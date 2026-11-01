@@ -1,0 +1,27 @@
+/out/
+/node_modules/
+/build/
+
+# Machine-local IDE and build settings
+/.vs/
+/CMakeUserPresets.json
+*.user
+*.suo
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local DAW projects and exported plugin binaries
+*.flp
+*.flp.bak
+*.vst3
+*.dll
+*.pdb
+
+# OS metadata
+.DS_Store
+Thumbs.db
