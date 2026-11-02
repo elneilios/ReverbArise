@@ -27,7 +27,7 @@ merely because the proposal or a mockup exists.
 
 ## 4. Integration and acceptance
 
-- [ ] 4.1 Run appropriate integrated state/processor/UI regressions and strict OpenSpec validation after final changes; verify capture protection, useful/empty/silence Recapture outcomes, frozen recovery, incompatible render rejection, preview/live/export routing and callback safety retain their existing numerical behavior.
+- [x] 4.1 Run appropriate integrated state/processor/UI regressions and strict OpenSpec validation after final changes; verify capture protection, useful/empty/silence Recapture outcomes, frozen recovery, incompatible render rejection, preview/live/export routing and callback safety retain their existing numerical behavior.
 - [x] 4.2 Build the Release ReverbArise VST3 and record its hash plus native layout/scale evidence; verify the artifact identity is unchanged and separate offscreen scale checks from actual host DPI validation.
 - [ ] 4.3 Ask for one brief final FL Studio smoke test of control feel/focus, a Learn → Perform → Export/return journey and save/reopen; rely on automation for detailed guards/routing/protection/edge cases, record untested host/DPI coverage, and request more UAT only for failures or concrete unresolved host behavior.
 - [ ] 4.4 Assemble dated evidence and the issue #16 PR with requirement/task results, both component and integrated approval records, and remaining control migration; verify no runtime/state change exceeds the approved scope and leave owner review/merge outstanding.

@@ -75,7 +75,9 @@ test output to identify future failing stages.
 Integrated focused Release tests passed (workflow processor/state and native UI).
 Full Release build and CTest subsequently passed **32/32 in 41.29 s**. Strict
 all-spec validation passed **13/13**, and patch formatting checks passed. The
-additional changed Debug fixtures are still pending; no full Debug pass is claimed.
+additional changed Debug fixtures also passed **4/4 in 7.96 s** (workflow state,
+workflow processor, capture transaction and native UI, including assertions).
+This is focused Debug coverage, not a full Debug-suite claim.
 
 Delivery bundle:
 `out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`.
@@ -89,7 +91,9 @@ introduced; saved-mode compatibility assertions still pass.
 Native evidence is under `out/issue16-header-checkpoint-b/`: matched Perform,
 Learn and Export full-editor captures, a larger layout, header-state strips and
 125/150/200% offscreen scale renders. These are geometry/native evidence, not
-in-host DPI or FL Studio acceptance. **Integrated checkpoint B remains pending.**
+in-host DPI or FL Studio acceptance. **Integrated checkpoint B needs adjustment:**
+the owner requested changes; detailed header feedback is pending. Task 3.5 remains
+open and no final host acceptance has been requested.
 The final owner host request is limited to one brief feel/mode-journey/save-reopen
 smoke test after visual approval; other edge cases rely on automated regressions.
 
