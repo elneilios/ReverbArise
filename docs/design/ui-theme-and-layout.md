@@ -141,4 +141,13 @@ preview status discloses active wet/sum safety attenuation and saved trim stays
 visible/resettable. The test-tone armed state is visible in the header with its
 Settings > Recovery Off path.
 
+Inspector knobs accept mouse-wheel input through JUCE's normal rotary-slider
+gesture path, with the same normalized direction and wheel travel as the global
+sensitivity knobs. Each inspector parameter retains its own units and validated
+domain; the numeric field updates during the gesture. Regular dragging uses the
+same JUCE rotary drag style as the globals. The inspector's existing slower
+Shift-drag remains available for precision (the globals retain JUCE's default
+modifier behavior). Wheel input outside an interactive knob still scrolls the
+inspector; this is not a panel-wide wheel override.
+
 See [current diagnostic dispositions and final host checklist](ui-diagnostics-and-acceptance.md).

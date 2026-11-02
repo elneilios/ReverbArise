@@ -22,7 +22,7 @@ public:
         addAndMakeVisible(label);addAndMakeVisible(knob);addAndMakeVisible(entry);
         label.setBorderSize({});
         knob.setRange(0,1,.000001);knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(false);
+        knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(true);
         knob.setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier);
         entry.setFont(juce::FontOptions(controlSize));entry.setJustification(juce::Justification::centredLeft);
         entry.setSelectAllWhenFocused(true);
