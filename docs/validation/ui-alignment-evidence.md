@@ -2,7 +2,7 @@
 
 Change: `align-reverbarise-ui-with-approved-design`.
 The source of visual authority is `../design/ReverbArise_UI_Layout_and_Style_Guide.md`
-and the current Init/SamplesLoaded pair in `../archive/prototypes/`. This log separates
+and the current Init/SamplesLoaded pair in `../archive/2026-11-02/prototypes/`. This log separates
 automated/native evidence from user approval and physical host acceptance.
 
 ## Approval checkpoints
