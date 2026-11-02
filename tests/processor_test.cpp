@@ -1,6 +1,7 @@
 #include "../Source/Plugin/PluginProcessor.h"
 
 #include <memory>
+#include "WorkflowTestSupport.h"
 
 class TestPlayHead final : public juce::AudioPlayHead
 {
@@ -22,8 +23,11 @@ public:
 #include "PerformanceExportCases.h"
 #include "MultipleExportCases.h"
 
-int main()
+int main(int argc,char** argv)
 {
+    // Optional focused iteration; CTest's argument-free command still executes
+    // every processor regression below.
+    if(argc==2 && juce::String(argv[1])=="multiple-export")return runTest([]{multipleExportCases();});
     const auto root = juce::File::getSpecialLocation(juce::File::tempDirectory)
         .getChildFile("PreverbProcessorTest-" + juce::Uuid().toDashedString());
     struct Cleanup { juce::File directory; ~Cleanup() { directory.deleteRecursively(); } } cleanup{root};
@@ -84,14 +88,16 @@ int main()
     // Capture input (not generated output), save compact v2 state, then restore asynchronously.
     stoppedPlayHead.position.setIsPlaying(true);
     stoppedPlayHead.position.setTimeInSamples(100);
+    stoppedPlayHead.position.setPpqPosition(100.0/24000);stoppedPlayHead.position.setBpm(120);
+    stoppedPlayHead.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     processor->processBlock(buffer, midiMessages);
-    processor->setMappingEnabled(false);
+    finishCaptureFixture(*processor,stoppedPlayHead.position);
     if (! processor->flushCaptureForTesting()) return 12;
     const auto committed = processor->getCaptureSnapshot();
     if (committed.manifest.ranges.size() != 1 || committed.reference.isEmpty()) return 13;
     processor->getStateInformation(savedState);
     if (savedState.getSize() > 4096) return 14;
-    // Capturing while the generated tone is audible must still store only silent dry input.
+    // Capture suppresses generated tone and stores only silent original input.
     processor->setToneStartBar(8);
     processor->setToneEndBar(10);
     stoppedPlayHead.position.setTimeInSamples(672000);
@@ -101,11 +107,13 @@ int main()
     buffer.setSize(2, 128);
     buffer.clear();
     processor->setMappingEnabled(true);
+    stoppedPlayHead.position.setIsPlaying(true);
     processor->processBlock(buffer, midiMessages);
-    processor->setMappingEnabled(false);
-    if (buffer.getMagnitude(0, 128) == 0 || ! processor->flushCaptureForTesting()) return 23;
+    finishCaptureFixture(*processor,stoppedPlayHead.position);
+    if (buffer.getMagnitude(0, 128) != 0 || ! processor->flushCaptureForTesting()) return 23;
     if (processor->getCaptureSnapshot().manifest.ranges.back().kind != CaptureCoverageKind::silence) return 24;
-    // Switching off during the scheduled interval immediately removes the generated contribution.
+    // The diagnostic tone remains independently testable in Live.
+    stoppedPlayHead.position.setIsPlaying(true);buffer.clear();processor->processBlock(buffer,midiMessages);
     if (processor->getGeneratedTonePeak() <= 0) return 25;
     processor->setTestToneEnabled(false);
     for (int pass = 0; pass < 4; ++pass)

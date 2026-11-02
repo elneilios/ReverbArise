@@ -1,5 +1,15 @@
 # Song transport playback
 
+The [workflow authority](workflow-modes.md) now gates this mixer independently
+of its saved live-playback settings. Scheduled wet runs only in Live. Capture
+and Finalise preserve dry passthrough, including with saved Wet Only routing;
+leaving Live releases wet within the existing 5 ms transition. Only Live at
+offline-bounce entry enables its accepted wet snapshot. A Capture-entered bounce
+cannot gain wet halfway through if Stop validation finishes in the background.
+Capture source is accepted atomically on explicit DAW Stop; loops and seeks do
+not publish it or authorize overwriting. Old scoped-recapture entry points now
+arm the encountered Capture pass, and remain subject to workflow admission.
+
 Current gain staging uses version-8 session metadata: new plugin instances use
 source energy +6 dB and old projects retain Legacy until explicit adoption.
 See [Musical gain staging](../musical-gain-staging.md). Version-7 details below

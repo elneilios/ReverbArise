@@ -17,21 +17,28 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       captureWorker(captureQueue, projectsRoot)
 {
-    captureWorker.startThread();
+    captureWorker.useWorkflow(workflowState);
     swells = std::make_unique<m3::SwellEngine>(std::move(projectsRoot), [this]
     {
         auto capture=captureWorker.snapshot();if(captureWorker.isLoading())capture.status="Loading capture state";
         return PreviewContext{std::move(capture), getSongTime(), captureWorker.captureGeneration()};
-    });
+    },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
+    swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
     captureWorker.setRecaptureHandler([this](int64_t a,int64_t b) { swells->recaptureCompleted(a,b); });
-    captureWorker.setCommitHandler([this](int64_t a,int64_t b,uint64_t generation) {swells->captureCommitted(a,b,generation);});
+    captureWorker.setCommitHandler([this](int64_t a,int64_t b,uint64_t generation,bool recapture) {swells->captureCommitted(a,b,generation,recapture);});
+    captureWorker.setAcceptedStateHandler([this]{persistentStateChanged();});
+    cancelPendingUpdate(); // Constructor defaults are not user edits.
+    hostNotificationsEnabled.store(true);
+    captureWorker.startThread();
 }
 
 PreverbAudioProcessor::~PreverbAudioProcessor()
 {
+    hostNotificationsEnabled.store(false);
     captureWorker.stopThread(-1);
     swells.reset();
+    cancelPendingUpdate();
 }
 
 void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
@@ -63,32 +70,39 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         diagnostics.samplePosition,diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,
         diagnostics.numerator,diagnostics.denominator},diagnostics.isPlaying,diagnostics.isLooping,diagnostics.loopStart,diagnostics.loopEnd};
     const auto captureGeneration = captureWorker.captureGeneration();
-    captureWorker.setChangeTolerance(swells->changeTolerance());
     const auto offline=isNonRealtime();
-    if(offline && !wasOffline)captureWorker.flush();
+    if(offline && !wasOffline)offlineWorkflowMode=workflowState.snapshot().mode;
     wasOffline=offline;
-
-    const auto admission=captureWorker.recaptureAdmission(samplePosition.load(std::memory_order_relaxed),buffer.getNumSamples(),sampleRate.load(std::memory_order_relaxed));
-    if (!offline && (mappingEnabled.load(std::memory_order_relaxed) || admission.armed)
-        && captureWorker.canMap()
-        && isPlaying.load(std::memory_order_relaxed)
-        && samplePositionAvailable.load(std::memory_order_relaxed))
+    auto workflow=workflowState.snapshot();
+    if(!offline && diagnostics.positionAvailable)
     {
+        if(diagnostics.isPlaying && workflow.mode==workflow::Mode::capture && !workflow.locked() && (!previousHostPlaying || previousWorkflowMode!=workflow::Mode::capture))
+            if(workflowState.begin(transport.song.valid && captureWorker.canMap()))swells->captureStarted(transport.song.sample);
+        if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording){swells->captureStopped();workflowState.stop(workflow.pass);}
+        previousHostPlaying=diagnostics.isPlaying;
+        previousWorkflowMode=workflow.mode;
+    }
+    workflow=workflowState.snapshot();
+    if (!offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
+        && diagnostics.isPlaying)
+    {
+        if(observedCapturePass!=workflow.pass){capturePassTime=transport.song;observedCapturePass=workflow.pass;}
+        const bool compatiblePass=transportMappingMatches(capturePassTime,transport.song);
         const auto channelCount = buffer.getNumChannels();
-        const auto offset=admission.armed ? admission.offset : 0;
-        const auto count=admission.armed ? admission.count : buffer.getNumSamples();
+        const auto count=buffer.getNumSamples();
         const auto wasQueued = count==0 || (channelCount >= 2
-            && captureQueue.tryPush(samplePosition.load(std::memory_order_relaxed)+offset,
+            && transport.song.valid && compatiblePass && captureWorker.canMap()
+            && captureQueue.tryPush(samplePosition.load(std::memory_order_relaxed),
                                     sampleRate.load(std::memory_order_relaxed),
-                                    buffer.getReadPointer(0)+offset,
-                                    buffer.getReadPointer(1)+offset,
-                                    count, captureGeneration, admission.token));
+                                    buffer.getReadPointer(0),
+                                    buffer.getReadPointer(1),
+                                    count, captureGeneration, workflow.pass));
         if (! wasQueued)
-            droppedCaptureBlockCount.fetch_add(1, std::memory_order_relaxed);
+        {droppedCaptureBlockCount.fetch_add(1, std::memory_order_relaxed);captureWorker.failPass(workflow.pass);}
     }
 
     auto tonePeak = 0.0f;
-    if (testToneEnabled.load(std::memory_order_relaxed)
+    if (workflow.mode==workflow::Mode::live && testToneEnabled.load(std::memory_order_relaxed)
         && diagnostics.positionAvailable
         && diagnostics.isPlaying
         && diagnostics.samplePositionAvailable
@@ -112,7 +126,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     generatedTonePeak.store(tonePeak, std::memory_order_relaxed);
     if (buffer.getNumChannels() >= 2)
     {
-        if(offline)swells->processOfflineAudio(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),transport);
+        if(offline){if(offlineWorkflowMode==workflow::Mode::live)swells->processOfflineAudio(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),transport);}
         else {swells->endOffline();swells->processTransportAudio(buffer.getWritePointer(0), buffer.getWritePointer(1), buffer.getNumSamples(), transport);}
     }
 
@@ -162,31 +176,53 @@ SongTime PreverbAudioProcessor::getSongTime() const noexcept
 
 void PreverbAudioProcessor::setMappingEnabled(bool enabled)
 {
-    captureWorker.cancelRecapture();
-    mappingEnabled.store(enabled, std::memory_order_relaxed);
+    // Legacy control now requests a guarded workflow transition; never a second
+    // independent source-overwrite authority.
+    requestWorkflowMode(enabled?workflow::Mode::capture:workflow::Mode::live);
 }
 
 bool PreverbAudioProcessor::isMappingEnabled() const noexcept
 {
-    return mappingEnabled.load(std::memory_order_relaxed);
+    return workflowState.snapshot().mode==workflow::Mode::capture;
 }
 
 void PreverbAudioProcessor::requestClearCapture()
 {
+    if(workflowState.snapshot().mode!=workflow::Mode::capture || workflowState.snapshot().locked())
+    {swells->diagnostic("Clear requires stopped idle Capture mode");return;}
     swells->clear();
-    mappingEnabled.store(false, std::memory_order_relaxed);
     droppedCaptureBlockCount.store(0, std::memory_order_relaxed);
     captureWorker.requestClear();
+    persistentStateChanged();
 }
 
 bool PreverbAudioProcessor::armRecapture(int64_t start,int64_t end)
 {
-    const auto time=getSongTime();
-    if(!time.valid || time.rate!=captureWorker.snapshot().manifest.sampleRate)
-    { swells->diagnostic("Recapture needs compatible fixed host timing"); return false; }
-    mappingEnabled=false;
-    if(!captureWorker.requestRecapture(start,end,time.rate)) {swells->diagnostic("Cannot arm this capture range");return false;}
-    return true;
+    if(start>=end){swells->diagnostic("Invalid recapture interval; arm pass-wide Recapture in Capture mode");return false;}
+    const auto accepted=workflowState.arm(true);
+    if(!accepted)swells->diagnostic("Recapture requires idle Capture mode; applies to the encountered pass");
+    return accepted;
+}
+
+workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
+{
+    const auto capture=captureWorker.snapshot();const auto time=getSongTime();
+    const auto session=swells->savedSession();
+    const auto solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
+    const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo)
+        && w.frozen && w.phase==m3::Phase::ready && w.render.present() && time.valid && w.render.rate==time.rate && w.render.bpm==time.bpm
+        && w.render.numerator==time.numerator && w.render.denominator==time.denominator;});
+    return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
+        && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
+        std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo) && w.phase==m3::Phase::ready && w.render.present();}),frozen};
+}
+bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
+{
+    const auto previous=workflowState.snapshot().mode;
+    const auto readiness=getWorkflowReadiness();
+    if(const auto error=workflow::entryError(workflowState.snapshot(),mode,readiness)){swells->diagnostic(error);return false;}
+    if(!workflowState.requestMode(mode,readiness))return false;
+    swells->stop();if(previous!=mode)persistentStateChanged();return true;
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {
@@ -254,7 +290,7 @@ uint64_t PreverbAudioProcessor::getTimelineDiscontinuityCount() const noexcept
 
 void PreverbAudioProcessor::setTestToneEnabled(bool enabled) noexcept
 {
-    testToneEnabled.store(enabled, std::memory_order_relaxed);
+    if(testToneEnabled.exchange(enabled,std::memory_order_relaxed)!=enabled)persistentStateChanged();
 }
 
 bool PreverbAudioProcessor::isTestToneEnabled() const noexcept
@@ -265,8 +301,8 @@ bool PreverbAudioProcessor::isTestToneEnabled() const noexcept
 void PreverbAudioProcessor::setToneStartBar(int bar) noexcept
 {
     const auto boundedBar = std::clamp(bar, 1, 511);
-    toneStartBar.store(std::min(boundedBar, toneEndBar.load(std::memory_order_relaxed) - 1),
-                       std::memory_order_relaxed);
+    const auto value=std::min(boundedBar,toneEndBar.load(std::memory_order_relaxed)-1);
+    if(toneStartBar.exchange(value,std::memory_order_relaxed)!=value)persistentStateChanged();
 }
 
 int PreverbAudioProcessor::getToneStartBar() const noexcept
@@ -277,8 +313,8 @@ int PreverbAudioProcessor::getToneStartBar() const noexcept
 void PreverbAudioProcessor::setToneEndBar(int bar) noexcept
 {
     const auto boundedBar = std::clamp(bar, 2, 512);
-    toneEndBar.store(std::max(boundedBar, toneStartBar.load(std::memory_order_relaxed) + 1),
-                     std::memory_order_relaxed);
+    const auto value=std::max(boundedBar,toneStartBar.load(std::memory_order_relaxed)+1);
+    if(toneEndBar.exchange(value,std::memory_order_relaxed)!=value)persistentStateChanged();
 }
 
 int PreverbAudioProcessor::getToneEndBar() const noexcept
@@ -361,7 +397,7 @@ bool PreverbAudioProcessor::hasEditor() const
 
 const juce::String PreverbAudioProcessor::getName() const
 {
-    return "Preverb Spike";
+    return "ReverbArise";
 }
 
 bool PreverbAudioProcessor::acceptsMidi() const
@@ -410,7 +446,8 @@ void PreverbAudioProcessor::changeProgramName(int, const juce::String&)
 void PreverbAudioProcessor::getStateInformation(juce::MemoryBlock& destinationData)
 {
     juce::XmlElement state("PreverbState");
-    state.setAttribute("stateVersion", 7);
+    state.setAttribute("stateVersion", 8);
+    state.setAttribute("workflowMode",workflow::modeName(workflowState.snapshot().mode));
     state.setAttribute("toneEnabled", isTestToneEnabled());
     state.setAttribute("toneStartBar", getToneStartBar());
     state.setAttribute("toneEndBar", getToneEndBar());
@@ -432,9 +469,17 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     {swells->diagnostic("Invalid or oversized plugin state");return;}
     const auto state = getXmlFromBinary(data, sizeInBytes);
     if (state == nullptr || ! state->hasTagName("PreverbState")
-        || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>7)
+        || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>8)
     {swells->diagnostic("Unsupported or malformed plugin state");return;}
     const auto version=state->getIntAttribute("stateVersion");m3::Session session;juce::String error;
+    auto savedMode=workflow::Mode::capture;
+    if(version>=8)
+    {
+        const auto name=state->getStringAttribute("workflowMode");
+        if(name=="Live")savedMode=workflow::Mode::live;
+        else if(name=="Finalise")savedMode=workflow::Mode::finalise;
+        else if(name!="Capture"){swells->diagnostic("State rejected: invalid workflow mode");return;}
+    }
     if(version>=3)
     {
         const auto child=state->getChildByName("SwellSession");
@@ -464,21 +509,21 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     toneStartBar.store(startBar, std::memory_order_relaxed);
     toneEndBar.store(endBar, std::memory_order_relaxed);
     testToneEnabled.store(state->getBoolAttribute("toneEnabled", false), std::memory_order_relaxed);
-    mappingEnabled.store(version>=4 ? session.mappingEnabled : false);
     if (version >= 2)
     {
         const auto revision = state->getStringAttribute("manifestRevision").getLargeIntValue();
         captureWorker.requestRestore(state->getStringAttribute("projectId").toStdString(),
                                      state->getStringAttribute("instanceId").toStdString(),
                                      state->getStringAttribute("manifestReference"),
-                                     static_cast<uint64_t>(std::max(juce::int64{0}, revision)));
+                                     static_cast<uint64_t>(std::max(juce::int64{0}, revision)),savedMode);
     }
     else
     {
         captureWorker.requestRestore(juce::Uuid().toDashedString().toStdString(),
-                                     juce::Uuid().toDashedString().toStdString(), {}, 0);
+                                     juce::Uuid().toDashedString().toStdString(), {}, 0,savedMode);
     }
     swells->restore(std::move(session),version>=2?state->getStringAttribute("manifestReference"):juce::String{});
+    cancelPendingUpdate(); // Loading acknowledged state is not a new user edit.
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

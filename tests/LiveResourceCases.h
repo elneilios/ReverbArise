@@ -6,7 +6,7 @@ inline void liveResourceCases()
     const auto position=[&](int64_t at,bool playing){head.position.setTimeInSamples(at);head.position.setPpqPosition(at/12000.0);head.position.setIsPlaying(playing);};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
     for(int64_t at=0;at<49152;at+=4096){position(at,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),4096,.05f);p->processBlock(buffer,midi);}
-    REQUIRE(p->flushCaptureForTesting());p->setMappingEnabled(false);position(0,false);buffer.clear();p->processBlock(buffer,midi);
+    REQUIRE(p->flushCaptureForTesting());finishCaptureFixture(*p,head.position);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.addTarget(12000));std::vector<float> ir(96000,.00001f);const auto file=root.file.getChildFile("long-ir.wav");writeTestWav(file,1,48000,ir);engine.loadIR(file);
     waitM3([&]{return engine.savedSession().swells[0].irName=="long-ir.wav";});engine.generate();waitM3([&]{return engine.snapshot().auditionReady;});
     auto state=engine.savedSession();const auto original=state.swells[0];state.swells.clear();

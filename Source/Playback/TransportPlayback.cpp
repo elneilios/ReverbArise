@@ -56,7 +56,7 @@ bool TransportPlayback::publish(std::unique_ptr<LivePublication> pub)
         if(old>=0)slots[old].state.store(retired,std::memory_order_release);
         return true;}return false;
 }
-void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time) noexcept
+void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows) noexcept
 {
     if(count<=0)return;
     const auto next=pending.exchange(-1,std::memory_order_acq_rel);bool publicationChanged=false;
@@ -71,15 +71,15 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
     const auto mapping=pub && transportMappingMatches(pub->mapping,time.song);
     int64_t end;
     const auto validCount=count<=1048576 && checkedAdd(time.song.sample,count,end);
-    const auto running=enabled.load() && time.playing && mapping && validCount && !resetRequested;
+    const auto running=workflowAllows && enabled.load() && time.playing && mapping && validCount && !resetRequested;
     const auto discontinuity=!wasRunning || !running || expectedPosition!=time.song.sample || resetRequested;
     const auto ramp=static_cast<int>(std::clamp(std::round(std::isfinite(time.song.rate)?time.song.rate*.005:1),1.0,9600.0));
     for(auto& v:voices)if(v.remaining>ramp){v.remaining=ramp;v.fromL=v.lastL;v.fromR=v.lastR;}
-    const auto wantedDry=enabled.load() && time.playing && wetOnly.load()?0.0f:1.0f;
+    const auto wantedDry=workflowAllows && enabled.load() && time.playing && wetOnly.load()?0.0f:1.0f;
     if(wantedDry!=dryTarget){dryTarget=wantedDry;dryRemaining=ramp;dryStep=(dryTarget-dry)/ramp;}
     const auto wantedGain=level.load();if(wantedGain!=gainTarget){gainTarget=wantedGain;gainRemaining=ramp;gainStep=(gainTarget-gain)/ramp;}
-    badMapping.store(enabled.load() && time.playing && pub && (!mapping || !validCount));
-    bool anyMissing=enabled.load() && time.playing && !pub;int segmentIndex=-1;
+    badMapping.store(workflowAllows && enabled.load() && time.playing && pub && (!mapping || !validCount));
+    bool anyMissing=workflowAllows && enabled.load() && time.playing && !pub;int segmentIndex=-1;
     if(!running && dryRemaining==0 && gainRemaining==0 && std::all_of(voices.begin(),voices.end(),[](const auto& v){return v.remaining==0 && v.lastL==0 && v.lastR==0;})){
         if(dry==0){std::fill_n(left,count,0.0f);std::fill_n(right,count,0.0f);}
         for(auto& v:voices){v.audible=false;v.entry=nullptr;}
@@ -94,7 +94,7 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
                 segmentIndex=it==pub->segments.begin()?-1:static_cast<int>(it-pub->segments.begin()-1);
             }
             if(segmentIndex>=0)segment=&pub->segments[static_cast<size_t>(segmentIndex)];
-        }else if(enabled.load() && time.playing && mapping)anyMissing=true;
+        }else if(workflowAllows && enabled.load() && time.playing && mapping)anyMissing=true;
         std::array<const LiveEntry*,liveMaximumOverlap> wanted{};
         if(segment){for(size_t n=0;n<segment->count;++n){const auto& e=pub->entries[segment->members[n]];
             if(e.generation!=generations[e.slot].load(std::memory_order_acquire)){anyMissing=true;continue;}

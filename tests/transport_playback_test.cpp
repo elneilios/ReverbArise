@@ -55,6 +55,13 @@ int main(){return runTest([]{
     float musicalL[32]{},musicalR[32]{};TransportTime musicalTime{{true,60,.12,1000,120,4,4},true};
     musicalPlayer.process(musicalL,musicalR,32,musicalTime);
     REQUIRE(std::abs(musicalL[31]-((102+62)*.0005f*.75f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
+    musicalTime.song.sample=92;musicalTime.song.ppq=.184;std::fill_n(musicalL,32,.125f);std::fill_n(musicalR,32,.125f);
+    {AudioAllocationGuard guard;musicalPlayer.process(musicalL,musicalR,32,musicalTime,false);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+    for(int n=5;n<32;++n)REQUIRE(musicalL[n]==.125f && musicalR[n]==.125f);
+    REQUIRE(!musicalPlayer.active() && !musicalPlayer.missing());
+    musicalTime.song.sample=70;musicalTime.song.ppq=.14;std::fill_n(musicalL,32,.125f);std::fill_n(musicalR,32,.125f);
+    musicalPlayer.process(musicalL,musicalR,32,musicalTime,true);
+    REQUIRE(std::abs(musicalL[15]-((96+56)*.0005f*.75f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
     player.configure(true,LiveRouting::wetOnly,0);t.playing=true;t.song.sample=10000;t.song.ppq=20;
     std::fill_n(l,20,.125f);std::fill_n(r,20,.125f);player.process(l,r,20,t);REQUIRE(l[19]==0 && player.missing());
     player.configure(false,LiveRouting::wetOnly,0);player.process(l,r,20,t);REQUIRE(!player.active());

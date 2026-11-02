@@ -26,6 +26,7 @@ CaptureAssetStore& CaptureSession::store() const
 bool CaptureSession::restore(const std::string& project, const std::string& instance,
                              const juce::String& reference, uint64_t revision)
 {
+    abortPass();
     CaptureManifest identity;
     identity.projectId = project;
     identity.instanceId = instance;
@@ -149,6 +150,9 @@ bool CaptureSession::commit(int64_t start, double rate, const float* samples, ui
 
 bool CaptureSession::publish(CaptureManifest next)
 {
+    // Private candidate maps reuse exact chunk/slicing logic, but never expose
+    // a source revision or write intermediate manifests during a capture pass.
+    if(provisional){state.manifest=std::move(next);rebuildOverview();return !state.unavailable;}
     juce::String reference, error;
     if (! store().publishSnapshot(next, reference, error))
     {
@@ -163,6 +167,7 @@ bool CaptureSession::publish(CaptureManifest next)
 
 bool CaptureSession::clear(double rate)
 {
+    abortPass();
     auto next = state.manifest;
     next.ranges.clear();
     next.sampleRate = std::isfinite(rate) && rate > 0 ? rate : next.sampleRate;
@@ -170,6 +175,95 @@ bool CaptureSession::clear(double rate)
     ++next.revision;
     return publish(std::move(next));
 }
+
+bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace)
+{
+    if(!token || staged || state.unavailable)return false;
+    staged=std::make_unique<CaptureSession>(root);staged->state=state;staged->provisional=true;
+    passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
+    replaceMapped=replace;passUseful=false;passReplaced=false;passError.clear();passChanges.clear();return true;
+}
+
+bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames)
+{
+    if(!staged || token!=passToken || passError.isNotEmpty())return false;
+    if(!samples || !frames || frames>1920000 || !std::isfinite(rate) || rate<=0
+        || frames>rate*5 || start>INT64_MAX-frames
+        || !std::all_of(samples,samples+static_cast<size_t>(frames)*2,[](float x){return std::isfinite(x);}))
+    {passError="Invalid or non-finite capture data";return false;}
+    if(!state.manifest.ranges.empty() && std::abs(state.manifest.sampleRate-rate)>.001)
+    {passError="Capture sample rate is incompatible";return false;}
+    const auto end=start+frames;
+    std::vector<std::pair<int64_t,int64_t>> intervals;
+    if(replaceMapped)intervals.emplace_back(start,end);
+    else
+    {
+        auto cursor=start;
+        for(const auto& old:staged->state.manifest.ranges)
+        {
+            const auto oldEnd=old.startSample+static_cast<int64_t>(old.frameCount);
+            if(oldEnd<=cursor)continue;if(old.startSample>=end)break;
+            if(old.startSample>cursor)intervals.emplace_back(cursor,std::min(end,old.startSample));
+            cursor=std::max(cursor,std::min(end,oldEnd));if(cursor>=end)break;
+        }
+        if(cursor<end)intervals.emplace_back(cursor,end);
+    }
+    for(const auto [a,b]:intervals)
+    {
+        const auto* input=samples+static_cast<size_t>(a-start)*2;
+        const auto count=static_cast<uint32_t>(b-a);
+        passUseful=passUseful || std::any_of(input,input+static_cast<size_t>(count)*2,[](float x){return x!=0;});
+        if(replaceMapped)for(const auto& old:state.manifest.ranges)
+            if(a<old.startSample+static_cast<int64_t>(old.frameCount) && b>old.startSample)passReplaced=true;
+        const auto revision=staged->state.manifest.revision;
+        if(!staged->commit(a,rate,input,count))
+        {passError=staged->state.status;return false;}
+        if(staged->state.manifest.revision!=revision)passChanges.emplace_back(a,b);
+    }
+    return true;
+}
+
+CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t epoch)
+{
+    PassResult result;
+    if(!staged || token!=passToken || epoch!=passEpoch || state.manifest.revision!=baseRevision)
+    {result.error="Obsolete capture pass";return result;}
+    result.error=passError;
+    if(result.error.isEmpty())
+    {
+        result.changed=!passChanges.empty();
+        if(result.changed)
+        {
+            auto candidate=staged->state.manifest;candidate.revision=baseRevision+1;
+            for(auto& range:candidate.ranges)if(range.revision>baseRevision)range.revision=candidate.revision;
+            juce::String reference;
+            if(!store().publishSnapshot(candidate,reference,result.error))result.changed=false;
+            else {prepared=std::make_unique<CaptureSessionSnapshot>(staged->state);prepared->manifest=std::move(candidate);prepared->reference=reference;prepared->status="Ready (committed)";}
+        }
+        if(result.error.isEmpty())
+        {result.success=true;result.useful=passUseful;result.replaced=passReplaced;result.changedIntervals=passChanges;}
+    }
+    return result;
+}
+
+bool CaptureSession::acceptPreparedPass(uint64_t token,uint64_t epoch)
+{
+    if(!staged || token!=passToken || epoch!=passEpoch || state.manifest.revision!=baseRevision || passError.isNotEmpty())return false;
+    if(prepared)state=std::move(*prepared);
+    abortPass();return true;
+}
+
+CaptureSession::PassResult CaptureSession::finishPass(uint64_t token,uint64_t epoch)
+{
+    auto result=preparePass(token,epoch);
+    if(result.success){result.success=acceptPreparedPass(token,epoch);return result;}
+    if(staged && token==passToken && epoch==passEpoch)
+    {state.status="Capture pass rejected: "+result.error+"; previous committed source retained";abortPass();}
+    return result;
+}
+
+void CaptureSession::abortPass()
+{staged.reset();prepared.reset();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passUseful=false;passReplaced=false;}
 
 void CaptureSession::rebuildOverview()
 {

@@ -7,7 +7,8 @@ namespace m3
 {
 void SwellEngine::setAutomaticProcessing(bool enabled)
 {
-    const auto context=contextProvider();const juce::ScopedLock guard(lock);if(model.automaticProcessing!=enabled)++markerGeneration;model.automaticProcessing=enabled;
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Automatic settings are locked in Finalise");return;}
+    const auto context=contextProvider();const juce::ScopedLock guard(lock);if(model.automaticProcessing!=enabled){++markerGeneration;persistentChangedLocked();}model.automaticProcessing=enabled;
     automaticBoundsDirty=true;
     if(enabled && model.autoMarkersEnabled)for(const auto& r:context.capture.manifest.ranges)
     {int64_t end;if(r.frameCount<=INT64_MAX && checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))dirtyLocked(r.startSample,end);}
@@ -15,16 +16,18 @@ void SwellEngine::setAutomaticProcessing(bool enabled)
 }
 void SwellEngine::setAutoMarkers(bool enabled)
 {
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Marker settings are locked in Finalise");return;}
     const auto context=contextProvider();const juce::ScopedLock guard(lock);
-    if(model.autoMarkersEnabled==enabled)return;model.autoMarkersEnabled=enabled;++markerGeneration;
+    if(model.autoMarkersEnabled==enabled)return;model.autoMarkersEnabled=enabled;persistentChangedLocked();++markerGeneration;
     if(enabled && model.automaticProcessing)for(const auto& r:context.capture.manifest.ranges)
     {int64_t end;if(r.frameCount<=INT64_MAX && checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))dirtyLocked(r.startSample,end);}
     notify();
 }
 void SwellEngine::resetSuppression()
-{const juce::ScopedLock guard(lock);model.suppressed.clear();analyzedContent.clear();message="Deleted target suppression reset; replay to rediscover";}
+{if(!permitCreative())return;const juce::ScopedLock guard(lock);if(!model.suppressed.empty())persistentChangedLocked();model.suppressed.clear();analyzedContent.clear();message="Deleted target suppression reset; replay to rediscover";}
 void SwellEngine::loadDefaultIR(const juce::File& file)
 {
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Default IR is locked in Finalise");return;}
     const juce::ScopedLock guard(lock);if(imports.size()>=32){message="IR import queue full";return;}
     Import job;job.file=file;job.session=sessionGeneration.load();job.futureDefault=true;imports.push_back(std::move(job));notify();
 }
@@ -37,10 +40,14 @@ void SwellEngine::dirtyLocked(int64_t a,int64_t b)
     // A bounding dirty summary is safe: analysis still walks only real coverage.
     if(dirty.size()>128){const auto first=dirty.front().first,last=dirty.back().second;dirty={{first,last}};}
 }
-void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation)
+void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool explicitRecapture)
 {
     const auto context=contextProvider();if(context.captureGeneration!=generation)return;
-    const juce::ScopedLock guard(lock);automaticBoundsDirty=true;if(model.automaticProcessing && model.autoMarkersEnabled)dirtyLocked(a,b);notify();
+    const juce::ScopedLock guard(lock);if(captureEpochProvider && captureEpochProvider()!=generation)return;
+    automaticBoundsDirty=true;if(model.automaticProcessing && model.autoMarkersEnabled)dirtyLocked(a,b);
+    if(explicitRecapture)for(auto& w:model.swells)if(!w.frozen && w.sourceStart<b && renderInputEnd(w)>a)
+    {invalidateLiveLocked(w.id);forceRefresh.insert(w.id);if(w.ir.present()){w.phase=Phase::checking;w.status="Checking completed recapture";}if(w.id==model.primary)stopLocked();}
+    notify();
 }
 void SwellEngine::collectCompletedPass(const PreviewContext& context)
 {
@@ -89,7 +96,7 @@ void SwellEngine::prepareDefault(const PreviewContext& context)
     const auto ok=installBundledImpulse(store,defaultImpulseId,available(),asset,error);
     const juce::ScopedLock guard(lock);if(generation!=sessionGeneration.load())return;
     if(!ok){defaultError="Missing default IR: "+error;message=defaultError;return;}
-    model.defaultIR=asset;model.defaultIRName="Preverb Hall";
+    if(model.defaultIR!=asset || model.defaultIRName!="Preverb Hall")persistentChangedLocked();model.defaultIR=asset;model.defaultIRName="Preverb Hall";
     for(auto& w:model.swells)if(!w.ir.present() && w.status=="Waiting for default IR")
     {w.ir=asset;w.irName=model.defaultIRName;w.phase=Phase::stale;w.status="Waiting for source";}
 }
@@ -196,6 +203,7 @@ bool SwellEngine::automaticJob()
         ++automaticAnalysisCount;
         const auto previous=model.swells;
         if(!reconcileTargets(model,detected,bodyStart,bodyEnd,context.time,error,applicableCompletedPasses(context.capture.manifest))){message=error;return true;}
+        if(previous.size()!=model.swells.size() || !std::equal(previous.begin(),previous.end(),model.swells.begin(),sameSavedSwell))persistentChangedLocked();
         for(const auto& old:previous){const auto* now=find(model,old.id);
             if(!now || now->inputGeneration!=old.inputGeneration || now->shapeGeneration!=old.shapeGeneration)invalidateLiveLocked(old.id);}
         if(analyzedContent.size()>=512)analyzedContent.erase(analyzedContent.begin());

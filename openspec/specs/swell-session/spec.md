@@ -6,15 +6,15 @@ Preserve editable swell sessions and their managed IR/render dependencies across
 ## Requirements
 
 ### Requirement: Saved projects retain swell definitions and editing preferences
-Project state SHALL retain stable swell identities, arrivals, source intervals, IR references, audible bounds, fades/curves/gain, activity flags, names, selection, fixed timing, audition level, and auto-regeneration preference. It SHALL retain capture/tone state and compact asset references without embedding PCM. Mapping, recapture arms, pending jobs, and active audition SHALL not resume on restore.
+Project state SHALL retain stable swell identities, source/arrival, IR/render references, shapes/gain/placement, activity/freeze, names/selection, timing, monitoring/automation preferences and workflow mode without embedding PCM. Restore SHALL disarm Recapture, discard in-flight operation authority and stop voices. Capture SHALL admit only a subsequent valid Play, never resume the saved pass.
 
 #### Scenario: Reopen an edited session
-- **WHEN** a project with multiple edited swells and audition level -24 dB is saved and reopened on the same PC/profile
-- **THEN** its definitions, edits, assignments, selected swell, captured source, tone settings, and -24 dB audition level are restored without starting audition or capture
+- **WHEN** an edited multi-swell project with -24 dB audition level is saved and reopened on the same PC/profile
+- **THEN** source, definitions, edits, assets, selection, tone preference, -24 dB audition level and saved workflow mode are retained without starting audition, host transport or the saved capture pass
 
 #### Scenario: Save while work is in flight
-- **WHEN** a project is saved during import, analysis, recapture, or rendering
-- **THEN** saved editing choices refer only to committed assets, unfinished work is not marked ready, and reopening can recover valid dependencies without resuming capture or playback
+- **WHEN** a project is saved during capture, Stop validation, import, analysis, recapture or rendering
+- **THEN** it references committed source/assets only, unfinished work is not marked ready and reopening cannot resume a Recapture arm or publish the obsolete pass
 
 ### Requirement: IR and full render audio have managed immutable assets
 Successfully imported WAV/WavPack IR samples and complete untrimmed render results SHALL be stored as verified immutable managed assets under the instance's working store. Saved references SHALL include content identity, format/version, rate, channels, length, and render dependencies. Changing or deleting the original external IR SHALL not change an already imported assignment. Edits SHALL remain metadata over the full render.
@@ -43,15 +43,21 @@ Restoration SHALL verify source/IR/render identities, bounds, engine version, sa
 - **THEN** saved sample positions and original capture rate are retained, affected swells are not auditionable as current, and no implicit stretching or reinterpretation occurs
 
 ### Requirement: State migration and malformed input do not destroy valid data
-The system SHALL version M3 state and accept legacy v1/v2 capture/tone state as an empty swell collection with absent audition trim defaulting to 0 dB, preserving any explicitly saved supported trim. Unsupported versions, malformed metadata, unsafe asset paths, non-finite parameters, duplicate identities, and invalid bounds SHALL be rejected with a diagnostic while retaining the previous valid session. Parsing SHALL enforce documented resource limits.
+Workflow metadata SHALL be versioned and validated transactionally. Supported pre-workflow states SHALL migrate to Capture with Recapture off while preserving source/creative/gain state. Unknown versions, invalid modes, unsafe paths, nonfinite parameters, duplicate identities or invalid bounds SHALL be rejected with diagnostics while retaining the prior valid session and documented resource limits.
 
 #### Scenario: Reopen an M2 project
-- **WHEN** valid v2 state is restored
-- **THEN** existing capture identities/references and tone settings restore, the new swell collection is empty, and neither audition nor mapping starts
+- **WHEN** supported valid v2 state is restored
+- **THEN** capture references and tone settings survive, swells remain empty and workflow is Capture with Recapture off, without starting transport or audition
+- **AND** absent supported audition trim defaults to 0 dB while an explicitly saved supported trim remains unchanged
 
 #### Scenario: Invalid newer state
-- **WHEN** state contains an unknown version, path traversal, duplicate swell IDs, or non-finite envelope data
-- **THEN** restoration reports the problem without publishing a partial session, deleting assets, or replacing previously valid definitions
+- **WHEN** workflow or creative metadata contains an unknown version, invalid mode, traversal, duplicate IDs or nonfinite values
+- **THEN** restore reports the error without publishing a partial session, deleting assets or replacing valid definitions
+
+#### Scenario: Existing musical or legacy-gain project
+- **WHEN** a supported project lacking workflow mode contains valid source and prepared/frozen swells, regardless of its saved mapping/live flags
+- **THEN** it opens in Capture with Recapture off and all existing source, IR/render identities, gain policy/calibration, edits and independent preferences preserved
+- **AND** Live can be selected after its prerequisites validate; migration never silently chooses Live
 
 ### Requirement: Saving and editing preserve prior project snapshots
 New managed assets SHALL publish completely before being referenced as committed. Saves SHALL use immutable dependency references so older saved projects and instances remain readable after later edits, Clear, or deletion of swell definitions. The plugin SHALL not automatically delete sole asset copies or perform asset I/O in the audio callback. Basic same-PC persistence SHALL not imply that the FL Studio project embeds or packs external assets.
@@ -63,3 +69,25 @@ New managed assets SHALL publish completely before being referenced as committed
 #### Scenario: Asset publication fails
 - **WHEN** an IR/render write or publication fails
 - **THEN** the prior committed asset references remain valid, the affected operation reports failure, and no half-written result is marked ready
+
+### Requirement: Saved mode waits for safe readiness without resuming activity
+New-format sessions SHALL restore their saved mode while verifying its dependencies and fresh timing before enabling corresponding actions/output. Missing or incompatible material SHALL remain explicit without deleting state or fabricating readiness. Recapture permission and transient pass/voice state SHALL never restore.
+
+#### Scenario: Restore Live or Finalise with unavailable assets
+- **WHEN** saved Live/Finalise state restores with missing source or incompatible timing
+- **THEN** its saved mode/preference is retained with unavailable status, affected actions/output wait for validation and unaffected durable assets are preserved
+
+#### Scenario: Restore Capture while host later plays
+- **WHEN** saved Capture state restores and subsequent valid DAW Play occurs
+- **THEN** a fresh additive-only pass can begin but prior mapped source remains protected and no saved Recapture arm is reused
+
+### Requirement: Cloned instances share immutable assets without sharing future writes
+Duplicated instances SHALL preserve readable committed references and creative state while isolating new capture transactions, manifest publication and completion authority. Clearing, recording or restoring one instance SHALL NOT mutate another instance's accepted map or permit stale completion into it.
+
+#### Scenario: Clone while a pass is pending
+- **WHEN** an instance is duplicated during an uncommitted capture pass
+- **THEN** the duplicate restores only the last committed source and saved mode with Recapture off, and cannot inherit the original pass's publication rights
+
+#### Scenario: Independent later recapture
+- **WHEN** one copy explicitly recaptures while another copy retains the old project state
+- **THEN** the old copy's source samples, manifest reference and prior saved snapshots remain recoverable and unchanged

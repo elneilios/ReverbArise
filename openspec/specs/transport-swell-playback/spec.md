@@ -6,11 +6,12 @@ Play verified prepared swells against the host Song timeline so users hear their
 ## Requirements
 
 ### Requirement: Minor performance variations preserve the accepted baseline
-A saved change tolerance distinct from marker sensitivity SHALL allow minor performance variation to retain the committed capture and prepared swells. Comparisons SHALL use the retained baseline rather than accumulate pass-to-pass drift. Larger level, spectral or event changes SHALL commit and refresh dependencies. Exact comparison and explicit scoped recapture SHALL remain available; tolerance SHALL NOT fill gaps or change live dry.
+Mapped source SHALL remain protected during ordinary Capture and all Live/Finalise playback regardless of performance variation. Only explicit Recapture SHALL permit replacement. Saved regeneration-tolerance values SHALL remain compatible metadata and SHALL NOT authorize implicit source updates; marker sensitivity and live dry SHALL remain independent.
 
 #### Scenario: Small variation and accumulated drift
-- **WHEN** successive performances vary within the configured tolerance and later depart materially from the retained baseline
-- **THEN** small variations do not publish new captures or renders, while the material departure commits and refreshes affected swells
+- **WHEN** repeated upstream performances vary slightly and later change materially with Recapture off
+- **THEN** neither variation replaces mapped source or recalibrates its wet baseline
+- **AND** the user must return to Capture and explicitly arm Recapture to adopt the changed performance
 
 ### Requirement: Host offline bounce prepares all required wet before mixing
 The host-marked non-real-time path SHALL render a fixed snapshot at absolute Song positions using bounded synchronous pages, without relying on realtime prefetch or capturing export input. It SHALL export available contributions and warn about skipped swells. Fatal failures SHALL remain visible. Offline preparation MAY allocate, read and wait; live callback restrictions SHALL remain unchanged.
@@ -31,15 +32,19 @@ An untouched automatic source window extending past an explicit loop end or obse
 - **THEN** the full defined interval remains required and protected edits are not shortened
 
 ### Requirement: Prepared wet follows absolute Song time
-While live playback is enabled and valid host Song transport is playing, the plugin SHALL mix prepared wet at its positioned absolute sample interval. Each block SHALL read the intersecting samples at their Song-relative offsets, honoring placement and shape without retriggering at block boundaries. No audio before the host starting position SHALL be replayed retroactively.
+Only in Live, with saved live playback enabled and valid compatible host transport playing, SHALL the plugin mix prepared wet at its absolute positioned sample intervals. Each block SHALL use intersecting Song-relative offsets, honoring placement/shape without retriggering. Capture and Finalise SHALL emit no host-scheduled wet. Missing elapsed lead-in SHALL NOT replay retroactively.
 
 #### Scenario: Start inside a swell
-- **WHEN** transport starts halfway through a resident prepared swell
-- **THEN** its wet contribution joins at that absolute offset with the disclosed admission ramp, not at the beginning of the render
+- **WHEN** Live transport starts halfway through a resident prepared swell
+- **THEN** its wet joins at that absolute offset with the disclosed admission ramp, not at render start
 
 #### Scenario: Block boundaries and negative lead-in
-- **WHEN** blocks of varying sizes cross event starts, ends or song sample zero
-- **THEN** samples match the positioned reference, with exclusive interval ends and no missing or repeated samples; negative lead-in is heard only if the host actually processes those positions
+- **WHEN** Live blocks of varying sizes cross event starts, ends or song sample zero
+- **THEN** samples match the positioned reference with exclusive ends and no missing/repeated samples; negative lead-in is heard only if the host processes those positions
+
+#### Scenario: Same timeline in Capture or Finalise
+- **WHEN** DAW playback visits a ready swell in Capture or Finalise
+- **THEN** no scheduled wet plays even though its verified audio remains retained for later Live use
 
 ### Requirement: Playback combines eligible overlapping swells
 Playback SHALL include all current, enabled, unmuted swells intersecting the block and honor session solo filtering. Selection and manual audition isolation SHALL not change live membership. Each swell SHALL retain its IR, shape, gain, placement and wet gap/overlap; the original source arrival SHALL remain fixed.
@@ -53,15 +58,19 @@ Playback SHALL include all current, enabled, unmuted swells intersecting the blo
 - **THEN** its wet contribution is excluded using a short transition without moving any source event
 
 ### Requirement: Live routing is independent of manual monitoring
-The plugin SHALL expose saved live playback enable, Dry + Wet/Wet Only routing and wet level controls, defaulting to enabled Dry + Wet and 0 dB user wet gain. Dry + Wet SHALL pass live dry unchanged and add only prepared wet. Wet Only SHALL suppress dry only while live playback is enabled and Song transport is playing. Disabled or stopped live playback SHALL preserve dry passthrough.
+Within Live, saved enable, Dry + Wet/Wet Only routing and wet level SHALL remain independent of audition, defaulting to enabled Dry + Wet at 0 dB. Dry + Wet SHALL add only prepared wet to unchanged input. Wet Only SHALL suppress dry only during enabled valid Live playback. Capture/Finalise SHALL preserve dry passthrough without modifying saved Live preferences.
 
 #### Scenario: Play in context
-- **WHEN** a prepared project plays in default Dry + Wet mode
-- **THEN** output is the live input plus the protected positioned wet, with no captured-dry replay, audition blend or audition trim applied
+- **WHEN** a prepared project plays in Live default Dry + Wet
+- **THEN** output is input plus protected positioned wet, without captured-dry replay or audition blend/trim
 
 #### Scenario: Route wet only and disable
-- **WHEN** the user selects Wet Only during Song playback and subsequently disables live playback
-- **THEN** enabled Wet Only outputs only prepared wet; disabling restores live dry and removes wet with disclosed short routing ramps
+- **WHEN** Wet Only is selected during Live playback and live playback is subsequently disabled
+- **THEN** enabled Wet Only outputs prepared wet and disabling restores dry/removes wet with disclosed short routing ramps
+
+#### Scenario: Enter Finalise from Wet Only
+- **WHEN** Finalise is entered from Live with Wet Only selected
+- **THEN** scheduled wet stops through the existing bounded transition, normal DAW output becomes dry passthrough and returning to Live restores the saved preference
 
 ### Requirement: Wet level protection is transparent
 Playback SHALL follow the saved gain policy. Legacy sessions SHALL retain their -6 dBFS fixed aggregate guard and -60 to 0 dB wet level. Musical sessions SHALL use the approved musical ceiling and actual-aggregate preparation from swell-gain-staging, with -60 to +12 dB user wet level. Gain SHALL ramp over 5 ms, protection SHALL remain fixed for an accepted schedule, and stored renders SHALL remain unchanged. The wet ceiling SHALL not be claimed for dry plus wet output.
@@ -148,11 +157,15 @@ Complete playback revisions SHALL become active at processing boundaries with sh
 - **THEN** the new revision uses its new absolute interval with a bounded transition, without shifting dry input or restarting unrelated swells
 
 ### Requirement: Capture excludes all generated output
-Mapping and scoped recapture SHALL read the original plugin input before dry routing, live wet, manual audition and diagnostic tone. Enabling playback or choosing Wet Only SHALL not change captured source samples.
+Capture/Recapture SHALL read original plugin input before routing, prepared wet, manual audition and diagnostic tone. Live and Finalise SHALL enqueue no source capture. Generated audio SHALL NOT enter the stored source through mode transitions or stale capture jobs.
 
 #### Scenario: Wet plays over silent input
-- **WHEN** mapping runs with zero dry input while prepared wet is audible
-- **THEN** committed samples remain zero and the generated wet never becomes a new detection or convolution source
+- **WHEN** Live plays prepared wet over zero dry input
+- **THEN** no capture is enqueued and zero input cannot become a new wet-driven detection/convolution source
+
+#### Scenario: Enter Capture after generated output
+- **WHEN** an instance changes to Capture after Live wet or internal preview
+- **THEN** newly admitted source contains only original input and no retired wet/preview/tone samples
 
 ### Requirement: Workspace distinguishes live and manual playback
 The workspace SHALL show live controls, host playhead and live readiness separately from manual Audition. Enabled Song playback SHALL stop and inhibit manual audition while playing; disabling live playback SHALL retain independent manual preview behavior. Stopping Song playback SHALL not automatically start audition. Preparation alone SHALL never request host Play.
@@ -274,3 +287,26 @@ A complete latest IR replacement SHALL become active at a processing boundary wi
 #### Scenario: Replacement exceeds resources
 - **WHEN** the old contribution plus pending preparation or handover cannot fit the supported memory budget
 - **THEN** the request reports resource pressure, retains eligible accepted output and does not silently raise the budget, truncate audio or allocate/block on the live callback
+
+### Requirement: Host offline rendering honors workflow mode
+Host offline rendering SHALL never capture source or settle an unfinished Capture pass implicitly. Live SHALL keep accepted-snapshot available-member export behavior and instance isolation. Capture/Finalise SHALL contribute dry passthrough without scheduled wet. Separately initiated internal preview SHALL not redefine host export routing.
+
+#### Scenario: Pending capture at bounce entry
+- **WHEN** a host bounce begins while source is provisional or Stop validation is settling
+- **THEN** no provisional source becomes accepted because of the bounce and no offline input is captured
+- **AND** output follows the admitted workflow mode and any unavailable contribution is explained
+
+#### Scenario: Two different modes export together
+- **WHEN** interleaved offline callbacks reach a Live instance and a Finalise instance
+- **THEN** the Live instance uses its own accepted wet snapshot/routing while Finalise passes dry without scheduled wet
+
+### Requirement: Mode output changes retain bounded audio safety
+Mode gating SHALL reuse bounded click-prevention transitions of at most 5 ms and retire audio ownership outside realtime processing. Returning to Live SHALL join current absolute time rather than resume an old cursor. Background preparation SHALL never start host transport or an internal voice.
+
+#### Scenario: Return during playback
+- **WHEN** the user returns from Finalise to Live during valid DAW playback
+- **THEN** eligible wet joins the current position safely without replaying prior lead-in or duplicating neighbours
+
+#### Scenario: Worker completion in Finalise
+- **WHEN** a render or IR replacement completes while Finalise is selected
+- **THEN** accepted state can update under its normal dependency guards but scheduled wet remains bypassed

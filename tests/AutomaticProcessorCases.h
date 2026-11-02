@@ -11,6 +11,7 @@ inline void automaticProcessorCases()
     const auto position=[&](int64_t sample){head.position.setTimeInSamples(sample);head.position.setPpqPosition(sample/24000.0);};
     const auto pass=[&](int64_t start,float scale=1)
     {
+        if(processor->getWorkflowSnapshot().mode!=workflow::Mode::capture)REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
         head.position.setIsPlaying(true);
         for(int block=0;block<24;++block)
         {
@@ -27,7 +28,7 @@ inline void automaticProcessorCases()
     };
     // Song bar 86 at 120 BPM/4:4, then bar 1, without any plugin capture/generate action.
     pass(85*96000);pass(0);
-    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->isMappingEnabled());engine.setAutoMarkers(true);
+    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::live);engine.setAutoMarkers(true);
     waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=4 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     auto s=engine.savedSession();REQUIRE(s.automaticProcessing && s.auditionDb==0);
     const auto map=processor->getCaptureSnapshot().manifest;
@@ -37,10 +38,10 @@ inline void automaticProcessorCases()
     engine.setPostRoll(0); // This routing fixture captures short disjoint ranges; extended context is tested separately.
     engine.setMonitoring(m3::AuditionMode::dryWet,.35f);waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().dryAvailable;});
     REQUIRE(engine.audition());buffer.clear();
-    REQUIRE(processor->armRecapture(300000,304096));head.position.setIsPlaying(true);position(300000);
+    armCaptureFixture(*processor);head.position.setIsPlaying(true);position(300000);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
-    REQUIRE(processor->flushCaptureForTesting());
+    finishCaptureFixture(*processor,head.position);
     const auto feedbackMap=processor->getCaptureSnapshot().manifest;
     CaptureAssetStore feedbackStore(engine.assetDirectory());SourceInterval capturedZero;juce::String feedbackError;
     REQUIRE(readSourceInterval(feedbackStore,feedbackMap,300000,304096,4096,capturedZero,feedbackError));
@@ -64,7 +65,9 @@ inline void automaticProcessorCases()
     const auto directory=engine.assetDirectory();
     for(const auto& r:map.ranges)if(!r.assetPath.empty())REQUIRE(directory.getChildFile(r.assetPath).deleteFile());
     auto recovery=std::make_unique<PreverbAudioProcessor>(root.file);recovery->prepareToPlay(48000,4096);recovery->setPlayHead(&head);
-    recovery->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(recovery->flushCaptureForTesting());recovery->processBlock(buffer,midi);
+    auto recoveryXml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
+    recoveryXml->setAttribute("workflowMode","Live");juce::MemoryBlock recoveryBytes;juce::AudioProcessor::copyXmlToBinary(*recoveryXml,recoveryBytes);
+    recovery->setStateInformation(recoveryBytes.getData(),static_cast<int>(recoveryBytes.getSize()));REQUIRE(recovery->flushCaptureForTesting());recovery->processBlock(buffer,midi);
     waitM3([&]{return recovery->swellEngine().snapshot().cachedWetOnly;});
     REQUIRE(!recovery->swellEngine().snapshot().auditionReady && !recovery->swellEngine().snapshot().dryAvailable);
     recovery->swellEngine().setMonitoring(m3::AuditionMode::wetOnly,.35f);

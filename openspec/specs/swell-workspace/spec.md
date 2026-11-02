@@ -6,19 +6,19 @@ Provide a usable single-screen workspace for inspecting captured audio and editi
 ## Requirements
 
 ### Requirement: Workspace reflects actual processing and selection
-The main view SHALL retain eight stable regions in six bands: branded header, full-width marker/regeneration controls, Swells/editor/Selected Swell columns, Audition, Overview and host info. Selection and processing SHALL replace content without moving dividers or bands. Rows SHALL show enabled state, name, own IR and actual state, bound by stable swell identity.
+The foundation workspace SHALL retain the existing eight-region Live composition while adding mode selection/status without a dedicated Capture/Finalise redesign. Capture/Finalise SHALL show mode-appropriate read-only content and lock unavailable creative actions. Selection/processing SHALL remain identity-bound and SHALL NOT imply a requested render or mode is already ready.
 
 #### Scenario: Select while background work completes
-- **WHEN** the user selects a swell while capture, analysis or another swell's rendering completes
-- **THEN** its row, handles and inspector remain bound to that identity and show its actual IR and state
+- **WHEN** the user selects a swell while allowed analysis or another swell's rendering completes
+- **THEN** its row, handles and inspector remain bound to that identity and show actual IR/state, with editing available only under mode guards
 
 #### Scenario: Empty or unavailable selection
-- **WHEN** the session is empty or the selected result is waiting, stale or failed
-- **THEN** the workspace explains the state and enables only valid actions without displaying false ready waveforms or controls
+- **WHEN** the session is empty or a result is waiting, stale or failed
+- **THEN** the workspace explains its state and enables only valid mode/selection actions without false ready waveforms
 
 #### Scenario: Stable empty and loaded composition
-- **WHEN** the same editor size transitions from empty through mapped/unselected to selected and updating
-- **THEN** all eight region bounds and column dividers stay fixed, global controls span the width above the inspector, and no diagnostics toolbar displaces the workspace
+- **WHEN** the same editor size transitions through empty, mapped, selected and updating states in this foundation
+- **THEN** existing region bounds/dividers remain coherent, no developer toolbar displaces them and mode/readiness text does not promise the deferred workspace/export implementation
 
 ### Requirement: Timeline navigation preserves exact edits
 The editor SHALL align dry, wet, arrivals and handles on one absolute Song scale with bar references, zoom, pan and snap. The overview SHALL distinguish audio, captured silence, unmapped and unavailable coverage and support viewport navigation. Navigation SHALL not edit render inputs. Display-only peak scaling SHALL remain disclosed.
@@ -248,11 +248,11 @@ Completion SHALL include matched native empty/mapped/selected screenshots and ru
 - **THEN** actual native screenshots, binding/coordinate assertions and regression results are traceable to requirements, and unavailable host or DPI checks are not marked passed
 
 ### Requirement: Both sensitivity controls remain global
-The full-width global band SHALL show Auto-marker On/Off, Marker sensitivity and Regeneration sensitivity as independent knobs with exact 0-100% entries. Marking SHALL remain separate from capture/automatic-processing policy. Lower regeneration sensitivity SHALL tolerate more performance variation; neither control SHALL reset selected-swell edits or other preferences.
+Marker sensitivity SHALL remain a saved instance preference independent of selection and Recapture. The prior Regeneration sensitivity value SHALL be preserved for compatibility but its implicit source-overwrite control SHALL be disabled/retired with an explanation. Mode/Recapture SHALL exclusively govern source admission; no replacement behavior SHALL be hidden behind either sensitivity.
 
 #### Scenario: Two distinct sensitivities
-- **WHEN** either knob is dragged or typed while different swells are selected
-- **THEN** its saved per-instance value and truthful status update while the other sensitivity stays unchanged and both remain visible outside Settings and Diagnostics
+- **WHEN** an older project restores either sensitivity value and the user changes marker sensitivity in an allowed mode
+- **THEN** marker selection policy remains independent, the saved tolerance value is retained without authorizing source overwrite, and selected-swell edits remain unchanged
 
 ### Requirement: IR choices are real and independently assigned
 The selected-swell IR dropdown SHALL list verified bundled catalogue responses and its current imported assignment, with an adjacent Load file action. Selection SHALL affect only the intended swell, preserve other assignments/future defaults and edits, honor freeze and report async failures. Pending replacement SHALL distinguish requested IR from retained audible IR. No fictional entries or new DSP controls SHALL appear.
@@ -292,3 +292,48 @@ Source start and exclusive end SHALL each have a matching full-height vertical b
 - **WHEN** a user selects a swell and drags either source boundary or types its paired value
 - **THEN** both boundary lines and the shaded span update at actual source coordinates without moving the dry audio, falsely filling capture gaps or confusing the arrival with the source start
 - **AND** the dependent render follows existing invalidation/preparation rules while unrelated swells remain unchanged
+
+### Requirement: Mode selector explains eligibility and transition locks
+The existing editor SHALL provide Capture, Live and Finalise selection with concise roles/status and unavailable reasons. Recording/Stop settlement SHALL lock mode selection. Capture readiness SHALL be distinguished from pending wet work; no export implementation or unverified host Play/Stop action SHALL be exposed by this foundation.
+
+#### Scenario: Stop is settling
+- **WHEN** a capture pass is draining or validating
+- **THEN** the mode control explains the lock, source remains provisional and no manual switch bypasses it
+- **AND** successful useful source acceptance automatically selects Live even with wet jobs still pending
+
+#### Scenario: Insufficient material
+- **WHEN** there is no useful compatible source or no enabled prepared swell
+- **THEN** Live/Finalise availability reflects the distinct prerequisites and explains what is missing
+
+### Requirement: Mode guards apply below disabled UI
+Capture SHALL reject creative editing and manual audition; Finalise SHALL reject creative editing while allowing only separately initiated supported preview. Live SHALL permit the current editor/audition capabilities under existing validity rules. Canvas, numeric fields, keyboard, Settings, Diagnostics and async chooser completions SHALL all obey the same mode authority.
+
+#### Scenario: Delayed file chooser changes mode
+- **WHEN** an IR chooser opened in Live completes after Finalise is entered
+- **THEN** the edit is rejected/cancelled with preserved definitions/assets rather than bypassing the read-only mode
+
+#### Scenario: Keyboard or recovery bypass attempt
+- **WHEN** an edit, generation or legacy mapping command is requested through a secondary path in a disallowing mode
+- **THEN** the model rejects the disallowed action, preserves state and provides the same reason as the visible control
+
+#### Scenario: Explicit preview versus host output
+- **WHEN** supported internal preview is explicitly started in Finalise
+- **THEN** it is clearly identified separately from dry-only DAW output and does not enable capture or host-scheduled wet
+
+### Requirement: Recapture status is independent and honest
+An explicitly labelled Recapture existing audio control SHALL show its armed/off/settling/failure state independently of Automatic Swells. Legacy mapping controls SHALL route through workflow guards or be unavailable with an explanation. Saved mode and toggles SHALL NOT silently overwrite source or enable another policy.
+
+#### Scenario: Return to Capture
+- **WHEN** the user returns from Live to Capture with existing mapped material
+- **THEN** protected coverage remains visible, Recapture remains off unless explicitly armed and the next ordinary playback fills unmapped positions only
+
+#### Scenario: Successful recapture finishes
+- **WHEN** a useful armed pass commits successfully on Stop
+- **THEN** Recapture shows off, Live is selected and background rendering status remains visible without claiming all swells ready
+
+### Requirement: Foundation visuals require native and host review
+Mode selection, guarded controls and source/settlement status SHALL remain usable at 1100x850 and existing larger supported sizes. Native evidence SHALL exercise empty, recording, settling, Live, Finalise and failure states. User visual review SHALL precede final FL Studio acceptance; untested host/DPI results SHALL remain open.
+
+#### Scenario: Review the minimal mode integration
+- **WHEN** the foundation UI is ready for review
+- **THEN** actual native captures and binding/guard tests show readable controls and no overlap, with a user checkpoint before broader host validation

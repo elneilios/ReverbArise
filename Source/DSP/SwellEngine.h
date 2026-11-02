@@ -5,6 +5,7 @@
 #include <Analysis/OnsetAnalysis.h>
 #include <Analysis/AutomaticTargets.h>
 #include <Core/TransportTime.h>
+#include <Core/WorkflowState.h>
 #include <Playback/TransportPlayback.h>
 #include <deque>
 #include <map>
@@ -51,8 +52,9 @@ struct EditorSnapshot
 class SwellEngine final : private juce::Thread
 {
 public:
-    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>);
+    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={});
     ~SwellEngine() override;
+    void useWorkflow(workflow::State& state,std::function<uint64_t()> captureEpoch={}) {workflowState=&state;captureEpochProvider=std::move(captureEpoch);}
     EditorSnapshot snapshot() const;
     Session savedSession() const;
     void restore(Session,juce::String expectedCaptureReference={});
@@ -84,8 +86,10 @@ public:
     bool setFrozen(const juce::String&,bool);
     void loadDefaultIR(const juce::File&);
     void resetSuppression();
-    void captureCommitted(int64_t start,int64_t end,uint64_t generation);
+    void captureCommitted(int64_t start,int64_t end,uint64_t generation,bool explicitRecapture=false);
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
+    void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
+    void captureStopped() noexcept;
     bool audition();
     void stop();
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
@@ -97,6 +101,11 @@ public:
     uint64_t residentBytes() const;
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
+    std::function<void()> persistentChange;
+    void persistentChangedLocked() {if(persistentChange)persistentChange();}
+    bool permitCreative();
+    workflow::State* workflowState=nullptr;
+    std::function<uint64_t()> captureEpochProvider;
     struct Runtime
     {
         std::shared_ptr<WetRender> raw,shaped,monitor;

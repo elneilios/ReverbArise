@@ -44,6 +44,7 @@ private:
     std::array<std::optional<m3::Swell>,valueCount> valueAnchors;
     std::array<double,valueCount> valueSpans{};
     std::array<uint64_t,valueCount> valueTokens{};
+    std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
     SongTime valueTime;
     m3::ui::InvocationComboBox irBox;
@@ -83,6 +84,9 @@ private:
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,selectedStatus,irStatus,monitorStatus,helper;
+    juce::ComboBox workflowBox;
+    juce::ToggleButton recaptureExisting{"Recapture existing audio"};
+    juce::Label workflowStatus;
     juce::TextButton diagnosticsButton{"Diagnostics"},trimResetButton{"Trim 0 dB"};
     juce::TextButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};
     juce::ToggleButton automaticButton{"Automatic processing"},sampleUnitsButton{"Exact sample positions"};
