@@ -1,5 +1,12 @@
 # ReverbArise — Product Vision
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../resources/logo/png/wordmark/reverbarise-wordmark-dark-1024px.png">
+    <img src="../resources/logo/png/wordmark/reverbarise-wordmark-light-1024px.png" alt="ReverbArise" width="480">
+  </picture>
+</p>
+
 **Edition:** 1.0 · **Product direction:** Approved
 
 ## 1. Product identity
