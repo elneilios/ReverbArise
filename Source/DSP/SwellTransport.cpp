@@ -103,6 +103,7 @@ void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
     const juce::ScopedLock guard(lock);
     if(!std::isfinite(db) || db< -60 || db>(model.gainPolicy==GainPolicy::musical?12:0) || static_cast<int>(routing)<0 || static_cast<int>(routing)>1)return;
     const auto gainChanged=model.liveWetDb!=db;
+    if(model.liveEnabled!=enabled || model.liveRouting!=routing || gainChanged)persistentChangedLocked();
     model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
     liveEnabled=enabled;live.configure(enabled,routing,db);
     if(gainChanged && model.gainPolicy==GainPolicy::musical)invalidateLiveLocked();else notify();
@@ -132,20 +133,22 @@ bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,co
 void SwellEngine::setRegenerationSensitivity(float value)
 {
     if(!std::isfinite(value) || value<0 || value>1)return;
-    const juce::ScopedLock guard(lock);model.regenerationSensitivity=value;regeneration=value;
+    const juce::ScopedLock guard(lock);if(model.regenerationSensitivity!=value)persistentChangedLocked();model.regenerationSensitivity=value;regeneration=value;
 }
 bool SwellEngine::setFrozen(const juce::String& id,bool frozen)
 {
+    if(!permitCreative())return false;
     const juce::ScopedLock guard(lock);auto w=find(model,id);if(!w)return false;
     if(w->frozen==frozen)return true;
     if(frozen && (w->phase!=Phase::ready || !w->render.present())){message="Wait for a ready render before freezing";return false;}
-    w->frozen=frozen;w->provenance=Provenance::manualEdited;
+    w->frozen=frozen;w->provenance=Provenance::manualEdited;persistentChangedLocked();
     if(frozen){w->status="Frozen render";forceRefresh.erase(id);}
     else {++w->inputGeneration;w->phase=Phase::checking;w->status="Checking unfrozen source";forceRefresh.insert(id);invalidateLiveLocked(id);}
     ++monitoringGeneration;notify();return true;
 }
 void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const TransportTime& hostTime)
 {
+    if(workflowState && workflowState->snapshot().mode!=workflow::Mode::live){endOffline();return;}
     if(frames<=0)return;
     offlineBlockCount.fetch_add(1,std::memory_order_relaxed);
     const auto starting=!offlineActive.exchange(true);

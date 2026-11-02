@@ -7,8 +7,13 @@
 
 namespace m3
 {
-SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context)
-    :Thread("Preverb Swells"),root(std::move(path)),contextProvider(std::move(context))
+bool SwellEngine::permitCreative()
+{
+    if(!workflowState || workflowState->snapshot().mode==workflow::Mode::live)return true;
+    const juce::ScopedLock guard(lock);message="Creative editing is available in Live mode";return false;
+}
+SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
+    :Thread("Preverb Swells"),persistentChange(std::move(changed)),root(std::move(path)),contextProvider(std::move(context))
 { voice.setLevel(1); startThread(); }
 SwellEngine::~SwellEngine() { signalThreadShouldExit(); sessionGeneration.fetch_add(1); stopThread(-1); }
 void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true); }
@@ -68,6 +73,8 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 }
 void SwellEngine::clear()
 {
+    if(workflowState && (workflowState->snapshot().mode!=workflow::Mode::capture || workflowState->snapshot().locked()))
+    {diagnostic("Clear requires stopped idle Capture mode");return;}
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();analyzedContent.clear();trailing.reset();
@@ -79,13 +86,14 @@ void SwellEngine::clear()
 }
 bool SwellEngine::addTarget(int64_t arrival)
 {
+    if(!permitCreative())return false;
     const auto context=contextProvider(); const juce::ScopedLock guard(lock);
     std::vector<int64_t> arrivals; for(const auto& c:candidates) arrivals.push_back(c.sample);
     if(!add(model,arrival,context.capture.manifest,context.time,arrivals,message)) return false;
     ++monitoringGeneration;auto& w=model.swells.back();w.detectorAnchor=arrival;w.ir=model.defaultIR;w.irName=model.defaultIRName;
     w.phase=Phase::stale;w.status=w.ir.present()?"Target added":"Waiting for default IR";
     nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
-    stopLocked(); message="Target added"; return true;
+    stopLocked(); message="Target added";persistentChangedLocked();return true;
 }
 bool SwellEngine::confirmCandidate(size_t index)
 {
@@ -101,9 +109,10 @@ bool SwellEngine::confirmCandidateAt(int64_t arrival)
 }
 void SwellEngine::removeSelected()
 {
+    if(!permitCreative())return;
     const juce::ScopedLock guard(lock); stopLocked();
     ++monitoringGeneration;const auto selected=model.selected;
-    for(const auto& id:selected) if(suppressAndErase(model,id,message)) { invalidateLiveLocked(id);runtime.erase(id); forceRefresh.erase(id); }
+    for(const auto& id:selected) if(suppressAndErase(model,id,message)) { invalidateLiveLocked(id);runtime.erase(id); forceRefresh.erase(id);persistentChangedLocked(); }
 }
 bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce::String& primary)
 {
@@ -115,6 +124,8 @@ bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,ju
 {return editChecked(id,operation);}
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
+    if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
+    {diagnostic("Gain policy needs idle Capture or Live mode");return false;}
     const juce::ScopedLock guard(lock);actionError.clear();
     if(policy!=GainPolicy::legacy && policy!=GainPolicy::musical){actionError="Unknown gain policy";return false;}
     if(policy==model.gainPolicy && (policy==GainPolicy::legacy || model.gainRevision==approvedGainRevision))return true;
@@ -134,10 +145,11 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
     ++monitoringGeneration;invalidateLiveLocked();live.configure(model.liveEnabled,model.liveRouting,model.liveWetDb);
     for(auto& [id,r]:runtime){r.preparedShape=UINT64_MAX;r.preparedMonitor=UINT64_MAX;}
     message=policy==GainPolicy::musical?"Musical gain staging selected; preparing calibrated swells":"Legacy gain staging selected";
-    notify();return true;
+    persistentChangedLocked();notify();return true;
 }
 bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset)
 {
+    if(!permitCreative())return false;
     const juce::ScopedLock guard(lock); auto w=find(model,id); if(!w) return false;
     actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return false;
     if(candidate.id!=id) { message="Swell identity cannot be edited"; return false; }
@@ -169,10 +181,12 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     if(support){candidate.phase=Phase::checking;candidate.status="Preparing extended wet support";forceRefresh.insert(id);}
     if(allowReset && input){candidate.phase=Phase::checking;candidate.status="Checking Reset all dependencies";forceRefresh.insert(id);}
     if(input)nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
+    if(!sameSavedSwell(*w,candidate))persistentChangedLocked();
     ++monitoringGeneration;*w=std::move(candidate);notify(); return true;
 }
 void SwellEngine::loadIR(const juce::File& file,bool primaryOnly)
 {
+    if(!permitCreative())return;
     if(file==juce::File{}) return;
     const auto context=contextProvider();
     const juce::ScopedLock guard(lock); if(model.selected.empty()) { message="Add or select a swell before loading its IR"; return; }
@@ -192,6 +206,7 @@ void SwellEngine::loadIR(const juce::File& file,bool primaryOnly)
 }
 void SwellEngine::generate(bool all)
 {
+    if(!permitCreative())return;
     const auto context=contextProvider(); const juce::ScopedLock guard(lock); stopLocked();
     if(context.time.valid && context.capture.manifest.sampleRate==context.time.rate) model.timing=context.time;
     for(auto& w:model.swells)
@@ -210,6 +225,7 @@ bool SwellEngine::assignBundledIR(const juce::String& id,uint64_t expectedInput,
 }
 bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,const juce::String& presetId,uint64_t expectedSession)
 {
+    if(!permitCreative())return false;
     const auto context=contextProvider();
     const juce::ScopedLock guard(lock);actionError.clear();auto w=find(model,id);
     if(!w || w->inputGeneration!=expectedInput || (expectedSession!=0 && expectedSession!=sessionGeneration.load())){message="IR assignment superseded; select the swell again";return false;}
@@ -225,6 +241,7 @@ bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const ju
 }
 bool SwellEngine::resetSwell(const juce::String& id,bool allSettings)
 {
+    if(!permitCreative())return false;
     const auto context=contextProvider();const juce::ScopedLock guard(lock);const auto w=find(model,id);
     actionError.clear();
     if(!w)return false;
@@ -270,6 +287,7 @@ void SwellEngine::resetJob(const Reset& job)
 }
 void SwellEngine::analyze(int64_t start,int64_t end)
 {
+    if(!permitCreative())return;
     const juce::ScopedLock guard(lock);
     if(end<=start) { message="Analysis needs a positive covered range"; return; }
     const auto token=analysisRequest.fetch_add(1)+1;
@@ -279,18 +297,24 @@ void SwellEngine::analyze(int64_t start,int64_t end)
 void SwellEngine::setPreferences(float db,float sensitivity,double separation,bool automatic)
 {
     const juce::ScopedLock guard(lock);
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && (sensitivity!=model.sensitivity || separation!=model.separationSeconds || automatic!=model.autoRegenerate))
+    {message="Creative preferences are locked in Finalise";return;}
     if(!std::isfinite(db) || !std::isfinite(sensitivity) || !std::isfinite(separation)) { message="Preferences must be finite"; return; }
     const auto changed=sensitivity!=model.sensitivity || separation!=model.separationSeconds;
+    const auto savedChanged=model.auditionDb!=std::clamp(db,-60.0f,0.0f) || model.sensitivity!=std::clamp(sensitivity,0.0f,1.0f)
+        || model.separationSeconds!=std::clamp(separation,0.001,2.0) || model.autoRegenerate!=automatic;
     if(changed){++markerGeneration;nextMarkerAnalysis=juce::Time::getMillisecondCounterHiRes()+200;}
     if(changed && model.automaticProcessing && model.autoMarkersEnabled){const auto context=contextProvider();for(const auto& r:context.capture.manifest.ranges)
         {int64_t end;if(r.frameCount<=INT64_MAX && checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))dirtyLocked(r.startSample,end);}}
     model.auditionDb=std::clamp(db,-60.0f,0.0f); model.sensitivity=std::clamp(sensitivity,0.0f,1.0f);
     model.separationSeconds=std::clamp(separation,0.001,2.0); model.autoRegenerate=automatic;
+    if(savedChanged)persistentChangedLocked();
     voice.setLevel(juce::Decibels::decibelsToGain(model.auditionDb));notify();
 }
 bool SwellEngine::audition()
 {
-    if(liveEnabled.load() && transportActive.load())return false;
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return false;
+    if((!workflowState || workflowState->snapshot().mode==workflow::Mode::live) && liveEnabled.load() && transportActive.load())return false;
     const juce::ScopedLock guard(lock); const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
     if(!w || at==runtime.end() || !at->second.monitor || at->second.preparedMonitor!=monitoringGeneration
         || at->second.preparedShape!=w->shapeGeneration || at->second.preparedRender!=w->render.content) return false;
@@ -304,7 +328,7 @@ bool SwellEngine::audition()
 void SwellEngine::stop() { const juce::ScopedLock guard(lock); voice.stop(); }
 void SwellEngine::processAudio(float* left,float* right,int frames,const SongTime& time) noexcept
 {
-    auto allowed=audioAllowed.load();
+    auto allowed=audioAllowed.load() && (!workflowState || workflowState->snapshot().mode!=workflow::Mode::capture);
     if(allowed && (!time.valid || time.rate!=expectedRate.load() || time.bpm!=expectedBpm.load()
         || time.numerator!=expectedNumerator.load() || time.denominator!=expectedDenominator.load()))
     { if(time.valid)timingChanged=true; allowed=false; audioAllowed=false; }
@@ -329,10 +353,17 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
         previousTransportTime=time.song;previousTransportEnd=blockEnd;previousTransportPlaying=time.playing;
     }else previousTransportPlaying=false;
     loopSequence.fetch_add(1,std::memory_order_acq_rel);loopHint=time.looping;loopHintStart=time.loopStart;loopHintEnd=time.loopEnd;loopSequence.fetch_add(1,std::memory_order_release);
-    const auto priority=liveEnabled.load() && time.playing;
+    const auto modeAllows=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
+    const auto priority=modeAllows && liveEnabled.load() && time.playing;
     if(priority && !songPriority)voice.stop();songPriority=priority;
-    live.process(left,right,frames,time);
+    live.process(left,right,frames,time,modeAllows);
     processAudio(left,right,frames,time.song);
+}
+void SwellEngine::captureStopped() noexcept
+{
+    if(!previousTransportPlaying || currentPassStart>=previousTransportEnd)return;
+    passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=currentPassStart;passEnd=previousTransportEnd;
+    passSession=sessionGeneration.load(std::memory_order_acquire);passSequence.fetch_add(1,std::memory_order_release);
 }
 void SwellEngine::recaptureCompleted(int64_t a,int64_t b)
 {
@@ -470,7 +501,8 @@ void SwellEngine::importJob(const Import& job)
     const juce::ScopedLock guard(lock);
     if(job.session!=sessionGeneration.load())return;
     if(job.futureDefault)
-    {if(ok){model.defaultIR=asset;model.defaultIRName=job.file.getFileName();defaultError.clear();}message=ok?"Default IR for future swells updated":error;return;}
+    {if(ok){if(model.defaultIR!=asset || model.defaultIRName!=job.file.getFileName())persistentChangedLocked();
+        model.defaultIR=asset;model.defaultIRName=job.file.getFileName();defaultError.clear();}message=ok?"Default IR for future swells updated":error;return;}
     for(const auto& [id,generation]:job.targets)
     {
         if(cancelled(id,generation,job.session)) continue; auto& w=*find(model,id);if(w.frozen)continue;
@@ -478,6 +510,7 @@ void SwellEngine::importJob(const Import& job)
             const auto kept=retainedIR.find(id);
             const auto identical=kept!=retainedIR.end() && retainedCompatible(kept->second,w,context)
                 && kept->second.accepted.ir.content==asset.content && w.render==kept->second.accepted.render;
+            if(w.ir!=asset || w.irName!=label)persistentChangedLocked();
             w.ir=asset;w.irName=label;w.phase=identical?Phase::ready:Phase::stale;
             w.status=identical?"Ready (identical IR content)":"IR: "+label+"; regenerate";if(identical)++liveRevision;}
         else { w.phase=Phase::error; w.status=error; }
@@ -681,7 +714,10 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     {report(requested,session,Phase::checking,"Source changed during waveform preparation; checking again");return;}
     auto wave=waveform(*raw);
     const juce::ScopedLock guard(lock); if(cancel()) return;
-    auto& w=*find(model,requested.id); ++monitoringGeneration;w.render=committed;w.calibration=calibration; w.supportOffset=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd); w.phase=Phase::ready; w.progress=1; w.status=cached?"Ready (verified saved render)":"Ready (committed render)";
+    auto& w=*find(model,requested.id); ++monitoringGeneration;
+    const auto support=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd);
+    if(w.render!=committed || w.calibration!=calibration || w.supportOffset!=support)persistentChangedLocked();
+    w.render=committed;w.calibration=calibration;w.supportOffset=support;w.phase=Phase::ready; w.progress=1; w.status=cached?"Ready (verified saved render)":"Ready (committed render)";
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);
     else ++liveRevision;

@@ -4,7 +4,7 @@ inline void multipleExportCases()
 {
     TestDirectory root;const auto irFile=root.file.getChildFile("two-track-ir.wav");writeTestWav(irFile,1,1000,std::vector<float>(101,.001f));
     std::array<std::unique_ptr<PreverbAudioProcessor>,2> processors;
-    std::array<TestPlayHead,2> heads;juce::MidiBuffer midi;std::array<juce::String,2> finalIds;
+    std::array<TestPlayHead,2> heads;juce::MidiBuffer midi;std::array<juce::String,2> finalIds;juce::String waitingId;
     const auto position=[&](int i,int64_t at,bool playing){auto& h=heads[i].position;h.setIsPlaying(playing);h.setTimeInSamples(at);h.setPpqPosition(at/500.0);};
     for(int i=0;i<2;++i){auto& p=processors[i];p=std::make_unique<PreverbAudioProcessor>(root.file);p->prepareToPlay(1000,1024);p->setPlayHead(&heads[i]);
         auto& e=p->swellEngine();e.setAutomaticProcessing(false);e.setAutoMarkers(false);
@@ -12,14 +12,20 @@ inline void multipleExportCases()
         heads[i].position.setBpm(120);heads[i].position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
         juce::AudioBuffer<float> b(2,1000);for(int at=0;at<4001;at+=1000){const auto n=std::min(1000,4001-at);b.setSize(2,n);position(i,at,true);
             for(int c=0;c<2;++c)std::fill_n(b.getWritePointer(c),n,i?.25f:.125f);p->processBlock(b,midi);REQUIRE(p->flushCaptureForTesting());}
-        p->setMappingEnabled(false);position(i,0,false);b.clear();p->processBlock(b,midi);
+        finishCaptureFixture(*p,heads[i].position);position(i,0,false);b.clear();p->processBlock(b,midi);
         REQUIRE(e.addTarget(500));const auto first=e.savedSession().primary;REQUIRE(e.addTarget(3900));finalIds[i]=e.savedSession().primary;
         REQUIRE(e.selectTargets({first,finalIds[i]},first));e.loadIR(irFile);
         waitM3([&]{return e.savedSession().swells.back().irName=="two-track-ir.wav";});e.generate(true);
         waitM3([&]{const auto s=e.savedSession();return std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         e.setLivePlayback(true,m3::LiveRouting::wetOnly,0);
         if(i){REQUIRE(e.edit(finalIds[i],[](auto& w,auto&){w.provenance=m3::Provenance::automatic;return true;}));e.setAutomaticProcessing(true);
-            waitM3([&]{return m3::find(e.savedSession(),finalIds[i])->status=="Waiting for source";});}}
+            waitM3([&]{return m3::find(e.savedSession(),finalIds[i])->phase==m3::Phase::ready;});
+            // Stop now bounds the real final event. Use a genuinely unmapped,
+            // protected source range to exercise available-member warnings.
+            auto session=e.savedSession();auto waiting=session.swells.front();waiting.id=juce::Uuid().toDashedString();waitingId=waiting.id;
+            waiting.arrival=waiting.sourceStart=6000;waiting.sourceEnd=6500;waiting.render={};waiting.provenance=m3::Provenance::manualEdited;waiting.phase=m3::Phase::stale;
+            session.swells.push_back(waiting);e.restore(session);
+            waitM3([&]{return m3::find(e.savedSession(),waitingId)->status=="Waiting for source" && m3::find(e.savedSession(),finalIds[i])->phase==m3::Phase::ready;});}}
     REQUIRE(processors[0]->getCaptureSnapshot().manifest.instanceId!=processors[1]->getCaptureSnapshot().manifest.instanceId);
     REQUIRE(processors[0]->swellEngine().snapshot().offlineBlocks==0 && processors[1]->swellEngine().snapshot().offlineBlocks==0);
     // A waiting marker warns, while already audible contributions still export.
@@ -27,10 +33,13 @@ inline void multipleExportCases()
         processors[i]->setNonRealtime(true);position(i,450,false);juce::AudioBuffer<float> b(2,16);b.clear();if(i)for(int c=0;c<2;++c)std::fill_n(b.getWritePointer(c),16,.4f);processors[i]->processBlock(b,midi);
         if(i){REQUIRE(processors[i]->swellEngine().snapshot().liveStatus.startsWith("Export warning"));REQUIRE(std::abs(b.getSample(0,10)-(.4f+61*.00025f))<1e-6);processors[i]->swellEngine().setLivePlayback(true,m3::LiveRouting::wetOnly,0);}
         REQUIRE(b.getMagnitude(0,16)>0);processors[i]->setNonRealtime(false);}
+    REQUIRE(processors[1]->swellEngine().selectTargets({waitingId},waitingId));processors[1]->swellEngine().removeSelected();
     // An explicit [0,4000) loop has real captured data through 4001 due to rounding.
     heads[1].position.setIsLooping(true);heads[1].position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});position(1,0,false);
     juce::AudioBuffer<float> tick(2,64);tick.clear();processors[1]->processBlock(tick,midi);
-    waitM3([&]{return m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->phase==m3::Phase::ready;});
+    try {waitM3([&]{const auto saved=processors[1]->swellEngine().savedSession();const auto w=m3::find(saved,finalIds[1]);return w && w->phase==m3::Phase::ready && w->sourceEnd==4000;});}
+    catch(...){const auto state=processors[1]->swellEngine().snapshot();const auto w=m3::find(state.session,finalIds[1]);const auto timing=processors[1]->getHostPositionDiagnostics();
+        std::cerr<<"Final loop fit: end="<<w->sourceEnd<<" provenance="<<static_cast<int>(w->provenance)<<" status="<<w->status<<" automatic="<<state.session.automaticProcessing<<" loop="<<timing.loopStart<<":"<<timing.loopEnd<<" | "<<state.message<<"\n";throw;}
     REQUIRE(m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->sourceEnd==4000);
     // Saved final-tail fitting survives reopen with loop flags no longer supplied.
     auto reopened=processors[1]->swellEngine().savedSession();heads[1].position.setIsLooping(false);

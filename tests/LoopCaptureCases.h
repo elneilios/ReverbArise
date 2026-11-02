@@ -29,11 +29,11 @@ inline void loopCaptureCases()
     const auto block=[&](int at,int frames){buffer.setSize(2,frames);for(int c=0;c<2;++c)for(int n=0;n<frames;++n)buffer.setSample(c,n,source[(at+n)*2+c]);
         head.position.setTimeInSamples(at);head.position.setPpqPosition(at/24000.0);
         {AudioAllocationGuard guard;p->processBlock(buffer,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);};
-    const auto pass=[&](int stride){for(int at=0;at<96000;at+=stride){block(at,std::min(stride,96000-at));juce::Thread::sleep(1);}REQUIRE(p->flushCaptureForTesting());};
+    const auto pass=[&](int stride){head.position.setIsPlaying(true);for(int at=0;at<96000;at+=stride){block(at,std::min(stride,96000-at));juce::Thread::sleep(1);}finishCaptureFixture(*p,head.position);};
     pass(4096);
-    waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=3 && s.swells.back().status=="Waiting for source";});
-    const auto finalId=engine.savedSession().swells.back().id;REQUIRE(m3::find(engine.savedSession(),finalId)->sourceEnd>96000);
-    // No advertised host cycle points: backward Song wrap closes the first pass.
+    waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=3 && s.swells.back().phase==m3::Phase::ready;});
+    const auto finalId=engine.savedSession().swells.back().id;REQUIRE(m3::find(engine.savedSession(),finalId)->sourceEnd==96000);
+    // Stop now closes the atomic source pass; later Live loops do not recapture.
     block(0,512);REQUIRE(p->flushCaptureForTesting());
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && !s.analyzing && s.pendingIntervals==0 && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     const auto initial=engine.savedSession();const auto captured=p->getCaptureSnapshot();const auto renders=engine.snapshot().renderCount;const auto analyses=engine.snapshot().analysisCount;
@@ -54,16 +54,17 @@ inline void loopCaptureCases()
         restored.setAutoMarkers(false);restored.setAutoMarkers(true);
         waitM3([&]{const auto s=restored.snapshot();return !s.analyzing && s.pendingIntervals==0;});
         REQUIRE(m3::find(restored.savedSession(),finalId)->sourceEnd==96000 && m3::find(restored.savedSession(),finalId)->phase==m3::Phase::ready);}
-    // Exact regeneration sensitivity still refreshes a short source edit.
+    // Source changes now require explicit Capture/Recapture, not sensitivity.
     engine.setRegenerationSensitivity(1);
     for(int n=48100;n<48120;++n){source[n*2]*=.5f;source[n*2+1]*=.5f;}
-    head.position.setIsPlaying(true);pass(2048);
+    armCaptureFixture(*p);head.position.setIsPlaying(true);pass(2048);
     waitM3([&]{const auto s=engine.snapshot();return s.renderCount>renders && !s.analyzing && s.pendingIntervals==0 && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     for(const auto& old:initial.swells)if(old.sourceStart>49000 || old.sourceEnd<48000)REQUIRE(m3::find(engine.savedSession(),old.id)->render==old.render);
     // A later genuine extension removes the inferred cap; growing capture is
     // never padded and the ordinary automatic source window becomes usable.
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));head.position.setIsPlaying(true);
     for(int at=96000;at<120000;at+=4096){const auto count=std::min(4096,120000-at);buffer.setSize(2,count);buffer.clear();
         head.position.setTimeInSamples(at);head.position.setPpqPosition(at/24000.0);p->processBlock(buffer,midi);}
-    REQUIRE(p->flushCaptureForTesting());
+    finishCaptureFixture(*p,head.position);
     waitM3([&]{const auto state=engine.savedSession();const auto last=m3::find(state,finalId);return last && last->sourceEnd==last->arrival+24000 && last->phase==m3::Phase::ready;});
 }

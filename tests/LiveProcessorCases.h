@@ -8,7 +8,7 @@ inline void liveProcessorCases()
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/250.0);};
     juce::AudioBuffer<float> buffer(2,1000);juce::MidiBuffer midi;position(0,true);
     for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),1000,.125f);
-    p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());p->setMappingEnabled(false);position(0,false);buffer.clear();p->processBlock(buffer,midi);
+    p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());finishCaptureFixture(*p,head.position);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.addTarget(500));const auto first=engine.savedSession().primary;REQUIRE(engine.addTarget(520));const auto second=engine.savedSession().primary;
     REQUIRE(engine.selectTargets({first,second},first));std::vector<float> ir(101,.001f);auto file=root.file.getChildFile("live-ir.wav");writeTestWav(file,1,1000,ir);engine.loadIR(file);
     waitM3([&]{return engine.savedSession().swells[0].irName=="live-ir.wav" && engine.savedSession().swells[1].irName=="live-ir.wav";});engine.generate(true);
@@ -27,19 +27,19 @@ inline void liveProcessorCases()
     waitM3([&]{return engine.snapshot().liveReady;});position(416,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(buffer.getMagnitude(5,11)==0); // One-frame crop is silent after the old wet's <=5 ms discharge.
     REQUIRE(engine.edit(second,[&](auto& w,auto&){w.shape=originalShape;return true;}));waitM3([&]{return engine.snapshot().liveReady;});
-    REQUIRE(p->armRecapture(450,466));position(450,true);buffer.clear();p->processBlock(buffer,midi);REQUIRE(buffer.getMagnitude(0,16)>0);
-    REQUIRE(p->flushCaptureForTesting());
+    armCaptureFixture(*p);position(450,true);buffer.clear();p->processBlock(buffer,midi);REQUIRE(buffer.getMagnitude(5,11)==0);
+    finishCaptureFixture(*p,head.position);
     {const auto zeroMap=p->getCaptureSnapshot().manifest;CaptureAssetStore zeroStore(root.file.getChildFile(zeroMap.projectId).getChildFile(zeroMap.instanceId));SourceInterval zero;juce::String error;
         REQUIRE(readSourceInterval(zeroStore,zeroMap,450,466,1000,zero,error));for(auto value:zero.samples)REQUIRE(value==0);}
     // Dry passthrough and capture are independent of Wet Only routing.
-    engine.setLivePlayback(true,m3::LiveRouting::wetOnly,0);p->setMappingEnabled(true);position(450,true);
+    engine.setLivePlayback(true,m3::LiveRouting::wetOnly,0);armCaptureFixture(*p);position(450,true);
     for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),16,.25f);
-    p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());
-    REQUIRE(buffer.getSample(0,15)<.1f);
+    p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
+    REQUIRE(buffer.getSample(0,15)==.25f); // Capture always passes original dry.
     const auto map=p->getCaptureSnapshot().manifest;
     CaptureAssetStore store(root.file.getChildFile(map.projectId).getChildFile(map.instanceId));SourceInterval dry;juce::String error;
     REQUIRE(readSourceInterval(store,map,450,466,1000,dry,error));for(auto value:dry.samples)REQUIRE(value==.25f);
-    p->setMappingEnabled(false);engine.setLivePlayback(false,m3::LiveRouting::dryWet,0);position(466,false);
+    finishCaptureFixture(*p,head.position);engine.setLivePlayback(false,m3::LiveRouting::dryWet,0);position(466,false);
     for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),16,.125f);p->processBlock(buffer,midi);
     REQUIRE(buffer.getSample(0,15)==.125f);
     REQUIRE(engine.residentBytes()<=previewMemoryBudget);
@@ -57,12 +57,12 @@ inline void liveProcessorCases()
     REQUIRE(engine.edit(first,[](auto& w,auto&){w.solo=false;return true;}));
     position(490,false);buffer.clear();p->processBlock(buffer,midi);waitM3([&]{return engine.snapshot().liveReady;});
     const auto count=engine.snapshot().renderCount;
-    REQUIRE(p->armRecapture(500,750));buffer.setSize(2,250);position(500,true);
-    for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.125f);p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());
+    armCaptureFixture(*p);buffer.setSize(2,250);position(500,true);
+    for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.125f);p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
     waitM3([&]{return engine.snapshot().liveReady && engine.savedSession().swells[1].phase==m3::Phase::ready;});
     REQUIRE(engine.snapshot().renderCount==count);
-    REQUIRE(p->armRecapture(500,750));position(500,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.25f);
-    p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());
+    armCaptureFixture(*p);position(500,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.25f);
+    p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.renderCount>count && s.session.swells[1].phase==m3::Phase::ready;});
     buffer.setSize(2,16);position(490,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(std::abs(buffer.getSample(0,10)-41*.00025f)<1e-6f);
@@ -88,7 +88,7 @@ inline void liveProcessorCases()
     head.position.setBpm(240);position(490,true);buffer.clear();p->processBlock(buffer,midi);REQUIRE(buffer.getMagnitude(0,16)==0);
     // Clearing/restoring cannot expose an old publication before validation.
     engine.generate(true);position(490,false);buffer.clear();p->processBlock(buffer,midi);waitM3([&]{return engine.snapshot().liveReady && engine.savedSession().swells[1].phase==m3::Phase::ready;});
-    REQUIRE(engine.selectTargets({second},second));auto saved=engine.savedSession();p->requestClearCapture();REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(engine.selectTargets({second},second));auto saved=engine.savedSession();REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));p->requestClearCapture();REQUIRE(p->flushCaptureForTesting());
     engine.restore(saved);position(490,true);buffer.clear();p->processBlock(buffer,midi);REQUIRE(buffer.getMagnitude(0,16)==0);
     waitM3([&]{return engine.snapshot().cachedWetOnly;});buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(buffer.getMagnitude(0,16)==0); // Labeled manual recovery never enters live playback.

@@ -21,7 +21,7 @@ inline void m3ProcessorCases()
     processor->setMappingEnabled(true);
     for(int block=0;block<2;++block)
     {position(block*1000);buffer.clear();buffer.setSample(0,0,0.25f);buffer.setSample(1,0,-0.5f);processor->processBlock(buffer,midi);}
-    processor->setMappingEnabled(false);REQUIRE(processor->flushCaptureForTesting());
+    finishCaptureFixture(*processor,head.position);REQUIRE(processor->flushCaptureForTesting());
     auto& engine=processor->swellEngine();REQUIRE(engine.addTarget(0));const auto first=engine.savedSession().primary;
     REQUIRE(engine.addTarget(1000));const auto second=engine.savedSession().primary;
     REQUIRE(engine.selectTargets({first,second},first));const auto original=root.file.getChildFile("m3-ir.wav");
@@ -46,13 +46,13 @@ inline void m3ProcessorCases()
     engine.loadIR(original);verifyInFlightSave();waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready;});
     REQUIRE(engine.snapshot().renderCount==beforeIdentical); // Same verified PCM needs no convolution.
     engine.generate(true);waitM3([&]{return engine.snapshot().auditionReady;});
-    REQUIRE(processor->armRecapture(7000,7100));verifyInFlightSave();processor->cancelRecapture();
+    armCaptureFixture(*processor);verifyInFlightSave();processor->cancelRecapture();REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
     // Live preferences persist independently from the selected edit and audition trim.
     auto liveState=engine.savedSession();liveState.liveEnabled=false;liveState.liveRouting=m3::LiveRouting::wetOnly;liveState.liveWetDb=-7.5f;
     engine.restore(liveState);waitM3([&]{return engine.snapshot().auditionReady;});
     juce::MemoryBlock saved;processor->getStateInformation(saved);const auto savedModel=engine.savedSession();
     const auto capture=processor->getCaptureSnapshot();REQUIRE(saved.getSize()<16384);
-    auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(xml && xml->getIntAttribute("stateVersion")==7);
+    auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(xml && xml->getIntAttribute("stateVersion")==8);
     const auto rejected=[&](juce::XmlElement& bad)
     {
         juce::MemoryBlock bytes;juce::AudioProcessor::copyXmlToBinary(bad,bytes);processor->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
@@ -63,26 +63,26 @@ inline void m3ProcessorCases()
     bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("manifestReference","../outside.json");rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);auto child=bad->getChildByName("SwellSession");auto json=child->getAllSubText();
     child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 8","\"version\": 9"));rejected(*bad);
-    // Audition is audible in output but admission captures only the original dry silence.
-    REQUIRE(engine.audition());REQUIRE(processor->armRecapture(3000,3200));buffer.setSize(2,500);buffer.clear();position(2900);
+    // Entering Capture stops preview; capture still reads only original dry.
+    REQUIRE(engine.audition());armCaptureFixture(*processor);buffer.setSize(2,500);buffer.clear();head.position.setIsPlaying(true);position(2900);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}
-    REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && buffer.getMagnitude(0,500)>0);
-    REQUIRE(processor->flushCaptureForTesting());REQUIRE(!processor->getRecaptureSnapshot().active && processor->getRecaptureSnapshot().covered==200);
+    REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && buffer.getMagnitude(5,495)==0);
+    finishCaptureFixture(*processor,head.position);REQUIRE(!processor->getWorkflowSnapshot().recapture);
     auto manifest=processor->getCaptureSnapshot().manifest;CaptureAssetStore assets(root.file.getChildFile(manifest.projectId).getChildFile(manifest.instanceId));
     SourceInterval silence;juce::String error;REQUIRE(readSourceInterval(assets,manifest,3000,3200,1000,silence,error));
     REQUIRE(std::all_of(silence.samples.begin(),silence.samples.end(),[](float v){return v==0;}));
-    REQUIRE(processor->armRecapture(5000,5100));position(4950);buffer.setSize(2,200);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),200,0.125f);
+    armCaptureFixture(*processor);head.position.setIsPlaying(true);position(4950);buffer.setSize(2,200);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),200,0.125f);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
     for(int c=0;c<2;++c)for(int i=0;i<200;++i)REQUIRE(buffer.getSample(c,i)==0.125f);
-    REQUIRE(processor->flushCaptureForTesting());manifest=processor->getCaptureSnapshot().manifest;
-    REQUIRE(manifest.ranges.back().startSample==5000 && manifest.ranges.back().frameCount==100);
+    finishCaptureFixture(*processor,head.position);manifest=processor->getCaptureSnapshot().manifest;
+    REQUIRE(manifest.ranges.back().startSample==4950 && manifest.ranges.back().frameCount==200);
     const auto count=engine.snapshot().renderCount;
-    REQUIRE(processor->armRecapture(0,250));position(0);buffer.setSize(2,250);buffer.clear();buffer.setSample(0,0,0.25f);buffer.setSample(1,0,-0.5f);
-    processor->processBlock(buffer,midi);REQUIRE(processor->flushCaptureForTesting());
+    armCaptureFixture(*processor);head.position.setIsPlaying(true);position(0);buffer.setSize(2,250);buffer.clear();buffer.setSample(0,0,0.25f);buffer.setSample(1,0,-0.5f);
+    processor->processBlock(buffer,midi);finishCaptureFixture(*processor,head.position);
     waitM3([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.snapshot().renderCount==count);
-    REQUIRE(processor->armRecapture(0,250));position(0);buffer.clear();buffer.setSample(0,0,0.75f);buffer.setSample(1,0,-0.5f);
-    processor->processBlock(buffer,midi);REQUIRE(processor->flushCaptureForTesting());
+    armCaptureFixture(*processor);head.position.setIsPlaying(true);position(0);buffer.clear();buffer.setSample(0,0,0.75f);buffer.setSample(1,0,-0.5f);
+    processor->processBlock(buffer,midi);finishCaptureFixture(*processor,head.position);
     waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount>count;});
     REQUIRE(engine.savedSession().swells[1].render.path==savedModel.swells[1].render.path && processor->getDroppedCaptureBlockCount()==0);
     REQUIRE(original.moveFileTo(root.file.getChildFile("original-moved.wav")));
@@ -101,7 +101,7 @@ inline void m3ProcessorCases()
     restored->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(restored->flushCaptureForTesting());restored->processBlock(buffer,midi);
     waitM3([&]{return restored->swellEngine().snapshot().auditionReady;});
     REQUIRE(restored->swellEngine().savedSession().swells[0].render.path!=savedModel.swells[0].render.path);
-    restored->requestClearCapture();REQUIRE(restored->flushCaptureForTesting());REQUIRE(restored->getCaptureSnapshot().manifest.ranges.empty());
+    REQUIRE(restored->requestWorkflowMode(workflow::Mode::capture));restored->requestClearCapture();REQUIRE(restored->flushCaptureForTesting());REQUIRE(restored->getCaptureSnapshot().manifest.ranges.empty());
     restored->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(restored->flushCaptureForTesting());restored->processBlock(buffer,midi);
     waitM3([&]{return restored->swellEngine().snapshot().auditionReady;});
     REQUIRE(restored->getCaptureSnapshot().reference==capture.reference);
@@ -117,7 +117,7 @@ inline void m3ProcessorCases()
     v3json.getDynamicObject()->setProperty("version",1);v3child->deleteAllChildElements();v3child->addTextElement(juce::JSON::toString(v3json));
     juce::MemoryBlock v3;juce::AudioProcessor::copyXmlToBinary(*v3xml,v3);
     restored->setStateInformation(v3.getData(),static_cast<int>(v3.getSize()));
-    REQUIRE(!restored->isMappingEnabled() && !restored->swellEngine().savedSession().automaticProcessing);
+    REQUIRE(restored->isMappingEnabled() && !restored->swellEngine().savedSession().automaticProcessing);
     REQUIRE(restored->swellEngine().savedSession().swells[0].provenance==m3::Provenance::manualEdited);
     REQUIRE(restored->swellEngine().savedSession().auditionDb==-24 && !restored->swellEngine().snapshot().playing);
     REQUIRE(restored->swellEngine().savedSession().liveEnabled && restored->swellEngine().savedSession().liveWetDb==0);
@@ -126,7 +126,7 @@ inline void m3ProcessorCases()
     // Legacy v2 is still independently supported, without fabricating unsaved M2 swells.
     auto legacy=std::make_unique<juce::XmlElement>(*xml);legacy->setAttribute("stateVersion",2);legacy->deleteAllChildElements();
     juce::MemoryBlock v2;juce::AudioProcessor::copyXmlToBinary(*legacy,v2);
-    REQUIRE(restored->swellEngine().audition());restored->setStateInformation(v2.getData(),static_cast<int>(v2.getSize()));
+    REQUIRE(restored->requestWorkflowMode(workflow::Mode::live));REQUIRE(restored->swellEngine().audition());restored->setStateInformation(v2.getData(),static_cast<int>(v2.getSize()));
     REQUIRE(restored->flushCaptureForTesting());buffer.clear();
     {AudioAllocationGuard guard;restored->processBlock(buffer,midi);}
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && buffer.getMagnitude(0,250)==0);

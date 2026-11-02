@@ -89,7 +89,7 @@ juce_add_plugin(preverb_plugin
     BUNDLE_ID "com.k7ma.preverb"
     PLUGIN_MANUFACTURER_CODE K7Ma
     PLUGIN_CODE Prv1
-    PRODUCT_NAME "Preverb Spike"
+    PRODUCT_NAME "ReverbArise"
     FORMATS VST3
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
@@ -130,6 +130,15 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
+    target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
+    add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
+    add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
+    target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
+    add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)
+    add_executable(preverb_workflow_state_test tests/workflow_state_test.cpp)
+    target_link_libraries(preverb_workflow_state_test PRIVATE preverb_session)
+    add_test(NAME preverb_workflow_state_test COMMAND preverb_workflow_state_test)
     add_executable(preverb_gain_staging_test tests/gain_staging_test.cpp)
     target_link_libraries(preverb_gain_staging_test PRIVATE preverb_assets)
     add_test(NAME preverb_gain_staging_test COMMAND preverb_gain_staging_test)

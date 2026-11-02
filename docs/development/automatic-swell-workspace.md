@@ -1,6 +1,16 @@
 > Current UI: see [ReverbArise workspace](../design/ui-theme-and-layout.md) and [Settings/Diagnostics and current checks](../design/ui-diagnostics-and-acceptance.md). Song-synchronized playback is implemented; see [transport playback](transport-swell-playback.md). Earlier UI locations and deferred-transport statements below describe the preceding workspace iteration, not the current editor. Historical acceptance results remain separate.
 # Automatic swell workspace
 
+Current source ownership is defined by [workflow modes](workflow-modes.md).
+Fresh and legacy instances enter Capture with Recapture off. Source remains
+private until a successful explicit DAW Stop; only accepted changed intervals
+notify automatic discovery/refresh. Ordinary Capture protects both mapped audio
+and silence, and Live/Finalise never capture. Automatic markers and marker
+sensitivity cannot grant replacement permission. Saved regeneration tolerance
+is retained metadata, with its former global control retired. Explicit changed
+Recapture refreshes affected unfrozen dependencies even with discovery off;
+identical PCM reuses accepted assets and renders.
+
 This change extends M3. It prepares swells automatically; Song-synchronized swell
 playback remains a separate follow-up. Prepared swells are heard with manual
 Audition. FL Studio must continue calling the effect for audition to advance.

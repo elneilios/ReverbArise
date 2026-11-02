@@ -27,7 +27,7 @@ inline void performanceExportCases()
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/250.0);};
     juce::AudioBuffer<float> buffer(2,1000);juce::MidiBuffer midi;
     for(int at=0;at<24000;at+=1000){position(at,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),1000,.125f);p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());}
-    p->setMappingEnabled(false);position(0,false);buffer.clear();p->processBlock(buffer,midi);
+    finishCaptureFixture(*p,head.position);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.addTarget(500));const auto first=engine.savedSession().primary;
     REQUIRE(engine.addTarget(520));const auto overlap=engine.savedSession().primary;
     REQUIRE(engine.addTarget(20000));const auto last=engine.savedSession().primary;
@@ -60,8 +60,8 @@ inline void performanceExportCases()
     engine.setLivePlayback(true,m3::LiveRouting::wetOnly,0);const auto cold=bounce({1023},19930,20020);
     REQUIRE(cold[0]>0 && std::abs(cold[10]-.00003125f)<1e-6f); // Cold export is immediately prepared; no leaked dry.
     // A frozen render survives actual changed source, state roundtrip and missing capture.
-    p->setNonRealtime(false);p->setMappingEnabled(true);position(0,true);buffer.setSize(2,1000);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),1000,.25f);
-    {AudioAllocationGuard guard;p->processBlock(buffer,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);REQUIRE(p->flushCaptureForTesting());p->setMappingEnabled(false);
+    p->setNonRealtime(false);armCaptureFixture(*p);position(0,true);buffer.setSize(2,1000);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),1000,.25f);
+    {AudioAllocationGuard guard;p->processBlock(buffer,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);REQUIRE(p->flushCaptureForTesting());finishCaptureFixture(*p,head.position);
     waitM3([&]{const auto s=engine.savedSession();return s.swells[0].phase==m3::Phase::ready;});REQUIRE(engine.savedSession().swells[0].render==frozen.swells[0].render);
     juce::String json,error;m3::Session decoded;REQUIRE(m3::encode(engine.savedSession(),json,error) && m3::decode(json,decoded,error));REQUIRE(decoded.swells[0].frozen && decoded.regenerationSensitivity==.2f && decoded.isolateDry);
     auto legacy=juce::JSON::parse(json);legacy.getDynamicObject()->setProperty("version",5);legacy.getDynamicObject()->removeProperty("regenerationSensitivity");
@@ -76,8 +76,27 @@ inline void performanceExportCases()
     REQUIRE(engine.setFrozen(first,false));waitM3([&]{const auto s=engine.savedSession();return s.swells[0].phase==m3::Phase::ready && s.swells[0].render!=frozen.swells[0].render;});
     REQUIRE(engine.setFrozen(first,true));auto saved=engine.savedSession();saved.swells.erase(saved.swells.begin()+1,saved.swells.end());saved.selected={first};saved.primary=first;
     REQUIRE(engine.assetDirectory().getChildFile(saved.swells[0].ir.path).deleteFile());
-    p->requestClearCapture();REQUIRE(p->flushCaptureForTesting());engine.restore(saved);position(0,false);buffer.clear();p->processBlock(buffer,midi);
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));p->requestClearCapture();REQUIRE(p->flushCaptureForTesting());engine.restore(saved);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready && engine.snapshot().liveReady;});
+    const auto verifiedRecovery=engine.savedSession();
+    // Valid frozen assets cannot grant Live admission when excluded from the mix.
+    for(int exclusion=0;exclusion<3;++exclusion)
+    {
+        auto excluded=verifiedRecovery;
+        if(exclusion==0)excluded.swells[0].enabled=false;
+        if(exclusion==1)excluded.swells[0].muted=true;
+        if(exclusion==2){auto soloMember=excluded.swells[0];soloMember.id=juce::Uuid().toString();
+            soloMember.frozen=false;soloMember.render={};soloMember.solo=true;excluded.swells.push_back(soloMember);}
+        engine.restore(excluded);
+        waitM3([&]{const auto current=engine.savedSession();return current.swells[0].phase==m3::Phase::ready;});
+        REQUIRE(!p->getWorkflowReadiness().frozenWet && !p->requestWorkflowMode(workflow::Mode::live));
+    }
+    engine.restore(verifiedRecovery);
+    waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready;});
+    head.position.setBpm(121);buffer.clear();p->processBlock(buffer,midi);
+    REQUIRE(!p->getWorkflowReadiness().frozenWet && !p->requestWorkflowMode(workflow::Mode::live));
+    head.position.setBpm(240);buffer.clear();p->processBlock(buffer,midi);
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::live)); // Verified frozen wet qualifies even after source Clear.
     const auto recovered=bounce({13,4096},0,800);REQUIRE(recovered[450]>0);
     // Corrupt/missing render is explicit, stable failure, never a successful silent bounce.
     const auto asset=engine.savedSession().swells[0].render;REQUIRE(engine.assetDirectory().getChildFile(asset.path).deleteFile());

@@ -19,6 +19,7 @@ bool decimal(const juce::String& text,double& value)
 }
 void PreverbAudioProcessorEditor::beginValueEdit(int index)
 {
+    valueWorkflowTokens[index]=processor.getWorkflowSnapshot().pass;
     const auto current=processor.swellEngine().snapshot();const auto w=m3::find(current.session,current.session.primary);
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;valueTime=processor.getSongTime();
     valueTokens[index]=w?w->inputGeneration:0;
@@ -27,6 +28,7 @@ void PreverbAudioProcessorEditor::beginValueEdit(int index)
 bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& text,std::optional<double> delta)
 {
     if(updating || destroying || !valueAnchors[index])return false;
+    if(processor.getWorkflowSnapshot().pass!=valueWorkflowTokens[index] || processor.getWorkflowSnapshot().mode!=workflow::Mode::live)return false;
     const auto anchor=*valueAnchors[index];const auto current=processor.swellEngine().savedSession();
     const auto latest=m3::find(current,anchor.id);
     if(current.primary!=anchor.id || !latest)return false;

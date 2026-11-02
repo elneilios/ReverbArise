@@ -26,6 +26,7 @@ public:
     void setWaveZoomDb(double db){waveZoom.setValue(db,juce::sendNotificationSync);}
     double waveZoomDb() const noexcept{return waveZoom.getValue();}
     void setSnap(bool enabled) {snapEnabled=enabled;}
+    void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
     const SwellViewport& viewport() const noexcept {return view;}
     void setViewport(SwellViewport v) {view=v;updateScroll();repaint();}
@@ -56,6 +57,7 @@ private:
     bool snapEnabled=true,updatingScroll=false;
     bool playheadAvailable=false;
     bool inlineOverview=true;
+    bool editingEnabled=true;
 };
 class SwellOverview final : public juce::Component
 {

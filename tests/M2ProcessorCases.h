@@ -25,7 +25,7 @@ inline void m2ProcessorCases()
         if (block == 0) { buffer.setSample(0, 0, 0.25f); buffer.setSample(1, 0, -0.5f); }
         processor->processBlock(buffer, midi);
     }
-    processor->setMappingEnabled(false); REQUIRE(processor->flushCaptureForTesting());
+    finishCaptureFixture(*processor,head.position); REQUIRE(processor->flushCaptureForTesting());
     writeTestWav(root.file.getChildFile("ir.wav"), 1, 1000, {1,0.5f,0.25f});
     const auto wait = [&](PreviewPhase expected)
     {
@@ -78,7 +78,7 @@ inline void m2ProcessorCases()
     REQUIRE(processor->auditionPreview());
     head.position.setIsPlaying(true); head.position.setTimeInSamples(4000); head.position.setPpqPosition(16);
     processor->setMappingEnabled(true); buffer.clear(); processor->processBlock(buffer, midi);
-    processor->setMappingEnabled(false); REQUIRE(processor->flushCaptureForTesting());
+    finishCaptureFixture(*processor,head.position); REQUIRE(processor->flushCaptureForTesting());
     auto captured = processor->getCaptureSnapshot().manifest;
     CaptureAssetStore store(root.file.getChildFile(captured.projectId).getChildFile(captured.instanceId));
     SourceInterval dryCapture;

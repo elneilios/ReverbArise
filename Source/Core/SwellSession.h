@@ -97,6 +97,24 @@ struct Session
     juce::String defaultIRName = "Preverb Hall";
     std::vector<int64_t> suppressed;
 };
+// Foundation eligibility uses already-verified readiness and timing metadata.
+// Full export preparation/asset verification remains the export workspace's job.
+inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexcept
+{
+    const auto& a=w.render;
+    return w.phase==Phase::ready && a.present() && a.frames>0 && time.valid
+        && a.rate==time.rate && a.bpm==time.bpm && a.numerator==time.numerator && a.denominator==time.denominator;
+}
+// Excludes selection, worker progress and generation counters. These fields
+// describe the durable musical definition, not the current playback/UI state.
+inline bool sameSavedSwell(const Swell& a,const Swell& b)
+{
+    return a.id==b.id && a.name==b.name && a.irName==b.irName && a.arrival==b.arrival
+        && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape
+        && a.calibration==b.calibration && a.placement==b.placement && a.supportOffset==b.supportOffset
+        && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
+        && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor;
+}
 bool checkedAdd(int64_t a, int64_t b, int64_t& result) noexcept;
 bool checkedSubtract(int64_t a, int64_t b, int64_t& result) noexcept;
 bool safeAssetPath(const juce::String&) noexcept;

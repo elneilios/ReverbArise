@@ -204,7 +204,7 @@ void SwellTimeline::paint(juce::Graphics& g)
                 envelopeLine.lineTo(x(b),wet.getCentreY());
                 g.setColour(ui::aqua);g.strokePath(envelopeLine,juce::PathStrokeType(2.0f));
                 if(static_cast<long double>(b)-w->placement>data.raw->end){g.setColour(ui::warning);g.drawText("Requested wet support - capture through endpoint",wet.withHeight(22),juce::Justification::left);}
-                g.setColour(ui::secondary);g.drawText("Drag wet body to move audio + envelope",wet.withY(wet.getBottom()-22).withHeight(20),juce::Justification::centred);
+                g.setColour(ui::secondary);g.drawText(editingEnabled?"Drag wet body to move audio + envelope":"Editing available in Live mode",wet.withY(wet.getBottom()-22).withHeight(20),juce::Justification::centred);
                 const auto handles=grabPoints();for(const auto& handle:handles)
                 {
                     const auto active=hover && *hover==handle.kind;
@@ -238,6 +238,7 @@ void SwellTimeline::paint(juce::Graphics& g)
 }
 bool SwellTimeline::beginDrag(juce::Point<float> point)
 {
+    if(!editingEnabled)return false;
     drag=Drag::none;
     if(overview.contains(point))
     {
@@ -343,6 +344,7 @@ void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(t
 void SwellTimeline::mouseDrag(const juce::MouseEvent& e){fineDrag=e.mods.isShiftDown();dragTo(e.position);}
 void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
 {
+    if(!editingEnabled)return;
     if(!source.contains(e.position))return;
     for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}

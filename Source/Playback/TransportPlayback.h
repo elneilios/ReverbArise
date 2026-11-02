@@ -52,7 +52,7 @@ public:
     // Offline start has no previous route to crossfade from.
     void primeForOffline() noexcept {gain=gainTarget=level.load();dry=dryTarget=enabled.load() && wetOnly.load()?0.0f:1.0f;gainRemaining=dryRemaining=0;}
     void reset() noexcept {epoch.fetch_add(1);}
-    void process(float*,float*,int,const TransportTime&) noexcept;
+    void process(float*,float*,int,const TransportTime&,bool workflowAllows=true) noexcept;
     bool missing() const noexcept {return missed.load();}
     bool incompatible() const noexcept {return badMapping.load();}
     bool active() const noexcept {return liveActive.load();}

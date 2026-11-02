@@ -7,6 +7,14 @@ CaptureWorker::CaptureWorker(PluginCaptureQueue& q, juce::File root)
 
 CaptureWorker::~CaptureWorker() { stopThread(-1); }
 
+void CaptureWorker::cancelWorkflowPass()
+{
+    const juce::ScopedLock guard(commandLock);
+    if(workflowState)workflowState->cancel();
+    // Pass identity invalidates queued/provisional work. The accepted source
+    // epoch must stay fixed: cancelling is not Clear or a source revision.
+}
+
 void CaptureWorker::setHostRate(double rate) noexcept
 {
     hostRate.store(rate);
@@ -35,15 +43,23 @@ CaptureSessionSnapshot CaptureWorker::snapshot() const
 }
 
 void CaptureWorker::requestRestore(const std::string& project, const std::string& instance,
-                                    const juce::String& reference, uint64_t revision)
+                                    const juce::String& reference, uint64_t revision,workflow::Mode mode)
 {
     recapture.cancel();
     const juce::ScopedLock lock(commandLock);
+    if(workflowState)workflowState->reset(mode);
     mappingAllowed.store(false);
     generation.fetch_add(1);
     loading.store(true);
     restore = {project, instance, reference, revision};
     restoreRequested.store(true, std::memory_order_release);
+}
+
+void CaptureWorker::requestClear()
+{
+    const juce::ScopedLock guard(commandLock);recapture.cancel();
+    if(workflowState)workflowState->reset();
+    mappingAllowed=false;usefulSource=false;generation.fetch_add(1);clearRequested=true;
 }
 
 bool CaptureWorker::flush(int timeout)
@@ -57,6 +73,7 @@ void CaptureWorker::updateSnapshot()
 {
     const auto rate = hostRate.load();
     const auto& current = session.snapshot();
+    usefulSource.store(!current.unavailable && std::any_of(current.overview.begin(),current.overview.end(),[](const auto& r){return r.available && r.range.kind==CaptureCoverageKind::audio;}),std::memory_order_release);
     committedRate.store(current.manifest.ranges.empty() ? 0 : current.manifest.sampleRate);
     if (! current.manifest.ranges.empty() && rate > 0
         && std::abs(current.manifest.sampleRate - rate) > 0.001)
@@ -75,12 +92,13 @@ void CaptureWorker::run()
     auto lastBlock = juce::Time::getMillisecondCounter();
     while (! threadShouldExit())
     {
+        if(workerHold.load()){wait(2);continue;}
         if (restoreRequested.exchange(false, std::memory_order_acq_rel))
         {
             Restore command;
             uint64_t commandGeneration;
             { const juce::ScopedLock lock(commandLock); command = restore; commandGeneration = generation.load(); }
-            pending.clear();
+            session.abortPass();activePass=0;pending.clear();
             hasPendingCapture.store(false);
             while (queue.tryPop(block)) {}
             continuity.reset();
@@ -92,7 +110,7 @@ void CaptureWorker::run()
         }
         if (clearRequested.exchange(false))
         {
-            pending.clear();
+            session.abortPass();activePass=0;pending.clear();
             hasPendingCapture.store(false);
             while (queue.tryPop(block)) {}
             if (session.clear(hostRate.load()))
@@ -109,24 +127,90 @@ void CaptureWorker::run()
             updateSnapshot();
         while (queue.tryPop(block))
         {
-            handleBlock(block);
+            if(workflowState)handleWorkflowBlock(block);else handleBlock(block);
             lastBlock = juce::Time::getMillisecondCounter();
         }
+        if(workflowState)settleWorkflowPass();
         // A second restore can arrive while the first is reading assets. Do not acknowledge
         // a flush barrier until the latest queued restore/clear command has completed.
         if (! loading.load() && ! restoreRequested.load() && ! clearRequested.load()
             && flushRequested.exchange(false, std::memory_order_acq_rel))
         {
-            flushPending();
+            if(!workflowState)flushPending();
             updateSnapshot();
             flushFinished.signal();
         }
-        else if (! pending.empty() && juce::Time::getMillisecondCounter() - lastBlock >= 250)
+        else if (!workflowState && ! pending.empty() && juce::Time::getMillisecondCounter() - lastBlock >= 250)
             flushPending();
         wait(2);
     }
+    if(workflowState){session.abortPass();return;}
     while (queue.tryPop(block)) handleBlock(block);
     flushPending();
+}
+
+void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
+{
+    const auto state=workflowState->snapshot();
+    if(block.generation!=generation.load() || loading.load() || rateStale
+        || block.recaptureToken!=state.pass || (state.phase!=workflow::Phase::recording && state.phase!=workflow::Phase::draining))return;
+    if(activePass!=state.pass || activeEpoch!=block.generation)
+    {
+        session.abortPass();pending.clear();continuity.reset();activePass=state.pass;activeEpoch=block.generation;
+        if(!session.beginPass(activePass,activeEpoch,state.recapture)){failedPass.store(activePass);return;}
+    }
+    hasPendingCapture.store(true);
+    if(failedPass.load()==activePass)return;
+    if(!std::isfinite(block.sampleRate) || std::abs(block.sampleRate-hostRate.load())>.001)
+    {failedPass.store(activePass);return;}
+    handleBlock(block); // Reuse bounded five-second/silence/discontinuity batching.
+}
+
+void CaptureWorker::settleWorkflowPass()
+{
+    auto state=workflowState->snapshot();
+    if(activePass && (activePass!=state.pass || activeEpoch!=generation.load()))
+    {session.abortPass();pending.clear();activePass=0;hasPendingCapture=false;}
+    if(state.phase!=workflow::Phase::draining)return;
+    // Validate and write immutable assets outside the short command fence;
+    // cancel/restore can supersede the operation without waiting for disk I/O.
+    CaptureSession::PassResult result;uint64_t committedGeneration=0;
+    std::function<void(int64_t,int64_t,uint64_t,bool)> handler;
+    std::function<void()> acceptedHandler;
+    {
+        const juce::ScopedLock guard(commandLock);
+        state=workflowState->snapshot();if(state.phase!=workflow::Phase::draining || loading.load() || restoreRequested.load() || clearRequested.load())return;
+        if(!workflowState->validating(state.pass))return;
+        committedGeneration=generation.load();
+    }
+    while(validationHold.load() && !threadShouldExit() && workflowState->snapshot().pass==state.pass)wait(2);
+    if(threadShouldExit())return;
+    flushPending();
+    if(activePass==state.pass && activeEpoch==committedGeneration && failedPass.load()!=state.pass)
+        result=session.preparePass(state.pass,activeEpoch);
+    else if(failedPass.load()==state.pass)result.error=session.passFailure().isNotEmpty()?session.passFailure():juce::String("Capture queue/data failure; previous source retained");
+    else {result.success=true;result.error="No source captured";}
+    {
+        const juce::ScopedLock guard(commandLock);
+        const auto current=workflowState->snapshot();
+        if(generation.load()!=committedGeneration || current.pass!=state.pass || current.phase!=workflow::Phase::validating)
+        {session.abortPass();pending.clear();activePass=0;hasPendingCapture=false;return;}
+        if(result.success && activePass==state.pass)result.success=session.acceptPreparedPass(state.pass,activeEpoch);
+        else session.abortPass();
+        activePass=0;hasPendingCapture=false;handler=commitHandler;
+        updateSnapshot();
+        if(!result.success){const juce::ScopedLock snapshotGuard(snapshotLock);published.status=result.error;}
+    }
+    if(result.success && handler)for(const auto [a,b]:result.changedIntervals)handler(a,b,committedGeneration,result.replaced);
+    {
+        const juce::ScopedLock guard(commandLock);
+        // Explicit replacement may deliberately remove a note. Other accepted
+        // useful source still qualifies; ordinary mapped-only/empty passes do not.
+        const auto usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
+        if(generation.load()==committedGeneration && workflowState->complete(state.pass,result.success,usefulMaterial,result.replaced)
+            && result.success && (result.changed || usefulMaterial))acceptedHandler=acceptedStateHandler;
+    }
+    if(acceptedHandler)acceptedHandler(); // Never call host code under publication locks or on the audio thread.
 }
 
 void CaptureWorker::handleBlock(const AudioCaptureBlock& block)
@@ -172,6 +256,11 @@ void CaptureWorker::flushPending()
 {
     if (pending.empty()) return;
     const auto frames=static_cast<uint32_t>(pending.size()/2);
+    if(workflowState)
+    {
+        if(failedPass.load()!=activePass && !session.stagePass(activePass,pendingStart,pendingRate,pending.data(),frames))failedPass.store(activePass);
+        pending.clear();return;
+    }
     const auto armBefore=recapture.snapshot();
     const auto commitGeneration=generation.load();
     const auto previousRevision=session.snapshot().manifest.revision;
@@ -185,9 +274,9 @@ void CaptureWorker::flushPending()
     updateSnapshot();
     if(changed)
     {
-        std::function<void(int64_t,int64_t,uint64_t)> handler;
+        std::function<void(int64_t,int64_t,uint64_t,bool)> handler;
         {const juce::ScopedLock guard(commandLock);handler=commitHandler;}
-        if(handler)handler(pendingStart,pendingStart+frames,commitGeneration);
+        if(handler)handler(pendingStart,pendingStart+frames,commitGeneration,false);
     }
     if(completed)
     {

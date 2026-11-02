@@ -7,7 +7,7 @@ void SwellEngine::setPostRoll(double seconds)
 {
     const juce::ScopedLock guard(lock);
     if(!std::isfinite(seconds) || seconds<0 || seconds>5){message="Audition tail must be 0 to 5 seconds";return;}
-    if(model.postRollSeconds==seconds)return;model.postRollSeconds=seconds;++monitoringGeneration;notify();
+    if(model.postRollSeconds==seconds)return;model.postRollSeconds=seconds;persistentChangedLocked();++monitoringGeneration;notify();
 }
 void SwellEngine::setMonitoring(AuditionMode mode,float blend)
 {
@@ -15,17 +15,17 @@ void SwellEngine::setMonitoring(AuditionMode mode,float blend)
     if((mode!=AuditionMode::wetOnly && mode!=AuditionMode::dryWet) || !std::isfinite(blend) || blend<0 || blend>1)
     {message="Invalid audition mode or percentage";return;}
     if(model.auditionMode==mode && model.wetBlend==blend)return;
-    model.auditionMode=mode;model.wetBlend=blend;++monitoringGeneration;notify();
+    model.auditionMode=mode;model.wetBlend=blend;persistentChangedLocked();++monitoringGeneration;notify();
 }
 void SwellEngine::setIsolateSelected(bool enabled)
 {
     const juce::ScopedLock guard(lock);if(model.isolateSelected==enabled)return;
-    model.isolateSelected=enabled;++monitoringGeneration;notify();
+    model.isolateSelected=enabled;persistentChangedLocked();++monitoringGeneration;notify();
 }
 void SwellEngine::setIsolateDry(bool enabled)
 {
     const juce::ScopedLock guard(lock);if(model.isolateDry==enabled)return;
-    model.isolateDry=enabled;++monitoringGeneration;notify();
+    model.isolateDry=enabled;persistentChangedLocked();++monitoringGeneration;notify();
 }
 namespace
 {

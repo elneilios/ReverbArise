@@ -31,7 +31,7 @@ struct HostPositionDiagnostics
     double sampleRate = 0.0;
 };
 
-class PreverbAudioProcessor final : public juce::AudioProcessor
+class PreverbAudioProcessor final : public juce::AudioProcessor, private juce::AsyncUpdater
 {
 public:
     explicit PreverbAudioProcessor(juce::File projectsRoot = defaultProjectsRoot());
@@ -58,7 +58,15 @@ public:
     static juce::File defaultProjectsRoot();
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
     bool flushCaptureForTesting() { return captureWorker.flush(); }
+    void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
     SongTime getSongTime() const noexcept;
+    workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
+    workflow::Readiness getWorkflowReadiness() const;
+    bool requestWorkflowMode(workflow::Mode);
+    bool setRecaptureExisting(bool enabled) {return workflowState.arm(enabled);}
+    void cancelCapturePass() {const auto previous=workflowState.snapshot().mode;captureWorker.cancelWorkflowPass();if(previous!=workflow::Mode::capture)persistentStateChanged();}
+    void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
+    void holdCaptureWorkerForTesting(bool hold) noexcept {captureWorker.holdWorkerForTesting(hold);}
     PreviewSnapshot getPreviewSnapshot() const;
     void loadPreviewIR(const juce::File& file);
     void setSourceBars(int64_t start, int64_t end);
@@ -69,8 +77,10 @@ public:
     m3::SwellEngine& swellEngine() noexcept { return *swells; }
     const m3::SwellEngine& swellEngine() const noexcept { return *swells; }
     bool armRecapture(int64_t start,int64_t end);
-    void cancelRecapture() { captureWorker.cancelRecapture(); }
-    m3::RecaptureSnapshot getRecaptureSnapshot() const { return captureWorker.recaptureSnapshot(); }
+    void cancelRecapture() { cancelCapturePass(); }
+    m3::RecaptureSnapshot getRecaptureSnapshot() const
+    {const auto s=workflowState.snapshot();m3::RecaptureSnapshot result;result.active=s.recapture;result.token=s.pass;
+        result.status=s.recapture?"Pass-wide recapture armed; DAW Stop commits encountered source":"Recapture off; mapped source protected";return result;}
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -88,6 +98,9 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+    void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
+    void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
+    std::atomic<bool> hostNotificationsEnabled{false};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     std::atomic<uint64_t> diagnosticsSequence{0};
 
@@ -109,8 +122,13 @@ private:
     std::atomic<double> sampleRate{0.0};
     std::atomic<bool> awaitingRestoredPosition{false};
     bool wasOffline=false;
+    workflow::Mode offlineWorkflowMode=workflow::Mode::capture;
+    workflow::State workflowState;
+    bool previousHostPlaying=false;
+    workflow::Mode previousWorkflowMode=workflow::Mode::capture;
+    SongTime capturePassTime;
+    uint64_t observedCapturePass=0;
     PluginCaptureQueue captureQueue;
-    std::atomic<bool> mappingEnabled{true};
     std::atomic<uint64_t> droppedCaptureBlockCount{0};
     std::atomic<bool> testToneEnabled{false};
     std::atomic<float> generatedTonePeak{0};
