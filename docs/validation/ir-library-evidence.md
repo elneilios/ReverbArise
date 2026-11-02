@@ -52,13 +52,13 @@ targets and the review utility passed. These are focused tests, not a new full
 Debug/Release suite. No installed VST3 has been replaced.
 
 Descriptor/provenance/compatibility guidance and field-to-test mapping:
-`docs/ir-library.md`. Header declarations and legacy entry points retain the
+`docs/development/ir-library.md`. Header declarations and legacy entry points retain the
 existing Hall/default API behavior; source state has not changed format.
 
 ### Prototype v2 generation and measurements
 
 Python 3.10.6 stdlib-only generator, explicit LCG32 seeds and all construction
-parameters are recorded in `docs/ir-library-prototype-manifest.json`. The new
+parameters are recorded in `docs/validation/ir-library-prototype-manifest.json`. The new
 IRs remain ignored `out/ir-library-prototypes/*.wav` imports, not shipped assets.
 The manifest records exact packaged/PCM/canonical hashes, 48 kHz stereo PCM24,
 duration, peak/RMS/energy/DC, first-order spectral energy indicators, cumulative
@@ -79,7 +79,7 @@ examples and separate forward references are exported. All 102 review WAVs were
 independently checked for complete stereo 48 kHz PCM24 RIFF payloads without
 stale append bytes. No non-finite/clipped export sample was admitted by the tool.
 
-Calibration report: `docs/ir-library-calibration.json`; complete report and WAVs:
+Calibration report: `docs/validation/ir-library-calibration.json`; complete report and WAVs:
 `out/ir-library-listening/`. Authored gains changed only generator content;
 runtime importer/resampler/monitoring gains are unchanged. Median active RMS
 differences from Hall across piano/pad/voice-like/pluck are +0.04, +0.04, +0.03,
@@ -115,7 +115,7 @@ effect/control or real-time DSP was added. Durations remain 10/1/4/7/0.5 s.
 
 After calibration, median full-response active RMS deltas relative to Hall are
 +1.23/+0.03/+0.02/-0.31/-0.04 dB. Source-specific level differences are still
-reported in `docs/ir-library-calibration.json`; these are not listening passes.
+reported in `docs/validation/ir-library-calibration.json`; these are not listening passes.
 Piano wet side/mid energy for Monumental is approximately +3.2 dB versus Plate
 at -15.1 dB, a measured spatial contrast rather than a claim of subjective size.
 All 24 protected wet fixture fold-downs lose less than 6 dB relative to mean
@@ -129,7 +129,7 @@ The unchanged production review utility rendered 6 responses x 4 sources and
 all 102 exported PCM24 WAVs have valid complete RIFF payloads. No native runtime
 source changed in this feedback round; previous catalogue tests are separate.
 
-Current prototype manifest: `docs/ir-library-prototype-manifest.json`, generator
+Current prototype manifest: `docs/validation/ir-library-prototype-manifest.json`, generator
 `ir-library-prototype-v3`. Current review is **out/ir-library-listening-v3/index.html**
 with manually loadable IRs in **out/ir-library-prototypes-v3**. The unversioned
 folders are historical revision 2. Task progress stays **7/28**, paused at the
@@ -252,8 +252,8 @@ callback-allocation, legacy/current state and two-instance export regressions.
 The added source-commit race and missing retained-IR cases pass without reviving
 old source. No fixture is being accepted merely because its timeout was raised.
 
-Actual Debug metrics are committed as `docs/ir-library-metrics-debug.json` and
-`docs/ir-streaming-metrics-debug.json`. Library rows cover all six responses at
+Actual Debug metrics are committed as `docs/validation/ir-library-metrics-debug.json` and
+`docs/validation/ir-streaming-metrics-debug.json`. Library rows cover all six responses at
 44.1/48/96 kHz using a 32-frame sparse/asymmetric source and a full O(M) numerical
 oracle, including all final samples; mono mapping has an independent reference.
 Installation timings refer to original-rate managed assets (48 kHz), while

@@ -6,6 +6,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - **Future requirements:** Read the assigned GitHub issue, its approved mockups, and only the directly relevant dependencies. Do not load the full backlog.
 - **Current behaviour:** `openspec/specs/` records the system as implemented. Differences from planned GitHub work are intentional. Use the existing, unmodified OpenSpec workflows to propose, apply, and archive changes.
 - **Documentation:** Start with `docs/README.md` to locate relevant current technical guidance. `docs/product-vision.md` gives high-level direction; `docs/archive/` is historical, not current instruction.
+- **Document placement:** Put new technical guides in `docs/development/`, UI/design guidance in `docs/design/`, and test evidence or metrics in `docs/validation/`. Keep the `docs/` root for `README.md` and `product-vision.md`; use dated `docs/archive/YYYY-MM-DD/` folders for superseded historical material. Update affected links when moving files.
 
 ## Contribution workflow
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.

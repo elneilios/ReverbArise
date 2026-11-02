@@ -10,6 +10,11 @@ This directory covers product identity, the existing implementation, development
 | [Validation](validation/) | Dated native and FL Studio test evidence | Preserve test scope and actual results |
 | [Archive](archive/) | Superseded visions, handoffs and early visual concepts | Historical context only |
 
+## Recent engineering references
+
+- [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
+- [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
+
 ## Documentation policy
 
 - **GitHub Issues and approved issue mockups** describe the future roadmap and requirements.
