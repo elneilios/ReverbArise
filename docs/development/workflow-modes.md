@@ -24,6 +24,13 @@ renders finish. Empty/failed passes remain Capture. Restored saved modes may
 remain selected while dependency readiness is unavailable; unavailable controls
 must explain the reason.
 
+PR #18 review refinement: a successful explicit mapped replacement can enter
+Live using remaining useful committed material, even when that replacement is
+silence. Erasing the last useful source stays Capture; fresh silence-only,
+ordinary mapped-only and empty passes do not gain automatic Live entry.
+Finalise and frozen-wet admission share ready-render rate/tempo/meter checks.
+This is foundation eligibility, not #6's later full export preflight.
+
 `preverb_workflow_state_test` checks the eligibility matrix, all guarded
 recording/settling transitions, successful/empty/failed Stop, duplicate and stale
 completion rejection, restore/cancel disarming and independent instance state.

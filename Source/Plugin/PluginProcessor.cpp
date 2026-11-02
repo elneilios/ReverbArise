@@ -209,12 +209,11 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
     const auto capture=captureWorker.snapshot();const auto time=getSongTime();
     const auto session=swells->savedSession();
     const auto solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
-    const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo)
-        && w.frozen && w.phase==m3::Phase::ready && w.render.present() && time.valid && w.render.rate==time.rate && w.render.bpm==time.bpm
-        && w.render.numerator==time.numerator && w.render.denominator==time.denominator;});
+    const auto ready=[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo) && m3::hasCompatibleReadyRender(w,time);};
+    const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.frozen && ready(w);});
     return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
         && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
-        std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo) && w.phase==m3::Phase::ready && w.render.present();}),frozen};
+        std::any_of(session.swells.begin(),session.swells.end(),ready),frozen};
 }
 bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
 {

@@ -60,6 +60,15 @@ int main(){return runTest([]{
     while(juce::Time::getMillisecondCounter()<until && e.savedSession().swells[0].status=="Importing IR")juce::Thread::sleep(5);
     e.generate();while(juce::Time::getMillisecondCounter()<until && e.savedSession().swells[0].phase!=m3::Phase::ready)juce::Thread::sleep(5);
     REQUIRE(e.savedSession().swells[0].phase==m3::Phase::ready);
+    const auto compatibleRender=e.savedSession().swells[0].render;
+    REQUIRE(p->getWorkflowReadiness().readySwell);
+    REQUIRE(e.edit(id,[](auto& w,auto&){w.render.bpm=121;return true;}));
+    REQUIRE(p->getWorkflowReadiness().usefulSource && p->getWorkflowReadiness().compatible);
+    REQUIRE(!p->getWorkflowReadiness().readySwell && !p->requestWorkflowMode(workflow::Mode::finalise));
+    REQUIRE(e.edit(id,[&](auto& w,auto&){w.render=compatibleRender;return true;}));
+    e.generate();const auto compatibleDeadline=juce::Time::getMillisecondCounter()+10000;
+    while(juce::Time::getMillisecondCounter()<compatibleDeadline && e.savedSession().swells[0].phase!=m3::Phase::ready)juce::Thread::sleep(5);
+    REQUIRE(p->getWorkflowReadiness().readySwell);
     p->flushHostStateChangesForTesting();const auto beforeSettings=listener.changes;
     REQUIRE(e.edit(id,[](auto& w,auto&){w.shape.gainDb=3;return true;}));
     e.setPostRoll(1);e.setIsolateDry(true);e.setIsolateSelected(true);e.setMonitoring(m3::AuditionMode::dryWet,.7f);

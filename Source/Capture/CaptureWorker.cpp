@@ -204,8 +204,11 @@ void CaptureWorker::settleWorkflowPass()
     if(result.success && handler)for(const auto [a,b]:result.changedIntervals)handler(a,b,committedGeneration,result.replaced);
     {
         const juce::ScopedLock guard(commandLock);
-        if(generation.load()==committedGeneration && workflowState->complete(state.pass,result.success,result.useful,result.replaced)
-            && result.success && (result.changed || result.useful))acceptedHandler=acceptedStateHandler;
+        // Explicit replacement may deliberately remove a note. Other accepted
+        // useful source still qualifies; ordinary mapped-only/empty passes do not.
+        const auto usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
+        if(generation.load()==committedGeneration && workflowState->complete(state.pass,result.success,usefulMaterial,result.replaced)
+            && result.success && (result.changed || usefulMaterial))acceptedHandler=acceptedStateHandler;
     }
     if(acceptedHandler)acceptedHandler(); // Never call host code under publication locks or on the audio thread.
 }
