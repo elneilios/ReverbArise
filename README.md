@@ -1,5 +1,3 @@
-# ReverbArise
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="resources/logo/png/wordmark/reverbarise-wordmark-dark-1024px.png">
