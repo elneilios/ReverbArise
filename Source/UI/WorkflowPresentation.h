@@ -50,7 +50,7 @@ inline const char* workflowStatus(workflow::Snapshot state) noexcept
     }
     if(state.mode==workflow::Mode::capture)
         return state.recapture?"Recapture armed - replaces encountered audio":"Mapped source protected - play your DAW to learn";
-    return state.mode==workflow::Mode::live?"Source protected - no capture":"DAW wet bypassed - editing locked";
+    return state.mode==workflow::Mode::live?"":"DAW wet bypassed - editing locked";
 }
 struct WorkflowChoice
 {

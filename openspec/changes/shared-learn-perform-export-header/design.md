@@ -37,8 +37,9 @@ Add a focused `SegmentedSelector` and semantic `IconActionButton` under
 feedback; their API accepts labels, selected ID, availability/reasons and action
 callbacks, without depending on the processor or engine. Use JUCE event/accessibility
 mechanisms rather than a hand-drawn mouse-only control. A shared `WorkflowHeader`
-composes the existing Wordmark, tagline, selector, concise status and Settings
-action. The editor supplies presentation snapshots and binds requests/settings.
+composes the existing Wordmark, tagline, selector, italic mode description and
+Settings action. The editor supplies presentation snapshots, binds requests/settings
+and hosts the separate important-message bar immediately below the header.
 The same instance/composition remains in place for every mode and future workspace.
 
 Do not embed processor references in primitives or create three header variants.
@@ -51,7 +52,8 @@ Affected inventory:
 | --- | --- |
 | Temporary workflow ComboBox | Shared SegmentedSelector, old dropdown removed |
 | Header Settings gear | Shared semantic IconActionButton, existing window action |
-| Wordmark/tagline/mode status | Shared header composition, existing brand resource |
+| Wordmark/tagline/mode description | Shared header composition, existing brand resource |
+| Important workflow/error messages | Shared NoticeBar below the header, conditional visibility |
 | Global/inspector knobs and numeric fields | Existing components, including merged wheel fix; later workspace migration |
 | Recapture, lists, canvas, menus, Settings/Diagnostics content | Existing controls/guards, terminology changes only where mode-related |
 
@@ -97,9 +99,15 @@ available. It must not advertise a working Save WAV or drag tile before #6.
 
 Reserve room for all three segments and Settings first, then lay out the brand
 and italic tagline without distorting the SVG or reducing labels below approved
-type roles. Keep the compact existing header/global band budget; concise current
-subtitle/status can use a second line within that budget, with full explanations
-accessible through help. Do not steal waveform height or expand the opening size.
+type roles. Keep the existing 70-pixel header and opening size. Mode labels use
+an 18-pixel bold role and the description uses a 13-pixel italic role. Remove the
+routine Perform status line; important notices belong in the bar below the header.
+Normally the current band layout is unchanged. When a notice exists, insert a
+32-pixel inline row: globals and the workspace top move down, the waveform area
+temporarily shortens, and audition/Overview/bottom information remain anchored.
+This is the owner-approved exception to the earlier fixed-band design. Test both
+layout variants at the minimum size; never overlay controls or increase the
+opening size. Geometry invariants are keyed by size and notice presence.
 At 1100x850, adjust spacing/brand proportions within the approved composition;
 review the real result with the owner instead of inventing another navigation.
 
@@ -120,6 +128,28 @@ sizes. Ask about brand balance, hierarchy, status, focus and switching feel befo
 final host acceptance. Record appearance-only approvals separately from untested
 interactions. Any material change to accepted component behavior reopens approval.
 An untested behavior cannot be checked off merely because its screenshot passed.
+After checkpoint-B feedback, the new NoticeBar and typography refinement receive
+a representative native component review before production bar binding/wider
+rollout. The final integrated review can be consolidated with the brief host smoke
+test to keep owner testing small.
+
+### 6. Conditional important-message bar
+
+Add a library-owned NoticeBar with information, warning and error roles. It accepts
+text/detail/severity, supplies consistent painting and accessible state, and owns
+no workflow, rendering or host logic. It is nonmodal, never steals focus, and has
+no arbitrary auto-dismiss timer or notification queue. Repeated refresh of the same
+notice is silent; changing a relevant notice updates its accessible description.
+
+An application presentation adapter selects one highest-priority notice from
+explicit workflow and snapshot error fields. Source failure/unavailability, failed
+actions/IR preparation and existing offline-export warnings take priority over
+recording/validation information. Recapture arming and Export's DAW-wet bypass
+guidance remain important context. Ordinary idle Perform/clean Learn, progress
+counts and routine ready messages do not create a bar. Existing contextual row/
+inspector details remain, and no generic parsing of arbitrary status prose or
+cross-plugin message bus is introduced. The bar disappears when its underlying
+condition resolves; it does not dismiss an unresolved error merely to look clean.
 
 ## Risks / Trade-offs
 

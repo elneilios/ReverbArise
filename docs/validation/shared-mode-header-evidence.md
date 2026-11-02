@@ -104,3 +104,32 @@ Committed native header examples at the minimum content width:
 ![Perform header](images/shared-header-perform.png)
 
 ![Export header](images/shared-header-export.png)
+
+## Stage C: typography and conditional-notice refinement — 2026-11-02
+
+The owner approved the header layout/buttons but requested larger, heavier mode
+labels, an italic mode description and removal of routine source-protection text.
+They then explicitly chose a conditional inline important-message bar below the
+header, with temporary reflow rather than overlays. The plan/delta/tasks now
+include this refinement; final integration/build checks were reopened because
+the earlier full-suite and VST3 hash describe the pre-refinement build.
+
+The native component stage uses 18-pixel bold navigation and a 13-pixel italic
+description. Operational status is removed from the header. The new library
+NoticeBar accepts one message/detail/severity and has information, warning and
+error styles. It hides on no message, retains keyboard focus elsewhere, avoids
+duplicate announcements on identical refresh and keeps detail accessible.
+
+Focused Release verification passed: workflow-state and native-UI tests, followed
+by the final native-UI fixture at **14.25 s** (CTest 14.34 s). The fixture covers
+the typography/header geometry and NoticeBar visibility, severity pixels,
+accessible title/detail, repeat suppression and nonmodal/focus behavior. This is
+not a claim that the earlier 32/32 Release or 4/4 Debug results cover the final
+message-bar integration; that binding is not implemented yet.
+
+Review example: `out/issue16-message-bar-checkpoint/checkpoint-c-controls.png`.
+The owner requested direct preview launch for future UI/component approvals;
+this is recorded in AGENTS.md and the UI development standards. The native
+`--review-messages` window was opened directly, without FL Studio. The owner
+requested further styling adjustments; details are pending. Component checkpoint
+3.6 and production notice binding 3.7 remain open. No new host acceptance is claimed.

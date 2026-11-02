@@ -26,7 +26,7 @@ The segmented selector SHALL support pointer and keyboard activation with visibl
 - **THEN** its accessible description or equivalent focusable help exposes the actual reason even though activation is disabled
 
 ### Requirement: Shared header preserves approved composition
-All three modes SHALL reuse the same header with the approved wordmark, italic tagline, three-segment selector and Settings action. It SHALL fit the supported minimum and larger sizes without clipping, overlapping or adding duplicate navigation. Current-mode subtitles and status SHALL describe available behavior without implying deferred WAV delivery exists.
+All three modes SHALL reuse the same header with the approved wordmark, italic tagline, prominent bold mode labels, italic mode description and Settings action. It SHALL fit supported sizes without clipping, overlapping or duplicate navigation. Routine Perform status text SHALL be absent; important notices SHALL use the conditional inline bar below it. Descriptions SHALL NOT imply deferred WAV delivery exists.
 
 #### Scenario: Minimum and larger editor sizes
 - **WHEN** empty, ready, recording, settling and failure states are displayed at 1100x850 and supported larger logical sizes
@@ -50,3 +50,18 @@ New or materially revised header control families SHALL receive explicit owner a
 #### Scenario: Minimal host acceptance
 - **WHEN** automated component/state/processor/persistence checks and native owner checkpoints pass
 - **THEN** FL Studio UAT is consolidated into one brief final control-feel, mode-journey and save/reopen smoke test; detailed edge cases rely on automation, with extra host checks requested only for failures or specific unresolved host behavior
+
+### Requirement: Important notices use a conditional inline message bar
+Important workflow states and relevant errors SHALL appear in a shared nonmodal bar below the header, with readable severity and accessible detail. The bar SHALL shift content within the current window without covering controls or stealing focus. It SHALL be absent for routine idle/ready information, remain while its condition applies and disappear on resolution. Identical refresh SHALL NOT repeatedly announce or reopen a notice.
+
+#### Scenario: Clean idle workspace
+- **WHEN** Perform is idle with no relevant error, or Learn is idle with Recapture off and no relevant error
+- **THEN** no message bar or meaningless source-protection line is shown, and the normal compact layout is retained
+
+#### Scenario: Recording and failure
+- **WHEN** recording, source validation, Recapture arming or a relevant failure requires attention
+- **THEN** the highest-priority current notice is visible below the header, its text and severity are accessible, and all existing controls remain reachable at the minimum window size
+
+#### Scenario: Notice resolves
+- **WHEN** the underlying notice condition clears
+- **THEN** the bar hides and the normal layout returns without changing parameters, moving audio or interrupting an active control edit

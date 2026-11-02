@@ -78,12 +78,15 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     }
 }
 #include "WorkflowHeaderCases.h"
+#include "NoticeBarCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
+    if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
     controlReview::cases();
     workflowHeaderCases();
+    noticeReview::cases();
     {
         m3::ui::KnobValue cell;cell.setSize(180,50);double delta=0;cell.onDelta=[&](double value){delta=value;};
         const auto drag=[&](juce::ModifierKeys modifiers)

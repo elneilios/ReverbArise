@@ -122,16 +122,16 @@ inline void cases()
     snapshot(panel,"control-library-compact");
     panel.setLookAndFeel(nullptr);panel.removeFromDesktop();
 }
-inline void run()
+inline void run(std::unique_ptr<juce::Component> content=std::make_unique<Panel>())
 {
     class Window final:public juce::DocumentWindow
     {
     public:
-        Window():juce::DocumentWindow("ReverbArise control review",m3::ui::background,juce::DocumentWindow::closeButton)
-        {setUsingNativeTitleBar(true);setContentOwned(new Panel,true);centreWithSize(720,570);setVisible(true);}
+        explicit Window(std::unique_ptr<juce::Component> body):juce::DocumentWindow("ReverbArise control review",m3::ui::background,juce::DocumentWindow::closeButton)
+        {const auto width=body->getWidth(),height=body->getHeight();setUsingNativeTitleBar(true);setContentOwned(body.release(),true);centreWithSize(width,height+30);setVisible(true);}
         void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
     };
-    m3::ui::WorkspaceTheme theme;Window window;window.setLookAndFeel(&theme);
+    m3::ui::WorkspaceTheme theme;Window window(std::move(content));window.setLookAndFeel(&theme);
     juce::MessageManager::getInstance()->runDispatchLoop();window.setLookAndFeel(nullptr);
 }
 }

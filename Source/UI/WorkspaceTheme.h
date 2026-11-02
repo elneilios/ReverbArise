@@ -8,6 +8,7 @@ inline const juce::Colour background{0xff0f1418}, aqua{0xff00efff}, hover{0xff00
     timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffe1e6ec}, separator{0xff4a5058}, outline{0xff6b737c},
     danger{0xffff6b5e};
 inline constexpr float rule=1, radius=4, headingSize=21, bodySize=14, controlSize=13, smallSize=12, captionSize=11, emptyHeadingSize=24;
+inline constexpr float navigationSize=18, modeDescriptionSize=13;
 inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},
     rawWet{0xff63716e}, otherWet{0xff80938f}, warning{0xffe6bb72}, staleWet{0xffdba66f}, previewCursor{0xffffb4e9};
 

@@ -81,6 +81,13 @@ specific reason. Ask for additional host checks only after a failure or when
 concrete host behavior remains unresolved. Record untested host/DPI coverage
 explicitly rather than expanding the checklist by default or inventing a pass.
 
+When asking for component/UI approval, open the prepared native preview directly
+for the owner if available. Do not require them to locate an executable, paste a
+command or run a launcher. Reuse an already open review window rather than
+spawning duplicates; leave it open while they review. Screenshots remain useful
+supplementary evidence. If a review executable is open, preserve that process and
+defer relinking its binary until the owner has finished.
+
 - Add focused tests at the shared component boundary using actual wheel, drag,
   keyboard, text-entry and focus events where practical. Exercise limits,
   invalid/disabled states, cancellation and refresh; avoid tests that only call a
@@ -127,10 +134,18 @@ native review fixture and are composed into the shared production WorkflowHeader
   including disabled choices. Wheel and repeated active selection are no-ops.
   Segments share square internal joins with one border; only the group's outer
   left/right ends are rounded, following owner checkpoint-A feedback.
+  Navigation text uses the shared 18-pixel bold role; the mode description uses
+  a 13-pixel italic role, following integrated-header polish feedback.
 - `IconActionButton(ActionIcon::settings)` supplies a semantic Settings glyph,
   focus/hover/disabled feedback and native pointer/accessibility/Enter/Space
   activation. Bind `onClick` to the screen's Settings action. Component names
   remain identifiers, not icon/appearance switches.
+- `NoticeBar::display(optional<NoticeMessage>)` displays one information/warning/
+  error notice or hides on no message. It returns whether content changed, never
+  takes focus and owns no timers, queue, workflow or model logic. Bindings decide
+  priority and relevance from explicit state fields. Identical refresh is silent;
+  detail-only changes do not reannounce the headline. Full detail remains in the
+  tooltip/accessibility description. The preferred inline height is 32 pixels.
 
 `tests/ControlLibraryCases.h` exercises native events, accessible state, silent
 refresh, rejected/stale intents and callback lifetime. The UI test executable's
@@ -139,6 +154,9 @@ normal test execution also renders its state gallery when
 `PREVERB_UI_M3_OUTPUT` is set. Its message-loop helper is enabled only in the test
 target, not the plugin. The initial families' owner approval is recorded in
 `docs/validation/shared-mode-header-evidence.md`; material changes reopen that gate.
+`tests/NoticeBarCases.h` and `--review-messages` provide the corresponding native
+message-bar/polished-header fixture. Its component acceptance precedes production
+message binding; prototype severity examples do not imply simultaneous notices.
 
 This stage does not claim a full library migration. KnobValue/global sliders,
 general buttons/toggles/dropdowns, row menus, scroll containers and window content

@@ -16,7 +16,8 @@ int main(){return runTest([]{
             {
                 const Snapshot snapshot{mode,phase};const Readiness readiness{bool(bits&1),bool(bits&2),bool(bits&4),bool(bits&8)};
                 const auto shown=m3::ui::presentWorkflow(snapshot,readiness);
-                REQUIRE(shown.selected==mode && std::string_view(shown.status).size()>0);
+                REQUIRE(shown.selected==mode);
+                REQUIRE(std::string_view(shown.status).empty()==(mode==Mode::live && phase==Phase::idle));
                 for(const auto& choice:shown.choices)
                 {
                     REQUIRE(choice.available==(entryBlock(snapshot,choice.mode,readiness)==EntryBlock::none));

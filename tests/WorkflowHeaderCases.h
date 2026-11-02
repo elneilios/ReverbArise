@@ -21,6 +21,8 @@ static void workflowHeaderCases()
     {
         header.setSize(width,70);header.display(m3::ui::presentWorkflow(item.state,item.ready));
         REQUIRE(header.modeSelector().selectedId()==static_cast<int>(item.state.mode)+1 && requests==0);
+        auto description=dynamic_cast<juce::Label*>(findNamed(header,"workflowRole"));REQUIRE(description && description->getFont().isItalic());
+        REQUIRE(!findNamed(header,"workflowStatus")); // Operational messages have their own inline bar.
         for(const auto target:{workflow::Mode::capture,workflow::Mode::live,workflow::Mode::finalise})
         {
             const auto segment=header.modeSelector().segment(static_cast<int>(target)+1);REQUIRE(segment);
