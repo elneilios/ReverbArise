@@ -25,4 +25,4 @@ None. Existing capabilities concern plugin behavior; the new command introduces 
 
 ## Impact
 
-Implementation will touch `CMakePresets.json`, a new PowerShell wrapper and focused wrapper checks, `docs/development/development.md`, AGENTS.md and dated evidence under `docs/validation/`. Preserve CMakeLists.txt, C++20, Visual Studio 18 2026 x64, dependency pins, plugin identifiers and audio behavior. No GitHub Actions, hosted CI, remote build service, paid runner, dependency migration, automatic plugin deployment or DAW acceptance automation. This change currently contains planning artifacts only.
+Implementation touches `CMakePresets.json`, a new PowerShell wrapper and focused wrapper checks, `docs/development/development.md`, AGENTS.md and dated evidence under `docs/validation/`. Preserve CMakeLists.txt, C++20, Visual Studio 18 2026 x64, dependency pins, plugin identifiers and audio behavior. No GitHub Actions, hosted CI, remote build service, paid runner, dependency migration, automatic plugin deployment or DAW acceptance automation. Implementation progress is tracked in tasks.md; the change remains active until separately approved for archive.

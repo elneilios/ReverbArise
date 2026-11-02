@@ -56,6 +56,10 @@ must use the wrapper for mutations of this tree; raw CMake/MSBuild commands cann
 participate in this cooperative lock automatically. Wait for any raw build before
 starting the wrapper.
 
+After forcibly terminating a wrapper shell, confirm its child CMake/MSBuild
+processes have stopped before retrying; raw or orphaned processes do not hold
+the wrapper's file handle.
+
 For troubleshooting, the equivalent preset commands are below. Run them only when
 no wrapper or other build is active. They do not provide the wrapper's locking,
 logging or exit summary:
@@ -66,7 +70,7 @@ $ctest = Join-Path (Split-Path $cmake) "ctest.exe"
 
 & $cmake --preset windows-msvc
 & $cmake --build --preset windows-msvc-debug
-& $ctest --preset windows-msvc-debug
+& $ctest --preset windows-msvc-debug --no-tests=error
 & $cmake --build --preset windows-msvc-release
 & $ctest --preset windows-msvc-release --no-tests=error
 ```

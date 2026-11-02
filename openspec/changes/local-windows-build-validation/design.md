@@ -28,9 +28,8 @@ The living setup guide uses explicit Visual Studio bundled CMake/CTest paths, so
 
 7. **Proportionate verification.** Use lightweight native-command doubles in an isolated temporary fixture to verify wrapper orchestration and failure paths without compiler runs, dependency downloads or edits to real project caches. No new Pester dependency is required. Cover both shells where installed. Then perform actual Debug and Release builds and matching full CTest once each on the supported local machine; repeat warm invocations to observe incremental reuse. Doubles establish wrapper behavior only and must not be presented as MSVC validation. Record actual generator/tool versions, commands, revision, counts, timings, logs and any unavailable checks in dated evidence. CTest success does not imply FL Studio acceptance.
 
-## Risks / Trade-offs
-
-The apply request adds per-binary-directory exclusion. Hold an exclusive `FileShare.None`
+8. **Exclude concurrent work per binary directory.** The apply request adds this
+requirement. Hold an exclusive `FileShare.None`
 handle on `.reverbarise-build.lock` in the resolved preset binary directory for all
 mutating stages and CTest. Fail immediately on contention; release in `finally`.
 Keep the file instead of deleting it to avoid unlink/recreate races. Separate trees
@@ -38,6 +37,8 @@ have separate handles and proceed independently. This is a cooperative wrapper
 lock: raw CMake/MSBuild users must first ensure the tree is idle. Process termination
 releases the handle; confirm any orphaned native process has stopped before retrying.
 Fixtures test subprocess contention, cross-tree operation and failure release.
+
+## Risks / Trade-offs
 
 - [First configure may need network and first Release compilation may be substantial] → Reuse the same tree and pinned sources, perform cheap wrapper checks first, and avoid extra clean builds. No promise of an offline first build.
 - [Reconfiguring may still perform dependency update work] → Apply update-disconnected behavior for populated sources and verify warm runs preserve dependency checkout state; keep first population supported.
@@ -51,4 +52,4 @@ Add presets and the wrapper, validate its orchestration, then run the supported 
 
 ## Open Questions
 
-None blocking planning. Exact local installed CMake/Visual Studio versions and available PowerShell shells will be recorded during implementation validation; they do not change the chosen generator or workflow. No native build or CTest run has been performed for this planning-only change.
+None blocking planning. Exact local installed CMake/Visual Studio versions and available PowerShell shells are recorded during implementation validation; they do not change the chosen generator or workflow. At proposal time no native build or CTest run had been performed; actual implementation results are recorded in `docs/validation/2026-11-02-local-windows-build.md`.

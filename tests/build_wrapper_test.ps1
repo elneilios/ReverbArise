@@ -135,6 +135,15 @@ try {
     Move-Item -LiteralPath (Join-Path $bundled 'ctest.hidden') -Destination (Join-Path $bundled 'ctest.exe')
 
     . (Join-Path $fixture 'scripts/build-support.ps1')
+    $originalResolver = (Get-Item Function:Resolve-BuildTools).ScriptBlock
+    $fixtureToolsRoot = $tools
+    try {
+        Set-Item Function:Resolve-BuildTools -Value {
+            return @{ CMake=(Join-Path $fixtureToolsRoot 'missing-after-discovery.exe'); CTest=(Join-Path $fixtureToolsRoot 'ctest.exe'); Git=(Join-Path $fixtureToolsRoot 'git.exe') }
+        }
+        $launchResult = Invoke-ReverbBuild -Root $fixture
+        Assert ($launchResult -eq 1) 'Native launch failure was not reported as a wrapper failure.'
+    } finally { Set-Item Function:Resolve-BuildTools -Value $originalResolver }
     $binary = Join-Path $fixture 'out/build/windows-msvc'
     $cache = Join-Path $binary 'CMakeCache.txt'
     [IO.File]::WriteAllText($cache, "CMAKE_HOME_DIRECTORY:INTERNAL=C:/other-checkout`n")
