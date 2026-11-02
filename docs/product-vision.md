@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+<p align="center"><em>Product Vision</em></p>
+
 **Edition:** 1.0 · **Product direction:** Approved
 
 ## 1. Product identity
