@@ -19,7 +19,7 @@ Session SwellEngine::savedSession() const { const juce::ScopedLock guard(lock); 
 EditorSnapshot SwellEngine::snapshot() const
 {
     const juce::ScopedLock guard(lock); EditorSnapshot s;
-    s.session=model; s.candidates=candidates; s.message=message; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
+    s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;s.liveAttenuationDb=liveAttenuationDb;
     s.liveReady=preparedLiveRevision>0 && preparedLiveRevision==liveRevision;
@@ -51,7 +51,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 {
     juce::String error; if(!validate(session,error)) { const juce::ScopedLock guard(lock); message=error; return; }
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
-    imports.clear(); analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
+    imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
     dirty.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     model=std::move(session); regeneration=model.regenerationSensitivity; for(auto& w:model.swells) { w.phase=Phase::restoring; w.status="Restoring dependencies"; }
     invalidateLiveLocked();live.reset();liveCache.clear();hostObserved=false;
@@ -65,7 +65,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 void SwellEngine::clear()
 {
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
-    imports.clear(); analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
+    imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();analyzedContent.clear();trailing.reset();
     for(auto& w:model.swells) { ++w.inputGeneration; w.phase=w.frozen?Phase::restoring:Phase::stale; w.status=w.frozen?"Restoring frozen render":"Capture cleared; recapture source"; }
     runtime.clear(); message="Capture cleared; saved assets retained";
@@ -108,15 +108,17 @@ bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce:
     if(!select(model,ids,primary)) return false; stopLocked(); return true;
 }
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation)
+{return editChecked(id,operation);}
+bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset)
 {
     const juce::ScopedLock guard(lock); auto w=find(model,id); if(!w) return false;
-    auto candidate=*w; if(!operation(candidate,message)) return false;
+    actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return false;
     if(candidate.id!=id) { message="Swell identity cannot be edited"; return false; }
     if(candidate.arrival==w->arrival && (candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd))candidate.supportOffset=0;
     const auto support=candidate.arrival==w->arrival && candidate.sourceStart==w->sourceStart && candidate.sourceEnd==w->sourceEnd
         && renderInputEnd(candidate)!=renderInputEnd(*w);
-    const auto input=support || candidate.arrival!=w->arrival || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir;
-    if(candidate.frozen!=w->frozen || (w->frozen && input)){message="Unfreeze before changing source, IR or render support";return false;}
+    const auto input=(allowReset && w->frozen && !candidate.frozen) || support || candidate.arrival!=w->arrival || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir;
+    if(!allowReset && (candidate.frozen!=w->frozen || (w->frozen && input))){message="Unfreeze before changing source, IR or render support";return false;}
     const auto shape=candidate.shape!=w->shape || candidate.placement!=w->placement;
     const auto activity=candidate.enabled!=w->enabled || candidate.muted!=w->muted || candidate.solo!=w->solo;
     if(input || shape || activity || candidate.name!=w->name)
@@ -136,6 +138,7 @@ bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,ju
     if(activity){const auto soloFilterChanged=candidate.solo!=w->solo || (w->solo && (candidate.enabled!=w->enabled || candidate.muted!=w->muted));
         if(soloFilterChanged)invalidateLiveLocked();else invalidateLiveLocked(id);}
     if(support){candidate.phase=Phase::checking;candidate.status="Preparing extended wet support";forceRefresh.insert(id);}
+    if(allowReset && input){candidate.phase=Phase::checking;candidate.status="Checking Reset all dependencies";forceRefresh.insert(id);}
     if(input)nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
     ++monitoringGeneration;*w=std::move(candidate);notify(); return true;
 }
@@ -166,6 +169,63 @@ void SwellEngine::generate(bool all)
         if(all ? w.phase==Phase::ready : std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end()) continue;
         ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;
     }
+}
+bool SwellEngine::assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled)
+{
+    const juce::ScopedLock guard(lock);actionError.clear();auto w=find(model,id);
+    if(!w || w->inputGeneration!=expectedInput){message="IR assignment superseded; select the swell again";return false;}
+    if(w->frozen){message="Unfreeze this swell before changing its IR";return false;}
+    if((!bundled && file==juce::File{}) || imports.size()>=32){message="IR assignment unavailable; retry";return false;}
+    Import command;command.file=file;command.bundled=bundled;command.session=sessionGeneration.load();
+    stopLocked();invalidateLiveLocked(id);++w->inputGeneration;
+    if(w->provenance==Provenance::automatic)w->provenance=Provenance::manualEdited;
+    w->phase=Phase::checking;w->status="Importing IR";command.targets.emplace_back(id,w->inputGeneration);
+    imports.push_back(std::move(command));notify();return true;
+}
+bool SwellEngine::resetSwell(const juce::String& id,bool allSettings)
+{
+    const auto context=contextProvider();const juce::ScopedLock guard(lock);const auto w=find(model,id);
+    actionError.clear();
+    if(!w)return false;
+    if(!context.time.valid || context.capture.manifest.sampleRate!=context.time.rate
+        || (w->render.present() && w->render.rate!=context.time.rate))
+    {message="Reset needs compatible captured sample rate and host timing";return false;}
+    if(!allSettings)return editChecked(id,[&](auto& candidate,auto& error){return resetWetDefaults(candidate,context.time.rate,error);});
+    Reset job;job.expected=*w;job.time=context.time;job.session=sessionGeneration.load();
+    if(!resetSwellDefaults(model,id,context.capture.manifest,context.time,job.candidate,message))return false;
+    job.captureScope=instanceRoot(context.capture.manifest).getFullPathName();
+    job.sourceRevision=sourceDependency(context.capture.manifest,job.candidate.sourceStart,job.candidate.sourceEnd);
+    std::erase_if(resets,[&](const auto& previous){return previous.expected.id==id;});
+    if(resets.size()>=32){message="Reset queue capacity reached; retry";return false;}
+    resets.push_back(std::move(job));message="Checking captured source and default IR for Reset all";notify();return true;
+}
+void SwellEngine::resetJob(const Reset& job)
+{
+    const auto context=contextProvider();juce::String error;
+    auto valid=instanceRoot(context.capture.manifest).getFullPathName()==job.captureScope
+        && sameMusicalMapping(context.time,job.time)
+        && sourceDependency(context.capture.manifest,job.candidate.sourceStart,job.candidate.sourceEnd)==job.sourceRevision;
+    if(valid)
+    {
+        CaptureAssetStore captures(instanceRoot(context.capture.manifest));SourceInterval source;
+        valid=readSourceInterval(captures,context.capture.manifest,job.candidate.sourceStart,job.candidate.sourceEnd,
+            available()/(sizeof(float)*2),source,error,[&]{return cancelled(job.expected.id,job.expected.inputGeneration,job.session);});
+    }
+    if(valid){SwellAssetStore assets(instanceRoot(context.capture.manifest));ImpulseResponse impulse;valid=assets.readIR(job.candidate.ir,available(),impulse,error);}
+    const auto latest=contextProvider();const juce::ScopedLock guard(lock);const auto current=find(model,job.expected.id);
+    if(cancelled(job.expected.id,job.expected.inputGeneration,job.session) || !current)return;
+    const auto& old=job.expected;
+    // Definition edits supersede the transaction; background phase/render progress does not.
+    if(current->shapeGeneration!=old.shapeGeneration || current->shape!=old.shape || current->placement!=old.placement
+        || current->name!=old.name || current->frozen!=old.frozen || current->enabled!=old.enabled || current->muted!=old.muted
+        || current->solo!=old.solo || current->ir!=old.ir || current->arrival!=old.arrival || current->sourceStart!=old.sourceStart
+        || current->sourceEnd!=old.sourceEnd || model.defaultIR!=job.candidate.ir)
+    {actionError=message="Reset all superseded by a newer edit";return;}
+    valid=valid && instanceRoot(latest.capture.manifest).getFullPathName()==job.captureScope
+        && sameMusicalMapping(latest.time,job.time)
+        && sourceDependency(latest.capture.manifest,job.candidate.sourceStart,job.candidate.sourceEnd)==job.sourceRevision;
+    if(!valid){actionError=message=error.isNotEmpty()?"Reset all: "+error:"Reset all needs unchanged compatible capture and timing";return;}
+    editChecked(old.id,[&](auto& value,auto&){auto candidate=job.candidate;candidate.render=value.render;value=std::move(candidate);return true;},true);
 }
 void SwellEngine::analyze(int64_t start,int64_t end)
 {
@@ -348,18 +408,21 @@ void SwellEngine::inspect(const PreviewContext& context)
 void SwellEngine::importJob(const Import& job)
 {
     const auto context=contextProvider(); SwellAssetStore store(instanceRoot(context.capture.manifest)); Asset asset; juce::String error;
-    const auto ok=store.importIR(job.file,available(),asset,error);
+    const auto budget=available();
+    if(job.bundled && budget<3ULL*1024*1024)error="Working budget unavailable for bundled IR assignment";
+    const auto ok=job.bundled?(error.isEmpty() && installBundledImpulse(store,asset,error)):store.importIR(job.file,budget,asset,error);
+    const auto label=job.bundled?juce::String("Preverb Hall"):job.file.getFileName();
     const juce::ScopedLock guard(lock);
     if(job.session!=sessionGeneration.load())return;
     if(job.futureDefault)
     {if(ok){model.defaultIR=asset;model.defaultIRName=job.file.getFileName();defaultError.clear();}message=ok?"Default IR for future swells updated":error;return;}
     for(const auto& [id,generation]:job.targets)
     {
-        if(cancelled(id,generation,job.session)) continue; auto& w=*find(model,id);
-        if(ok) { w.ir=asset; w.irName=job.file.getFileName(); w.phase=Phase::stale; w.status="IR: "+job.file.getFileName()+"; regenerate"; }
+        if(cancelled(id,generation,job.session)) continue; auto& w=*find(model,id);if(w.frozen)continue;
+        if(ok) { w.ir=asset; w.irName=label; w.phase=Phase::stale; w.status="IR: "+label+"; regenerate"; }
         else { w.phase=Phase::error; w.status=error; }
     }
-    message=ok ? "Managed IR imported: "+job.file.getFileName() : error;
+    message=ok ? "Managed IR imported: "+label : error;
     nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
 }
 void SwellEngine::analysisJob(const Analysis& job)
@@ -582,11 +645,12 @@ void SwellEngine::run()
             long double origin;const auto validTime=songOrigin(context.time,origin);
             if(analysisTurn && automaticJob()){analysisTurn=false;continue;}
             analysisTurn=true;
-            std::optional<Import> import; std::optional<Analysis> analyzingJob; std::optional<Swell> work,shape,monitor;
+            std::optional<Import> import; std::optional<Reset> reset; std::optional<Analysis> analyzingJob; std::optional<Swell> work,shape,monitor;
             bool restoreOrCheck=false; uint64_t session,settings=0;
             {
                 const juce::ScopedLock guard(lock); session=sessionGeneration.load();
-                if(!imports.empty()) { import=std::move(imports.front()); imports.pop_front(); }
+                if(!resets.empty()){reset=std::move(resets.front());resets.pop_front();}
+                else if(!imports.empty()) { import=std::move(imports.front()); imports.pop_front(); }
                 else if(analysis) { analyzingJob=analysis; analysis.reset(); }
                 else if(validTime && !context.capture.status.startsWith("Loading")
                     && (awaitingCaptureReference.isEmpty() || context.capture.reference==awaitingCaptureReference))
@@ -606,7 +670,8 @@ void SwellEngine::run()
                     }
                 }
             }
-            if(import) importJob(*import);
+            if(reset)resetJob(*reset);
+            else if(import) importJob(*import);
             else if(analyzingJob) analysisJob(*analyzingJob);
             else if(work) renderJob(*work,context,session,restoreOrCheck);
             else if(shape) shapeJob(*shape,session);

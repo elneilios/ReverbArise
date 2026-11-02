@@ -45,6 +45,7 @@ private:
     SwellViewport view;juce::ScrollBar scrollbar{false};
     juce::Rectangle<float> overview,source,wet;
     juce::String dragId;Drag drag=Drag::none;
+    juce::String sourceHover;
     juce::Point<float> dragOrigin;double initialTension=0;int64_t initialFade=0,initialPlacement=0,initialSample=0;
     Shape initialEnvelope;
     std::optional<EnvelopePoint> hover;bool fineDrag=false;

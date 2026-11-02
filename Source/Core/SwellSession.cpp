@@ -72,7 +72,7 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     for (const auto candidate : others) if (candidate > arrival) end = std::min(end, candidate);
     for (const auto& other : s.swells) if (other.arrival > arrival) end = std::min(end, other.arrival);
     if (end <= arrival) { error = "Source interval is empty"; return false; }
-    Swell w; w.name = "Swell " + juce::String(static_cast<int>(s.swells.size() + 1));
+    Swell w; w.name = defaultSwellName(arrival,time);
     w.arrival = w.sourceStart = arrival; w.sourceEnd = end; w.shape=initialShape(time.rate);
     const auto id = w.id; s.swells.push_back(std::move(w)); s.timing = time;
     select(s, {id}, id); error.clear(); return true;
@@ -80,6 +80,38 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
 Shape initialShape(double rate)
 {
     Shape s;if(std::isfinite(rate) && rate>0 && rate<1e9){s.endOffset=s.fadeOut=std::max(int64_t{1},static_cast<int64_t>(std::llround(rate*.020)));s.outCurve=Curve::smooth;}return s;
+}
+juce::String defaultSwellName(int64_t arrival,const SongTime& time)
+{
+    if(!time.valid || !std::isfinite(time.rate) || time.rate<=0 || !std::isfinite(time.bpm) || time.bpm<=0
+        || !std::isfinite(time.ppq) || time.numerator<=0 || time.denominator<=0)return "Swell";
+    const auto quarter=static_cast<long double>(time.rate)*60/time.bpm;
+    const auto ppq=static_cast<long double>(time.ppq)+(static_cast<long double>(arrival)-time.sample)/quarter;
+    const auto bar=std::floor(ppq/(static_cast<long double>(time.numerator)*4/time.denominator))+1;
+    if(!std::isfinite(bar) || bar<=-9223372036854775808.0L || bar>=9223372036854775808.0L)return "Swell";
+    return "Swell "+juce::String(static_cast<juce::int64>(bar));
+}
+bool resetWetDefaults(Swell& w,double rate,juce::String& error)
+{
+    if(!std::isfinite(rate) || rate<=0 || rate>=1e9){error="Compatible sample rate is required for Reset";return false;}
+    auto candidate=w;candidate.shape=initialShape(rate);candidate.placement=0;
+    int64_t a,b,length;if(!requestedShapeBounds(candidate,w.render.present()?w.render.start:w.sourceStart,a,b) || !checkedSubtract(b,a,length))
+    {error="Reset wet bounds are unavailable";return false;}
+    if(w.render.present())candidate.shape.fadeOut=std::min(candidate.shape.fadeOut,length-1);
+    w=std::move(candidate);error.clear();return true;
+}
+bool resetSwellDefaults(const Session& session,const juce::String& id,const CaptureManifest& map,const SongTime& time,Swell& output,juce::String& error)
+{
+    const auto old=find(session,id);
+    if(!old || !session.defaultIR.present()){error="Reset all needs a selected swell and valid default IR";return false;}
+    if(!time.valid || map.sampleRate!=time.rate){error="Reset all needs compatible captured source timing";return false;}
+    auto trial=session;erase(trial,id);
+    if(!add(trial,old->arrival,map,time,{},error))return false;
+    auto candidate=trial.swells.back();candidate.id=old->id;candidate.name=old->name;
+    candidate.detectorAnchor=old->detectorAnchor;candidate.provenance=Provenance::manualEdited;
+    candidate.ir=session.defaultIR;candidate.irName=session.defaultIRName;candidate.render=old->render;
+    candidate.phase=old->phase;candidate.status=old->status;
+    output=std::move(candidate);error.clear();return true;
 }
 bool moveWet(Swell& w,int64_t placement,juce::String& error)
 {

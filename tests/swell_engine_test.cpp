@@ -103,4 +103,47 @@ int main() { return runTest([]
     REQUIRE(cache.getChildFile(longRef.path).deleteFile());engine.restore(collection);
     waitFor([&]{const auto s=engine.savedSession();return s.swells[0].phase==Phase::error && s.swells.back().phase==Phase::ready;});
     REQUIRE(engine.savedSession().swells.size()==91 && !engine.snapshot().playing);
+    {
+        TestDirectory editsRoot;CaptureSession editsCapture(editsRoot.file);
+        std::vector<float> signal(4000,0);signal[0]=signal[1000]=.25f;
+        REQUIRE(editsCapture.commit(0,1000,signal.data(),2000));
+        PreviewContext editsContext{editsCapture.snapshot(),{true,0,0,1000,120,4,4},0};
+        SwellEngine edits(editsRoot.file,[&]{return editsContext;});edits.setAutomaticProcessing(false);
+        waitFor([&]{return edits.savedSession().defaultIR.present();});
+        REQUIRE(edits.addTarget(0));const auto a=edits.savedSession().primary;
+        REQUIRE(edits.addTarget(500));const auto b=edits.savedSession().primary;
+        const auto custom=editsRoot.file.getChildFile("own.wav");writeTestWav(custom,1,1000,{1,.5f,0});
+        const auto token=find(edits.savedSession(),a)->inputGeneration;
+        REQUIRE(edits.assignIR(a,token,custom));REQUIRE(edits.selectTargets({b},b));
+        waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wav";});
+        REQUIRE(find(edits.savedSession(),b)->irName=="Preverb Hall");
+        REQUIRE(!edits.assignIR(a,token,custom));
+        auto request=*find(edits.savedSession(),a);
+        REQUIRE(edits.assignIR(a,request.inputGeneration,{},true));
+        waitFor([&]{return find(edits.savedSession(),a)->irName=="Preverb Hall";});
+        edits.generate(true);waitFor([&]{const auto state=edits.savedSession();return state.swells[0].phase==Phase::ready && state.swells[1].phase==Phase::ready;});
+        REQUIRE(edits.setFrozen(a,true));request=*find(edits.savedSession(),a);
+        REQUIRE(!edits.assignIR(a,request.inputGeneration,custom) && find(edits.savedSession(),a)->ir==request.ir);
+        REQUIRE(edits.edit(a,[](auto& w,auto&){w.shape.gainDb=-8;w.shape.fadeIn=5;w.placement=10;w.enabled=false;w.solo=true;w.name="Keep name";return true;}));
+        REQUIRE(edits.resetSwell(a,false));request=*find(edits.savedSession(),a);
+        REQUIRE(request.frozen && !request.enabled && request.solo && request.shape==initialShape(1000) && request.placement==0 && request.name=="Keep name");
+        const auto neighbour=*find(edits.savedSession(),b);const auto preferences=edits.savedSession();
+        REQUIRE(edits.resetSwell(a,true));waitFor([&]{return !find(edits.savedSession(),a)->frozen;});
+        request=*find(edits.savedSession(),a);
+        REQUIRE(request.id==a && request.name=="Keep name" && request.arrival==0 && request.enabled && !request.solo && !request.muted);
+        REQUIRE(request.shape==initialShape(1000) && request.ir==preferences.defaultIR && request.sourceEnd==500);
+        REQUIRE(find(edits.savedSession(),b)->shape==neighbour.shape && find(edits.savedSession(),b)->ir==neighbour.ir);
+        REQUIRE(edits.savedSession().primary==b && edits.savedSession().sensitivity==preferences.sensitivity);
+        waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::ready;});
+        REQUIRE(edits.edit(a,[](auto& w,auto&){w.shape.gainDb=-7;w.enabled=false;return true;}));
+        const auto defaultFile=edits.assetDirectory().getChildFile(edits.savedSession().defaultIR.path);REQUIRE(defaultFile.deleteFile());
+        const auto prior=*find(edits.savedSession(),a);REQUIRE(edits.resetSwell(a,true));
+        waitFor([&]{return edits.snapshot().message.startsWith("Reset all:");});
+        request=*find(edits.savedSession(),a);REQUIRE(request.shape==prior.shape && request.ir==prior.ir && !request.enabled && request.inputGeneration==prior.inputGeneration);
+        REQUIRE(edits.assignIR(a,request.inputGeneration,custom));edits.removeSelected(); // b was selected; assignment remains pinned to a.
+        waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wav";});
+        REQUIRE(edits.selectTargets({a},a));request=*find(edits.savedSession(),a);
+        REQUIRE(edits.assignIR(a,request.inputGeneration,{},true));edits.removeSelected();
+        juce::Thread::sleep(30);REQUIRE(edits.savedSession().swells.empty());
+    }
 }); }

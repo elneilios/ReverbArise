@@ -5,6 +5,30 @@ using namespace m3;
 int main() { return runTest([]
 {
     Session s; CaptureManifest map; juce::String error;
+    {
+        SongTime timing{true,0,0,48000,120,4,4};
+        REQUIRE(defaultSwellName(34*48000,timing)=="Swell 18");
+        timing.sample=48000;timing.ppq=12;timing.numerator=3;timing.denominator=4;
+        REQUIRE(defaultSwellName(48000,timing)=="Swell 5");
+        timing.valid=false;REQUIRE(defaultSwellName(0,timing)=="Swell");
+        CaptureManifest covered;covered.sampleRate=48000;covered.ranges={{0,192000,CaptureCoverageKind::silence}};
+        timing={true,0,0,48000,120,4,4};Session definitions;
+        REQUIRE(add(definitions,100,covered,timing,{},error) && add(definitions,200,covered,timing,{},error));
+        REQUIRE(definitions.swells[0].name=="Swell 1" && definitions.swells[1].name=="Swell 1" && definitions.swells[0].id!=definitions.swells[1].id);
+        auto& edited=definitions.swells[0];edited.name="My saved name";edited.placement=1000;edited.shape.gainDb=-9;
+        edited.shape.fadeIn=123;edited.shape.inTension=.7;edited.enabled=false;edited.solo=true;edited.frozen=true;
+        const auto identity=edited.id;
+        REQUIRE(resetWetDefaults(edited,48000,error));
+        REQUIRE(edited.shape==initialShape(48000) && edited.shape.endOffset==960 && edited.shape.fadeOut==960 && edited.shape.outCurve==Curve::smooth);
+        REQUIRE(edited.placement==0 && edited.name=="My saved name" && edited.id==identity && !edited.enabled && edited.solo && edited.frozen);
+        const auto unchanged=edited;REQUIRE(!resetWetDefaults(edited,0,error) && edited.shape==unchanged.shape && edited.frozen);
+        Swell result;REQUIRE(!resetSwellDefaults(definitions,identity,covered,timing,result,error));
+        definitions.defaultIR.path="irs/default.wav";definitions.defaultIRName="Future default";
+        REQUIRE(resetSwellDefaults(definitions,identity,covered,timing,result,error));
+        REQUIRE(result.id==identity && result.name==edited.name && result.arrival==100 && result.sourceStart==100 && result.sourceEnd==200);
+        REQUIRE(result.enabled && !result.muted && !result.solo && !result.frozen && result.ir==definitions.defaultIR && result.shape==initialShape(48000));
+        REQUIRE(!definitions.swells[0].enabled && definitions.swells[0].frozen && definitions.swells[1].arrival==200);
+    }
     map.ranges = {{-100, 150, CaptureCoverageKind::audio}, {50, 1950, CaptureCoverageKind::silence}, {3000,100, CaptureCoverageKind::audio}};
     SongTime time{true,0,0,1000,120,4,4};
     REQUIRE(add(s,0,map,time,{100},error));

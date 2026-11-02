@@ -1,6 +1,7 @@
 #include "AudioTestFiles.h"
 #include <Plugin/PluginEditor.h>
 #include <source_location>
+#include <map>
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -14,14 +15,49 @@ static bool visibleOffscreen(juce::Component* control)
 {for(;control;control=control->getParentComponent())if(!control->isVisible())return false;return true;}
 static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::String& tag)
 {
+    // A state or recovery panel may replace content, never the region geometry.
+    std::array<juce::Rectangle<int>,4> regions;
+    int index=0;for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview"})
+    {const auto c=named(editor,name);REQUIRE(c);regions[static_cast<size_t>(index++)]=c->getBounds();}
+    static std::map<std::pair<int,int>,decltype(regions)> geometry;
+    const auto key=std::pair{editor.getWidth(),editor.getHeight()};
+    if(const auto old=geometry.find(key);old!=geometry.end())REQUIRE(old->second==regions);else geometry.emplace(key,regions);
     const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image image(juce::Image::ARGB,editor.getWidth(),editor.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);editor.paintEntireComponent(graphics,true);
     auto stream=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(image,*stream));
+    if(tag=="fresh-1400" || tag=="ready")for(const auto scale:{1.25f,1.5f,2.0f})
+    {
+        juce::Image scaled(juce::Image::ARGB,juce::roundToInt(editor.getWidth()*scale),juce::roundToInt(editor.getHeight()*scale),true,juce::SoftwareImageType{});
+        juce::Graphics canvas(scaled);canvas.addTransform(juce::AffineTransform::scale(scale));editor.paintEntireComponent(canvas,true);
+        auto output=directory.getChildFile(tag+"-scale-"+juce::String(juce::roundToInt(scale*100))+".png").createOutputStream();
+        REQUIRE(output && output->setPosition(0) && output->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(scaled,*output));
+    }
 }
 int main(){return runTest([]
 {
-    juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    juce::ScopedJuceInitialiser_GUI gui;
+    // A fresh instance must not inherit capture or status from the long-lived
+    // editing fixture below. Keep matched baseline states independently useful.
+    {
+        TestDirectory freshRoot;auto freshOwner=std::make_unique<PreverbAudioProcessor>(freshRoot.file);auto& fresh=*freshOwner;
+        REQUIRE(fresh.getName()=="Preverb Spike" && fresh.getParameters().isEmpty() && fresh.getNumPrograms()==1);
+        REQUIRE(fresh.getCaptureSnapshot().manifest.ranges.empty());
+        PreverbAudioProcessorEditor empty(fresh);empty.setVisible(true);empty.refresh();
+        const auto* mark=dynamic_cast<m3::ui::Wordmark*>(named(empty,"brandWordmark"));REQUIRE(mark && mark->loaded());
+        const auto* theme=dynamic_cast<m3::ui::WorkspaceTheme*>(&empty.getLookAndFeel());
+        REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName().containsIgnoreCase("Inter"));
+        const auto surface=empty.createComponentSnapshot(empty.getLocalBounds());
+        REQUIRE(surface.getPixelAt(0,0)==m3::ui::background && surface.getPixelAt(empty.getWidth()-1,0)==m3::ui::background);
+        REQUIRE(fresh.swellEngine().savedSession().swells.empty());
+        REQUIRE(fresh.getCaptureSnapshot().manifest.ranges.empty() && !fresh.swellEngine().snapshot().playing);
+        for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,1000}})
+        {empty.setSize(size.x,size.y);empty.refresh();snapshotEditor(empty,"fresh-"+juce::String(size.x));}
+        juce::MemoryBlock saved;fresh.getStateInformation(saved);
+        const auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
+        REQUIRE(xml && xml->hasTagName("PreverbState") && xml->getIntAttribute("stateVersion")==7);
+    }
+    TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
     processor->swellEngine().setAutomaticProcessing(false);processor->swellEngine().setIsolateSelected(true);
     UIPlayHead head;head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});head.position.setIsPlaying(true);
     processor->prepareToPlay(48000,4096);processor->setPlayHead(&head);juce::MidiBuffer midi;juce::AudioBuffer<float> buffer(2,4096);
@@ -33,7 +69,13 @@ int main(){return runTest([]
         processor->processBlock(buffer,midi);juce::Thread::sleep(1);
     }
     processor->setMappingEnabled(false);REQUIRE(processor->flushCaptureForTesting());head.position.setIsPlaying(false);buffer.clear();processor->processBlock(buffer,midi);
-    auto& engine=processor->swellEngine();REQUIRE(engine.addTarget(0));const auto first=engine.savedSession().primary;REQUIRE(engine.addTarget(48000));const auto second=engine.savedSession().primary;
+    auto& engine=processor->swellEngine();
+    {
+        PreverbAudioProcessorEditor mapped(*processor);mapped.setVisible(true);mapped.setSize(1400,1000);mapped.refresh();
+        REQUIRE(!processor->getCaptureSnapshot().manifest.ranges.empty() && engine.savedSession().swells.empty());
+        snapshotEditor(mapped,"mapped-unselected");
+    }
+    REQUIRE(engine.addTarget(0));const auto first=engine.savedSession().primary;REQUIRE(engine.addTarget(48000));const auto second=engine.savedSession().primary;
     waitUI([&]{const auto state=engine.snapshot();return state.session.defaultIR.present() || state.defaultIRError.isNotEmpty();});
     if(engine.snapshot().defaultIRError.isNotEmpty())std::cerr<<engine.snapshot().defaultIRError<<"\n";
     REQUIRE(engine.savedSession().defaultIR.present());
@@ -42,7 +84,38 @@ int main(){return runTest([]
     waitUI([&]{return engine.savedSession().swells[0].irName=="musical-ir.wav" && engine.savedSession().swells[1].irName=="musical-ir.wav";});engine.generate(true);
     waitUI([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==m3::Phase::ready;});
     REQUIRE(engine.snapshot().raw->peak>1);
+    const auto baseline=engine.savedSession();
     PreverbAudioProcessorEditor editor(*processor);editor.setVisible(true);editor.refresh();snapshotEditor(editor,"ready");
+    const auto afterOpening=engine.savedSession();
+    for(size_t i=0;i<baseline.swells.size();++i)
+    {const auto& current=afterOpening.swells[i];const auto& prior=baseline.swells[i];
+        REQUIRE(current.id==prior.id && current.ir==prior.ir && current.render==prior.render && current.shape==prior.shape);}
+    {
+        const auto enter=[&](const char* name,const char* value)
+        {auto field=dynamic_cast<juce::TextEditor*>(named(editor,name));REQUIRE(field);field->setText(value,false);field->onReturnKey();editor.refresh();};
+        for(const auto* name:{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","swellLevel","curveInTension","curveOutTension","wetPlacement"})
+        {const auto cell=dynamic_cast<m3::ui::KnobValue*>(named(editor,juce::String(name)+"Cell"));REQUIRE(cell && visibleOffscreen(cell));REQUIRE(cell->getLocalBounds().contains(cell->valueField().getBounds()) && cell->getLocalBounds().contains(cell->valueKnob().getBounds()));}
+        enter("preRoll","0.4");enter("endOffset","0.015");enter("fadeInMs","10");enter("fadeOutMs","20");enter("swellLevel","-3");
+        enter("curveInTension","0.25");enter("curveOutTension","-0.4");enter("wetPlacement","25");
+        auto edited=*m3::find(engine.savedSession(),first);REQUIRE(edited.placement==1200 && edited.shape.startOffset==-19200 && edited.shape.endOffset==720);
+        REQUIRE(edited.shape.fadeIn==480 && edited.shape.fadeOut==960 && edited.shape.gainDb==-3 && edited.shape.inTension==.25 && edited.shape.outTension==-.4);
+        enter("preRoll","0.45");enter("endOffset","0.05");edited=*m3::find(engine.savedSession(),first);
+        REQUIRE(edited.shape.startOffset==-22800 && edited.shape.endOffset==1200 && edited.placement==1200);
+        const auto retained=edited;enter("preRoll","99999999999999999999999999");enter("curveInTension","2");
+        REQUIRE(m3::find(engine.savedSession(),first)->shape==retained.shape);
+        auto curve=dynamic_cast<m3::ui::KnobValue*>(named(editor,"curveInTensionCell"));REQUIRE(curve);
+        auto& knob=curve->valueKnob();knob.onDragStart();const auto start=knob.getValue();knob.setValue(start+.1,juce::sendNotificationSync);
+        REQUIRE(std::abs(m3::find(engine.savedSession(),first)->shape.inTension-.45)<1e-6);
+        REQUIRE(engine.selectTargets({second},second));editor.refresh();const auto otherShape=m3::find(engine.savedSession(),second)->shape;
+        knob.setValue(.9,juce::sendNotificationSync);knob.onDragEnd();REQUIRE(m3::find(engine.savedSession(),second)->shape==otherShape);
+        engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+        const auto shape=m3::find(engine.savedSession(),first)->shape;
+        auto field=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(field);field->setText("77",false);field->onEscapeKey();
+        REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
+        auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==2 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getText()=="musical-ir.wav");
+        snapshotEditor(editor,"inspector-default");
+        auto scroll=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));REQUIRE(scroll);scroll->setViewPosition(0,10000);snapshotEditor(editor,"inspector-scrolled");scroll->setViewPosition(0,0);
+    }
     REQUIRE(engine.audition());buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
     const auto auditionPosition=engine.snapshot().auditionSample;REQUIRE(auditionPosition && *auditionPosition==engine.snapshot().raw->start+buffer.getNumSamples());
     {const auto lane=editor.timelineComponent().sourceLane();const auto view=editor.timelineComponent().viewport();
@@ -88,7 +161,8 @@ int main(){return runTest([]
     markerToggle->setToggleState(false,juce::dontSendNotification);markerToggle->onClick();
     REQUIRE(std::abs(engine.savedSession().sensitivity-.12f)<1e-5 && !engine.savedSession().autoMarkersEnabled);
     auto liveToggle=dynamic_cast<juce::ToggleButton*>(named(editor,"livePlayback"));auto liveMode=dynamic_cast<juce::ComboBox*>(named(editor,"liveRouting"));auto liveLevel=dynamic_cast<juce::Slider*>(named(editor,"liveWetLevel"));
-    REQUIRE(liveToggle && liveMode && liveLevel && visibleOffscreen(liveLevel));
+    REQUIRE(liveToggle && liveMode && liveLevel);
+    REQUIRE(!visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();REQUIRE(visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();
     liveToggle->setToggleState(false,juce::dontSendNotification);liveToggle->onClick();liveMode->setSelectedId(2,juce::sendNotificationSync);liveLevel->setValue(-7.5,juce::sendNotificationSync);
     REQUIRE(!engine.savedSession().liveEnabled && engine.savedSession().liveRouting==m3::LiveRouting::wetOnly && engine.savedSession().liveWetDb==-7.5f);
     REQUIRE(engine.savedSession().auditionDb==0);engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);editor.refresh();
@@ -105,7 +179,8 @@ int main(){return runTest([]
     REQUIRE(engine.savedSession().wetBlend==.35f && engine.snapshot().renderCount==monitorRenderCount);
     engine.setPreferences(-24,.5f,.08,false);editor.refresh();
     dryWet->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-    auto dryIsolation=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && visibleOffscreen(dryIsolation) && dryIsolation->isEnabled());
+    auto dryIsolation=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && dryIsolation->isEnabled());
+    diagnostics->onClick();editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
     dryIsolation->setToggleState(true,juce::dontSendNotification);dryIsolation->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().isolateDry && engine.snapshot().auditionDryEnd==engine.savedSession().swells[0].sourceEnd);
     snapshotEditor(editor,"isolated-dry");dryIsolation->setToggleState(false,juce::dontSendNotification);dryIsolation->onClick();
@@ -318,5 +393,22 @@ int main(){return runTest([]
     auto exportStatus=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(exportStatus && exportStatus->getText().startsWith("Export warning"));
     REQUIRE(engine.snapshot().offlineBlocks==1 && engine.snapshot().offlineStatus.startsWith("Export warning"));snapshotEditor(editor,"export-error");
     processor->setNonRealtime(false);processor->prepareToPlay(48000,4096);
+    // The knob's floating proxy must never round an absolute sample through
+    // double. Both typed and relative edits retain the odd sample above 2^53.
+    {
+        auto exact=engine.savedSession();exact.swells.resize(1);auto& large=exact.swells[0];
+        large.id=juce::Uuid().toDashedString();large.arrival=large.sourceStart=9007199254740993LL;large.sourceEnd=large.arrival+24000;
+        large.frozen=false;large.ir={};large.render={};large.shape=m3::initialShape(48000);large.placement=0;
+        exact.selected={large.id};exact.primary=large.id;exact.automaticProcessing=false;
+        engine.restore(exact);editor.refresh();
+        auto units=dynamic_cast<juce::ToggleButton*>(named(editor,"sampleUnits"));REQUIRE(units);units->setToggleState(true,juce::dontSendNotification);units->onClick();editor.refresh();
+        auto field=dynamic_cast<juce::TextEditor*>(named(editor,"arrivalSample"));REQUIRE(field && field->getText()=="9007199254740993");
+        field->setText("9007199254740995",false);field->onReturnKey();REQUIRE(engine.savedSession().swells[0].arrival==9007199254740995LL);
+        editor.refresh();auto cell=dynamic_cast<m3::ui::KnobValue*>(named(editor,"sourceSampleStartCell"));REQUIRE(cell);
+        const auto before=engine.savedSession().swells[0].sourceStart;const auto span=editor.timelineComponent().viewport().span();
+        auto& knob=cell->valueKnob();knob.onDragStart();const auto initial=knob.getValue();knob.setValue(initial-.001,juce::sendNotificationSync);knob.onDragEnd();
+        REQUIRE(engine.savedSession().swells[0].sourceStart==before+static_cast<int64_t>(std::llround(-.001*span)));
+        field->setText("9223372036854775808",false);field->onReturnKey();REQUIRE(engine.savedSession().swells[0].arrival==9007199254740995LL);
+    }
     engine.restore({});editor.refresh();snapshotEditor(editor,"empty");
 });}

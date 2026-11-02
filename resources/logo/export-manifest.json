@@ -1,0 +1,767 @@
+{
+  "version": "1.0",
+  "font": "Inter, weight 700, optical size 32; tagline Inter Italic 400",
+  "colors": {
+    "aqua": "#00EFFF",
+    "white": "#F5F7F9",
+    "charcoal": "#0F1418"
+  },
+  "exports": [
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-256px.png",
+      "width": 256,
+      "height": 44,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        7,
+        7,
+        250,
+        38
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-320px.png",
+      "width": 320,
+      "height": 55,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        9,
+        8,
+        312,
+        47
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-512px.png",
+      "width": 512,
+      "height": 88,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        75
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-640px.png",
+      "width": 640,
+      "height": 110,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        19,
+        17,
+        624,
+        94
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-1024px.png",
+      "width": 1024,
+      "height": 175,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        149
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-2048px.png",
+      "width": 2048,
+      "height": 351,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        298
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-dark-4096px.png",
+      "width": 4096,
+      "height": 701,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        594
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-dark-512px.png",
+      "width": 512,
+      "height": 121,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        112
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-dark-1024px.png",
+      "width": 1024,
+      "height": 243,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        224
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-dark-2048px.png",
+      "width": 2048,
+      "height": 486,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        448
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-dark-4096px.png",
+      "width": 4096,
+      "height": 971,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        894
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-256px.png",
+      "width": 256,
+      "height": 44,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        7,
+        7,
+        250,
+        38
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-320px.png",
+      "width": 320,
+      "height": 55,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        9,
+        8,
+        312,
+        47
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-512px.png",
+      "width": 512,
+      "height": 88,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        75
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-640px.png",
+      "width": 640,
+      "height": 110,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        19,
+        17,
+        624,
+        94
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-1024px.png",
+      "width": 1024,
+      "height": 175,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        149
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-2048px.png",
+      "width": 2048,
+      "height": 351,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        298
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-light-4096px.png",
+      "width": 4096,
+      "height": 701,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        594
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-light-512px.png",
+      "width": 512,
+      "height": 121,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        112
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-light-1024px.png",
+      "width": 1024,
+      "height": 243,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        224
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-light-2048px.png",
+      "width": 2048,
+      "height": 486,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        448
+      ]
+    },
+    {
+      "file": "png/tagline/reverbarise-tagline-light-4096px.png",
+      "width": 4096,
+      "height": 971,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        894
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-256px.png",
+      "width": 256,
+      "height": 44,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        7,
+        7,
+        250,
+        38
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-320px.png",
+      "width": 320,
+      "height": 55,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        9,
+        8,
+        312,
+        47
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-512px.png",
+      "width": 512,
+      "height": 88,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        75
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-640px.png",
+      "width": 640,
+      "height": 110,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        19,
+        17,
+        624,
+        94
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-1024px.png",
+      "width": 1024,
+      "height": 175,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        149
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-2048px.png",
+      "width": 2048,
+      "height": 351,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        298
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-white-4096px.png",
+      "width": 4096,
+      "height": 701,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        594
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-256px.png",
+      "width": 256,
+      "height": 44,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        7,
+        7,
+        250,
+        38
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-320px.png",
+      "width": 320,
+      "height": 55,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        9,
+        8,
+        312,
+        47
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-512px.png",
+      "width": 512,
+      "height": 88,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        15,
+        14,
+        499,
+        75
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-640px.png",
+      "width": 640,
+      "height": 110,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        19,
+        17,
+        624,
+        94
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-1024px.png",
+      "width": 1024,
+      "height": 175,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        31,
+        28,
+        998,
+        149
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-2048px.png",
+      "width": 2048,
+      "height": 351,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        62,
+        56,
+        1995,
+        298
+      ]
+    },
+    {
+      "file": "png/wordmark/reverbarise-wordmark-mono-charcoal-4096px.png",
+      "width": 4096,
+      "height": 701,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        124,
+        113,
+        3989,
+        594
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-32px.png",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        3,
+        8,
+        29,
+        24
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-64px.png",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        6,
+        17,
+        58,
+        47
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-128px.png",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        12,
+        34,
+        116,
+        94
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-256px.png",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        25,
+        69,
+        231,
+        187
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-512px.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        49,
+        139,
+        463,
+        373
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-aqua-1024px.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        98,
+        278,
+        926,
+        746
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-32px.png",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        3,
+        8,
+        29,
+        24
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-64px.png",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        6,
+        17,
+        58,
+        47
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-128px.png",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        12,
+        34,
+        116,
+        94
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-256px.png",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        25,
+        69,
+        231,
+        187
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-512px.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        49,
+        139,
+        463,
+        373
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-white-1024px.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        98,
+        278,
+        926,
+        746
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-32px.png",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        3,
+        8,
+        29,
+        24
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-64px.png",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        6,
+        17,
+        58,
+        47
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-128px.png",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        12,
+        34,
+        116,
+        94
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-256px.png",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        25,
+        69,
+        231,
+        187
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-512px.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        49,
+        139,
+        463,
+        373
+      ]
+    },
+    {
+      "file": "png/mark/reverbarise-mark-charcoal-1024px.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "content_bounds": [
+        98,
+        278,
+        926,
+        746
+      ]
+    }
+  ]
+}

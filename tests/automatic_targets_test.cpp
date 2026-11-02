@@ -29,6 +29,16 @@ int main(){return runTest([]
         REQUIRE(usableCompletedPasses(extreme,{{INT64_MAX-10,INT64_MAX}}).size()==1);
     }
     Session s;SongTime time{true,0,0,48000,120,4,4};juce::String error;
+    {
+        Session named;REQUIRE(reconcileTargets(named,{{1632000,1},{1638000,1}},1600000,1700000,time,error));
+        REQUIRE(named.swells.size()==2 && named.swells[0].name=="Swell 18" && named.swells[1].name=="Swell 18" && named.swells[0].id!=named.swells[1].id);
+        const auto id=named.swells[0].id;named.swells[0].name="A saved custom name";
+        REQUIRE(reconcileTargets(named,{{1632010,1},{1638000,1}},1600000,1700000,time,error));
+        REQUIRE(find(named,id) && find(named,id)->name=="A saved custom name");
+        REQUIRE(moveWet(*find(named,id),1000,error) && find(named,id)->name=="A saved custom name");
+        juce::String text;Session reopen;REQUIRE(encode(named,text,error) && decode(text,reopen,error));
+        REQUIRE(find(reopen,id)->name=="A saved custom name");
+    }
     REQUIRE(reconcileTargets(s,{{1000,1},{1000,2},{30000,1}},0,48000,time,error));
     REQUIRE(s.swells.size()==2 && s.swells[0].sourceEnd==25000);
     const auto first=s.swells[0].id,second=s.swells[1].id;

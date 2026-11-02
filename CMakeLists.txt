@@ -71,6 +71,10 @@ target_include_directories(preverb_analysis PUBLIC Source)
 target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 
 juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav)
+juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
+    resources/logo/svg/reverbarise-wordmark-dark.svg
+    resources/logo/source/InterVariable.ttf
+)
 add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
@@ -93,13 +97,14 @@ juce_add_plugin(preverb_plugin
 
 target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
+    Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
 )
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
 
-target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview)
+target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)
 target_link_libraries(preverb_plugin PRIVATE
     preverb_playback
     juce::juce_audio_utils
@@ -111,6 +116,8 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${preverb_wavpack_source}/COPYING"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/WavPack-LICENSE.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/licenses/Inter-OFL.txt"
+        "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/Inter-OFL.txt"
 )
 
 add_executable(preverb_build_smoke tests/build_smoke.cpp)

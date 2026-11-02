@@ -1,6 +1,9 @@
 #pragma once
 #include "PluginProcessor.h"
 #include <UI/SwellTimeline.h>
+#include <UI/WorkspaceTheme.h>
+#include <UI/WorkspaceLayout.h>
+#include <UI/KnobValue.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer,private juce::ListBoxModel
 {
@@ -12,6 +15,9 @@ public:
     void refresh();
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
 private:
+    m3::ui::WorkspaceTheme workspaceTheme;
+    m3::ui::Wordmark wordmark;
+    juce::Label tagline,inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {refresh();}
     int getNumRows() override;
@@ -25,6 +31,19 @@ private:
     void armSelected();
     void shapeReset(bool full);
     void fieldBounds(juce::Rectangle<int>&,int field,int labelWidth,int editorWidth);
+    enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
+    void beginValueEdit(int);
+    bool commitValueEdit(int,const juce::String&,std::optional<double> delta={});
+    void refreshValues(const m3::Swell*,const SongTime&);
+    std::array<m3::ui::KnobValue,valueCount> valueControls;
+    std::array<std::optional<m3::Swell>,valueCount> valueAnchors;
+    std::array<double,valueCount> valueSpans{};
+    std::array<uint64_t,valueCount> valueTokens{};
+    std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
+    SongTime valueTime;
+    juce::ComboBox irBox;
+    juce::TextButton resetMenu{"v"};
+    juce::String irOwner,irChoice;
     PreverbAudioProcessor& processor;
     m3::EditorSnapshot state;
     m3::SwellTimeline timeline;
@@ -58,7 +77,7 @@ private:
     juce::Label liveLevelLabel;
     juce::TextButton nudgeLeft{"<"},nudgeRight{">"};
     juce::Slider blendSlider,fadeInKnob,fadeOutKnob,inTensionSlider,outTensionSlider,tailSlider;
-    juce::Label transitionStatus,supportStatus,inTensionLabel,outTensionLabel,tailLabel;
+    juce::Label inTensionLabel,outTensionLabel,tailLabel;
     bool diagnosticsOpen=false;
     juce::TextButton timingButton{"Source and audible timing..."};
     bool advancedTiming=false;

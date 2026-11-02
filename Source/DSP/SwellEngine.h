@@ -25,6 +25,7 @@ struct EditorSnapshot
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
     juce::String message;
+    juce::String actionError;
     std::optional<int64_t> auditionSample;
     int64_t auditionDryStart=0,auditionDryEnd=0;
     bool playing=false,auditionReady=false,analyzing=false;
@@ -60,6 +61,8 @@ public:
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
     void loadIR(const juce::File&,bool primaryOnly=false);
+    bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false);
+    bool resetSwell(const juce::String& id,bool allSettings);
     void generate(bool all=false);
     void analyze(int64_t start,int64_t end);
     void setPreferences(float auditionDb,float sensitivity,double separation,bool autoRegenerate);
@@ -104,7 +107,8 @@ private:
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
-    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false; };
+    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false,bundled=false; };
+    struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
     struct Analysis { int64_t start,end; float sensitivity; double separation; uint64_t session,request; };
     void run() override;
     void inspect(const PreviewContext&);
@@ -115,6 +119,8 @@ private:
     void dispatchAutomatic(const PreviewContext&);
     void dirtyLocked(int64_t,int64_t);
     void importJob(const Import&);
+    void resetJob(const Reset&);
+    bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
     void shapeJob(Swell,uint64_t session);
@@ -137,9 +143,11 @@ private:
     Session model;
     std::map<juce::String,Runtime> runtime;
     std::deque<Import> imports;
+    std::deque<Reset> resets;
     std::optional<Analysis> analysis;
     std::vector<Candidate> candidates;
     juce::String message="Capture source, add or confirm a target, then assign an IR";
+    juce::String actionError;
     juce::String captureReference,captureScope;
     juce::String awaitingCaptureReference;
     std::set<juce::String> forceRefresh;

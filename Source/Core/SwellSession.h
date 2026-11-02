@@ -81,6 +81,9 @@ bool canAudition(const Session&, const Swell&) noexcept;
 bool add(Session&, int64_t arrival, const CaptureManifest&, const SongTime&,
          const std::vector<int64_t>& otherArrivals, juce::String& error);
 Shape initialShape(double rate);
+juce::String defaultSwellName(int64_t arrival,const SongTime&);
+bool resetWetDefaults(Swell&,double rate,juce::String& error);
+bool resetSwellDefaults(const Session&,const juce::String& id,const CaptureManifest&,const SongTime&,Swell&,juce::String& error);
 bool moveWet(Swell&,int64_t placement,juce::String& error);
 bool moveArrival(Swell&, int64_t arrival, juce::String& error);
 bool setSource(Swell&, int64_t start, int64_t end, juce::String& error);
