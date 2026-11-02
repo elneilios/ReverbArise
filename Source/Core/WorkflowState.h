@@ -33,19 +33,6 @@ inline EntryBlock entryBlock(Snapshot s,Mode target,Readiness r) noexcept
     if(target==Mode::finalise && !r.readySwell)return EntryBlock::wet;
     return EntryBlock::none;
 }
-inline const char* entryError(Snapshot s,Mode target,Readiness r) noexcept
-{
-    switch(entryBlock(s,target,r))
-    {
-        case EntryBlock::recording:return "Capture is recording; stop the DAW first";
-        case EntryBlock::settling:return "Source commit/validation is settling";
-        case EntryBlock::source:return "Capture useful source audio first (Live also supports verified frozen wet)";
-        case EntryBlock::timing:return "Source needs compatible validated host timing";
-        case EntryBlock::wet:return "Finalise needs an enabled ready swell";
-        case EntryBlock::none:return nullptr;
-    }
-    return nullptr;
-}
 // A single lock-free word owns mode, phase, arm and generation. All callback
 // transitions are bounded CAS attempts; no UI/worker lock enters processing.
 class State
@@ -56,7 +43,7 @@ public:
     {
         if(static_cast<unsigned>(target)>2)return false;
         auto old=word.load(std::memory_order_acquire);const auto s=decode(old);
-        if(entryError(s,target,r))return false;
+        if(entryBlock(s,target,r)!=EntryBlock::none)return false;
         return word.compare_exchange_strong(old,pack(target,Phase::idle,false,Result::none,s.pass+1),std::memory_order_acq_rel);
     }
     bool arm(bool enabled) noexcept

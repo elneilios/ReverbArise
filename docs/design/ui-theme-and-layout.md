@@ -5,6 +5,16 @@ native LookAndFeel. `WorkspaceLayout.h` calculates eight regions in six bands
 from editor size only; changing selection/readiness or opening the separate
 Settings/Diagnostics windows does not change their positions.
 
+Issue #16 replaces the temporary mode dropdown with one `WorkflowHeader` reused
+across Learn, Perform and Export. It composes the existing wordmark/italic tagline,
+the approved library SegmentedSelector and semantic Settings IconActionButton,
+plus concise role/status lines. Only outer selector ends are rounded; internal
+joins are square. The 70-pixel header budget and 1100x850 opening size remain.
+Visible selection comes from accepted model state; recording/commit locks expose
+accessible reasons without switching modes. Display names are separate from saved
+mode identifiers. Dedicated Learn and Export layouts remain #11/#6. Component
+checkpoint A is approved; integrated header approval is a separate checkpoint.
+
 The numerical palette remains a proposed baseline adopted for this change:
 background #0F1418, aqua #00EFFF/#00C2CC, timing #FFC700, text #F8FAFC/#E1E6EC,
 rules #4A5058 and control outlines #6B737C. The first stage replaces the large

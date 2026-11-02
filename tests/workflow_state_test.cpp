@@ -19,7 +19,7 @@ int main(){return runTest([]{
                 REQUIRE(shown.selected==mode && std::string_view(shown.status).size()>0);
                 for(const auto& choice:shown.choices)
                 {
-                    REQUIRE(choice.available==(entryError(snapshot,choice.mode,readiness)==nullptr));
+                    REQUIRE(choice.available==(entryBlock(snapshot,choice.mode,readiness)==EntryBlock::none));
                     REQUIRE(choice.available==std::string_view(choice.reason).empty());
                 }
             }

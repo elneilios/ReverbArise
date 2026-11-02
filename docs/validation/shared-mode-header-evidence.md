@@ -39,10 +39,56 @@ where segment options touch. The revised selector keeps rounding only at the
 outer ends, with square internal joins and a shared border. Native geometry/pixel
 checks verify this; existing interactions still pass. Revised review images:
 `checkpoint-a-joined-states.png` and `checkpoint-a-joined-compact.png`.
-**Revised component approval remains pending.** Task 2.4 is unchecked; no dependent
-header integration, final host acceptance or complete library migration is claimed.
+The owner explicitly approved the revised components and continuation to header
+integration on 2026-11-02. This closes component checkpoint A (task 2.4), not the
+integrated header checkpoint, final host acceptance or whole-library migration.
 
 All results above are automated/native. No new FL Studio or actual Windows DPI
 acceptance is claimed. The final host request remains one brief smoke test after
 integration, with detailed edge cases proved by automation. The production Release
 VST3 has not yet been rebuilt for delivery of this header change.
+
+## Stage B: integrated header — 2026-11-02
+
+The shared WorkflowHeader now replaces the temporary dropdown and owns the
+wordmark, italic tagline, library selector, semantic Settings action and concise
+role/status text. It uses the approved square internal joins. The old name-based
+Settings glyph branch and string-returning guard adapter are removed after their
+consumers migrate; one typed guard remains authoritative. Functional source
+capture/live wet wording is retained. The targeted old-mode-wording audit finds
+only the durable `modeName()` strings and legacy XML restore parser.
+
+The expanded native header fixture checks ten states at three widths (1068,
+1360,1560, matching editor content widths) with real native peers: empty,
+dry-only, ready, recording, draining, validating, failure, incompatible timing,
+frozen recovery and Export. It asserts child containment/no overlap and segment
+availability/reasons. Existing editor fixtures check actual pointer/keyboard mode
+requests, active-choice no-op, recording locks, selection-edit invalidation and
+Settings/Diagnostics lifecycle with the new controls.
+
+The first standalone header fixture incorrectly queried accessibility without
+a native peer and hit a null handler. Giving that fixture a real peer and checking
+the handler fixed it; the native UI test then passed. This was a fixture setup
+failure, not a verified host crash. Native snapshot tracing remains available in
+test output to identify future failing stages.
+
+Integrated focused Release tests passed (workflow processor/state and native UI).
+Full Release build and CTest subsequently passed **32/32 in 41.29 s**. Strict
+all-spec validation passed **13/13**, and patch formatting checks passed. The
+additional changed Debug fixtures are still pending; no full Debug pass is claimed.
+
+Delivery bundle:
+`out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`.
+Its `Contents/x86_64-win/ReverbArise.vst3` SHA-256 is
+`3a6fd0996b60a6e47d74b8dad9556392d46d45b6c30371a4b070eec438a1eb24`.
+Generated module metadata retains component
+`ABCDEF019182FAEB4B374D6150727631` and controller
+`ABCDEF011234ABCD4B374D6150727631`. No parameter/state version/asset migration is
+introduced; saved-mode compatibility assertions still pass.
+
+Native evidence is under `out/issue16-header-checkpoint-b/`: matched Perform,
+Learn and Export full-editor captures, a larger layout, header-state strips and
+125/150/200% offscreen scale renders. These are geometry/native evidence, not
+in-host DPI or FL Studio acceptance. **Integrated checkpoint B remains pending.**
+The final owner host request is limited to one brief feel/mode-journey/save-reopen
+smoke test after visual approval; other edge cases rely on automated regressions.

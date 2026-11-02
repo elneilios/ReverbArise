@@ -21,11 +21,9 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     :AudioProcessorEditor(p),processor(p),timeline(p.swellEngine())
 {
     setLookAndFeel(&workspaceTheme);
-    workflowBox.setName("workflowMode");workflowBox.addItem("Capture - Learn",1);workflowBox.addItem("Live - Edit & play",2);workflowBox.addItem("Finalise - Dry bypass",3);
-    addAndMakeVisible(workflowBox);addAndMakeVisible(recaptureExisting);addAndMakeVisible(workflowStatus);
-    recaptureExisting.setName("recaptureExisting");workflowStatus.setName("workflowStatus");
-    workflowStatus.setFont(juce::FontOptions(m3::ui::smallSize));workflowStatus.setColour(juce::Label::textColourId,m3::ui::secondary);
-    workflowBox.onChange=[this]{if(!updating){processor.requestWorkflowMode(static_cast<workflow::Mode>(workflowBox.getSelectedId()-1));refresh();}};
+    addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
+    recaptureExisting.setName("recaptureExisting");
+    workflowHeader.onModeRequested=[this](workflow::Mode mode){if(!updating && !destroying){processor.requestWorkflowMode(mode);refresh();}};
     recaptureExisting.onClick=[this]{processor.setRecaptureExisting(recaptureExisting.getToggleState());refresh();};
     setResizable(true,true);setResizeLimits(1100,850,2000,1400);
     for(auto* label:{&status,&detail,&listLabel,&auditionLabel,&separationLabel,&spanLabel,&barStartLabel,&barEndLabel,&recaptureStatus,&toneStartLabel,&toneEndLabel})
@@ -128,12 +126,12 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         liveRoutingBox.getSelectedId()==2?m3::LiveRouting::wetOnly:m3::LiveRouting::dryWet,static_cast<float>(liveLevel.getValue()));};
     liveButton.onClick=updateLive;liveRoutingBox.onChange=updateLive;liveLevel.onValueChange=updateLive;
     helper.setFont(juce::FontOptions(m3::ui::smallSize));
-    for(auto* button:{&diagnosticsButton,&trimResetButton,&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
+    for(auto* button:{&trimResetButton,&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
     for(auto* button:{&automaticButton,&sampleUnitsButton})addAndMakeVisible(button);
-    sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");diagnosticsButton.setName("diagnostics");
+    sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");
     trimResetButton.setName("resetAuditionTrim");
     blendSlider.setName("auditionBlend");slider(blendSlider,0,100,.1," % Wet");
-    diagnosticsButton.onClick=[this]{setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
+    workflowHeader.onSettings=[this]{if(!destroying)setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
     automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState());refresh();};
     sampleUnitsButton.onClick=[this]{refresh();};
     suppressionButton.onClick=[this]{processor.swellEngine().resetSuppression();refresh();};
@@ -183,19 +181,17 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(auto* control:std::array<juce::Component*,28>{&status,&detail,&generateButton,&allButton,&analyzeButton,&confirmButton,&candidateBox,&separationLabel,&separationSlider,&autoButton,&recaptureButton,&cancelButton,&recaptureStatus,&mappingButton,&toneButton,&toneStartLabel,&toneStartSlider,&toneEndLabel,&toneEndSlider,&clearButton,&assetInfoButton,&barStartLabel,&barEndLabel,&barStartEditor,&barEndEditor,&setBarsButton,&auditionLabel,&auditionSlider})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,4>{&automaticButton,&sampleUnitsButton,&defaultIRButton,&suppressionButton})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,10>{&removeButton,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel,&isolateButton,&isolateDryButton,&tailSlider,&tailLabel,&helper})diagnosticsContent.addAndMakeVisible(control);
-    addAndMakeVisible(wordmark);wordmark.setName("brandWordmark");
-    for(auto* label:{&tagline,&inspectorHeading,&hostInfo,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
+    for(auto* label:{&inspectorHeading,&hostInfo,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::text);label->setInterceptsMouseClicks(false,false);}
-    tagline.setText("Reverse Reverb for Creative Swells",juce::dontSendNotification);tagline.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::italic));
     inspectorHeading.setText("Selected Swell",juce::dontSendNotification);inspectorHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
     auditionHeading.setText("Audition",juce::dontSendNotification);auditionHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
     hostInfo.setName("hostInfo");hostInfo.setFont(juce::FontOptions(15));hostInfo.setJustificationType(juce::Justification::centred);
-    listEmpty.setText("No swells yet\n\nPlay your song to map audio,\nor add a swell with +.",juce::dontSendNotification);listEmpty.setJustificationType(juce::Justification::centred);listEmpty.setFont(juce::FontOptions(18));
+    listEmpty.setText("No swells yet\n\nUse Learn to capture source.\nIn Perform, add a swell with +.",juce::dontSendNotification);listEmpty.setJustificationType(juce::Justification::centred);listEmpty.setFont(juce::FontOptions(18));
     inspectorEmpty.setText("No swell selected\n\nSelect a swell to adjust\nits settings.",juce::dontSendNotification);inspectorEmpty.setJustificationType(juce::Justification::centred);inspectorEmpty.setFont(juce::FontOptions(18));
     listLabel.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
     headerStatus.setBorderSize(juce::BorderSize<int>(0));headerStatus.setFont(juce::FontOptions(m3::ui::smallSize));
     headerStatus.setJustificationType(juce::Justification::centredRight);
-    diagnosticsButton.setTooltip("Settings: playback, processing, selected swell, audition and recovery");
+    workflowHeader.settingsAction().setTooltip("Settings: playback, processing, selected swell, audition and recovery");
     markerButton.setButtonText("Auto-marker");
     const std::array<juce::String,valueCount> valueTitles{"Target","Source Start","Source End","Pre-roll (s)","End Offset (s)","Fade In (ms)","Fade Out (ms)","Level (dB)","Curve In","Curve Out","Move Wet (ms)"};
     const std::array<juce::String,valueCount> valueNames{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","swellLevel","curveInTension","curveOutTension","wetPlacement"};
@@ -327,15 +323,12 @@ void PreverbAudioProcessorEditor::armSelected()
 void PreverbAudioProcessorEditor::resized()
 {
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
-    auto top=layout.header;diagnosticsButton.setBounds(top.removeFromRight(42).withSizeKeepingCentre(36,32));
-    top.removeFromRight(12);workflowBox.setBounds(top.removeFromRight(218).withSizeKeepingCentre(218,30));
-    wordmark.setBounds(top.removeFromLeft(getWidth()<1200?250:290).reduced(0,5));
-    top.removeFromLeft(20);tagline.setBounds(top.withSizeKeepingCentre(top.getWidth(),43));
+    workflowHeader.setBounds(layout.header);
     auto globals=layout.globals.reduced(0,8);
     markerButton.setBounds(globals.removeFromLeft(160));globals.removeFromLeft(16);
     markerLabel.setBounds(globals.removeFromLeft(118));markerKnob.setBounds(globals.removeFromLeft(150));globals.removeFromLeft(24);
     regenerationLabel.setBounds({});regenerationKnob.setBounds({});
-    recaptureExisting.setBounds(globals.removeFromLeft(198));workflowStatus.setBounds(globals.removeFromLeft(std::min(240,globals.getWidth())));
+    recaptureExisting.setBounds(globals.removeFromLeft(198));
     markerState.setBounds({});headerStatus.setBounds(globals);
     auto listArea=layout.swells.reduced(0,10);auto listTop=listArea.removeFromTop(32);
     addButton.setBounds(listTop.removeFromRight(32).reduced(1));addButton.setButtonText("+");listLabel.setBounds(listTop);
@@ -353,7 +346,6 @@ void PreverbAudioProcessorEditor::resized()
     trimResetButton.setBounds(auditionRow.removeFromRight(138).reduced(1));blendSlider.setBounds(auditionRow.reduced(24,0));
     monitorStatus.setBounds(audition.withTrimmedLeft(116));
     songOverview.setBounds(layout.overview.reduced(0,8));hostInfo.setBounds(layout.info.reduced(0,4));
-    diagnosticsButton.setButtonText("Settings");
     const auto width=std::max(280,inspectorWidth-14);inspectorContent.setSize(width,560);
     auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
     selectedStatus.setBounds(inspector.removeFromTop(24));
@@ -559,27 +551,22 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureStatus.setText(recapture,juce::dontSendNotification);recaptureStatus.setTooltip(recapture);
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
-    workflowBox.setSelectedId(static_cast<int>(flow.mode)+1,juce::dontSendNotification);workflowBox.setEnabled(!flow.locked());
-    for(const auto target:{workflow::Mode::capture,workflow::Mode::live,workflow::Mode::finalise})
-        workflowBox.setItemEnabled(static_cast<int>(target)+1,workflow::entryError(flow,target,workflowReady)==nullptr);
-    const auto phase=flow.phase==workflow::Phase::recording?"Recording - stop DAW to commit":flow.phase==workflow::Phase::draining || flow.phase==workflow::Phase::validating?"Committing / validating source":flow.phase==workflow::Phase::failed?"Capture failed - source retained":flow.mode==workflow::Mode::capture?"Learn | mapped audio protected":flow.mode==workflow::Mode::live?"Edit & play | no capture":"Dry bypass | editing locked";
-    workflowStatus.setText(phase,juce::dontSendNotification);workflowStatus.setTooltip(juce::String(phase)+"\n"+capture.status);
-    workflowBox.setTooltip(juce::String(phase)+"\nLive: compatible source or verified frozen wet. Finalise: source and enabled ready swell. Dedicated workspaces/export follow separately.");
+    workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),capture.status);
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
     recaptureStatus.setText(flow.recapture?"Recapture armed for encountered positions; commit on DAW Stop":"Recapture off; mapped source protected",juce::dontSendNotification);
-    mappingButton.setEnabled(!flow.locked());mappingButton.setTooltip("Legacy control requests Capture or Live; workflow guards always apply.");
+    mappingButton.setEnabled(!flow.locked());mappingButton.setTooltip("Legacy control requests Learn or Perform; workflow guards always apply.");
     clearButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
-    regenerationKnob.setEnabled(false);regenerationKnob.setTooltip("Saved for compatibility. Source replacement now requires explicit Capture/Recapture.");
+    regenerationKnob.setEnabled(false);regenerationKnob.setTooltip("Saved for compatibility. Source replacement requires Learn with explicit Recapture.");
     const bool edit=caps.edit;timeline.setEditingEnabled(edit);
     if(!edit)for(auto& control:valueControls)if(control.editing())control.cancel();
     inspectorContent.setEnabled(edit);addButton.setEnabled(edit);removeButton.setEnabled(edit && hasSelection);
     for(auto* button:{&generateButton,&allButton,&analyzeButton,&confirmButton,&timingButton})button->setEnabled(edit && button->isEnabled());
     auditionButton.setEnabled(caps.preview && state.auditionReady && !(flow.mode==workflow::Mode::live && state.session.liveEnabled && diagnostics.isPlaying));
     stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
-    if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Capture | dry passthrough | editing and audition available in Live",juce::dontSendNotification);
-    if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Finalise | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
+    if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
+    if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise);markerButton.setEnabled(flow.mode!=workflow::Mode::finalise);markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise);
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise);suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");

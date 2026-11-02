@@ -40,6 +40,7 @@ static juce::TextButton* button(juce::Component& root,const juce::String& text)
 }
 static void snapshotPanel(juce::Component& panel,const juce::String& tag)
 {
+    std::cerr<<"Native panel: "<<tag<<'\n';
     const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image surface(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(surface);panel.paintEntireComponent(canvas,true);
@@ -49,6 +50,14 @@ static bool visibleOffscreen(juce::Component* control)
 {if(!control)return false;for(;control;control=control->getParentComponent())if(!control->isVisible())return false;return true;}
 static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::String& tag)
 {
+    std::cerr<<"Native editor: "<<tag<<'\n';
+    const auto header=named(editor,"workflowHeader");REQUIRE(header);
+    const auto children=header->getChildren();
+    for(int i=0;i<children.size();++i)
+    {
+        REQUIRE(header->getLocalBounds().contains(children[i]->getBounds()));
+        for(int j=i+1;j<children.size();++j)REQUIRE(!children[i]->getBounds().intersects(children[j]->getBounds()));
+    }
     // A state or recovery panel may replace content, never the region geometry.
     std::array<juce::Rectangle<int>,4> regions;
     int index=0;for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview"})
@@ -68,11 +77,13 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
         REQUIRE(output && output->setPosition(0) && output->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(scaled,*output));
     }
 }
+#include "WorkflowHeaderCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     controlReview::cases();
+    workflowHeaderCases();
     {
         m3::ui::KnobValue cell;cell.setSize(180,50);double delta=0;cell.onDelta=[&](double value){delta=value;};
         const auto drag=[&](juce::ModifierKeys modifiers)
@@ -123,7 +134,7 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto before=liveProcessor.swellEngine().savedSession();const auto revision=liveProcessor.getCaptureSnapshot().manifest.revision;
         {
             PreverbAudioProcessorEditor active(liveProcessor);active.setVisible(true);
-            auto gear=dynamic_cast<juce::TextButton*>(named(active,"diagnostics"));REQUIRE(gear);gear->onClick();
+            auto gear=dynamic_cast<juce::Button*>(named(active,"diagnostics"));REQUIRE(gear);gear->onClick();
             auto tabs=dynamic_cast<juce::TabbedComponent*>(active.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
             auto open=dynamic_cast<juce::TextButton*>(named(active,"openDiagnostics"));REQUIRE(open);open->onClick();
             playhead.position.setTimeInSamples(512);playhead.position.setPpqPosition(512./24000);silence.clear();liveProcessor.processBlock(silence,events);
@@ -147,6 +158,8 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(fresh.getName()=="ReverbArise" && fresh.getParameters().isEmpty() && fresh.getNumPrograms()==1);
         REQUIRE(fresh.getCaptureSnapshot().manifest.ranges.empty());
         PreverbAudioProcessorEditor empty(fresh);empty.setVisible(true);empty.refresh();
+        auto navigation=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(empty,"workflowMode"));
+        REQUIRE(navigation && navigation->selectedId()==1 && !navigation->segment(2)->isEnabled() && !navigation->segment(3)->isEnabled());
         REQUIRE(empty.getWidth()==1100 && empty.getHeight()==850);
         REQUIRE(!empty.isParentOf(named(empty,"advancedTiming")));
         REQUIRE(!empty.isParentOf(named(empty,"previewStatus")));
@@ -279,7 +292,13 @@ int main(int argc,char* argv[]){return runTest([&]
         editor.setSize(1400,1000);editor.refresh();snapshotEditor(editor,tag+"-1400");
         editor.setSize(bounds.getWidth(),bounds.getHeight());editor.refresh();};
     {
-        auto mode=dynamic_cast<juce::ComboBox*>(named(editor,"workflowMode"));REQUIRE(mode && mode->getSelectedId()==2);
+        auto mode=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(editor,"workflowMode"));REQUIRE(mode && mode->selectedId()==2);
+        REQUIRE(!dynamic_cast<juce::ComboBox*>(named(editor,"workflowMode")));
+        const auto beforeActive=processor->getWorkflowSnapshot().pass;controlReview::pointerClick(*mode->segment(2));
+        REQUIRE(processor->getWorkflowSnapshot().pass==beforeActive);
+        mode->keyPressed(juce::KeyPress(juce::KeyPress::homeKey));mode->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+        REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::capture && mode->selectedId()==1);
+        controlReview::pointerClick(*mode->segment(2));REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::live && mode->selectedId()==2);
         auto levelCell=dynamic_cast<m3::ui::KnobValue*>(named(editor,"swellLevelCell"));REQUIRE(levelCell);
         levelCell->onBegin();REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
@@ -300,7 +319,7 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::AudioBuffer<float> probeAudio(2,32);juce::MidiBuffer probeMidi;
         const auto hostBlock=[&](int sample,bool playing){head.position.setTimeInSamples(sample);head.position.setPpqPosition(sample/24000.0);head.position.setIsPlaying(playing);
             probeAudio.clear();processor->processBlock(probeAudio,probeMidi);};
-        hostBlock(0,true);editor.refresh();REQUIRE(!mode->isEnabled());snapshotEditor(editor,"workflow-recording");
+        hostBlock(0,true);editor.refresh();for(int id:{1,2,3})REQUIRE(!mode->segment(id)->isEnabled());snapshotEditor(editor,"workflow-recording");
         largeWorkflowSnapshot("workflow-recording");
         processor->holdCaptureValidationForTesting(true);hostBlock(32,false);
         waitUI([&]{return processor->getWorkflowSnapshot().phase==workflow::Phase::validating;});editor.refresh();snapshotEditor(editor,"workflow-settling");
@@ -421,7 +440,7 @@ int main(int argc,char* argv[]){return runTest([&]
     head.position.setIsPlaying(false);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
     REQUIRE(visibleOffscreen(named(editor,"arrivalSample")));
     auto musical=dynamic_cast<juce::TextEditor*>(named(editor,"arrivalSample"));REQUIRE(musical && musical->getText()=="1.1");
-    auto diagnostics=dynamic_cast<juce::TextButton*>(named(editor,"diagnostics"));REQUIRE(diagnostics);
+    auto diagnostics=dynamic_cast<juce::Button*>(named(editor,"diagnostics"));REQUIRE(diagnostics);
     REQUIRE(!visibleOffscreen(named(editor,"generate")));
     const auto beforeSettings=engine.savedSession();const auto beforeSettingsRenders=engine.snapshot().renderCount;
     const auto beforeSettingsCapture=processor->getCaptureSnapshot().manifest.revision;

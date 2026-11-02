@@ -115,8 +115,8 @@ not defer it automatically because the screen already looks correct.
 
 ## Initial control-library API (issue #16)
 
-The first families live under `Source/UI/Controls/`; they are introduced in a
-native review fixture before integration into the production header:
+The first families live under `Source/UI/Controls/`; they were approved in a
+native review fixture and are composed into the shared production WorkflowHeader:
 
 - `SegmentedSelector::display(choices, acceptedId)` silently supplies labels,
   help, availability and unavailable reasons. `onRequest(id)` emits an intent;
@@ -137,7 +137,8 @@ refresh, rejected/stale intents and callback lifetime. The UI test executable's
 `--review-controls` mode opens the same interactive fixture without FL Studio;
 normal test execution also renders its state gallery when
 `PREVERB_UI_M3_OUTPUT` is set. Its message-loop helper is enabled only in the test
-target, not the plugin. Component approval remains pending until recorded.
+target, not the plugin. The initial families' owner approval is recorded in
+`docs/validation/shared-mode-header-evidence.md`; material changes reopen that gate.
 
 This stage does not claim a full library migration. KnobValue/global sliders,
 general buttons/toggles/dropdowns, row menus, scroll containers and window content

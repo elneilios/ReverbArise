@@ -21,7 +21,7 @@ inline const char* modeSubtitle(workflow::Mode mode) noexcept
     {
         case workflow::Mode::capture:return "Capture audio and discover musical moments";
         case workflow::Mode::live:return "Shape, edit and play your swells";
-        case workflow::Mode::finalise:return "DAW wet bypassed; explicit preview only";
+        case workflow::Mode::finalise:return "Preview your prepared swells";
     }
     return "Mode unavailable";
 }
@@ -50,7 +50,7 @@ inline const char* workflowStatus(workflow::Snapshot state) noexcept
     }
     if(state.mode==workflow::Mode::capture)
         return state.recapture?"Recapture armed - replaces encountered audio":"Mapped source protected - play your DAW to learn";
-    return state.mode==workflow::Mode::live?"Edit and play - no source capture":"DAW wet bypassed - explicit preview only";
+    return state.mode==workflow::Mode::live?"Source protected - no capture":"DAW wet bypassed - editing locked";
 }
 struct WorkflowChoice
 {

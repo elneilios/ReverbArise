@@ -7,7 +7,7 @@ namespace m3
 {
 void SwellEngine::setAutomaticProcessing(bool enabled)
 {
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Automatic settings are locked in Finalise");return;}
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Automatic settings are locked in Export");return;}
     const auto context=contextProvider();const juce::ScopedLock guard(lock);if(model.automaticProcessing!=enabled){++markerGeneration;persistentChangedLocked();}model.automaticProcessing=enabled;
     automaticBoundsDirty=true;
     if(enabled && model.autoMarkersEnabled)for(const auto& r:context.capture.manifest.ranges)
@@ -16,7 +16,7 @@ void SwellEngine::setAutomaticProcessing(bool enabled)
 }
 void SwellEngine::setAutoMarkers(bool enabled)
 {
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Marker settings are locked in Finalise");return;}
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Marker settings are locked in Export");return;}
     const auto context=contextProvider();const juce::ScopedLock guard(lock);
     if(model.autoMarkersEnabled==enabled)return;model.autoMarkersEnabled=enabled;persistentChangedLocked();++markerGeneration;
     if(enabled && model.automaticProcessing)for(const auto& r:context.capture.manifest.ranges)
@@ -27,7 +27,7 @@ void SwellEngine::resetSuppression()
 {if(!permitCreative())return;const juce::ScopedLock guard(lock);if(!model.suppressed.empty())persistentChangedLocked();model.suppressed.clear();analyzedContent.clear();message="Deleted target suppression reset; replay to rediscover";}
 void SwellEngine::loadDefaultIR(const juce::File& file)
 {
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Default IR is locked in Finalise");return;}
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Default IR is locked in Export");return;}
     const juce::ScopedLock guard(lock);if(imports.size()>=32){message="IR import queue full";return;}
     Import job;job.file=file;job.session=sessionGeneration.load();job.futureDefault=true;imports.push_back(std::move(job));notify();
 }

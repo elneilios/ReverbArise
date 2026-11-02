@@ -96,14 +96,6 @@ public:
         if(b.getName()=="audition")
         {juce::Path p;p.addTriangle(c.x-5,c.y-8,c.x-5,c.y+8,c.x+8,c.y);g.fillPath(p);return;}
         if(b.getName()=="stopAudition"){g.fillRect(juce::Rectangle<float>(12,12).withCentre(c));return;}
-        if(b.getName()=="diagnostics")
-        {
-            g.drawEllipse(juce::Rectangle<float>(14,14).withCentre(c),1.5f);
-            g.drawEllipse(juce::Rectangle<float>(5,5).withCentre(c),1.5f);
-            for(int n=0;n<8;++n){const auto a=juce::MathConstants<float>::twoPi*n/8;
-                g.drawLine(c.x+std::cos(a)*7,c.y+std::sin(a)*7,c.x+std::cos(a)*10,c.y+std::sin(a)*10,2);}
-            return;
-        }
         if(b.getName()=="resetWetShape" || b.getName()=="resetSwellMenu")
         {
             g.setColour(danger.withMultipliedAlpha(b.isEnabled()?1.0f:.35f));

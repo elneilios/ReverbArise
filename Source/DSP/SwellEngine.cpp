@@ -10,7 +10,7 @@ namespace m3
 bool SwellEngine::permitCreative()
 {
     if(!workflowState || workflowState->snapshot().mode==workflow::Mode::live)return true;
-    const juce::ScopedLock guard(lock);message="Creative editing is available in Live mode";return false;
+    const juce::ScopedLock guard(lock);message="Creative editing is available in Perform mode";return false;
 }
 SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
     :Thread("Preverb Swells"),persistentChange(std::move(changed)),root(std::move(path)),contextProvider(std::move(context))
@@ -74,7 +74,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 void SwellEngine::clear()
 {
     if(workflowState && (workflowState->snapshot().mode!=workflow::Mode::capture || workflowState->snapshot().locked()))
-    {diagnostic("Clear requires stopped idle Capture mode");return;}
+    {diagnostic("Clear requires stopped idle Learn mode");return;}
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();analyzedContent.clear();trailing.reset();
@@ -125,7 +125,7 @@ bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,ju
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
     if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
-    {diagnostic("Gain policy needs idle Capture or Live mode");return false;}
+    {diagnostic("Gain policy needs idle Learn or Perform mode");return false;}
     const juce::ScopedLock guard(lock);actionError.clear();
     if(policy!=GainPolicy::legacy && policy!=GainPolicy::musical){actionError="Unknown gain policy";return false;}
     if(policy==model.gainPolicy && (policy==GainPolicy::legacy || model.gainRevision==approvedGainRevision))return true;
@@ -298,7 +298,7 @@ void SwellEngine::setPreferences(float db,float sensitivity,double separation,bo
 {
     const juce::ScopedLock guard(lock);
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && (sensitivity!=model.sensitivity || separation!=model.separationSeconds || automatic!=model.autoRegenerate))
-    {message="Creative preferences are locked in Finalise";return;}
+    {message="Creative preferences are locked in Export";return;}
     if(!std::isfinite(db) || !std::isfinite(sensitivity) || !std::isfinite(separation)) { message="Preferences must be finite"; return; }
     const auto changed=sensitivity!=model.sensitivity || separation!=model.separationSeconds;
     const auto savedChanged=model.auditionDb!=std::clamp(db,-60.0f,0.0f) || model.sensitivity!=std::clamp(sensitivity,0.0f,1.0f)
