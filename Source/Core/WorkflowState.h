@@ -24,12 +24,26 @@ inline Capabilities capabilities(const Snapshot& s,Readiness r) noexcept
 }
 inline const char* modeName(Mode mode) noexcept
 {switch(mode){case Mode::capture:return "Capture";case Mode::live:return "Live";case Mode::finalise:return "Finalise";}return "Unknown";}
+enum class EntryBlock : uint8_t { none, recording, settling, source, timing, wet };
+inline EntryBlock entryBlock(Snapshot s,Mode target,Readiness r) noexcept
+{
+    if(s.locked())return s.phase==Phase::recording?EntryBlock::recording:EntryBlock::settling;
+    if(target!=Mode::capture && !r.usefulSource && !(target==Mode::live && r.frozenWet))return EntryBlock::source;
+    if(target!=Mode::capture && !r.compatible)return EntryBlock::timing;
+    if(target==Mode::finalise && !r.readySwell)return EntryBlock::wet;
+    return EntryBlock::none;
+}
 inline const char* entryError(Snapshot s,Mode target,Readiness r) noexcept
 {
-    if(s.locked())return s.phase==Phase::recording?"Capture is recording; stop the DAW first":"Source commit/validation is settling";
-    if(target!=Mode::capture && !r.usefulSource && !(target==Mode::live && r.frozenWet))return "Capture useful source audio first (Live also supports verified frozen wet)";
-    if(target!=Mode::capture && !r.compatible)return "Source needs compatible validated host timing";
-    if(target==Mode::finalise && !r.readySwell)return "Finalise needs an enabled ready swell";
+    switch(entryBlock(s,target,r))
+    {
+        case EntryBlock::recording:return "Capture is recording; stop the DAW first";
+        case EntryBlock::settling:return "Source commit/validation is settling";
+        case EntryBlock::source:return "Capture useful source audio first (Live also supports verified frozen wet)";
+        case EntryBlock::timing:return "Source needs compatible validated host timing";
+        case EntryBlock::wet:return "Finalise needs an enabled ready swell";
+        case EntryBlock::none:return nullptr;
+    }
     return nullptr;
 }
 // A single lock-free word owns mode, phase, arm and generation. All callback

@@ -6,15 +6,15 @@ merely because the proposal or a mockup exists.
 
 ## 1. Display mapping and guarded presentation
 
-- [ ] 1.1 Add one Learn/Perform/Export presentation mapping and reason/status adapter backed by existing workflow authority; verify unit cases for all modes, recording, settlement, failure, missing/incompatible source and frozen/ready-render eligibility without duplicating guard predicates.
-- [ ] 1.2 Add explicit saved Capture/Live/Finalise round-trip and metadata-free legacy tests alongside presentation assertions; verify state versions, identities, host notifications and the approved Recapture Stop policy remain unchanged.
-- [ ] 1.3 Document the durable/display-name boundary and reason mapping in the living workflow guide; verify examples distinguish future Export delivery from currently supported dry bypass/explicit preview.
+- [x] 1.1 Add one Learn/Perform/Export presentation mapping and reason/status adapter backed by existing workflow authority; verify unit cases for all modes, recording, settlement, failure, missing/incompatible source and frozen/ready-render eligibility without duplicating guard predicates.
+- [x] 1.2 Add explicit saved Capture/Live/Finalise round-trip and metadata-free legacy tests alongside presentation assertions; verify state versions, identities, host notifications and the approved Recapture Stop policy remain unchanged.
+- [x] 1.3 Document the durable/display-name boundary and reason mapping in the living workflow guide; verify examples distinguish future Export delivery from currently supported dry bypass/explicit preview.
 
 ## 2. Library controls and component acceptance
 
-- [ ] 2.1 Implement library-owned SegmentedSelector with silent model refresh, pointer and keyboard activation, visible focus, selected/unavailable descriptions, accessible reasons and wheel/active-selection no-ops; verify actual event tests including rejected/stale requests and zero callbacks during refresh.
-- [ ] 2.2 Implement a semantic Settings IconActionButton using existing visual tokens; verify Enter/Space/pointer activation, focus/hover/disabled states, safe lifetime and icon selection independent of component name.
-- [ ] 2.3 Add a reusable native fixture for both component families and document their interaction policies and API in the UI development guide; verify normal/active/hover/focused/disabled states at representative logical sizes and record remaining unmigrated families.
+- [x] 2.1 Implement library-owned SegmentedSelector with silent model refresh, pointer and keyboard activation, visible focus, selected/unavailable descriptions, accessible reasons and wheel/active-selection no-ops; verify actual event tests including rejected/stale requests and zero callbacks during refresh.
+- [x] 2.2 Implement a semantic Settings IconActionButton using existing visual tokens; verify Enter/Space/pointer activation, focus/hover/disabled states, safe lifetime and icon selection independent of component name.
+- [x] 2.3 Add a reusable native fixture for both component families and document their interaction policies and API in the UI development guide; verify normal/active/hover/focused/disabled states at representative logical sizes and record remaining unmigrated families.
 - [ ] 2.4 Component checkpoint A: ask for brief owner look-and-feel approval using the native fixture, without requiring FL Studio; use automated keyboard/disabled/wheel tests as primary evidence, record approval/adjustments/untested items and resolve material adjustments before further integration.
 
 ## 3. Shared header and visible terminology

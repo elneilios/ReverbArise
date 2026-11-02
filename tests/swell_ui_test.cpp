@@ -3,6 +3,7 @@
 #include <Plugin/PluginEditor.h>
 #include <source_location>
 #include <map>
+#include "ControlLibraryCases.h"
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -67,9 +68,11 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
         REQUIRE(output && output->setPosition(0) && output->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(scaled,*output));
     }
 }
-int main(){return runTest([]
+int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
+    controlReview::cases();
     {
         m3::ui::KnobValue cell;cell.setSize(180,50);double delta=0;cell.onDelta=[&](double value){delta=value;};
         const auto drag=[&](juce::ModifierKeys modifiers)

@@ -112,3 +112,36 @@ PRs touching UI should state the component families reused/extracted, deliberate
 policy exceptions, remaining migration and validation gaps, and visual approval
 status. Reviewers should flag duplicated interaction setup as a maintenance issue,
 not defer it automatically because the screen already looks correct.
+
+## Initial control-library API (issue #16)
+
+The first families live under `Source/UI/Controls/`; they are introduced in a
+native review fixture before integration into the production header:
+
+- `SegmentedSelector::display(choices, acceptedId)` silently supplies labels,
+  help, availability and unavailable reasons. `onRequest(id)` emits an intent;
+  the binding must revalidate it against the model and call `display` with the
+  accepted state. Pointer/Enter/Space activation never toggles optimistically.
+  Arrow/Home/End keys inspect choices without selecting them; Tab enters/leaves
+  the group. The group exposes all reasons through accessibility descriptions,
+  including disabled choices. Wheel and repeated active selection are no-ops.
+  Segments share square internal joins with one border; only the group's outer
+  left/right ends are rounded, following owner checkpoint-A feedback.
+- `IconActionButton(ActionIcon::settings)` supplies a semantic Settings glyph,
+  focus/hover/disabled feedback and native pointer/accessibility/Enter/Space
+  activation. Bind `onClick` to the screen's Settings action. Component names
+  remain identifiers, not icon/appearance switches.
+
+`tests/ControlLibraryCases.h` exercises native events, accessible state, silent
+refresh, rejected/stale intents and callback lifetime. The UI test executable's
+`--review-controls` mode opens the same interactive fixture without FL Studio;
+normal test execution also renders its state gallery when
+`PREVERB_UI_M3_OUTPUT` is set. Its message-loop helper is enabled only in the test
+target, not the plugin. Component approval remains pending until recorded.
+
+This stage does not claim a full library migration. KnobValue/global sliders,
+general buttons/toggles/dropdowns, row menus, scroll containers and window content
+remain on their existing implementations until their planned workspace refactors.
+Timeline/Overview remain specialized controls with their current geometry and
+model guards. Retained name-based theme branches outside the new Settings action
+are follow-up consumers, not a precedent for new controls.

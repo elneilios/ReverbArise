@@ -4,6 +4,29 @@ Issue #10 introduces a foundation mode authority; the dedicated Capture and
 Finalise layouts and export composition are separate issues. This guide records
 the implemented model and processor contract. FL Studio acceptance remains open.
 
+## Display names and durable identity
+
+The issue #16 presentation adapter maps the durable modes below to musician-facing
+labels. Header integration follows the separate component approval checkpoint;
+the adapter alone does not replace the temporary dropdown.
+
+| Durable XML value / internal mode | Display label | Role |
+| --- | --- | --- |
+| Capture / capture | Learn | Capture audio and discover musical moments |
+| Live / live | Perform | Shape, edit and play swells; no source capture |
+| Finalise / finalise | Export | DAW wet bypassed; existing explicit preview only |
+
+`workflow::modeName()` and the `workflowMode` XML property remain serialization
+identifiers. `UI/WorkflowPresentation.h` owns labels, concise subtitles/status and
+human explanations; it uses `workflow::entryBlock()` from the same predicate chain
+as `entryError()`/mode admission. No second UI eligibility policy is introduced.
+Recording, drain/validation, missing source, incompatible timing and missing ready
+wet have distinct explanations; source-ready Perform never waits for wet jobs.
+The Export label does not add the deferred #6 WAV-delivery workspace. Source
+capture, Recapture and live wet remain functional terms, not persisted mode renames.
+
+## Foundation behavior
+
 | Mode/phase | Source | Host-scheduled wet | Creative editing / internal preview |
 | --- | --- | --- | --- |
 | Capture idle | Can begin additive capture on valid DAW Play | Off, dry passes | Off / off |
