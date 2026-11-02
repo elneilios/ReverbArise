@@ -15,6 +15,7 @@ ReverbArise is a personal project. Contributions, including Codex-generated chan
 - Commit cohesive increments with clear messages. Avoid unrelated cleanup, broad refactoring or generated build outputs.
 - Run focused tests and checks for affected behaviour. Document what was and was not tested, including any FL Studio manual validation still required.
 - Keep living technical docs current when implementation changes; don't rewrite archived historical records.
+- UI contributions must follow the [UI development standards](docs/development/ui-development-standards.md), including shared control ownership, incremental migration and visual/interaction acceptance.
 - Prefer concise plans and summaries, targeted file reads and limited test logs to minimise agent token cost.
 
 ## Open a pull request
