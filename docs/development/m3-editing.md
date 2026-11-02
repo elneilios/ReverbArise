@@ -77,4 +77,4 @@ scroll/zoom or click the source lane to select other suggestions.
 
 New-state metadata survives reopen. Editor zoom/page/snap choices are view controls,
 not saved swell definitions. M3 still has no transport-synchronized swell playback.
-Follow [FL Studio M3 validation](fl-studio-m3-validation.md) for host acceptance.
+Follow [FL Studio M3 validation](../validation/fl-studio-m3-validation.md) for host acceptance.

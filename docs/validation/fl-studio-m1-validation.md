@@ -60,7 +60,7 @@ This is a fixed-tempo/fixed-meter ruler, not a tempo-map implementation. With mi
 timing or mismatched capture/host sample rates it reports bars unavailable. Compare
 several bar boundaries with the Playlist after installing this build.
 
-Build using the commands in [development.md](development.md). The VST3 bundle is:
+Build using the commands in [development.md](../development/development.md). The VST3 bundle is:
 
 `out/build/windows-msvc/preverb_plugin_artefacts/Debug/VST3/Preverb Spike.vst3`
 

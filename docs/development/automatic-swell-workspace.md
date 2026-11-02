@@ -1,4 +1,4 @@
-> Current UI: see [ReverbArise workspace](ui-theme-and-layout.md) and [Settings/Diagnostics and current checks](ui-diagnostics-and-acceptance.md). Song-synchronized playback is implemented; see [transport playback](transport-swell-playback.md). Earlier UI locations and deferred-transport statements below describe the preceding workspace iteration, not the current editor. Historical acceptance results remain separate.
+> Current UI: see [ReverbArise workspace](../design/ui-theme-and-layout.md) and [Settings/Diagnostics and current checks](../design/ui-diagnostics-and-acceptance.md). Song-synchronized playback is implemented; see [transport playback](transport-swell-playback.md). Earlier UI locations and deferred-transport statements below describe the preceding workspace iteration, not the current editor. Historical acceptance results remain separate.
 # Automatic swell workspace
 
 This change extends M3. It prepares swells automatically; Song-synchronized swell
@@ -176,7 +176,7 @@ Automated coverage includes:
 The full build is `cmake --build --preset windows-msvc-debug`; tests are
 `ctest --preset windows-msvc-debug`. Set `PREVERB_UI_M3_OUTPUT` to an output folder
 to retain offscreen editor PNGs. Host acceptance follows the separate
-[FL Studio guide](fl-studio-automatic-workspace-validation.md); no host audibility,
+[FL Studio guide](../validation/fl-studio-automatic-workspace-validation.md); no host audibility,
 user UI signoff or deferred transport scheduling result is inferred from CTest.
 
 Implementation and acceptance are tracked in
@@ -228,7 +228,7 @@ This is new verification, separate from the historical 22-test baseline above. O
 
 The final VST3 binary is `out/build/windows-msvc/preverb_plugin_artefacts/Debug/VST3/Preverb Spike.vst3/Contents/x86_64-win/Preverb Spike.vst3` (32,148,992 bytes), SHA-256 `475e73566529f126214a62c47d163da4b06b8da37ea0fba753ab84dcb3b22868`. Use the whole .vst3 bundle including Contents/Resources. The final CTest log is under out/build/windows-msvc/Testing/Temporary/LastTest.log.
 
-Only host acceptance remains: original checks 8.1–8.5 plus feedback checks 13.2–13.3. Follow docs/fl-studio-automatic-workspace-validation.md; transport-synchronized swell playback remains deferred.
+Only host acceptance remains: original checks 8.1Â–8.5 plus feedback checks 13.2Â–13.3. Follow docs/validation/fl-studio-automatic-workspace-validation.md; transport-synchronized swell playback remains deferred.
 
 
 ## Second feedback revision: movement, listening and marker controls

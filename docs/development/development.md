@@ -37,7 +37,7 @@ Build output is placed under `out/build`, which is ignored by Git.
 ### M3 editable swell sessions
 
 See [M3 editing](m3-editing.md), [regeneration](m3-regeneration.md),
-[persistence](m3-persistence.md), and the separate [FL Studio acceptance guide](fl-studio-m3-validation.md).
+[persistence](m3-persistence.md), and the separate [FL Studio acceptance guide](../validation/fl-studio-m3-validation.md).
 M3 writes plugin state v3 with managed IR/render references while preserving capture
 schema v1 and legacy plugin state v1/v2 restoration. Manual selected-swell audition
 remains independent of host transport; Song-synchronized playback is M4.
@@ -47,9 +47,9 @@ to render software PNGs for ready, shaped, stale, error, empty and many-swell st
 
 See [Automatic swell workspace](automatic-swell-workspace.md) for successor v4
 state/defaults, automatic capture/detection/rendering, monitoring gain/blend and
-the lean editor. [Host acceptance](fl-studio-automatic-workspace-validation.md)
+the lean editor. [Host acceptance](../validation/fl-studio-automatic-workspace-validation.md)
 keeps historical FL Studio checks separate from automated verification. Current
-UI access and remaining acceptance are in [the UI checklist](ui-diagnostics-and-acceptance.md);
+UI access and remaining acceptance are in [the UI checklist](../design/ui-diagnostics-and-acceptance.md);
 Song transport playback is implemented. The older milestone notes below describe their historical versions.
 
 ### M2 source selection and reading
@@ -73,4 +73,4 @@ Project save records the currently committed revision. After stopping transport,
 
 Restore runs asynchronously with mapping paused and a Loading status. It rebuilds compact stereo min/max peaks (512 frames per peak) one bounded chunk at a time; it does not retain full-song PCM in RAM. Missing or corrupt chunks appear unavailable in red, while unrelated valid audio and captured silence remain visible. Mapping pauses until assets are restored and the project reopened, or the user explicitly clears and recaptures. A host sample-rate mismatch retains the old map and pauses mapping until Clear and recapture at the new rate. Tone scheduling and dry passthrough remain independent. Version-1 project state preserves tone settings and starts a new empty capture session.
 
-The M1 portability guarantee is reopening the same saved FL Studio project on the same PC and Windows user profile. Save As/duplicate-project isolation, Pack Project, Relink, and cross-PC moves are deferred. Copied projects can share asset identities; concurrent editing is unsupported. The plugin does not infer the `.flp` path. See [M1 validation](fl-studio-m1-validation.md) for the host acceptance workflow and outstanding checks.
+The M1 portability guarantee is reopening the same saved FL Studio project on the same PC and Windows user profile. Save As/duplicate-project isolation, Pack Project, Relink, and cross-PC moves are deferred. Copied projects can share asset identities; concurrent editing is unsupported. The plugin does not infer the `.flp` path. See [M1 validation](../validation/fl-studio-m1-validation.md) for the host acceptance workflow and outstanding checks.
