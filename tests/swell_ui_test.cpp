@@ -6,6 +6,13 @@
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
+static void wheelOver(juce::Component& target,float delta)
+{
+    static int64_t stamp=juce::Time::currentTimeMillis();
+    const auto point=target.getLocalBounds().getCentre().toFloat();const juce::Time time(++stamp);
+    juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&target,&target,time,point,time,0,false);
+    juce::MouseWheelDetails wheel{};wheel.deltaY=delta;target.mouseWheelMove(event,wheel);
+}
 template<class F>static void waitUI(F f,const std::source_location loc=std::source_location::current())
 {const auto end=juce::Time::getMillisecondCounter()+15000;while(!f()){if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("UI timeout "+std::to_string(loc.line()));juce::Thread::sleep(2);}}
 static juce::Component* findNamed(juce::Component& root,const juce::String& name)
@@ -73,6 +80,21 @@ int main(){return runTest([]
         };
         const auto coarse=drag(juce::ModifierKeys::leftButtonModifier),fine=drag(juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier);
         REQUIRE(coarse>fine && fine>0);
+        // Exercise real wheel dispatch, including JUCE's drag notifications,
+        // rather than directly invoking the value callback.
+        m3::ui::KnobValue wheeled;wheeled.setSize(180,50);double fraction=.5;unsigned ends=0;
+        wheeled.display("wheel-owner","0.5",fraction,true);
+        wheeled.onDelta=[&](double amount){fraction+=amount;wheeled.display("wheel-owner",juce::String(fraction,6),fraction,true);};
+        wheeled.onEnd=[&]{++ends;};
+        juce::Slider global;global.setRange(0,100,.1);global.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);global.setValue(50);
+        wheelOver(wheeled.valueKnob(),.1f);wheelOver(global,.1f);
+        REQUIRE(fraction>.5 && std::abs(fraction-global.getValue()/100)<.00001 && ends==1 && !wheeled.editing());
+        REQUIRE(std::abs(wheeled.valueField().getText().getDoubleValue()-fraction)<.000001);
+        wheelOver(wheeled.valueKnob(),-.1f);REQUIRE(std::abs(fraction-.5)<.00001 && ends==2);
+        for(int n=0;n<100;++n)wheelOver(wheeled.valueKnob(),.1f);
+        REQUIRE(fraction==1 && wheeled.valueKnob().getValue()==1);
+        wheeled.display("wheel-owner","0",0,false);wheelOver(wheeled.valueKnob(),.1f);
+        REQUIRE(wheeled.valueKnob().getValue()==0 && !wheeled.editing());
         m3::ui::KnobValue live;live.setSize(180,50);live.display("level","0.0",.5,true);
         live.onDelta=[&](double value){live.display("level",juce::String(value*72,1),.5+value,true);};
         auto& dial=live.valueKnob();dial.onDragStart();dial.setValue(.6,juce::sendNotificationSync);
@@ -337,6 +359,14 @@ int main(){return runTest([]
         REQUIRE(edited.shape.startOffset==-22800 && edited.shape.endOffset==1200 && edited.placement==1200);
         const auto retained=edited;enter("preRoll","99999999999999999999999999");enter("curveInTension","2");
         REQUIRE(m3::find(engine.savedSession(),first)->shape==retained.shape);
+        auto levelCell=dynamic_cast<m3::ui::KnobValue*>(named(editor,"swellLevelCell"));REQUIRE(levelCell);
+        const auto otherBeforeWheel=*m3::find(engine.savedSession(),second);
+        const auto captureBeforeWheel=processor->getCaptureSnapshot().manifest.revision;
+        wheelOver(levelCell->valueKnob(),.1f);
+        const auto wheelLevel=m3::find(engine.savedSession(),first)->shape.gainDb;
+        REQUIRE(wheelLevel>retained.shape.gainDb && std::abs(levelCell->valueField().getText().getDoubleValue()-wheelLevel)<.051);
+        REQUIRE(m3::find(engine.savedSession(),second)->shape==otherBeforeWheel.shape && processor->getCaptureSnapshot().manifest.revision==captureBeforeWheel);
+        enter("swellLevel","-3");
         auto curve=dynamic_cast<m3::ui::KnobValue*>(named(editor,"curveInTensionCell"));REQUIRE(curve);
         auto& knob=curve->valueKnob();knob.onDragStart();const auto start=knob.getValue();knob.setValue(start+.1,juce::sendNotificationSync);
         REQUIRE(std::abs(m3::find(engine.savedSession(),first)->shape.inTension-.45)<1e-6);
@@ -362,6 +392,7 @@ int main(){return runTest([]
         engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");
         auto scroll=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));REQUIRE(scroll);scroll->setViewPosition(0,10000);snapshotEditor(editor,"inspector-scrolled");scroll->setViewPosition(0,0);
+        wheelOver(*scroll->getViewedComponent(),-.1f);REQUIRE(scroll->getViewPositionY()>0);scroll->setViewPosition(0,0);
     }
     REQUIRE(engine.audition());buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
     const auto auditionPosition=engine.snapshot().auditionSample;REQUIRE(auditionPosition && *auditionPosition==engine.snapshot().raw->start+buffer.getNumSamples());
