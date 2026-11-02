@@ -20,7 +20,7 @@
 - [x] 3.2 Run `./scripts/build.ps1 -Configuration Release` then `./scripts/build.ps1 -Configuration Release -Test`; verify Release binaries and the full matching CTest suite, shared dependency checkout reuse and no forced clean/repopulation. Append actual counts, timings, outcomes and any existing test failures to the same report; flag unrelated failures instead of changing DSP/UI behavior or weakening tests.
 - [x] 3.3 Verify a warm configuration switch and invocation from outside the repository using a checkout path containing spaces where available; record incremental build/dependency observations and native versus fixture coverage in the report. Avoid copying CMake caches between worktrees or creating a second full build solely for path testing; retain fixture-only coverage explicitly if needed.
 - [x] 3.4 Reconcile the living guide with actually verified commands and evidence, clearly distinguish build-only success, CTest success, unavailable environments and unperformed FL Studio checks; verify every Issue #19 acceptance criterion maps to a recorded result or explicit outstanding check.
-- [ ] 3.5 Run `openspec validate local-windows-build-validation --strict`, inspect the focused diff and prepare one owner-reviewed PR linked to #19 and this change; verify no Actions/hosted service, generated build outputs, plugin compatibility changes or unrelated edits are included. Do not merge.
+- [x] 3.5 Run `openspec validate local-windows-build-validation --strict`, inspect the focused diff and prepare one owner-reviewed PR linked to #19 and this change; verify no Actions/hosted service, generated build outputs, plugin compatibility changes or unrelated edits are included. Do not merge.
 
 ## Workflow follow-up
 
