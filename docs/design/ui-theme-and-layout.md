@@ -114,7 +114,7 @@ Final audition/overview/diagnostic consolidation and Release/physical-host
 acceptance remain tracked separately. Native software screenshots alone do not
 prove FL Studio popup scaling or physical Windows DPI behaviour.
 
-See [evidence and approvals](ui-alignment-evidence.md). Checkpoint B, Settings for this iteration, the compact opening size and brighter
+See [evidence and approvals](../validation/ui-alignment-evidence.md). Checkpoint B, Settings for this iteration, the compact opening size and brighter
 text have recorded user approvals. The final integrated checkpoint C remains
 separate from automated evidence and physical FL Studio/DPI acceptance.
 

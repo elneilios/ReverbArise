@@ -78,4 +78,4 @@ instead of flattening values outside +/-1. It changes neither raw render nor aud
 M2's IR selection, source-bar fields, and generated preview are session-local.
 Saving/reopening retains M1 capture IDs/assets and tone settings, but clears preview
 work and never starts audition. Reload the IR and Generate explicitly after reopen.
-See [FL Studio M2 validation](fl-studio-m2-validation.md) for the host workflow.
+See [FL Studio M2 validation](../validation/fl-studio-m2-validation.md) for the host workflow.

@@ -1,6 +1,6 @@
 # Song transport playback
 
-Song-synchronized playback is implemented. Automated tests exercise the live mixer; acceptance of the current UI build is tracked separately in [current checks](ui-diagnostics-and-acceptance.md).
+Song-synchronized playback is implemented. Automated tests exercise the live mixer; acceptance of the current UI build is tracked separately in [current checks](../design/ui-diagnostics-and-acceptance.md).
 
 New and migrated instances store independent live settings: playback enabled, Dry + Wet routing, and 0 dB user wet level. Live level accepts -60 through 0 dB. Manual Audition trim, blend, isolation and listening tail remain separate. Session JSON and plugin state are version 7; v1-v6 input remains supported and preserves its existing edits and monitoring values.
 

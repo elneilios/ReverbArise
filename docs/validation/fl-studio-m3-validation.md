@@ -5,7 +5,7 @@ tasks below remain pending. M2's earlier acceptance is not evidence for M3.
 
 ## Build and setup
 
-Build/test commands are in [development.md](development.md). Close FL Studio before
+Build/test commands are in [development.md](../development/development.md). Close FL Studio before
 replacing the plugin with this bundle:
 
 `out/build/windows-msvc/preverb_plugin_artefacts/Debug/VST3/Preverb Spike.vst3`

@@ -41,7 +41,7 @@ synchronized playback belongs to M4.
 
 ## Build and reproducible media
 
-Use the MSVC build/test commands in [development.md](development.md). Close existing
+Use the MSVC build/test commands in [development.md](../development/development.md). Close existing
 instances and FL Studio before replacing the installed plugin with this bundle:
 
 `out/build/windows-msvc/preverb_plugin_artefacts/Debug/VST3/Preverb Spike.vst3`

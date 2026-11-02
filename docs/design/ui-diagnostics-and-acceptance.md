@@ -64,5 +64,5 @@ row menu position retain their earlier individual approvals. Approved checks:
    scaled PNGs do not substitute for physical DPI acceptance.
 
 Release/Debug binary identities, native image paths and actual test results
-and the user acceptance record are in [the evidence log](ui-alignment-evidence.md).
+and the user acceptance record are in [the evidence log](../validation/ui-alignment-evidence.md).
 All 45 tasks are checked; sync/archive remains a separate workflow action.

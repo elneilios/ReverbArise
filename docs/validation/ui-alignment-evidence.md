@@ -1,8 +1,8 @@
 # ReverbArise UI alignment evidence
 
 Change: `align-reverbarise-ui-with-approved-design`.
-The source of visual authority is `style/ReverbArise_UI_Layout_and_Style_Guide.md`
-and the current Init/SamplesLoaded pair in `prototypes/`. This log separates
+The source of visual authority is `../design/ReverbArise_UI_Layout_and_Style_Guide.md`
+and the current Init/SamplesLoaded pair in `../archive/2026-11-02/prototypes/`. This log separates
 automated/native evidence from user approval and physical host acceptance.
 
 ## Approval checkpoints
@@ -298,7 +298,7 @@ explicit request and remain verified complete (overall progress 16/45).
 ## Final integrated native audit — 2026-11-02
 
 This entry supersedes earlier pending native run records, not user/host acceptance.
-The current access/disposition inventory is in `docs/ui-diagnostics-and-acceptance.md`.
+The current access/disposition inventory is in `docs/design/ui-diagnostics-and-acceptance.md`.
 
 - Full configured Debug build succeeded. Clean full CTest rerun: **25/25 passed**
   (`LastTest.log`: 09:23–09:24 GMT). The preceding run's sole failure was an
@@ -361,7 +361,7 @@ Exact replacement bundle binaries (not installed or pushed):
 Final integrated checkpoint C and tasks 10.1–10.4 remain pending. The individual
 compact/brightness, Settings and popup-position approvals above remain valid.
 Do not archive based on native test results. Use the current host checklist in
-`docs/ui-diagnostics-and-acceptance.md`; prior milestone passes are historical.
+`docs/design/ui-diagnostics-and-acceptance.md`; prior milestone passes are historical.
 
 Audit close-out: strict validation of this change passed; `openspec validate --all
 --strict` passed **10/10**, and `git diff --check` passed. Reviewed the four delta
