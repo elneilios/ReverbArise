@@ -12,6 +12,16 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
 int main(){return runTest([]{
+    {juce::String error;TransportPlayback handover;handover.invalidate(0,1);handover.invalidate(1,1);REQUIRE(handover.publish(fixture()));
+        float left[10]{},right[10]{};TransportTime time{{true,40,.08,1000,120,4,4},true};handover.process(left,right,10,time);
+        auto replacement=fixture();auto changed=std::make_shared<WetRender>(*replacement->entries[0].audio);
+        for(auto& v:changed->samples)v*=2;replacement->entries[0].audio=changed;replacement->entries[0].version=2;replacement->entries[0].peak=.16f;
+        REQUIRE(prepareLiveSegments(*replacement,error));REQUIRE(handover.publish(std::move(replacement)));
+        time.song.sample=50;time.song.ppq=.1;std::fill_n(left,10,0.f);std::fill_n(right,10,0.f);
+        {AudioAllocationGuard guard;handover.process(left,right,10,time);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        for(int i=0;i<10;++i){const auto current=(61+i)*.001f,neighbour=(21+i)*.0005f;
+            const auto blend=i<5?static_cast<float>(4-i)/5:0.f;
+            REQUIRE(std::abs(left[i]-(current*(1-blend)+.03f*blend+neighbour))<1e-7f);}}
     TransportPlayback player;player.invalidate(0,1);player.invalidate(1,1);auto p=fixture();REQUIRE(p->attenuation==1);REQUIRE(player.publish(std::move(p)));
     float l[200]{},r[200]{};TransportTime t{{true,-20,-.04,1000,120,4,4},true};
     {AudioAllocationGuard guard;player.process(l,r,200,t);}
@@ -35,6 +45,16 @@ int main(){return runTest([]{
     REQUIRE(prepareLiveSegments(*loud,error));REQUIRE(std::abs(loud->attenuation-std::pow(10.0f,-6.0f/20)/5)<1e-6f);
     loud->start=100;loud->end=110;REQUIRE(prepareLiveSegments(*loud,error));REQUIRE(std::abs(loud->attenuation-std::pow(10.0f,-6.0f/20)/5)<1e-6f);
     auto full=fixture();full->entries.resize(65,full->entries[0]);for(size_t i=0;i<full->entries.size();++i)full->entries[i].slot=i;REQUIRE(!prepareLiveSegments(*full,error));
+    // A musical publication carries one fixed full-support measurement; page
+    // segmentation must not replace it with the legacy member-peak bound.
+    auto musical=fixture();musical->measuredAttenuation=true;musical->attenuation=.75f;
+    musical->entries[0].peak=20;musical->entries[1].peak=30;
+    REQUIRE(prepareLiveSegments(*musical,error) && musical->attenuation==.75f);
+    TransportPlayback musicalPlayer;musicalPlayer.invalidate(0,1);musicalPlayer.invalidate(1,1);
+    musicalPlayer.configure(true,LiveRouting::wetOnly,6);REQUIRE(musicalPlayer.publish(std::move(musical)));
+    float musicalL[32]{},musicalR[32]{};TransportTime musicalTime{{true,60,.12,1000,120,4,4},true};
+    musicalPlayer.process(musicalL,musicalR,32,musicalTime);
+    REQUIRE(std::abs(musicalL[31]-((102+62)*.0005f*.75f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
     player.configure(true,LiveRouting::wetOnly,0);t.playing=true;t.song.sample=10000;t.song.ppq=20;
     std::fill_n(l,20,.125f);std::fill_n(r,20,.125f);player.process(l,r,20,t);REQUIRE(l[19]==0 && player.missing());
     player.configure(false,LiveRouting::wetOnly,0);player.process(l,r,20,t);REQUIRE(!player.active());

@@ -86,7 +86,7 @@ void SwellEngine::prepareDefault(const PreviewContext& context)
     {const juce::ScopedLock guard(lock);if(!awaitingCaptureReference.isEmpty() || model.defaultIR.present() || defaultAttemptScope==scope)return;
         defaultAttemptScope=scope;generation=sessionGeneration.load();}
     Asset asset;juce::String error;SwellAssetStore store(instanceRoot(context.capture.manifest));
-    const auto ok=installBundledImpulse(store,asset,error);
+    const auto ok=installBundledImpulse(store,defaultImpulseId,available(),asset,error);
     const juce::ScopedLock guard(lock);if(generation!=sessionGeneration.load())return;
     if(!ok){defaultError="Missing default IR: "+error;message=defaultError;return;}
     model.defaultIR=asset;model.defaultIRName="Preverb Hall";

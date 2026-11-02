@@ -1,0 +1,381 @@
+{
+  "prototype": false,
+  "approval": "User approved revision-3 Plate/Shimmer/Whisper and revision-4 Monumental/Vintage Dark Hall on 2026-11-02; exact WAVs locked in resources/irs/manifest.json. These are historical authored-level measurements; subsequent musical runtime calibration is documented separately in gain-staging-evidence.md.",
+  "window": "20 ms windows >= -40 dB relative to maximum window power; no quiet boost",
+  "monitoring": "50% dry/wet, initial 20 ms Smooth release; production wet/sum protection; zero trim",
+  "notes": "Level deltas are source-specific; median calibration does not imply equal perceived loudness. Common crop: 250 ms pre-roll / 20 ms release.",
+  "responses": [
+    {
+      "id": "preverb-hall",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": 0.0,
+          "common_crop_active_delta_db": 0.0,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -11.696756820014977,
+          "shaped_peak_dbfs": -14.10747396469417,
+          "protected_wet_stereo": {
+            "correlation": 0.3880892561875729,
+            "side_to_mid_db": -3.5557096003298976,
+            "mono_vs_mean_channel_db": -1.5866105833117559
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": 0.0,
+          "common_crop_active_delta_db": 0.0,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -6.115215074925459,
+          "shaped_peak_dbfs": -25.05970053850261,
+          "protected_wet_stereo": {
+            "correlation": -0.10878151231474925,
+            "side_to_mid_db": 0.8976480842816963,
+            "mono_vs_mean_channel_db": -3.4822748179103664
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": 0.0,
+          "common_crop_active_delta_db": 0.0,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -14.690827470152543,
+          "shaped_peak_dbfs": -14.690827470152543,
+          "protected_wet_stereo": {
+            "correlation": -0.09599639624772985,
+            "side_to_mid_db": 0.8044058081731347,
+            "mono_vs_mean_channel_db": -3.4311004334984356
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": 0.0,
+          "common_crop_active_delta_db": 0.0,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -11.967582357606787,
+          "shaped_peak_dbfs": -11.967582357606787,
+          "protected_wet_stereo": {
+            "correlation": -0.0006251598892971845,
+            "side_to_mid_db": 0.005370749537894411,
+            "mono_vs_mean_channel_db": -3.012986161633122
+          }
+        }
+      ],
+      "median_full_active_delta_db": 0.0
+    },
+    {
+      "id": "monumental",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": 6.7229110379041295,
+          "common_crop_active_delta_db": 10.47836718352573,
+          "wet_guard_db": -0.668517231941223,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -5.331483372941043,
+          "shaped_peak_dbfs": -5.331483372941043,
+          "protected_wet_stereo": {
+            "correlation": -0.4526731057541901,
+            "side_to_mid_db": 4.067045298588895,
+            "mono_vs_mean_channel_db": -5.503464131592681
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": 19.362397737112016,
+          "common_crop_active_delta_db": 24.079062019235128,
+          "wet_guard_db": -4.191122531890869,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": 1.651354323919311,
+          "shaped_peak_dbfs": -1.808878389939188,
+          "protected_wet_stereo": {
+            "correlation": -0.2998483134818149,
+            "side_to_mid_db": 2.394640483276505,
+            "mono_vs_mean_channel_db": -4.3706173554790775
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": 5.362641697866007,
+          "common_crop_active_delta_db": 8.693115512185976,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -8.385392129272086,
+          "shaped_peak_dbfs": -8.385392129272086,
+          "protected_wet_stereo": {
+            "correlation": -0.35942985261508137,
+            "side_to_mid_db": 3.2671939498369196,
+            "mono_vs_mean_channel_db": -4.944152373702631
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": 1.8042852557652722,
+          "common_crop_active_delta_db": 4.956239785022923,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -8.627199385852224,
+          "shaped_peak_dbfs": -8.627199385852224,
+          "protected_wet_stereo": {
+            "correlation": -0.4403215949679126,
+            "side_to_mid_db": 4.1047941592043395,
+            "mono_vs_mean_channel_db": -5.530615548383501
+          }
+        }
+      ],
+      "median_full_active_delta_db": 6.042776367885068
+    },
+    {
+      "id": "intimate-plate",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": 0.9534614431371864,
+          "common_crop_active_delta_db": -0.5495884919698071,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -15.143330860447241,
+          "shaped_peak_dbfs": -15.143330860447241,
+          "protected_wet_stereo": {
+            "correlation": 0.9420515497830885,
+            "side_to_mid_db": -15.126696864398959,
+            "mono_vs_mean_channel_db": -0.1313799425949192
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": -9.435825367060794,
+          "common_crop_active_delta_db": -10.713600226563791,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -14.817349357930345,
+          "shaped_peak_dbfs": -30.987410116955566,
+          "protected_wet_stereo": {
+            "correlation": 0.9881146715001952,
+            "side_to_mid_db": -18.338513221373194,
+            "mono_vs_mean_channel_db": -0.06320752424619813
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": 1.1590144596432808,
+          "common_crop_active_delta_db": 0.07595360579093224,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -16.32381390449916,
+          "shaped_peak_dbfs": -16.32381390449916,
+          "protected_wet_stereo": {
+            "correlation": 0.9369738293732908,
+            "side_to_mid_db": -13.70776875620524,
+            "mono_vs_mean_channel_db": -0.1811010291627085
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": -0.9013588296501815,
+          "common_crop_active_delta_db": -2.2192214348800334,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -14.018294506392895,
+          "shaped_peak_dbfs": -14.018294506392895,
+          "protected_wet_stereo": {
+            "correlation": 0.9344848204806205,
+            "side_to_mid_db": -13.79456225212814,
+            "mono_vs_mean_channel_db": -0.1775899283552204
+          }
+        }
+      ],
+      "median_full_active_delta_db": 0.026051306743502423
+    },
+    {
+      "id": "vintage-dark-hall",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": 1.4683157789208394,
+          "common_crop_active_delta_db": 3.3771032097648472,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -13.713639757340808,
+          "shaped_peak_dbfs": -13.713639757340808,
+          "protected_wet_stereo": {
+            "correlation": 0.2181376638718768,
+            "side_to_mid_db": -1.9129645783259888,
+            "mono_vs_mean_channel_db": -2.1583040053234974
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": 11.964453291079014,
+          "common_crop_active_delta_db": 14.757783596127155,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -7.776349822544723,
+          "shaped_peak_dbfs": -9.484203794348185,
+          "protected_wet_stereo": {
+            "correlation": -0.17138169225191854,
+            "side_to_mid_db": 1.457803011657287,
+            "mono_vs_mean_channel_db": -3.8000843041742263
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": -1.4439539823681358,
+          "common_crop_active_delta_db": 1.2075866160792081,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -17.905042971724047,
+          "shaped_peak_dbfs": -17.905042971724047,
+          "protected_wet_stereo": {
+            "correlation": 0.16334104422277454,
+            "side_to_mid_db": -1.2717558716582056,
+            "mono_vs_mean_channel_db": -2.4208080883280743
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": -2.943444219327919,
+          "common_crop_active_delta_db": -0.46105178802631386,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -14.860924136942163,
+          "shaped_peak_dbfs": -14.860924136942163,
+          "protected_wet_stereo": {
+            "correlation": 0.3773861138235427,
+            "side_to_mid_db": -3.447777834595567,
+            "mono_vs_mean_channel_db": -1.619926989104117
+          }
+        }
+      ],
+      "median_full_active_delta_db": 0.012180898276351826
+    },
+    {
+      "id": "shimmer-cloud",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": -5.156821013469539,
+          "common_crop_active_delta_db": -2.3709820437435027,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -19.363618368076583,
+          "shaped_peak_dbfs": -19.363618368076583,
+          "protected_wet_stereo": {
+            "correlation": -0.10430147513340178,
+            "side_to_mid_db": 0.9033515560920257,
+            "mono_vs_mean_channel_db": -3.485421149601709
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": -0.3504381253141915,
+          "common_crop_active_delta_db": 1.3057380290042815,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -19.59990943810421,
+          "shaped_peak_dbfs": -24.503472898064203,
+          "protected_wet_stereo": {
+            "correlation": -0.43928403095355173,
+            "side_to_mid_db": 4.093810367674601,
+            "mono_vs_mean_channel_db": -5.52270846419308
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": -0.2759712815532893,
+          "common_crop_active_delta_db": 2.975002422996571,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -16.337762434002403,
+          "shaped_peak_dbfs": -16.337762434002403,
+          "protected_wet_stereo": {
+            "correlation": -0.14377648717455524,
+            "side_to_mid_db": 1.2312721494125987,
+            "mono_vs_mean_channel_db": -3.6694255548694517
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": 1.6810887953122382,
+          "common_crop_active_delta_db": 4.926741437097963,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -10.054755612611434,
+          "shaped_peak_dbfs": -10.054755612611434,
+          "protected_wet_stereo": {
+            "correlation": -0.16070950125294806,
+            "side_to_mid_db": 1.3732510671062268,
+            "mono_vs_mean_channel_db": -3.750979082025763
+          }
+        }
+      ],
+      "median_full_active_delta_db": -0.3132047034337404
+    },
+    {
+      "id": "whisper",
+      "fixtures": [
+        {
+          "fixture": "piano",
+          "full_active_delta_db": 1.177524308569481,
+          "common_crop_active_delta_db": -3.5797095751799546,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -13.81197564961905,
+          "shaped_peak_dbfs": -14.001903280195332,
+          "protected_wet_stereo": {
+            "correlation": 0.9523239151065153,
+            "side_to_mid_db": -15.412359824273077,
+            "mono_vs_mean_channel_db": -0.12313374692206122
+          }
+        },
+        {
+          "fixture": "pad",
+          "full_active_delta_db": -25.91116517543682,
+          "common_crop_active_delta_db": -30.154123843432423,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -17.169834288443678,
+          "shaped_peak_dbfs": -49.32066898491997,
+          "protected_wet_stereo": {
+            "correlation": 0.9665030741352578,
+            "side_to_mid_db": -14.329982269033001,
+            "mono_vs_mean_channel_db": -0.15735999311839707
+          }
+        },
+        {
+          "fixture": "voice-like",
+          "full_active_delta_db": 0.5918958549426421,
+          "common_crop_active_delta_db": -3.5664265452057897,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -13.758662600900042,
+          "shaped_peak_dbfs": -15.025340277025308,
+          "protected_wet_stereo": {
+            "correlation": 0.9368587358238977,
+            "side_to_mid_db": -14.25948496385433,
+            "mono_vs_mean_channel_db": -0.15988836818151694
+          }
+        },
+        {
+          "fixture": "pluck",
+          "full_active_delta_db": -0.6646285168861361,
+          "common_crop_active_delta_db": -4.778139175372189,
+          "wet_guard_db": 0.0,
+          "sum_guard_db": 0.0,
+          "raw_peak_dbfs": -11.607958436410675,
+          "shaped_peak_dbfs": -11.607958436410675,
+          "protected_wet_stereo": {
+            "correlation": 0.9396816585091106,
+            "side_to_mid_db": -15.072440251247603,
+            "mono_vs_mean_channel_db": -0.13300653718066974
+          }
+        }
+      ],
+      "median_full_active_delta_db": -0.03636633097174702
+    }
+  ]
+}

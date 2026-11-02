@@ -70,12 +70,13 @@ add_library(preverb_analysis STATIC Source/Analysis/OnsetAnalysis.cpp Source/Ana
 target_include_directories(preverb_analysis PUBLIC Source)
 target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 
-juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav)
+juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav
+    resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
     resources/logo/svg/reverbarise-wordmark-dark.svg
     resources/logo/source/InterVariable.ttf
 )
-add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
+add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
@@ -119,14 +120,34 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/WavPack-LICENSE.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/licenses/Inter-OFL.txt"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/Inter-OFL.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/irs/LICENSE.md"
+        "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-LICENSE.md"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/irs/manifest.json"
+        "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-manifest.json"
 )
 
 add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_gain_staging_test tests/gain_staging_test.cpp)
+    target_link_libraries(preverb_gain_staging_test PRIVATE preverb_assets)
+    add_test(NAME preverb_gain_staging_test COMMAND preverb_gain_staging_test)
+    add_executable(preverb_ir_review tests/ir_library_review.cpp)
+    target_link_libraries(preverb_ir_review PRIVATE preverb_assets)
+    add_executable(preverb_gain_review tests/gain_listening_review.cpp)
+    target_link_libraries(preverb_gain_review PRIVATE preverb_assets)
+    add_executable(preverb_ir_library_test tests/ir_library_test.cpp)
+    target_link_libraries(preverb_ir_library_test PRIVATE preverb_assets psapi)
+    add_test(NAME preverb_ir_library_test COMMAND preverb_ir_library_test "${CMAKE_BINARY_DIR}/ir-library-metrics-$<CONFIG>.json")
+    add_executable(preverb_ir_handover_test tests/ir_handover_test.cpp)
+    target_link_libraries(preverb_ir_handover_test PRIVATE preverb_preview)
+    add_test(NAME preverb_ir_handover_test COMMAND preverb_ir_handover_test)
+    add_executable(preverb_ir_streaming_test tests/ir_streaming_test.cpp)
+    target_link_libraries(preverb_ir_streaming_test PRIVATE preverb_preview psapi)
+    add_test(NAME preverb_ir_streaming_test COMMAND preverb_ir_streaming_test "${CMAKE_BINARY_DIR}/ir-streaming-metrics-$<CONFIG>.json")
     add_executable(preverb_audition_mix_test tests/audition_mix_test.cpp)
-    target_link_libraries(preverb_audition_mix_test PRIVATE preverb_assets)
+    target_link_libraries(preverb_audition_mix_test PRIVATE preverb_preview)
     add_test(NAME preverb_audition_mix_test COMMAND preverb_audition_mix_test)
     add_executable(preverb_transition_feedback_test tests/transition_feedback_test.cpp)
     target_link_libraries(preverb_transition_feedback_test PRIVATE preverb_preview)

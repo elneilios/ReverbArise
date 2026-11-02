@@ -12,6 +12,9 @@ class KnobValue final:public juce::Component
     public:
         std::function<void()> gained;
         void focusGained(FocusChangeType type)override{juce::TextEditor::focusGained(type);if(gained)gained();}
+        void mouseDown(const juce::MouseEvent& event)override{if(gained)gained();juce::TextEditor::mouseDown(event);}
+        bool keyPressed(const juce::KeyPress& key)override
+        {if(key!=juce::KeyPress::escapeKey && key!=juce::KeyPress::returnKey && gained)gained();return juce::TextEditor::keyPressed(key);}
     };
 public:
     KnobValue()
@@ -22,8 +25,9 @@ public:
         knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(false);
         knob.setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier);
         entry.setFont(juce::FontOptions(controlSize));entry.setJustification(juce::Justification::centredLeft);
+        entry.setSelectAllWhenFocused(true);
         entry.gained=[this]{begin(true);};
-        entry.onReturnKey=[this]{finish(true);};entry.onFocusLost=[this]{finish(true);};
+        entry.onReturnKey=[this]{finish(true);};entry.onFocusLost=[this]{if(typing)finish(true);};
         entry.onEscapeKey=[this]{cancel();};
         knob.onDragStart=[this]{cancelledGesture=false;begin(false);};
         knob.onValueChange=[this]
@@ -50,7 +54,7 @@ public:
         if(owner!=identity){cancel();identity=owner;}
         canonical=valueText;canonicalFraction=std::clamp(fraction,0.0,1.0);
         setEnabled(enabled);
-        if(!active){refreshing=true;entry.setText(canonical,false);knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}
+        if(!typing){refreshing=true;entry.setText(canonical,false);if(!active)knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}
     }
     void cancel(){if(active && !typing)cancelledGesture=true;active=false;typing=false;restore();if(onEnd)onEnd();}
     bool editing()const noexcept{return active;}
@@ -68,7 +72,9 @@ public:
 private:
     void begin(bool textEntry)
     {
-        if(active)return;active=true;typing=textEntry;origin=canonicalFraction;if(onBegin)onBegin();
+        if(active && typing==textEntry)return;
+        if(active)finish(typing);
+        active=true;typing=textEntry;origin=canonicalFraction;if(onBegin)onBegin();
     }
     void restore(){refreshing=true;entry.setText(canonical,false);knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}
     void finish(bool commit)

@@ -34,6 +34,7 @@ struct EditorSnapshot
     bool dryAvailable=false,cachedWetOnly=false;
     juce::String dryStatus;
     juce::String defaultIRError;
+    juce::String retainedIRName,requestedIRName;
     uint64_t renderCount=0;
     uint64_t analysisCount=0;
     size_t pendingIntervals=0;
@@ -41,6 +42,8 @@ struct EditorSnapshot
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
+    float gainPlanPeak=0;double gainPlanPreparationMs=0;
+    uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     int64_t liveLoopDestination=0;
     uint64_t offlineBlocks=0;
     juce::String offlineStatus="No offline callbacks observed";
@@ -63,6 +66,7 @@ public:
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
+    bool assignBundledIR(const juce::String& id,uint64_t expectedInput,const juce::String& presetId,uint64_t expectedSession=0);
     bool resetSwell(const juce::String& id,bool allSettings);
     void generate(bool all=false);
     void analyze(int64_t start,int64_t end);
@@ -74,6 +78,7 @@ public:
     void setPostRoll(double seconds);
     void setMonitoring(AuditionMode,float blend);
     void setLivePlayback(bool,LiveRouting,float db);
+    bool setGainPolicy(GainPolicy);
     void setRegenerationSensitivity(float);
     float changeTolerance() const noexcept {return (1-regeneration.load())*.3f;}
     bool setFrozen(const juce::String&,bool);
@@ -108,7 +113,12 @@ private:
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
-    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false,bundled=false; };
+    bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession);
+    struct RetainedIR { Swell accepted;SongTime timing;juce::String revision,requestedName; };
+    bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&) const;
+    bool retainIRLocked(const Swell&,const PreviewContext&,const juce::String& requestedName);
+    std::map<juce::String,RetainedIR> retainedIR;
+    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId; };
     struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
     struct Analysis { int64_t start,end; float sensitivity; double separation; uint64_t session,request; };
     void run() override;
@@ -153,6 +163,7 @@ private:
     juce::String awaitingCaptureReference;
     std::set<juce::String> forceRefresh;
     uint64_t captureGeneration=0,renderCount=0,useSerial=0;
+    uint64_t activeJobBytes=0;
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};
     std::atomic<bool> audioAllowed{false},timingChanged{false};
     std::atomic<double> expectedRate{0},expectedBpm{0};
@@ -166,10 +177,13 @@ private:
     juce::File offlineRoot;
     std::vector<LiveEntry> offlineEntries;
     std::vector<Swell> offlineMembers;
+    std::map<juce::String,Swell> offlineAccepted;
+    juce::String offlineIRNotice;
     juce::String offlineWarning;
     int64_t offlineWindowStart=0,offlineWindowEnd=0;
     int64_t offlineLastPosition=INT64_MIN;
     juce::String offlineError;
+    float offlineGainAttenuation=1,offlineGainPeak=0;
     std::atomic<uint64_t> offlineBlockCount{0};
     juce::String offlineStatus="No offline callbacks observed";
     std::atomic<bool> liveEnabled{true},hostObserved{false};
@@ -190,6 +204,10 @@ private:
     std::array<uint64_t,maximumSwells> liveGenerations{};
     struct LiveCache {juce::String key;float peak=0;std::weak_ptr<const WetRender> main,loop;};
     std::map<juce::String,LiveCache> liveCache;
+    juce::String gainPlanKey;
+    float gainPlanAttenuation=1,gainPlanPeak=0;
+    double gainPlanPreparationMs=0;
+    uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     uint64_t liveRevision=1,preparedLiveRevision=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";

@@ -1,0 +1,33 @@
+{
+  "debug_ctest": {
+    "passed": 28,
+    "total": 28,
+    "seconds": 91.63
+  },
+  "release_focused_ctest": {
+    "passed": 4,
+    "total": 4,
+    "seconds": 11.43
+  },
+  "installed": false,
+  "release_transport_ctest": {
+    "passed": 1,
+    "total": 1,
+    "seconds": 0.05
+  },
+  "bundles": {
+    "Debug": {
+      "path": "out\\build\\windows-msvc\\preverb_plugin_artefacts\\Debug\\VST3\\Preverb Spike.vst3\\Contents\\x86_64-win\\Preverb Spike.vst3",
+      "bytes": 41658880,
+      "sha256": "267d51f9ad52bb47c516826d71525e29d7a49f42e36519cce48dd30d5426d24c",
+      "growth_bytes": 7877632
+    },
+    "Release": {
+      "path": "out\\build\\windows-msvc\\preverb_plugin_artefacts\\Release\\VST3\\Preverb Spike.vst3\\Contents\\x86_64-win\\Preverb Spike.vst3",
+      "bytes": 16982528,
+      "sha256": "0c8ca6b71e2898eb40ad22b39dc479d4fa285a075dfa41910738f7d9f55e22a6",
+      "growth_bytes": 6500352
+    }
+  },
+  "new_wav_payload_bytes": 6480220
+}

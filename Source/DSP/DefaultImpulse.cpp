@@ -6,26 +6,70 @@
 
 namespace m3
 {
+std::span<const BundledImpulse> bundledImpulses()
+{
+    static const BundledImpulse catalogue[]{
+        {defaultImpulseId,1,"Preverb Hall","Original compact diffuse stereo hall.","CC0-1.0","generate_default_ir.py/v1",
+         48000,2,16,86400,PreverbResources::PreverbHall_wav,static_cast<size_t>(PreverbResources::PreverbHall_wavSize),
+         "b7275a27fc7629a9a1a7191abda4fbb3c8a46372dc9071e36dc1112e4839b458",
+         "e07178229546d127295fee703375c233090f02faa312f9ce9a639beee2bfaacf"}
+        #include "BundledImpulseEntries.inc"
+    };
+    return catalogue;
+}
+const BundledImpulse* findBundledImpulse(const juce::String& id)
+{for(const auto& entry:bundledImpulses())if(id==entry.id)return &entry;return nullptr;}
 bool bundledImpulse(ImpulseResponse& output, juce::String& error)
-{return decodeDefaultImpulse(PreverbResources::PreverbHall_wav,PreverbResources::PreverbHall_wavSize,output,error);}
+{return decodeBundledImpulse(*findBundledImpulse(defaultImpulseId),previewMemoryBudget,output,error);}
 bool decodeDefaultImpulse(const void* bytes,size_t size,ImpulseResponse& output,juce::String& error)
 {
+    auto entry=*findBundledImpulse(defaultImpulseId);entry.bytes=bytes;entry.size=size;
+    return decodeBundledImpulse(entry,previewMemoryBudget,output,error);
+}
+bool decodeBundledImpulse(const BundledImpulse& entry,uint64_t budget,ImpulseResponse& output,juce::String& error)
+{
+    const auto bytes=entry.bytes;const auto size=entry.size;
     if(!bytes || size==0){error="Bundled IR is missing; assign a replacement IR";return false;}
+    if(entry.channels<1 || entry.channels>2 || entry.frames<=0 || entry.frames>INT_MAX || !std::isfinite(entry.rate) || entry.rate<=0
+        || static_cast<uint64_t>(entry.frames)>std::min(budget,previewMemoryBudget)/(entry.channels*sizeof(float)*2))
+    {error="Bundled IR exceeds available working budget or has invalid metadata";return false;}
     ContentHash checksum;checksum.update(bytes,size);
-    if(checksum.finish()!="b7275a27fc7629a9a1a7191abda4fbb3c8a46372dc9071e36dc1112e4839b458")
+    if(checksum.finish()!=entry.wavHash)
     {error="Bundled IR checksum mismatch; assign a replacement IR";return false;}
     juce::WavAudioFormat format;
     auto stream=std::make_unique<juce::MemoryInputStream>(bytes,size,false);
     std::unique_ptr<juce::AudioFormatReader> reader(format.createReaderFor(stream.release(),true));
-    if(!reader || reader->numChannels!=2 || reader->sampleRate!=48000 || reader->lengthInSamples!=86400)
-    {error="Bundled Preverb Hall IR is invalid; assign a replacement IR";return false;}
-    juce::AudioBuffer<float> audio(2,86400);
-    if(!reader->read(&audio,0,86400,0,true,true)){error="Cannot decode bundled IR";return false;}
-    ImpulseResponse result;result.rate=reader->sampleRate;result.channels=2;result.samples.reserve(172800);
-    for(int i=0;i<86400;++i)for(int c=0;c<2;++c)
+    if(!reader || reader->numChannels!=entry.channels || reader->sampleRate!=entry.rate || reader->lengthInSamples!=entry.frames || reader->bitsPerSample!=entry.bits)
+    {error="Bundled IR format does not match catalogue";return false;}
+    const auto frames=static_cast<int>(entry.frames);
+    juce::AudioBuffer<float> audio(entry.channels,frames);
+    if(!reader->read(&audio,0,frames,0,true,entry.channels==2)){error="Cannot decode bundled IR";return false;}
+    ImpulseResponse result;result.rate=reader->sampleRate;result.channels=entry.channels;
+    result.name=entry.name;result.identity=juce::String(entry.id)+"@"+juce::String(entry.revision);
+    result.samples.reserve(static_cast<size_t>(frames)*entry.channels);
+    for(int i=0;i<frames;++i)for(int c=0;c<entry.channels;++c)
     {const auto v=audio.getSample(c,i);if(!std::isfinite(v)){error="Non-finite bundled IR";return false;}result.samples.push_back(v);}
+    if(sampleHash(result.samples,result.rate,result.channels)!=entry.decodedHash)
+    {error="Bundled decoded IR checksum mismatch";return false;}
     output=std::move(result);error.clear();return true;
 }
 bool installBundledImpulse(SwellAssetStore& store,Asset& output,juce::String& error)
-{ImpulseResponse ir;return bundledImpulse(ir,error) && store.writeIR(ir,output,error);}
+{return installBundledImpulse(store,defaultImpulseId,previewMemoryBudget,output,error);}
+bool installBundledImpulse(SwellAssetStore& store,const juce::String& id,uint64_t budget,Asset& output,juce::String& error)
+{
+    const auto* entry=findBundledImpulse(id);if(!entry){error="Unknown bundled IR identity";return false;}
+    ImpulseResponse ir;if(!decodeBundledImpulse(*entry,budget,ir,error))return false;
+    // Reuse only fully verified immutable PCM, never a label or menu position.
+    // Keep unique-file publication for new/corrupt assets and old saved snapshots.
+    const auto directory=store.directory().getChildFile("irs");int examined=0;
+    if(ir.samples.size()*sizeof(float)<=budget/3 && !directory.isSymbolicLink())
+        for(const auto& child:juce::RangedDirectoryIterator(directory,false,juce::String(entry->decodedHash)+"-*.json")){
+            if(++examined>32)break;const auto metadata=child.getFile();if(metadata.isSymbolicLink() || metadata.getSize()>16384)continue;
+            juce::var value;Asset candidate;juce::String ignored;
+            if(juce::JSON::parse(metadata.loadFileAsString(),value).failed() || !parseAssetMetadata(value,candidate,ignored)
+                || candidate.content!=entry->decodedHash || candidate.rate!=entry->rate || candidate.channels!=entry->channels || candidate.frames!=entry->frames)continue;
+            ImpulseResponse verified;
+            if(store.readIR(candidate,budget-ir.samples.size()*sizeof(float),verified,ignored) && verified.samples==ir.samples){output=candidate;error.clear();return true;}}
+    return store.writeIR(ir,output,error);
+}
 }

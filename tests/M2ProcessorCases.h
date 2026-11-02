@@ -7,6 +7,7 @@ inline void m2ProcessorCases()
     juce::ScopedJuceInitialiser_GUI gui;
     TestDirectory root;
     auto processor = std::make_unique<PreverbAudioProcessor>(root.file);
+    REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy)); // Original preview sample oracle.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0); // Exercise independent manual preview.
     processor->swellEngine().setAutomaticProcessing(false);
     processor->prepareToPlay(1000, 250);

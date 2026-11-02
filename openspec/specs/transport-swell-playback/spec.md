@@ -64,11 +64,30 @@ The plugin SHALL expose saved live playback enable, Dry + Wet/Wet Only routing a
 - **THEN** enabled Wet Only outputs only prepared wet; disabling restores live dry and removes wet with disclosed short routing ramps
 
 ### Requirement: Wet level protection is transparent
-Playback SHALL protect the aggregate wet branch to a -6 dBFS ceiling at 0 dB user gain, without boosting quiet audio or modifying stored renders. Protection SHALL use a disclosed fixed gain for each published schedule revision, preserving relative swell gains without block-dependent pumping. User wet level SHALL range from -60 to 0 dB and ramp over 5 ms. The ceiling SHALL not be claimed for dry plus wet output.
+Playback SHALL follow the saved gain policy. Legacy sessions SHALL retain their -6 dBFS fixed aggregate guard and -60 to 0 dB wet level. Musical sessions SHALL use the approved musical ceiling and actual-aggregate preparation from swell-gain-staging, with -60 to +12 dB user wet level. Gain SHALL ramp over 5 ms, protection SHALL remain fixed for an accepted schedule, and stored renders SHALL remain unchanged. The wet ceiling SHALL not be claimed for dry plus wet output.
 
 #### Scenario: Loud overlapping IR results
 - **WHEN** several loud prepared swells overlap
-- **THEN** their protected aggregate stays within the wet ceiling, relative contributions remain intact, and attenuation is visible separately from user gain
+- **THEN** their protected aggregate stays within the saved policy's wet ceiling, relative contributions remain intact, and attenuation is visible separately from user gain
+
+#### Scenario: Boost a musical schedule with headroom
+- **WHEN** musical live wet level changes from 0 to +6 dB and the actual sum has sufficient headroom
+- **THEN** positioned wet rises by the corresponding amplitude ratio after the 5 ms ramp while live dry is unchanged
+- **AND** the same saved wet level and fixed protection plan apply to offline export
+
+#### Scenario: Publication pages do not change the balance
+- **WHEN** playback moves between prepared pages of the same accepted schedule, seeks or loops
+- **THEN** its musical protection gain stays unchanged, including when a loud member's own peak lies outside the current page
+
+#### Scenario: Accepted source-matched version
+- **WHEN** a source-matched swell plays while an IR/source replacement and its recalculated baseline are pending
+- **THEN** live and offline snapshots use the accepted audio with its corresponding saved baseline, never the replacement's baseline on the old audio
+- **AND** looping over unchanged captured performances does not continually remeasure the reference or alter the balance
+
+#### Scenario: Energy method survives export and looping
+- **WHEN** source-energy calibration is accepted with its method revision and RMS/reference metadata
+- **THEN** live and offline paths use that same saved baseline and disclose sample-peak protection separately
+- **AND** neither host block partitions, page boundaries nor a changed IR recording level introduces repeated normalization during playback
 
 ### Requirement: Transport discontinuities do not replay old positions
 Seeking and looping SHALL abandon the old wet position and join prepared audio at the new absolute offset. Stopping, disabling or losing valid timing SHALL stop wet with a bounded click-prevention transition. Old-position audio SHALL not continue beyond that transition. Host transport SHALL never be changed by plugin playback controls.
@@ -107,7 +126,7 @@ The audio callback SHALL perform no file I/O, convolution, allocation, deallocat
 - **THEN** the callback continues with valid pinned data or explicit missing coverage, with no waiting, resource lifetime violation or unbounded work
 
 ### Requirement: Playback validity tracks actual dependencies
-Only verified current or explicitly frozen wet SHALL enter live playback. Changed unfrozen dependencies, shape, placement or mapping SHALL invalidate affected publications; cancelled generations SHALL not publish. Identical/unrelated capture SHALL preserve output. Manual missing-source recovery SHALL remain ineligible unless explicitly frozen while ready; frozen assets SHALL follow the render-freeze requirement.
+Only verified current or explicitly frozen wet SHALL enter live playback, except a disclosed retained contribution during an eligible IR-only replacement. Changed source, shape, placement or mapping SHALL invalidate affected publications; cancelled generations SHALL not publish. Identical/unrelated capture SHALL preserve output. Manual missing-source recovery SHALL remain ineligible unless explicitly frozen while ready; frozen assets SHALL follow the render-freeze requirement.
 
 #### Scenario: Recapture while listening
 - **WHEN** capture commits identical source followed by changed source inside one swell's dependencies
@@ -116,6 +135,10 @@ Only verified current or explicitly frozen wet SHALL enter live playback. Change
 #### Scenario: Saved asset cannot verify
 - **WHEN** reopen finds missing or corrupt source, IR or wet assets
 - **THEN** affected wet remains excluded with an actionable diagnostic and unaffected verified swells remain eligible
+
+#### Scenario: Replace only the IR
+- **WHEN** a user requests a different IR for a verified ready swell without changing its other dependencies
+- **THEN** its accepted old contribution remains eligible with its original verified IR/render identity while the replacement prepares, and only a complete latest valid replacement becomes current
 
 ### Requirement: Live edits publish without unsafe boundaries
 Complete playback revisions SHALL become active at processing boundaries with short, disclosed transitions of at most 5 ms. Changes SHALL preserve absolute timing and existing fade/tension/placement semantics; partial results SHALL never play. Preparing new audio SHALL not play already elapsed lead-in or reset the whole Song cursor.
@@ -139,11 +162,16 @@ The workspace SHALL show live controls, host playhead and live readiness separat
 - **THEN** manual output transitions out within 5 ms and Song-positioned wet takes priority without sustained duplicate output; the UI identifies the active path
 
 ### Requirement: Live preferences restore without starting voices
-Live enable, routing and wet level SHALL persist independently of audition preferences in bounded versioned metadata, with explicit migration from existing projects. Restore SHALL clear active voices and require fresh host timing and validated assets. Restoring state SHALL not request host transport or resume manual audition.
+Live enable, routing and wet level SHALL persist independently of audition preferences in bounded versioned metadata, with explicit migration from existing projects. The saved gain policy SHALL determine valid gain ranges and restoration behavior. Restore SHALL clear active voices and require fresh host timing and validated assets. Restoring state SHALL not request host transport or resume manual audition.
 
 #### Scenario: Reopen an older project
 - **WHEN** a project without live playback preferences is restored
 - **THEN** enabled Dry + Wet with 0 dB user wet gain is selected, existing swell edits and audition preferences are preserved, and wet waits for valid playing transport and preparation
+- **AND** its gain policy remains legacy-compatible until explicitly changed
+
+#### Scenario: Restore positive musical wet level
+- **WHEN** a musical-policy project saved with +4 dB live wet level reopens
+- **THEN** +4 dB restores unchanged under its saved policy and validated ceiling, without autoplay or clamping to 0 dB
 
 ### Requirement: Adjustable regeneration and per-swell render freeze
 The system SHALL save independent Regeneration sensitivity and per-swell Freeze render preferences. Freeze SHALL require ready committed wet and retain verified audio across source changes, capture clear and reopen, at its saved rate/tempo/meter. Frozen shape/gain/placement/activity SHALL remain editable. Source/IR/support changes SHALL require unfreeze and current dependency validation.
@@ -215,3 +243,34 @@ Small outlined circular Start/End handles SHALL stay on the waveform centre line
 - **WHEN** either fade is zero, full length or edited
 - **THEN** Start/End stay at the waveform centre line while fade/tension controls follow the curve
 - **AND** zero fades at unity naturally separate from the endpoint circles without an artificial offset
+
+### Requirement: IR replacement retains one bounded accepted contribution
+An eligible IR-only replacement SHALL retain at most one verified accepted contribution per swell, separately from requested state and pending work. Failed or superseded requests SHALL not replace accepted audio. Source, timing, shape or placement changes, deletion and invalid assets SHALL revoke retention; activity/solo/live routing SHALL still govern audibility. Retention SHALL NOT become a blanket stale-render fallback.
+
+#### Scenario: Rapid selection and failed preparation
+- **WHEN** response B then C are requested while accepted response A is audible, and B completes late or C fails
+- **THEN** B cannot publish, A remains the sole retained contribution while its dependencies remain valid, and C's failure is reported without muting unaffected neighbours or claiming C is ready
+
+#### Scenario: Source or editing changes during replacement
+- **WHEN** source dependencies, shape, placement or host mapping change while an old contribution is retained
+- **THEN** retention is revoked and normal invalidation/repreparation applies; deleting or disabling the swell cannot leave a ghost contribution
+
+#### Scenario: Offline bounce during a pending replacement
+- **WHEN** host offline rendering snapshots a session with an eligible accepted contribution and an unfinished IR-only request
+- **THEN** that snapshot renders the accepted audible version consistently, discloses the pending requested version and does not switch mid-export to a background completion
+- **AND** no unavailable wet is fabricated and separate plugin instances retain independent snapshots
+
+### Requirement: Completed IR replacements join the current Song position safely
+A complete latest IR replacement SHALL become active at a processing boundary with a disclosed transition of at most 5 ms at the current absolute Song offset. It SHALL not restart elapsed lead-in, sustain duplicate old/new output or restart neighbouring swells. Preparation, asset work, lifetime retirement and budget checks SHALL remain outside the real-time callback, whose mixing SHALL stay bounded.
+
+#### Scenario: Handover during an overlapping swell
+- **WHEN** a replacement is ready during Song playback with another swell overlapping
+- **THEN** the old/new contribution transitions at the same Song position without an abrupt discontinuity or doubled steady-state level, while the neighbour's timing and samples are unchanged
+
+#### Scenario: Replacement while stopped or during manual audition
+- **WHEN** an IR replacement finishes with Song stopped
+- **THEN** it becomes eligible for subsequent playback without starting a voice, moving host transport or automatically restarting manual audition
+
+#### Scenario: Replacement exceeds resources
+- **WHEN** the old contribution plus pending preparation or handover cannot fit the supported memory budget
+- **THEN** the request reports resource pressure, retains eligible accepted output and does not silently raise the budget, truncate audio or allocate/block on the live callback

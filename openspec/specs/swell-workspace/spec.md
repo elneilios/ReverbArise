@@ -255,7 +255,7 @@ The full-width global band SHALL show Auto-marker On/Off, Marker sensitivity and
 - **THEN** its saved per-instance value and truthful status update while the other sensitivity stays unchanged and both remain visible outside Settings and Diagnostics
 
 ### Requirement: IR choices are real and independently assigned
-The selected-swell IR dropdown SHALL list available bundled responses and faithfully show its current imported assignment, with an adjacent Load file action. Selection SHALL affect only the intended swell, preserve other assignments/future defaults, honor freeze and report async failures. No fictional library entries SHALL appear.
+The selected-swell IR dropdown SHALL list verified bundled catalogue responses and its current imported assignment, with an adjacent Load file action. Selection SHALL affect only the intended swell, preserve other assignments/future defaults and edits, honor freeze and report async failures. Pending replacement SHALL distinguish requested IR from retained audible IR. No fictional entries or new DSP controls SHALL appear.
 
 #### Scenario: Bundled and imported choices
 - **WHEN** a user chooses the bundled Preverb Hall or loads a mono/stereo WAV/WavPack file for one swell
@@ -264,6 +264,19 @@ The selected-swell IR dropdown SHALL list available bundled responses and faithf
 #### Scenario: Selection changes during file choice
 - **WHEN** a file chooser opens for swell A and selection changes to swell B before completion
 - **THEN** the assignment is pinned to A or explicitly cancelled, never silently applied to B; deleted/frozen/obsolete targets reject the completion safely
+
+#### Scenario: Select another library response
+- **WHEN** one swell receives Monumental, Intimate Plate, Vintage Dark Hall, Shimmer Cloud or Whisper through the existing dropdown
+- **THEN** the real requested catalogue identity is prepared for that swell alone without resetting source, arrival, envelope, placement, name, activity or unrelated preferences
+- **AND** the current custom response remains identifiable when it is not a catalogue entry, and a short description explains the chosen sound including Shimmer Cloud's static limitation
+
+#### Scenario: Requested and audible responses differ
+- **WHEN** an eligible IR-only replacement is preparing or fails while the old verified live contribution remains available
+- **THEN** concise status identifies the requested response, retained audible response and preparation/failure state, rather than claiming that the requested IR is already playing
+
+#### Scenario: Rapid choices and restored identity
+- **WHEN** selection, session restoration or repeated catalogue choices supersede an asynchronous assignment
+- **THEN** only the latest permitted target/session request can publish and catalogue ordering does not determine saved assignment identity
 
 ### Requirement: Every waveform edit has a paired inspector control
 Each movable source, target or wet control SHALL have a corresponding knob and typeable value in Selected Swell: source start/end, arrival, wet start/pre-roll, wet end/offset, fade durations, independent tensions and whole-wet placement. Both directions SHALL use identical canonical validation. Grouping and inspector scrolling SHALL preserve access without shrinking waveform lanes or hiding these edits in Settings.

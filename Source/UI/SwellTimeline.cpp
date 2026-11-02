@@ -5,7 +5,15 @@
 namespace m3
 {
 SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
-{setName("swellTimeline");scrollbar.addListener(this);addAndMakeVisible(scrollbar);setMouseCursor(juce::MouseCursor::CrosshairCursor);}
+{
+    setName("swellTimeline");scrollbar.addListener(this);addAndMakeVisible(scrollbar);setMouseCursor(juce::MouseCursor::CrosshairCursor);
+    waveZoom.setName("waveZoom");waveZoom.setSliderStyle(juce::Slider::LinearHorizontal);
+    waveZoom.setRange(-24,48,1);waveZoom.setValue(0,juce::dontSendNotification);
+    waveZoom.setTextBoxStyle(juce::Slider::TextBoxRight,false,60,20);waveZoom.setTextValueSuffix(" dB");
+    waveZoom.setDoubleClickReturnValue(true,0);waveZoom.setTooltip("Display zoom for both source and audible wet. Does not change audio gain. Double-click to reset.");
+    waveZoom.onValueChange=[this]{repaint();};addAndMakeVisible(waveZoom);
+    waveZoomLabel.setText("Wave zoom",juce::dontSendNotification);waveZoomLabel.setColour(juce::Label::textColourId,ui::secondary);addAndMakeVisible(waveZoomLabel);
+}
 void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available)
 {capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();}
 std::pair<double,double> SwellTimeline::globalBounds() const
@@ -48,6 +56,8 @@ void SwellTimeline::resized()
     auto area=getLocalBounds().toFloat().reduced(2);scrollbar.setBounds(area.removeFromBottom(16).toNearestInt());area.removeFromBottom(4);
     if(inlineOverview){overview=area.removeFromBottom(80);area.removeFromBottom(24);}
     else overview={-10000,-10000,0,0};
+    auto waveControls=area.removeFromTop(24);waveZoomLabel.setBounds(waveControls.removeFromLeft(76).toNearestInt());
+    waveZoom.setBounds(waveControls.removeFromLeft(std::min(240.0f,waveControls.getWidth())).toNearestInt());
     area.removeFromTop(42);
     source=area.removeFromTop(std::max(40.0f,(area.getHeight()-32)/2));area.removeFromTop(32);wet=area;
     updateScroll();
@@ -66,6 +76,7 @@ void SwellTimeline::drawWave(juce::Graphics& g,const Waveform& wave,juce::Rectan
 void SwellTimeline::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);g.setFont(ui::smallSize);
+    const auto waveGain=juce::Decibels::decibelsToGain(static_cast<float>(waveZoom.getValue()));
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
         const auto area=source.getUnion(wet);auto headline=area.withHeight(64).withCentre(area.getCentre().translated(0,-30));
@@ -92,7 +103,7 @@ void SwellTimeline::paint(juce::Graphics& g)
         const auto left=std::max(source.getX(),x(a)),right=std::min(source.getRight(),x(b));if(right<=left)continue;
         g.setColour(colour);g.fillRect(juce::Rectangle<float>(left,source.getY(),right-left,source.getHeight()));
         if(item.available && item.range.kind==CaptureCoverageKind::audio)
-        {Waveform wave;wave.peaks=item.peaks;drawWave(g,wave,source,ui::secondary,1);}
+        {Waveform wave;wave.peaks=item.peaks;drawWave(g,wave,source,ui::secondary,waveGain);}
         else if(item.available){g.setColour(ui::secondary);g.drawHorizontalLine(static_cast<int>(source.getCentreY()),left,right);}
     }
     if(data.sourceDetail)
@@ -106,7 +117,7 @@ void SwellTimeline::paint(juce::Graphics& g)
             const auto right=std::min(source.getRight(),x(std::min(data.sourceDetail->end,end)));
             if(right<=left)continue;
             juce::Graphics::ScopedSaveState clip(g);g.reduceClipRegion(juce::Rectangle<float>(left,source.getY(),right-left,source.getHeight()).toNearestInt());
-            g.setColour(ui::background);g.fillRect(source);drawWave(g,*data.sourceDetail,source,ui::secondary,1);
+            g.setColour(ui::background);g.fillRect(source);drawWave(g,*data.sourceDetail,source,ui::secondary,waveGain);
         }
     }
     g.setColour(juce::Colours::white.withAlpha(0.8f));const auto miniLeft=std::clamp(mini(view.first),overview.getX(),overview.getRight()),miniRight=std::clamp(mini(view.last),overview.getX(),overview.getRight());
@@ -144,15 +155,14 @@ void SwellTimeline::paint(juce::Graphics& g)
         juce::Path marker;marker.addTriangle(at-5,source.getY()+5,at+5,source.getY()+5,at,source.getY()+14);g.fillPath(marker);
         g.drawText("Target | "+primary->name,juce::Rectangle<float>(at+7,source.getY()+3,140,18),juce::Justification::left);}
     for(const auto& [id,wave]:data.wetSummaries)if(id!=data.session.primary && wave)
-        drawWave(g,*wave,wet,ui::otherWet,1.0f/std::max(1.0f,wave->peak),find(data.session,id)?find(data.session,id)->placement:0);
+        drawWave(g,*wave,wet,ui::otherWet.withAlpha(.22f),.45f/std::max(.000001f,wave->peak),find(data.session,id)?find(data.session,id)->placement:0);
     if(data.raw)
     {
-        const auto peak=std::max(data.raw->peak,data.shaped?data.shaped->peak:0.0f),gain=1.0f/std::max(1.0f,peak);
-        drawWave(g,*data.raw,wet,ui::rawWet,gain,primary?primary->placement:0);
+        drawWave(g,*data.raw,wet,ui::rawWet.withAlpha(.3f),.55f/std::max(.000001f,data.raw->peak),primary?primary->placement:0);
         const auto current=primary && primary->phase==Phase::ready;
         const auto colour=current?ui::aqua:ui::staleWet;
-        if(data.shaped)drawWave(g,*data.shaped,wet,colour,gain);
-        g.setColour(colour);g.drawText("Full wet / shaped overlay | "+juce::String(current?(data.shaped?"current":"shape pending"):"previous / stale")+" | display "+juce::String(juce::Decibels::gainToDecibels(gain),1)+" dB",wet.translated(0,-25).withHeight(20),juce::Justification::left);
+        if(data.shaped)drawWave(g,*data.shaped,wet,colour,waveGain);
+        g.setColour(colour);g.drawText("Audible wet | "+juce::String(current?(data.shaped?"current":"shape pending"):"previous / stale")+" | shared amplitude scale | grey: raw reference",wet.translated(0,-25).withHeight(20),juce::Justification::left);
     }
     else{g.setColour(ui::secondary);g.drawText(primary?primary->status:juce::String("Select a swell to inspect its wet audio"),wet,juce::Justification::centred);}
     if(data.dryAvailable && data.session.auditionMode==AuditionMode::dryWet){

@@ -11,7 +11,8 @@ bool sampleCount(long double value,int64_t& result)
 }
 bool decimal(const juce::String& text,double& value)
 {
-    const auto s=text.trim();if(s.isEmpty() || !s.containsOnly("-0123456789.") || s=="-" || s=="." || s=="-."
+    const auto trimmed=text.trim();const auto s=trimmed.startsWithChar('+')?trimmed.substring(1):trimmed;
+    if(s.isEmpty() || !s.containsOnly("-0123456789.") || s=="-" || s=="." || s=="-."
         || s.lastIndexOfChar('-')>0 || s.indexOfChar('.')!=s.lastIndexOfChar('.'))return false;
     value=s.getDoubleValue();return std::isfinite(value);
 }

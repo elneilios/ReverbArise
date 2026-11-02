@@ -77,7 +77,7 @@ int main() { return runTest([]
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
-    reject(json.replace("\"version\": 7", "\"version\": 9"));
+    reject(json.replace("\"version\": 8", "\"version\": 9"));
     reject(json.replace(second,first));
     reject(json.replace("\"gain\": -3", "\"gain\": \"nan\""));
     reject(json.replace("\"sourceEnd\": \"40\"", "\"sourceEnd\": \"3\""));
@@ -157,7 +157,8 @@ int main() { return runTest([]
     REQUIRE(restored.swells[0].placement==-1000 && restored.isolateSelected && !restored.autoMarkersEnabled);
     for(int version=1;version<=4;++version){auto old=juce::JSON::parse(json);old.getDynamicObject()->setProperty("version",version);
         REQUIRE(decode(juce::JSON::toString(old),restored,error));
-        REQUIRE(restored.liveEnabled && restored.liveRouting==LiveRouting::dryWet && restored.liveWetDb==0);}
+        REQUIRE(restored.liveEnabled && restored.liveRouting==LiveRouting::dryWet && restored.liveWetDb==0);
+        REQUIRE(restored.gainPolicy==GainPolicy::legacy && restored.gainRevision==legacyGainRevision);}
     const auto before=restored;
     for(int mutation=0;mutation<6;++mutation){auto bad=juce::JSON::parse(json);auto* obj=bad.getDynamicObject();
         if(mutation==0)obj->setProperty("liveEnabled",1);
@@ -169,4 +170,38 @@ int main() { return runTest([]
         REQUIRE(!decode(juce::JSON::toString(bad),restored,error));
         REQUIRE(restored.swells[0].id==before.swells[0].id && restored.liveWetDb==before.liveWetDb);}
     automatic.suppressed.resize(maximumSwells+1);REQUIRE(!encode(automatic,json,error));
+
+    // Version 8 introduces an explicit gain policy and per-swell calibration.
+    Session musical;musical.gainPolicy=GainPolicy::musical;musical.gainRevision=candidateGainRevision;musical.liveWetDb=4;musical.swells.emplace_back();auto& calibrated=musical.swells.back();
+    calibrated.sourceEnd=1000;calibrated.calibration.state=CalibrationState::matched;calibrated.calibration.baselineDb=6;
+    calibrated.calibration.dryPeak=.5f;calibrated.calibration.wetPeak=.25f;calibrated.calibration.referenceStart=0;
+    calibrated.calibration.referenceEnd=100;calibrated.calibration.sourceIdentity="source";calibrated.calibration.irIdentity="ir";
+    calibrated.calibration.renderIdentity="render";calibrated.calibration.revision=candidateGainRevision;
+    REQUIRE(musical.gainPolicy==GainPolicy::musical && encode(musical,json,error));
+    REQUIRE(json.contains("\"version\": 8") && decode(json,restored,error));
+    REQUIRE(restored.gainPolicy==GainPolicy::musical && restored.gainRevision==candidateGainRevision && restored.liveWetDb==4);
+    REQUIRE(restored.swells[0].calibration==calibrated.calibration);
+    for(int version=1;version<=7;++version){auto old=juce::JSON::parse(json);old.getDynamicObject()->setProperty("version",version);
+        old.getDynamicObject()->setProperty("liveWetDb",0.0);
+        REQUIRE(decode(juce::JSON::toString(old),restored,error));
+        REQUIRE(restored.gainPolicy==GainPolicy::legacy && restored.gainRevision==legacyGainRevision);
+        REQUIRE(restored.swells[0].calibration.state==CalibrationState::unavailable);}
+    const auto validV8=musical;
+    {auto energy=musical;energy.gainRevision=energyGainRevision;auto& g=energy.swells[0].calibration;
+        g.revision=energyGainRevision;g.dryRms=.25f;g.wetRms=.125f;g.windowFrames=20;g.hopFrames=1;
+        juce::String energyJson;REQUIRE(encode(energy,energyJson,error) && decode(energyJson,restored,error));
+        REQUIRE(restored.swells[0].calibration==g);
+        for(const auto* field:{"dryRms","wetRms","windowFrames","hopFrames"}){auto bad=juce::JSON::parse(energyJson);
+            bad["swells"][0]["calibration"].getDynamicObject()->removeProperty(field);restored=energy;
+            REQUIRE(!decode(juce::JSON::toString(bad),restored,error));REQUIRE(restored.swells[0].calibration==g);}}
+    for(int mutation=0;mutation<6;++mutation){auto bad=juce::JSON::parse(json);auto* root=bad.getDynamicObject();auto calibration=bad["swells"][0]["calibration"].getDynamicObject();
+        if(mutation==0)root->setProperty("gainPolicy",2);
+        if(mutation==1)root->setProperty("gainRevision","unknown");
+        if(mutation==2)calibration->setProperty("baselineDb",25.0);
+        if(mutation==3)calibration->setProperty("dryPeak","nan");
+        if(mutation==4)calibration->setProperty("referenceEnd","0");
+        if(mutation==5)calibration->setProperty("revision","mismatch");
+        restored=validV8;REQUIRE(!decode(juce::JSON::toString(bad),restored,error));REQUIRE(restored.liveWetDb==4 && restored.gainPolicy==GainPolicy::musical);}
+    musical.gainPolicy=GainPolicy::legacy;musical.gainRevision=legacyGainRevision;musical.liveWetDb=4;
+    REQUIRE(!validate(musical,error));musical.liveWetDb=0;musical.swells[0].calibration={};REQUIRE(validate(musical,error));
 }); }

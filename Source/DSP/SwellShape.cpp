@@ -19,6 +19,11 @@ double envelope(const Shape& shape,int64_t position,int64_t start,int64_t end) n
     const auto fadeOut=shape.fadeOut ? fadeFactor(static_cast<double>(end-1-position)/shape.fadeOut,shape.outCurve,shape.outTension) : 1.0;
     return std::pow(10.0,shape.gainDb/20.0)*fadeIn*fadeOut;
 }
+double swellEnvelope(const Swell& swell,int64_t position,int64_t start,int64_t end) noexcept
+{
+    const auto baseline=swell.calibration.state==CalibrationState::unavailable?1.0:std::pow(10.0,swell.calibration.baselineDb/20.0);
+    return baseline*envelope(swell.shape,position,start,end);
+}
 bool prepareShape(const Swell& swell,const WetRender& raw,uint64_t available,WetRender& output,
                   juce::String& error,const RenderCancellation& cancelled)
 {
@@ -33,7 +38,7 @@ bool prepareShape(const Swell& swell,const WetRender& raw,uint64_t available,Wet
     for(uint64_t i=0;i<frames;++i)
     {
         if(i%4096==0 && cancelled && cancelled()) { error="Shape preparation cancelled"; return false; }
-        const auto gain=envelope(swell.shape,a+static_cast<int64_t>(i),a,b);
+        const auto gain=swellEnvelope(swell,a+static_cast<int64_t>(i),a,b);
         for(size_t channel=0;channel<2;++channel)
         {
             const auto value=static_cast<float>(raw.samples[(static_cast<size_t>(a-swell.placement-raw.start)+i)*2+channel]*gain);

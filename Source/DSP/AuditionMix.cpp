@@ -4,7 +4,7 @@
 namespace m3
 {
 bool prepareAuditionMix(const WetRender& wet,const SourceInterval* dry,AuditionMode mode,float blend,
-                        uint64_t budget,WetRender& output,float& wetDb,float& sumDb,juce::String& error,bool wetEdges)
+                        uint64_t budget,WetRender& output,float& wetDb,float& sumDb,juce::String& error,bool wetEdges,GainPolicy policy)
 {
     if(wet.frames()==0 || !std::isfinite(blend) || blend<0 || blend>1 || wet.rate<=0
         || (mode!=AuditionMode::wetOnly && mode!=AuditionMode::dryWet)) {error="Invalid audition inputs";return false;}
@@ -17,7 +17,7 @@ bool prepareAuditionMix(const WetRender& wet,const SourceInterval* dry,AuditionM
     const auto start=mixed?std::min(wet.start,dry->start):wet.start,end=mixed?std::max(wetEnd,dry->end):wetEnd;
     int64_t frames;if(!checkedSubtract(end,start,frames) || frames<=0 || static_cast<uint64_t>(frames)>budget/8)
     {error="256 MiB working budget exceeded by aligned audition";return false;}
-    const auto ceiling=juce::Decibels::decibelsToGain(-6.0f);
+    const auto ceiling=juce::Decibels::decibelsToGain(policy==GainPolicy::musical?candidateWetCeilingDb:-6.0f);
     float peak=0;for(size_t i=0;i<wet.samples.size();++i){const auto v=wet.samples[i]*(wetEdges?monitorEdgeGain(i/2,wet.frames(),wet.rate,.002):1);if(!std::isfinite(v)){error="Non-finite wet audition";return false;}peak=std::max(peak,std::abs(v));}
     const auto wetGuard=peak>ceiling?ceiling/peak:1.0f;
     WetRender result;result.start=start;result.rate=wet.rate;result.sourceStart=wet.sourceStart;result.sourceEnd=wet.sourceEnd;

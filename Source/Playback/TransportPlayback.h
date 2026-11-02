@@ -16,6 +16,7 @@ struct LiveEntry
     float peak=0;
     std::shared_ptr<const WetRender> audio;
     std::shared_ptr<const WetRender> loopAudio;
+    uint64_t version=0; // Content replacement without revoking the accepted generation.
 };
 struct LiveSegment
 {
@@ -30,6 +31,7 @@ struct LivePublication
     int64_t start=0,end=0;
     int64_t loopStart=0,loopEnd=0;
     float attenuation=1;
+    bool measuredAttenuation=false;
     std::vector<LiveEntry> entries;
     std::vector<LiveSegment> segments;
     uint64_t bytes() const noexcept;
@@ -60,6 +62,7 @@ private:
     struct Voice
     {
         size_t slot=maximumSwells;uint64_t generation=0;
+        uint64_t version=0;
         const LiveEntry* entry=nullptr;
         float lastL=0,lastR=0,fromL=0,fromR=0;
         int remaining=0;

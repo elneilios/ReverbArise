@@ -90,7 +90,7 @@ private:
     juce::Slider markerKnob;juce::ToggleButton markerButton{"Auto markers"},isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
     juce::Label markerLabel,markerState,placementLabel;juce::TextEditor placementEditor;
     juce::ToggleButton liveButton{"Live playback"};juce::ComboBox liveRoutingBox;juce::Slider liveLevel;
-    juce::Label liveLevelLabel;
+    juce::Label liveLevelLabel,gainPolicyLabel;juce::ComboBox gainPolicyBox;
     juce::Slider blendSlider,tailSlider;
     juce::Label tailLabel;
     bool diagnosticsOpen=false;

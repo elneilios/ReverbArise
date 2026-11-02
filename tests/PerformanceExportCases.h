@@ -22,6 +22,7 @@ inline void performanceExportCases()
     REQUIRE(capture.commit(10000,48000,variation.data(),4800,.3));REQUIRE(capture.snapshot().manifest.ranges.back().startSample==10000);
 
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();engine.setAutomaticProcessing(false);
+    REQUIRE(engine.setGainPolicy(m3::GainPolicy::legacy)); // Retain the original convolution/export oracle.
     p->prepareToPlay(1000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/250.0);};
     juce::AudioBuffer<float> buffer(2,1000);juce::MidiBuffer midi;

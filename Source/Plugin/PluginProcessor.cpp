@@ -23,6 +23,7 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
         auto capture=captureWorker.snapshot();if(captureWorker.isLoading())capture.status="Loading capture state";
         return PreviewContext{std::move(capture), getSongTime(), captureWorker.captureGeneration()};
     });
+    swells->setGainPolicy(m3::GainPolicy::musical);
     captureWorker.setRecaptureHandler([this](int64_t a,int64_t b) { swells->recaptureCompleted(a,b); });
     captureWorker.setCommitHandler([this](int64_t a,int64_t b,uint64_t generation) {swells->captureCommitted(a,b,generation);});
 }

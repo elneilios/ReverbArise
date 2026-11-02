@@ -7,6 +7,15 @@
 
 namespace m3
 {
+float calibrationDb(const Session& s,const Swell& w) noexcept
+{
+    if(s.gainPolicy!=GainPolicy::musical)return 0;
+    return w.calibration.state==CalibrationState::unavailable?0:w.calibration.baselineDb;
+}
+float gainCeilingDb(const Session& s) noexcept
+{
+    return s.gainPolicy==GainPolicy::musical?candidateWetCeilingDb:-6.0f;
+}
 bool checkedAdd(int64_t a, int64_t b, int64_t& result) noexcept
 {
     if ((b > 0 && a > INT64_MAX - b) || (b < 0 && a < INT64_MIN - b)) return false;
@@ -221,7 +230,9 @@ static bool validAsset(const Asset& a)
 bool validate(const Session& s, juce::String& error)
 {
     if (s.swells.size() > maximumSwells || ! std::isfinite(s.auditionDb) || s.auditionDb < -60 || s.auditionDb > 0
-        || !std::isfinite(s.liveWetDb) || s.liveWetDb < -60 || s.liveWetDb > 0
+        || !std::isfinite(s.liveWetDb) || s.liveWetDb < -60 || s.liveWetDb > (s.gainPolicy==GainPolicy::musical?12:0)
+        || static_cast<int>(s.gainPolicy)<0 || static_cast<int>(s.gainPolicy)>1
+        || (s.gainPolicy==GainPolicy::legacy?s.gainRevision!=legacyGainRevision:(s.gainRevision!=candidateGainRevision && !isEnergyRevision(s.gainRevision)))
         || !std::isfinite(s.regenerationSensitivity) || s.regenerationSensitivity<0 || s.regenerationSensitivity>1
         || static_cast<int>(s.liveRouting)<0 || static_cast<int>(s.liveRouting)>1
         || ! std::isfinite(s.sensitivity) || s.sensitivity < 0 || s.sensitivity > 1
@@ -247,7 +258,26 @@ bool validate(const Session& s, juce::String& error)
             || ! checkedSubtract(w.sourceEnd, w.sourceStart, length) || length <= 0 || ! validShape(w.shape)
             || static_cast<int>(w.provenance)<0 || static_cast<int>(w.provenance)>2
             || ! validAsset(w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
-            || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/")))
+            || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/"))
+            || static_cast<int>(w.calibration.state)<0 || static_cast<int>(w.calibration.state)>3
+            || !std::isfinite(w.calibration.baselineDb) || w.calibration.baselineDb < -60 || w.calibration.baselineDb > candidateMaximumBoostDb
+            || !std::isfinite(w.calibration.dryPeak) || w.calibration.dryPeak<0
+            || !std::isfinite(w.calibration.wetPeak) || w.calibration.wetPeak<0
+            || !std::isfinite(w.calibration.dryRms) || w.calibration.dryRms<0
+            || !std::isfinite(w.calibration.wetRms) || w.calibration.wetRms<0
+            || w.calibration.windowFrames<0 || w.calibration.hopFrames<0
+            || (isEnergyRevision(w.calibration.revision) && w.calibration.state!=CalibrationState::unavailable
+                && (w.calibration.windowFrames<1 || w.calibration.windowFrames>1000000000 || w.calibration.hopFrames<1
+                    || w.calibration.hopFrames>1000000 || w.calibration.dryRms<=0 || w.calibration.wetRms<=0
+                    || w.calibration.dryRms>w.calibration.dryPeak+1e-6f || w.calibration.wetRms>w.calibration.wetPeak+1e-6f))
+            || w.calibration.sourceIdentity.length()>4096 || w.calibration.irIdentity.length()>128
+            || w.calibration.renderIdentity.length()>128 || w.calibration.revision.length()>128
+            || (w.calibration.state!=CalibrationState::unavailable
+                && (w.calibration.referenceEnd<=w.calibration.referenceStart || w.calibration.sourceIdentity.isEmpty()
+                    || w.calibration.irIdentity.isEmpty() || w.calibration.renderIdentity.isEmpty()
+                    || (w.calibration.revision!=candidateGainRevision && !isEnergyRevision(w.calibration.revision))
+                    || (w.render.present() && (w.calibration.renderIdentity!=w.render.content || w.calibration.irIdentity!=w.render.irContent))
+                    || (s.gainPolicy==GainPolicy::musical && w.calibration.revision!=s.gainRevision))))
         { error = "Invalid swell identity, bounds, shape or asset reference"; return false; }
     }
     auto copy = s;
@@ -270,7 +300,7 @@ juce::var assetMetadata(const Asset& a)
 bool encode(const Session& s, juce::String& json, juce::String& error)
 {
     if (! validate(s, error)) return false;
-    auto v = object(); put(v,"version",7); put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    auto v = object(); put(v,"version",8); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
     put(v,"auditionMode",static_cast<int>(s.auditionMode)); put(v,"wetBlend",s.wetBlend);
@@ -290,6 +320,13 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(a,"placement",integer(w.placement)); put(a,"supportOffset",integer(w.supportOffset)); put(a,"sourceStart",integer(w.sourceStart)); put(a,"sourceEnd",integer(w.sourceEnd));
         put(a,"enabled",w.enabled); put(a,"muted",w.muted); put(a,"solo",w.solo);
         put(a,"frozen",w.frozen);
+        auto g=object();put(g,"state",static_cast<int>(w.calibration.state));put(g,"baselineDb",w.calibration.baselineDb);
+        put(g,"dryPeak",w.calibration.dryPeak);put(g,"wetPeak",w.calibration.wetPeak);
+        if(isEnergyRevision(w.calibration.revision)){put(g,"dryRms",w.calibration.dryRms);put(g,"wetRms",w.calibration.wetRms);
+            put(g,"windowFrames",integer(w.calibration.windowFrames));put(g,"hopFrames",integer(w.calibration.hopFrames));}
+        put(g,"referenceStart",integer(w.calibration.referenceStart));put(g,"referenceEnd",integer(w.calibration.referenceEnd));
+        put(g,"sourceIdentity",w.calibration.sourceIdentity);put(g,"irIdentity",w.calibration.irIdentity);
+        put(g,"renderIdentity",w.calibration.renderIdentity);put(g,"revision",w.calibration.revision);put(a,"calibration",g);
         put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));
         put(a,"ir",assetMetadata(w.ir)); put(a,"render",assetMetadata(w.render));
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
@@ -339,7 +376,9 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;
     const auto version=p.small(v,"version");
-    if (version < 1 || version > 7) { error = "Unsupported swell state version"; return false; }
+    if (version < 1 || version > 8) { error = "Unsupported swell state version"; return false; }
+    if(version>=8){s.gainPolicy=static_cast<GainPolicy>(p.small(v,"gainPolicy"));s.gainRevision=p.string(v,"gainRevision");}
+    else {s.gainPolicy=GainPolicy::legacy;s.gainRevision=legacyGainRevision;}
     if(version>=7)s.isolateDry=p.boolean(v,"isolateDry");
     if(version>=6)s.regenerationSensitivity=static_cast<float>(p.number(v,"regenerationSensitivity"));
     if(version>=5){s.liveEnabled=p.boolean(v,"liveEnabled");s.liveRouting=static_cast<LiveRouting>(p.small(v,"liveRouting"));s.liveWetDb=static_cast<float>(p.number(v,"liveWetDb"));}
@@ -372,6 +411,13 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         w.sourceStart=p.big(a,"sourceStart"); w.sourceEnd=p.big(a,"sourceEnd");
         w.enabled=p.boolean(a,"enabled"); w.muted=p.boolean(a,"muted"); w.solo=p.boolean(a,"solo");
         if(version>=6)w.frozen=p.boolean(a,"frozen");
+        if(version>=8){const auto g=p.field(a,"calibration");w.calibration.state=static_cast<CalibrationState>(p.small(g,"state"));
+            w.calibration.baselineDb=static_cast<float>(p.number(g,"baselineDb"));w.calibration.dryPeak=static_cast<float>(p.number(g,"dryPeak"));
+            w.calibration.wetPeak=static_cast<float>(p.number(g,"wetPeak"));w.calibration.referenceStart=p.big(g,"referenceStart");
+            w.calibration.referenceEnd=p.big(g,"referenceEnd");w.calibration.sourceIdentity=p.string(g,"sourceIdentity");
+            w.calibration.irIdentity=p.string(g,"irIdentity");w.calibration.renderIdentity=p.string(g,"renderIdentity");w.calibration.revision=p.string(g,"revision");
+            if(isEnergyRevision(w.calibration.revision)){w.calibration.dryRms=static_cast<float>(p.number(g,"dryRms"));w.calibration.wetRms=static_cast<float>(p.number(g,"wetRms"));
+                w.calibration.windowFrames=p.big(g,"windowFrames");w.calibration.hopFrames=p.big(g,"hopFrames");}}
         if(version>=2) {w.provenance=static_cast<Provenance>(p.small(a,"provenance"));w.detectorAnchor=p.big(a,"detectorAnchor");}
         else {w.provenance=Provenance::manualEdited;w.detectorAnchor=w.arrival;}
         w.ir=p.asset(p.field(a,"ir")); w.render=p.asset(p.field(a,"render"));

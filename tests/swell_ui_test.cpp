@@ -72,6 +72,19 @@ int main(){return runTest([]
         };
         const auto coarse=drag(juce::ModifierKeys::leftButtonModifier),fine=drag(juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier);
         REQUIRE(coarse>fine && fine>0);
+        m3::ui::KnobValue live;live.setSize(180,50);live.display("level","0.0",.5,true);
+        live.onDelta=[&](double value){live.display("level",juce::String(value*72,1),.5+value,true);};
+        auto& dial=live.valueKnob();dial.onDragStart();dial.setValue(.6,juce::sendNotificationSync);
+        REQUIRE(live.valueField().getText()=="7.2");
+        dial.setValue(.65,juce::sendNotificationSync);REQUIRE(live.valueField().getText()=="10.8");dial.onDragEnd();
+        auto& input=live.valueField();juce::String committed;
+        live.onCommit=[&](const juce::String& value){committed=value;live.display("level",value,.5,true);return true;};
+        input.selectAll();REQUIRE(input.keyPressed(juce::KeyPress('3',{},'3')));
+        live.display("level","10.8",.65,true);REQUIRE(input.getText()=="3");input.onReturnKey();REQUIRE(committed=="3");
+        // The editor keeps focus after Return. Further keystrokes must start
+        // another transaction before a timer refresh can restore old text.
+        input.selectAll();REQUIRE(input.keyPressed(juce::KeyPress('6',{},'6')));
+        live.display("level","3",.5,true);REQUIRE(input.getText()=="6");input.onReturnKey();REQUIRE(committed=="6");
     }
     // Window lifecycle while the real callback and capture worker keep running.
     {
@@ -120,6 +133,8 @@ int main(){return runTest([]
         const auto surface=empty.createComponentSnapshot(empty.getLocalBounds());
         REQUIRE(surface.getPixelAt(0,0)==m3::ui::background && surface.getPixelAt(empty.getWidth()-1,0)==m3::ui::background);
         REQUIRE(fresh.swellEngine().savedSession().swells.empty());
+        REQUIRE(fresh.swellEngine().savedSession().gainPolicy==m3::GainPolicy::musical
+            && fresh.swellEngine().savedSession().gainRevision==m3::approvedGainRevision);
         REQUIRE(fresh.getCaptureSnapshot().manifest.ranges.empty() && !fresh.swellEngine().snapshot().playing);
         for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,1000}})
         {empty.setSize(size.x,size.y);empty.refresh();snapshotEditor(empty,"fresh-"+juce::String(size.x));}
@@ -134,6 +149,7 @@ int main(){return runTest([]
         REQUIRE(std::abs(prefs.sensitivity-.225f)<1e-6 && std::abs(prefs.regenerationSensitivity-.715f)<1e-6);
     }
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy)); // Existing editor/gain compatibility fixture.
     processor->swellEngine().setAutomaticProcessing(false);processor->swellEngine().setIsolateSelected(true);
     UIPlayHead head;head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});head.position.setIsPlaying(true);
     processor->prepareToPlay(48000,4096);processor->setPlayHead(&head);juce::MidiBuffer midi;juce::AudioBuffer<float> buffer(2,4096);
@@ -180,6 +196,42 @@ int main(){return runTest([]
         int64_t a,b;REQUIRE(m3::requestedShapeBounds(edit,0,a,b) && a==48000 && b==112800 && b-a==64800);
         edit.placement=2400;display.session.swells={edit};probe.setData({},display,{true,0,0,48000,120,4,4},false);
         REQUIRE(std::abs(probe.grabPoints()[0].point.x-px(115200))<1e-3 && edit.arrival==96000);
+        edit.placement=0;edit.phase=m3::Phase::ready;display.session.swells={edit};
+        raw->peak=100;raw->peaks={{72000,1,-100,100}};
+        auto audible=std::make_shared<m3::Waveform>();audible->start=48000;audible->end=112800;audible->peak=.5f;audible->peaks={{72000,1,-.5f,.5f}};display.shaped=audible;
+        auto dry=std::make_shared<m3::Waveform>(*audible);display.sourceDetail=dry;
+        CaptureSessionSnapshot comparisonCapture;CaptureOverviewRange comparisonRegion;
+        comparisonRegion.range={48000,64800,CaptureCoverageKind::audio};comparisonRegion.available=true;
+        comparisonCapture.overview={comparisonRegion};comparisonCapture.manifest.ranges={comparisonRegion.range};
+        probe.setData(comparisonCapture,display,{true,0,0,48000,120,4,4},false);probe.setViewport(range);
+        const auto audiblePixel=juce::Point<int>{static_cast<int>(px(72000)),static_cast<int>(wetLane.getCentreY()+wetLane.getHeight()*.15f)};
+        auto hot=probe.createComponentSnapshot(probe.getLocalBounds());REQUIRE(hot.getPixelAt(audiblePixel.x,audiblePixel.y)==m3::ui::aqua);
+        raw->peak=10000;raw->peaks={{72000,1,-10000,10000}};
+        probe.setData(comparisonCapture,display,{true,0,0,48000,120,4,4},false);probe.setViewport(range);
+        hot=probe.createComponentSnapshot(probe.getLocalBounds());REQUIRE(hot.getPixelAt(audiblePixel.x,audiblePixel.y)==m3::ui::aqua);
+        snapshotPanel(probe,"audible-wet-hot-ir");
+        const auto sourcePixelY=[&](float fraction){return static_cast<int>(probe.sourceLane().getCentreY()+probe.sourceLane().getHeight()*fraction);};
+        REQUIRE(hot.getPixelAt(audiblePixel.x,sourcePixelY(.15f)).getBrightness()>.4f);
+        REQUIRE(hot.getPixelAt(audiblePixel.x,sourcePixelY(.3f)).getBrightness()<.4f);
+        probe.setWaveZoomDb(6);REQUIRE(probe.waveZoomDb()==6);
+        hot=probe.createComponentSnapshot(probe.getLocalBounds());
+        REQUIRE(hot.getPixelAt(audiblePixel.x,sourcePixelY(.3f)).getBrightness()>.4f);
+        REQUIRE(hot.getPixelAt(audiblePixel.x,static_cast<int>(wetLane.getCentreY()+wetLane.getHeight()*.3f))==m3::ui::aqua);
+        snapshotPanel(probe,"shared-amplitude-zoom-plus6");probe.setWaveZoomDb(0);
+        // Level must change the visible height, even far below the old
+        // normalisation floor; raw convolution still cannot set that height.
+        for(const auto db:{-60.0f,-6.0f,6.0f})
+        {
+            edit.shape.gainDb=db;display.session.swells={edit};
+            const auto linear=juce::Decibels::decibelsToGain(db);
+            audible->peak=.5f*linear;audible->peaks={{72000,1,-audible->peak,audible->peak}};
+            probe.setData(comparisonCapture,display,{true,0,0,48000,120,4,4},false);probe.setViewport(range);
+            hot=probe.createComponentSnapshot(probe.getLocalBounds());
+            REQUIRE((hot.getPixelAt(audiblePixel.x,audiblePixel.y)==m3::ui::aqua)==(db>0));
+            REQUIRE(hot.getPixelAt(audiblePixel.x,sourcePixelY(.15f)).getBrightness()>.4f);
+            if(db>0){const auto y=static_cast<int>(wetLane.getCentreY()+wetLane.getHeight()*.3f);REQUIRE(hot.getPixelAt(audiblePixel.x,y)==m3::ui::aqua);}
+            snapshotPanel(probe,"audible-wet-level-"+juce::String(db,0));
+        }
     }
     {
         PreverbAudioProcessorEditor mapped(*processor);mapped.setVisible(true);mapped.setSize(1400,1000);mapped.refresh();
@@ -238,6 +290,10 @@ int main(){return runTest([]
         enter("curveInTension","0.25");enter("curveOutTension","-0.4");enter("wetPlacement","25");
         auto edited=*m3::find(engine.savedSession(),first);REQUIRE(edited.placement==1200 && edited.shape.startOffset==-19200 && edited.shape.endOffset==720);
         REQUIRE(edited.shape.fadeIn==480 && edited.shape.fadeOut==960 && edited.shape.gainDb==-3 && edited.shape.inTension==.25 && edited.shape.outTension==-.4);
+        auto levelField=dynamic_cast<juce::TextEditor*>(named(editor,"swellLevel"));REQUIRE(levelField && levelField->isEnabled() && !levelField->isReadOnly());
+        levelField->selectAll();REQUIRE(levelField->keyPressed(juce::KeyPress('2',{},'2')));editor.refresh();REQUIRE(levelField->getText()=="2");
+        levelField->onReturnKey();REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==2);
+        enter("swellLevel","+6");REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==6);enter("swellLevel","-3");
         enter("preRoll","0.45");enter("endOffset","0.05");edited=*m3::find(engine.savedSession(),first);
         REQUIRE(edited.shape.startOffset==-22800 && edited.shape.endOffset==1200 && edited.placement==1200);
         const auto retained=edited;enter("preRoll","99999999999999999999999999");enter("curveInTension","2");
@@ -245,6 +301,7 @@ int main(){return runTest([]
         auto curve=dynamic_cast<m3::ui::KnobValue*>(named(editor,"curveInTensionCell"));REQUIRE(curve);
         auto& knob=curve->valueKnob();knob.onDragStart();const auto start=knob.getValue();knob.setValue(start+.1,juce::sendNotificationSync);
         REQUIRE(std::abs(m3::find(engine.savedSession(),first)->shape.inTension-.45)<1e-6);
+        REQUIRE(curve->valueField().getText()=="0.450");
         REQUIRE(engine.selectTargets({second},second));editor.refresh();const auto otherShape=m3::find(engine.savedSession(),second)->shape;
         knob.setValue(.9,juce::sendNotificationSync);knob.onDragEnd();REQUIRE(m3::find(engine.savedSession(),second)->shape==otherShape);
         REQUIRE(engine.selectTargets({first},first));editor.refresh();knob.onDragStart();engine.removeSelected();
@@ -254,7 +311,16 @@ int main(){return runTest([]
         const auto shape=m3::find(engine.savedSession(),first)->shape;
         auto field=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(field);field->setText("77",false);field->onEscapeKey();
         REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
-        auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==2 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getText()=="musical-ir.wav");
+        auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="musical-ir.wav");
+        const auto before=engine.savedSession();const auto wasPlaying=engine.snapshot().playing;
+        irChoice->setSelectedId(6,juce::sendNotificationSync);
+        waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
+        REQUIRE(irChoice->getNumItems()==6 && irChoice->getText()=="Whisper");
+        const auto assignment=dynamic_cast<juce::Label*>(named(editor,"irAssignmentStatus"));
+        REQUIRE(assignment && assignment->getText().contains("Whisper") && assignment->getText().contains("musical-ir.wav"));
+        snapshotEditor(editor,"ir-replacement-pending");
+        REQUIRE(m3::find(engine.savedSession(),second)->ir==m3::find(before,second)->ir && engine.savedSession().defaultIR==before.defaultIR);
+        engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");
         auto scroll=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));REQUIRE(scroll);scroll->setViewPosition(0,10000);snapshotEditor(editor,"inspector-scrolled");scroll->setViewPosition(0,0);
     }
@@ -325,6 +391,20 @@ int main(){return runTest([]
     liveToggle->setToggleState(false,juce::dontSendNotification);liveToggle->onClick();liveMode->setSelectedId(2,juce::sendNotificationSync);liveLevel->setValue(-7.5,juce::sendNotificationSync);
     REQUIRE(!engine.savedSession().liveEnabled && engine.savedSession().liveRouting==m3::LiveRouting::wetOnly && engine.savedSession().liveWetDb==-7.5f);
     REQUIRE(engine.savedSession().auditionDb==0);engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);editor.refresh();
+    auto gainPolicy=dynamic_cast<juce::ComboBox*>(named(editor,"gainPolicy"));REQUIRE(gainPolicy);
+    gainPolicy->setSelectedId(2,juce::sendNotificationSync);waitUI([&]{return engine.savedSession().gainPolicy==m3::GainPolicy::musical;});editor.refresh();
+    REQUIRE(engine.savedSession().gainRevision==m3::approvedGainRevision);
+    waitUI([&]{const auto saved=engine.savedSession();return std::all_of(saved.swells.begin(),saved.swells.end(),[](const auto& w){return w.phase!=m3::Phase::checking && w.phase!=m3::Phase::rendering;});});
+    editor.setSize(1100,850);editor.refresh();snapshotEditor(editor,"musical-gain-default");
+    auto gainStatus=dynamic_cast<juce::Label*>(named(editor,"selectedStatus"));REQUIRE(gainStatus && gainStatus->getTooltip().contains("Requested Level"));
+    auto gainDetails=dynamic_cast<juce::Label*>(named(editor,"diagnosticPolicy"));REQUIRE(gainDetails && gainDetails->getHeight()>=80);
+    auto openGainDiagnostics=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openGainDiagnostics);openGainDiagnostics->onClick();editor.refresh();
+    REQUIRE(gainDetails->getText().contains(m3::approvedGainRevision) && gainDetails->getText().contains("protection"));
+    snapshotPanel(*editor.diagnosticsPanel(),"musical-gain-diagnostics");snapshotPanel(*editor.settingsPanel(),"musical-gain-settings");
+    REQUIRE(liveLevel->getMaximum()==12);liveLevel->setValue(4,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);
+    REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::musical && engine.savedSession().liveWetDb==4);
+    liveLevel->setValue(0,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::legacy);editor.refresh();
+    REQUIRE(liveLevel->getMaximum()==0);
     const auto monitorRenderCount=engine.snapshot().renderCount;
     auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(blend);
     REQUIRE(!named(editor,"wetOnly") && !named(editor,"dryWet"));

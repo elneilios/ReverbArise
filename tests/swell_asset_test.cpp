@@ -34,6 +34,19 @@ int main() { return runTest([]
     ImpulseResponse retainedBundle=bundled;const char corruptBytes[]{'b','a','d'};
     REQUIRE(!decodeDefaultImpulse(corruptBytes,sizeof(corruptBytes),retainedBundle,error) && retainedBundle.samples==bundled.samples);
     REQUIRE(!decodeDefaultImpulse(nullptr,0,retainedBundle,error));
+    const auto* hall=findBundledImpulse(defaultImpulseId);REQUIRE(hall && hall->revision==1 && juce::String(hall->name)=="Preverb Hall");
+    REQUIRE(!findBundledImpulse("not-a-preset") && !bundledImpulses().empty());
+    auto descriptor=*hall;descriptor.wavHash="invalid";
+    REQUIRE(!decodeBundledImpulse(descriptor,previewMemoryBudget,retainedBundle,error) && retainedBundle.samples==bundled.samples);
+    descriptor=*hall;descriptor.frames+=1;
+    REQUIRE(!decodeBundledImpulse(descriptor,previewMemoryBudget,retainedBundle,error) && error.contains("format"));
+    descriptor=*hall;descriptor.decodedHash="invalid";
+    REQUIRE(!decodeBundledImpulse(descriptor,previewMemoryBudget,retainedBundle,error) && error.contains("decoded"));
+    REQUIRE(!decodeBundledImpulse(*hall,100,retainedBundle,error) && error.contains("budget") && retainedBundle.samples==bundled.samples);
+    Asset catalogueAsset;REQUIRE(installBundledImpulse(store,defaultImpulseId,previewMemoryBudget,catalogueAsset,error));
+    REQUIRE(catalogueAsset.content==hall->decodedHash);
+    const auto retainedAsset=catalogueAsset;
+    REQUIRE(!installBundledImpulse(store,"unknown",previewMemoryBudget,catalogueAsset,error) && catalogueAsset==retainedAsset);
     // A fresh cache is created concurrently by capture and default-IR publication.
     for(int pass=0;pass<20;++pass)
     {

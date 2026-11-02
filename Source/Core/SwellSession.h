@@ -12,7 +12,19 @@ enum class Curve { linear, smooth, exponential };
 enum class Provenance { automatic, manualCreated, manualEdited };
 enum class AuditionMode { wetOnly, dryWet };
 enum class LiveRouting { dryWet, wetOnly };
+enum class GainPolicy { legacy, musical };
+enum class CalibrationState { unavailable, fixed, matched, capped };
 enum class Phase { empty, checking, queued, rendering, ready, stale, error, restoring };
+inline constexpr const char* legacyGainRevision="legacy-v1";
+inline constexpr const char* candidateGainRevision="candidate-source-peak-v1";
+inline constexpr const char* energyGainRevision="candidate-source-energy-v1";
+inline constexpr const char* approvedGainRevision="musical-source-energy-plus6-v1";
+inline constexpr float approvedEnergyTargetDb=6.0f;
+inline bool isEnergyRevision(const juce::String& revision) noexcept
+{return revision==energyGainRevision || revision==approvedGainRevision;}
+inline constexpr double candidateRmsSeconds=.020,candidateRmsHopSeconds=.001;
+inline constexpr float candidateWetCeilingDb=-1.0f,candidateMatchFloorDb=-60.0f,candidateMaximumBoostDb=24.0f;
+inline constexpr double candidateAttackSeconds=.100;
 struct Asset
 {
     bool operator==(const Asset&) const = default;
@@ -31,11 +43,22 @@ struct Shape
     float gainDb = 0;
     double inTension = 0, outTension = 0;
 };
+struct GainCalibration
+{
+    bool operator==(const GainCalibration&) const = default;
+    CalibrationState state=CalibrationState::unavailable;
+    float baselineDb=0,dryPeak=0,wetPeak=0;
+    float dryRms=0,wetRms=0;
+    int64_t windowFrames=0,hopFrames=0;
+    int64_t referenceStart=0,referenceEnd=0;
+    juce::String sourceIdentity,irIdentity,renderIdentity,revision;
+};
 struct Swell
 {
     juce::String id = juce::Uuid().toDashedString(), name, irName;
     int64_t arrival = 0, sourceStart = 0, sourceEnd = 1;
     Shape shape;
+    GainCalibration calibration;
     int64_t placement = 0;
     int64_t supportOffset = 0; // Retain genuine extended input when shortening the wet shape.
     Asset ir, render;
@@ -62,6 +85,10 @@ struct Session
     bool liveEnabled = true;
     LiveRouting liveRouting = LiveRouting::dryWet;
     float liveWetDb = 0;
+    // Bare Session is also the migration container for old metadata. Fresh
+    // plugin instances explicitly select the approved policy at construction.
+    GainPolicy gainPolicy=GainPolicy::legacy;
+    juce::String gainRevision=legacyGainRevision;
     float regenerationSensitivity=.5f;
     AuditionMode auditionMode = AuditionMode::wetOnly;
     float wetBlend = 0.5f;
@@ -84,6 +111,8 @@ Shape initialShape(double rate);
 juce::String defaultSwellName(int64_t arrival,const SongTime&,const Session* existing=nullptr);
 bool resetWetDefaults(Swell&,double rate,juce::String& error);
 bool resetSwellDefaults(const Session&,const juce::String& id,const CaptureManifest&,const SongTime&,Swell&,juce::String& error);
+float calibrationDb(const Session&,const Swell&) noexcept;
+float gainCeilingDb(const Session&) noexcept;
 bool moveWet(Swell&,int64_t placement,juce::String& error);
 bool moveArrival(Swell&, int64_t arrival, juce::String& error);
 bool setSource(Swell&, int64_t start, int64_t end, juce::String& error);

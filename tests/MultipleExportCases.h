@@ -8,6 +8,7 @@ inline void multipleExportCases()
     const auto position=[&](int i,int64_t at,bool playing){auto& h=heads[i].position;h.setIsPlaying(playing);h.setTimeInSamples(at);h.setPpqPosition(at/500.0);};
     for(int i=0;i<2;++i){auto& p=processors[i];p=std::make_unique<PreverbAudioProcessor>(root.file);p->prepareToPlay(1000,1024);p->setPlayHead(&heads[i]);
         auto& e=p->swellEngine();e.setAutomaticProcessing(false);e.setAutoMarkers(false);
+        REQUIRE(e.setGainPolicy(m3::GainPolicy::legacy)); // Musical adoption is exercised separately below.
         heads[i].position.setBpm(120);heads[i].position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
         juce::AudioBuffer<float> b(2,1000);for(int at=0;at<4001;at+=1000){const auto n=std::min(1000,4001-at);b.setSize(2,n);position(i,at,true);
             for(int c=0;c<2;++c)std::fill_n(b.getWritePointer(c),n,i?.25f:.125f);p->processBlock(b,midi);REQUIRE(p->flushCaptureForTesting());}
@@ -53,6 +54,20 @@ inline void multipleExportCases()
             REQUIRE(std::abs(samples[at]-expected)<1e-6);}}
     REQUIRE(serial0[440]>0 && serial1[440]>serial0[440] && serial1[3850]>0);
     REQUIRE(processors[0]->getCaptureSnapshot().reference==captured0 && processors[1]->getCaptureSnapshot().reference==captured1);
+    // Musical exports snapshot each instance's calibrated accepted schedule;
+    // irregular and independently interleaved callbacks remain deterministic.
+    for(int i=0;i<2;++i){processors[i]->setNonRealtime(false);position(i,0,false);tick.clear();processors[i]->processBlock(tick,midi);}
+    for(auto& processor:processors){REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::musical));
+        waitM3([&]{const auto session=processor->swellEngine().savedSession();return std::all_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.phase!=m3::Phase::checking && w.phase!=m3::Phase::rendering;});});}
+    const auto musical0=bounce(0,37),musical1=bounce(1,509);
+    auto musicalFuture0=std::async(std::launch::async,[&]{return bounce(0,2048);});
+    auto musicalFuture1=std::async(std::launch::async,[&]{return bounce(1,19);});
+    REQUIRE(musical0==musicalFuture0.get() && musical1==musicalFuture1.get());
+    for(const auto& processor:processors){const auto metrics=processor->swellEngine().snapshot();
+        REQUIRE(metrics.gainPlanBuilds>0 && metrics.gainPlanPreparationMs>=0 && metrics.gainPlanPeak>=0);
+        std::cout<<"Musical gain plan: builds="<<metrics.gainPlanBuilds<<" cacheHits="<<metrics.gainPlanCacheHits
+            <<" lastMs="<<metrics.gainPlanPreparationMs<<" peak="<<metrics.gainPlanPeak<<"\n";}
+    for(auto& processor:processors)REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy));
     // Hosts can reset/freeze PPQ while processing an offline tail after every
     // prepared wet interval has already ended. That cannot invalidate prior wet.
     for(const auto routing:{m3::LiveRouting::dryWet,m3::LiveRouting::wetOnly}){

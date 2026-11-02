@@ -84,7 +84,8 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
         const auto overhead=aggregate.samples.capacity()*sizeof(float);
         if(!resident && !assets.readRender(w.render,available(overhead),raw,dryError)){error="Unavailable render: "+w.name+" - "+dryError;break;}
         const auto& input=resident?*resident:raw;
-        if(!prepareShape(w,input,available(overhead+raw.samples.capacity()*sizeof(float)),shaped,dryError,cancel))
+        auto audible=w;if(saved.gainPolicy==GainPolicy::legacy)audible.calibration={};
+        if(!prepareShape(audible,input,available(overhead+raw.samples.capacity()*sizeof(float)),shaped,dryError,cancel))
         {error="Unavailable shape: "+w.name+" - "+dryError;break;}
         int64_t end;if(!checkedAdd(shaped.start,static_cast<int64_t>(shaped.frames()),end)){error="Swell position overflow: "+w.name;break;}
         const auto a=std::max(windowStart,shaped.start),b=std::min(windowEnd,end);
@@ -106,7 +107,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     }
     auto prepared=std::make_shared<WetRender>();float branch=0,sum=0;
     if(error.isEmpty() && !prepareAuditionMix(aggregate,dryReady?&dry:nullptr,mode,saved.wetBlend,
-        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false)){}
+        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false,saved.gainPolicy)){}
     const auto latest=contextProvider();const juce::ScopedLock guard(lock);if(cancel())return;
     bool changed=context.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(context.time,latest.time);
     if(mode==AuditionMode::dryWet)changed=changed || sourceDependency(context.capture.manifest,requested.sourceStart,dryEnd)!=sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd);

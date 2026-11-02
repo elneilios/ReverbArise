@@ -36,11 +36,14 @@ bool prepareLiveSegments(LivePublication& pub,juce::String& error)
         for(auto id:members)s.members[n++]=static_cast<uint16_t>(id);
         if(s.start<s.end)pub.segments.push_back(s);at=end;
     }
-    pub.attenuation=bound>0?static_cast<float>(std::min(1.0,std::pow(10.0,-6.0/20)/bound)):1;
+    if(!pub.measuredAttenuation)
+        pub.attenuation=bound>0?static_cast<float>(std::min(1.0,std::pow(10.0,-6.0/20)/bound)):1;
+    else if(!std::isfinite(pub.attenuation) || pub.attenuation<0 || pub.attenuation>1)
+    {error="Invalid measured live attenuation";return false;}
     error.clear();return true;
 }
 void TransportPlayback::configure(bool on,LiveRouting mode,float db) noexcept
-{enabled.store(on);wetOnly.store(mode==LiveRouting::wetOnly);level.store(std::isfinite(db)?std::pow(10.0f,std::clamp(db,-60.0f,0.0f)/20):0);}
+{enabled.store(on);wetOnly.store(mode==LiveRouting::wetOnly);level.store(std::isfinite(db)?std::pow(10.0f,std::clamp(db,-60.0f,12.0f)/20):0);}
 void TransportPlayback::collect()
 {for(auto& s:slots)if(s.state.load(std::memory_order_acquire)==retired){s.data.reset();s.state.store(free,std::memory_order_release);}}
 uint64_t TransportPlayback::pinnedBytes() const noexcept
@@ -104,10 +107,10 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
         for(const auto* e:wanted)if(e){size_t channel=channels[e->slot]>=0?static_cast<size_t>(channels[e->slot]):liveMaximumOverlap;
             if(channel==liveMaximumOverlap)for(size_t n=0;n<voices.size();++n)if(!assigned[n]){channel=n;break;}
             if(channel<voices.size()){auto& v=voices[channel];assigned[channel]=true;
-                const auto changed=v.slot!=e->slot || v.generation!=e->generation || v.attenuation!=pub->attenuation || !v.audible || (frame==0 && discontinuity);
+                const auto changed=v.slot!=e->slot || v.generation!=e->generation || v.version!=e->version || v.attenuation!=pub->attenuation || !v.audible || (frame==0 && discontinuity);
                 if(changed && v.remaining==0){v.fromL=v.lastL;v.fromR=v.lastR;v.remaining=ramp;}
                 if(v.slot<maximumSwells && v.slot!=e->slot)channels[v.slot]=-1;
-                v.slot=e->slot;channels[e->slot]=static_cast<int>(channel);v.generation=e->generation;v.entry=e;v.attenuation=pub->attenuation;v.audible=true;}}
+                v.slot=e->slot;channels[e->slot]=static_cast<int>(channel);v.generation=e->generation;v.version=e->version;v.entry=e;v.attenuation=pub->attenuation;v.audible=true;}}
         float l=0,r=0;
         for(size_t n=0;n<voices.size();++n){auto& v=voices[n];float a=0,b=0;
             if(!assigned[n]){if(v.audible && v.remaining==0){v.fromL=v.lastL;v.fromR=v.lastR;v.remaining=ramp;}v.audible=false;v.entry=nullptr;}

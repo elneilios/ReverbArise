@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include <DSP/AuditionMix.h>
+#include <Playback/TransportPlayback.h>
 using namespace m3;
 int main(){return runTest([]
 {
@@ -28,4 +29,15 @@ int main(){return runTest([]
     REQUIRE(prepareAuditionMix(wet,&dry,AuditionMode::dryWet,.5f,previewMemoryBudget,out,branch,sum,error));
     REQUIRE(sum<0 && out.peak<=juce::Decibels::decibelsToGain(-6.0f)+1e-7f);
     REQUIRE(wet.samples[0]>1 && dry.samples[0]==2); // No asset normalization.
+    REQUIRE(prepareAuditionMix(wet,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,out,branch,sum,error,false,GainPolicy::musical));
+    REQUIRE(std::abs(juce::Decibels::gainToDecibels(out.peak)-candidateWetCeilingDb)<1e-4f);
+    // Equal musical membership and unity path controls produce the same wet
+    // interior samples; live admission ramps remain a documented boundary.
+    WetRender quiet;quiet.start=0;quiet.rate=1000;quiet.samples.assign(80,.25f);quiet.peak=.25f;
+    WetRender monitored;REQUIRE(prepareAuditionMix(quiet,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,monitored,branch,sum,error,false,GainPolicy::musical));
+    auto publication=std::make_unique<LivePublication>();publication->mapping={true,0,0,1000,120,4,4};publication->start=0;publication->end=40;
+    publication->attenuation=1;publication->measuredAttenuation=true;publication->entries.push_back({0,1,0,40,.25f,std::make_shared<WetRender>(quiet)});
+    REQUIRE(prepareLiveSegments(*publication,error));TransportPlayback live;live.invalidate(0,1);live.configure(true,LiveRouting::wetOnly,0);REQUIRE(live.publish(std::move(publication)));
+    float liveL[40]{},liveR[40]{};TransportTime time{{true,0,0,1000,120,4,4},true};live.process(liveL,liveR,40,time);
+    for(int n=5;n<40;++n)REQUIRE(std::abs(liveL[n]-monitored.samples[n*2])<1e-7f && std::abs(liveR[n]-monitored.samples[n*2+1])<1e-7f);
 });}

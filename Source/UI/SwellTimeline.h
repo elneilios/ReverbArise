@@ -23,6 +23,8 @@ public:
     void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&) override;
     void fitSelection();
     void page(int bars);void previous();void next();void zoom(double factor);
+    void setWaveZoomDb(double db){waveZoom.setValue(db,juce::sendNotificationSync);}
+    double waveZoomDb() const noexcept{return waveZoom.getValue();}
     void setSnap(bool enabled) {snapEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
     const SwellViewport& viewport() const noexcept {return view;}
@@ -43,6 +45,8 @@ private:
     float x(int64_t sample) const {return static_cast<float>(view.pixel(static_cast<double>(sample),source.getX(),source.getWidth()));}
     SwellEngine& engine;CaptureSessionSnapshot capture;EditorSnapshot data;SongTime time;
     SwellViewport view;juce::ScrollBar scrollbar{false};
+    juce::Slider waveZoom;
+    juce::Label waveZoomLabel;
     juce::Rectangle<float> overview,source,wet;
     juce::String dragId;Drag drag=Drag::none;
     juce::String sourceHover;

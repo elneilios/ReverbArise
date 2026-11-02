@@ -63,7 +63,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     }
     const auto move=[&](int page,std::initializer_list<juce::Component*> controls)
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
-    move(0,{&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
+    move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
     move(1,{&mappingButton,&automaticButton,&autoButton,&separationLabel,&separationSlider,&defaultIRButton});
     move(2,{&muteButton,&fullButton,&inCurveBox,&outCurveBox,&sampleUnitsButton,&barStartLabel,&barStartEditor,&barEndLabel,&barEndEditor,&setBarsButton,&removeButton});
     move(3,{&isolateButton,&isolateDryButton,&tailLabel,&tailSlider,&auditionLabel,&auditionSlider});
@@ -71,7 +71,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     const juce::StringArray captions{"Routing","Default IR","Fade-in curve","Fade-out curve","Source range (bars)","Audition scope","Manual preparation","Onset suggestions","Fresh capture","Test tone range","Details",""};
     const int labelPages[]{0,1,2,2,2,3,4,4,4,4,4,4};
     for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);settingsLabels[i].setFont(juce::FontOptions(m3::ui::bodySize));settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
-    settingsHelp[0].setText("Live playback follows the DAW's Song transport.\nThese settings affect mixer output; audition settings are separate.",juce::dontSendNotification);
+    settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive wet affects mixer output; audition blend/trim are separate.",juce::dontSendNotification);
     settingsHelp[1].setText("Both sensitivities stay in the main workspace.\nThe default IR applies to future swells; existing swells keep their own IR.",juce::dontSendNotification);
     settingsHelp[2].setText("Applies to the selected swell. Rename from its three-dot list menu.\nSource, envelope, Enabled, Solo and Freeze stay in the inspector.",juce::dontSendNotification);
     settingsHelp[3].setText("Preview only. Isolation and listening tail affect captured audition audio.\nLive playback settings remain separate.",juce::dontSendNotification);
@@ -86,7 +86,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     const int left=24,width=590,labelWidth=175;
     const auto row=[&](juce::Component& label,juce::Component& value,int y)
     {label.setBounds(left,y,labelWidth,32);value.setBounds(left+labelWidth,y,width-labelWidth,32);};
-    liveButton.setBounds(left,24,width,30);row(settingsLabels[0],liveRoutingBox,70);row(liveLevelLabel,liveLevel,116);
+    row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
     mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
     muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds(left+180,20,350,30);

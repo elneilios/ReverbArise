@@ -1,4 +1,5 @@
 #include "SwellEngine.h"
+#include "GainStaging.h"
 #include <Core/MonitoringSafety.h>
 
 namespace m3
@@ -6,7 +7,13 @@ namespace m3
 namespace
 {
 juce::String memberKey(const Swell& w)
-{return w.render.content+"/"+juce::String(w.inputGeneration)+"/"+juce::String(w.shapeGeneration)+"/"+juce::String(w.placement);}
+{return w.render.content+"/"+juce::String(w.inputGeneration)+"/"+juce::String(w.shapeGeneration)+"/"+juce::String(w.placement)
+    +"/"+juce::String(w.arrival)+"/"+juce::String(static_cast<int>(w.shape.automaticStart))+"/"+juce::String(w.shape.startOffset)+"/"+juce::String(w.shape.endOffset)
+    +"/"+juce::String(w.shape.fadeIn)+"/"+juce::String(w.shape.fadeOut)+"/"+juce::String(static_cast<int>(w.shape.inCurve))+"/"+juce::String(static_cast<int>(w.shape.outCurve))
+    +"/"+juce::String(w.shape.inTension,17)+"/"+juce::String(w.shape.outTension,17)+"/"+juce::String(w.shape.gainDb,9)
+    +"/"+juce::String(static_cast<int>(w.calibration.state))+"/"+juce::String(w.calibration.baselineDb,9)+"/"+w.calibration.revision
+    +"/"+w.calibration.sourceIdentity+"/"+w.calibration.irIdentity+"/"+w.calibration.renderIdentity+"/"+w.render.path+"/"+w.render.checksum+"/"+w.ir.path;}
+juce::String waveformKey(const Swell& w){auto unplaced=w;unplaced.placement=0;return memberKey(unplaced);}
 
 bool readShaped(const Swell& w,const SwellAssetStore& store,int64_t from,int64_t to,
     WetRender* output,float& peak,juce::String& error,const RenderCancellation& cancel)
@@ -24,7 +31,7 @@ bool readShaped(const Swell& w,const SwellAssetStore& store,int64_t from,int64_t
         const auto rawAt=at-w.placement-w.render.start;
         if(!reader->read(&scratch,0,count,rawAt,true,true)){error="Live render read failed";return false;}
         for(int n=0;n<count;++n){const auto position=at+n;
-            const auto factor=envelope(w.shape,position,a,b)*monitorEdgeGain(static_cast<size_t>(position-a),static_cast<size_t>(b-a),w.render.rate,.002);
+            const auto factor=swellEnvelope(w,position,a,b)*monitorEdgeGain(static_cast<size_t>(position-a),static_cast<size_t>(b-a),w.render.rate,.002);
             for(int c=0;c<2;++c){const auto value=static_cast<float>(scratch.getSample(c,n)*factor);
                 if(!std::isfinite(value)){error="Non-finite live render";return false;}
                 peak=std::max(peak,std::abs(value));if(output)output->samples[static_cast<size_t>(position-from)*2+c]=value;}}
@@ -32,9 +39,60 @@ bool readShaped(const Swell& w,const SwellAssetStore& store,int64_t from,int64_t
     }
     if(output)output->peak=peak;return true;
 }
+
+juce::String gainKey(const Session& session,const std::vector<Swell>& members)
+{
+    juce::String key=session.gainRevision+"/"+juce::String(session.liveWetDb,6);
+    for(const auto& w:members)key+="|"+memberKey(w)+"/"+juce::String(static_cast<int>(w.enabled))+"/"+juce::String(static_cast<int>(w.muted))+"/"+juce::String(static_cast<int>(w.solo));
+    return key;
+}
+
+bool prepareMusicalPlan(const Session& session,const std::vector<Swell>& members,const SwellAssetStore& store,
+                        uint64_t budget,const RenderCancellation& cancel,float& attenuation,float& peak,juce::String& error)
+{
+    if(members.empty()){attenuation=1;peak=0;error.clear();return true;}
+    struct Group{const Swell* swell;int count;int64_t start,end;};std::vector<Group> groups;
+    std::map<juce::String,size_t> grouped;std::vector<std::pair<int64_t,int64_t>> intervals;
+    for(const auto& w:members){int64_t a,b;if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error))return false;
+        const auto key=memberKey(w);const auto found=grouped.find(key);
+        if(found!=grouped.end())++groups[found->second].count;
+        else {grouped[key]=groups.size();groups.push_back({&w,1,a,b});intervals.emplace_back(a,b);}}
+    std::sort(intervals.begin(),intervals.end());std::vector<std::pair<int64_t,int64_t>> occupied;
+    for(const auto& range:intervals){if(!occupied.empty() && range.first<occupied.back().second)occupied.back().second=std::max(occupied.back().second,range.second);
+        else occupied.push_back(range);}
+    peak=0;attenuation=1;
+    std::map<juce::String,float> isolatedPeaks;
+    for(const auto& range:occupied){float measured=0,guard=1;
+    const Group* isolated=nullptr;size_t count=0;for(const auto& g:groups)if(g.start<range.second && g.end>range.first){isolated=&g;++count;}
+    if(count==1 && isolated->count==1){
+        const auto key=waveformKey(*isolated->swell);auto cached=isolatedPeaks.find(key);float memberPeak=0;
+        if(cached==isolatedPeaks.end()){
+            if(!readShaped(*isolated->swell,store,range.first,range.second,nullptr,memberPeak,error,cancel))return false;
+            isolatedPeaks[key]=memberPeak;
+        }else memberPeak=cached->second;
+        measured=memberPeak*juce::Decibels::decibelsToGain(session.liveWetDb);
+        const auto ceiling=juce::Decibels::decibelsToGain(gainCeilingDb(session));guard=measured>ceiling?ceiling/measured:1;
+        peak=std::max(peak,measured);attenuation=std::min(attenuation,guard);continue;
+    }
+    if(!measureAggregateGain(range.first,range.second,gainCeilingDb(session),session.liveWetDb,budget,
+        [&](int64_t at,int frames,float* sum,juce::String& addError){
+            int64_t end;if(!checkedAdd(at,frames,end)){addError="Aggregate interval overflow";return false;}
+            for(const auto& group:groups){if(group.end<=at || group.start>=end)continue;WetRender part;float ignored=0;
+                if(!readShaped(*group.swell,store,at,end,&part,ignored,addError,cancel))return false;
+                for(size_t n=0;n<part.frames();++n){const auto offset=static_cast<size_t>(part.start-at+n)*2;
+                    // Repeat additions preserve the production mixer's float
+                    // accumulation for identical voices, while reading once.
+                    for(int copy=0;copy<group.count;++copy){sum[offset]+=part.samples[n*2];sum[offset+1]+=part.samples[n*2+1];}}}
+            return true;
+        },cancel,guard,measured,error))return false;
+        peak=std::max(peak,measured);attenuation=std::min(attenuation,guard);
+    }
+    return true;
+}
 }
 void SwellEngine::invalidateLiveLocked(const juce::String& id)
 {
+    if(id.isEmpty())retainedIR.clear();else retainedIR.erase(id);
     ++liveRevision;
     if(id.isEmpty()){for(const auto& [key,slot]:liveSlots)live.invalidate(slot,++liveGenerations[slot]);}
     else if(const auto at=liveSlots.find(id);at!=liveSlots.end())live.invalidate(at->second,++liveGenerations[at->second]);
@@ -42,9 +100,34 @@ void SwellEngine::invalidateLiveLocked(const juce::String& id)
 }
 void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
 {
-    if(!std::isfinite(db) || db< -60 || db>0 || static_cast<int>(routing)<0 || static_cast<int>(routing)>1)return;
-    const juce::ScopedLock guard(lock);model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
-    liveEnabled=enabled;live.configure(enabled,routing,db);notify();
+    const juce::ScopedLock guard(lock);
+    if(!std::isfinite(db) || db< -60 || db>(model.gainPolicy==GainPolicy::musical?12:0) || static_cast<int>(routing)<0 || static_cast<int>(routing)>1)return;
+    const auto gainChanged=model.liveWetDb!=db;
+    model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
+    liveEnabled=enabled;live.configure(enabled,routing,db);
+    if(gainChanged && model.gainPolicy==GainPolicy::musical)invalidateLiveLocked();else notify();
+}
+bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const PreviewContext& context) const
+{
+    const auto& a=kept.accepted;
+    return w.enabled && !w.frozen && w.sourceStart==a.sourceStart && w.sourceEnd==a.sourceEnd
+        && w.arrival==a.arrival && w.shape==a.shape && w.placement==a.placement
+        && transportMappingMatches(kept.timing,context.time)
+        && kept.revision==juce::String(sourceDependency(context.capture.manifest,a.sourceStart,renderInputEnd(a)));
+}
+bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,const juce::String& requestedName)
+{
+    if(auto found=retainedIR.find(w.id);found!=retainedIR.end()){
+        if(retainedCompatible(found->second,w,context)){found->second.requestedName=requestedName;return true;}
+        retainedIR.erase(found);}
+    const auto r=runtime.find(w.id);int64_t a,b;juce::String error;
+    if(w.phase!=Phase::ready || w.frozen || !w.enabled || r==runtime.end() || r->second.cachedWetOnly
+        || r->second.verifiedRender!=w.render || !shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error))return false;
+    const auto revision=juce::String(sourceDependency(context.capture.manifest,w.sourceStart,renderInputEnd(w)));
+    if(r->second.revision!=revision)return false; // A commit may precede the worker's next inspect pass.
+    RetainedIR kept{w,model.timing,revision,requestedName};
+    if(!retainedCompatible(kept,w,context))return false;
+    retainedIR.emplace(w.id,std::move(kept));return true;
 }
 void SwellEngine::setRegenerationSensitivity(float value)
 {
@@ -66,7 +149,15 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
     if(frames<=0)return;
     offlineBlockCount.fetch_add(1,std::memory_order_relaxed);
     const auto starting=!offlineActive.exchange(true);
+    // Capture accepted IR-only fallbacks before waiting for an in-flight worker
+    // render. Its completion must not silently change this export's composition.
+    std::map<juce::String,Swell> acceptedAtEntry;juce::StringArray pendingAtEntry;
+    if(starting){const auto context=contextProvider();const juce::ScopedLock guard(lock);
+        for(const auto& [id,kept]:retainedIR)if(const auto* current=find(model,id);current && retainedCompatible(kept,*current,context)){
+            auto audible=kept.accepted;audible.phase=Phase::ready;audible.enabled=current->enabled;audible.muted=current->muted;audible.solo=current->solo;
+            acceptedAtEntry.emplace(id,std::move(audible));pendingAtEntry.add(current->name+": "+kept.accepted.irName+" (requested "+kept.requestedName+")");}}
     const juce::ScopedLock work(workLock);
+    if(starting){offlineAccepted=std::move(acceptedAtEntry);offlineIRNotice=pendingAtEntry.isEmpty()?juce::String{}:"Export uses accepted IRs; replacements pending | "+pendingAtEntry.joinIntoString("; ");}
     const auto fail=[&](const juce::String& error){const juce::ScopedLock guard(lock);
         offlineError="Export incomplete: "+error;message=offlineError;offlineStatus=offlineError;
         if(offlineSession.liveEnabled && offlineSession.liveRouting==LiveRouting::wetOnly){std::fill_n(left,frames,0.0f);std::fill_n(right,frames,0.0f);}};
@@ -83,8 +174,10 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
             Session pending;uint64_t generation;
             {const juce::ScopedLock guard(lock);pending=model;generation=sessionGeneration.load();}
             const auto solo=std::any_of(pending.swells.begin(),pending.swells.end(),[](const auto& w){return w.solo;});
-            if(pending.liveEnabled)for(const auto& w:pending.swells)if(w.enabled && !w.muted && (!solo || w.solo))renderJob(w,context,generation,true);
-            {const juce::ScopedLock guard(lock);offlineSession=model;offlineRoot=instanceRoot(context.capture.manifest);}
+            if(pending.liveEnabled)for(const auto& w:pending.swells)if(w.enabled && !w.muted && (!solo || w.solo) && !offlineAccepted.contains(w.id))renderJob(w,context,generation,true);
+            {const juce::ScopedLock guard(lock);offlineSession=model;offlineRoot=instanceRoot(context.capture.manifest);
+                for(const auto& [id,accepted]:offlineAccepted)if(auto target=find(offlineSession,id))*target=accepted;}
+            if(offlineSession.gainPolicy==GainPolicy::legacy)for(auto& w:offlineSession.swells)w.calibration={};
             if(offlineSession.liveEnabled && !transportMappingMatches(offlineSession.timing,hostTime.song) && !offlineSession.swells.empty()){
                 fail("prepared assets have incompatible timing");return;}
             SwellAssetStore store(offlineRoot);juce::String error;juce::StringArray skipped;
@@ -96,8 +189,18 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                     || !readShaped(w,store,a,b,nullptr,peak,error,{})){++skippedCount;skip(w,error);continue;}
                 offlineEntries.push_back({offlineEntries.size(),1,a,b,peak,{},{}});offlineMembers.push_back(w);
             }
+            offlineGainAttenuation=1;offlineGainPeak=0;
+            if(offlineSession.gainPolicy==GainPolicy::musical){
+                const auto key=gainKey(offlineSession,offlineMembers);bool cached=false;const auto started=juce::Time::getMillisecondCounterHiRes();
+                {const juce::ScopedLock guard(lock);cached=key==gainPlanKey;if(cached){offlineGainAttenuation=gainPlanAttenuation;offlineGainPeak=gainPlanPeak;++gainPlanCacheHits;}}
+                if(!cached && !prepareMusicalPlan(offlineSession,offlineMembers,store,available(),{},offlineGainAttenuation,offlineGainPeak,error))
+                {fail(error);return;}
+                if(!cached){const juce::ScopedLock guard(lock);gainPlanKey=key;gainPlanAttenuation=offlineGainAttenuation;gainPlanPeak=offlineGainPeak;
+                    gainPlanPreparationMs=juce::Time::getMillisecondCounterHiRes()-started;++gainPlanBuilds;}
+            }
             {const juce::ScopedLock guard(lock);
                 if(skippedCount)offlineWarning="Export warning: "+juce::String(skippedCount)+(skippedCount==1?" swell skipped | ":" swells skipped | ")+skipped.joinIntoString("; ");
+                if(offlineIRNotice.isNotEmpty())offlineWarning=offlineWarning.isEmpty()?offlineIRNotice:offlineWarning+" | "+offlineIRNotice;
                 offlinePlayer=std::make_unique<TransportPlayback>();
                 offlinePlayer->configure(offlineSession.liveEnabled,offlineSession.liveRouting,offlineSession.liveWetDb);
                 offlinePlayer->primeForOffline();
@@ -136,6 +239,7 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                     if(required<=available())break;
                     if(length<=count){fail("256 MiB budget cannot admit required offline pages");return;}length=std::max(count,length/2);}
                 uint64_t reserved=8ULL*1024*1024;
+                if(offlineSession.gainPolicy==GainPolicy::musical){pub->attenuation=offlineGainAttenuation;pub->measuredAttenuation=true;}
                 size_t index=0;
                 for(const auto& w:offlineMembers){
                     auto& entry=pub->entries[index++];const auto a=std::max(at,entry.start),b=std::min(pub->end,entry.end);if(a>=b)continue;
@@ -159,7 +263,7 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
 void SwellEngine::prepareTransport(const PreviewContext& context)
 {
     if(!hostObserved.load(std::memory_order_acquire) || !context.time.valid || !liveEnabled.load())return;
-    Session session;uint64_t revision,generation;
+    Session session;uint64_t revision,generation;std::set<juce::String> held,replacements;
     int64_t loopFrom=0,loopTo=0;
     for(int attempt=0;attempt<8;++attempt){const auto sequence=loopSequence.load(std::memory_order_acquire);if(sequence&1)continue;
         const auto on=loopHint.load();const auto a=loopHintStart.load(),b=loopHintEnd.load();
@@ -167,19 +271,41 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     {
         const juce::ScopedLock guard(lock);live.collect();
         if(!transportMappingMatches(model.timing,context.time))return;
+        // Restore validates members serially. Avoid rebuilding an ever-growing
+        // full-support gain plan after each member; publish once restoration
+        // has settled (failed members are still explicitly unavailable).
+        if(model.gainPolicy==GainPolicy::musical && std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.phase==Phase::restoring;})){
+            LivePublication admission;admission.start=0;admission.end=1;juce::String admissionError;
+            const auto solo=std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.solo;});
+            for(const auto& w:model.swells)if(w.enabled && !w.muted && (!solo || w.solo) && w.render.present()){
+                int64_t a,b;if(shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,admissionError))
+                    admission.entries.push_back({admission.entries.size(),0,a,b,0,{},{}});}
+            if(!prepareLiveSegments(admission,admissionError))liveStatus=admissionError;
+            return;
+        }
         // Some hosts wrap Song playback without advertising cycle points.
         // Keep the observed completed pass start warm as the next destination.
         if(loopTo<=loopFrom && !completedPasses.empty()){
             const auto& pass=completedPasses.back();
             if(context.time.sample>=pass.first && context.time.sample<=pass.second){loopFrom=pass.first;loopTo=pass.second;}}
-        const auto margin=static_cast<int64_t>(std::min(context.time.rate,48000.0)*.5);
+        // Service substantially earlier while a long job is between FFT stages.
+        // At 96 kHz this leaves ~0.75 s rather than 0.25 s of page headroom.
+        const auto margin=activeJobBytes?static_cast<int64_t>(std::min(context.time.rate*2,96000.0)*.75)
+            :static_cast<int64_t>(std::min(context.time.rate,48000.0)*.5);
         if(preparedLiveRevision==liveRevision && preparedLoopStart==loopFrom && preparedLoopEnd==loopTo && context.time.sample>=liveWindowStart && context.time.sample<liveWindowEnd-margin)return;
         session=model;revision=liveRevision;generation=sessionGeneration.load();liveStatus="Preparing live window";
+        for(auto& w:session.swells)if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end()){
+            if(!retainedCompatible(kept->second,w,context)){invalidateLiveLocked(w.id);return;}
+            if(w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content)){
+                const auto enabled=w.enabled,muted=w.muted,solo=w.solo;w=kept->second.accepted;w.phase=Phase::ready;
+                w.enabled=enabled;w.muted=muted;w.solo=solo;held.insert(w.id);
+            }else replacements.insert(w.id);}
         for(auto it=liveSlots.begin();it!=liveSlots.end();){if(!find(model,it->first)){live.invalidate(it->second,++liveGenerations[it->second]);liveCache.erase(it->first);it=liveSlots.erase(it);}else ++it;}
         std::array<bool,maximumSwells> used{};for(const auto& [id,slot]:liveSlots)used[slot]=true;
         for(const auto& w:session.swells)if(!liveSlots.contains(w.id)){size_t slot=0;while(slot<used.size() && used[slot])++slot;
             if(slot==used.size()){liveStatus="Live identity capacity unavailable";return;}used[slot]=true;liveSlots[w.id]=slot;live.invalidate(slot,++liveGenerations[slot]);}
     }
+    if(session.gainPolicy==GainPolicy::legacy)for(auto& w:session.swells)w.calibration={};
     const auto cancel=[&]{const juce::ScopedLock guard(lock);return threadShouldExit() || generation!=sessionGeneration.load() || revision!=liveRevision;};
     auto pub=std::make_unique<LivePublication>();pub->mapping=session.timing;pub->revision=revision;
     // At most 2.25 seconds at 48 kHz; higher rates shorten time coverage to
@@ -191,6 +317,8 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(!checkedSubtract(loopFrom,behind,pub->loopStart) || !checkedAdd(loopFrom,frames,pub->loopEnd))return;}
     const auto anySolo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     SwellAssetStore store(instanceRoot(context.capture.manifest));juce::String error;uint64_t reserved=8ULL*1024*1024;size_t unavailable=0;
+    std::vector<Swell> gainMembers;
+    std::map<juce::String,float> sharedMemberPeaks;
     for(const auto& w:session.swells){if(cancel())return;
         if(!w.enabled || w.muted || (anySolo && !w.solo) || !w.render.present())continue;
         LiveCache cached;size_t slot;uint64_t memberGeneration;bool recovered=false;
@@ -202,14 +330,22 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
             error.clear();continue;}
         if(recovered || (w.phase!=Phase::ready && !checking)){
             pub->entries.push_back({slot,memberGeneration,a,b,0,{},{}});++unavailable;continue;}
+        if(held.contains(w.id) && (!store.verify(w.ir,error) || !store.verify(w.render,error))){
+            const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}return;}
         if(cached.key!=key){
             if(available(reserved)<512ULL*1024){error="256 MiB budget unavailable for bounded live verification scratch";break;}
-            float peak=0;
-            if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error) || !readShaped(w,store,a,b,nullptr,peak,error,cancel)){
-                if(!cancel())report(w,generation,Phase::error,error);return;}
+            float peak=0;const auto shared=sharedMemberPeaks.find(waveformKey(w));
+            if(shared!=sharedMemberPeaks.end())peak=shared->second;
+            else if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error) || !readShaped(w,store,a,b,nullptr,peak,error,cancel)){
+                if(!cancel()){
+                    if(held.contains(w.id)){const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}}
+                    else report(w,generation,Phase::error,error);}
+                return;}
+            sharedMemberPeaks[waveformKey(w)]=peak;
             cached={key,peak};const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;
         }
         LiveEntry entry{slot,memberGeneration,a,b,cached.peak,{}};
+        entry.version=w.inputGeneration;
         const auto first=std::max(a,pub->start),last=std::min(b,pub->end);
         if(first<last){const auto bytes=static_cast<uint64_t>(last-first)*2*sizeof(float);
             if(bytes>available(reserved+65536)){error="256 MiB budget unavailable for live pages";break;}
@@ -229,8 +365,19 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
             reserved+=entry.loopAudio->samples.capacity()*sizeof(float);cached.loop=entry.loopAudio;}
         {const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;}
         pub->entries.push_back(std::move(entry));
+        gainMembers.push_back(w);
     }
     if(cancel())return;
+    if(error.isEmpty())prepareLiveSegments(*pub,error);
+    if(error.isEmpty() && session.gainPolicy==GainPolicy::musical){
+        const auto key=gainKey(session,gainMembers);float attenuation=1,peak=0;bool cached=false;
+        const auto started=juce::Time::getMillisecondCounterHiRes();
+        {const juce::ScopedLock guard(lock);cached=key==gainPlanKey;if(cached){attenuation=gainPlanAttenuation;peak=gainPlanPeak;++gainPlanCacheHits;}}
+        if(!cached && !prepareMusicalPlan(session,gainMembers,store,available(reserved),cancel,attenuation,peak,error)){}
+        if(error.isEmpty()){pub->attenuation=attenuation;pub->measuredAttenuation=true;
+            if(!cached){const juce::ScopedLock guard(lock);if(!cancel()){gainPlanKey=key;gainPlanAttenuation=attenuation;gainPlanPeak=peak;
+                gainPlanPreparationMs=juce::Time::getMillisecondCounterHiRes()-started;++gainPlanBuilds;}}}
+    }
     if(error.isEmpty() && !prepareLiveSegments(*pub,error)){}
     const auto latest=contextProvider();
     if(latest.captureGeneration!=context.captureGeneration || !transportMappingMatches(session.timing,latest.time))return;
@@ -240,7 +387,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     if(error.isNotEmpty()){liveStatus=error;return;}
     const auto start=pub->start,end=pub->end;const auto attenuation=pub->attenuation;
     if(pub->bytes()>available()){liveStatus="256 MiB live publication budget exceeded";return;}
-    if(live.publish(std::move(pub))){preparedLiveRevision=revision;liveWindowStart=start;liveWindowEnd=end;
+    if(live.publish(std::move(pub))){for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;liveWindowStart=start;liveWindowEnd=end;
         preparedLoopStart=loopFrom;preparedLoopEnd=loopTo;
         liveAttenuationDb=juce::Decibels::gainToDecibels(attenuation);liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}
     else liveStatus="Live publication queue busy";

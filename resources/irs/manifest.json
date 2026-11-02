@@ -1,0 +1,528 @@
+{
+  "generator": "ir-library-prototype-v4",
+  "generator_sha256": "39082a86c9009f808309df572c1ffe387c7410af09cf6b110a5e820b5867e444",
+  "author": "ReverbArise contributors",
+  "python": "3.10.6 (tags/v3.10.6:9c7b4bd, Aug  1 2022, 21:53:49) [MSC v.1932 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26300-SP0",
+  "license": "CC0-1.0",
+  "source": "Original procedural audio; no recordings or third-party effect captures",
+  "prng": "LCG32: state = (1664525 * state + 1013904223) modulo 2^32",
+  "authoring_energy_target_per_channel": 0.35,
+  "static_modes_hz": [
+    587.0,
+    887.0,
+    1327.0,
+    1777.0,
+    2371.0,
+    3169.0,
+    4231.0,
+    5647.0
+  ],
+  "construction": {
+    "filter": "fixed one-pole lowpass minus fixed one-pole lowpass residual",
+    "onset": "sin(min(1,t/attack)*pi/2)^2",
+    "decay": "exp(-log(1000)*t/decay)",
+    "end_window_seconds": 0.025,
+    "final_window_seconds": 0.025,
+    "seed_channel_increment": 2654435769,
+    "modal_channel_frequency_ratio": 1.0013,
+    "modal_channel_phase": 0.7,
+    "comb_channel_ratio": "1 + channel * (0.023 + bank * 0.0009)",
+    "allpass_coefficient": 0.67,
+    "allpass_channel_ratio": 1.071,
+    "reflections": "96-sample sin^2 pulse * exp(-n/20) / (reflection index+1)",
+    "reflection_channel_ms": "4.1 + index*1.7",
+    "spatial_blend": "energy-matched components, then static mid/side width, then mean channel authoring gain",
+    "rounding": "Python round, signed little-endian PCM24 scaled by 2^23; reject clipping"
+  },
+  "prototypes_pending_listening": false,
+  "entries": [
+    {
+      "parameters": {
+        "id": "monumental",
+        "name": "Monumental",
+        "duration": 10.0,
+        "decay": 8.8,
+        "attack": 0.04,
+        "cutoff": 6500.0,
+        "highpass": 45.0,
+        "seed": 1297042993,
+        "modes": 0.0,
+        "gain_db": 13.0,
+        "network_mix": 0.65,
+        "width": 1.7,
+        "comb_ms": [
+          61.3,
+          71.9,
+          89.3,
+          101.9,
+          127.7,
+          149.3,
+          173.9,
+          197.3
+        ],
+        "allpass_ms": [
+          3.1,
+          7.3,
+          13.7,
+          17.3,
+          23.9,
+          31.1,
+          43.7,
+          59.3
+        ],
+        "damping_hz": 6500.0,
+        "network_decay": 8.8,
+        "reflections_ms": [
+          31.0,
+          57.0,
+          93.0,
+          151.0,
+          229.0,
+          347.0,
+          481.0,
+          687.0
+        ],
+        "reflection_gain": 0.035,
+        "front_presence": 2.5,
+        "front_presence_seconds": 0.7
+      },
+      "revision": 1,
+      "prototype": false,
+      "file": "Monumental.wav",
+      "rate": 48000,
+      "channels": 2,
+      "bits": 24,
+      "frames": 480000,
+      "seconds": 10.0,
+      "wav_sha256": "0799b724acba5b66f3e933109a79454673da944d022f2ac13a8d6cb2a0532148",
+      "pcm_sha256": "6d316d0b210837167dd9379746cfd78a50a0848063b9448a80edc8da78465439",
+      "canonical_sample_sha256": "10513f266fc46676dd1264baaf37290a7e432c48725b7a922ec0613c15ca2f9e",
+      "measurements": {
+        "channels": [
+          {
+            "peak": 0.08499491214752197,
+            "rms": 0.003826901174042067,
+            "energy": 7.029682846024585,
+            "dc": 5.208672707279523e-05,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.6859583333333333,
+              "20": 1.5667083333333334,
+              "40": 4.179770833333333,
+              "60": 7.061416666666666
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.03988909481385869,
+              "1000": 0.13846707065911512,
+              "4000": 0.39079079128063227,
+              "10000": 0.6796997728673525
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "peak": 0.07751405239105225,
+            "rms": 0.0038016315964004696,
+            "energy": 6.937153341480183,
+            "dc": 4.800130228201548e-05,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.7031041666666666,
+              "20": 1.5932083333333333,
+              "40": 4.206604166666667,
+              "60": 7.082375
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.03868960969866922,
+              "1000": 0.1386607819442592,
+              "4000": 0.3939887958666002,
+              "10000": 0.6823033557966645
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "correlation": -0.4729998529623155,
+        "mono_fold_energy": 1.840167425291515,
+        "side_to_mid_db": 4.463803526655576,
+        "mono_vs_mean_channel_db": -5.792107052750602
+      },
+      "description": "Long, intense cinematic build with broad stereo diffusion; deliberately stronger level."
+    },
+    {
+      "parameters": {
+        "id": "intimate-plate",
+        "name": "Intimate Plate",
+        "duration": 1.0,
+        "decay": 0.85,
+        "attack": 0.003,
+        "cutoff": 11000.0,
+        "highpass": 140.0,
+        "seed": 1347179569,
+        "modes": 0.0,
+        "gain_db": 3.2,
+        "network_mix": 0.8,
+        "width": 0.2,
+        "comb_ms": [
+          7.1,
+          9.7,
+          13.3,
+          17.9,
+          23.3,
+          29.9
+        ],
+        "allpass_ms": [
+          0.7,
+          1.1,
+          1.9
+        ],
+        "damping_hz": 12500.0,
+        "network_decay": 0.85,
+        "reflections_ms": [],
+        "reflection_gain": 0.0
+      },
+      "revision": 1,
+      "prototype": false,
+      "file": "IntimatePlate.wav",
+      "rate": 48000,
+      "channels": 2,
+      "bits": 24,
+      "frames": 48000,
+      "seconds": 1.0,
+      "wav_sha256": "fad9e920013101794af9050fbf88d784f65ccb7fd65523e963998a2853b10c1c",
+      "pcm_sha256": "ac1e2cd0dbd6bfbb94032bbaa45e477006afd20fd647e0d9602cf2839fbf1ad3",
+      "canonical_sample_sha256": "8e54e6ec1b64d7ebfe3c01494251f55a7f77e7df9a69efdb5a9cba06484e9216",
+      "measurements": {
+        "channels": [
+          {
+            "peak": 0.09049046039581299,
+            "rms": 0.0038947891475340337,
+            "energy": 0.7281303601799465,
+            "dc": 0.00036239404728015265,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.10185416666666666,
+              "20": 0.22710416666666666,
+              "40": 0.49133333333333334,
+              "60": 0.7650625
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.06033590587325571,
+              "1000": 0.14281620274065038,
+              "4000": 0.3887098374477581,
+              "10000": 0.679954600825671
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "peak": 0.0798417329788208,
+            "rms": 0.003911460075729968,
+            "energy": 0.7343769563534153,
+            "dc": 0.0003618548437952995,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.10177083333333334,
+              "20": 0.22708333333333333,
+              "40": 0.4913958333333333,
+              "60": 0.7678541666666666
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.059836904325020056,
+              "1000": 0.14237937996419822,
+              "4000": 0.3888554341545295,
+              "10000": 0.6802122236873487
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "correlation": 0.9229851814679625,
+        "mono_fold_energy": 0.7030918961797283,
+        "side_to_mid_db": -13.973522670856777,
+        "mono_vs_mean_channel_db": -0.17055959458475772
+      },
+      "description": "Compact bright plate lift with a narrow image."
+    },
+    {
+      "parameters": {
+        "id": "vintage-dark-hall",
+        "name": "Vintage Dark Hall",
+        "duration": 4.0,
+        "decay": 3.4,
+        "attack": 0.025,
+        "cutoff": 850.0,
+        "highpass": 65.0,
+        "seed": 1146243889,
+        "modes": 0.35,
+        "gain_db": -3.2,
+        "network_mix": 0.8,
+        "width": 0.85,
+        "comb_ms": [
+          43.7,
+          67.1,
+          83.9,
+          107.3,
+          139.9,
+          167.3
+        ],
+        "allpass_ms": [
+          5.3,
+          11.9,
+          19.9,
+          31.1
+        ],
+        "damping_hz": 700.0,
+        "network_decay": 3.4,
+        "reflections_ms": [
+          37.0,
+          79.0,
+          131.0,
+          211.0
+        ],
+        "reflection_gain": 0.025,
+        "modal_frequencies": [
+          83.0,
+          127.0,
+          173.0,
+          227.0,
+          317.0,
+          433.0,
+          617.0
+        ],
+        "final_lowpass_hz": 850.0
+      },
+      "revision": 1,
+      "prototype": false,
+      "file": "VintageDarkHall.wav",
+      "rate": 48000,
+      "channels": 2,
+      "bits": 24,
+      "frames": 192000,
+      "seconds": 4.0,
+      "wav_sha256": "1f86a72cbf8fcdae256ea8a8765705fd227ae1adaf94594908c80fd2f370d65c",
+      "pcm_sha256": "1f070666988b6a27c3b8f4a439e6487a6aa6f0504975fadb15c9d383fd2a561c",
+      "canonical_sample_sha256": "2f20e629f979b22b8ce3e17d058bb19c9582c1ae01e6ba2dd665f26637e2c9ac",
+      "measurements": {
+        "channels": [
+          {
+            "peak": 0.01025688648223877,
+            "rms": 0.0009242705254746222,
+            "energy": 0.16402099281813776,
+            "dc": 0.00011192885041236877,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.5769583333333334,
+              "20": 1.1107708333333333,
+              "40": 2.218208333333333,
+              "60": 3.3322708333333333
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.5621702170615559,
+              "1000": 0.8909076891077928,
+              "4000": 0.9876287558722294,
+              "10000": 0.9979157224817137
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "peak": 0.01074683666229248,
+            "rms": 0.0009437846713515001,
+            "energy": 0.17102006512858736,
+            "dc": 0.00010815026176472505,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.5899583333333334,
+              "20": 1.1209375,
+              "40": 2.228645833333333,
+              "60": 3.326395833333333
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.5629462137919873,
+              "1000": 0.8942897826145005,
+              "4000": 0.988255932965101,
+              "10000": 0.9980348880089575
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "correlation": 0.33305710314901343,
+        "mono_fold_energy": 0.11165112775445252,
+        "side_to_mid_db": -3.0068909727960524,
+        "mono_vs_mean_channel_db": -1.7620492158499332
+      },
+      "description": "Warm low resonances and strongly damped highs."
+    },
+    {
+      "parameters": {
+        "id": "shimmer-cloud",
+        "name": "Shimmer Cloud",
+        "duration": 7.0,
+        "decay": 6.3,
+        "attack": 0.09,
+        "cutoff": 7800.0,
+        "highpass": 200.0,
+        "seed": 1397247281,
+        "modes": 0.8,
+        "gain_db": 7.2,
+        "network_mix": 0.0,
+        "width": 1.0
+      },
+      "revision": 1,
+      "prototype": false,
+      "file": "ShimmerCloud.wav",
+      "rate": 48000,
+      "channels": 2,
+      "bits": 24,
+      "frames": 336000,
+      "seconds": 7.0,
+      "wav_sha256": "16d1ea58c5db5ae1bf110ceea30da6a88276092a40bb34f25745f72f7d9eee7f",
+      "pcm_sha256": "9e031374d5e23a945621c68d4c0d89a9995cda0bf18c1c27df718b0a1388f5a7",
+      "canonical_sample_sha256": "c700a91410c65299a584a7b9ade955ded8810ec64f2694b186ccee8de6951c06",
+      "measurements": {
+        "channels": [
+          {
+            "peak": 0.02847301959991455,
+            "rms": 0.002338778376506132,
+            "energy": 1.8378811229226528,
+            "dc": 1.508352302369617e-08,
+            "remaining_energy_crossing_seconds": {
+              "10": 1.1065833333333333,
+              "20": 2.1593958333333334,
+              "40": 4.2607083333333335,
+              "60": 6.254125
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.03532861069710648,
+              "1000": 0.25647753909985116,
+              "4000": 0.688374339697596,
+              "10000": 0.9035060826414623
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "peak": 0.026930689811706543,
+            "rms": 0.002337435418823755,
+            "energy": 1.835771057289719,
+            "dc": 8.218345187959217e-09,
+            "remaining_energy_crossing_seconds": {
+              "10": 1.1051041666666668,
+              "20": 2.1541041666666665,
+              "40": 4.258520833333334,
+              "60": 6.254416666666667
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.035353186698622405,
+              "1000": 0.2568234124896376,
+              "4000": 0.6884120063904021,
+              "10000": 0.9035090443070541
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "correlation": -0.09966699683580015,
+        "mono_fold_energy": 0.8268775900970766,
+        "side_to_mid_db": 0.8685800659308985,
+        "mono_vs_mean_channel_db": -3.466268175297001
+      },
+      "description": "Broad static resonant coloration; no dynamic pitch shifting."
+    },
+    {
+      "parameters": {
+        "id": "whisper",
+        "name": "Whisper",
+        "duration": 0.5,
+        "decay": 0.38,
+        "attack": 0.006,
+        "cutoff": 6500.0,
+        "highpass": 500.0,
+        "seed": 1464357681,
+        "modes": 0.0,
+        "gain_db": 3.7,
+        "network_mix": 0.0,
+        "width": 0.15
+      },
+      "revision": 1,
+      "prototype": false,
+      "file": "Whisper.wav",
+      "rate": 48000,
+      "channels": 2,
+      "bits": 24,
+      "frames": 24000,
+      "seconds": 0.5,
+      "wav_sha256": "59f013118f8daccb87b93c9b125c385d620f50e72e710bede6eedcd93d5387c7",
+      "pcm_sha256": "d48b53103c9a5505dff5c090f19576929a2ae0a68fcffdda74dc6dc3b1ebb0d7",
+      "canonical_sample_sha256": "ab75832422da6db16b9915a3f2e28e1fd193236f06105b9b3c6d877c27a4ab06",
+      "measurements": {
+        "channels": [
+          {
+            "peak": 0.05952572822570801,
+            "rms": 0.005833391040200972,
+            "energy": 0.8166828246695275,
+            "dc": 1.0307629903157552e-06,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.06820833333333333,
+              "20": 0.13245833333333334,
+              "40": 0.26014583333333335,
+              "60": 0.3855
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.01158126537532662,
+              "1000": 0.08696594556830234,
+              "4000": 0.371968847343214,
+              "10000": 0.6918378833654766
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "peak": 0.05926406383514404,
+            "rms": 0.005860450966350954,
+            "energy": 0.824277252696092,
+            "dc": 2.5732815265655515e-07,
+            "remaining_energy_crossing_seconds": {
+              "10": 0.06816666666666667,
+              "20": 0.13245833333333334,
+              "40": 0.25914583333333335,
+              "60": 0.3854375
+            },
+            "first_order_lowpass_energy_fraction": {
+              "250": 0.0109623669242513,
+              "1000": 0.08510345221156258,
+              "4000": 0.3734382346539825,
+              "10000": 0.6948151231112168
+            },
+            "endpoints": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "correlation": 0.9530378078082063,
+        "mono_fold_energy": 0.801210080937576,
+        "side_to_mid_db": -16.18865642665472,
+        "mono_vs_mean_channel_db": -0.10321614632196989
+      },
+      "description": "Short, narrow, airy transient anticipation."
+    }
+  ],
+  "listening_approved": "2026-11-02",
+  "release_revision": 1
+}

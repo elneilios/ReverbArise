@@ -2,6 +2,7 @@
 inline void liveProcessorCases()
 {
     TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();
+    REQUIRE(engine.setGainPolicy(m3::GainPolicy::legacy)); // Original live sample oracle.
     engine.setAutomaticProcessing(false);p->prepareToPlay(1000,1000);TestPlayHead head;p->setPlayHead(&head);
     head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/250.0);};
@@ -65,10 +66,11 @@ inline void liveProcessorCases()
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.renderCount>count && s.session.swells[1].phase==m3::Phase::ready;});
     buffer.setSize(2,16);position(490,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(std::abs(buffer.getSample(0,10)-41*.00025f)<1e-6f);
+    const auto identicalCount=engine.snapshot().renderCount;
     REQUIRE(engine.selectTargets({second},second));engine.loadIR(file,true);position(490,true);buffer.clear();p->processBlock(buffer,midi);
-    REQUIRE(buffer.getSample(0,15)==0);
-    waitM3([&]{return engine.savedSession().swells[1].phase==m3::Phase::stale;});engine.generate();
+    REQUIRE(std::abs(buffer.getSample(0,15)-46*.00025f)<1e-6f); // Retain the accepted contribution.
     waitM3([&]{return engine.snapshot().liveReady && engine.savedSession().swells[1].phase==m3::Phase::ready;});
+    REQUIRE(engine.snapshot().renderCount==identicalCount);
     // Coalesce rapid edits; cancelled generations cannot return an older placement.
     for(int64_t offset=1;offset<=40;++offset)REQUIRE(engine.edit(second,[&](auto& w,auto& error){return m3::moveWet(w,offset,error);}));
     waitM3([&]{return engine.snapshot().liveReady;});position(490,true);buffer.clear();p->processBlock(buffer,midi);

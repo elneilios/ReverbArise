@@ -11,6 +11,7 @@ template<class F> static void waitM3(F condition,const std::source_location loca
 inline void m3ProcessorCases()
 {
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy)); // Retain the pre-upgrade numerical oracle.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0);
     processor->swellEngine().setAutomaticProcessing(false);
     processor->prepareToPlay(1000,1000);TestPlayHead head;
@@ -41,7 +42,9 @@ inline void m3ProcessorCases()
         for(const auto& w:records.swells) {if(w.ir.present())REQUIRE(store.verify(w.ir,parseError));if(w.render.present())REQUIRE(store.verify(w.render,parseError));}
     };
     engine.generate();verifyInFlightSave();waitM3([&]{return engine.snapshot().auditionReady;});
-    engine.loadIR(original);verifyInFlightSave();waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::stale;});
+    const auto beforeIdentical=engine.snapshot().renderCount;
+    engine.loadIR(original);verifyInFlightSave();waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready;});
+    REQUIRE(engine.snapshot().renderCount==beforeIdentical); // Same verified PCM needs no convolution.
     engine.generate(true);waitM3([&]{return engine.snapshot().auditionReady;});
     REQUIRE(processor->armRecapture(7000,7100));verifyInFlightSave();processor->cancelRecapture();
     // Live preferences persist independently from the selected edit and audition trim.
@@ -59,7 +62,7 @@ inline void m3ProcessorCases()
     auto bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("stateVersion",9);rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("manifestReference","../outside.json");rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);auto child=bad->getChildByName("SwellSession");auto json=child->getAllSubText();
-    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 7","\"version\": 9"));rejected(*bad);
+    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 8","\"version\": 9"));rejected(*bad);
     // Audition is audible in output but admission captures only the original dry silence.
     REQUIRE(engine.audition());REQUIRE(processor->armRecapture(3000,3200));buffer.setSize(2,500);buffer.clear();position(2900);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}

@@ -1,5 +1,10 @@
 # Song transport playback
 
+Current gain staging uses version-8 session metadata: new plugin instances use
+source energy +6 dB and old projects retain Legacy until explicit adoption.
+See [Musical gain staging](../musical-gain-staging.md). Version-7 details below
+describe the original transport implementation.
+
 Song-synchronized playback is implemented. Automated tests exercise the live mixer; acceptance of the current UI build is tracked separately in [current checks](../design/ui-diagnostics-and-acceptance.md).
 
 New and migrated instances store independent live settings: playback enabled, Dry + Wet routing, and 0 dB user wet level. Live level accepts -60 through 0 dB. Manual Audition trim, blend, isolation and listening tail remain separate. Session JSON and plugin state are version 7; v1-v6 input remains supported and preserves its existing edits and monitoring values.

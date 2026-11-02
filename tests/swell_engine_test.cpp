@@ -145,10 +145,42 @@ int main() { return runTest([]
         REQUIRE(!edits.assignIR(a,find(restored,a)->inputGeneration,custom,false,oldEpoch));
         waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::ready;});
         auto request=*find(edits.savedSession(),a);
-        REQUIRE(edits.assignIR(a,request.inputGeneration,{},true));
+        REQUIRE(edits.assignBundledIR(a,request.inputGeneration,"preverb-hall",edits.assignmentEpoch()));
         waitFor([&]{return find(edits.savedSession(),a)->irName=="Preverb Hall";});
         REQUIRE(edits.savedSession().defaultIR==future && find(edits.savedSession(),a)->ir!=future);
         edits.generate(true);waitFor([&]{const auto state=edits.savedSession();return state.swells[0].phase==Phase::ready && state.swells[1].phase==Phase::ready;});
+        const auto calibrationTarget=b;
+        REQUIRE(edits.assignIR(b,find(edits.savedSession(),b)->inputGeneration,custom));
+        waitFor([&]{return find(edits.savedSession(),b)->irName=="own.wav";});edits.generate(true);
+        waitFor([&]{return find(edits.savedSession(),b)->phase==Phase::ready;});
+        const auto rendersBeforeAdoption=edits.snapshot().renderCount;
+        REQUIRE(edits.setGainPolicy(GainPolicy::musical));
+        waitFor([&]{const auto state=edits.savedSession();const auto* w=find(state,calibrationTarget);return w && w->phase!=Phase::checking && w->phase!=Phase::rendering;});
+        const auto afterAdoption=edits.savedSession();const auto* calibrated=find(afterAdoption,calibrationTarget);
+        if(calibrated->calibration.state==CalibrationState::unavailable)throw std::runtime_error(calibrated->status.toStdString());
+        const auto adopted=*calibrated;REQUIRE(edits.snapshot().renderCount==rendersBeforeAdoption);
+        REQUIRE(edits.addTarget(550));
+        waitFor([&]{const auto state=edits.savedSession();const auto* w=find(state,b);return w->phase==Phase::ready && w->calibration.referenceEnd==550;});
+        REQUIRE(edits.snapshot().renderCount==rendersBeforeAdoption);edits.removeSelected();REQUIRE(edits.selectTargets({b},b));
+        waitFor([&]{const auto state=edits.savedSession();const auto* w=find(state,b);return w->phase==Phase::ready && w->calibration.referenceEnd==adopted.calibration.referenceEnd;});
+        REQUIRE(find(edits.savedSession(),b)->calibration==adopted.calibration);
+        REQUIRE(edits.edit(calibrationTarget,[](auto& w,auto&){w.shape.gainDb=-3;w.shape.inTension=.5;w.placement=7;return true;}));
+        if(const auto actual=find(edits.savedSession(),calibrationTarget)->calibration;actual!=adopted.calibration)
+            throw std::runtime_error(("Calibration changed: "+juce::String(actual.baselineDb)+"/"+actual.renderIdentity+" vs "+juce::String(adopted.calibration.baselineDb)+"/"+adopted.calibration.renderIdentity).toStdString());
+        REQUIRE(edits.resetSwell(calibrationTarget,false));waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
+        if(const auto actual=find(edits.savedSession(),calibrationTarget)->calibration;actual!=adopted.calibration)
+            throw std::runtime_error(("Reset calibration changed: "+juce::String(actual.baselineDb)+"/"+actual.renderIdentity+" vs "+juce::String(adopted.calibration.baselineDb)+"/"+adopted.calibration.renderIdentity).toStdString());
+        edits.setLivePlayback(true,LiveRouting::dryWet,4);REQUIRE(!edits.setGainPolicy(GainPolicy::legacy));
+        REQUIRE(edits.savedSession().gainPolicy==GainPolicy::musical && edits.savedSession().liveWetDb==4);
+        edits.setLivePlayback(true,LiveRouting::dryWet,0);REQUIRE(edits.setGainPolicy(GainPolicy::legacy));
+        REQUIRE(edits.setGainPolicy(GainPolicy::musical));waitFor([&]{const auto state=edits.savedSession();return std::all_of(state.swells.begin(),state.swells.end(),[](const auto& w){return w.phase!=Phase::checking && w.phase!=Phase::rendering;});});
+        REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
+        REQUIRE(edits.setFrozen(calibrationTarget,true));const auto energySaved=edits.savedSession();
+        juce::String energyJson,energyError;Session energyDecoded;
+        REQUIRE(encode(energySaved,energyJson,energyError) && decode(energyJson,energyDecoded,energyError));
+        edits.restore(energyDecoded);waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
+        REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
+        REQUIRE(edits.setFrozen(calibrationTarget,false));waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
         REQUIRE(edits.setFrozen(a,true));request=*find(edits.savedSession(),a);
         REQUIRE(!edits.assignIR(a,request.inputGeneration,custom) && find(edits.savedSession(),a)->ir==request.ir);
         REQUIRE(edits.edit(a,[](auto& w,auto&){w.shape.gainDb=-8;w.shape.fadeIn=5;w.placement=10;w.enabled=false;w.solo=true;w.name="Keep name";return true;}));
@@ -167,6 +199,8 @@ int main() { return runTest([]
         const auto prior=*find(edits.savedSession(),a);REQUIRE(edits.resetSwell(a,true));
         waitFor([&]{return edits.snapshot().message.startsWith("Reset all:");});
         request=*find(edits.savedSession(),a);REQUIRE(request.shape==prior.shape && request.ir==prior.ir && !request.enabled && request.inputGeneration==prior.inputGeneration);
+        REQUIRE(!edits.assignBundledIR(a,request.inputGeneration,"unknown",edits.assignmentEpoch()));
+        REQUIRE(find(edits.savedSession(),a)->inputGeneration==request.inputGeneration);
         REQUIRE(edits.assignIR(a,request.inputGeneration,custom));edits.removeSelected(); // b was selected; assignment remains pinned to a.
         waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wav";});
         REQUIRE(edits.selectTargets({a},a));request=*find(edits.savedSession(),a);

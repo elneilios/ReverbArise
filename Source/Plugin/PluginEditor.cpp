@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include <UI/MusicalPosition.h>
+#include <DSP/DefaultImpulse.h>
 
 namespace
 {
@@ -104,7 +105,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneEndSlider.onValueChange=[this]{if(!updating)processor.setToneEndBar(static_cast<int>(toneEndSlider.getValue()));};
     for(auto* label:{&headerStatus,&selectedStatus,&irStatus,&monitorStatus,&helper})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
-    headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");
+    headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");irStatus.setName("irAssignmentStatus");
     headerStatus.setBorderSize(juce::BorderSize<int>(0,24,0,8));
     helper.setText("Live playback: awaiting prepared Song audio",juce::dontSendNotification);
     liveButton.setName("livePlayback");liveRoutingBox.setName("liveRouting");liveLevel.setName("liveWetLevel");
@@ -112,6 +113,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     liveLevelLabel.setText("Live wet",juce::dontSendNotification);
     liveLevel.setRange(-60,0,.1);liveLevel.setTextValueSuffix(" dB");liveLevel.setSliderStyle(juce::Slider::LinearHorizontal);
     liveLevel.setTextBoxStyle(juce::Slider::TextBoxRight,false,75,24);
+    gainPolicyLabel.setText("Gain staging",juce::dontSendNotification);gainPolicyBox.setName("gainPolicy");
+    gainPolicyBox.addItem("Legacy (original projects)",1);gainPolicyBox.addItem("Musical (source energy +6 dB)",2);
+    gainPolicyBox.addItem("Saved musical prototype",3);gainPolicyBox.setItemEnabled(3,false);
+    gainPolicyBox.onChange=[this]{if(!updating && gainPolicyBox.getSelectedId()!=3){processor.swellEngine().setGainPolicy(gainPolicyBox.getSelectedId()==2?m3::GainPolicy::musical:m3::GainPolicy::legacy);refresh();}};
     addAndMakeVisible(liveButton);addAndMakeVisible(liveRoutingBox);addAndMakeVisible(liveLevel);addAndMakeVisible(liveLevelLabel);
     const auto updateLive=[this]{if(!updating)processor.swellEngine().setLivePlayback(liveButton.getToggleState(),
         liveRoutingBox.getSelectedId()==2?m3::LiveRouting::wetOnly:m3::LiveRouting::dryWet,static_cast<float>(liveLevel.getValue()));};
@@ -205,12 +210,14 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
     }
     irBox.setName("selectedIR");inspectorContent.addAndMakeVisible(irBox);
-    irBox.setTooltip("This swell's IR. Preverb Hall is bundled; Load file assigns WAV or WavPack to this swell only.");
+    irBox.setTooltip("Choose a bundled response, or load WAV/WavPack for this swell only. Monumental is deliberately intense; Shimmer is static coloration.");
     irBox.setScrollWheelEnabled(false);
     irBox.beforeInvocation=[this]{const auto session=processor.swellEngine().savedSession();if(const auto w=m3::find(session,session.primary))irInvocation=IRInvocation{w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch()};else irInvocation.reset();};
-    irBox.onChange=[this]{if(updating)return;const auto invocation=std::exchange(irInvocation,std::nullopt);if(irBox.getSelectedId()!=1)return;
-        if(invocation)processor.swellEngine().assignIR(invocation->id,invocation->input,{},true,invocation->epoch);
-        else if(const auto w=m3::find(state.session,irOwner))processor.swellEngine().assignIR(w->id,w->inputGeneration,{},true,processor.swellEngine().assignmentEpoch());};
+    irBox.onChange=[this]{if(updating)return;const auto invocation=std::exchange(irInvocation,std::nullopt);
+        const auto index=irBox.getSelectedId()-1;const auto choices=m3::bundledImpulses();if(index<0 || static_cast<size_t>(index)>=choices.size())return;
+        const auto preset=choices[static_cast<size_t>(index)].id;
+        if(invocation)processor.swellEngine().assignBundledIR(invocation->id,invocation->input,preset,invocation->epoch);
+        else if(const auto w=m3::find(state.session,irOwner))processor.swellEngine().assignBundledIR(w->id,w->inputGeneration,preset,processor.swellEngine().assignmentEpoch());};
     loadIRButton.setButtonText({});loadIRButton.setTooltip("Load a mono/stereo WAV or WavPack IR file for this swell");
     resetButton.setButtonText("Reset");resetButton.setName("resetWetShape");
     resetButton.setTooltip("Reset only the wet shape: start/end, fades, curves, level and placement return to defaults. Source points, IR and activity stay unchanged.");
@@ -297,7 +304,13 @@ void PreverbAudioProcessorEditor::shapeReset(bool full)
     if(!full){processor.swellEngine().resetSwell(state.session.primary,false);refresh();return;}
     const auto raw=state.raw;
     processor.swellEngine().edit(state.session.primary,[&](auto& w,auto& error)
-    {if(full){if(!raw)return false;return m3::fullShape(w,raw->start,raw->end,error);}m3::resetShape(w);return true;});refresh();
+    {if(full){
+        if(w.ir.present() && w.ir.content!=w.render.irContent){
+            const auto length=std::round(w.ir.frames*state.session.timing.rate/w.ir.rate);int64_t start;
+            if(!state.session.timing.valid || !std::isfinite(length) || length<1 || length>=static_cast<double>(INT64_MAX)
+                || !m3::checkedSubtract(w.sourceStart,static_cast<int64_t>(length)-1,start)){error="Full response needs valid requested IR timing";return false;}
+            return m3::fullShape(w,start,m3::renderInputEnd(w),error);}
+        if(!raw)return false;return m3::fullShape(w,raw->start,raw->end,error);}m3::resetShape(w);return true;});refresh();
 }
 void PreverbAudioProcessorEditor::armSelected()
 {
@@ -355,7 +368,7 @@ void PreverbAudioProcessorEditor::resized()
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);
     status.setBounds(diagnostic.removeFromTop(72));captureDiagnostic.setBounds(diagnostic.removeFromTop(72));detail.setBounds(diagnostic.removeFromTop(140));
-    playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(45));
+    playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
     row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
     for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
     row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
@@ -372,6 +385,8 @@ void PreverbAudioProcessorEditor::refresh()
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
     liveRoutingBox.setSelectedId(state.session.liveRouting==m3::LiveRouting::wetOnly?2:1,juce::dontSendNotification);
+    gainPolicyBox.setSelectedId(state.session.gainPolicy==m3::GainPolicy::musical?(state.session.gainRevision==m3::approvedGainRevision?2:3):1,juce::dontSendNotification);
+    liveLevel.setRange(-60,state.session.gainPolicy==m3::GainPolicy::musical?12:0,.1);
     if(!liveLevel.isMouseButtonDown() && !liveLevel.hasKeyboardFocus(true))liveLevel.setValue(state.session.liveWetDb,juce::dontSendNotification);
     const auto liveText=(state.liveStatus.startsWith("Export incomplete") || state.liveStatus.startsWith("Export warning"))?state.liveStatus:
         !state.session.liveEnabled?juce::String("Live off | dry passthrough"):
@@ -379,6 +394,10 @@ void PreverbAudioProcessorEditor::refresh()
         state.liveMissing?juce::String("Live: missing prepared coverage | ")+state.liveStatus:
         (diagnostics.isPlaying?juce::String("Live Song | "):juce::String("Stopped | "))+state.liveStatus+" | guard "+juce::String(state.liveAttenuationDb,1)+" dB";
     helper.setText(liveText,juce::dontSendNotification);helper.setTooltip(liveText);
+    const auto musical=state.session.gainPolicy==m3::GainPolicy::musical;
+    const auto protection=musical && state.liveReady && state.liveAttenuationDb<-.01f?juce::String(" | ceiling-constrained"):juce::String{};
+    helper.setText(liveText+protection,juce::dontSendNotification);
+    helper.setTooltip(liveText+protection+(musical?" | Musical source-relative calibration; wet ceiling -1 dBFS":" | Legacy wet ceiling -6 dBFS"));
     songOverview.repaint();
     const auto w=m3::find(state.session,state.session.primary);
     juce::String timingText="Target: --    |    Pre-roll: --    |    Length: --";
@@ -419,14 +438,23 @@ void PreverbAudioProcessorEditor::refresh()
     monitorStatus.setText(monitoring,juce::dontSendNotification);monitorStatus.setTooltip(monitoring+". Live playback routing and gain are independent.");
     selectedStatus.setText(w?phaseName(w->phase)+" | "+w->name:"Select a swell",juce::dontSendNotification);
     selectedStatus.setTooltip(w?w->status:state.message);
+    if(w && musical){const auto& g=w->calibration;const auto calibrationText=g.state==m3::CalibrationState::unavailable?
+            juce::String("Calibration unavailable"):"Calibration "+juce::String(g.baselineDb,1)+" dB"+(g.state==m3::CalibrationState::capped?" (capped)":"");
+        selectedStatus.setTooltip(w->status+"\n"+calibrationText+" | Requested Level "+juce::String(w->shape.gainDb,1)+" dB");
+        if(w->phase==m3::Phase::ready && (g.state==m3::CalibrationState::unavailable || g.state==m3::CalibrationState::capped))
+            selectedStatus.setText(phaseName(w->phase)+" | "+(g.state==m3::CalibrationState::unavailable?"Calibration unavailable":"Calibration capped"),juce::dontSendNotification);}
     irStatus.setText("Impulse Response (IR)",juce::dontSendNotification);
+    if(state.retainedIRName.isNotEmpty()){
+        const auto text=(state.liveActive?juce::String("Playing "):juce::String("Retained "))+state.retainedIRName+" | Requested "+state.requestedIRName;
+        irStatus.setText(text,juce::dontSendNotification);irStatus.setTooltip(text+" | "+(w?w->status:state.message));}
     const auto choice=w?w->ir.content+"|"+w->irName:juce::String{};
     if(irOwner!=(w?w->id:juce::String{}) || irChoice!=choice)
     {
-        irBox.hidePopup();irOwner=w?w->id:juce::String{};irChoice=choice;irBox.clear(juce::dontSendNotification);irBox.addItem("Preverb Hall",1);
-        if(w && w->ir.present() && w->irName!="Preverb Hall"){irBox.addItem(w->irName,2);irBox.setSelectedId(2,juce::dontSendNotification);}
-        else if(w && w->ir.present())irBox.setSelectedId(1,juce::dontSendNotification);
-        else irBox.setTextWhenNothingSelected("Choose an IR");
+        irBox.hidePopup();irOwner=w?w->id:juce::String{};irChoice=choice;irBox.clear(juce::dontSendNotification);int selected=0,index=0;
+        for(const auto& entry:m3::bundledImpulses()){irBox.addItem(entry.name,++index);
+            if(w && w->ir.present() && w->ir.content==entry.decodedHash && w->irName==entry.name){selected=index;irBox.setTooltip(entry.description);}}
+        if(w && w->ir.present() && !selected){selected=1000;irBox.addItem(w->irName,selected);irBox.setTooltip("Saved immutable response; catalogue/file assignment changes only this swell, preserving old saved content and labels.");}
+        if(selected)irBox.setSelectedId(selected,juce::dontSendNotification);else irBox.setTextWhenNothingSelected("Choose an IR");
     }
     irBox.setEnabled(w && !w->frozen);loadIRButton.setEnabled(w && !w->frozen);
     resetButton.setEnabled(w && time.valid && capture.manifest.sampleRate==time.rate);resetMenu.setEnabled(w && time.valid);
@@ -447,6 +475,7 @@ void PreverbAudioProcessorEditor::refresh()
     if(!state.session.liveEnabled)aggregate<<" | Live off";
     else if(state.session.liveRouting==m3::LiveRouting::wetOnly)aggregate<<" | Live Wet Only";
     if(state.session.liveWetDb!=0)aggregate<<" | Live wet "<<juce::String(state.session.liveWetDb,1)<<" dB";
+    if(musical && state.liveReady && state.liveAttenuationDb<-.01f)aggregate<<" | Wet protection "<<juce::String(state.liveAttenuationDb,1)<<" dB";
     if(state.actionError.isNotEmpty() && !state.liveStatus.startsWith("Export"))aggregate=state.actionError;
     headerStatus.setText(aggregate,juce::dontSendNotification);headerStatus.setTooltip(aggregate+"\n"+((state.liveStatus.startsWith("Export incomplete") || state.liveStatus.startsWith("Export warning"))?state.liveStatus:state.message));
     candidateBox.clear(juce::dontSendNotification);int selectedCandidate=0;const auto viewport=timeline.viewport();
@@ -485,13 +514,20 @@ void PreverbAudioProcessorEditor::refresh()
     juce::String captured="Capture / assets\n";captured<<capture.status<<" | revision "<<juce::String(static_cast<juce::int64>(capture.manifest.revision))<<" | dropped "<<juce::String(static_cast<juce::int64>(processor.getDroppedCaptureBlockCount()))<<" | discontinuities "<<juce::String(static_cast<juce::int64>(processor.getTimelineDiscontinuityCount()));
     captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
-    policyDiagnostic.setText("Processing\nMarker "+juce::String(state.session.sensitivity*100,1)+"% | Regeneration "+juce::String(state.session.regenerationSensitivity*100,1)+"% | Tone peak "+juce::String(processor.getGeneratedTonePeak(),4),juce::dontSendNotification);
+    policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
+        +"\nLive requested "+juce::String(state.session.liveWetDb,1)+" dB | protection "+(state.liveReady?juce::String(state.liveAttenuationDb,1)+" dB":"pending preparation")+protection
+        +"\nMarker "+juce::String(state.session.sensitivity*100,1)+"% | Regeneration "+juce::String(state.session.regenerationSensitivity*100,1)+"%",juce::dontSendNotification);
     juce::String text="Selection / render\n"+state.message;
     if(w)
     {
         text="Selection / render\n"+w->name+": "+(w->phase==m3::Phase::ready && !state.shaped?juce::String("Loading / preparing edited preview"):w->status);
         if(w->phase==m3::Phase::rendering)text<<" ("<<juce::String(w->progress*100,0)<<"%)";
         text<<"\nIR: "<<(w->ir.present()?w->irName:juce::String("not assigned"))<<" | source ["<<juce::String(w->sourceStart)<<", "<<juce::String(w->sourceEnd)<<")";
+        if(musical){const auto& g=w->calibration;text<<"\nRequested Level "<<juce::String(w->shape.gainDb,1)<<" dB | Calibration ";
+            if(g.state==m3::CalibrationState::unavailable)text<<"unavailable (no automatic boost)";
+            else text<<juce::String(g.baselineDb,2)<<" dB"<<(g.state==m3::CalibrationState::capped?" (capped)":"");
+            if(m3::isEnergyRevision(g.revision))text<<" | RMS dry "<<peakText(g.dryRms)<<" / wet "<<peakText(g.wetRms)
+                <<" | window/hop "<<juce::String(g.windowFrames)<<"/"<<juce::String(g.hopFrames)<<" frames";}
         if(state.raw)text<<" | full wet ["<<juce::String(state.raw->start)<<", "<<juce::String(state.raw->end)<<") | "<<juce::String(w->render.frames)<<" frames";
         if(state.raw && state.shaped)text<<"\nRaw peak "<<peakText(state.raw->peak)<<" | shaped "<<peakText(state.shaped->peak)<<" | audition "<<peakText(state.monitorPeak)<<" (aggregate wet guard "<<juce::String(state.attenuationDb,1)<<" dB; sum guard "<<juce::String(state.blendAttenuationDb,1)<<" dB)";
     }
