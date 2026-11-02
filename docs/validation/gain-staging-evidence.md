@@ -208,7 +208,7 @@ Release VST3 bundle:
 The binary inside `Contents/x86_64-win/Preverb Spike.vst3` has SHA-256
 `b38fcf2c786638ca88ee618c1a1900361b307e0643473a068963171756a8d24a`.
 Strict OpenSpec validation and final diff checks pass. FL Studio acceptance
-(task 6.2) is the remaining gate; follow `docs/musical-gain-staging.md` and
+(task 6.2) is the remaining gate; follow `docs/development/musical-gain-staging.md` and
 record host, rate, buffer, routing/trim, Level travel, loops/seeks, two-instance
 WAV export and save/reopen results. No host acceptance is inferred from tests.
 

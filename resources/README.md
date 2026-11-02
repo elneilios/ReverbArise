@@ -24,5 +24,5 @@ CC0-1.0, documented in `irs/LICENSE.md`. Shimmer Cloud is static coloration, not
 dynamic pitch shifting. Original Hall remains untouched and remains the default.
 
 Reproduce with `scripts/generate_ir_library.py`, then verify using
-`scripts/package_ir_library.py --check`; see `docs/ir-library.md` for commands,
+`scripts/package_ir_library.py --check`; see `docs/development/ir-library.md` for commands,
 gain/compatibility policy and native/host verification.
