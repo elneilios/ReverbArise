@@ -32,7 +32,7 @@ Diagnostics when ready to discover new targets. No restoration starts audition.
 ## Default IR and ownership
 
 Preverb Hall is an original deterministic 1.8-second stereo generated IR embedded
-in the binary. [Resource provenance](../resources/README.md) lists its generator,
+in the binary. [Resource provenance](../../resources/README.md) lists its generator,
 seed and checksums. Resource checksum/format validation precedes managed import.
 Each new swell owns its immutable managed IR reference; changing one assignment
 does not affect neighbors. Changing the future default affects only new swells.
@@ -180,7 +180,7 @@ to retain offscreen editor PNGs. Host acceptance follows the separate
 user UI signoff or deferred transport scheduling result is inferred from CTest.
 
 Implementation and acceptance are tracked in
-[the change checklist](../openspec/changes/automatic-lean-swell-workspace/tasks.md).
+[the archived change checklist](../../openspec/changes/archive/2026-11-01-automatic-lean-swell-workspace/tasks.md).
 Completed checkboxes require their listed verification; FL Studio checks remain
 separate from headless tests. M3 acceptance remains open until explicitly recorded.
 
