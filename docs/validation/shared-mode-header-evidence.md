@@ -92,3 +92,11 @@ Learn and Export full-editor captures, a larger layout, header-state strips and
 in-host DPI or FL Studio acceptance. **Integrated checkpoint B remains pending.**
 The final owner host request is limited to one brief feel/mode-journey/save-reopen
 smoke test after visual approval; other edge cases rely on automated regressions.
+
+Committed native header examples at the minimum content width:
+
+![Learn header](images/shared-header-learn.png)
+
+![Perform header](images/shared-header-perform.png)
+
+![Export header](images/shared-header-export.png)
