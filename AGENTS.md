@@ -17,6 +17,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - Protect captured source, render revisions, persistent identities, cache assets, and saved DAW projects. Do not silently rename or discard durable state.
 - Follow approved issue mockups and existing design conventions. Do not introduce speculative controls or expose unimplemented DSP.
 - For UI work, follow [UI development standards](docs/development/ui-development-standards.md): reuse shared controls, consolidate affected interaction setup during planned refactors, and include component/binding tests. Ask the owner to approve each new/revised library control family's look and interaction feel before wider rollout. Shared styling alone is not a shared control library; do not require a separate whole-plugin migration before feature work.
+- Minimize owner UAT: prove behavior with automated component, integration, audio and persistence tests wherever practical. Use lightweight native previews for early control feedback and consolidate FL Studio testing into one brief final smoke test. Do not ask the owner to repeat passing automated edge cases or prior acceptance; request extra host checks only for failures or concrete unresolved host behavior. Record untested host/DPI coverage honestly.
 - Stay within the assigned issue. Flag necessary adjacent work rather than implementing it unrequested.
 - Update living technical guidance for implemented changes; preserve dated validation evidence.
 

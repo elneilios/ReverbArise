@@ -70,6 +70,17 @@ inventory, reuse/migration tasks and acceptance gates.
 
 ## Verification and review
 
+Automated verification is the default and primary evidence. Keep owner testing
+small: use lightweight native previews for component feedback as work progresses,
+then consolidate FL Studio UAT into one brief final smoke test. Do not require
+opening the DAW for each component checkpoint. The final smoke test should target
+host-specific feel/integration and a representative user journey; automate the
+detailed state, audio, persistence and failure cases wherever practical. Do not
+repeat passing automated edge cases or previous owner acceptance without a
+specific reason. Ask for additional host checks only after a failure or when
+concrete host behavior remains unresolved. Record untested host/DPI coverage
+explicitly rather than expanding the checklist by default or inventing a pass.
+
 - Add focused tests at the shared component boundary using actual wheel, drag,
   keyboard, text-entry and focus events where practical. Exercise limits,
   invalid/disabled states, cancellation and refresh; avoid tests that only call a
