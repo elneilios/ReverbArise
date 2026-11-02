@@ -1,5 +1,12 @@
 # ReverbArise
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/logo/png/wordmark/reverbarise-wordmark-dark-1024px.png">
+    <img src="resources/logo/png/wordmark/reverbarise-wordmark-light-1024px.png" alt="ReverbArise" width="480">
+  </picture>
+</p>
+
 A Windows VST3 reverse-reverb plugin built with C++20 and JUCE. The current development build retains the legacy **Preverb Spike** name and compatibility identifiers.
 
 The plugin captures source audio on the song timeline, detects arrivals and
@@ -30,11 +37,11 @@ See [development setup](docs/development/development.md) for full requirements a
 
 ## Project references
 
-- [Product vision](docs/ReverbArise_Product_Vision_and_Design_Specification.md)
-- [UI handoff](docs/Preverb_Lean_Functional_UI_Handoff_v1.2.md)
+- [Product vision](docs/product-vision.md)
+- [UI design guide](docs/design/ReverbArise_UI_Layout_and_Style_Guide.md)
 - [Automatic swell workspace](docs/development/automatic-swell-workspace.md)
-- [Transport playback](docs/transport-swell-playback.md)
-- [FL Studio transport validation](docs/fl-studio-transport-playback-validation.md)
+- [Transport playback](docs/development/transport-swell-playback.md)
+- [FL Studio transport validation](docs/validation/fl-studio-transport-playback-validation.md)
 - [OpenSpec requirements](openspec/specs/) and [change history](openspec/changes/)
 
 Source lives in `Source/`, automated checks in `tests/`, and the original
