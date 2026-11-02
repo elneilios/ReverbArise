@@ -2,11 +2,11 @@
 
 `Source/UI/WorkspaceTheme.h` centralizes the approved baseline palette and flat
 native LookAndFeel. `WorkspaceLayout.h` calculates eight regions in six bands
-from editor size only; changing selection/readiness or opening the interim
-Settings overlay does not change their positions.
+from editor size only; changing selection/readiness or opening the separate
+Settings/Diagnostics windows does not change their positions.
 
 The numerical palette remains a proposed baseline adopted for this change:
-background #0F1418, aqua #00EFFF/#00C2CC, timing #FFC700, text #F5F7F9/#C7CDD4,
+background #0F1418, aqua #00EFFF/#00C2CC, timing #FFC700, text #F8FAFC/#E1E6EC,
 rules #4A5058 and control outlines #6B737C. The first stage replaces the large
 boxed header/list/editor/inspector surfaces with rules. Control/selection outlines
 are allowed; only the Overview waveform viewport has a major rounded outline.
@@ -22,8 +22,9 @@ verified on this backend. The Inter OFL notice is copied into the VST3 bundle's
 Contents/Resources alongside the existing WavPack notice. Native visual inspection raised main headings/tagline to 21 logical pixels and the empty headline to 24 for clearer hierarchy; these are proposed checkpoint metrics, not immutable raster measurements. No font downloader or
 logo-export build dependency is introduced.
 
-The first-stage logical default is 1400x1000, minimum 1100x850 and maximum
-2000x1400. Margins are 20 (16 below 1200 width); header/global/audition/overview/
+The current logical opening default and minimum are both 1100x850, with maximum
+2000x1400. The former 1400x1000 opening size remains a supported reference size.
+The smaller default and brighter off-white text were explicitly requested by the user on 2026-11-02. Margins are 20 (16 below 1200 width); header/global/audition/overview/
 information bands are 70/66/82/142/44 pixels. Workspace gets the remaining height.
 The left list is 210 (180 at minimum width); inspector is 340 (320 at minimum).
 Twenty-pixel column separation preserves the large central waveform editor.
@@ -74,19 +75,70 @@ failed/superseded transactions do not partially unfreeze or change the swell.
 A failed Reset all remains visible in the header until the next edit/reset/IR
 action. Full response remains a separate Settings action rather than a reset.
 
-New manual and automatic names use the one-based Playlist arrival bar, e.g.
-Swell 18 for 34 seconds at 120 BPM/4/4. Same-bar names may repeat; UUIDs remain
-independent. Existing/custom/saved names survive reanalysis, placement and reset.
-Timing-unavailable naming falls back to Swell rather than a fictitious bar.
+New manual and automatic names use the one-based Playlist bar-and-beat arrival,
+e.g. Swell Bar 18.1 for 34 seconds at 120 BPM/4/4. A fractional beat is included
+when needed, e.g. Swell Bar 18.1.25 at 34.125 seconds. Repeated identical labels
+receive (2), (3), etc. so new names remain unique within the session. UUIDs stay
+independent. Existing/custom/saved names survive reanalysis, placement and reset;
+existing names are not migrated. Timing-unavailable naming falls back to Swell
+rather than inventing a position. The same formatter supplies inspector positions.
 Marker sensitivity changes event selectivity; Regeneration sensitivity tolerates
 performance variation; each is independent and saved. Initial mapping still
 needs a first pass; already prepared wet audio is heard on subsequent playback.
 
-This checkpoint is intermediate: existing recovery/settings controls remain
-available from the gear in a temporary overlay which never moves the bands.
-Legacy exact-bound and curve-preset tools remain there until the dedicated
-Settings/diagnostics cleanup. That window and final audition/overview polish
-remain unchecked tasks. Do not treat the temporary overlay as the final UI.
+The gear opens a separate, editor-owned Settings window with Playback,
+Processing, Swell, Audition and Recovery tabs. Settings uses labelled form rows;
+no controls are painted or allocated over the main workspace. The two global
+sensitivities and the selected source/shape/Freeze/Solo controls stay in place.
+Playback holds live enable/routing/wet level; Processing holds capture/master
+policy, minimum separation and future-default IR; Swell holds mute, independent
+curve presets, exact-unit choice, bar-range convenience and Full response;
+Audition holds isolation, listening tail and monitoring trim; Recovery holds
+explicit generate/suggest/confirm/recapture/Clear/suppression/test-tone actions.
+Live-off/nondefault live routing/level and critical warnings remain in the main
+status with full tooltip text. A reset error cannot hide an export warning.
 
-See [evidence and approvals](ui-alignment-evidence.md). Explicit checkpoint B
-approval is required before proceeding to the final UI stage.
+Recovery > Open diagnostics opens a second editor-owned window. Copyable absolute-bound observations remain there as read-only diagnostics.
+All source/shape/placement edits use the identity-pinned inspector controls;
+there is no second writable developer editing surface. Diagnostic text formats
+only while that window is open, at most five times per second, and refreshes
+immediately on reopen. Both windows hide on Close and are destroyed before the
+editor's LookAndFeel. Opening/closing them performs no engine action.
+
+The row three-dot/right-click menu is positioned at the event's screen point,
+with the row component retained as its scale/lifetime target. The whole list's
+rectangle is never used as its popup anchor, including after list scrolling.
+Rename/Delete continue to address the captured stable swell UUID.
+
+Final audition/overview/diagnostic consolidation and Release/physical-host
+acceptance remain tracked separately. Native software screenshots alone do not
+prove FL Studio popup scaling or physical Windows DPI behaviour.
+
+See [evidence and approvals](ui-alignment-evidence.md). Checkpoint B, Settings for this iteration, the compact opening size and brighter
+text have recorded user approvals. The final integrated checkpoint C remains
+separate from automated evidence and physical FL Studio/DPI acceptance.
+
+
+The Overview now draws cached real wet peaks weighted by each swell's current
+envelope, gain and placement; it no longer draws generic quadratic swell icons.
+Those summaries are scaled for visibility and do not change audio levels. A
+waiting result without cached wet data is a position marker, not a fake waveform.
+The map spans actual capture/render/requested extents, including negative wet
+lead-in, rather than imposing an arbitrary eight-second tail on captured audio.
+Its shared content/highlight rectangles drive both paint and navigation. Only
+editor navigation changes; DAW position is never sought. Captured silence,
+unmapped gaps and unavailable sections stay distinct. A retained source-detail
+cache is clipped to currently available audio ranges, so stale data cannot paint
+over a current gap or missing asset.
+
+A negative wet endpoint creates a gap before the unchanged dry target; positive
+end offset overlaps it. Negative-time wet audio remains visible, but output is
+not possible before the DAW actually processes those positions. Pre-roll/end
+entry includes placement and inverts it with checked integer arithmetic.
+Shift-drag uses JUCE's fine velocity mode on inspector knobs; typed positions
+retain full precision independent of Snap and displayed rounding. The main
+preview status discloses active wet/sum safety attenuation and saved trim stays
+visible/resettable. The test-tone armed state is visible in the header with its
+Settings > Recovery Off path.
+
+See [current diagnostic dispositions and final host checklist](ui-diagnostics-and-acceptance.md).

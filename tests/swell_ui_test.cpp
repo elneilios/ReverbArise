@@ -7,12 +7,37 @@ struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
 template<class F>static void waitUI(F f,const std::source_location loc=std::source_location::current())
 {const auto end=juce::Time::getMillisecondCounter()+15000;while(!f()){if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("UI timeout "+std::to_string(loc.line()));juce::Thread::sleep(2);}}
+static juce::Component* findNamed(juce::Component& root,const juce::String& name)
+{if(root.getName()==name)return &root;for(auto child:root.getChildren())if(auto result=findNamed(*child,name))return result;return nullptr;}
 static juce::Component* named(juce::Component& root,const juce::String& name)
-{if(root.getName()==name)return &root;for(auto child:root.getChildren())if(auto result=named(*child,name))return result;return nullptr;}
+{
+    if(auto result=findNamed(root,name))return result;
+    if(auto editor=dynamic_cast<PreverbAudioProcessorEditor*>(&root))
+    {if(auto result=findNamed(*editor->settingsPanel(),name))return result;
+        if(auto tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel()))for(int i=0;i<tabs->getNumTabs();++i)if(auto result=findNamed(*tabs->getTabContentComponent(i),name))return result;
+        return findNamed(*editor->diagnosticsPanel(),name);}
+    return nullptr;
+}
+static juce::TextButton* findButton(juce::Component& root,const juce::String& text)
+{for(auto child:root.getChildren()){if(auto b=dynamic_cast<juce::TextButton*>(child);b && b->getButtonText()==text)return b;if(auto b=findButton(*child,text))return b;}return nullptr;}
 static juce::TextButton* button(juce::Component& root,const juce::String& text)
-{for(auto child:root.getChildren()){if(auto b=dynamic_cast<juce::TextButton*>(child);b && b->getButtonText()==text)return b;if(auto b=button(*child,text))return b;}return nullptr;}
+{
+    if(auto b=findButton(root,text))return b;
+    if(auto editor=dynamic_cast<PreverbAudioProcessorEditor*>(&root))
+    {if(auto b=findButton(*editor->settingsPanel(),text))return b;
+        if(auto tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel()))for(int i=0;i<tabs->getNumTabs();++i)if(auto b=findButton(*tabs->getTabContentComponent(i),text))return b;
+        return findButton(*editor->diagnosticsPanel(),text);}
+    return nullptr;
+}
+static void snapshotPanel(juce::Component& panel,const juce::String& tag)
+{
+    const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
+    juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
+    juce::Image surface(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(surface);panel.paintEntireComponent(canvas,true);
+    auto output=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(output && output->setPosition(0) && output->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(surface,*output));
+}
 static bool visibleOffscreen(juce::Component* control)
-{for(;control;control=control->getParentComponent())if(!control->isVisible())return false;return true;}
+{if(!control)return false;for(;control;control=control->getParentComponent())if(!control->isVisible())return false;return true;}
 static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::String& tag)
 {
     // A state or recovery panel may replace content, never the region geometry.
@@ -37,6 +62,45 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 int main(){return runTest([]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    {
+        m3::ui::KnobValue cell;cell.setSize(180,50);double delta=0;cell.onDelta=[&](double value){delta=value;};
+        const auto drag=[&](juce::ModifierKeys modifiers)
+        {
+            cell.display("fine-drag-oracle","0",.5,true);auto& knob=cell.valueKnob();const auto start=knob.getLocalBounds().getCentre().toFloat();
+            const auto event=[&](juce::Point<float> at,bool moved){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),at,modifiers,0,0,0,0,0,&knob,&knob,juce::Time::getCurrentTime(),start,juce::Time::getCurrentTime(),1,moved);};
+            knob.mouseDown(event(start,false));knob.mouseDrag(event(start.translated(0,-20),true));knob.mouseUp(event(start.translated(0,-20),true));return std::abs(delta);
+        };
+        const auto coarse=drag(juce::ModifierKeys::leftButtonModifier),fine=drag(juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier);
+        REQUIRE(coarse>fine && fine>0);
+    }
+    // Window lifecycle while the real callback and capture worker keep running.
+    {
+        TestDirectory liveRoot;auto owner=std::make_unique<PreverbAudioProcessor>(liveRoot.file);auto& liveProcessor=*owner;
+        UIPlayHead playhead;playhead.position.setBpm(120);playhead.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});playhead.position.setIsPlaying(true);
+        playhead.position.setTimeInSamples(0);playhead.position.setPpqPosition(0);liveProcessor.setPlayHead(&playhead);liveProcessor.prepareToPlay(48000,512);
+        juce::AudioBuffer<float> silence(2,512);silence.clear();juce::MidiBuffer events;liveProcessor.processBlock(silence,events);
+        REQUIRE(liveProcessor.flushCaptureForTesting());
+        waitUI([&]{return liveProcessor.swellEngine().savedSession().defaultIR.present();});
+        const auto before=liveProcessor.swellEngine().savedSession();const auto revision=liveProcessor.getCaptureSnapshot().manifest.revision;
+        {
+            PreverbAudioProcessorEditor active(liveProcessor);active.setVisible(true);
+            auto gear=dynamic_cast<juce::TextButton*>(named(active,"diagnostics"));REQUIRE(gear);gear->onClick();
+            auto tabs=dynamic_cast<juce::TabbedComponent*>(active.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
+            auto open=dynamic_cast<juce::TextButton*>(named(active,"openDiagnostics"));REQUIRE(open);open->onClick();
+            playhead.position.setTimeInSamples(512);playhead.position.setPpqPosition(512./24000);silence.clear();liveProcessor.processBlock(silence,events);
+            REQUIRE(liveProcessor.flushCaptureForTesting());active.refresh();
+            REQUIRE(liveProcessor.getCaptureSnapshot().manifest.revision>revision);
+            REQUIRE(!liveProcessor.isTestToneEnabled() && liveProcessor.getGeneratedTonePeak()==0 && !liveProcessor.swellEngine().snapshot().playing);
+            REQUIRE(liveProcessor.swellEngine().snapshot().renderCount==0 && liveProcessor.swellEngine().savedSession().swells.empty());
+            const auto after=liveProcessor.swellEngine().savedSession();REQUIRE(after.sensitivity==before.sensitivity && after.liveEnabled==before.liveEnabled && after.auditionMode==before.auditionMode);
+            auto details=active.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>();REQUIRE(details);details->closeButtonPressed();
+            open->onClick();REQUIRE(visibleOffscreen(active.diagnosticsPanel()));
+            // Deliberately destroy the editor with both owned windows open.
+        }
+        playhead.position.setTimeInSamples(1024);playhead.position.setPpqPosition(1024./24000);silence.clear();liveProcessor.processBlock(silence,events);
+        REQUIRE(liveProcessor.flushCaptureForTesting());REQUIRE(liveProcessor.getDroppedCaptureBlockCount()==0 && !liveProcessor.isTestToneEnabled());
+        liveProcessor.setPlayHead(nullptr);
+    }
     // A fresh instance must not inherit capture or status from the long-lived
     // editing fixture below. Keep matched baseline states independently useful.
     {
@@ -44,6 +108,12 @@ int main(){return runTest([]
         REQUIRE(fresh.getName()=="Preverb Spike" && fresh.getParameters().isEmpty() && fresh.getNumPrograms()==1);
         REQUIRE(fresh.getCaptureSnapshot().manifest.ranges.empty());
         PreverbAudioProcessorEditor empty(fresh);empty.setVisible(true);empty.refresh();
+        REQUIRE(empty.getWidth()==1100 && empty.getHeight()==850);
+        REQUIRE(!empty.isParentOf(named(empty,"advancedTiming")));
+        REQUIRE(!empty.isParentOf(named(empty,"previewStatus")));
+        REQUIRE(empty.getLookAndFeel().findColour(juce::Label::textColourId)==m3::ui::text);
+        REQUIRE(m3::ui::secondary.getRed()==225 && m3::ui::secondary.getGreen()==230 && m3::ui::secondary.getBlue()==236);
+        auto host=dynamic_cast<juce::Label*>(named(empty,"hostInfo"));REQUIRE(host && host->getText().contains("Position unavailable") && host->getText().contains("BPM unavailable") && host->getText().contains("Meter unavailable"));
         const auto* mark=dynamic_cast<m3::ui::Wordmark*>(named(empty,"brandWordmark"));REQUIRE(mark && mark->loaded());
         const auto* theme=dynamic_cast<m3::ui::WorkspaceTheme*>(&empty.getLookAndFeel());
         REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName().containsIgnoreCase("Inter"));
@@ -56,6 +126,12 @@ int main(){return runTest([]
         juce::MemoryBlock saved;fresh.getStateInformation(saved);
         const auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
         REQUIRE(xml && xml->hasTagName("PreverbState") && xml->getIntAttribute("stateVersion")==7);
+        auto marker=dynamic_cast<juce::Slider*>(named(empty,"markerSensitivity"));auto regeneration=dynamic_cast<juce::Slider*>(named(empty,"regenerationSensitivity"));REQUIRE(marker && regeneration);
+        marker->setValue(22.5,juce::sendNotificationSync);regeneration->setValue(71.5,juce::sendNotificationSync);
+        fresh.getStateInformation(saved);TestDirectory independentRoot;auto independent=std::make_unique<PreverbAudioProcessor>(independentRoot.file);
+        REQUIRE(independent->swellEngine().savedSession().sensitivity==.5f && independent->swellEngine().savedSession().regenerationSensitivity==.5f);
+        independent->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));const auto prefs=independent->swellEngine().savedSession();
+        REQUIRE(std::abs(prefs.sensitivity-.225f)<1e-6 && std::abs(prefs.regenerationSensitivity-.715f)<1e-6);
     }
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
     processor->swellEngine().setAutomaticProcessing(false);processor->swellEngine().setIsolateSelected(true);
@@ -70,6 +146,41 @@ int main(){return runTest([]
     }
     processor->setMappingEnabled(false);REQUIRE(processor->flushCaptureForTesting());head.position.setIsPlaying(false);buffer.clear();processor->processBlock(buffer,midi);
     auto& engine=processor->swellEngine();
+    {
+        // Synthetic geometry oracle: a retained detail cache must not erase a
+        // current coverage gap or paint unavailable peak data as captured audio.
+        m3::SwellTimeline probe(engine);probe.setSize(700,500);probe.setInlineOverview(false);
+        m3::SwellOverview overview(probe);overview.setSize(700,150);
+        CaptureSessionSnapshot sparse;sparse.manifest.sampleRate=48000;
+        for(const auto range:std::array<CaptureManifestRange,4>{{{0,100,CaptureCoverageKind::audio},{100,100,CaptureCoverageKind::silence},{300,100,CaptureCoverageKind::audio},{400,100,CaptureCoverageKind::audio}}})
+        {sparse.manifest.ranges.push_back(range);CaptureOverviewRange item;item.range=range;item.available=range.startSample!=300;
+            if(range.kind==CaptureCoverageKind::audio)item.peaks.push_back({range.startSample+50,1,-1,1});sparse.overview.push_back(item);}
+        m3::EditorSnapshot display;auto detail=std::make_shared<m3::Waveform>();detail->start=0;detail->end=500;detail->peaks={{250,1,-1,1},{350,1,-1,1}};display.sourceDetail=detail;
+        probe.setData(sparse,display,{true,0,0,48000,120,4,4},false);m3::SwellViewport range;range.first=0;range.last=500;probe.setViewport(range);
+        const auto lane=probe.sourceLane();const auto picture=probe.createComponentSnapshot(probe.getLocalBounds());
+        const auto sx=[&](int64_t sample){return static_cast<int>(range.pixel(static_cast<double>(sample),lane.getX(),lane.getWidth()));};
+        REQUIRE(picture.getPixelAt(sx(250),static_cast<int>(lane.getCentreY()))==m3::ui::background);
+        const auto unavailable=picture.getPixelAt(sx(350),static_cast<int>(lane.getCentreY()));REQUIRE(unavailable.getRed()>unavailable.getGreen()*1.5);
+        range.last=100;probe.setViewport(range);const auto mini=overview.waveformBounds(),highlight=overview.detailBounds();
+        REQUIRE(std::abs(highlight.getWidth()/mini.getWidth()-.2)<1e-5);
+        const auto frame=overview.createComponentSnapshot(overview.getLocalBounds());
+        const auto mx=[&](int64_t sample){return static_cast<int>(mini.getX()+sample/500.f*mini.getWidth());};
+        REQUIRE(frame.getPixelAt(mx(250),static_cast<int>(mini.getCentreY()))==m3::ui::background);
+        const auto missing=frame.getPixelAt(mx(350),static_cast<int>(mini.getY()+mini.getHeight()*.3f));REQUIRE(missing.getRed()>missing.getGreen()*1.5);
+        const auto hostBefore=processor->getSongTime().sample;probe.navigateOverview(.75);
+        REQUIRE(std::abs(probe.viewport().first-325)<1e-6 && processor->getSongTime().sample==hostBefore);
+        snapshotPanel(overview,"sparse-overview-oracle");
+        m3::Swell edit;edit.arrival=96000;edit.sourceStart=96000;edit.sourceEnd=120000;edit.shape.automaticStart=false;edit.shape.startOffset=-48000;edit.shape.endOffset=16800;
+        display.session.swells={edit};display.session.primary=edit.id;display.session.selected={edit.id};
+        auto raw=std::make_shared<m3::Waveform>();raw->start=0;raw->end=200000;display.raw=raw;display.sourceDetail.reset();
+        probe.setData({},display,{true,0,0,48000,120,4,4},false);range.first=0;range.last=144000;probe.setViewport(range);
+        const auto grabs=probe.grabPoints();const auto wetLane=probe.wetLane();const auto px=[&](int64_t sample){return range.pixel(static_cast<double>(sample),wetLane.getX(),wetLane.getWidth());};
+        REQUIRE(std::abs(grabs[0].point.x-px(112800))<1e-3 && std::abs(grabs[1].point.x-px(48000))<1e-3);
+        REQUIRE(probe.sourceLane().getX()==wetLane.getX() && probe.sourceLane().getWidth()==wetLane.getWidth());
+        int64_t a,b;REQUIRE(m3::requestedShapeBounds(edit,0,a,b) && a==48000 && b==112800 && b-a==64800);
+        edit.placement=2400;display.session.swells={edit};probe.setData({},display,{true,0,0,48000,120,4,4},false);
+        REQUIRE(std::abs(probe.grabPoints()[0].point.x-px(115200))<1e-3 && edit.arrival==96000);
+    }
     {
         PreverbAudioProcessorEditor mapped(*processor);mapped.setVisible(true);mapped.setSize(1400,1000);mapped.refresh();
         REQUIRE(!processor->getCaptureSnapshot().manifest.ranges.empty() && engine.savedSession().swells.empty());
@@ -91,6 +202,34 @@ int main(){return runTest([]
     {const auto& current=afterOpening.swells[i];const auto& prior=baseline.swells[i];
         REQUIRE(current.id==prior.id && current.ir==prior.ir && current.render==prior.render && current.shape==prior.shape);}
     {
+        auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(blend);
+        REQUIRE(baseline.auditionMode==m3::AuditionMode::wetOnly && baseline.wetBlend==.5f && blend->getValue()==100);
+        REQUIRE(afterOpening.auditionMode==baseline.auditionMode && afterOpening.wetBlend==baseline.wetBlend && !engine.snapshot().playing);
+        const auto renderCount=engine.snapshot().renderCount;const auto liveRouting=baseline.liveRouting;const auto liveDb=baseline.liveWetDb;
+        for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,1000}})
+        {
+            editor.setSize(size.x,size.y);editor.refresh();
+            const auto minimum=blend->getPositionOfValue(0),maximum=blend->getPositionOfValue(100);
+            for(double percent:{0.,50.,65.,100.})
+            {
+                blend->setValue(percent,juce::sendNotificationSync);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+                REQUIRE(std::abs((blend->getPositionOfValue(percent)-minimum)/(maximum-minimum)-percent/100)<1e-6);
+                const auto frame=blend->createComponentSnapshot(blend->getLocalBounds());
+                const auto track=blend->getLookAndFeel().getSliderLayout(*blend).sliderBounds;
+                const auto pixel=frame.getPixelAt(juce::roundToInt(blend->getPositionOfValue(percent)),track.getCentreY()-4);
+                REQUIRE(pixel.getGreen()>180 && pixel.getBlue()>180 && pixel.getRed()<80);
+                const auto session=engine.savedSession();REQUIRE(session.liveRouting==liveRouting && session.liveWetDb==liveDb);
+                REQUIRE(session.auditionMode==(percent==100?m3::AuditionMode::wetOnly:m3::AuditionMode::dryWet));
+                REQUIRE(engine.snapshot().renderCount==renderCount && m3::find(session,first)->render==baseline.swells[0].render);
+            }
+        }
+        auto mixedState=baseline;mixedState.auditionMode=m3::AuditionMode::dryWet;mixedState.wetBlend=.65f;
+        engine.restore(mixedState);waitUI([&]{return engine.snapshot().auditionReady;});
+        {PreverbAudioProcessorEditor reopened(*processor);reopened.refresh();auto value=dynamic_cast<juce::Slider*>(named(reopened,"auditionBlend"));
+            REQUIRE(value && value->getValue()==65 && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f);}
+        engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.setSize(1100,850);editor.refresh();
+    }
+    {
         const auto enter=[&](const char* name,const char* value)
         {auto field=dynamic_cast<juce::TextEditor*>(named(editor,name));REQUIRE(field);field->setText(value,false);field->onReturnKey();editor.refresh();};
         for(const auto* name:{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","swellLevel","curveInTension","curveOutTension","wetPlacement"})
@@ -108,6 +247,9 @@ int main(){return runTest([]
         REQUIRE(std::abs(m3::find(engine.savedSession(),first)->shape.inTension-.45)<1e-6);
         REQUIRE(engine.selectTargets({second},second));editor.refresh();const auto otherShape=m3::find(engine.savedSession(),second)->shape;
         knob.setValue(.9,juce::sendNotificationSync);knob.onDragEnd();REQUIRE(m3::find(engine.savedSession(),second)->shape==otherShape);
+        REQUIRE(engine.selectTargets({first},first));editor.refresh();knob.onDragStart();engine.removeSelected();
+        knob.setValue(.1,juce::sendNotificationSync);knob.onDragEnd();editor.refresh();
+        REQUIRE(!m3::find(engine.savedSession(),first) && m3::find(engine.savedSession(),second)->shape==otherShape);
         engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
         const auto shape=m3::find(engine.savedSession(),first)->shape;
         auto field=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(field);field->setText("77",false);field->onEscapeKey();
@@ -142,13 +284,30 @@ int main(){return runTest([]
     auto musical=dynamic_cast<juce::TextEditor*>(named(editor,"arrivalSample"));REQUIRE(musical && musical->getText()=="1.1");
     auto diagnostics=dynamic_cast<juce::TextButton*>(named(editor,"diagnostics"));REQUIRE(diagnostics);
     REQUIRE(!visibleOffscreen(named(editor,"generate")));
-    diagnostics->onClick();editor.refresh();REQUIRE(visibleOffscreen(named(editor,"generate")));snapshotEditor(editor,"diagnostics");
+    const auto beforeSettings=engine.savedSession();const auto beforeSettingsRenders=engine.snapshot().renderCount;
+    const auto beforeSettingsCapture=processor->getCaptureSnapshot().manifest.revision;
+    diagnostics->onClick();editor.refresh();
+    auto tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==5 && tabs->getCurrentTabIndex()==0);
+    REQUIRE(editor.settingsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.settingsPanel()));
+    for(int page=0;page<5;++page){tabs->setCurrentTabIndex(page);snapshotPanel(*tabs,"settings-"+tabs->getTabNames()[page].toLowerCase());}
+    REQUIRE(visibleOffscreen(named(editor,"generate")));snapshotEditor(editor,"settings-open");
+    auto openDetails=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);openDetails->onClick();editor.refresh();
+    REQUIRE(editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.diagnosticsPanel()));
+    snapshotPanel(*editor.diagnosticsPanel(),"dedicated-diagnostics");
+    juce::String beforeJson,afterJson,jsonError;REQUIRE(m3::encode(beforeSettings,beforeJson,jsonError) && m3::encode(engine.savedSession(),afterJson,jsonError));
+    REQUIRE(beforeJson==afterJson && engine.snapshot().renderCount==beforeSettingsRenders && processor->getCaptureSnapshot().manifest.revision==beforeSettingsCapture);
+    snapshotEditor(editor,"diagnostics");
     editor.setSize(1100,850);editor.refresh();snapshotEditor(editor,"diagnostics-1100");
     auto inspectorScroll=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));
     auto diagnosticScroll=dynamic_cast<juce::Viewport*>(named(editor,"diagnosticsViewport"));REQUIRE(inspectorScroll && diagnosticScroll);
     inspectorScroll->setViewPosition(0,10000);diagnosticScroll->setViewPosition(0,10000);
     REQUIRE(inspectorScroll->getViewPositionY()>0 && diagnosticScroll->getViewPositionY()>0);snapshotEditor(editor,"diagnostics-scrolled");
     inspectorScroll->setViewPosition(0,0);diagnosticScroll->setViewPosition(0,0);
+    auto detailsWindow=editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>();REQUIRE(detailsWindow);detailsWindow->closeButtonPressed();
+    REQUIRE(!visibleOffscreen(editor.diagnosticsPanel()));
+    const auto hiddenText=dynamic_cast<juce::Label*>(named(editor,"previewStatus"))->getText();engine.diagnostic("Hidden diagnostics lifecycle fixture");editor.refresh();
+    REQUIRE(dynamic_cast<juce::Label*>(named(editor,"previewStatus"))->getText()==hiddenText);
+    openDetails->onClick();REQUIRE(visibleOffscreen(editor.diagnosticsPanel()));snapshotPanel(*editor.diagnosticsPanel(),"diagnostics-reopened");detailsWindow->closeButtonPressed();
     diagnostics->onClick();editor.setSize(1400,900);editor.refresh();
     auto regeneration=dynamic_cast<juce::Slider*>(named(editor,"regenerationSensitivity"));auto freeze=dynamic_cast<juce::ToggleButton*>(named(editor,"freezeRender"));
     REQUIRE(regeneration && freeze && visibleOffscreen(regeneration) && visibleOffscreen(freeze));
@@ -162,33 +321,38 @@ int main(){return runTest([]
     REQUIRE(std::abs(engine.savedSession().sensitivity-.12f)<1e-5 && !engine.savedSession().autoMarkersEnabled);
     auto liveToggle=dynamic_cast<juce::ToggleButton*>(named(editor,"livePlayback"));auto liveMode=dynamic_cast<juce::ComboBox*>(named(editor,"liveRouting"));auto liveLevel=dynamic_cast<juce::Slider*>(named(editor,"liveWetLevel"));
     REQUIRE(liveToggle && liveMode && liveLevel);
-    REQUIRE(!visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();REQUIRE(visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();
+    REQUIRE(!visibleOffscreen(liveLevel));diagnostics->onClick();tabs->setCurrentTabIndex(0);editor.refresh();REQUIRE(visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();
     liveToggle->setToggleState(false,juce::dontSendNotification);liveToggle->onClick();liveMode->setSelectedId(2,juce::sendNotificationSync);liveLevel->setValue(-7.5,juce::sendNotificationSync);
     REQUIRE(!engine.savedSession().liveEnabled && engine.savedSession().liveRouting==m3::LiveRouting::wetOnly && engine.savedSession().liveWetDb==-7.5f);
     REQUIRE(engine.savedSession().auditionDb==0);engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);editor.refresh();
     const auto monitorRenderCount=engine.snapshot().renderCount;
-    auto dryWet=dynamic_cast<juce::TextButton*>(named(editor,"dryWet"));auto wetOnly=dynamic_cast<juce::TextButton*>(named(editor,"wetOnly"));
-    auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(dryWet && wetOnly && blend);
+    auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(blend);
+    REQUIRE(!named(editor,"wetOnly") && !named(editor,"dryWet"));
+    const auto mixed=[&]{blend->setValue(engine.savedSession().wetBlend*100,juce::sendNotificationSync);};
+    const auto wet=[&]{blend->setValue(100,juce::sendNotificationSync);};
     auto isolate=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateSelected"));REQUIRE(isolate);
     isolate->setToggleState(false,juce::dontSendNotification);isolate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});
     REQUIRE(!engine.savedSession().isolateSelected);
     isolate->setToggleState(true,juce::dontSendNotification);isolate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});
-    dryWet->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    mixed();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     blend->setValue(35,juce::dontSendNotification);blend->onValueChange();waitUI([&]{return engine.snapshot().auditionReady;});
-    wetOnly->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    wet();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().wetBlend==.35f && engine.snapshot().renderCount==monitorRenderCount);
     engine.setPreferences(-24,.5f,.08,false);editor.refresh();
-    dryWet->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    mixed();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     auto dryIsolation=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && dryIsolation->isEnabled());
-    diagnostics->onClick();editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
+    diagnostics->onClick();tabs->setCurrentTabIndex(3);editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
     dryIsolation->setToggleState(true,juce::dontSendNotification);dryIsolation->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().isolateDry && engine.snapshot().auditionDryEnd==engine.savedSession().swells[0].sourceEnd);
     snapshotEditor(editor,"isolated-dry");dryIsolation->setToggleState(false,juce::dontSendNotification);dryIsolation->onClick();
     waitUI([&]{return engine.snapshot().auditionReady;});
-    wetOnly->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    wet();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     auto resetTrim=dynamic_cast<juce::TextButton*>(named(editor,"resetAuditionTrim"));REQUIRE(resetTrim && resetTrim->getButtonText().contains("-24"));
     resetTrim->onClick();REQUIRE(engine.savedSession().auditionDb==0);
     auto sampleUnits=dynamic_cast<juce::ToggleButton*>(named(editor,"sampleUnits"));REQUIRE(sampleUnits);
+    auto tone=dynamic_cast<juce::ToggleButton*>(named(editor,"scheduledTone"));auto processing=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(tone && processing);
+    tone->setToggleState(true,juce::dontSendNotification);tone->onClick();editor.refresh();REQUIRE(processing->getText().contains("test tone armed"));
+    tone->setToggleState(false,juce::dontSendNotification);tone->onClick();editor.refresh();REQUIRE(!processor->isTestToneEnabled() && !processing->getText().contains("test tone armed"));
     sampleUnits->setToggleState(true,juce::dontSendNotification);sampleUnits->onClick();
     for(auto dimensions:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1600,1000}})
     {editor.setSize(dimensions.x,dimensions.y);editor.refresh();for(auto child:editor.getChildren())REQUIRE(editor.getLocalBounds().contains(child->getBounds()));snapshotEditor(editor,"ready-"+juce::String(dimensions.x));}
@@ -204,7 +368,7 @@ int main(){return runTest([]
     waitUI([&]{return engine.snapshot().auditionReady;});REQUIRE(std::abs(engine.savedSession().swells[0].shape.startOffset-next)<=1);
     auto fade=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(fade);fade->setText("10.000",false);fade->onReturnKey();
     waitUI([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.savedSession().swells[0].shape.fadeIn==480);
-    auto gain=dynamic_cast<juce::Slider*>(named(editor,"swellGain"));REQUIRE(gain);gain->setValue(3,juce::dontSendNotification);gain->onValueChange();
+    auto gain=dynamic_cast<juce::TextEditor*>(named(editor,"swellLevel"));REQUIRE(gain);gain->setText("3",false);gain->onReturnKey();
     waitUI([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.savedSession().swells[0].shape.gainDb==3);
     REQUIRE(engine.snapshot().renderCount==oldCount && engine.savedSession().swells[0].render.path==oldRender);
     editor.refresh();snapshotEditor(editor,"shaped");
@@ -317,7 +481,7 @@ int main(){return runTest([]
     const auto beforeKey=engine.savedSession().swells[0].shape.endOffset;
     REQUIRE(timeline.keyPressed(juce::KeyPress(juce::KeyPress::rightKey)));
     REQUIRE(engine.savedSession().swells[0].shape.endOffset==beforeKey+1);
-    auto wetEndField=dynamic_cast<juce::TextEditor*>(named(editor,"audibleEnd"));REQUIRE(wetEndField && wetEndField->getText().getLargeIntValue()==beforeKey+1);
+    auto wetEndField=dynamic_cast<juce::TextEditor*>(named(editor,"audibleEnd"));REQUIRE(wetEndField && wetEndField->isReadOnly());
     waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     snapshotEditor(editor,"transition-handles");
     {const auto savedShape=engine.savedSession().swells[0].shape;const auto savedView=timeline.viewport();
@@ -332,8 +496,8 @@ int main(){return runTest([]
     {editor.setSize(size.x,size.y);editor.refresh();snapshotEditor(editor,"envelope-"+juce::String(size.x));
         diagnostics->onClick();editor.refresh();snapshotEditor(editor,"envelope-diagnostics-"+juce::String(size.x));diagnostics->onClick();}
     editor.setSize(1200,900);editor.refresh();
-    auto tension=dynamic_cast<juce::Slider*>(named(editor,"outTension"));auto tail=dynamic_cast<juce::Slider*>(named(editor,"auditionTail"));REQUIRE(tension && tail);
-    tension->setValue(-.37,juce::sendNotificationSync);tail->setValue(1.25,juce::sendNotificationSync);
+    auto tension=dynamic_cast<juce::TextEditor*>(named(editor,"curveOutTension"));auto tail=dynamic_cast<juce::Slider*>(named(editor,"auditionTail"));REQUIRE(tension && tail);
+    tension->setText("-0.37",false);tension->onReturnKey();tail->setValue(1.25,juce::sendNotificationSync);
     REQUIRE(engine.savedSession().swells[0].shape.outTension==-.37 && engine.savedSession().postRollSeconds==1.25);
     REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape=shapeBeforeHandles;return true;}));
     waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();timeline.setSnap(false);
@@ -347,6 +511,14 @@ int main(){return runTest([]
     editor.refresh();snapshotEditor(editor,"moved-body");auto moveField=dynamic_cast<juce::TextEditor*>(named(editor,"wetPlacement"));REQUIRE(moveField);moveField->setText("0",false);moveField->onReturnKey();
     waitUI([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.savedSession().swells[0].placement==0);
     // Source-handle edits invalidate only the selected swell.
+    {
+        const auto lane=timeline.sourceLane();const auto at=[&](int64_t sample){return static_cast<float>(timeline.viewport().pixel(static_cast<double>(sample),lane.getX(),lane.getWidth()));};
+        const auto neighbour=engine.savedSession().swells[1];
+        REQUIRE(timeline.beginDrag({at(0),lane.getBottom()-9}));timeline.dragTo({at(-100),lane.getBottom()-9});
+        REQUIRE(engine.savedSession().swells[0].sourceStart==-100 && engine.savedSession().swells[0].arrival==0);
+        timeline.dragTo({at(0),lane.getBottom()-9});REQUIRE(engine.savedSession().swells[0].sourceStart==0);
+        REQUIRE(engine.savedSession().swells[1].sourceStart==neighbour.sourceStart && engine.savedSession().swells[1].render==neighbour.render);
+    }
     const auto source=timeline.sourceLane();const auto xEnd=static_cast<float>(timeline.viewport().pixel(24000,source.getX(),source.getWidth()));
     REQUIRE(timeline.beginDrag({xEnd,source.getBottom()-5}));timeline.dragTo({static_cast<float>(timeline.viewport().pixel(20000,source.getX(),source.getWidth())),source.getBottom()-5});
     REQUIRE(engine.savedSession().swells[0].sourceEnd==20000 && engine.savedSession().swells[0].phase==m3::Phase::stale && engine.savedSession().swells[1].phase==m3::Phase::ready);
@@ -379,11 +551,27 @@ int main(){return runTest([]
     const auto shapeBefore=saved.swells[0].shape;
     REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape.automaticStart=false;w.shape.startOffset=raw->start-100;return true;}));
     waitUI([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});editor.refresh();
-    auto invalidStart=dynamic_cast<juce::TextEditor*>(named(editor,"audibleStart"));REQUIRE(invalidStart && invalidStart->getText().getLargeIntValue()==raw->start-100);
+    auto invalidStart=dynamic_cast<juce::TextEditor*>(named(editor,"audibleStart"));REQUIRE(invalidStart && invalidStart->isReadOnly());
     REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape=shapeBefore;return true;}));waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     for(int n=0;n<500;++n){auto w=saved.swells[0];w.id=juce::Uuid().toDashedString();w.name="Target "+juce::String(n+1);many.swells.push_back(w);}
     many.primary=many.swells[0].id;many.selected={many.primary};engine.restore(many);editor.refresh();
     const auto list=dynamic_cast<juce::ListBox*>(named(editor,"swellList"));REQUIRE(list && list->getModel()->getNumRows()==500 && list->getNumChildComponents()<30);snapshotEditor(editor,"many");
+    {
+        auto rows=const_cast<juce::ListBox*>(list);rows->scrollToEnsureRowIsOnscreen(250);
+        const auto position=juce::Point<float>(static_cast<float>(rows->getWidth()-15),45);
+        const juce::MouseEvent click(juce::Desktop::getInstance().getMainMouseSource(),position,juce::ModifierKeys::rightButtonModifier,
+            0,0,0,0,0,rows,rows,juce::Time::getCurrentTime(),position,juce::Time::getCurrentTime(),1,false);
+        const auto anchor=editor.swellMenuAnchor(click);
+        REQUIRE(anchor.getPosition()==click.getScreenPosition() && anchor.getWidth()==1 && anchor.getHeight()==1);
+        REQUIRE(anchor!=rows->getScreenBounds());
+        rows->getModel()->listBoxItemClicked(250,click);
+        juce::Component* popup=nullptr;auto& desktop=juce::Desktop::getInstance();
+        for(int i=0;i<desktop.getNumComponents();++i)if(desktop.getComponent(i)->getName()=="menu")popup=desktop.getComponent(i);
+        REQUIRE(popup);const auto menuBounds=popup->getScreenBounds();
+        REQUIRE(menuBounds.expanded(12).contains(anchor.getPosition()));snapshotPanel(*popup,"swell-context-menu");
+        juce::PopupMenu::dismissAllActiveMenus();rows->scrollToEnsureRowIsOnscreen(0);
+    }
+
     engine.restore(saved);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     auto advanced=dynamic_cast<juce::TextButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
     REQUIRE(visibleOffscreen(named(editor,"sourceSampleStart")));snapshotEditor(editor,"precise-timing");

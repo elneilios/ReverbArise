@@ -61,7 +61,8 @@ public:
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
     void loadIR(const juce::File&,bool primaryOnly=false);
-    bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false);
+    uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
+    bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
     bool resetSwell(const juce::String& id,bool allSettings);
     void generate(bool all=false);
     void analyze(int64_t start,int64_t end);

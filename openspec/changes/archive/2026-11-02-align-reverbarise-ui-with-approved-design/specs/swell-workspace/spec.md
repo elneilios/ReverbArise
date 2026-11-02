@@ -69,7 +69,7 @@ Useful developer observations/actions SHALL remain accessible in a dedicated set
 #### Scenario: Diagnostics lifecycle during playback
 - **WHEN** Diagnostics opens, refreshes, hides, closes or reopens while playback and capture continue
 - **THEN** it shows current snapshots without changing parameters, starting voices/test signals, clearing capture or queuing renders, and it does not resize the main workspace
-- **AND** hidden/closed diagnostics cease their own periodic work and release listeners safely
+- **AND** hidden/closed diagnostics cease their own periodic work while their UI may remain editor-owned for reuse; reopening immediately refreshes current data, and editor destruction safely releases their content, callbacks and window ownership before LookAndFeel/model teardown
 
 #### Scenario: Explicit developer action
 - **WHEN** a user explicitly enables the retained scheduled tone or invokes a recovery action
@@ -80,7 +80,7 @@ Useful developer observations/actions SHALL remain accessible in a dedicated set
 - **THEN** each original item has a disposition with consumers and verification, duplicate sensitivity/status is consolidated, proven-unused bindings/helpers are removed, and tested tone/capture/scheduling capabilities and saved identities remain intact
 
 ### Requirement: Supported editor sizes remain usable
-The eight-region workspace SHALL remain readable at a 1100x850 logical minimum, default 1400x1000 and larger supported sizes, including 1400x900 and 1600x1000. List scrolling and contextual windows SHALL not hide the main workflow. Supported Windows scales SHALL retain usable text/hit targets without overlap; numerical and keyboard alternatives SHALL remain available.
+The eight-region workspace SHALL remain readable at a 1100x850 logical minimum and opening default, and larger supported sizes, including 1400x900, 1400x1000 and 1600x1000. List scrolling and contextual windows SHALL not hide the main workflow. Supported Windows scales SHALL retain usable text/hit targets without overlap; numerical and keyboard alternatives SHALL remain available.
 
 #### Scenario: Resize and inspect many swells
 - **WHEN** the editor is resized across supported sizes with hundreds of swells and Diagnostics open or closed

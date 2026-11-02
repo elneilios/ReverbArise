@@ -32,17 +32,22 @@ An adjacent reset dropdown SHALL offer Reset all swell settings. It SHALL transa
 - **THEN** the gentle creation release is applied rather than exposing the full untrimmed response, and Full response remains a separately labelled operation
 
 ### Requirement: New swell names identify their target bar
-New swells SHALL receive the default name Swell followed by their one-based Playlist arrival bar from valid fixed musical timing, rather than creation count. Naming SHALL use the dry target, not wet placement, and SHALL NOT invent unavailable timing. Existing, restored and user-edited names SHALL be preserved; repeated arrivals within one bar MAY share the default name while retaining independent identities.
+New swells SHALL use unique `Swell Bar <bar>.<beat>[.<fraction>]` labels from one-based dry-target Playlist timing. Use the shared musical-position formatter and a numbered suffix for collisions. Naming SHALL NOT use creation count or wet placement, nor invent unavailable timing. Existing, restored and user-edited names SHALL remain unchanged.
 
 #### Scenario: Create in a later section
 - **GIVEN** valid fixed 120 BPM, 4/4 timing with Song origin zero
 - **WHEN** a new target is created at 34 seconds, inside Playlist bar 18
-- **THEN** its default name is Swell 18 regardless of how many swells already exist or the wet placement offset
+- **THEN** its default name is `Swell Bar 18.1` regardless of how many swells already exist or the wet placement offset
 
 #### Scenario: Preserve names and distinguish shared bars
 - **WHEN** two new targets occur in bar 18 and an existing target was renamed Chorus lift
-- **THEN** both new names identify bar 18 with separate IDs and precise arrival information, Chorus lift stays unchanged, and reanalysis, movement, reset or reopening does not rewrite saved names
+- **THEN** both new names identify bar 18 and their own beat/fractional-beat positions with separate IDs and unique labels, Chorus lift stays unchanged, and reanalysis, movement, reset or reopening does not rewrite saved names
 
 #### Scenario: Different meter or musical origin
 - **WHEN** valid fixed meter or the sample/PPQ origin differs from 4/4 at sample zero
 - **THEN** the creation name uses that actual one-based Playlist bar mapping, agrees with the ruler, and unknown timing is unavailable rather than fabricated as bar 1
+
+#### Scenario: Distinguish targets within one beat
+- **GIVEN** valid fixed 120 BPM, 4/4 timing with Song origin zero
+- **WHEN** new targets are created at 34 seconds and 34.125 seconds
+- **THEN** their names are `Swell Bar 18.1` and `Swell Bar 18.1.25`; a repeated target at 34 seconds is named `Swell Bar 18.1 (2)` without renaming existing swells

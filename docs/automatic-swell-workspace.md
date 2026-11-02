@@ -1,4 +1,4 @@
-> Song playback is now being added in `play-swells-with-song-transport`. See [transport playback](transport-swell-playback.md) and [FL Studio checks](fl-studio-transport-playback-validation.md) for current status. Historical references below to deferred transport apply to the earlier workspace change; its host acceptance remains separate.
+> Current UI: see [ReverbArise workspace](ui-theme-and-layout.md) and [Settings/Diagnostics and current checks](ui-diagnostics-and-acceptance.md). Song-synchronized playback is implemented; see [transport playback](transport-swell-playback.md). Earlier UI locations and deferred-transport statements below describe the preceding workspace iteration, not the current editor. Historical acceptance results remain separate.
 # Automatic swell workspace
 
 This change extends M3. It prepares swells automatically; Song-synchronized swell

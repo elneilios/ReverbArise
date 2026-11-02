@@ -5,9 +5,11 @@
 namespace m3::ui
 {
 inline const juce::Colour background{0xff0f1418}, aqua{0xff00efff}, hover{0xff00c2cc},
-    timing{0xffffc700}, text{0xfff5f7f9}, secondary{0xffc7cdd4}, separator{0xff4a5058}, outline{0xff6b737c},
+    timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffe1e6ec}, separator{0xff4a5058}, outline{0xff6b737c},
     danger{0xffff6b5e};
-inline constexpr float rule=1, radius=4;
+inline constexpr float rule=1, radius=4, headingSize=21, bodySize=14, controlSize=13, smallSize=12, captionSize=11, emptyHeadingSize=24;
+inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},
+    rawWet{0xff63716e}, otherWet{0xff80938f}, warning{0xffe6bb72}, staleWet{0xffdba66f}, previewCursor{0xffffb4e9};
 
 inline const char* resource(const juce::String& filename,int& bytes)
 {
@@ -17,6 +19,21 @@ inline const char* resource(const juce::String& filename,int& bytes)
     bytes=0;return nullptr;
 }
 
+class FlatSurface:public juce::Component
+{
+public:void paint(juce::Graphics& g)override{g.fillAll(background);}
+};
+class InvocationComboBox:public juce::ComboBox
+{
+public:
+    std::function<void()> beforeInvocation;
+    void showPopup()override{if(beforeInvocation)beforeInvocation();juce::ComboBox::showPopup();}
+    bool keyPressed(const juce::KeyPress& key)override{if(!isPopupActive() && beforeInvocation)beforeInvocation();return juce::ComboBox::keyPressed(key);}
+};
+class FlatViewport:public juce::Viewport
+{
+public:void paint(juce::Graphics& g)override{g.fillAll(background);}
+};
 class WorkspaceTheme final:public juce::LookAndFeel_V4
 {
 public:
@@ -44,6 +61,7 @@ public:
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
     bool interAvailable()const noexcept{return inter!=nullptr;}
+    std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
         if(inter && (flags&(juce::Font::bold|juce::Font::italic))==0)
@@ -51,7 +69,7 @@ public:
         return juce::Font(juce::FontOptions("Segoe UI",height,flags));
     }
     juce::Font getLabelFont(juce::Label& label)override{return font(label.getFont().getHeight(),label.getFont().getStyleFlags());}
-    juce::Font getComboBoxFont(juce::ComboBox&)override{return font(13);}
+    juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override
     {
         if(inter && !f.isBold() && !f.isItalic())return inter;
@@ -59,7 +77,7 @@ public:
         // variable typeface provides unverified style axes on this backend.
         return juce::Typeface::createSystemTypefaceFor(juce::Font(juce::FontOptions("Segoe UI",f.getHeight(),f.getStyleFlags())));
     }
-    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(13);}
+    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
     {
         const auto active=b.getName()=="audition" || b.getToggleState();
@@ -114,7 +132,7 @@ public:
         g.setColour((over?aqua:outline).withAlpha(alpha));g.drawRoundedRectangle(box,3,1);
         if(b.getToggleState()) {g.setColour(background);juce::Path tick;
             tick.startNewSubPath(box.getX()+4,box.getY()+9);tick.lineTo(box.getX()+8,box.getY()+13);tick.lineTo(box.getX()+15,box.getY()+5);g.strokePath(tick,juce::PathStrokeType(2));}
-        g.setColour(text.withAlpha(alpha));g.setFont(font(13));
+        g.setColour(text.withAlpha(alpha));g.setFont(font(controlSize));
         g.drawText(b.getButtonText(),b.getLocalBounds().withTrimmedLeft(28),juce::Justification::centredLeft);
     }
     void drawRotarySlider(juce::Graphics& g,int x,int y,int width,int height,float value,float start,float end,juce::Slider& s) override

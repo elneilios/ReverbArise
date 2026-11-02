@@ -200,7 +200,7 @@ The workspace SHALL display a distinct playhead at actual audition sample positi
 - **AND** isolated dry contains no replay outside the selected source interval
 
 ### Requirement: Envelope controls preserve time alignment
-Start/End handles SHALL stay on the waveform centre line at their exact times. Fade/tension controls SHALL remain on the curve and stack in paint order at low zoom, with topmost hit priority. Only genuine coincidences in both time and amplitude SHALL receive a small offset. Zooming SHALL separate distinct times without editing envelope metadata.
+Small outlined circular Start/End handles SHALL stay on the waveform centre line at their exact times. Outlined circular fade/tension controls SHALL remain on the curve and stack in paint order at low zoom, with topmost hit priority. Only genuine coincidences in both time and amplitude SHALL receive a small offset. Zooming SHALL separate distinct times without editing envelope metadata.
 
 #### Scenario: Full fade coincides with endpoint
 - **WHEN** a fade or tension control genuinely shares a sample-coordinate anchor with another control
@@ -214,4 +214,4 @@ Start/End handles SHALL stay on the waveform centre line at their exact times. F
 #### Scenario: Fade edits do not move endpoint handles vertically
 - **WHEN** either fade is zero, full length or edited
 - **THEN** Start/End stay at the waveform centre line while fade/tension controls follow the curve
-- **AND** zero fades at unity naturally separate from the endpoint squares without an artificial offset
+- **AND** zero fades at unity naturally separate from the endpoint circles without an artificial offset

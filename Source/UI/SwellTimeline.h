@@ -57,9 +57,11 @@ class SwellOverview final : public juce::Component
 {
 public:
     explicit SwellOverview(SwellTimeline& value):timeline(value){setName("songOverview");}
+    juce::Rectangle<float> waveformBounds()const noexcept{return getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
+    juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}
-    void mouseDrag(const juce::MouseEvent& e)override{timeline.navigateOverview((e.position.x-12)/std::max(1,getWidth()-24));repaint();}
+    void mouseDrag(const juce::MouseEvent& e)override{const auto lane=waveformBounds();timeline.navigateOverview((e.position.x-lane.getX())/std::max(1.0f,lane.getWidth()));repaint();}
 private:SwellTimeline& timeline;
 };
 }

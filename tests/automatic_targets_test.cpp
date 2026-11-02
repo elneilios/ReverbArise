@@ -31,7 +31,7 @@ int main(){return runTest([]
     Session s;SongTime time{true,0,0,48000,120,4,4};juce::String error;
     {
         Session named;REQUIRE(reconcileTargets(named,{{1632000,1},{1638000,1}},1600000,1700000,time,error));
-        REQUIRE(named.swells.size()==2 && named.swells[0].name=="Swell 18" && named.swells[1].name=="Swell 18" && named.swells[0].id!=named.swells[1].id);
+        REQUIRE(named.swells.size()==2 && named.swells[0].name=="Swell Bar 18.1" && named.swells[1].name=="Swell Bar 18.1.25" && named.swells[0].id!=named.swells[1].id);
         const auto id=named.swells[0].id;named.swells[0].name="A saved custom name";
         REQUIRE(reconcileTargets(named,{{1632010,1},{1638000,1}},1600000,1700000,time,error));
         REQUIRE(find(named,id) && find(named,id)->name=="A saved custom name");

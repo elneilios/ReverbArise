@@ -7,7 +7,7 @@ int main(){return runTest([]
     wet.samples={.1f,-.1f,.2f,-.2f,.3f,-.3f,.4f,-.4f};
     SourceInterval dry;dry.start=0;dry.end=4;dry.rate=1000;dry.samples={.2f,.1f,.1f,.2f,-.2f,-.1f,-.1f,-.2f};
     juce::String error;float branch,sum;WetRender out;
-    for(float mix:{0.0f,.5f,1.0f})
+    for(float mix:{0.0f,.5f,.65f,1.0f})
     {
         REQUIRE(prepareAuditionMix(wet,&dry,AuditionMode::dryWet,mix,previewMemoryBudget,out,branch,sum,error));
         REQUIRE(out.start==-3 && out.frames()==7 && branch==0 && sum==0);

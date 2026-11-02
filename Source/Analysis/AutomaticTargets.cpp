@@ -101,7 +101,7 @@ bool reconcileTargets(Session& session,const std::vector<Candidate>& candidates,
         Swell w;w.arrival=w.sourceStart=w.detectorAnchor=found[i].sample;
         if(!checkedAdd(w.arrival,1,w.sourceEnd)){error="Target overflow";return false;}
         w.shape=initialShape(time.rate);w.provenance=Provenance::automatic;w.ir=s.defaultIR;w.irName=s.defaultIRName;
-        w.name=defaultSwellName(w.arrival,time);w.phase=Phase::stale;w.status="Waiting for source";
+        w.name=defaultSwellName(w.arrival,time,&s);w.phase=Phase::stale;w.status="Waiting for source";
         matched.insert(w.id);s.swells.push_back(std::move(w));
     }
     std::vector<juce::String> retired;

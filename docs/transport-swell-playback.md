@@ -1,10 +1,10 @@
 # Song transport playback
 
-Implementation is in progress under `play-swells-with-song-transport`. Automated tests exercise the live mixer; FL Studio acceptance remains pending.
+Song-synchronized playback is implemented. Automated tests exercise the live mixer; acceptance of the current UI build is tracked separately in [current checks](ui-diagnostics-and-acceptance.md).
 
 New and migrated instances store independent live settings: playback enabled, Dry + Wet routing, and 0 dB user wet level. Live level accepts -60 through 0 dB. Manual Audition trim, blend, isolation and listening tail remain separate. Session JSON and plugin state are version 7; v1-v6 input remains supported and preserves its existing edits and monitoring values.
 
-Default Dry + Wet output is unchanged live input plus prepared wet. It does not replay captured dry. Enabled Wet Only suppresses live dry only during playing Song transport; disabling or stopping returns dry with a short routing transition. Main-view Live playback, routing and Live wet controls are independent of the manual Audition strip.
+Default Dry + Wet output is unchanged live input plus prepared wet. It does not replay captured dry. Enabled Wet Only suppresses live dry only during playing Song transport; disabling or stopping returns dry with a short routing transition. Settings > Playback controls for Live playback, routing and Live wet are independent of the manual Audition strip.
 
 Song playback requires a coherent host observation containing absolute samples, PPQ, sample rate, tempo, meter and playing state. Only fixed mappings compatible with the prepared capture are supported. Two inferred sample-to-PPQ origins can differ by at most one sample, allowing independently rounded host observations. A larger difference, a rate/tempo/meter change, invalid fields or an overflowing origin is incompatible rather than a request to stretch/remap existing audio.
 

@@ -7,14 +7,19 @@ int main() { return runTest([]
     Session s; CaptureManifest map; juce::String error;
     {
         SongTime timing{true,0,0,48000,120,4,4};
-        REQUIRE(defaultSwellName(34*48000,timing)=="Swell 18");
+        REQUIRE(defaultSwellName(34*48000,timing)=="Swell Bar 18.1");
+        REQUIRE(defaultSwellName(35*48000,timing)=="Swell Bar 18.3");
+        REQUIRE(defaultSwellName(34*48000+6000,timing)=="Swell Bar 18.1.25");
         timing.sample=48000;timing.ppq=12;timing.numerator=3;timing.denominator=4;
-        REQUIRE(defaultSwellName(48000,timing)=="Swell 5");
+        REQUIRE(defaultSwellName(48000,timing)=="Swell Bar 5.1");
+        timing.denominator=8;REQUIRE(defaultSwellName(60000,timing)=="Swell Bar 9.2");
         timing.valid=false;REQUIRE(defaultSwellName(0,timing)=="Swell");
         CaptureManifest covered;covered.sampleRate=48000;covered.ranges={{0,192000,CaptureCoverageKind::silence}};
         timing={true,0,0,48000,120,4,4};Session definitions;
         REQUIRE(add(definitions,100,covered,timing,{},error) && add(definitions,200,covered,timing,{},error));
-        REQUIRE(definitions.swells[0].name=="Swell 1" && definitions.swells[1].name=="Swell 1" && definitions.swells[0].id!=definitions.swells[1].id);
+        REQUIRE(definitions.swells[0].name=="Swell Bar 1.1.004166667" && definitions.swells[1].name=="Swell Bar 1.1.008333333" && definitions.swells[0].id!=definitions.swells[1].id);
+        auto duplicate=definitions;REQUIRE(add(duplicate,100,covered,timing,{},error));
+        REQUIRE(duplicate.swells.back().name=="Swell Bar 1.1.004166667 (2)");
         auto& edited=definitions.swells[0];edited.name="My saved name";edited.placement=1000;edited.shape.gainDb=-9;
         edited.shape.fadeIn=123;edited.shape.inTension=.7;edited.enabled=false;edited.solo=true;edited.frozen=true;
         const auto identity=edited.id;

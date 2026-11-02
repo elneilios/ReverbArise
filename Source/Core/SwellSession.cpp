@@ -1,4 +1,5 @@
 #include "SwellSession.h"
+#include "MusicalPosition.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -72,7 +73,7 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     for (const auto candidate : others) if (candidate > arrival) end = std::min(end, candidate);
     for (const auto& other : s.swells) if (other.arrival > arrival) end = std::min(end, other.arrival);
     if (end <= arrival) { error = "Source interval is empty"; return false; }
-    Swell w; w.name = defaultSwellName(arrival,time);
+    Swell w; w.name = defaultSwellName(arrival,time,&s);
     w.arrival = w.sourceStart = arrival; w.sourceEnd = end; w.shape=initialShape(time.rate);
     const auto id = w.id; s.swells.push_back(std::move(w)); s.timing = time;
     select(s, {id}, id); error.clear(); return true;
@@ -81,16 +82,17 @@ Shape initialShape(double rate)
 {
     Shape s;if(std::isfinite(rate) && rate>0 && rate<1e9){s.endOffset=s.fadeOut=std::max(int64_t{1},static_cast<int64_t>(std::llround(rate*.020)));s.outCurve=Curve::smooth;}return s;
 }
-juce::String defaultSwellName(int64_t arrival,const SongTime& time)
+juce::String defaultSwellName(int64_t arrival,const SongTime& time,const Session* existing)
 {
-    if(!time.valid || !std::isfinite(time.rate) || time.rate<=0 || !std::isfinite(time.bpm) || time.bpm<=0
-        || !std::isfinite(time.ppq) || time.numerator<=0 || time.denominator<=0)return "Swell";
-    const auto quarter=static_cast<long double>(time.rate)*60/time.bpm;
-    const auto ppq=static_cast<long double>(time.ppq)+(static_cast<long double>(arrival)-time.sample)/quarter;
-    const auto bar=std::floor(ppq/(static_cast<long double>(time.numerator)*4/time.denominator))+1;
-    if(!std::isfinite(bar) || bar<=-9223372036854775808.0L || bar>=9223372036854775808.0L)return "Swell";
-    return "Swell "+juce::String(static_cast<juce::int64>(bar));
+    const auto position=musicalPosition(arrival,time);
+    const auto base=position=="unavailable"?juce::String("Swell"):"Swell Bar "+position;
+    if(!existing)return base;
+    auto candidate=base;unsigned duplicate=1;
+    while(std::any_of(existing->swells.begin(),existing->swells.end(),[&](const auto& w){return w.name==candidate;}))
+        candidate=base+" ("+juce::String(++duplicate)+")";
+    return candidate;
 }
+
 bool resetWetDefaults(Swell& w,double rate,juce::String& error)
 {
     if(!std::isfinite(rate) || rate<=0 || rate>=1e9){error="Compatible sample rate is required for Reset";return false;}

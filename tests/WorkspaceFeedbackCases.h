@@ -42,12 +42,12 @@ inline void workspaceFeedbackCases()
     engine.setIsolateDry(false);
     engine.setMonitoring(AuditionMode::wetOnly,.5f);await([&]{return engine.snapshot().auditionReady;});
     REQUIRE(engine.edit(ids[1],[](auto& w,auto&){w.phase=Phase::error;w.status="missing fixture";return true;}));
-    await([&]{return !engine.snapshot().auditionReady && engine.snapshot().dryStatus.contains("Swell 2");});
+    await([&]{return !engine.snapshot().auditionReady && engine.snapshot().dryStatus.contains(find(engine.savedSession(),ids[1])->name);});
     // An excluded bad member cannot block isolation; a required incompatible member must block the group.
     engine.setIsolateSelected(true);await([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.snapshot().auditionMembers.size()==1);
     engine.restore(original);await([&]{return engine.snapshot().auditionReady && engine.savedSession().swells[2].phase==Phase::ready;});
     REQUIRE(engine.edit(ids[1],[](auto& w,auto&){w.render.rate=2000;return true;}));
-    await([&]{return !engine.snapshot().auditionReady && engine.snapshot().dryStatus.contains("Swell 2");});
+    await([&]{return !engine.snapshot().auditionReady && engine.snapshot().dryStatus.contains(find(engine.savedSession(),ids[1])->name);});
     engine.setIsolateSelected(true);await([&]{return engine.snapshot().auditionReady;});
     engine.restore(original);await([&]{return engine.snapshot().auditionReady && engine.savedSession().swells[2].phase==Phase::ready;});
     // Exact boundary touch is excluded, and rapid membership edits cannot publish an old group.

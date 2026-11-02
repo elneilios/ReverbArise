@@ -48,8 +48,9 @@ to render software PNGs for ready, shaped, stale, error, empty and many-swell st
 See [Automatic swell workspace](automatic-swell-workspace.md) for successor v4
 state/defaults, automatic capture/detection/rendering, monitoring gain/blend and
 the lean editor. [Host acceptance](fl-studio-automatic-workspace-validation.md)
-keeps FL Studio checks separate from automated verification and deferred transport
-playback. The older milestone notes below describe their historical versions.
+keeps historical FL Studio checks separate from automated verification. Current
+UI access and remaining acceptance are in [the UI checklist](ui-diagnostics-and-acceptance.md);
+Song transport playback is implemented. The older milestone notes below describe their historical versions.
 
 ### M2 source selection and reading
 

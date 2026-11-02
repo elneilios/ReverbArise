@@ -17,10 +17,11 @@ public:
     KnobValue()
     {
         addAndMakeVisible(label);addAndMakeVisible(knob);addAndMakeVisible(entry);
-        label.setFont(juce::FontOptions(13));label.setBorderSize({});
+        label.setBorderSize({});
         knob.setRange(0,1,.000001);knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(false);
-        entry.setFont(juce::FontOptions(13));entry.setJustification(juce::Justification::centredLeft);
+        knob.setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier);
+        entry.setFont(juce::FontOptions(controlSize));entry.setJustification(juce::Justification::centredLeft);
         entry.gained=[this]{begin(true);};
         entry.onReturnKey=[this]{finish(true);};entry.onFocusLost=[this]{finish(true);};
         entry.onEscapeKey=[this]{cancel();};
@@ -33,7 +34,7 @@ public:
             if(oneShot)finish(false);
         };
         knob.onDragEnd=[this]{cancelledGesture=false;finish(false);};
-        label.setFont(juce::FontOptions(12));
+        label.setFont(juce::FontOptions(smallSize));
     }
     std::function<void()> onBegin,onEnd;
     std::function<void(double)> onDelta;

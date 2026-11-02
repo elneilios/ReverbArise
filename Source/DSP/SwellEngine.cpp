@@ -170,10 +170,10 @@ void SwellEngine::generate(bool all)
         ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;
     }
 }
-bool SwellEngine::assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled)
+bool SwellEngine::assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled,uint64_t expectedSession)
 {
     const juce::ScopedLock guard(lock);actionError.clear();auto w=find(model,id);
-    if(!w || w->inputGeneration!=expectedInput){message="IR assignment superseded; select the swell again";return false;}
+    if(!w || w->inputGeneration!=expectedInput || (expectedSession!=0 && expectedSession!=sessionGeneration.load())){message="IR assignment superseded; select the swell again";return false;}
     if(w->frozen){message="Unfreeze this swell before changing its IR";return false;}
     if((!bundled && file==juce::File{}) || imports.size()>=32){message="IR assignment unavailable; retry";return false;}
     Import command;command.file=file;command.bundled=bundled;command.session=sessionGeneration.load();

@@ -98,6 +98,7 @@ juce_add_plugin(preverb_plugin
 target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
     Source/Plugin/PluginInspector.cpp
+    Source/Plugin/PluginSettings.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
 )
@@ -146,7 +147,7 @@ if(BUILD_TESTING)
     target_link_libraries(preverb_scoped_recapture_test PRIVATE preverb_capture)
     add_test(NAME preverb_scoped_recapture_test COMMAND preverb_scoped_recapture_test)
     add_executable(preverb_swell_engine_test tests/swell_engine_test.cpp)
-    target_link_libraries(preverb_swell_engine_test PRIVATE preverb_preview)
+    target_link_libraries(preverb_swell_engine_test PRIVATE preverb_preview WavPack::WavPack)
     add_test(NAME preverb_swell_engine_test COMMAND preverb_swell_engine_test)
     add_executable(preverb_swell_analysis_test tests/swell_analysis_test.cpp)
     target_link_libraries(preverb_swell_analysis_test PRIVATE preverb_analysis)

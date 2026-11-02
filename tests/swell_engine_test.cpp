@@ -2,7 +2,20 @@
 #include "AllocationGuard.h"
 #include <DSP/SwellEngine.h>
 #include <source_location>
+#include <wavpack.h>
+#include <bit>
 using namespace m3;
+static void writePackedIR(const juce::File& file)
+{
+    std::vector<char> bytes;const auto output=[](void* destination,void* data,int32_t count)->int
+    {auto& sink=*static_cast<std::vector<char>*>(destination);auto begin=static_cast<char*>(data);sink.insert(sink.end(),begin,begin+count);return 1;};
+    std::unique_ptr<WavpackContext,decltype(&WavpackCloseFile)> writer(WavpackOpenFileOutput(output,&bytes,nullptr),&WavpackCloseFile);REQUIRE(writer);
+    WavpackConfig config{};config.sample_rate=48000;config.num_channels=2;config.channel_mask=3;config.bits_per_sample=32;config.bytes_per_sample=4;config.float_norm_exp=127;
+    REQUIRE(WavpackSetConfiguration64(writer.get(),&config,4800,nullptr) && WavpackPackInit(writer.get()));
+    std::vector<int32_t> samples(9600,0);samples[0]=samples[1]=std::bit_cast<int32_t>(.125f);
+    REQUIRE(WavpackPackSamples(writer.get(),samples.data(),4800) && WavpackFlushSamples(writer.get()));
+    REQUIRE(file.replaceWithData(bytes.data(),bytes.size()));
+}
 template<class F> static void waitFor(F condition,const std::source_location location=std::source_location::current())
 {
     const auto deadline=juce::Time::getMillisecondCounter()+30000;
@@ -118,9 +131,23 @@ int main() { return runTest([]
         waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wav";});
         REQUIRE(find(edits.savedSession(),b)->irName=="Preverb Hall");
         REQUIRE(!edits.assignIR(a,token,custom));
+        edits.loadDefaultIR(custom);waitFor([&]{return edits.savedSession().defaultIRName=="own.wav";});
+        const auto future=edits.savedSession().defaultIR;
+        auto imported=*find(edits.savedSession(),a);REQUIRE(!edits.assignIR(a,imported.inputGeneration,{}));
+        REQUIRE(find(edits.savedSession(),a)->inputGeneration==imported.inputGeneration);
+        const auto packed=editsRoot.file.getChildFile("own.wv");writePackedIR(packed);
+        REQUIRE(edits.assignIR(a,imported.inputGeneration,packed));waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wv";});
+        REQUIRE(find(edits.savedSession(),a)->ir.channels==2 && edits.savedSession().defaultIR==future && find(edits.savedSession(),b)->irName=="Preverb Hall");
+        const auto bad=editsRoot.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid IR fixture"));imported=*find(edits.savedSession(),a);
+        REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::error;});
+        REQUIRE(find(edits.savedSession(),a)->ir==imported.ir && edits.savedSession().defaultIR==future);
+        const auto oldEpoch=edits.assignmentEpoch();const auto restored=edits.savedSession();edits.restore(restored);
+        REQUIRE(!edits.assignIR(a,find(restored,a)->inputGeneration,custom,false,oldEpoch));
+        waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::ready;});
         auto request=*find(edits.savedSession(),a);
         REQUIRE(edits.assignIR(a,request.inputGeneration,{},true));
         waitFor([&]{return find(edits.savedSession(),a)->irName=="Preverb Hall";});
+        REQUIRE(edits.savedSession().defaultIR==future && find(edits.savedSession(),a)->ir!=future);
         edits.generate(true);waitFor([&]{const auto state=edits.savedSession();return state.swells[0].phase==Phase::ready && state.swells[1].phase==Phase::ready;});
         REQUIRE(edits.setFrozen(a,true));request=*find(edits.savedSession(),a);
         REQUIRE(!edits.assignIR(a,request.inputGeneration,custom) && find(edits.savedSession(),a)->ir==request.ir);
