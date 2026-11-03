@@ -336,3 +336,42 @@ unchanged. The only production-source change is `WorkspaceTheme.h`, plus font
 resource/notice packaging in CMake; DSP, plugin identity and persisted-state code
 are untouched. The OpenSpec change remains archived and synced. PR #24 remains
 open and unmerged for owner review.
+
+### Final approved re-review and main/#27 integration — 2026-11-03
+
+The owner approved the final rubber-duck re-review: static Inter implementation,
+hierarchy, resource packaging, OFL notice and visual standards are accepted, with
+no further typography changes. Merged latest `origin/main` at `b79e25c` (merged
+PR #27, product-version/release identity) into the #16 branch with merge commit
+`244ef2d`, without conflicts. Approved `Source/` and `resources/` contents are
+unchanged from `c01ce69`. The optional duplicate Inter Regular table row was
+consolidated; this is documentation only.
+
+Ran `./scripts/build.ps1 -Configuration Release -Test` locally. The wrapper
+reported **PASS, exit 0, Git 244ef2d**; preflight, configure, build and test all
+passed. Full Release CTest: **35/35 passed, 39.83 seconds**. Logs:
+`out/build-logs/Release/20261103-011630-294a0eab/`.
+
+Explicit confirmations from that full run:
+
+| Test | Result |
+| --- | --- |
+| `preverb_product_version_test` | Pass, 0.04 s |
+| `preverb_version_contract_test` | Pass, 2.14 s |
+| `preverb_built_version_test` | Pass, 0.04 s |
+| `preverb_workflow_processor_test` | Pass, 0.36 s |
+| `preverb_workflow_state_test` | Pass, 0.02 s |
+| `preverb_swell_ui_test` | Pass, 2.56 s; native shared-header/control/font assertions |
+
+Generated product identity and VST3 module/component/controller metadata report
+version **0.1.0**. Manufacturer/plugin codes, bundle ID and component/controller
+IDs remain unchanged. The Release binary hash is still
+`c3d3d56e95a6f603484599375df70cd5ba4dad2aa3cc3b95667f4c48f4f95251`.
+Strict canonical OpenSpec validation passed **14/14**, now including product
+release identity. Patch formatting passed. Debug results above are from the
+earlier Inter-adoption run, not a claim of a new Debug run after #27.
+
+The #16 OpenSpec change was already archived and synced; no archive action was
+repeated. No visual, behavioral, DSP or persisted-state changes were introduced
+in this follow-up, and no additional owner UAT was requested. Final merge remains
+with the owner; PR #24 is left open.
