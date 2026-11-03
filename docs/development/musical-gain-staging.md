@@ -76,7 +76,7 @@ their peaks are not an RMS/intensity measurement. Display zoom changes no audio.
 Knob value boxes follow dragging continuously and
 accept typed values, including signed Level values such as `+6`.
 
-Use the Release build recorded in `gain-staging-evidence.md` and note host,
+Use the Release build recorded in [gain-staging evidence](../validation/gain-staging-evidence.md) and note host,
 rate and buffer. In a fresh instance capture quiet/strong musical events with
 factory and imported IRs; check starting impact at Level 0 dB. Try -6/+6 dB
 with headroom, then hot overlaps with visible protection. Compare Wet Only
@@ -85,4 +85,4 @@ for ramps. Check Dry + Wet in the mix, seeks/loops and two-track WAV export.
 Save/reopen with calibration, edits and freeze. On an older project copy verify
 Legacy restore and explicit adoption. The user passed the three grouped host
 checks on 2026-11-02; recorded results and configuration limitations are in
-`gain-staging-evidence.md`.
+[gain-staging evidence](../validation/gain-staging-evidence.md).
