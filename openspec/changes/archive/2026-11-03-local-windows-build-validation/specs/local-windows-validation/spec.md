@@ -71,6 +71,11 @@ Repeated invocations and configuration switches SHALL reuse the existing shared 
 - **WHEN** a cache belongs to a different checkout or incompatible generator
 - **THEN** execution fails with recovery guidance instead of silently deleting or replacing it
 
+#### Scenario: Incomplete existing cache
+- **WHEN** an existing cache lacks source directory, generator or platform identity
+- **THEN** preflight fails with a diagnostic naming the missing entries before configure, build or tests run
+- **AND** the cache remains unchanged and no automatic repair occurs
+
 ### Requirement: Reproducible documentation and evidence
 Living development guidance SHALL describe prerequisites, both configurations, optional testing, output locations and failure behavior, with a short AGENTS.md pointer. Validation evidence SHALL identify commands, environment, revision and actual outcomes, distinguishing unavailable checks from passes and automated CTest from manual DAW acceptance.
 
