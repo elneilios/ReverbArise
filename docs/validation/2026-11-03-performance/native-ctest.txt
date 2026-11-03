@@ -1,0 +1,75 @@
+Test project C:/Users/neila/.codex/worktrees/issue-25-performance-audit/k7ma-preverb/out/build/windows-msvc
+      Start  1: preverb_product_version_test
+ 1/35 Test  #1: preverb_product_version_test .........   Passed    0.03 sec
+      Start  2: preverb_version_contract_test
+ 2/35 Test  #2: preverb_version_contract_test ........   Passed    1.16 sec
+      Start  3: preverb_built_version_test
+ 3/35 Test  #3: preverb_built_version_test ...........   Passed    0.03 sec
+      Start  4: preverb_workflow_processor_test
+ 4/35 Test  #4: preverb_workflow_processor_test ......   Passed    0.32 sec
+      Start  5: preverb_capture_transaction_test
+ 5/35 Test  #5: preverb_capture_transaction_test .....   Passed    0.26 sec
+      Start  6: preverb_workflow_state_test
+ 6/35 Test  #6: preverb_workflow_state_test ..........   Passed    0.03 sec
+      Start  7: preverb_gain_staging_test
+ 7/35 Test  #7: preverb_gain_staging_test ............   Passed    0.22 sec
+      Start  8: preverb_ir_library_test
+ 8/35 Test  #8: preverb_ir_library_test ..............   Passed    3.88 sec
+      Start  9: preverb_ir_handover_test
+ 9/35 Test  #9: preverb_ir_handover_test .............   Passed    1.21 sec
+      Start 10: preverb_ir_streaming_test
+10/35 Test #10: preverb_ir_streaming_test ............   Passed    4.34 sec
+      Start 11: preverb_audition_mix_test
+11/35 Test #11: preverb_audition_mix_test ............   Passed    0.04 sec
+      Start 12: preverb_transition_feedback_test
+12/35 Test #12: preverb_transition_feedback_test .....   Passed    1.12 sec
+      Start 13: preverb_automatic_coordinator_test
+13/35 Test #13: preverb_automatic_coordinator_test ...   Passed    5.29 sec
+      Start 14: preverb_automatic_targets_test
+14/35 Test #14: preverb_automatic_targets_test .......   Passed    0.05 sec
+      Start 15: preverb_swell_viewport_test
+15/35 Test #15: preverb_swell_viewport_test ..........   Passed    0.03 sec
+      Start 16: preverb_swell_ui_test
+16/35 Test #16: preverb_swell_ui_test ................   Passed    2.07 sec
+      Start 17: preverb_scoped_recapture_test
+17/35 Test #17: preverb_scoped_recapture_test ........   Passed    0.09 sec
+      Start 18: preverb_swell_engine_test
+18/35 Test #18: preverb_swell_engine_test ............   Passed    2.41 sec
+      Start 19: preverb_swell_analysis_test
+19/35 Test #19: preverb_swell_analysis_test ..........   Passed    0.95 sec
+      Start 20: preverb_swell_shape_test
+20/35 Test #20: preverb_swell_shape_test .............   Passed    0.05 sec
+      Start 21: preverb_swell_asset_test
+21/35 Test #21: preverb_swell_asset_test .............   Passed    0.84 sec
+      Start 22: preverb_swell_session_test
+22/35 Test #22: preverb_swell_session_test ...........   Passed    0.07 sec
+      Start 23: preverb_transport_time_test
+23/35 Test #23: preverb_transport_time_test ..........   Passed    0.04 sec
+      Start 24: preverb_transport_playback_test
+24/35 Test #24: preverb_transport_playback_test ......   Passed    0.06 sec
+      Start 25: preverb_wavpack_ir_test
+25/35 Test #25: preverb_wavpack_ir_test ..............   Passed    0.14 sec
+      Start 26: preverb_audition_voice_test
+26/35 Test #26: preverb_audition_voice_test ..........   Passed    0.05 sec
+      Start 27: preverb_preview_engine_test
+27/35 Test #27: preverb_preview_engine_test ..........   Passed    0.57 sec
+      Start 28: preverb_reverse_convolution_test
+28/35 Test #28: preverb_reverse_convolution_test .....   Passed    0.10 sec
+      Start 29: preverb_source_range_test
+29/35 Test #29: preverb_source_range_test ............   Passed    0.13 sec
+      Start 30: preverb_build_smoke
+30/35 Test #30: preverb_build_smoke ..................   Passed    0.04 sec
+      Start 31: preverb_processor_test
+31/35 Test #31: preverb_processor_test ...............   Passed   12.33 sec
+      Start 32: preverb_capture_test
+32/35 Test #32: preverb_capture_test .................   Passed    0.06 sec
+      Start 33: preverb_persistent_capture_test
+33/35 Test #33: preverb_persistent_capture_test ......   Passed    0.23 sec
+      Start 34: preverb_scheduled_tone_test
+34/35 Test #34: preverb_scheduled_tone_test ..........   Passed    0.03 sec
+      Start 35: preverb_song_bar_ruler_test
+35/35 Test #35: preverb_song_bar_ruler_test ..........   Passed    0.03 sec
+
+100% tests passed, 0 tests failed out of 35
+
+Total Test time (real) =  39.28 sec
