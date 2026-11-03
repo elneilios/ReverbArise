@@ -12,6 +12,8 @@ description; it already has reusable navigation, notices and native review fixtu
 - Add semantic JUCE vector icons before Learn, Perform and Export: vertical
   waveform bars, a rising reverse-swell curve with three outlined handles, and an
   audio document/outward-arrow motif.
+- Prepare the canonical SVG resources in [assets/icons](assets/icons/README.md)
+  now, with no production embedding, C++ helper or shared-component edits.
 - Keep existing segment rectangles, border/focus/clipping behaviour, model-owned
   selection, wordmark, tagline, Settings and workspace geometry.
 - Give the mode description a 2 px aqua vertical accent, an 8–10 px text gap and
@@ -49,3 +51,14 @@ capability, third-party asset/library or main-workspace redesign is proposed.
 Planning is isolated on `codex/header-mode-icons`, based on main `09c566b`.
 `bound-waveform-paint-work` remains untouched with all seven tasks unchecked.
 The concurrent Learn agent's files are not edited by this proposal.
+
+## Preparation status
+
+The three original SVGs share a 16-unit canvas, 1.6-unit rounded strokes and
+explicit monochrome ink. Browser asset inspection covers 14/16 px plus scaled
+examples; the static review sheet does not establish native JUCE, interaction or
+Windows DPI acceptance. Exact visual specifications, file-level integration
+dependencies and the validation checklist are maintained in [design.md](design.md).
+Implementation remains blocked on the owner's later instruction and Agent 1's
+published navigation/focus-clipping baseline. No merge or cherry-pick is performed
+as part of preparation.

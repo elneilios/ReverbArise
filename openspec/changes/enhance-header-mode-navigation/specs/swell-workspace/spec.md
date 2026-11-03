@@ -27,6 +27,11 @@ Learn, Perform and Export SHALL display consistent resolution-independent outlin
 - **WHEN** pointer, keyboard or accessibility activation requests an available or unavailable mode
 - **THEN** the existing guarded intent determines acceptance, accessible names remain Learn, Perform and Export, and decorative icons create no additional focus or action targets
 
+#### Scenario: Consistent small-size artwork
+- **WHEN** the canonical SVG icons are displayed at 14 and 16 logical pixels and scaled for supported DPI
+- **THEN** they share a 16-unit canvas, a proportionally scaling 1.6-unit rounded stroke and transparent fill, with three distinct outlined Perform handles and no clipped stroke or external image/font dependency
+- **AND** the nominal navigation uses a 16 px icon canvas and 8 px icon-to-label gap without changing segment or focus geometry
+
 ### Requirement: Header information shares typography without losing severity
 The mode description SHALL have a 2 px aqua vertical accent, an 8–10 px text gap, regular text and no icon, fill or enclosing border. Description and contextual-message body text SHALL share font family, size, regular weight, #C7CDD4 ink and comparable vertical alignment. Contextual accents and icons SHALL preserve severity colours. Both columns SHALL retain reserved bounds and existing header dimensions without changing branding or main-workspace placement.
 
@@ -38,3 +43,8 @@ The mode description SHALL have a 2 px aqua vertical accent, an 8–10 px text g
 #### Scenario: Supported scale and size
 - **WHEN** the header is shown at existing supported logical sizes and Windows scale factors
 - **THEN** vector icons, text, accents and focus outlines remain complete and legible with no collision between the contextual message and mode description
+
+#### Scenario: Information-row metrics
+- **WHEN** a mode description and contextual message share the existing 32 px information row
+- **THEN** both body texts use 14 px regular Inter and the same vertical text alignment, while the description's 2×16 px aqua accent is vertically centred with an 8 px gap before text
+- **AND** contextual severity markers retain their existing geometry and colours, and header-specific body styling does not change unrelated controls
