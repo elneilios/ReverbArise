@@ -24,13 +24,14 @@ inline Capabilities capabilities(const Snapshot& s,Readiness r) noexcept
 }
 inline const char* modeName(Mode mode) noexcept
 {switch(mode){case Mode::capture:return "Capture";case Mode::live:return "Live";case Mode::finalise:return "Finalise";}return "Unknown";}
-inline const char* entryError(Snapshot s,Mode target,Readiness r) noexcept
+enum class EntryBlock : uint8_t { none, recording, settling, source, timing, wet };
+inline EntryBlock entryBlock(Snapshot s,Mode target,Readiness r) noexcept
 {
-    if(s.locked())return s.phase==Phase::recording?"Capture is recording; stop the DAW first":"Source commit/validation is settling";
-    if(target!=Mode::capture && !r.usefulSource && !(target==Mode::live && r.frozenWet))return "Capture useful source audio first (Live also supports verified frozen wet)";
-    if(target!=Mode::capture && !r.compatible)return "Source needs compatible validated host timing";
-    if(target==Mode::finalise && !r.readySwell)return "Finalise needs an enabled ready swell";
-    return nullptr;
+    if(s.locked())return s.phase==Phase::recording?EntryBlock::recording:EntryBlock::settling;
+    if(target!=Mode::capture && !r.usefulSource && !(target==Mode::live && r.frozenWet))return EntryBlock::source;
+    if(target!=Mode::capture && !r.compatible)return EntryBlock::timing;
+    if(target==Mode::finalise && !r.readySwell)return EntryBlock::wet;
+    return EntryBlock::none;
 }
 // A single lock-free word owns mode, phase, arm and generation. All callback
 // transitions are bounded CAS attempts; no UI/worker lock enters processing.
@@ -42,7 +43,7 @@ public:
     {
         if(static_cast<unsigned>(target)>2)return false;
         auto old=word.load(std::memory_order_acquire);const auto s=decode(old);
-        if(entryError(s,target,r))return false;
+        if(entryBlock(s,target,r)!=EntryBlock::none)return false;
         return word.compare_exchange_strong(old,pack(target,Phase::idle,false,Result::none,s.pass+1),std::memory_order_acq_rel);
     }
     bool arm(bool enabled) noexcept

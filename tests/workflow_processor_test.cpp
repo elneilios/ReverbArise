@@ -2,6 +2,7 @@
 #include "AudioTestFiles.h"
 #include "AllocationGuard.h"
 #include <Plugin/PluginProcessor.h>
+#include <UI/WorkflowPresentation.h>
 
 struct WorkflowHost:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -111,10 +112,29 @@ int main(){return runTest([]{
     auto restored=std::make_unique<PreverbAudioProcessor>(root.file);restored->prepareToPlay(1000,64);
     restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));REQUIRE(restored->flushCaptureForTesting());
     REQUIRE(restored->getWorkflowSnapshot().mode==workflow::Mode::finalise && !restored->getWorkflowSnapshot().recapture);
+    // Display labels never replace the established XML workflow identifiers.
+    const auto durableFixture=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(durableFixture && durableFixture->getStringAttribute("workflowMode")=="Finalise");
+    const auto savedVersion=durableFixture->getIntAttribute("stateVersion");
+    for(const auto mode:{workflow::Mode::capture,workflow::Mode::live,workflow::Mode::finalise})
+    {
+        auto fixture=std::make_unique<juce::XmlElement>(*durableFixture);
+        fixture->setAttribute("workflowMode",workflow::modeName(mode));juce::MemoryBlock encoded;
+        juce::AudioProcessor::copyXmlToBinary(*fixture,encoded);
+        restored->setStateInformation(encoded.getData(),static_cast<int>(encoded.getSize()));REQUIRE(restored->flushCaptureForTesting());
+        REQUIRE(restored->getWorkflowSnapshot().mode==mode && !restored->getWorkflowSnapshot().recapture);
+        REQUIRE(restored->getCaptureSnapshot().reference==replaced.reference && restored->getParameters().isEmpty());
+        REQUIRE(juce::String(m3::ui::presentWorkflow(restored->getWorkflowSnapshot(),restored->getWorkflowReadiness()).choices[static_cast<size_t>(mode)].label)
+            ==(mode==workflow::Mode::capture?"Learn":mode==workflow::Mode::live?"Perform":"Export"));
+        juce::MemoryBlock roundTrip;restored->getStateInformation(roundTrip);
+        const auto saved=juce::AudioProcessor::getXmlFromBinary(roundTrip.getData(),static_cast<int>(roundTrip.getSize()));
+        REQUIRE(saved && saved->getStringAttribute("workflowMode")==workflow::modeName(mode) && saved->getIntAttribute("stateVersion")==savedVersion);
+    }
     auto legacy=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
     REQUIRE(legacy);legacy->setAttribute("stateVersion",7);legacy->removeAttribute("workflowMode");juce::MemoryBlock old;
     juce::AudioProcessor::copyXmlToBinary(*legacy,old);restored->setStateInformation(old.getData(),static_cast<int>(old.getSize()));
     REQUIRE(restored->flushCaptureForTesting() && restored->getWorkflowSnapshot().mode==workflow::Mode::capture);
+    REQUIRE(juce::String(m3::ui::modeLabel(restored->getWorkflowSnapshot().mode))=="Learn");
     REQUIRE(restored->getCaptureSnapshot().reference==replaced.reference);
     for(int version=1;version<=7;++version)
     {legacy->setAttribute("stateVersion",version);juce::MemoryBlock fixture;juce::AudioProcessor::copyXmlToBinary(*legacy,fixture);

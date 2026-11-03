@@ -1,31 +1,56 @@
 # Native UI theme and visual checkpoints
 
 `Source/UI/WorkspaceTheme.h` centralizes the approved baseline palette and flat
-native LookAndFeel. `WorkspaceLayout.h` calculates eight regions in six bands
-from editor size only; changing selection/readiness or opening the separate
-Settings/Diagnostics windows does not change their positions.
+native LookAndFeel. `WorkspaceLayout.h` calculates fixed regions from editor
+size. The 82-pixel header reserves a 32-pixel notice row beneath the logo/tagline,
+left of the mode description. Showing one notice does not move globals or the
+workspace; the divider above globals stays visible below the notice. Audition,
+Overview and info remain anchored. The window remains 1100x850 by default.
+
+
+Issue #16 replaces the temporary mode dropdown with one `WorkflowHeader` reused
+across Learn, Perform and Export. It composes the existing wordmark/italic tagline,
+the approved library SegmentedSelector and semantic Settings IconActionButton,
+plus an italic role description. Only outer selector ends are rounded; internal
+joins are square. The header includes reserved notice space; the 1100x850 opening size remains.
+Visible selection comes from accepted model state; recording/commit locks expose
+accessible reasons without switching modes. Display names are separate from saved
+mode identifiers. Dedicated Learn and Export layouts remain #11/#6. Component
+and integrated header/typography approvals are recorded in the dated issue #16
+validation evidence.
 
 The numerical palette remains a proposed baseline adopted for this change:
-background #0F1418, aqua #00EFFF/#00C2CC, timing #FFC700, text #F8FAFC/#E1E6EC,
+background #0F1418, aqua #00EFFF/#00C2CC, timing #FFC700, text #F8FAFC/#EDF1F5,
 rules #4A5058 and control outlines #6B737C. The first stage replaces the large
 boxed header/list/editor/inspector surfaces with rules. Control/selection outlines
 are allowed; only the Overview waveform viewport has a major rounded outline.
 Its title and ruler sit above that viewport.
 
-The header embeds only `resources/logo/svg/reverbarise-wordmark-dark.svg` and
-`resources/logo/source/InterVariable.ttf`, rather than loading resources from
-disk in the callback or embedding the preview contact sheet. The supplied SVG
-keeps its aspect ratio, integrated A, alpha and clear space. Regular native
-control text uses the supplied Inter typeface; bold and italic roles explicitly
-use real system Segoe UI faces while variable-font style-axis support is not
-verified on this backend. The Inter OFL notice is copied into the VST3 bundle's
-Contents/Resources alongside the existing WavPack notice. Native visual inspection raised main headings/tagline to 21 logical pixels and the empty headline to 24 for clearer hierarchy; these are proposed checkpoint metrics, not immutable raster measurements. No font downloader or
-logo-export build dependency is introduced.
+The header embeds `resources/logo/svg/reverbarise-wordmark-dark.svg` without
+changing its proportions, integrated A, alpha or clear space. Typography uses
+Inter 4.1 static TTFs from `resources/fonts/inter/`: Regular, SemiBold, Bold and
+Italic. Each is loaded once from BinaryData and selected by explicit face pointer
+for components and custom painting. The variable Inter assets under the original
+logo source folder remain source material; they are no longer embedded in the
+plugin. Segoe UI is no longer the selected UI family. The official static-font
+OFL notice is copied to the VST3's Contents/Resources/Inter-OFL.txt alongside
+existing third-party notices. No runtime font download or font installation is
+required. The owner approved the static Inter comparison, including fuller
+small-text rendering and deferral of Zoom-button wrapping to the Perform redesign.
+
+Custom-painted navigation, notices, list rows and waveform text explicitly use
+`fontFor` to resolve this component-local policy. Plain `Graphics::setFont` with
+only a size/style can bypass the component's LookAndFeel and is not sufficient.
+Menus, tabs, dialogs and numeric inputs use the same explicit Inter policy. Secondary text is brighter off-white (#EDF1F5). Logo, tagline, mode toggles
+and Settings share one primary-row vertical center; the toggles/cog share top,
+bottom and 36-pixel height. The italic mode description sits below the toggles
+and does not influence primary-row alignment. Its 16-pixel italic text shares
+the reserved notice row's vertical center.
 
 The current logical opening default and minimum are both 1100x850, with maximum
 2000x1400. The former 1400x1000 opening size remains a supported reference size.
 The smaller default and brighter off-white text were explicitly requested by the user on 2026-11-02. Margins are 20 (16 below 1200 width); header/global/audition/overview/
-information bands are 70/66/82/142/44 pixels. Workspace gets the remaining height.
+information bands are 82/66/82/142/44 pixels. Workspace gets the remaining height.
 The left list is 210 (180 at minimum width); inspector is 340 (320 at minimum).
 Twenty-pixel column separation preserves the large central waveform editor.
 The inspector and list scroll independently. Screenshot scaling alone does not
