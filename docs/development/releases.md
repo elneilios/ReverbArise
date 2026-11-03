@@ -69,7 +69,10 @@ permission is implied. Before sharing any binary externally, the owner must reco
 
 The script records an owner's affirmative review; it does not determine legal
 eligibility. Keep dated supporting evidence outside the binary output and reference
-it in the publication review text. Local copying outside this workflow also needs
+it with a non-confidential summary in the publication review text. `-LicenseReview`
+text may appear in public GitHub release notes: do not include confidential evidence,
+private document links, credentials or other sensitive review material. Keep that
+supporting evidence private. Local copying outside this workflow also needs
 this review. No licensing review was approved by implementing or testing this script.
 
 ## Extraction and FL Studio acceptance
@@ -98,18 +101,37 @@ instructions for an authorized owner; **do not run them during implementation/te
 Use the exact packaged full SHA from `build-manifest.json`, not a moving branch.
 
 ```powershell
-# Deliberately create and push the exact identity tag only after review:
-git tag -a v0.1.0-rc.1 <packaged-full-sha> -m 'ReverbArise v0.1.0-rc.1'
-git push origin refs/tags/v0.1.0-rc.1
+& {
+    $manifest = Get-Content -LiteralPath 'out/releases/v0.1.0-rc.1/build-manifest.json' -Raw | ConvertFrom-Json
+    $packagedSha = $manifest.gitSha
+    $identity = $manifest.releaseIdentity
+    $headSha = git rev-parse --verify 'HEAD^{commit}'
+    if ($LASTEXITCODE -ne 0 -or $headSha -cne $packagedSha) { throw 'Check out the packaged commit before publication' }
 
-# From that same clean commit, after authenticated gh setup:
-./scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate rc.1 -Publish `
-  -RedistributionReviewed `
-  -LicenseReview 'Owner review record: <dated evidence covering JUCE, project and dependency rights>' `
-  -ConfirmPublish 'v0.1.0-rc.1@<packaged-full-sha>'
+    $confirmation = Read-Host "Type ${identity}@${packagedSha} to approve tag/release publication"
+    if ($confirmation -cne "${identity}@${packagedSha}") { throw 'Publication not confirmed' }
+
+    # Deliberately create and push the exact identity tag only after owner review:
+    git tag -a $identity $packagedSha -m "ReverbArise $identity"
+    if ($LASTEXITCODE -ne 0) { throw 'Tag creation failed; inspect existing tags before proceeding' }
+    git push origin "refs/tags/$identity"
+    if ($LASTEXITCODE -ne 0) { throw 'Tag push failed' }
+
+    # Supply only a public-safe summary; keep confidential review evidence private.
+    $publication = @{
+        ReleaseTag = $manifest.releaseTag
+        Publish = $true
+        RedistributionReviewed = $true
+        LicenseReview = 'Owner reviewed JUCE, project and third-party redistribution rights; public summary only'
+        ConfirmPublish = $confirmation
+    }
+    if ($manifest.candidate) { $publication.Candidate = $manifest.candidate }
+    ./scripts/release.ps1 @publication
+}
 ```
 
-Stable publication omits `-Candidate` and uses `vX.Y.Z@<sha>` as confirmation.
+For stable publication, select its manifest; the empty candidate field omits
+`-Candidate`, and confirmation uses `vX.Y.Z@<sha>`.
 The exact confirmation is separate from creating the local package. The command
 rechecks clean source, version, manifest, ZIP/checksum and payload inventory before
 network access; it verifies the already-pushed remote tag, including annotated tags,
