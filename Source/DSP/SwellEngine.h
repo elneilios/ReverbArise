@@ -2,6 +2,7 @@
 #include "PreviewEngine.h"
 #include "SwellAssetStore.h"
 #include "SwellShape.h"
+#include "GenerationConfiguration.h"
 #include <Analysis/OnsetAnalysis.h>
 #include <Analysis/AutomaticTargets.h>
 #include <Core/TransportTime.h>
@@ -35,6 +36,8 @@ struct EditorSnapshot
     bool dryAvailable=false,cachedWetOnly=false;
     juce::String dryStatus;
     juce::String defaultIRError;
+    bool defaultIRPending=false;
+    juce::String requestedDefaultIRName,defaultIRStatus;
     juce::String retainedIRName,requestedIRName;
     uint64_t renderCount=0;
     uint64_t analysisCount=0;
@@ -49,12 +52,19 @@ struct EditorSnapshot
     uint64_t offlineBlocks=0;
     juce::String offlineStatus="No offline callbacks observed";
 };
+struct IRChoice
+{
+    juce::String id,name,description,presetId,content;
+    Asset managed;
+};
 class SwellEngine final : private juce::Thread
 {
 public:
     SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={});
     ~SwellEngine() override;
-    void useWorkflow(workflow::State& state,std::function<uint64_t()> captureEpoch={}) {workflowState=&state;captureEpochProvider=std::move(captureEpoch);}
+    void useWorkflow(workflow::State&,std::function<uint64_t()> captureEpoch={});
+    // Non-realtime only: the worker copies the pinned configuration before settlement.
+    std::optional<GenerationConfiguration> passConfiguration(uint64_t pass) const;
     EditorSnapshot snapshot() const;
     Session savedSession() const;
     void restore(Session,juce::String expectedCaptureReference={});
@@ -69,12 +79,15 @@ public:
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
     bool assignBundledIR(const juce::String& id,uint64_t expectedInput,const juce::String& presetId,uint64_t expectedSession=0);
+    bool assignManagedIR(const juce::String& id,uint64_t expectedInput,const Asset&,const juce::String& name,uint64_t expectedSession=0);
+    std::vector<IRChoice> irChoices() const;
     bool resetSwell(const juce::String& id,bool allSettings);
     void generate(bool all=false);
     void analyze(int64_t start,int64_t end);
-    void setPreferences(float auditionDb,float sensitivity,double separation,bool autoRegenerate);
-    void setAutomaticProcessing(bool);
-    void setAutoMarkers(bool);
+    void setPreferences(float auditionDb,float sensitivity,double separation,bool autoRegenerate,uint64_t expectedWorkflowPass=UINT64_MAX);
+    void setAutomaticProcessing(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
+    void setAutoMarkers(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
+    void setLearningAutomatic(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
     void setIsolateSelected(bool);
     void setIsolateDry(bool);
     void setPostRoll(double seconds);
@@ -85,6 +98,11 @@ public:
     float changeTolerance() const noexcept {return (1-regeneration.load())*.3f;}
     bool setFrozen(const juce::String&,bool);
     void loadDefaultIR(const juce::File&);
+    bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    bool assignDefaultManagedIR(const Asset&,const juce::String& name,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    void holdDefaultImportsForTesting(bool hold) noexcept {defaultImportHold.store(hold);notify();}
+    bool defaultImportWaitingForTesting() const noexcept {return defaultImportWaiting.load();}
     void resetSuppression();
     void captureCommitted(int64_t start,int64_t end,uint64_t generation,bool explicitRecapture=false);
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
@@ -105,6 +123,9 @@ private:
     void persistentChangedLocked() {if(persistentChange)persistentChange();}
     bool permitCreative();
     workflow::State* workflowState=nullptr;
+    std::array<GenerationConfiguration,2> generationConfigurations;
+    uint64_t configurationRevision=0;
+    bool publishGenerationLocked(const Session&,uint64_t expectedWorkflowPass=UINT64_MAX,bool restoring=false,std::optional<uint64_t> configurationSession={});
     std::function<uint64_t()> captureEpochProvider;
     struct Runtime
     {
@@ -122,12 +143,14 @@ private:
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
-    bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession);
+    bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession,const Asset& managed={},const juce::String& label={});
+    bool queueDefaultIR(const juce::File&,const juce::String& presetId,const Asset&,const juce::String& label,uint64_t expectedSession,uint64_t expectedWorkflowPass);
     struct RetainedIR { Swell accepted;SongTime timing;juce::String revision,requestedName; };
     bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&) const;
     bool retainIRLocked(const Swell&,const PreviewContext&,const juce::String& requestedName);
     std::map<juce::String,RetainedIR> retainedIR;
-    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId; };
+    struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId;
+        Asset managed;juce::String label;uint64_t defaultRequest=0,workflowPass=0; };
     struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
     struct Analysis { int64_t start,end; float sensitivity; double separation; uint64_t session,request; };
     void run() override;
@@ -137,7 +160,8 @@ private:
     void collectCompletedPass(const PreviewContext&);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
     void dispatchAutomatic(const PreviewContext&);
-    void dirtyLocked(int64_t,int64_t);
+    void dirtyLocked(int64_t,int64_t,bool acceptedPass=false);
+    void acceptedSourceLocked(const CaptureManifest&);
     void importJob(const Import&);
     void resetJob(const Reset&);
     bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false);
@@ -222,11 +246,18 @@ private:
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
     bool analyzing=false;
-    std::vector<std::pair<int64_t,int64_t>> dirty;
+    std::vector<std::pair<int64_t,int64_t>> dirty,passDirty;
+    std::optional<CaptureManifest> acceptedSource;
+    std::set<juce::String> passRenderRequests;
     std::map<std::pair<int64_t,int64_t>,juce::String> analyzedContent;
     std::optional<std::pair<int64_t,int64_t>> trailing;
     juce::String defaultAttemptScope;
     juce::String defaultError;
+    juce::String requestedDefaultName,defaultStatus;
+    bool defaultPending=false;
+    uint64_t defaultRequest=0;
+    std::atomic<bool> defaultImportHold{false};
+    std::atomic<bool> defaultImportWaiting{false};
     double nextAutomaticEdit=0;
     std::atomic<bool> transportActive{false};
     bool wasTransportActive=false,analysisTurn=true;

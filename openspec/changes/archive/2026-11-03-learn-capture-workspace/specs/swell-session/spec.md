@@ -78,6 +78,22 @@ Accepted changes to learning preferences/defaults and committed source/context S
 - **WHEN** the playhead/auto-fit/provisional display updates, Recapture is armed or a pass-locked/no-op edit is attempted
 - **THEN** no persistent change notification is emitted for that transient or rejected action
 
+#### Scenario: Read-only Learn inspection is ephemeral
+- **WHEN** the user hovers, pins, relocates or clears a Learn inspection position, including during recording or while focus moves to a setting
+- **THEN** the operation creates no persistent-state notification, capture/commit/generation request or Perform edit
+- **AND** project/session replacement or editor reopen restores no pin and clears the pin flag and coordinate together
+
 #### Scenario: Successful pass with the editor closed
 - **WHEN** a useful pass accepts source/context and selects Perform without an open editor
 - **THEN** host state is marked changed through the safe notification path without callback storage, GUI work or waiting
+
+### Requirement: Retain successfully imported IR choices per instance
+Creative metadata SHALL persist a bounded collection of immutable managed IR identities and display labels, independently of current assignments. Duplicate content, unsafe references and excess capacity SHALL be rejected transactionally. Supported legacy metadata SHALL seed known choices from accepted default and swell references without scanning storage or inventing unused import history.
+
+#### Scenario: An imported IR is no longer selected
+- **WHEN** a successful import is replaced everywhere and the project is saved and reopened
+- **THEN** its managed identity remains selectable without the original file, while existing swell assignments and audio remain unchanged
+
+#### Scenario: Invalid collection cannot replace accepted state
+- **WHEN** restored collection metadata has duplicate content, unsafe paths or exceeds its capacity
+- **THEN** restoration fails without replacing valid accepted state or deleting assets

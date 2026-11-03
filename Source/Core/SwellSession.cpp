@@ -243,6 +243,13 @@ bool validate(const Session& s, juce::String& error)
         || s.suppressed.size()>maximumSwells || !validAsset(s.defaultIR)
         || (s.defaultIR.present() && !s.defaultIR.path.startsWith("irs/")) || s.defaultIRName.length()>512)
     { error = "Invalid session preferences/capacity"; return false; }
+    if(s.importedIRs.size()>maximumImportedIRs){error="Imported IR collection capacity exceeded";return false;}
+    std::set<juce::String> imported;
+    for(const auto& entry:s.importedIRs)
+        if(!entry.asset.present() || !validAsset(entry.asset) || !entry.asset.path.startsWith("irs/")
+            || entry.asset.content.isEmpty() || !imported.insert(entry.asset.content).second
+            || entry.name.isEmpty() || entry.name.length()>512 || entry.name.containsChar('\0'))
+        {error="Invalid imported IR collection";return false;}
     if (s.timing.valid && (! std::isfinite(s.timing.rate) || s.timing.rate <= 0 || ! std::isfinite(s.timing.bpm)
         || s.timing.bpm <= 0 || ! std::isfinite(s.timing.ppq) || s.timing.numerator <= 0 || s.timing.denominator <= 0))
     { error = "Invalid saved timing"; return false; }
@@ -300,11 +307,14 @@ juce::var assetMetadata(const Asset& a)
 bool encode(const Session& s, juce::String& json, juce::String& error)
 {
     if (! validate(s, error)) return false;
-    auto v = object(); put(v,"version",8); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    auto v = object(); put(v,"version",9); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
     put(v,"auditionMode",static_cast<int>(s.auditionMode)); put(v,"wetBlend",s.wetBlend);
     put(v,"defaultIR",assetMetadata(s.defaultIR)); put(v,"defaultIRName",s.defaultIRName);
+    juce::Array<juce::var> imported;
+    for(const auto& entry:s.importedIRs){auto item=object();put(item,"asset",assetMetadata(entry.asset));put(item,"name",entry.name);imported.add(item);}
+    put(v,"importedIRs",imported);
     juce::Array<juce::var> suppressed; for(auto anchor:s.suppressed) suppressed.add(integer(anchor));
     put(v,"suppressed",suppressed);
     put(v,"separation",s.separationSeconds); put(v,"autoRegenerate",s.autoRegenerate);
@@ -376,7 +386,13 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;
     const auto version=p.small(v,"version");
-    if (version < 1 || version > 8) { error = "Unsupported swell state version"; return false; }
+    if (version < 1 || version > 9) { error = "Unsupported swell state version"; return false; }
+    if(version>=9)
+    {
+        const auto imported=p.field(v,"importedIRs");
+        if(!imported.isArray() || imported.size()>static_cast<int>(maximumImportedIRs)){error="Invalid imported IR collection capacity";return false;}
+        for(const auto& entry:*imported.getArray())s.importedIRs.push_back({p.asset(p.field(entry,"asset")),p.string(entry,"name")});
+    }
     if(version>=8){s.gainPolicy=static_cast<GainPolicy>(p.small(v,"gainPolicy"));s.gainRevision=p.string(v,"gainRevision");}
     else {s.gainPolicy=GainPolicy::legacy;s.gainRevision=legacyGainRevision;}
     if(version>=7)s.isolateDry=p.boolean(v,"isolateDry");
@@ -426,6 +442,14 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         if(version>=3){w.shape.inTension=p.number(h,"inTension");w.shape.outTension=p.number(h,"outTension");}
         w.shape.inCurve=static_cast<Curve>(p.small(h,"inCurve")); w.shape.outCurve=static_cast<Curve>(p.small(h,"outCurve")); w.shape.gainDb=static_cast<float>(p.number(h,"gain"));
         w.phase=Phase::restoring; w.status="Restoring dependencies"; s.swells.push_back(std::move(w));
+    }
+    if(version<9)
+    {
+        const auto remember=[&](const Asset& asset,const juce::String& name){
+            if(asset.present() && asset.content.isNotEmpty() && name.isNotEmpty()
+                && std::none_of(s.importedIRs.begin(),s.importedIRs.end(),[&](const auto& entry){return entry.asset.content==asset.content;}))
+                s.importedIRs.push_back({asset,name});};
+        remember(s.defaultIR,s.defaultIRName);for(const auto& w:s.swells)remember(w.ir,w.irName);
     }
     if (! p.ok) { error="Malformed swell metadata"; return false; }
     if (! validate(s,error)) return false;

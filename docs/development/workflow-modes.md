@@ -121,3 +121,15 @@ New builds are named ReverbArise.vst3. The VST3 component/controller IDs,
 com.k7ma.preverb bundle identity, K7Ma/Prv1 codes and empty parameter inventory
 remain unchanged. An installed older Preverb Spike bundle is not removed by
 building; host rescan/reload behavior requires explicit FL Studio verification.
+
+## Learn generation settings
+
+Learn's effective Automatic Swells policy is the conjunction of the saved
+processing and marker switches. Explicit On enables both; Off disables
+processing without resetting hidden IR/sensitivity/marker preferences. Idle
+Learn edits configure future passes, rather than enqueuing reanalysis of old
+source. Explicit Perform marking/reanalysis remains separate. The whole-pass
+configuration pin and stale-input fences are documented in
+[the Learn protocol](learn-source-context-protocol.md). Source/context
+persistence and dry-only scheduling verification remain tracked implementation
+work; these settings changes alone do not claim those tasks are complete.

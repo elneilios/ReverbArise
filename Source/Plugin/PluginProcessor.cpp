@@ -26,6 +26,13 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
+    captureWorker.setPassContextProvider([this](uint64_t pass)->std::optional<CaptureGenerationContext>
+    {
+        const auto pinned=swells->passConfiguration(pass);if(!pinned)return {};
+        CaptureGenerationContext context;context.automatic=pinned->automatic;context.sensitivity=pinned->sensitivity;
+        context.separationSeconds=pinned->separationSeconds;context.ir=pinned->ir;context.irName=pinned->irName;
+        context.id=captureGenerationContextId(context);return context;
+    });
     captureWorker.setRecaptureHandler([this](int64_t a,int64_t b) { swells->recaptureCompleted(a,b); });
     captureWorker.setCommitHandler([this](int64_t a,int64_t b,uint64_t generation,bool recapture) {swells->captureCommitted(a,b,generation,recapture);});
     captureWorker.setAcceptedStateHandler([this]{persistentStateChanged();});

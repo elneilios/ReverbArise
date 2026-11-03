@@ -73,6 +73,15 @@ Learn SHALL show the existing branded header/mode navigation, narrow left captur
 - **WHEN** a user returns to Learn from Perform
 - **THEN** accepted source and full-song context remain visible, Recapture is off unless explicitly armed, and the Perform editor state is retained for return
 
+#### Scenario: Compact settings and keyboard focus
+- **WHEN** Learn is shown at the supported minimum or larger size and the user tabs through its controls
+- **THEN** matching section headings, smaller consistent field labels and tightly grouped descriptions remain top-aligned; both right-aligned switches and all other interactive controls retain complete focus outlines inside their bounds without touching the column separator
+- **AND** the timeline heading, caption, ruler and status remain aligned without overlap, preserving the approved header and dominant dry canvas
+
+#### Scenario: Hover beside a selected workflow mode
+- **WHEN** a mode segment is selected and the pointer hovers an adjacent segment
+- **THEN** its entire hover border remains visible at the shared edge without changing selection, square joins, rounded outer ends, keyboard focus or accessibility order
+
 ### Requirement: Learn exposes independent progressive capture controls
 Learn SHALL separate Source Capture/Recapture from Automatic Swells. Automatic Swells off SHALL hide IR, Character, DSP and sensitivity controls while retaining their values and explaining dry-only learning. On SHALL expose real supported generation settings. Unsupported Character algorithms/parameters SHALL be absent rather than selectable placeholders.
 
@@ -110,6 +119,17 @@ The Learn Default IR selector SHALL offer all real bundled responses, its curren
 - **WHEN** DAW Play locks the pass before a requested default is accepted
 - **THEN** the pass uses the displayed previously accepted default, late completion cannot replace it, and any deferred/discarded request is disclosed
 
+### Requirement: IR pickers share the instance's retained imported choices
+Learn and Perform IR pickers SHALL include bundled IRs and every successfully accepted imported managed IR in this instance, deduplicated by content identity. Imported choices SHALL remain available when unused or deselected and across save/reopen. Reuse SHALL verify managed assets without requiring the original external file. Failed, cancelled and superseded imports SHALL NOT enter the collection. The collection SHALL be instance-local rather than a scanned or global library.
+
+#### Scenario: Reuse an unselected learning import in Perform
+- **WHEN** a custom learning IR is successfully imported, subsequently deselected everywhere, and the user edits another swell's IR
+- **THEN** that custom IR remains selectable and selecting it changes only the intended assignment
+
+#### Scenario: Reopen or copy an instance
+- **WHEN** the instance is saved/restored or copied with an unused successful import
+- **THEN** the imported choice survives without duplicates and subsequent imports into one instance do not change another instance's choices
+
 ### Requirement: Learn coverage can be understood without waveform-height guessing
 Learn SHALL explicitly distinguish captured audio, exact-zero silence, uncaptured gaps, unavailable assets and provisional recording. A concise key and inspectable range/status text SHALL supplement colour and waveform height. Capture totals SHALL distinguish mapped duration, observed extent and provisional progress without inventing a known song length.
 
@@ -135,3 +155,29 @@ The Learn viewport SHALL include song origin and the highest accepted/admitted p
 #### Scenario: Timing is unavailable
 - **WHEN** musical timing or asset compatibility is unavailable
 - **THEN** the ruler/status uses truthful available coordinates and does not invent bars, stretch old source or hide unavailable regions
+
+### Requirement: Learn inspection is read-only, persistent across focus and ephemeral
+Learn SHALL provide read-only absolute-sample inspection. Left-click SHALL pin/relocate across focus changes; right-click SHALL NOT pin. Waveform-focused Escape SHALL clear coordinate/pin together. Inspection SHALL stay enabled during capture, remain ephemeral and leave capture, generation and Perform unchanged. Project/session reset or editor reopen SHALL clear it. Inspection, transport and provisional indicators SHALL be distinguishable.
+
+#### Scenario: Relocate and retain a pin
+- **WHEN** a left-click pins a position, focus moves to a setting, the pointer moves or capture advances
+- **THEN** the same absolute inspection position and its visible marker remain, and another left-click relocates it
+- **AND** right-click does not create/relocate the pin and Escape outside waveform focus does not clear it
+
+#### Scenario: Inspect an active or settling pass
+- **WHEN** hover, pin relocation or waveform keyboard inspection occurs while recording/draining/validating
+- **THEN** inspection remains responsive without changing capture authority, accepted source/context, job counts, saved state or Perform selection
+
+#### Scenario: Reset inspection consistently
+- **WHEN** Learn is re-entered or the editor's project/instance/session is replaced, restored or cleared
+- **THEN** coordinate and pinned flag clear together, hover resumes and no marker is restored from project state
+- **AND** ordinary auto-fit expansion and DAW seeks preserve the absolute pin without changing viewport policy or seeking the host
+
+### Requirement: Learn inspection readout uses reliable musical timing
+The existing inspection row SHALL show exact sample and coverage classification, plus bar/beat and elapsed time from song origin only with reliable coherent host timing and compatible capture rate. Missing/incompatible timing SHALL be explicitly unavailable. Full coverage ranges SHALL remain accessible without new controls or fabricated coordinates.
+
+#### Scenario: Inspect with and without reliable timing
+- **WHEN** an inspected sample has valid coherent host timing and a compatible capture rate
+- **THEN** its bar/beat and elapsed time from song origin are shown with exact sample and truthful audio/silence/gap/unavailable/provisional classification
+- **AND WHEN** that timing is unavailable or incompatible
+- **THEN** exact sample/coverage remain available and musical/elapsed timing is explicitly unavailable rather than fabricated

@@ -2,8 +2,10 @@
 
 ## Context
 
-See proposal.md for scope. The starting point is #10's implementation at
-`dda1a6c`, pending PR #18. Its workflow word already locks capture/settlement,
+See proposal.md for scope. Planning started from #10's implementation at
+`dda1a6c`; implementation now reconciles merged main `653f13a` via `dc003a7`,
+including #10/#18 and #16/#24. The approved shared static-Inter header and its
+reserved notice row are reused. The workflow word already locks capture/settlement,
 stages source privately and publishes accepted source on explicit Stop. The
 editor always lays out the eight-region Perform composition; its current
 capture snapshot exposes committed coverage, not the incoming provisional
@@ -30,7 +32,7 @@ functional verification.
 
 **Non-Goals:** replacing the workflow state machine, changing audio calibration,
 new Character DSP, destructive cache cleanup, or redesigning Perform/Export.
-Use #16's display mapping when available; do not implement that rename here.
+Use the delivered #16 display mapping and shared controls; do not implement that rename here.
 
 ## Decisions
 
@@ -61,6 +63,45 @@ Hide the Perform list, inspector, audition strip and separate bottom Overview;
 do not just shrink or disable them. Re-entering Perform restores its prior
 selection, scroll/zoom and controls. Learn has an independent viewport and no
 wet-envelope editing or audition affordance. Navigation does not seek the DAW.
+
+Checkpoint-A polish keeps Source Capture and Automatic Swells as matching section
+headings, with a separate regular-weight Enable automatic swells label beside its
+switch. Field labels share one smaller typography role. Use shared 4-pixel tight,
+12–16-pixel related and 24-pixel section spacing, with top-aligned groups rather
+than height-filling distribution. Retain one restrained inter-section rule.
+Switch component bounds include the entire focus stroke and padding; both
+switches share dimensions and right alignment. Check other interactive outlines
+and the timeline heading/caption/ruler/status rows for clipping or overlap while
+preserving the approved header geometry and the dominant dry canvas.
+The final checkpoint-A refinement keeps the header frozen, modestly widens the
+settings column to 304 logical pixels, and uses 14-pixel secondary workspace text.
+Restore the centred waveform glyph/instruction within an empty timeline, remove
+left-column workflow instructions, and keep capture/acceptance feedback beneath
+the waveform. Bring forward the existing worker-progress display from decision 2
+so recording/acceptance show actual admitted data rather than an empty prompt.
+This does not imply completion of coverage inspection, totals or sparse auto-fit.
+The final focused polish uses an explicit bundled Inter Medium face for Learn
+field labels, grey Regular helper text with a 6-pixel label/helper gap, balanced
+description lines, and matching dropdown/numeric-value typography. Preserve the
+304-pixel column, control dimensions and waveform viewport area. A single centred
+empty-state group uses shared internal spacing rather than independent offsets.
+These candidate Learn roles require owner approval before wider rollout; Perform
+density will be reviewed separately before finalizing production design tokens.
+The IR helper stays fixed in text and geometry across preparation/success/error
+states. Suppress progress for near-instant operations; preparation still pending
+after 600 ms uses the existing contextual message bar. Clear progress on completion
+without a success flash, and retain actionable model-owned errors until retry or
+resolution. This is presentation-only: preserve importer/loading/acceptance and
+asynchronous ownership. Do not introduce a new status row or control. Adopt
+the reusable wheel-enabled SliderControl/NumericInputControl family for Learn:
+step buttons, wheel, dragging and typing share range, formatting, gesture and
+invocation guards. The owner approved the numeric up/down family; preserve it.
+Checkpoint A and the stable IR feedback refinement are approved. Preserve these
+approved controls and composition while completing functional acceptance.
+Paint joined mode-segment borders at group level, with hovered/pressed borders
+after other borders, so neighbouring selected fills cannot clip a shared edge.
+Retain square internal joins, rounded outer ends, stable accessibility order and
+the existing selection/keyboard behaviour.
 
 Follow the issue's approved mockups and flat style guide. Reuse the wordmark,
 fonts, source grey, aqua accents and restrained yellow timing. The timeline is
@@ -107,6 +148,35 @@ silence merely because it appears flat. Use captured-duration as the union of
 mapped spans, separately from total timeline extent; disclose provisional totals
 separately. Do not imply a known song length, count an uncaptured seek as learned
 audio, or present unavailable assets as silence.
+
+#### Read-only interaction contract (owner refinement)
+
+Map pointer X linearly to an absolute sample in the current dry viewport; Y does
+not affect the position and there is no snapping. Unpinned hover updates the
+readout. Left-click pins/relocates that absolute sample; subsequent hover and
+focus movement to other controls must not replace or clear it. Draw the neutral
+white dashed cursor/dot and inspected-coverage wash even when another control has
+focus; aqua outline denotes waveform keyboard focus only. Solid yellow remains
+the observed DAW transport position; yellow recording tint/stripe remains
+provisional source. Right/middle click do not pin and have no new context action.
+
+When the waveform owns focus, Escape clears coordinate and pin together; retain
+Home/End viewport-edge and left/right coverage-boundary navigation. These keys
+must not intercept another control's editing. Inspection stays enabled during
+recording/drain/validation without issuing capture, commit, playback, generation
+or persistent-state commands. Extent expansion/host seek retain the same pinned
+absolute sample. Re-entering Learn or replacing/restoring/clearing the editor's
+session/project scope clears coordinate and pin atomically; reopening restores
+no inspection state. Ordinary capture acceptance keeps its established workflow.
+
+Use the existing readout row: bar and beat (display precision up to three beat
+fraction decimals), elapsed time from the reliably resolved song origin, exact
+sample and coverage kind. Use only valid coherent fixed host timing and compatible
+capture rate; otherwise show exact sample/coverage and explicit timing unavailable.
+Do not invent origin, bars or elapsed time from an assumed zero. Negative source
+may show negative elapsed time. Keep absolute coverage range and full readout in
+tooltip/accessibility text. No extra rows or controls. Preserve actual coverage,
+independent totals and threshold fitting, and keep all inspection ephemeral.
 
 ### 4. Auto-fit the dry extent independently of wet/selection state
 
@@ -198,8 +268,16 @@ of old swells as a side effect of preparing the next pass.
 
 ### 8. Reuse catalogue, importer and host change notifications
 
-List all six real bundled responses, the current managed custom default when
-needed, and Open from File. Reuse catalogue IDs/checksums and WAV/WavPack worker
+List all six real bundled responses, every successfully accepted imported IR in
+this instance, and Open from File in both Learn and Perform. Keep imports even
+when no default or swell uses them, so auditioning alternatives does not lose
+choices. Deduplicate by content identity; selecting an import reuses verified
+managed bytes after the external file moves. Persist the bounded collection in
+creative metadata v9; the host envelope remains v8. Restore/clone copies the
+collection, with future additions independent. Legacy states seed it from their
+accepted default and swell assignments; previously unused imports cannot be
+reconstructed. Failed, cancelled or superseded imports do not enter the collection.
+No directory scan, global library or automatic eviction is introduced. Reuse catalogue IDs/checksums and WAV/WavPack worker
 validation. Add the default-target variant of existing assignment/import commands,
 with instance/session/config-generation ownership and latest-request-wins guards.
 Cancellation, decode failure, stale requests or deletion of the external file
@@ -227,7 +305,7 @@ internal values, bundle identifiers and historical records remain unchanged.
 
 ## Migration Plan
 
-Implement from the reviewed/merged #10 baseline and coordinate #16 separately.
+Implement from the reconciled merged #10/#16 baseline recorded above.
 Before code changes, pin the exact source-context envelope schema and bounds in
 the implementation evidence. Read existing source schema 1 and supported state
 versions; version only affected metadata domains. Legacy source has unknown

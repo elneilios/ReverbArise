@@ -53,6 +53,18 @@ automatic-coordinator fixtures exercise unchanged default behavior.
 
 ## Select and replace a response
 
+The shared instance catalogue also retains successfully accepted custom imports,
+even after every swell and the future default switch away from them. Entries are
+deduplicated by content and reuse immutable managed WAVs; the original WAV/WavPack
+file is not required after import. Failed, cancelled and superseded imports do
+not become reusable choices. Saving/reopening retains the collection; copying a
+session copies its choices, while later imports remain local to that instance.
+Creative metadata v9 stores up to 4097 named managed identities within the
+existing 8 MiB state bound. Capacity failures retain the previous accepted IR.
+Legacy sessions seed known choices from accepted default/swell references;
+formerly unused imports cannot be recovered by scanning storage. Keep a
+pre-upgrade project copy when rollback to an older binary is required.
+
 Use the existing Selected Swell dropdown for any of the six bundled sounds, or
 the adjacent folder button for a WAV/WavPack. This changes only that swell; its
 source, arrival, envelope, placement and activity preferences remain intact.

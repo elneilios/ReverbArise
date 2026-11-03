@@ -116,7 +116,7 @@ bool isSafeCaptureAssetPath(const std::string& path) noexcept
 
 bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error)
 {
-    if (manifest.schemaVersion != CaptureManifest::currentSchemaVersion)
+    if (manifest.schemaVersion < 1 || manifest.schemaVersion > CaptureManifest::latestSupportedSchemaVersion)
     {
         error = "Unsupported capture manifest schema version";
         return false;
@@ -172,6 +172,7 @@ bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error
         }
     }
 
+    if(!validateCaptureContexts(manifest,error))return false;
     error.clear();
     return true;
 }
@@ -197,6 +198,12 @@ bool serializeCaptureManifest(const CaptureManifest& manifest, juce::String& jso
         ranges.add(makeRangeObject(range));
 
     properties->setProperty("ranges", juce::var(ranges));
+    if(manifest.schemaVersion==2)
+    {
+        const auto metadata=captureContextMetadata(manifest);
+        properties->setProperty("generationContexts",metadata["generationContexts"]);
+        properties->setProperty("contextSpans",metadata["contextSpans"]);
+    }
     json = juce::JSON::toString(root, true);
     error.clear();
     return true;
@@ -293,6 +300,10 @@ bool parseCaptureManifest(const juce::String& json, CaptureManifest& manifest, j
         parsed.ranges.push_back(std::move(range));
     }
 
+    if(parsed.schemaVersion==2)
+    {if(!parseCaptureContexts(root,parsed,error))return false;}
+    else if(properties->hasProperty("generationContexts") || properties->hasProperty("contextSpans"))
+    {error="Generation context fields require capture schema 2";return false;}
     if (! isValidCaptureManifest(parsed, error))
         return false;
 

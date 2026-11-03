@@ -6,15 +6,19 @@ Preserve editable swell sessions and their managed IR/render dependencies across
 ## Requirements
 
 ### Requirement: Saved projects retain swell definitions and editing preferences
-Project state SHALL retain stable swell identities, source/arrival, IR/render references, shapes/gain/placement, activity/freeze, names/selection, timing, monitoring/automation preferences and workflow mode without embedding PCM. Restore SHALL disarm Recapture, discard in-flight operation authority and stop voices. Capture SHALL admit only a subsequent valid Play, never resume the saved pass.
+Project state SHALL retain stable swell definitions/assets, source/arrival, shapes/gain/placement, activity/freeze, names/selection, timing, workflow and monitoring/automation preferences. Selected future defaults and accepted source/generation-context references SHALL persist without PCM. Restore SHALL disarm Recapture, discard provisional operation/display authority and stop voices; only subsequent valid Play can start a new pass.
 
 #### Scenario: Reopen an edited session
 - **WHEN** an edited multi-swell project with -24 dB audition level is saved and reopened on the same PC/profile
-- **THEN** source, definitions, edits, assets, selection, tone preference, -24 dB audition level and saved workflow mode are retained without starting audition, host transport or the saved capture pass
+- **THEN** source, definitions, edits, assets, selection, tone preference, -24 dB audition level, saved mode and accepted future defaults are retained without starting audition, transport or a saved capture pass
 
 #### Scenario: Save while work is in flight
-- **WHEN** a project is saved during capture, Stop validation, import, analysis, recapture or rendering
-- **THEN** it references committed source/assets only, unfinished work is not marked ready and reopening cannot resume a Recapture arm or publish the obsolete pass
+- **WHEN** a project is saved during capture, Stop validation, import, analysis, Recapture or rendering
+- **THEN** it references coherent accepted source/context/assets only, unfinished work is not Ready and reopening cannot resume an arm, provisional overlay or obsolete pass
+
+#### Scenario: Reopen before deferred pass generation finishes
+- **WHEN** source from pass A has accepted, a later future Default IR B has been selected, and the project reopens before A's target generation completes
+- **THEN** A's new automatic targets resolve A's accepted context while B remains the selected future default
 
 ### Requirement: IR and full render audio have managed immutable assets
 Successfully imported WAV/WavPack IR samples and complete untrimmed render results SHALL be stored as verified immutable managed assets under the instance's working store. Saved references SHALL include content identity, format/version, rate, channels, length, and render dependencies. Changing or deleting the original external IR SHALL not change an already imported assignment. Edits SHALL remain metadata over the full render.
@@ -43,21 +47,26 @@ Restoration SHALL verify source/IR/render identities, bounds, engine version, sa
 - **THEN** saved sample positions and original capture rate are retained, affected swells are not auditionable as current, and no implicit stretching or reinterpretation occurs
 
 ### Requirement: State migration and malformed input do not destroy valid data
-Workflow metadata SHALL be versioned and validated transactionally. Supported pre-workflow states SHALL migrate to Capture with Recapture off while preserving source/creative/gain state. Unknown versions, invalid modes, unsafe paths, nonfinite parameters, duplicate identities or invalid bounds SHALL be rejected with diagnostics while retaining the prior valid session and documented resource limits.
+Workflow, capture-context and creative metadata SHALL be versioned/validated transactionally in their own domains. Supported older states SHALL retain source, gain, IRs, edits and saved/migrated mode with Recapture off. Unsupported versions, unsafe references, nonfinite controls, ambiguous/invalid contexts, duplicate identities or invalid bounds SHALL be rejected without replacing valid accepted state or deleting assets.
 
 #### Scenario: Reopen an M2 project
 - **WHEN** supported valid v2 state is restored
-- **THEN** capture references and tone settings survive, swells remain empty and workflow is Capture with Recapture off, without starting transport or audition
+- **THEN** capture references/tone survive, swells remain empty and the internal Capture mode is selected with Recapture off, without starting transport or audition
 - **AND** absent supported audition trim defaults to 0 dB while an explicitly saved supported trim remains unchanged
 
 #### Scenario: Invalid newer state
-- **WHEN** workflow or creative metadata contains an unknown version, invalid mode, traversal, duplicate IDs or nonfinite values
+- **WHEN** workflow, creative or pass-context metadata contains an unknown version, invalid enum, traversal, duplicate ID, nonfinite value or invalid reference/bounds
 - **THEN** restore reports the error without publishing a partial session, deleting assets or replacing valid definitions
 
 #### Scenario: Existing musical or legacy-gain project
-- **WHEN** a supported project lacking workflow mode contains valid source and prepared/frozen swells, regardless of its saved mapping/live flags
-- **THEN** it opens in Capture with Recapture off and all existing source, IR/render identities, gain policy/calibration, edits and independent preferences preserved
-- **AND** Live can be selected after its prerequisites validate; migration never silently chooses Live
+- **WHEN** a supported project lacking workflow mode contains valid source and prepared/frozen swells, regardless of saved mapping/live flags
+- **THEN** it opens in internal Capture mode with Recapture off and existing source, IR/render identities, gain/calibration, edits and preferences preserved
+- **AND** Perform can be selected after readiness validates; migration does not silently choose it
+
+#### Scenario: Workflow project predates pass-context metadata
+- **WHEN** a supported #10-era project has a saved mode/defaults but no historical pass contexts
+- **THEN** saved mode, defaults and assigned swells survive, old source remains usable and migration uses a documented legacy baseline only where historical settings are unknown
+- **AND** it does not fabricate original pass choices, force recapture or rewrite existing assigned IRs
 
 ### Requirement: Saving and editing preserve prior project snapshots
 New managed assets SHALL publish completely before being referenced as committed. Saves SHALL use immutable dependency references so older saved projects and instances remain readable after later edits, Clear, or deletion of swell definitions. The plugin SHALL not automatically delete sole asset copies or perform asset I/O in the audio callback. Basic same-PC persistence SHALL not imply that the FL Studio project embeds or packs external assets.
@@ -82,12 +91,58 @@ New-format sessions SHALL restore their saved mode while verifying its dependenc
 - **THEN** a fresh additive-only pass can begin but prior mapped source remains protected and no saved Recapture arm is reused
 
 ### Requirement: Cloned instances share immutable assets without sharing future writes
-Duplicated instances SHALL preserve readable committed references and creative state while isolating new capture transactions, manifest publication and completion authority. Clearing, recording or restoring one instance SHALL NOT mutate another instance's accepted map or permit stale completion into it.
+Copied instances SHALL retain readable accepted source/context references and creative/default preferences while isolating later transactions, settings and completion authority. Shared immutable history SHALL NOT let recording, changing defaults, clearing or restoring one instance mutate another's accepted source, generation context or swell assignments.
 
 #### Scenario: Clone while a pass is pending
-- **WHEN** an instance is duplicated during an uncommitted capture pass
-- **THEN** the duplicate restores only the last committed source and saved mode with Recapture off, and cannot inherit the original pass's publication rights
+- **WHEN** an instance is copied during an uncommitted capture pass
+- **THEN** the copy restores only the last coherent accepted source/context and saved mode with Recapture off, without the original pass's publication/display rights
 
 #### Scenario: Independent later recapture
-- **WHEN** one copy explicitly recaptures while another copy retains the old project state
-- **THEN** the old copy's source samples, manifest reference and prior saved snapshots remain recoverable and unchanged
+- **WHEN** one copy explicitly Recaptures with a different future default while another retains its saved map
+- **THEN** only that copy accepts new source/context, and the other retains its prior samples, assignments, references and recoverable snapshots
+
+### Requirement: Managed future defaults survive external-file changes
+The selected bundled/custom Default IR SHALL be saved by immutable managed identity and label, alongside hidden generation preferences. External-file movement, catalogue ordering or later future-default changes SHALL NOT reinterpret accepted pass contexts or existing assignments. Invalid/cancelled import SHALL retain the previous accepted default.
+
+#### Scenario: Restore a custom learning default
+- **WHEN** a user imports a custom Default IR, records a pass, saves, moves the external file and reopens
+- **THEN** the selected default and deferred automatic assignments use their verified managed identities without external-file dependency or substitution
+
+#### Scenario: Hide and restore generation preferences
+- **WHEN** Automatic Swells is turned off, state is saved/reopened and it is later enabled while idle
+- **THEN** the prior accepted Default IR/sensitivity remain available and are not reset by hiding or restoring controls
+
+#### Scenario: One context dependency is missing
+- **WHEN** an accepted pass's generation metadata/IR cannot be verified while its dry source is valid
+- **THEN** dry remains preserved, affected generation shows the dependency failure, and other valid/frozen/manual work is not discarded or silently reassigned
+
+### Requirement: Persistent learning changes notify the host to save
+Accepted changes to learning preferences/defaults and committed source/context SHALL notify the host that persistent non-parameter state changed, including with the editor closed. Notifications SHALL be coalesced outside realtime processing. Provisional progress, navigation, Recapture arming, selection and rejected/no-op changes SHALL NOT create false persistent edits.
+
+#### Scenario: Change an idle learning default
+- **WHEN** a different Default IR, Automatic Swells policy or sensitivity is accepted
+- **THEN** the host receives a resave notification and an explicit save/reopen restores the accepted value
+
+#### Scenario: Transient or rejected action
+- **WHEN** the playhead/auto-fit/provisional display updates, Recapture is armed or a pass-locked/no-op edit is attempted
+- **THEN** no persistent change notification is emitted for that transient or rejected action
+
+#### Scenario: Read-only Learn inspection is ephemeral
+- **WHEN** the user hovers, pins, relocates or clears a Learn inspection position, including during recording or while focus moves to a setting
+- **THEN** the operation creates no persistent-state notification, capture/commit/generation request or Perform edit
+- **AND** project/session replacement or editor reopen restores no pin and clears the pin flag and coordinate together
+
+#### Scenario: Successful pass with the editor closed
+- **WHEN** a useful pass accepts source/context and selects Perform without an open editor
+- **THEN** host state is marked changed through the safe notification path without callback storage, GUI work or waiting
+
+### Requirement: Retain successfully imported IR choices per instance
+Creative metadata SHALL persist a bounded collection of immutable managed IR identities and display labels, independently of current assignments. Duplicate content, unsafe references and excess capacity SHALL be rejected transactionally. Supported legacy metadata SHALL seed known choices from accepted default and swell references without scanning storage or inventing unused import history.
+
+#### Scenario: An imported IR is no longer selected
+- **WHEN** a successful import is replaced everywhere and the project is saved and reopened
+- **THEN** its managed identity remains selectable without the original file, while existing swell assignments and audio remain unchanged
+
+#### Scenario: Invalid collection cannot replace accepted state
+- **WHEN** restored collection metadata has duplicate content, unsafe paths or exceeds its capacity
+- **THEN** restoration fails without replacing valid accepted state or deleting assets

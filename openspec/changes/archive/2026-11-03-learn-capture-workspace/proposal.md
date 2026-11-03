@@ -10,9 +10,11 @@ Issue [#11](https://github.com/elneilios/ReverbArise/issues/11) needs a focused 
 - Expose independent Recapture and Automatic Swells controls. Automatic Swells off hides generation preferences and learns dry only, without automatically starting analysis/convolution; retain hidden values, source and existing swell definitions.
 - **BREAKING scheduling change:** dry-only learning also blocks legacy forced-Recapture refresh from launching automatic convolution; explicit permitted manual Perform work remains available.
 - Provide the real bundled Default IR catalogue and Open from File using the existing WAV/WavPack importer. Pending/cancelled/failed imports retain the previous accepted default and disclose status.
+- Include all successfully imported managed IRs retained by this instance in every instance IR picker, including Perform. Deduplicate by content identity and reuse the managed asset without requiring the original file or a global library.
 - Use a horizontal Marker Sensitivity slider with a typeable percentage. Omit Character presets/parameters until their DSP actually exists.
 - **Confirmed decision:** lock Automatic Swells, Default IR and Marker Sensitivity from DAW Play through Stop validation. Freeze an immutable generation context for that pass and persist its association with accepted source, so deferred work and reopen use the intended settings.
 - Show real provisional capture separately from committed audio/silence, uncaptured gaps and unavailable assets. Add a concise coverage key/readout, absolute ruler/playhead and stable origin-anchored auto-fit, including sparse seeks.
+- Refine read-only inspection: left-click pins/relocates an absolute position across focus changes, Escape clears only with waveform focus, and right-click does not pin. Keep a distinct inspection cursor, reliable bar/beat/song-elapsed readout plus exact sample/coverage details, recording-safe inspection and coupled ephemeral session/scope reset. Add no editing, seeking, scrubbing, creation actions or controls.
 - Preserve #10's atomic Stop publication, automatic entry into Perform after useful acceptance, dry passthrough, source protection and bounded realtime processing. Require early native visual checkpoints and a short consolidated host checklist.
 
 ## Capabilities
@@ -32,6 +34,6 @@ None; extend the existing capture/workspace/session boundaries.
 
 Expected areas: editor layout/components and Settings bindings; capture worker/session snapshots and versioned manifest metadata; automatic target reconciliation/import jobs; session migration and host-save notifications; focused source, UI, assignment, persistence and realtime regression tests.
 
-Implementation depends on #10 (PR #18) and #16's separate Learn/Perform/Export display-name change. This branch starts from #10's implementation for planning only; implementation must reconcile the merged baseline first. Do not duplicate #16 or rename persisted/internal identities.
+Implementation depends on merged #10 (PR #18) and #16 (PR #24). The original planning branch is now reconciled with main `653f13a` via `dc003a7`, reusing the approved static-Inter header, reserved notices and Learn/Perform/Export mapping. Do not duplicate #16 or rename persisted/internal identities.
 
 Not included: Character DSP, Live bulk editing (#9), full-timeline audition (#5), export workspace/composition (#6), storage relocation/cleanup (#8), or Live Pattern/Song discrimination (#1). Reuse approved branding and 1100x850 opening size; mockup gradients/cards or speculative controls do not override the flat style guide.

@@ -6,7 +6,7 @@
 template<class F> static void waitM3(F condition,const std::source_location location=std::source_location::current())
 {
     const auto deadline=juce::Time::getMillisecondCounter()+15000;
-    while(!condition()) {if(juce::Time::getMillisecondCounter()>deadline)throw std::runtime_error("M3 timeout at "+std::to_string(location.line()));juce::Thread::sleep(2);}
+    while(!condition()) {if(juce::Time::getMillisecondCounter()>deadline)throw std::runtime_error("M3 timeout at "+std::string(location.file_name())+":"+std::to_string(location.line()));juce::Thread::sleep(2);}
 }
 inline void m3ProcessorCases()
 {
@@ -62,7 +62,7 @@ inline void m3ProcessorCases()
     auto bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("stateVersion",9);rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("manifestReference","../outside.json");rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);auto child=bad->getChildByName("SwellSession");auto json=child->getAllSubText();
-    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 8","\"version\": 9"));rejected(*bad);
+    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 9","\"version\": 10"));rejected(*bad);
     // Entering Capture stops preview; capture still reads only original dry.
     REQUIRE(engine.audition());armCaptureFixture(*processor);buffer.setSize(2,500);buffer.clear();head.position.setIsPlaying(true);position(2900);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}
@@ -83,6 +83,9 @@ inline void m3ProcessorCases()
     waitM3([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.snapshot().renderCount==count);
     armCaptureFixture(*processor);head.position.setIsPlaying(true);position(0);buffer.clear();buffer.setSample(0,0,0.75f);buffer.setSample(1,0,-0.5f);
     processor->processBlock(buffer,midi);finishCaptureFixture(*processor,head.position);
+    // Learn Automatic Swells off now deliberately overrides legacy forced refresh.
+    waitM3([&]{return m3::find(engine.savedSession(),first)->phase==m3::Phase::stale;});
+    REQUIRE(engine.snapshot().renderCount==count);REQUIRE(engine.selectTargets({first},first));engine.generate(false);
     waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount>count;});
     REQUIRE(engine.savedSession().swells[1].render.path==savedModel.swells[1].render.path && processor->getDroppedCaptureBlockCount()==0);
     REQUIRE(original.moveFileTo(root.file.getChildFile("original-moved.wav")));

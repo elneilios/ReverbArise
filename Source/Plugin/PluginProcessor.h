@@ -57,6 +57,7 @@ public:
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
+    CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
     SongTime getSongTime() const noexcept;

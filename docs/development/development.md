@@ -145,6 +145,13 @@ The interval reader consumes an immutable committed manifest, decodes each inter
 chunk once, retains covered silence, and reports uncaptured or invalid intervals.
 It never substitutes zeros for missing source audio or repeatedly reads WAVs per sample.
 
+Current Learn capture extends this original source format with schema-2 generation
+contexts, published atomically with source coverage at Stop acceptance. Creative
+state v9 retains imported IR choices; the processor envelope remains v8. See the
+[Learn source/context protocol](learn-source-context-protocol.md) for bounds,
+legacy migration, provisional-versus-accepted ownership and rollback copies.
+Generation-consumer acceptance is tracked separately in the active OpenSpec tasks.
+
 Capture assets are stored under `%LOCALAPPDATA%\K7MA\Preverb\Projects\<project-id>\<instance-id>`. Plugin state version 2 stores stable UUIDs, a revision, and an immutable `manifests/<uuid>.json` reference, not captured PCM. Each manifest records absolute sample positions, coverage kind, sample rate, frame count, revision, relative asset path, and SHA-256 checksum. Audio chunks are immutable stereo 32-bit-float WAV files in `segments/`. Captured silence is represented as coverage metadata without an audio file; uncaptured gaps have no entry.
 
 The worker assembles at most five seconds per chunk (also capped at 1,920,000 frames), splitting at timeline discontinuities and audio/silence boundaries. Chunk files are written and validated before a new manifest is atomically published. The previous committed map stays authoritative until publication succeeds. A failed capture or Clear leaves the previous manifest, coverage, and referenced chunks intact and reports an Uncommitted status. Retry capture or Clear after resolving storage errors. Temporary and orphaned files may remain and are not automatically purged; never delete the working cache as routine disposable data.
