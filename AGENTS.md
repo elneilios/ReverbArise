@@ -12,6 +12,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.
 
 ## Implementation safeguards
+- **Local Windows validation:** Use `scripts/build.ps1 -Configuration Debug|Release [-Test]`; see [development setup](docs/development/development.md). Its per-build-directory lock prevents overlapping wrapper operations. Do not run raw CMake/MSBuild against an active wrapper's tree; independent worktrees use separate trees. Report fixture checks separately from native MSVC/CTest results.
 - Inspect affected code and focused tests before changing behaviour; prefer extending working mechanisms over replacing them.
 - Keep the real-time audio callback free of disk I/O, blocking, and unbounded allocation or processing.
 - Protect captured source, render revisions, persistent identities, cache assets, and saved DAW projects. Do not silently rename or discard durable state.
