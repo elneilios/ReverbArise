@@ -115,6 +115,17 @@ Use neutral grey waveforms for **source input**, aqua for **wet swell**, and yel
 
 **Reference font:** Inter, or a legally bundled/system-available metrically similar modern sans-serif. Do **not** distribute any third-party font binary without checking its license and packaging requirements.
 
+**Approved Windows implementation (#16):** Segoe UI is the intentional system-font
+choice for the native JUCE UI. The owner approved its Regular body text, true
+Semibold navigation, Bold headings and Italic tagline/mode description in the
+header's native visual reviews. Explicit system faces replaced the bundled Inter
+variable-font default after its weight appeared too light and navigation weights
+needed reliable resolution. Segoe UI is obtained from Windows, not redistributed;
+the supplied Inter asset and OFL notice remain packaged. This is the approved
+implementation of the visual hierarchy below, not an automatic fallback or a
+claim of identical Inter metrics. Keep the accepted sizes, off-white contrast
+and alignment; changing font family or component typography requires review.
+
 | Style | Intended content |
 |---|---|
 | Inter **Bold** | Plugin brand, main headings, Swells / Selected Swell / Overview |

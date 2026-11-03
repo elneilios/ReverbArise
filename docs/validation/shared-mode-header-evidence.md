@@ -251,3 +251,46 @@ and NoticeBar, composed by WorkflowHeader and the snapshot notice adapter. Other
 control families retain their existing implementations for incremental workspace
 refactors; this is not a whole-plugin library migration. Issue #11's dedicated
 Learn workspace remains separate. PR #24 is left for owner review and merge.
+
+### Pre-merge review follow-up — 2026-11-03
+
+Merged latest `origin/main` (`4ff6195`, including PR #26's local Windows build
+workflow) into the existing #16 branch with merge commit `cca2450`. The merge
+was conflict-free. No reviewed runtime source or CMake target definitions changed
+from `ff5f0c6`; this follow-up adds typography clarification and validation evidence
+only. Header design, plugin identity, DSP and persisted-state semantics are unchanged.
+
+Actual native validation used the merged wrapper sequentially against the shared
+build tree; no raw CMake/MSBuild ran alongside either wrapper:
+
+| Command | Result | Wrapper stage results | Retained logs |
+| --- | --- | --- | --- |
+| `./scripts/build.ps1 -Configuration Debug -Test` | Exit 0; 32/32 CTest tests, 117.73 s | Preflight/configure/build/test all pass | `out/build-logs/Debug/20261103-003909-3bb0260a/` |
+| `./scripts/build.ps1 -Configuration Release -Test` | Exit 0; 32/32 CTest tests, 35.58 s | Preflight/configure/build/test all pass | `out/build-logs/Release/20261103-004331-d992287b/` |
+
+Debug reported clean revision `cca2450`; Release reported `cca2450 (dirty)`
+because the visual-standard clarification had been added. Runtime source was
+unchanged between runs. Each log directory contains configure/build/test output.
+Separately, `pwsh -NoProfile -File tests/build_wrapper_test.ps1` passed **65 fixture
+assertions on PowerShell 7.6.9**, exit 0; these command-double checks are not native
+MSVC validation. Fixture summary: `out/issue16-wrapper-fixtures-pwsh.log`.
+Strict canonical OpenSpec validation passed **13/13**; patch formatting passed.
+
+The Release binary still has SHA-256
+`6fc0cfa0054173de1d085139dd3ab37bfc138502c1777095546bb88d477de889`,
+with the same component/controller IDs recorded above. Existing owner host
+acceptance remains applicable; no repeat FL Studio or extra physical DPI test
+was requested or claimed.
+
+Segoe UI is intentional, not an accidental fallback. The style guide permits
+a system-available modern sans-serif alternative to Inter; its Typography section
+now explicitly records the approved Windows implementation, Regular/Semibold/
+Bold/Italic hierarchy and native-review rationale. No font or visual code changed
+in this follow-up. Inter's bundled asset and license notice remain intact.
+
+OpenSpec is **already archived and synced** at
+`openspec/changes/archive/2026-11-03-shared-learn-perform-export-header/`.
+All six requirement blocks in its delta specs match the canonical workspace/
+workflow specs verbatim, and the active change directory is absent. The PR
+description is updated to reflect that completed lifecycle step. PR #24 remains
+open for owner review and merge.
