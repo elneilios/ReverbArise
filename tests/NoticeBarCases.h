@@ -35,10 +35,10 @@ inline void cases()
 {
     m3::ui::WorkspaceTheme theme;Panel panel;panel.setLookAndFeel(&theme);panel.addToDesktop(0);panel.setVisible(true);
     auto& bar=panel.bars[0];panel.header.modeSelector().grabKeyboardFocus();const auto focus=juce::Component::getCurrentlyFocusedComponent();
-    REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefacePtr()->getName()=="Inter");
     REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefaceStyle().containsIgnoreCase("Regular"));
     REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefacePtr()->getStyle().containsIgnoreCase("Regular"));
-    REQUIRE(m3::ui::fontFor(bar,m3::ui::controlSize,juce::Font::bold).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::controlSize,juce::Font::bold).getTypefacePtr()->getName()=="Inter");
     const NoticeMessage failure{"Unable to load the requested impulse response","Previous valid response retained",NoticeTone::error};
     REQUIRE(bar.display(failure) && bar.isVisible() && !bar.getWantsKeyboardFocus());
     REQUIRE(juce::Component::getCurrentlyFocusedComponent()==focus && !panel.header.isCurrentlyBlockedByAnotherModalComponent());

@@ -183,7 +183,7 @@ int main(int argc,char* argv[]){return runTest([&]
         auto host=dynamic_cast<juce::Label*>(named(empty,"hostInfo"));REQUIRE(host && host->getText().contains("Position unavailable") && host->getText().contains("BPM unavailable") && host->getText().contains("Meter unavailable"));
         const auto* mark=dynamic_cast<m3::ui::Wordmark*>(named(empty,"brandWordmark"));REQUIRE(mark && mark->loaded());
         const auto* theme=dynamic_cast<m3::ui::WorkspaceTheme*>(&empty.getLookAndFeel());
-        REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
+        REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName()=="Inter");
         const auto surface=empty.createComponentSnapshot(empty.getLocalBounds());
         REQUIRE(surface.getPixelAt(0,0)==m3::ui::background && surface.getPixelAt(empty.getWidth()-1,0)==m3::ui::background);
         REQUIRE(fresh.swellEngine().savedSession().swells.empty());

@@ -51,13 +51,14 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
   not depend on incidental component names or visible button text. Keep stable
   component names where they support accessibility and existing tests.
 - Resolve fonts through the shared theme policy, including custom Graphics
-  painting: use `fontFor(component, height, flags)` for verified Segoe UI Regular,
-  Bold and Italic faces, and `navigationFont()` for true Segoe UI Semibold. These
-  are the approved system faces; the supplied Inter asset remains available but
-  its light variable-font default is not used for body copy. Never rely on an implicit
-  default typeface or change JUCE's process-wide default LookAndFeel. Text-entry
-  composites must refresh their font when their inherited LookAndFeel changes.
-  Verify resolved typeface names as well as requested font properties.
+  painting: `fontFor(component, height, flags)` uses embedded Inter Regular,
+  Bold and Italic; `navigationFont()` selects the actual Inter SemiBold face.
+  `interTypeface(InterFace)` owns cached explicit face pointers. Label refresh
+  preserves named SemiBold rather than reducing it to a binary bold flag.
+  Do not use installed-family lookup, mix in system bold/italic, rely on an
+  implicit default font or change JUCE's process-wide default LookAndFeel.
+  Text-entry composites must refresh their font when their inherited LookAndFeel
+  changes. Verify resolved typeface names/styles and embedded resource coverage.
 
 ## Incremental migration
 

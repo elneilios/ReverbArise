@@ -74,7 +74,10 @@ juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE 
     resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
     resources/logo/svg/reverbarise-wordmark-dark.svg
-    resources/logo/source/InterVariable.ttf
+    resources/fonts/inter/Inter-Regular.ttf
+    resources/fonts/inter/Inter-SemiBold.ttf
+    resources/fonts/inter/Inter-Bold.ttf
+    resources/fonts/inter/Inter-Italic.ttf
 )
 add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
@@ -118,7 +121,7 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${preverb_wavpack_source}/COPYING"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/WavPack-LICENSE.txt"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/licenses/Inter-OFL.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/inter/OFL.txt"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/Inter-OFL.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/irs/LICENSE.md"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-LICENSE.md"

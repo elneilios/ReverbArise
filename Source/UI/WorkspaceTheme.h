@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <PreverbUIResources.h>
+#include <array>
 
 namespace m3::ui
 {
@@ -19,6 +20,34 @@ inline const char* resource(const juce::String& filename,int& bytes)
             return PreverbUIResources::getNamedResource(PreverbUIResources::namedResourceList[i],bytes);
     bytes=0;return nullptr;
 }
+
+// Explicit embedded faces: no installed-family lookup or synthetic weights.
+enum class InterFace { regular, semibold, bold, italic };
+inline juce::Typeface::Ptr interTypeface(InterFace face)
+{
+    static const auto faces=[]{
+        std::array<juce::Typeface::Ptr,4> result;
+        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf"};
+        for(size_t i=0;i<result.size();++i)
+        {
+            int size=0;const auto* bytes=resource(names[i],size);jassert(bytes && size>0);
+            if(bytes)result[i]=juce::Typeface::createSystemTypefaceFor(bytes,static_cast<size_t>(size));
+            jassert(result[i]!=nullptr);
+        }
+        return result;
+    }();
+    return faces[static_cast<size_t>(face)];
+}
+inline InterFace interStyle(const juce::String& style)
+{
+    if(style.containsIgnoreCase("italic"))return InterFace::italic;
+    if(style.containsIgnoreCase("semi"))return InterFace::semibold;
+    return style.containsIgnoreCase("bold")?InterFace::bold:InterFace::regular;
+}
+inline juce::Font interFont(float height,InterFace face=InterFace::regular)
+{return juce::Font(juce::FontOptions(interTypeface(face)).withHeight(height));}
+inline juce::Font interFont(float height,int flags)
+{return interFont(height,(flags&juce::Font::italic)?InterFace::italic:(flags&juce::Font::bold)?InterFace::bold:InterFace::regular);}
 
 class FlatSurface:public juce::Component
 {
@@ -59,13 +88,14 @@ public:
         setColour(juce::Slider::backgroundColourId,separator);
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
-    bool interAvailable()const noexcept{int size=0;return resource("InterVariable.ttf",size)!=nullptr;}
+    bool interAvailable()const{return interTypeface(InterFace::regular)!=nullptr && interTypeface(InterFace::semibold)!=nullptr
+        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr;}
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
-        return juce::Font(juce::FontOptions("Segoe UI",height,flags));
+        return interFont(height,flags);
     }
-    juce::Font getLabelFont(juce::Label& label)override{return font(label.getFont().getHeight(),label.getFont().getStyleFlags());}
+    juce::Font getLabelFont(juce::Label& label)override{return interFont(label.getFont().getHeight(),interStyle(label.getFont().getTypefaceStyle()));}
     juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
     juce::Font getPopupMenuFont()override{return font(bodySize);}
     juce::Font getSliderPopupFont(juce::Slider&)override{return font(controlSize);}
@@ -75,7 +105,7 @@ public:
     juce::Font getAlertWindowFont()override{return font(bodySize);}
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override
     {
-        return juce::Typeface::createSystemTypefaceFor(juce::Font(juce::FontOptions("Segoe UI",f.getTypefaceStyle(),f.getHeight())));
+        return interTypeface(interStyle(f.getTypefaceStyle()));
     }
     juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
@@ -154,10 +184,10 @@ public:
 inline juce::Font fontFor(juce::Component& component,float height,int flags=0)
 {
     if(const auto* theme=dynamic_cast<WorkspaceTheme*>(&component.getLookAndFeel()))return theme->font(height,flags);
-    return juce::Font(juce::FontOptions("Segoe UI",height,flags));
+    return interFont(height,flags);
 }
 inline juce::Font navigationFont()
-{return juce::Font(juce::FontOptions("Segoe UI","Semibold",navigationSize));}
+{return interFont(navigationSize,InterFace::semibold);}
 
 class Wordmark final:public juce::Component
 {

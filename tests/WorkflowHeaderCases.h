@@ -16,10 +16,13 @@ static void workflowHeaderCases()
         {"export",{workflow::Mode::finalise},{true,true,true}}
     }};
     m3::ui::WorkspaceTheme theme;m3::ui::WorkflowHeader header;header.setLookAndFeel(&theme);header.addToDesktop(0);header.setVisible(true);
-    const auto approvedFont=[](const juce::Font& font){const auto name=font.getTypefacePtr()->getName();return name.containsIgnoreCase("Inter") || name.containsIgnoreCase("Segoe UI");};
+    const auto approvedFont=[](const juce::Font& font){return font.getTypefacePtr()->getName()=="Inter";};
     const auto navigationFont=m3::ui::navigationFont();
     REQUIRE(approvedFont(navigationFont) && navigationFont.getTypefaceStyle().containsIgnoreCase("Semibold"));
     REQUIRE(navigationFont.getTypefacePtr()->getStyle().containsIgnoreCase("Semibold"));
+    for(const auto face:{m3::ui::InterFace::regular,m3::ui::InterFace::semibold,m3::ui::InterFace::bold,m3::ui::InterFace::italic})
+    {const auto pointer=m3::ui::interTypeface(face);REQUIRE(pointer && pointer->getName()=="Inter" && pointer->getSupportedVariables().empty());}
+    juce::Label semibold;semibold.setFont(navigationFont);REQUIRE(theme.getLabelFont(semibold).getTypefacePtr()==navigationFont.getTypefacePtr());
     for(auto* child:header.getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))REQUIRE(approvedFont(theme.getLabelFont(*label)));
     unsigned requests=0;header.onModeRequested=[&](auto){++requests;};
     for(const auto& item:cases)for(int width:{1068,1360,1560})

@@ -294,3 +294,45 @@ All six requirement blocks in its delta specs match the canonical workspace/
 workflow specs verbatim, and the active change directory is absent. The PR
 description is updated to reflect that completed lifecycle step. PR #24 remains
 open for owner review and merge.
+
+### Approved static Inter adoption — 2026-11-03
+
+After the isolated [four-scale comparison](2026-11-03-static-inter-comparison.md),
+the owner explicitly approved bundling static Inter and dropping Segoe selection.
+They accepted Zoom-label wrapping until the Perform workspace redesign. No Zoom
+controls, layout, spacing or typography heights were redesigned in this adoption.
+
+The plugin embeds unmodified Inter 4.1 Regular, SemiBold, Bold and Italic TTFs
+from `resources/fonts/inter/`. The shared theme caches exact memory-loaded face
+pointers, including a genuine SemiBold that survives Label font refresh. JUCE
+component fonts and custom Graphics use that policy; there is no remaining
+explicit Segoe selection in production source. The previous variable font is
+no longer embedded. Original logo source assets remain on disk as source material.
+The official release OFL is retained and copied into the VST3; source/packaged
+license SHA-256 values match:
+`262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a`.
+All four TTF hashes match the reviewed official release assets.
+
+Actual final validation, through the merged #26 wrapper:
+
+| Command | Result | Logs |
+| --- | --- | --- |
+| `./scripts/build.ps1 -Configuration Release -Test` | Exit 0, all stages pass; **32/32 tests, 35.24 s** | `out/build-logs/Release/20261103-010641-58806b61/` |
+| `./scripts/build.ps1 -Configuration Debug -Test` | Exit 0, all stages pass; **32/32 tests, 144.67 s** | `out/build-logs/Debug/20261103-010824-f5323aca/` |
+
+Both runs recorded `2a99386 (dirty)`, testing this font-adoption working tree before
+commit. Debug also generated the final native/scale screenshots under
+`out/issue16-static-inter-final/`; the committed Learn/Perform/Export examples
+above now show Inter. Tests require actual Inter faces, static-font axis absence
+and SemiBold preservation. Strict canonical OpenSpec validation remains **13/13**,
+and patch formatting passes. No new physical DPI/macOS or repeated FL Studio
+acceptance is claimed; the owner approved the comparative font appearance and
+the previously accepted audio/mode behavior is unchanged.
+
+Final Release binary SHA-256:
+`c3d3d56e95a6f603484599375df70cd5ba4dad2aa3cc3b95667f4c48f4f95251`.
+This supersedes the earlier Segoe delivery hashes. Component/controller IDs remain
+unchanged. The only production-source change is `WorkspaceTheme.h`, plus font
+resource/notice packaging in CMake; DSP, plugin identity and persisted-state code
+are untouched. The OpenSpec change remains archived and synced. PR #24 remains
+open and unmerged for owner review.
