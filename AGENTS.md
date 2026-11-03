@@ -8,6 +8,11 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - **Documentation:** Start with `docs/README.md` to locate relevant current technical guidance. `docs/product-vision.md` gives high-level direction; `docs/archive/` is historical, not current instruction.
 - **Document placement:** Put new technical guides in `docs/development/`, UI/design guidance in `docs/design/`, and test evidence or metrics in `docs/validation/`. Keep the `docs/` root for `README.md` and `product-vision.md`; use dated `docs/archive/YYYY-MM-DD/` folders for superseded historical material. Update affected links when moving files.
 
+## Issue delivery orchestration
+- For requests to deliver, implement, or continue a GitHub issue, use the repository skill [`deliver-issue`](.agents/skills/deliver-issue/SKILL.md). It resolves issue context, reuses existing OpenSpec changes and applies risk-aware verification.
+- The skill orchestrates **vanilla** OpenSpec explore/propose/apply; it does not replace their generated instructions, approval gates or task tracking. Explicit requests for individual OpenSpec operations may use those workflows directly.
+- Do not change generated OpenSpec skills or `openspec/config.yaml` to customise this delivery workflow.
+
 ## Contribution workflow
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.
 
