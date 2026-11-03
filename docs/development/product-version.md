@@ -10,7 +10,7 @@ Use three decimal components X.Y.Z without leading zeroes or suffixes. Component
 are limited to 0..255 to keep JUCE's packed numeric representation unambiguous.
 This is a numeric SemVer-style product version, not full SemVer prerelease syntax.
 
-## Cheap verification and the Issue #21 interface
+## Cheap verification and the packaging interface
 
 Run from the repository root; use the installed CMake supporting the existing VS
 2026 generator for native builds. Script-only checks need CMake 3.22+, no compiler,
@@ -32,7 +32,7 @@ Bare 0.1.0, v00.1.0, v0.2.0 and v0.1.0-rc.1 fail against 0.1.0. To label a candi
 use the separate `'-DCANDIDATE=rc.1'` argument, optionally together with the matching
 base RELEASE_TAG. Labels contain alphanumeric components separated by dots/hyphens.
 The candidate's releaseIdentity is v0.1.0-rc.1, while its plugin version remains 0.1.0.
-Candidates must remain explicitly labelled by the future packager; this verifier
+Candidates must remain explicitly labelled by the packager; this verifier
 neither changes tags nor creates, renames, signs, installs or publishes packages.
 
 OUTPUT_FILE is optional. On success its JSON contains:
@@ -47,7 +47,7 @@ OUTPUT_FILE is optional. On success its JSON contains:
 | releaseIdentity | vX.Y.Z, with -label only for explicit candidates |
 | builtVerified | True only if requested built metadata checks succeeded |
 
-Consumers such as Issue #21's future script must check the process exit code before
+Consumers such as scripts/release.ps1 must check the process exit code before
 reading JSON. A failure does not write successful output, but an old output file
 may still exist: never use it after a nonzero exit. Source-only queries do not
 claim tag or binary validation. Stable releases must request tag and built checks;
@@ -90,11 +90,11 @@ JUCE_VST3_CAN_REPLACE_VST2=0. No version bump or candidate label migrates saved 
 Studio sessions, captured source or assets. Changes to storage formats or host
 identity need separately scoped compatibility work.
 
-## Issue #21 handoff
+## Packaging integration
 
 The release packager must validate actual Git refs against the intended source
 revision and verify worktree cleanliness before packaging; matching a supplied tag
 string here does not prove that a Git ref exists or identifies this checkout.
 After any failed verification it must reject previously generated release-identity
 JSON, even if the file still exists. These packaging checks belong to Issue #21;
-no Git-ref, cleanliness or packaging automation is implemented by Issue #20.
+the [local release workflow](releases.md) now supplies those checks.
