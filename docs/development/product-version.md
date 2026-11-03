@@ -89,3 +89,12 @@ ReverbArise product name, VST3 component/controller CIDs and
 JUCE_VST3_CAN_REPLACE_VST2=0. No version bump or candidate label migrates saved FL
 Studio sessions, captured source or assets. Changes to storage formats or host
 identity need separately scoped compatibility work.
+
+## Issue #21 handoff
+
+The release packager must validate actual Git refs against the intended source
+revision and verify worktree cleanliness before packaging; matching a supplied tag
+string here does not prove that a Git ref exists or identifies this checkout.
+After any failed verification it must reject previously generated release-identity
+JSON, even if the file still exists. These packaging checks belong to Issue #21;
+no Git-ref, cleanliness or packaging automation is implemented by Issue #20.

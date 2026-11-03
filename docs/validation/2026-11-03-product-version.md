@@ -83,3 +83,24 @@ Strict OpenSpec validation passed for all 14 items; diff and scope checks passed
 remains active; neither archive nor merge is authorized.
 FL Studio manual save/reopen is not run and cannot be inferred from CTest. No
 product version change, persisted-state migration or host identity change occurs.
+
+## Owner-approved archive closeout
+
+Following approval of PR #27, `product-version-release-identity` was synchronised
+to `openspec/specs/product-release-identity/spec.md` and archived as
+`openspec/changes/archive/2026-11-03-product-version-release-identity/`.
+All four requirements, their scenarios and authored purpose were preserved;
+all six tracked implementation tasks were complete. Strict validation passed
+before the move and for all **14 canonical specs** after it; no active changes remain.
+
+Current fetched `origin/main` is `4ff6195a41e260e5a1b250a4c9d980521b4ea742`, an
+ancestor of this feature branch. The complete PR diff was checked against it:
+there are no Source/ UI/DSP changes, no unrelated specifications or build-workflow
+changes, and the only CMake additions concern product identity and focused tests.
+This archive adds no implementation changes and does not repeat native builds.
+
+The living product-version guide records the Issue #21 handoff: validate actual
+Git refs and worktree cleanliness before packaging, and never consume stale
+release-identity JSON after a failed verification. Those checks remain Issue #21
+work, with no implementation added here. PR #27 remains open for the owner's
+final merge; this closeout supersedes the earlier active-change status above.
