@@ -188,3 +188,40 @@ there are no unresolved owner acceptance decisions. Full OS-DPI/FL Studio scalin
 and injected faults remain explicitly untested in the host; automated coverage
 and actual usual-setup host passes are distinguished throughout this record.
 No archive, commit, push or PR action is included in this completion.
+
+
+## PR #39 main integration — 2026-11-03
+
+Integrated `origin/main` at `09b3704` (19 previously missing commits) into the
+issue branch after implementation commit `598b998`. Git merged without conflicts.
+The three auto-merged documents (`docs/README.md`, development setup and IR library
+guidance) retain the Learn references and new upstream links; their local Markdown
+links resolve. Imported AGENTS/delivery guidance and release scripts/tests match
+main under Git-normalized comparison. No upstream instructions were overwritten.
+
+`git diff HEAD -- Source CMakeLists.txt CMakePresets.json cmake resources
+scripts/build.ps1 scripts/build-support.ps1` was empty before the merge commit:
+no native implementation/build inputs changed. The archived #11 directory and
+its four canonical specifications likewise remain identical to `598b998`.
+No re-archiving, UI changes, new state transitions or capture-context changes
+were made. Existing Debug/Release 38/38 results and owner approvals remain valid;
+full suites and host UAT were not repeated for unchanged native inputs.
+
+Focused integration results (existing validated Release executables, exit 0):
+
+- `preverb_workflow_processor_test`: pass.
+- `preverb_capture_context_test`: pass.
+- `preverb_generation_configuration_test`: pass.
+- `preverb_ir_choices_test`: pass.
+- `preverb_capture_transaction_test`: pass.
+- `openspec validate --all --strict --no-interactive`: 17/17 items passed.
+- `tests/release_wrapper_test.ps1`: 39 simulated packaging/orchestration checks
+  passed; no native rebuild, CTest, DAW check or real release/publication was
+  performed by this fixture.
+- No unresolved merge entries; staged whitespace check passed.
+
+Issue #38 is a separate future implementation. The current successful Stop →
+Perform transition remains expected for #39. The deliberate future replacement
+(Stop stays Learn; explicit Generate creates swells and enters Perform) is not
+implemented here and does not change the current canonical or archived #11
+contract. PR #39 remains for owner review and merge.
