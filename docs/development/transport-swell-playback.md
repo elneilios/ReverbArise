@@ -12,7 +12,7 @@ arm the encountered Capture pass, and remain subject to workflow admission.
 
 Current gain staging uses version-8 session metadata: new plugin instances use
 source energy +6 dB and old projects retain Legacy until explicit adoption.
-See [Musical gain staging](../musical-gain-staging.md). Version-7 details below
+See [Musical gain staging](musical-gain-staging.md). Version-7 details below
 describe the original transport implementation.
 
 Song-synchronized playback is implemented. Automated tests exercise the live mixer; acceptance of the current UI build is tracked separately in [current checks](../design/ui-diagnostics-and-acceptance.md).
