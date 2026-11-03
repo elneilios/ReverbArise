@@ -112,6 +112,11 @@ CTest as **not run**, never passed. Automated tests do not establish FL Studio
 manual acceptance. See the dated [Issue #19 evidence](../validation/2026-11-02-local-windows-build.md)
 for actual commands, results and outstanding checks.
 
+## Local release packages
+
+See [local Windows releases](releases.md) for validated internal ZIPs, checksums,
+source manifests, extraction/FL Studio checks and the separate licensing/publication gate.
+
 ## Capture Cache (M1)
 
 ### M3 editable swell sessions
