@@ -36,10 +36,61 @@ Fixture output is ignored under `out/release-wrapper-fixtures/`.
 
 ## Native validation
 
-A preparatory `scripts/build.ps1 -Configuration Release -Test` was started in the new
-worktree to fetch pinned dependencies and compile the native targets. Native package
-validation will be recorded below after running the release entry point from a clean
-committed revision. Simulated checks above are not MSVC/CTest results.
+Actual supported local toolchain: VS 2026 Community, MSVC 19.51.36260.0,
+CMake/CTest 4.3.1-msvc1. No native-command doubles were used in this section.
+
+The preparatory `scripts/build.ps1 -Configuration Release -Test` fetched the pinned
+dependencies and compiled all targets in the new isolated tree. It passed **35/35
+CTest tests** in 38.80 seconds. Its log summary recorded the initial
+`b79e25c (dirty)` checkout while implementation was being written, so it was not
+used alone as release provenance. Logs:
+`out/build-logs/Release/20261103-010023-b6ed69ad/`.
+
+After committing implementation, the following real command ran from clean
+`259c4f245db8952b785026f6091027b53623c8f1`:
+
+```powershell
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate rc.issue21.1
+```
+
+**Passed, exit 0.** The entry point reused incremental dependency/build state, ran
+Release configure/build and **35/35 CTest tests** again (36.44 seconds), verified
+built identity and the actual x64 PE/file version, and created the internal package.
+Build/CTest logs: `out/build-logs/Release/20261103-012027-1ec41291/`.
+
+| Field | Actual result |
+| --- | --- |
+| Numeric plugin version | 0.1.0 |
+| Explicit release identity | v0.1.0-rc.issue21.1 |
+| Artifact | ReverbArise-v0.1.0-rc.issue21.1-win-x64.zip |
+| Location | out/releases/v0.1.0-rc.issue21.1/ |
+| UTC manifest timestamp | 2026-11-03T01:21:23.7550191Z |
+| ZIP size | 8,600,410 bytes |
+| ZIP SHA-256 | 63a619c57b7126f395f0dbf7b231e62bb5ee7c2684d98695fcee599eb9377309 |
+| Extracted payload files | 21, including complete VST3 resources and 14 additional notice/provenance files |
+
+Independent PowerShell 7 verification matched the ZIP hash against both sidecars,
+extracted it to ignored `out/release-validation/`, compared every path/size/hash
+against the manifest, and checked the extracted PE/version. An initial whole-JSON
+comparison flagged only differing Framework/Core file sort order; path-based
+comparison confirmed identical contents. No production script change was needed.
+
+Repeating the same release command returned **exit 1** before building because the
+output already existed. The original ZIP SHA-256 remained unchanged. Requesting
+`-ReleaseTag v0.2.0` returned **exit 1** for the version mismatch before building or
+creating a completed package. The worktree remained clean after these commands.
+
+The internal candidate above identifies the implementation commit exactly. Subsequent
+commits only record evidence and workflow completion; this is not a package of a
+later evidence-only revision. No stable release tag was created. Native Debug was
+not rerun for this Release-only scripting change. The release publication path was
+not invoked against the real checkout or GitHub; only fixtures exercised it.
+
+## OpenSpec and review
+
+`openspec validate local-windows-release-packaging --strict` passed; `git diff --check`
+passed. Generated workflow tooling/configuration and canonical specs were unchanged.
+Owner review: [PR #28](https://github.com/elneilios/ReverbArise/pull/28).
 
 ## Outstanding owner acceptance
 

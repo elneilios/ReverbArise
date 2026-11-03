@@ -10,5 +10,5 @@
 
 ## 3. Integration evidence
 
-- [ ] 3.1 Run focused fixtures in Windows PowerShell 5.1 and PowerShell 7, OpenSpec strict validation and actual local Release packaging where supported; record native results separately and leave FL Studio/manual licensing acceptance explicit.
-- [ ] 3.2 Review scoped diff, commit and open one PR for owner review; verify no release/tag publication, merge or archive occurred.
+- [x] 3.1 Run focused fixtures in Windows PowerShell 5.1 and PowerShell 7, OpenSpec strict validation and actual local Release packaging where supported; record native results separately and leave FL Studio/manual licensing acceptance explicit.
+- [x] 3.2 Review scoped diff, commit and open one PR for owner review; verify no release/tag publication, merge or archive occurred.
