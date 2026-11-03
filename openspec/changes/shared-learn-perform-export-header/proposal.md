@@ -13,7 +13,7 @@ Issue #10 established the working modes, but its temporary dropdown and mixed te
 - Separate display names from the existing saved Capture/Live/Finalise identifiers; preserve all capture, playback, preview, eligibility and persistence semantics.
 - Use automation as primary evidence, native component feedback as work progresses and one brief final FL Studio smoke test; record their distinct coverage and preserve the merged knob-wheel fix.
 - Apply owner-requested polish: larger, heavier mode labels, an italic mode description, and no routine Perform status line.
-- Move important messages into a conditional inline bar below the header. It appears only while relevant, shifts content without covering controls, and uses explicit workflow/error fields; normal idle information stays unobtrusive. Add the reusable bar to the native component approval flow and rerun affected layout/build checks.
+- Move important messages into a conditional notice row reserved beneath the branding in the header. It appears only while relevant, keeps the workspace fixed for one message, and uses explicit workflow/error fields; normal idle information stays unobtrusive. Add the reusable bar to the native component approval flow and rerun affected layout/build checks.
 
 No dedicated Learn/Export workspace, full-timeline audition, waveform-toolbar redesign, Character DSP, whole-plugin control migration or state/asset identity migration is included. Those remain their existing issues. Export naming does not imply that issue #6's WAV-delivery UI already exists.
 

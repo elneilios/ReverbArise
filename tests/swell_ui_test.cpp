@@ -58,7 +58,16 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
         REQUIRE(header->getLocalBounds().contains(children[i]->getBounds()));
         for(int j=i+1;j<children.size();++j)REQUIRE(!children[i]->getBounds().intersects(children[j]->getBounds()));
     }
-    // A state or recovery panel may replace content, never the region geometry.
+    const auto notice=named(editor,"workspaceNotice");REQUIRE(notice);
+    const m3::ui::WorkspaceLayout layout(editor.getLocalBounds());
+    REQUIRE(notice->getBounds()==layout.notice);
+    REQUIRE(header->getBounds().contains(notice->getBounds()));
+    REQUIRE(notice->getY()>=header->getY()+46 && notice->getBottom()<layout.globals.getY());
+    const auto role=named(editor,"workflowRole");REQUIRE(role);
+    REQUIRE(header->getY()+role->getBounds().getCentreY()==notice->getBounds().getCentreY());
+    for(auto* child:header->getChildren())REQUIRE(!notice->getBounds().intersects(header->getLocalArea(child,child->getLocalBounds()).translated(header->getX(),header->getY())));
+    REQUIRE(layout.workspace.getBottom()==layout.audition.getY());
+    // Notice visibility never changes region geometry.
     std::array<juce::Rectangle<int>,4> regions;
     int index=0;for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview"})
     {const auto c=named(editor,name);REQUIRE(c);regions[static_cast<size_t>(index++)]=c->getBounds();}
@@ -68,6 +77,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image image(juce::Image::ARGB,editor.getWidth(),editor.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);editor.paintEntireComponent(graphics,true);
+    REQUIRE(image.getPixelAt(layout.header.getX()+4,layout.globals.getY())==m3::ui::separator);
     auto stream=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(image,*stream));
     if(tag=="fresh-1400" || tag=="ready")for(const auto scale:{1.25f,1.5f,2.0f})
     {
@@ -79,6 +89,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 }
 #include "WorkflowHeaderCases.h"
 #include "NoticeBarCases.h"
+#include "WorkspaceNoticeCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -87,6 +98,7 @@ int main(int argc,char* argv[]){return runTest([&]
     controlReview::cases();
     workflowHeaderCases();
     noticeReview::cases();
+    workspaceNoticeCases();
     {
         m3::ui::KnobValue cell;cell.setSize(180,50);double delta=0;cell.onDelta=[&](double value){delta=value;};
         const auto drag=[&](juce::ModifierKeys modifiers)
@@ -167,11 +179,11 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(!empty.isParentOf(named(empty,"advancedTiming")));
         REQUIRE(!empty.isParentOf(named(empty,"previewStatus")));
         REQUIRE(empty.getLookAndFeel().findColour(juce::Label::textColourId)==m3::ui::text);
-        REQUIRE(m3::ui::secondary.getRed()==225 && m3::ui::secondary.getGreen()==230 && m3::ui::secondary.getBlue()==236);
+        REQUIRE(m3::ui::secondary.getRed()==237 && m3::ui::secondary.getGreen()==241 && m3::ui::secondary.getBlue()==245);
         auto host=dynamic_cast<juce::Label*>(named(empty,"hostInfo"));REQUIRE(host && host->getText().contains("Position unavailable") && host->getText().contains("BPM unavailable") && host->getText().contains("Meter unavailable"));
         const auto* mark=dynamic_cast<m3::ui::Wordmark*>(named(empty,"brandWordmark"));REQUIRE(mark && mark->loaded());
         const auto* theme=dynamic_cast<m3::ui::WorkspaceTheme*>(&empty.getLookAndFeel());
-        REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName().containsIgnoreCase("Inter"));
+        REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
         const auto surface=empty.createComponentSnapshot(empty.getLocalBounds());
         REQUIRE(surface.getPixelAt(0,0)==m3::ui::background && surface.getPixelAt(empty.getWidth()-1,0)==m3::ui::background);
         REQUIRE(fresh.swellEngine().savedSession().swells.empty());
@@ -291,6 +303,12 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(engine.snapshot().raw->peak>1);
     const auto baseline=engine.savedSession();
     PreverbAudioProcessorEditor editor(*processor);editor.setVisible(true);editor.refresh();snapshotEditor(editor,"ready");
+    if(argc>1 && juce::String(argv[1])=="--review-workspace")
+    {
+        // The same real processor/editor fixture, isolated from DAW projects.
+        auto review=std::make_unique<PreverbAudioProcessorEditor>(*processor);review->refresh();
+        controlReview::run(std::move(review));return;
+    }
     const auto largeWorkflowSnapshot=[&](const juce::String& tag){const auto bounds=editor.getBounds();
         editor.setSize(1400,1000);editor.refresh();snapshotEditor(editor,tag+"-1400");
         editor.setSize(bounds.getWidth(),bounds.getHeight());editor.refresh();};
@@ -307,6 +325,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
         REQUIRE(!levelCell->onCommit("6"));levelCell->onEnd(); // Even without refresh, an old edit cannot cross a mode roundtrip.
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));editor.refresh();
+        REQUIRE(named(editor,"workspaceNotice")->isVisible());
         auto inspector=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));REQUIRE(inspector && !inspector->getViewedComponent()->isEnabled());
         REQUIRE(!engine.edit(first,[](auto& w,auto&){w.shape.gainDb=7;return true;}));snapshotEditor(editor,"workflow-finalise");
         REQUIRE(!engine.assignIR(first,baseline.swells[0].inputGeneration,file,false,engine.assignmentEpoch()));
@@ -314,11 +333,14 @@ int main(int argc,char* argv[]){return runTest([&]
         if(!handles.empty())REQUIRE(!editor.timelineComponent().beginDrag(handles.front().point));
         largeWorkflowSnapshot("workflow-finalise");
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();snapshotEditor(editor,"workflow-capture");
+        REQUIRE(!named(editor,"workspaceNotice")->isVisible());
         REQUIRE(!engine.assignIR(first,baseline.swells[0].inputGeneration,file,false,engine.assignmentEpoch()));
         largeWorkflowSnapshot("workflow-capture");
         auto recapture=dynamic_cast<juce::ToggleButton*>(named(editor,"recaptureExisting"));REQUIRE(recapture && recapture->isEnabled());
         recapture->setToggleState(true,juce::sendNotificationSync);REQUIRE(processor->getWorkflowSnapshot().recapture);
+        editor.refresh();REQUIRE(named(editor,"workspaceNotice")->isVisible());snapshotEditor(editor,"workflow-recapture");
         REQUIRE(processor->setRecaptureExisting(false));
+        editor.refresh();REQUIRE(!named(editor,"workspaceNotice")->isVisible());
         juce::AudioBuffer<float> probeAudio(2,32);juce::MidiBuffer probeMidi;
         const auto hostBlock=[&](int sample,bool playing){head.position.setTimeInSamples(sample);head.position.setPpqPosition(sample/24000.0);head.position.setIsPlaying(playing);
             probeAudio.clear();processor->processBlock(probeAudio,probeMidi);};

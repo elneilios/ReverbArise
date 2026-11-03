@@ -22,6 +22,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
 {
     setLookAndFeel(&workspaceTheme);
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
+    noticeBar.setName("workspaceNotice");addChildComponent(noticeBar);
     recaptureExisting.setName("recaptureExisting");
     workflowHeader.onModeRequested=[this](workflow::Mode mode){if(!updating && !destroying){processor.requestWorkflowMode(mode);refresh();}};
     recaptureExisting.onClick=[this]{processor.setRecaptureExisting(recaptureExisting.getToggleState());refresh();};
@@ -57,9 +58,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     {
         fieldLabels[i].setText(labels[i],juce::dontSendNotification);fieldLabels[i].setColour(juce::Label::textColourId,m3::ui::secondary);fieldLabels[i].setFont(juce::FontOptions(m3::ui::smallSize));addAndMakeVisible(fieldLabels[i]);
         fields[i].setName(names[i]);fields[i].setInputRestrictions(i==name?256:40,i==name?juce::String{}:(i>=fadeIn?juce::String("0123456789."):juce::String("-0123456789.")));
-        fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
+        fields[i].setFont(m3::ui::fontFor(*this,m3::ui::controlSize));fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
     }
     barStartEditor.setName("sourceStart");barEndEditor.setName("sourceEnd");barStartEditor.setText("1",false);barEndEditor.setText("2",false);
+    for(auto* editor:{&barStartEditor,&barEndEditor,&placementEditor})editor->setFont(m3::ui::fontFor(*this,m3::ui::controlSize));
     for(auto* field:{&barStartEditor,&barEndEditor}){field->setInputRestrictions(12,"0123456789");addAndMakeVisible(field);field->onReturnKey=[this]{applyBarRange();};}
     const auto slider=[&](juce::Slider& control,double a,double b,double step,const juce::String& suffix)
     {control.setRange(a,b,step);control.setSliderStyle(juce::Slider::LinearHorizontal);control.setTextBoxStyle(juce::Slider::TextBoxRight,false,78,22);control.setTextValueSuffix(suffix);addAndMakeVisible(control);};
@@ -249,10 +251,10 @@ void PreverbAudioProcessorEditor::paintListBoxItem(int row,juce::Graphics& g,int
 {
     if(row<0 || row>=getNumRows())return;const auto& w=state.session.swells[static_cast<size_t>(row)];
     if(selected){g.setColour(m3::ui::aqua.withAlpha(.06f));g.fillRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4);g.setColour(m3::ui::aqua);g.drawRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4,1);}
-    g.setColour(m3::ui::text);g.setFont(m3::ui::bodySize);g.drawText(w.name,32,2,width-62,20,juce::Justification::left);
+    g.setColour(m3::ui::text);g.setFont(m3::ui::fontFor(*this,m3::ui::bodySize));g.drawText(w.name,32,2,width-62,20,juce::Justification::left);
     g.drawRect(8,8,15,15);if(w.enabled){g.setColour(m3::ui::aqua);g.fillRect(11,11,9,9);}
-    g.setFont(m3::ui::smallSize);g.drawText(w.irName.isNotEmpty()?w.irName:"No IR",32,23,width-62,18,juce::Justification::left);
-    g.setFont(m3::ui::captionSize);g.setColour(w.phase==m3::Phase::error?m3::ui::warning:m3::ui::secondary);
+    g.setFont(m3::ui::fontFor(*this,m3::ui::smallSize));g.drawText(w.irName.isNotEmpty()?w.irName:"No IR",32,23,width-62,18,juce::Justification::left);
+    g.setFont(m3::ui::fontFor(*this,m3::ui::captionSize));g.setColour(w.phase==m3::Phase::error?m3::ui::warning:m3::ui::secondary);
     g.drawText((w.phase==m3::Phase::ready?phaseName(w.phase):w.status)+(w.muted?" | mute":"")+(!w.enabled?" | off":"")+(w.solo?" | solo":"")+(w.frozen?" | frozen":""),32,43,width-62,height-43,juce::Justification::left);
     g.setColour(m3::ui::secondary);
     for(int n=0;n<3;++n)g.fillEllipse(juce::Rectangle<float>(3,3).withCentre({static_cast<float>(width-13),static_cast<float>(height/2-7+n*7)}));
@@ -324,6 +326,7 @@ void PreverbAudioProcessorEditor::resized()
 {
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     workflowHeader.setBounds(layout.header);
+    noticeBar.setBounds(layout.notice);
     auto globals=layout.globals.reduced(0,8);
     markerButton.setBounds(globals.removeFromLeft(160));globals.removeFromLeft(16);
     markerLabel.setBounds(globals.removeFromLeft(118));markerKnob.setBounds(globals.removeFromLeft(150));globals.removeFromLeft(24);
@@ -552,6 +555,7 @@ void PreverbAudioProcessorEditor::refresh()
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
     workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),capture.status);
+    noticeBar.display(m3::ui::workspaceNotice(flow,capture,state));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));

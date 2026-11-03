@@ -10,12 +10,12 @@ class WorkflowHeader final:public juce::Component
 public:
     WorkflowHeader()
     {
-        setName("workflowHeader");wordmark.setName("brandWordmark");selector.setName("workflowMode");
+        setName("workflowHeader");wordmark.setName("brandWordmark");tagline.setName("brandTagline");selector.setName("workflowMode");
         selector.setTitle("Workflow mode");settings.setName("diagnostics");
         tagline.setText("Reverse Reverb for Creative Swells",juce::dontSendNotification);
-        tagline.setFont(juce::FontOptions(headingSize,juce::Font::italic));tagline.setColour(juce::Label::textColourId,text);
+        tagline.setFont(fontFor(*this,headingSize,juce::Font::italic));tagline.setColour(juce::Label::textColourId,text);
         role.setName("workflowRole");role.setBorderSize({});role.setColour(juce::Label::textColourId,secondary);
-        role.setFont(juce::FontOptions(modeDescriptionSize,juce::Font::italic));
+        role.setFont(fontFor(*this,modeDescriptionSize,juce::Font::italic));
         addAndMakeVisible(wordmark);addAndMakeVisible(tagline);addAndMakeVisible(selector);
         addAndMakeVisible(settings);addAndMakeVisible(role);
         selector.onRequest=[this](int id){const auto callback=onModeRequested;if(callback)callback(static_cast<workflow::Mode>(id-1));};
@@ -36,11 +36,12 @@ public:
     controls::IconActionButton& settingsAction()noexcept{return settings;}
     void resized()override
     {
-        auto area=getLocalBounds();auto gear=area.removeFromRight(36);settings.setBounds(gear.withY(2).withHeight(36));
+        constexpr int primaryHeight=46,controlHeight=36,controlY=(primaryHeight-controlHeight)/2;
+        auto area=getLocalBounds();auto gear=area.removeFromRight(36);settings.setBounds(gear.withY(controlY).withHeight(controlHeight));
         area.removeFromRight(12);const auto column=area.removeFromRight(getWidth()<1200?330:360);
-        selector.setBounds(column.withY(0).withHeight(36));role.setBounds(column.withY(40).withHeight(16));
-        area.removeFromRight(16);wordmark.setBounds(area.removeFromLeft(getWidth()<1200?250:290).withY(0).withHeight(46));
-        area.removeFromLeft(16);tagline.setBounds(area.withY(0).withHeight(46));
+        selector.setBounds(column.withY(controlY).withHeight(controlHeight));role.setBounds(column.withY(primaryHeight).withHeight(32));
+        area.removeFromRight(16);wordmark.setBounds(area.removeFromLeft(getWidth()<1200?250:290).withY(0).withHeight(primaryHeight));
+        area.removeFromLeft(16);tagline.setBounds(area.withY(0).withHeight(primaryHeight));
     }
 private:
     Wordmark wordmark;juce::Label tagline,role;

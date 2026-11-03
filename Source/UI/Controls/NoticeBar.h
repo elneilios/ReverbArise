@@ -40,8 +40,8 @@ public:
         const auto ink=message->tone==NoticeTone::error?danger:message->tone==NoticeTone::warning?warning:aqua;
         g.fillAll(background);g.setColour(ink);g.fillRect(0,4,3,getHeight()-8);
         const auto cy=getHeight()*.5f;g.drawEllipse(13,cy-7,14,14,1.25f);
-        g.setFont(juce::FontOptions(controlSize,juce::Font::bold));g.drawText(message->tone==NoticeTone::information?"i":"!",12,0,16,getHeight(),juce::Justification::centred);
-        g.setColour(m3::ui::text);g.setFont(juce::FontOptions(bodySize));
+        g.setFont(fontFor(*this,controlSize,juce::Font::bold));g.drawText(message->tone==NoticeTone::information?"i":"!",12,0,16,getHeight(),juce::Justification::centred);
+        g.setColour(m3::ui::text);g.setFont(fontFor(*this,bodySize));
         g.drawText(message->text,getLocalBounds().withTrimmedLeft(38).withTrimmedRight(8),juce::Justification::centredLeft);
     }
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override

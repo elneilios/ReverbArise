@@ -28,7 +28,7 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
             const auto path=owner.outlineFor(index,box);
             g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
             g.setColour((over || down?aqua:outline).withAlpha(alpha));g.strokePath(path,juce::PathStrokeType(rule));
-            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(juce::FontOptions(navigationSize,juce::Font::bold));
+            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(navigationFont());
             g.drawText(choice.label,getLocalBounds().reduced(5,0),juce::Justification::centred);
         }
         std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override

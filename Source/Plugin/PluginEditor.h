@@ -5,6 +5,7 @@
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
 #include <UI/WorkflowHeader.h>
+#include <UI/WorkspaceNotice.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer,private juce::ListBoxModel
 {
@@ -21,6 +22,7 @@ public:
 private:
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::WorkflowHeader workflowHeader;
+    m3::ui::controls::NoticeBar noticeBar;
     juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {refresh();}

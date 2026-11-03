@@ -132,4 +132,122 @@ The owner requested direct preview launch for future UI/component approvals;
 this is recorded in AGENTS.md and the UI development standards. The native
 `--review-messages` window was opened directly, without FL Studio. The owner
 requested further styling adjustments; details are pending. Component checkpoint
-3.6 and production notice binding 3.7 remain open. No new host acceptance is claimed.
+3.6 and production notice binding 3.7 remained open at that review. No new host acceptance was claimed.
+
+### Refined component approval — 2026-11-03
+
+The owner approved the revised native preview: true Segoe UI Semibold mode
+labels, Segoe UI Regular body text, brighter off-white secondary text and a
+shared centerline for logo, tagline, selector and Settings. The italic mode
+description sits independently below the selector. Message-bar styling was
+approved in the earlier review. Checkpoint 3.6 is complete; this is native visual
+approval, not new FL Studio/DPI acceptance. Native UI verification passed in
+6.86 seconds, including resolved typeface styles and alignment assertions.
+Review capture: `out/issue16-message-bar-checkpoint/checkpoint-c-centered-regular.png`.
+
+### Production notice integration — 2026-11-03
+
+`WorkspaceNotice` projects explicit workflow/capture/action/IR error fields and
+the existing offline-result prefixes into one current notice. Failures precede
+recording/settlement and contextual Recapture/Export guidance. Routine idle Learn
+and Perform stay quiet. `PluginEditor` inserts/removes the 32-pixel row only on
+presence changes; bottom bands remain anchored, and model edits remain unchanged.
+Tests cover priority/resolution, minimum/larger geometry and real mode/Recapture
+bindings. Native component tests retain focus and repeated-refresh checks.
+
+- Release: **32/32 passed, 40.78 seconds**.
+- Focused Debug workflow processor, capture transaction, workflow state and
+  native UI: **4/4 passed, 6.43 seconds**.
+- Strict OpenSpec: **13/13 passed**; `git diff --check` passed.
+- Release VST3 rebuilt at the existing artifact path above. SHA-256:
+  `72308283e5912bd84040b7b5a5a11c2c7e286cefd5640fa47d04013beef18c7e`.
+- Component/controller CIDs remain
+  `ABCDEF019182FAEB4B374D6150727631` /
+  `ABCDEF011234ABCD4B374D6150727631`.
+- Captures: `out/issue16-integrated-notices/`, including Learn/Perform/Export,
+  Recapture, recording, settlement, failure and 1100/1400/larger layouts.
+  Ready/fresh captures include 125%, 150% and 200% software transforms;
+  these do **not** establish actual in-host DPI behavior.
+
+The real processor/editor fixture was opened directly with `--review-workspace`.
+The owner requested adjustments before host testing; details are pending, so
+integrated checkpoint 3.8, final host check 4.3 and PR completion 4.4 remain open.
+The preview is preserved. No new host/DPI acceptance is claimed. Reopen affected
+build/regression tasks if the requested adjustments change implementation.
+
+### Reserved header notice row — 2026-11-03
+
+The owner requested relocating notices beneath the logo, reserving space so one
+notice does not move the workspace, and retaining the divider above global
+settings. The header now reserves 82 pixels: the original primary-row alignment
+is preserved, with a 32-pixel notice area beneath the branding and left of the
+mode description. The full divider sits below the reserved row. Notice visibility
+no longer changes geometry. The existing single-highest-priority notice policy
+remains; additional simultaneous messages, if later introduced, may grow the
+header rather than overlap content.
+
+The revised native UI test passed in **6.39 seconds** (CTest 6.45), including
+geometry invariance across notice visibility, no intersection with header
+content, and actual divider-pixel assertions across native editor states.
+Strict OpenSpec validation passed **13/13**. Captures and scale transforms are
+in `out/issue16-reserved-notice/`. A new real-editor preview was opened directly;
+layout approval is pending. Final Release build/regression evidence above is
+superseded for delivery until the reserved-row rebuild completes.
+
+The reserved-row Release rebuild completed: **32/32 tests passed, 35.46 seconds**.
+VST3 SHA-256:
+`59f25c8dd816f4e019d00b7c0801b3b0078ff784c6405e011e1b923f1b1d2c5e`.
+This supersedes the previous delivery hash. The owner requested further visual
+adjustments; their details are pending. Integrated approval and host acceptance
+remain open, and affected verification will be reopened for further code changes.
+
+The owner approved the reserved message-bar positioning and requested a larger
+mode description aligned with that row. It now uses 16-pixel Segoe UI Italic
+(previously 13) and shares the notice row's vertical center, independently of the
+primary logo/tagline/control centerline. Native UI tests passed in 6.68 seconds
+(CTest 6.73), including actual editor alignment and font-height assertions;
+strict OpenSpec passed 13/13. Review captures: `out/issue16-description-aligned/`.
+A revised native editor preview was launched directly. Final integrated approval
+is pending, and final regression/build tasks remain reopened for this revision.
+
+The owner approved this final integrated layout on 2026-11-03 and requested
+continuation to final checks. This closes checkpoint 3.8; it does not claim new
+FL Studio or physical DPI validation. The native preview remains available.
+
+### Approved delivery build — 2026-11-03
+
+Final approved typography/alignment and reserved message row are included in:
+
+- Release: **32/32 tests passed, 41.28 seconds**.
+- Focused Debug: **4/4 passed, 7.07 seconds** (workflow processor/state,
+  transactional capture and native editor/component assertions).
+- Strict OpenSpec: **13/13 passed**; patch formatting check passed.
+- Release binary SHA-256:
+  `6fc0cfa0054173de1d085139dd3ab37bfc138502c1777095546bb88d477de889`.
+  This supersedes earlier delivery hashes in this chronological record.
+- Generated component/controller IDs remain unchanged as recorded above.
+- Final native captures and 125/150/200% software scale renders are under
+  `out/issue16-final-approved/`; the three committed Learn/Perform/Export images
+  above now show this final build. Physical host/DPI coverage is still untested.
+
+All component and integrated visual approvals are recorded. Only the brief final
+FL Studio mode/control-feel/save-reopen smoke and final PR evidence completion
+remain open; no detailed automated edge-case repetition is requested.
+
+### Final host acceptance — 2026-11-03
+
+The owner reported **Pass** for the single consolidated FL Studio smoke:
+reloading the rebuilt VST3, Learn → Perform → Export → Perform, header/Settings
+control feel, and saving/reopening with the mode preserved. This completes task
+4.3 and the requested host acceptance without repeating automated audio/capture/
+export edge cases. No additional physical monitor/DPI configurations were tested.
+The old Preverb Spike automatic-discovery migration remains unverified: the owner
+previously replaced the effect manually. Plugin identities and durable mode/state
+keys remain unchanged; no automatic relink claim is made.
+
+All component and integrated appearance feedback is resolved and approved. Shared
+controls delivered here are SegmentedSelector, semantic Settings IconActionButton
+and NoticeBar, composed by WorkflowHeader and the snapshot notice adapter. Other
+control families retain their existing implementations for incremental workspace
+refactors; this is not a whole-plugin library migration. Issue #11's dedicated
+Learn workspace remains separate. PR #24 is left for owner review and merge.

@@ -16,12 +16,21 @@ static void workflowHeaderCases()
         {"export",{workflow::Mode::finalise},{true,true,true}}
     }};
     m3::ui::WorkspaceTheme theme;m3::ui::WorkflowHeader header;header.setLookAndFeel(&theme);header.addToDesktop(0);header.setVisible(true);
+    const auto approvedFont=[](const juce::Font& font){const auto name=font.getTypefacePtr()->getName();return name.containsIgnoreCase("Inter") || name.containsIgnoreCase("Segoe UI");};
+    const auto navigationFont=m3::ui::navigationFont();
+    REQUIRE(approvedFont(navigationFont) && navigationFont.getTypefaceStyle().containsIgnoreCase("Semibold"));
+    REQUIRE(navigationFont.getTypefacePtr()->getStyle().containsIgnoreCase("Semibold"));
+    for(auto* child:header.getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))REQUIRE(approvedFont(theme.getLabelFont(*label)));
     unsigned requests=0;header.onModeRequested=[&](auto){++requests;};
     for(const auto& item:cases)for(int width:{1068,1360,1560})
     {
-        header.setSize(width,70);header.display(m3::ui::presentWorkflow(item.state,item.ready));
+        header.setSize(width,82);header.display(m3::ui::presentWorkflow(item.state,item.ready));
         REQUIRE(header.modeSelector().selectedId()==static_cast<int>(item.state.mode)+1 && requests==0);
+        REQUIRE(header.settingsAction().getY()==header.modeSelector().getY() && header.settingsAction().getBottom()==header.modeSelector().getBottom());
+        for(const char* name:{"brandWordmark","brandTagline"}){const auto component=findNamed(header,name);REQUIRE(component && component->getBounds().getCentreY()==header.modeSelector().getBounds().getCentreY());}
         auto description=dynamic_cast<juce::Label*>(findNamed(header,"workflowRole"));REQUIRE(description && description->getFont().isItalic());
+        REQUIRE(description->getY()>=header.modeSelector().getBottom()+4);
+        REQUIRE(description->getBounds().getCentreY()==62 && description->getFont().getHeight()==16);
         REQUIRE(!findNamed(header,"workflowStatus")); // Operational messages have their own inline bar.
         for(const auto target:{workflow::Mode::capture,workflow::Mode::live,workflow::Mode::finalise})
         {

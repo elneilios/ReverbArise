@@ -50,6 +50,14 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 - Use semantic roles for icons, emphasis and destructive actions. Appearance must
   not depend on incidental component names or visible button text. Keep stable
   component names where they support accessibility and existing tests.
+- Resolve fonts through the shared theme policy, including custom Graphics
+  painting: use `fontFor(component, height, flags)` for verified Segoe UI Regular,
+  Bold and Italic faces, and `navigationFont()` for true Segoe UI Semibold. These
+  are the approved system faces; the supplied Inter asset remains available but
+  its light variable-font default is not used for body copy. Never rely on an implicit
+  default typeface or change JUCE's process-wide default LookAndFeel. Text-entry
+  composites must refresh their font when their inherited LookAndFeel changes.
+  Verify resolved typeface names as well as requested font properties.
 
 ## Incremental migration
 
@@ -134,7 +142,7 @@ native review fixture and are composed into the shared production WorkflowHeader
   including disabled choices. Wheel and repeated active selection are no-ops.
   Segments share square internal joins with one border; only the group's outer
   left/right ends are rounded, following owner checkpoint-A feedback.
-  Navigation text uses the shared 18-pixel bold role; the mode description uses
+  Navigation text uses the shared 18-pixel Semibold role; the mode description uses
   a 13-pixel italic role, following integrated-header polish feedback.
 - `IconActionButton(ActionIcon::settings)` supplies a semantic Settings glyph,
   focus/hover/disabled feedback and native pointer/accessibility/Enter/Space
@@ -157,6 +165,16 @@ target, not the plugin. The initial families' owner approval is recorded in
 `tests/NoticeBarCases.h` and `--review-messages` provide the corresponding native
 message-bar/polished-header fixture. Its component acceptance precedes production
 message binding; prototype severity examples do not imply simultaneous notices.
+
+`WorkspaceNotice.h` selects a single current notice from explicit workflow,
+capture, action/IR error and existing offline-result fields. Failures precede
+recording/settlement and contextual Recapture/Export guidance; routine ready/idle
+status is quiet. The editor reserves one notice row beneath the branding, keeping geometry fixed
+across notice visibility changes without clearing focus or committing an active
+value edit. The divider above global settings remains clear of notice paint. No notification queue,
+expiry timer or generic parsing of engine progress messages is involved.
+`--review-workspace` opens the real processor/editor test fixture for integration
+review without a DAW project; it supports the actual mode and Settings controls.
 
 This stage does not claim a full library migration. KnobValue/global sliders,
 general buttons/toggles/dropdowns, row menus, scroll containers and window content

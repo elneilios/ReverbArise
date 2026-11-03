@@ -25,7 +25,7 @@ public:
     void paint(juce::Graphics& g)override{g.fillAll(m3::ui::background);g.setColour(m3::ui::separator);g.drawHorizontalLine(86,16,getWidth()-16.0f);}
     void resized()override
     {
-        header.setBounds(16,16,getWidth()-32,70);explanation.setBounds(16,98,getWidth()-32,25);
+        header.setBounds(16,16,getWidth()-32,82);explanation.setBounds(16,102,getWidth()-32,25);
         for(size_t i=0;i<bars.size();++i)bars[i].setBounds(16,136+static_cast<int>(i)*48,getWidth()-32,NoticeBar::preferredHeight);
     }
     m3::ui::WorkflowHeader header;std::array<NoticeBar,3> bars;
@@ -35,6 +35,10 @@ inline void cases()
 {
     m3::ui::WorkspaceTheme theme;Panel panel;panel.setLookAndFeel(&theme);panel.addToDesktop(0);panel.setVisible(true);
     auto& bar=panel.bars[0];panel.header.modeSelector().grabKeyboardFocus();const auto focus=juce::Component::getCurrentlyFocusedComponent();
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefaceStyle().containsIgnoreCase("Regular"));
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::bodySize).getTypefacePtr()->getStyle().containsIgnoreCase("Regular"));
+    REQUIRE(m3::ui::fontFor(bar,m3::ui::controlSize,juce::Font::bold).getTypefacePtr()->getName().containsIgnoreCase("Segoe UI"));
     const NoticeMessage failure{"Unable to load the requested impulse response","Previous valid response retained",NoticeTone::error};
     REQUIRE(bar.display(failure) && bar.isVisible() && !bar.getWantsKeyboardFocus());
     REQUIRE(juce::Component::getCurrentlyFocusedComponent()==focus && !panel.header.isCurrentlyBlockedByAnotherModalComponent());

@@ -5,10 +5,10 @@
 namespace m3::ui
 {
 inline const juce::Colour background{0xff0f1418}, aqua{0xff00efff}, hover{0xff00c2cc},
-    timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffe1e6ec}, separator{0xff4a5058}, outline{0xff6b737c},
+    timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffedf1f5}, separator{0xff4a5058}, outline{0xff6b737c},
     danger{0xffff6b5e};
 inline constexpr float rule=1, radius=4, headingSize=21, bodySize=14, controlSize=13, smallSize=12, captionSize=11, emptyHeadingSize=24;
-inline constexpr float navigationSize=18, modeDescriptionSize=13;
+inline constexpr float navigationSize=18, modeDescriptionSize=16;
 inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},
     rawWet{0xff63716e}, otherWet{0xff80938f}, warning{0xffe6bb72}, staleWet{0xffdba66f}, previewCursor{0xffffb4e9};
 
@@ -40,8 +40,6 @@ class WorkspaceTheme final:public juce::LookAndFeel_V4
 public:
     WorkspaceTheme()
     {
-        int size=0;const auto* bytes=resource("InterVariable.ttf",size);
-        if(bytes)inter=juce::Typeface::createSystemTypefaceFor(bytes,static_cast<size_t>(size));
         for(const int id:std::initializer_list<int>{juce::Label::textColourId,juce::TextEditor::textColourId,
                           juce::ComboBox::textColourId,juce::Slider::textBoxTextColourId})setColour(id,text);
         for(const int id:std::initializer_list<int>{juce::TextEditor::backgroundColourId,juce::ComboBox::backgroundColourId,
@@ -61,22 +59,23 @@ public:
         setColour(juce::Slider::backgroundColourId,separator);
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
-    bool interAvailable()const noexcept{return inter!=nullptr;}
+    bool interAvailable()const noexcept{int size=0;return resource("InterVariable.ttf",size)!=nullptr;}
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
-        if(inter && (flags&(juce::Font::bold|juce::Font::italic))==0)
-            return juce::Font(juce::FontOptions(height).withTypeface(inter));
         return juce::Font(juce::FontOptions("Segoe UI",height,flags));
     }
     juce::Font getLabelFont(juce::Label& label)override{return font(label.getFont().getHeight(),label.getFont().getStyleFlags());}
     juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
+    juce::Font getPopupMenuFont()override{return font(bodySize);}
+    juce::Font getSliderPopupFont(juce::Slider&)override{return font(controlSize);}
+    juce::Font getTabButtonFont(juce::TabBarButton&,float)override{return font(bodySize);}
+    juce::Font getAlertWindowTitleFont()override{return font(headingSize,juce::Font::bold);}
+    juce::Font getAlertWindowMessageFont()override{return font(bodySize);}
+    juce::Font getAlertWindowFont()override{return font(bodySize);}
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override
     {
-        if(inter && !f.isBold() && !f.isItalic())return inter;
-        // Keep real bold/italic faces rather than pretending the regular
-        // variable typeface provides unverified style axes on this backend.
-        return juce::Typeface::createSystemTypefaceFor(juce::Font(juce::FontOptions("Segoe UI",f.getHeight(),f.getStyleFlags())));
+        return juce::Typeface::createSystemTypefaceFor(juce::Font(juce::FontOptions("Segoe UI",f.getTypefaceStyle(),f.getHeight())));
     }
     juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
@@ -148,8 +147,17 @@ public:
         g.setColour(aqua.withMultipliedAlpha(s.isEnabled()?1.0f:.3f));g.drawLine(static_cast<float>(x),cy,pos,cy,3);
         g.fillEllipse(pos-5,cy-5,10,10);
     }
-private:juce::Typeface::Ptr inter;
 };
+
+// Custom Graphics painting does not automatically use the component's font
+// policy. Resolve explicitly; never change JUCE's process-wide default theme.
+inline juce::Font fontFor(juce::Component& component,float height,int flags=0)
+{
+    if(const auto* theme=dynamic_cast<WorkspaceTheme*>(&component.getLookAndFeel()))return theme->font(height,flags);
+    return juce::Font(juce::FontOptions("Segoe UI",height,flags));
+}
+inline juce::Font navigationFont()
+{return juce::Font(juce::FontOptions("Segoe UI","Semibold",navigationSize));}
 
 class Wordmark final:public juce::Component
 {
