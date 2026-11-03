@@ -22,6 +22,8 @@ This directory covers product identity, the existing implementation, development
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
 
+- [Asset storage audit](development/asset-storage-audit.md) and [dated investigation evidence](validation/2026-11-03-asset-storage-investigation.md) — source-backed Issue #8 findings; proposed portability and retention remain planning only.
+
 ## Documentation policy
 
 Keep only this index and `product-vision.md` directly under `docs/`. Use the directories above for engineering documents and reports; check for existing copies before moving files and update links and build/test paths when relocating them.
