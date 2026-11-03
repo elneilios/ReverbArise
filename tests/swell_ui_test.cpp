@@ -5,6 +5,7 @@
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
+#include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
 
 struct UIPlayHead final:juce::AudioPlayHead
@@ -118,7 +119,9 @@ int main(int argc,char* argv[]){return runTest([&]
     learnTimelineCases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
+    modeIconCases();
     controlReview::cases();
+    controlReview::cases(true);
     workflowHeaderCases();
     noticeReview::cases();
     workspaceNoticeCases();

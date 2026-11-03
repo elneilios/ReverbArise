@@ -1,21 +1,22 @@
 # Tasks
 
-Implementation has not started. Preserve the concurrent Learn agent's work.
+Candidate controls implemented and verified: 4/8 tasks complete. Owner native
+look-and-feel approval is the next checkpoint before production binding.
 
 Preparation delivered separately: canonical Learn/Perform/Export SVG assets,
 browser review evidence, exact visual specifications, file-level integration plan
-and validation checklist in design.md. All tracked C++/integration work below is
-still unchecked. Agent 1's final published clipping-fix revision is still required.
+and validation checklist in design.md. Integration baseline is merged PR #39,
+`185f00f` (Learn source `598b998`); its border/focus regressions are preserved.
 
 ## 1. Isolated glyph preparation and integration baseline
 
-- [ ] 1.1 Embed and load/cache the exact prepared SVGs through a reusable semantic JUCE helper after implementation is authorised; verify JUCE loading/recolouring, finite/in-bounds geometry, the three outlined Perform handles and 14/16 px rendering through focused component tests. Do not redraw or replace the canonical assets.
-- [ ] 1.2 Record the Learn agent's published navigation clipping-fix revision and exact shared-file hunks, then prepare a safe content-only integration diff; verify its border/focus geometry and regressions survive before editing overlapping selector/header code. If unpublished, retain the design's file-level plan and defer those edits; do not merge or cherry-pick without separate authorisation.
+- [x] 1.1 Embed and load/cache the exact prepared SVGs through a reusable semantic JUCE helper after implementation is authorised; verify JUCE loading/recolouring, finite/in-bounds geometry, the three outlined Perform handles and 14/16 px rendering through focused component tests. Do not redraw or replace the canonical assets.
+- [x] 1.2 Record the Learn agent's published navigation clipping-fix revision and exact shared-file hunks, then prepare a safe content-only integration diff; verify its border/focus geometry and regressions survive before editing overlapping selector/header code. If unpublished, retain the design's file-level plan and defer those edits; do not merge or cherry-pick without separate authorisation.
 
 ## 2. Candidate shared controls and owner checkpoint
 
-- [ ] 2.1 Add optional semantic icon content to the existing selector against the preserved clipping-fix baseline; pass active/inactive/hover/disabled/focus, guarded intent, accessibility and complete-outline component tests, including existing no-icon consumers.
-- [ ] 2.2 Implement the design's exact 2×16 px accent, 8 px text gap and 14 px regular Inter information-row treatment using existing control primitives; pass typography, short/long notice severity, no-collision and unchanged-geometry tests in the native review fixture, with non-header notice defaults unchanged.
+- [x] 2.1 Add optional semantic icon content to the existing selector against the preserved clipping-fix baseline; pass active/inactive/hover/disabled/focus, guarded intent, accessibility and complete-outline component tests, including existing no-icon consumers.
+- [x] 2.2 Implement the design's exact 2×16 px accent, 8 px text gap and 14 px regular Inter information-row treatment using existing control primitives; pass typography, short/long notice severity, no-collision and unchanged-geometry tests in the native review fixture, with non-header notice defaults unchanged.
 - [ ] 2.3 Launch one prepared native control/header preview for owner look-and-feel approval before wider rollout; record requested adjustments and accepted versus untested interaction/DPI coverage, and keep the review window open until the owner finishes.
 
 ## 3. Header integration and evidence

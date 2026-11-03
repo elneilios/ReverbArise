@@ -67,8 +67,14 @@ inline void pointerClick(juce::Button& button)
     const auto event=[&](juce::ModifierKeys mods){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,mods,0,0,0,0,0,&button,&button,time,point,time,1,false);};
     static_cast<juce::Component&>(button).mouseDown(event(juce::ModifierKeys::leftButtonModifier));static_cast<juce::Component&>(button).mouseUp(event({}));
 }
-inline void cases()
+inline void cases(bool withIcons=false)
 {
+    const auto choices=[withIcons](bool available=true)
+    {
+        auto values=controlReview::choices(available);
+        if(withIcons){values[0].icon=m3::ui::controls::ModeIcon::learn;values[1].icon=m3::ui::controls::ModeIcon::perform;values[2].icon=m3::ui::controls::ModeIcon::exportAudio;}
+        return values;
+    };
     {
         m3::ui::controls::SliderControl value;value.setRange(0,100,.1);value.setValue(50,juce::dontSendNotification);value.setSize(304,34);
         unsigned begins=0,changes=0,gestureStarts=0,gestureEnds=0;value.beforeInvocation=[&]{++begins;};value.onValueChange=[&]{++changes;};
@@ -127,6 +133,17 @@ inline void cases()
     {auto removed=std::make_unique<IconActionButton>(ActionIcon::settings);removed->onClick=[&]{++clicks;};removed->triggerClick();removed.reset();}
     juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(clicks==3);
     selector.onRequest={};selector.display(choices(),1);panel.groups[2].grabKeyboardFocus();
+    if(withIcons)for(int width:{330,360})
+    {
+        selector.setSize(width,36);
+        for(int id:{1,2,3})
+        {
+            auto* button=selector.segment(id);
+            const auto labelWidth=juce::GlyphArrangement::getStringWidth(m3::ui::navigationFont(),button->getButtonText());
+            REQUIRE(16+8+labelWidth<=button->getWidth()-10);
+            REQUIRE(button->getAccessibilityHandler()->getTitle()==button->getButtonText());
+        }
+    }
     // Internal joins are square and contiguous; only the outer silhouette rounds.
     const auto middle=selector.segment(2);const auto middleImage=middle->createComponentSnapshot(middle->getLocalBounds());
     REQUIRE(middleImage.getPixelAt(1,1)==m3::ui::background);

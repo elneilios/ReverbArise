@@ -1,5 +1,6 @@
 #pragma once
 #include <UI/WorkspaceTheme.h>
+#include "ModeIcon.h"
 #include <vector>
 
 namespace m3::ui::controls
@@ -10,6 +11,7 @@ struct SegmentChoice
     juce::String label,help;
     bool available=true;
     juce::String unavailableReason;
+    ModeIcon icon=ModeIcon::none;
 };
 
 // Model-owned selection: an input emits intent, never an optimistic toggle.
@@ -29,7 +31,16 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
             const auto path=owner.outlineFor(index,box);
             g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
             g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(navigationFont());
-            g.drawText(choice.label,getLocalBounds().reduced(5,0),juce::Justification::centred);
+            const auto content=getLocalBounds().toFloat().reduced(5,0);
+            if(choice.icon==ModeIcon::none)g.drawText(choice.label,content,juce::Justification::centred);
+            else
+            {
+                const auto labelWidth=juce::GlyphArrangement::getStringWidth(navigationFont(),choice.label);
+                const auto width=16.0f+8.0f+labelWidth;
+                const auto x=content.getCentreX()-width*.5f;
+                owner.iconCache.draw(g,choice.icon,{x,content.getCentreY()-8,16,16},activeChoice,alpha);
+                g.drawText(choice.label,juce::Rectangle<float>(x+24,content.getY(),labelWidth,content.getHeight()),juce::Justification::centredLeft);
+            }
         }
         std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
         {
@@ -139,6 +150,7 @@ private:
     }
     void updateHint(){if(focused<choices.size()){const auto& item=choices[focused];setTooltip(item.label+": "+(item.available?item.help:item.unavailableReason));}}
     std::vector<SegmentChoice> choices;
+    ModeIconCache iconCache;
     std::vector<std::unique_ptr<Segment>> buttons;
     int selected=0;size_t focused=0;
 };

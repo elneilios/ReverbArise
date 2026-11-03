@@ -80,6 +80,9 @@ target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav
     resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
+    resources/icons/learn.svg
+    resources/icons/perform.svg
+    resources/icons/export.svg
     resources/logo/svg/reverbarise-wordmark-dark.svg
     resources/fonts/inter/Inter-Regular.ttf
     resources/fonts/inter/Inter-Medium.ttf
