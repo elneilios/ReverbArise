@@ -309,3 +309,35 @@ strict all-spec validation 12/12, `git diff --check` clean, and unchanged final
 Release binary hash. This sign-off round changes documentation/tracking only;
 the recorded 32/32 Debug and 32/32 Release results still apply to that binary.
 No commit, push, GitHub issue change or archive operation was performed.
+
+## PR #18 review amendments — 2026-11-02
+
+The owner approved a narrow Stop-policy refinement: a successful explicit
+Recapture replacing mapped audio with silence returns to Live if useful accepted
+source remains elsewhere. Repeating an identical silence replacement also returns
+to Live without publishing a redundant source revision. Erasing the last useful
+source remains Capture; fresh silence, empty and ordinary mapped-only passes do
+not gain automatic Live entry. Worker tests cover these cases and saved-state
+notifications. The new silence-replacement regression failed before the fix.
+
+Finalise readiness and frozen recovery now share the same ready-render timing
+check: a present, nonempty committed render must match the current sample rate,
+tempo and meter. Unit cases reject each incompatible field, missing frames,
+non-ready phases and invalid timing; the processor test rejects Finalise with
+incompatible render metadata even when captured source remains compatible.
+This is foundation eligibility, not issue #6's full export/asset preflight.
+
+**Correction to legacy host evidence:** the owner clarified during PR review
+that they manually replaced the original Preverb Spike effect. Earlier legacy
+state/reopen confirmations therefore do not establish automatic discovery of
+ReverbArise from a project still referencing Preverb Spike. That exact host check
+remains unverified. Unchanged component/controller identifiers and automated
+legacy-state tests are supporting compatibility evidence only. No fresh FL Studio
+pass is claimed for these review amendments.
+
+Review-build verification: full Debug build and CTest **32/32** (118.98 s),
+full Release build and CTest **32/32** (36.42 s), strict all-spec validation
+**12/12**, and `git diff --check` passed. The rebuilt Release module at the bundle
+path above has SHA-256
+`b391afb9382ec25a59715fcda57c56935992014eee837a080f0224ea3c231e43`.
+Archived planning and previous dated acceptance records remain unchanged.

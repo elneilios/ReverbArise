@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Preverb VERSION 0.1.0 LANGUAGES C CXX)
 
+include(cmake/ProductVersion.cmake)
+reverbarise_product_version("${CMAKE_CURRENT_SOURCE_DIR}" product_version)
+if(NOT product_version STREQUAL PROJECT_VERSION)
+    message(FATAL_ERROR "Product version reader disagrees with PROJECT_VERSION")
+endif()
+
 include(CTest)
 include(FetchContent)
 
@@ -74,7 +80,10 @@ juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE 
     resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
     resources/logo/svg/reverbarise-wordmark-dark.svg
-    resources/logo/source/InterVariable.ttf
+    resources/fonts/inter/Inter-Regular.ttf
+    resources/fonts/inter/Inter-SemiBold.ttf
+    resources/fonts/inter/Inter-Bold.ttf
+    resources/fonts/inter/Inter-Italic.ttf
 )
 add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
@@ -85,6 +94,7 @@ target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
 juce_add_plugin(preverb_plugin
+    VERSION ${PROJECT_VERSION}
     COMPANY_NAME "K7MA"
     BUNDLE_ID "com.k7ma.preverb"
     PLUGIN_MANUFACTURER_CODE K7Ma
@@ -95,6 +105,10 @@ juce_add_plugin(preverb_plugin
     NEEDS_MIDI_INPUT FALSE
     VST3_CATEGORIES Fx Stereo
 )
+
+# Derived metadata, never an independent handwritten version authority.
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
+"{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
 
 target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
@@ -118,7 +132,7 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${preverb_wavpack_source}/COPYING"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/WavPack-LICENSE.txt"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/licenses/Inter-OFL.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/inter/OFL.txt"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/Inter-OFL.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/resources/irs/LICENSE.md"
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-LICENSE.md"
@@ -130,6 +144,18 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
+    add_executable(preverb_product_version_test tests/product_version_test.cpp)
+    target_compile_definitions(preverb_product_version_test PRIVATE
+        $<TARGET_PROPERTY:preverb_plugin,COMPILE_DEFINITIONS>
+        EXPECTED_PRODUCT_VERSION="${PROJECT_VERSION}"
+        EXPECTED_PRODUCT_VERSION_CODE=${product_version_code})
+    add_test(NAME preverb_product_version_test COMMAND preverb_product_version_test)
+    add_test(NAME preverb_version_contract_test COMMAND ${CMAKE_COMMAND}
+        "-DTEST_ROOT=${CMAKE_BINARY_DIR}/version-contract-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/product_version_test.cmake")
+    add_test(NAME preverb_built_version_test COMMAND ${CMAKE_COMMAND}
+        "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DBINARY_DIR=${CMAKE_BINARY_DIR}" "-DCONFIGURATION=$<CONFIG>"
+        -P "${CMAKE_SOURCE_DIR}/scripts/verify-version.cmake")
     add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
     target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
     add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
@@ -171,6 +197,7 @@ if(BUILD_TESTING)
     target_link_libraries(preverb_swell_viewport_test PRIVATE preverb_session)
     add_test(NAME preverb_swell_viewport_test COMMAND preverb_swell_viewport_test)
     add_executable(preverb_swell_ui_test tests/swell_ui_test.cpp)
+    target_compile_definitions(preverb_swell_ui_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_swell_ui_test PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_swell_ui_test COMMAND preverb_swell_ui_test)
     add_executable(preverb_scoped_recapture_test tests/scoped_recapture_test.cpp)

@@ -7,7 +7,7 @@
 - Visual Studio's **C++ CMake tools for Windows** component
 - Git
 
-The project pins JUCE 9.0.4 through CMake FetchContent. CMake downloads the source at configure time. The JUCE CMake API requires CMake 3.22 or newer; the Visual Studio 2026 installation supplies the tested CMake executable.
+The project pins JUCE 9.0.4 through CMake FetchContent. First configure needs Git and network access unless sources are already populated locally. The project/API minimum is CMake 3.22, but the selected CMake must support the **Visual Studio 18 2026** generator. The VS 2026 bundled CMake/CTest provides that support. Windows PowerShell 5.1 and PowerShell 7 are supported; no PowerShell modules are required.
 
 ## License Scope
 
@@ -15,7 +15,54 @@ JUCE is used for this feasibility spike as an internal evaluation dependency onl
 
 ## Configure, Build, and Test
 
-Run these commands from the repository root in PowerShell:
+Use the local wrapper from the repository root in PowerShell:
+
+```powershell
+./scripts/build.ps1 -Configuration Debug
+./scripts/build.ps1 -Configuration Debug -Test
+./scripts/build.ps1 -Configuration Release
+./scripts/build.ps1 -Configuration Release -Test
+```
+
+Debug is the default. `-Test` builds first, then runs the full matching CTest
+configuration; zero discovered tests is an error. Build-only success says testing
+was not requested. You can invoke the script by absolute path from any directory,
+including a checkout path containing spaces; the caller's location is restored.
+
+The wrapper prefers a compatible CMake on PATH with adjacent CTest and otherwise
+discovers Visual Studio 2026's bundled tools. It requires Git and VS C++ tools;
+configure verifies the compiler and SDK. It never installs prerequisites. Configure,
+build and test errors return nonzero native exit codes; preflight errors return 1.
+Invalid configuration is rejected by PowerShell before native work. The final summary
+includes configuration, Git revision/dirty state (or explicit unavailability), stage
+outcomes and log paths. Full stdout/stderr is retained in per-run directories under
+`out/build-logs/<configuration>/`; failures print the last 40 log lines. CTest also
+retains its normal `Testing/Temporary/LastTest.log` in the build tree.
+
+Both configurations share `out/build/windows-msvc` and its `_deps` sources. Each
+invocation configures in place, then builds incrementally: no default clean, cache
+deletion or forced dependency update. `FETCHCONTENT_UPDATES_DISCONNECTED=ON` skips
+update checks for populated dependencies while allowing first downloads. A first
+Release build still needs Release compilation. Incompatible cached checkout,
+generator or architecture is rejected; use the original checkout/toolchain or
+explicitly relocate the old tree while idle. Never copy a CMake cache between worktrees.
+
+The wrapper holds an exclusive file handle on `.reverbarise-build.lock` **inside
+the selected binary directory** throughout configure, build and tests. A second
+wrapper fails immediately; different worktrees with separate binary directories
+are independent. Exit or process termination releases the handle. The persistent
+file is harmless: do not delete it to override an active lock. All local agents
+must use the wrapper for mutations of this tree; raw CMake/MSBuild commands cannot
+participate in this cooperative lock automatically. Wait for any raw build before
+starting the wrapper.
+
+After forcibly terminating a wrapper shell, confirm its child CMake/MSBuild
+processes have stopped before retrying; raw or orphaned processes do not hold
+the wrapper's file handle.
+
+For troubleshooting, the equivalent preset commands are below. Run them only when
+no wrapper or other build is active. They do not provide the wrapper's locking,
+logging or exit summary:
 
 ```powershell
 $cmake = "$env:ProgramFiles\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
@@ -23,14 +70,47 @@ $ctest = Join-Path (Split-Path $cmake) "ctest.exe"
 
 & $cmake --preset windows-msvc
 & $cmake --build --preset windows-msvc-debug
-& $ctest --preset windows-msvc-debug
+& $ctest --preset windows-msvc-debug --no-tests=error
+& $cmake --build --preset windows-msvc-release
+& $ctest --preset windows-msvc-release --no-tests=error
 ```
+
+If compiler detection fails (for example, MSBuild tracking reports sandbox
+`E_ACCESSDENIED`), resolve the permission/toolchain problem before retrying. A failed
+configure can leave an incomplete cache, or empty compiler flags that later trigger
+JUCE's "compiling without exceptions enabled" error. Inspect the configure log and
+`CMakeFiles/CMakeConfigureLog.yaml` first. Missing source/generator/platform identity
+is rejected by the wrapper; preserve the logs and explicitly relocate that incomplete
+tree while idle before starting a new one. The wrapper never repairs caches automatically.
+
+For a complete-identity cache with unexpectedly empty compiler flags, the
+[recorded manual recovery](../validation/2026-11-02-local-windows-build.md#native-windowsmsvc-validation)
+restores CMake's defaults without deleting dependency sources. Back up
+`CMakeCache.txt` and confirm the flags are corrupt rather than intentionally
+customized first. Perform any recovery with the build directory idle and its
+`Enter-BuildLock` handle held through `try/finally`; do not add flag overrides or
+automatic repair to the normal build command.
 
 The first configure fetches the pinned JUCE release and libwavpack 5.9.0 (commit
 `5803634a030e2a11dba602ba057b89cc34486c67`). WavPack is linked statically for
 background mono/stereo lossless PCM/float IR decoding, including WavPack content
 named `.wav`. Its BSD notice is copied into the VST3 bundle's `Contents/Resources`.
 Build output is placed under `out/build`, which is ignored by Git.
+
+Wrapper checks use native-command doubles, not MSVC or the plugin test suite:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/build_wrapper_test.ps1
+pwsh -NoProfile -File tests/build_wrapper_test.ps1
+```
+
+They require Windows PowerShell's installed framework compiler but download no
+packages. Fixtures and logs stay under ignored `out/build-wrapper-fixtures/`.
+Native Debug/Release validation is separate and requires the supported local
+Windows toolchain. In cloud or toolchain-limited environments, record builds and
+CTest as **not run**, never passed. Automated tests do not establish FL Studio
+manual acceptance. See the dated [Issue #19 evidence](../validation/2026-11-02-local-windows-build.md)
+for actual commands, results and outstanding checks.
 
 ## Capture Cache (M1)
 

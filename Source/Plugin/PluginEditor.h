@@ -4,6 +4,8 @@
 #include <UI/WorkspaceTheme.h>
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
+#include <UI/WorkflowHeader.h>
+#include <UI/WorkspaceNotice.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer,private juce::ListBoxModel
 {
@@ -19,8 +21,9 @@ public:
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
 private:
     m3::ui::WorkspaceTheme workspaceTheme;
-    m3::ui::Wordmark wordmark;
-    juce::Label tagline,inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
+    m3::ui::WorkflowHeader workflowHeader;
+    m3::ui::controls::NoticeBar noticeBar;
+    juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {refresh();}
     void setDiagnosticsOpen(bool);
@@ -84,10 +87,8 @@ private:
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,selectedStatus,irStatus,monitorStatus,helper;
-    juce::ComboBox workflowBox;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
-    juce::Label workflowStatus;
-    juce::TextButton diagnosticsButton{"Diagnostics"},trimResetButton{"Trim 0 dB"};
+    juce::TextButton trimResetButton{"Trim 0 dB"};
     juce::TextButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};
     juce::ToggleButton automaticButton{"Automatic processing"},sampleUnitsButton{"Exact sample positions"};
     juce::Slider regenerationKnob;juce::Label regenerationLabel;juce::ToggleButton freezeButton{"Freeze render"};

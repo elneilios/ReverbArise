@@ -97,6 +97,14 @@ struct Session
     juce::String defaultIRName = "Preverb Hall";
     std::vector<int64_t> suppressed;
 };
+// Foundation eligibility uses already-verified readiness and timing metadata.
+// Full export preparation/asset verification remains the export workspace's job.
+inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexcept
+{
+    const auto& a=w.render;
+    return w.phase==Phase::ready && a.present() && a.frames>0 && time.valid
+        && a.rate==time.rate && a.bpm==time.bpm && a.numerator==time.numerator && a.denominator==time.denominator;
+}
 // Excludes selection, worker progress and generation counters. These fields
 // describe the durable musical definition, not the current playback/UI state.
 inline bool sameSavedSwell(const Swell& a,const Swell& b)

@@ -115,12 +115,22 @@ Use neutral grey waveforms for **source input**, aqua for **wet swell**, and yel
 
 **Reference font:** Inter, or a legally bundled/system-available metrically similar modern sans-serif. Do **not** distribute any third-party font binary without checking its license and packaging requirements.
 
+**Approved implementation (#16):** bundle Inter 4.1 static Regular (400),
+SemiBold (600), Bold (700) and Italic (400) faces. Resolve each from embedded
+font bytes through one shared policy for JUCE components and custom Graphics
+painting. Do not select weights through installed-family lookup or mix in Segoe
+UI for bold/italic. The owner approved the static Inter comparison on 2026-11-03,
+including its fuller small-text appearance. Keep the existing sizes, colors,
+alignment and spacing. Zoom-label wrapping is accepted for now; its buttons will
+be addressed with the Perform workspace redesign. Retain the bundled OFL notice.
+The SVG wordmark remains unchanged. Segoe comparisons in dated validation reports
+are historical evidence, not the current font-selection policy.
+
 | Style | Intended content |
 |---|---|
 | Inter **Bold** | Plugin brand, main headings, Swells / Selected Swell / Overview |
 | Inter **SemiBold** | Section labels and emphasized selected swell name |
-| Inter **Medium** | Control captions, target/pre-roll/length labels, numeric display |
-| Inter **Regular** | Helper text, descriptions and secondary metadata |
+| Inter **Regular** | Control captions, target/pre-roll/length labels, numeric display, helper text, descriptions and secondary metadata |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
 Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.

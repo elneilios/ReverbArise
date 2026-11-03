@@ -18,7 +18,7 @@ Each instance SHALL have exactly one Capture, Live or Finalise mode. Fresh insta
 - **THEN** their mode, capture-pass ownership and output remain independent
 
 ### Requirement: Mode entry prerequisites reflect verified material
-Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Finalise entry SHALL require useful compatible source plus an enabled ready swell. Mapped silence alone SHALL NOT satisfy useful audio readiness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit source replacement.
+Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Finalise entry SHALL require useful compatible source plus an enabled, unmuted, solo-eligible ready render compatible with the current rate, tempo and meter. Mapped silence alone SHALL NOT satisfy usefulness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit replacement.
 
 #### Scenario: Manual workflow after dry capture
 - **WHEN** useful source has committed with Automatic Swells off and no prepared swell
@@ -32,6 +32,10 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 #### Scenario: Finalise readiness
 - **WHEN** useful compatible source and an enabled ready swell exist
 - **THEN** Finalise can be selected without requiring an immediate export
+
+#### Scenario: Ready render has incompatible timing
+- **WHEN** useful source matches the host but a ready render has a different sample rate, tempo or meter
+- **THEN** that render cannot qualify for Finalise or frozen-wet recovery; eligibility does not substitute for the later export workspace's full asset/output preparation
 
 #### Scenario: Frozen wet recovery without source
 - **WHEN** captured dry is missing/cleared but an enabled unmuted solo-eligible frozen render verifies at compatible timing
@@ -51,19 +55,23 @@ Manual mode switching SHALL be disabled during active DAW Capture and while its 
 - **AND** Live can be selected explicitly while stopped if its prerequisites hold
 
 ### Requirement: Validated useful Stop commits automatically enter Live
-An explicit DAW Stop SHALL close the active pass once and trigger asynchronous drain/commit/validation. A successful useful accepted pass SHALL automatically select Live without waiting for wet rendering. Empty, aborted, incompatible or failed passes SHALL remain Capture with an accurate result and prior committed data intact.
+An explicit DAW Stop SHALL close the pass once and settle asynchronously. Useful new audio, or successful explicit mapped replacement with useful committed material remaining, SHALL automatically select Live without waiting for wet renders. Empty, mapped-only, aborted, incompatible or failed passes, and sessions left without useful material, SHALL remain Capture with truthful results and prior valid data intact.
 
 #### Scenario: Stop while wet work remains pending
 - **WHEN** source validation succeeds and related swell jobs are still queued or rendering
 - **THEN** Live is selected immediately after source acceptance and reports unfinished wet preparation honestly
 
 #### Scenario: Empty or failed pass
-- **WHEN** Stop closes a pass with no useful captured audio or a source publication failure
+- **WHEN** Stop closes an empty/mapped-only pass, publication fails, or no useful material remains after a silence-only replacement
 - **THEN** Capture remains selected, the real reason is shown and earlier committed source remains available
 
 #### Scenario: Identical explicit recapture
 - **WHEN** an explicitly armed pass receives useful mapped audio identical to the accepted source and validation succeeds
 - **THEN** Live is selected and Recapture disarms without forcing duplicate source or wet assets
+
+#### Scenario: Recapture deliberately replaces a note with silence
+- **WHEN** an explicitly armed pass successfully replaces mapped samples with silence and other useful committed source remains
+- **THEN** Live is selected and Recapture disarms, including for identical already-mapped silence; unchanged PCM retains its source/render identity
 
 ### Requirement: Transport events cannot publish a capture pass twice
 Capture settlement SHALL be idempotent and scoped to its originating instance/session/pass. Duplicate Stop reports, loops, seeks, restarts, restoration and superseded work SHALL NOT publish a pass twice, overwrite a newer revision or trigger a stale mode transition. Missing timing SHALL NOT be interpreted as zero position or a successful Stop.
@@ -97,3 +105,25 @@ Realtime host processing SHALL only perform bounded transport observation, captu
 #### Scenario: Slow storage on Stop
 - **WHEN** source validation is delayed or storage fails while the host continues processing
 - **THEN** dry audio continues under the mode contract, mode status remains settling/failed as appropriate and realtime processing performs no blocking storage work
+
+### Requirement: Creative mode names are separate from durable identity
+User-facing mode names SHALL be Learn, Perform and Export for the existing capture, live and finalise behaviors respectively. Visible mode guidance, rejection reasons and accessible text SHALL use those names consistently. Saved identifiers, state versions, plugin identities and mode/audio semantics SHALL remain compatible. Functional concepts such as source capture, Recapture and live wet SHALL retain their accurate meaning.
+
+#### Scenario: Reopen saved workflow modes
+- **WHEN** supported projects saved with Capture, Live or Finalise identifiers reopen
+- **THEN** their corresponding Learn, Perform or Export mode is displayed with the same source, swells, edits, readiness rules and output behavior, without a state migration or implicit recording/audition
+- **AND** projects lacking saved mode metadata still enter Learn with Recapture off under the existing legacy policy
+
+#### Scenario: Save and restore a newly labelled mode
+- **WHEN** a valid mode is selected through the new navigation and the host saves/reopens the project
+- **THEN** the original durable mode representation round-trips, the chosen display label returns, and a real mode change retains existing host save notification behavior
+
+#### Scenario: Automatic transition while renders prepare
+- **WHEN** useful accepted source or the approved explicit replacement qualifies for automatic Live entry under the existing Stop policy
+- **THEN** Perform becomes selected after source acceptance without waiting for wet jobs, with honest background preparation status
+- **AND** mapped-only, fresh all-silent, failed and erased-last-useful-source outcomes retain their existing Learn behavior
+
+#### Scenario: Existing eligibility and routing
+- **WHEN** a user requests Perform or Export with silent-only, incompatible, frozen-recovery or ready-render material
+- **THEN** the existing eligibility rules decide the request without being weakened by presentation changes
+- **AND** Learn captures only under its existing policy, Perform schedules wet without capture, and Export leaves DAW output dry with only explicitly initiated supported preview

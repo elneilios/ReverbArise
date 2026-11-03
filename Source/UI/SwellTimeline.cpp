@@ -75,14 +75,14 @@ void SwellTimeline::drawWave(juce::Graphics& g,const Waveform& wave,juce::Rectan
 }
 void SwellTimeline::paint(juce::Graphics& g)
 {
-    g.fillAll(ui::background);g.setFont(ui::smallSize);
+    g.fillAll(ui::background);g.setFont(ui::fontFor(*this,ui::smallSize));
     const auto waveGain=juce::Decibels::decibelsToGain(static_cast<float>(waveZoom.getValue()));
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
         const auto area=source.getUnion(wet);auto headline=area.withHeight(64).withCentre(area.getCentre().translated(0,-30));
-        g.setColour(ui::text);g.setFont(juce::FontOptions("Segoe UI",ui::emptyHeadingSize,juce::Font::bold));
+        g.setColour(ui::text);g.setFont(ui::fontFor(*this,ui::emptyHeadingSize,juce::Font::bold));
         g.drawFittedText("Press play to begin\nmapping your song",headline.toNearestInt(),juce::Justification::centred,2);
-        g.setFont(juce::FontOptions(ui::bodySize));g.setColour(ui::secondary);
+        g.setFont(ui::fontFor(*this,ui::bodySize));g.setColour(ui::secondary);
         g.drawFittedText("Start playback in your DAW.\nAudio is mapped as you play; swells are prepared for later playback.",headline.translated(0,76).withHeight(62).toNearestInt(),juce::Justification::centred,3);
         return;
     }
@@ -204,7 +204,7 @@ void SwellTimeline::paint(juce::Graphics& g)
                 envelopeLine.lineTo(x(b),wet.getCentreY());
                 g.setColour(ui::aqua);g.strokePath(envelopeLine,juce::PathStrokeType(2.0f));
                 if(static_cast<long double>(b)-w->placement>data.raw->end){g.setColour(ui::warning);g.drawText("Requested wet support - capture through endpoint",wet.withHeight(22),juce::Justification::left);}
-                g.setColour(ui::secondary);g.drawText(editingEnabled?"Drag wet body to move audio + envelope":"Editing available in Live mode",wet.withY(wet.getBottom()-22).withHeight(20),juce::Justification::centred);
+                g.setColour(ui::secondary);g.drawText(editingEnabled?"Drag wet body to move audio + envelope":"Editing available in Perform mode",wet.withY(wet.getBottom()-22).withHeight(20),juce::Justification::centred);
                 const auto handles=grabPoints();for(const auto& handle:handles)
                 {
                     const auto active=hover && *hover==handle.kind;
@@ -364,17 +364,17 @@ juce::Rectangle<float> SwellOverview::detailBounds()const
 void SwellOverview::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);
-    g.setColour(ui::text);g.setFont(juce::FontOptions("Segoe UI",ui::headingSize,juce::Font::bold));g.drawText("Overview",0,0,getWidth(),24,juce::Justification::left);
+    g.setColour(ui::text);g.setFont(ui::fontFor(*this,ui::headingSize,juce::Font::bold));g.drawText("Overview",0,0,getWidth(),24,juce::Justification::left);
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
     g.setColour(ui::outline);g.drawRoundedRectangle(lane,6,1);
     if(timeline.capture.manifest.ranges.empty())
-    {g.setColour(ui::secondary);g.setFont(juce::FontOptions(ui::bodySize));g.drawText("No audio mapped yet",lane,juce::Justification::centred);return;}
+    {g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::bodySize));g.drawText("No audio mapped yet",lane,juce::Justification::centred);return;}
     if(timeline.time.valid)
     {
         const auto& t=timeline.time;
         for(const auto& tick:makeSongBarRuler(a,b,lane.getWidth(),t.rate,t.bpm,t.numerator,t.denominator,t.sample,t.ppq))
         {const auto at=lane.getX()+static_cast<float>((tick.samplePosition-a)/(b-a))*lane.getWidth();
-            g.setColour(ui::secondary);g.setFont(juce::FontOptions(ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),27,48,17,juce::Justification::left);
+            g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),27,48,17,juce::Justification::left);
             g.drawVerticalLine(static_cast<int>(at),43,49);}
     }
     const auto x=[&](double position){return lane.getX()+static_cast<float>((position-a)/(b-a))*lane.getWidth();};
