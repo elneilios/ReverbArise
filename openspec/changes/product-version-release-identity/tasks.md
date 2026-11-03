@@ -10,4 +10,4 @@
 
 - [x] 2.1 Add compiled JUCE definition assertions and built-metadata verification with CTest registration; verify fixture failures for missing/stale metadata, incorrect class versions and changed identifiers.
 - [x] 2.2 Review the completed diff for identity/schema separation and run the supported native Release build/full CTest through scripts/build.ps1; inspect actual binary version and VST3 CIDs, record environment/results and any unperformed host checks in dated evidence.
-- [ ] 2.3 Run feasible focused Debug/native checks without an unnecessary second full build, rerun strict OpenSpec validation and scope checks, then commit/push and open one PR linked to #20 and this change for owner review. Do not merge or archive.
+- [x] 2.3 Run feasible focused Debug/native checks without an unnecessary second full build, rerun strict OpenSpec validation and scope checks, then commit/push and open one PR linked to #20 and this change for owner review. Do not merge or archive.

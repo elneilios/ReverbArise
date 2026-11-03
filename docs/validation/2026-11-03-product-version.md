@@ -79,7 +79,7 @@ Logs: `out/build-logs/Release/20261103-003135-f5126cb9/`.
 | Documented manual procedure | docs/development/product-version.md, with source/tag/candidate/built commands executed |
 | No automation/service/packaging creep | Scoped CMake/scripts/tests/docs/OpenSpec diff; no CI, version service or #21 packaging implementation |
 
-Strict OpenSpec validation and diff checks are performed before the PR. The change
+Strict OpenSpec validation passed for all 14 items; diff and scope checks passed. PR #27 is open for owner review. The change
 remains active; neither archive nor merge is authorized.
 FL Studio manual save/reopen is not run and cannot be inferred from CTest. No
 product version change, persisted-state migration or host identity change occurs.
