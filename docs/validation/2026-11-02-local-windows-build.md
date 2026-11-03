@@ -116,3 +116,24 @@ dependency, SDK or build-tool installation was performed for this change.
 `openspec validate local-windows-build-validation --strict` and `git diff --check`
 both passed. The OpenSpec change remains active; merge and archive require
 separate owner approval.
+
+## PR review refinements
+
+Follow-up to the owner review of PR #26, based on `57b6c4a`:
+
+- Existing caches now fail preflight when source directory, generator or platform
+  identity is absent, as well as when it mismatches. Focused fixtures omit each
+  entry individually and all three together; each verifies exit 1, an actionable
+  diagnostic, no configure/build/test commands and unchanged cache contents.
+- The living development guide now explains compiler-detection failures and
+  corrupted empty compiler flags, with a link to the recorded manual recovery.
+  It adds no automatic cache repair or normal-build compiler flag overrides.
+- `pwsh -NoProfile -File tests/build_wrapper_test.ps1`: **65 fixture assertions
+  passed** on PowerShell 7.6.9. Summary: `out/wrapper-review-ps7.log`.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tests/build_wrapper_test.ps1`:
+  **65 fixture assertions passed** on Windows PowerShell 5.1.26100.9807.
+  Summary: `out/wrapper-review-ps51.log`.
+- Strict OpenSpec validation and `git diff --check` passed again. Native MSVC
+  builds and CTest were **not rerun for these preflight/documentation changes**;
+  the earlier native 32/32 results above remain historical validation, separate
+  from these fixture results. No dependency downloads or native rebuilds occurred.

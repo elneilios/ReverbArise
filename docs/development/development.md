@@ -75,6 +75,22 @@ $ctest = Join-Path (Split-Path $cmake) "ctest.exe"
 & $ctest --preset windows-msvc-release --no-tests=error
 ```
 
+If compiler detection fails (for example, MSBuild tracking reports sandbox
+`E_ACCESSDENIED`), resolve the permission/toolchain problem before retrying. A failed
+configure can leave an incomplete cache, or empty compiler flags that later trigger
+JUCE's "compiling without exceptions enabled" error. Inspect the configure log and
+`CMakeFiles/CMakeConfigureLog.yaml` first. Missing source/generator/platform identity
+is rejected by the wrapper; preserve the logs and explicitly relocate that incomplete
+tree while idle before starting a new one. The wrapper never repairs caches automatically.
+
+For a complete-identity cache with unexpectedly empty compiler flags, the
+[recorded manual recovery](../validation/2026-11-02-local-windows-build.md#native-windowsmsvc-validation)
+restores CMake's defaults without deleting dependency sources. Back up
+`CMakeCache.txt` and confirm the flags are corrupt rather than intentionally
+customized first. Perform any recovery with the build directory idle and its
+`Enter-BuildLock` handle held through `try/finally`; do not add flag overrides or
+automatic repair to the normal build command.
+
 The first configure fetches the pinned JUCE release and libwavpack 5.9.0 (commit
 `5803634a030e2a11dba602ba057b89cc34486c67`). WavPack is linked statically for
 background mono/stereo lossless PCM/float IR decoding, including WavPack content

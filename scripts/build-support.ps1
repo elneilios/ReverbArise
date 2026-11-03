@@ -58,13 +58,19 @@ function Assert-BuildCache([string] $BinaryDirectory, [string] $Root) {
         CMAKE_GENERATOR = 'Visual Studio 18 2026'
         CMAKE_GENERATOR_PLATFORM = 'x64'
     }
+    $seen = @{}
     foreach ($line in Get-Content -LiteralPath $cache) {
         if ($line -match '^(CMAKE_HOME_DIRECTORY|CMAKE_GENERATOR|CMAKE_GENERATOR_PLATFORM):[^=]+=(.*)$') {
             $key = $matches[1]; $value = $matches[2].Replace('\', '/').TrimEnd('/')
+            $seen[$key] = $true
             if ($value -ine $expected[$key]) {
                 throw "Incompatible CMake cache ($key=$value) in $BinaryDirectory. Use the original checkout/toolchain or explicitly relocate the old build tree while idle; no cache was deleted."
             }
         }
+    }
+    $missing = @($expected.Keys | Where-Object { -not $seen.ContainsKey($_) } | Sort-Object)
+    if ($missing.Count -gt 0) {
+        throw "Incomplete CMake cache (missing required entries: $($missing -join ', ')) in $BinaryDirectory. Inspect the failed configure logs and explicitly recover or relocate the old build tree while idle; no cache was deleted."
     }
 }
 

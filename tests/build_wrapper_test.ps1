@@ -150,6 +150,22 @@ try {
     $output = Run-Case @() 1
     Assert ($output -match 'Incompatible CMake cache') 'Foreign cache accepted.'
     Assert ((Get-Content -LiteralPath $cache -Raw).Contains('C:/other-checkout')) 'Foreign cache modified.'
+    $identityLines = @(
+        "CMAKE_HOME_DIRECTORY:INTERNAL=$($fixture.Replace('\','/'))",
+        'CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026',
+        'CMAKE_GENERATOR_PLATFORM:INTERNAL=x64'
+    )
+    foreach ($missingEntry in @('CMAKE_HOME_DIRECTORY', 'CMAKE_GENERATOR', 'CMAKE_GENERATOR_PLATFORM', 'all')) {
+        $incompleteCache = if ($missingEntry -eq 'all') { '# Interrupted configure: no identity entries' } else {
+            ($identityLines | Where-Object { -not $_.StartsWith($missingEntry + ':') }) -join "`n"
+        }
+        [IO.File]::WriteAllText($cache, $incompleteCache)
+        $output = Run-Case @() 1
+        $diagnosticEntry = if ($missingEntry -eq 'all') { 'CMAKE_HOME_DIRECTORY' } else { $missingEntry }
+        Assert ($output -match 'Incomplete CMake cache' -and $output.Contains($diagnosticEntry)) "Missing cache identity not diagnosed: $missingEntry"
+        Assert ((Get-Item -LiteralPath $trace).Length -eq 0) "Incomplete cache launched native stages: $missingEntry"
+        Assert ((Get-Content -LiteralPath $cache -Raw) -eq $incompleteCache) "Incomplete cache was modified: $missingEntry"
+    }
     [IO.File]::WriteAllText($cache, "CMAKE_HOME_DIRECTORY:INTERNAL=$($fixture.Replace('\','/'))`nCMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026`nCMAKE_GENERATOR_PLATFORM:INTERNAL=x64`n")
     $marker = Join-Path $binary 'cached-dependency.marker'
     [IO.File]::WriteAllText($marker, 'keep')
