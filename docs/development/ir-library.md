@@ -147,7 +147,7 @@ and negative-time lead-in, two-instance bundled/custom assignments, shaped/froze
 swells, seeks/loops/final events, pending-choice WAV export and save/reopen.
 The evidence log records the unchanged host setup and configuration limitations.
 
-See [implementation evidence](ir-library-evidence.md) and the OpenSpec task list.
+See [implementation evidence](../validation/ir-library-evidence.md) and the OpenSpec task list.
 
 The current review also includes previous-revision players for Monumental and
 Vintage Dark Hall. Three accepted sounds are held byte-for-byte unchanged by

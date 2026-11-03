@@ -24,7 +24,7 @@ public:
         knob.setRange(0,1,.000001);knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(true);
         knob.setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier);
-        entry.setFont(juce::FontOptions(controlSize));entry.setJustification(juce::Justification::centredLeft);
+        entry.setFont(fontFor(*this,controlSize));entry.setJustification(juce::Justification::centredLeft);
         entry.setSelectAllWhenFocused(true);
         entry.gained=[this]{begin(true);};
         entry.onReturnKey=[this]{finish(true);};entry.onFocusLost=[this]{if(typing)finish(true);};
@@ -38,7 +38,7 @@ public:
             if(oneShot)finish(false);
         };
         knob.onDragEnd=[this]{cancelledGesture=false;finish(false);};
-        label.setFont(juce::FontOptions(smallSize));
+        label.setFont(fontFor(*this,smallSize));
     }
     std::function<void()> onBegin,onEnd;
     std::function<void(double)> onDelta;
@@ -61,6 +61,7 @@ public:
     void setCaption(const juce::String& caption){label.setText(caption,juce::dontSendNotification);}
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
+    void lookAndFeelChanged()override{entry.setFont(fontFor(*this,controlSize));label.setFont(fontFor(*this,smallSize));}
     void resized()override
     {
         auto bounds=getLocalBounds().reduced(0,2);

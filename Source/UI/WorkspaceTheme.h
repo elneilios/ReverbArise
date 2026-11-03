@@ -1,13 +1,15 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <PreverbUIResources.h>
+#include <array>
 
 namespace m3::ui
 {
 inline const juce::Colour background{0xff0f1418}, aqua{0xff00efff}, hover{0xff00c2cc},
-    timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffe1e6ec}, separator{0xff4a5058}, outline{0xff6b737c},
+    timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffedf1f5}, separator{0xff4a5058}, outline{0xff6b737c},
     danger{0xffff6b5e};
 inline constexpr float rule=1, radius=4, headingSize=21, bodySize=14, controlSize=13, smallSize=12, captionSize=11, emptyHeadingSize=24;
+inline constexpr float navigationSize=18, modeDescriptionSize=16;
 inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},
     rawWet{0xff63716e}, otherWet{0xff80938f}, warning{0xffe6bb72}, staleWet{0xffdba66f}, previewCursor{0xffffb4e9};
 
@@ -18,6 +20,34 @@ inline const char* resource(const juce::String& filename,int& bytes)
             return PreverbUIResources::getNamedResource(PreverbUIResources::namedResourceList[i],bytes);
     bytes=0;return nullptr;
 }
+
+// Explicit embedded faces: no installed-family lookup or synthetic weights.
+enum class InterFace { regular, semibold, bold, italic };
+inline juce::Typeface::Ptr interTypeface(InterFace face)
+{
+    static const auto faces=[]{
+        std::array<juce::Typeface::Ptr,4> result;
+        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf"};
+        for(size_t i=0;i<result.size();++i)
+        {
+            int size=0;const auto* bytes=resource(names[i],size);jassert(bytes && size>0);
+            if(bytes)result[i]=juce::Typeface::createSystemTypefaceFor(bytes,static_cast<size_t>(size));
+            jassert(result[i]!=nullptr);
+        }
+        return result;
+    }();
+    return faces[static_cast<size_t>(face)];
+}
+inline InterFace interStyle(const juce::String& style)
+{
+    if(style.containsIgnoreCase("italic"))return InterFace::italic;
+    if(style.containsIgnoreCase("semi"))return InterFace::semibold;
+    return style.containsIgnoreCase("bold")?InterFace::bold:InterFace::regular;
+}
+inline juce::Font interFont(float height,InterFace face=InterFace::regular)
+{return juce::Font(juce::FontOptions(interTypeface(face)).withHeight(height));}
+inline juce::Font interFont(float height,int flags)
+{return interFont(height,(flags&juce::Font::italic)?InterFace::italic:(flags&juce::Font::bold)?InterFace::bold:InterFace::regular);}
 
 class FlatSurface:public juce::Component
 {
@@ -39,8 +69,6 @@ class WorkspaceTheme final:public juce::LookAndFeel_V4
 public:
     WorkspaceTheme()
     {
-        int size=0;const auto* bytes=resource("InterVariable.ttf",size);
-        if(bytes)inter=juce::Typeface::createSystemTypefaceFor(bytes,static_cast<size_t>(size));
         for(const int id:std::initializer_list<int>{juce::Label::textColourId,juce::TextEditor::textColourId,
                           juce::ComboBox::textColourId,juce::Slider::textBoxTextColourId})setColour(id,text);
         for(const int id:std::initializer_list<int>{juce::TextEditor::backgroundColourId,juce::ComboBox::backgroundColourId,
@@ -60,22 +88,24 @@ public:
         setColour(juce::Slider::backgroundColourId,separator);
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
-    bool interAvailable()const noexcept{return inter!=nullptr;}
+    bool interAvailable()const{return interTypeface(InterFace::regular)!=nullptr && interTypeface(InterFace::semibold)!=nullptr
+        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr;}
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
-        if(inter && (flags&(juce::Font::bold|juce::Font::italic))==0)
-            return juce::Font(juce::FontOptions(height).withTypeface(inter));
-        return juce::Font(juce::FontOptions("Segoe UI",height,flags));
+        return interFont(height,flags);
     }
-    juce::Font getLabelFont(juce::Label& label)override{return font(label.getFont().getHeight(),label.getFont().getStyleFlags());}
+    juce::Font getLabelFont(juce::Label& label)override{return interFont(label.getFont().getHeight(),interStyle(label.getFont().getTypefaceStyle()));}
     juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
+    juce::Font getPopupMenuFont()override{return font(bodySize);}
+    juce::Font getSliderPopupFont(juce::Slider&)override{return font(controlSize);}
+    juce::Font getTabButtonFont(juce::TabBarButton&,float)override{return font(bodySize);}
+    juce::Font getAlertWindowTitleFont()override{return font(headingSize,juce::Font::bold);}
+    juce::Font getAlertWindowMessageFont()override{return font(bodySize);}
+    juce::Font getAlertWindowFont()override{return font(bodySize);}
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override
     {
-        if(inter && !f.isBold() && !f.isItalic())return inter;
-        // Keep real bold/italic faces rather than pretending the regular
-        // variable typeface provides unverified style axes on this backend.
-        return juce::Typeface::createSystemTypefaceFor(juce::Font(juce::FontOptions("Segoe UI",f.getHeight(),f.getStyleFlags())));
+        return interTypeface(interStyle(f.getTypefaceStyle()));
     }
     juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
@@ -96,14 +126,6 @@ public:
         if(b.getName()=="audition")
         {juce::Path p;p.addTriangle(c.x-5,c.y-8,c.x-5,c.y+8,c.x+8,c.y);g.fillPath(p);return;}
         if(b.getName()=="stopAudition"){g.fillRect(juce::Rectangle<float>(12,12).withCentre(c));return;}
-        if(b.getName()=="diagnostics")
-        {
-            g.drawEllipse(juce::Rectangle<float>(14,14).withCentre(c),1.5f);
-            g.drawEllipse(juce::Rectangle<float>(5,5).withCentre(c),1.5f);
-            for(int n=0;n<8;++n){const auto a=juce::MathConstants<float>::twoPi*n/8;
-                g.drawLine(c.x+std::cos(a)*7,c.y+std::sin(a)*7,c.x+std::cos(a)*10,c.y+std::sin(a)*10,2);}
-            return;
-        }
         if(b.getName()=="resetWetShape" || b.getName()=="resetSwellMenu")
         {
             g.setColour(danger.withMultipliedAlpha(b.isEnabled()?1.0f:.35f));
@@ -155,8 +177,17 @@ public:
         g.setColour(aqua.withMultipliedAlpha(s.isEnabled()?1.0f:.3f));g.drawLine(static_cast<float>(x),cy,pos,cy,3);
         g.fillEllipse(pos-5,cy-5,10,10);
     }
-private:juce::Typeface::Ptr inter;
 };
+
+// Custom Graphics painting does not automatically use the component's font
+// policy. Resolve explicitly; never change JUCE's process-wide default theme.
+inline juce::Font fontFor(juce::Component& component,float height,int flags=0)
+{
+    if(const auto* theme=dynamic_cast<WorkspaceTheme*>(&component.getLookAndFeel()))return theme->font(height,flags);
+    return interFont(height,flags);
+}
+inline juce::Font navigationFont()
+{return interFont(navigationSize,InterFace::semibold);}
 
 class Wordmark final:public juce::Component
 {

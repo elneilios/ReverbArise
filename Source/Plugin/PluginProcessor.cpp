@@ -2,6 +2,7 @@
 
 #include "PluginEditor.h"
 #include <Playback/ScheduledTestTone.h>
+#include <UI/WorkflowPresentation.h>
 
 #include <algorithm>
 
@@ -189,7 +190,7 @@ bool PreverbAudioProcessor::isMappingEnabled() const noexcept
 void PreverbAudioProcessor::requestClearCapture()
 {
     if(workflowState.snapshot().mode!=workflow::Mode::capture || workflowState.snapshot().locked())
-    {swells->diagnostic("Clear requires stopped idle Capture mode");return;}
+    {swells->diagnostic("Clear requires stopped idle Learn mode");return;}
     swells->clear();
     droppedCaptureBlockCount.store(0, std::memory_order_relaxed);
     captureWorker.requestClear();
@@ -198,9 +199,9 @@ void PreverbAudioProcessor::requestClearCapture()
 
 bool PreverbAudioProcessor::armRecapture(int64_t start,int64_t end)
 {
-    if(start>=end){swells->diagnostic("Invalid recapture interval; arm pass-wide Recapture in Capture mode");return false;}
+    if(start>=end){swells->diagnostic("Invalid recapture interval; arm pass-wide Recapture in Learn mode");return false;}
     const auto accepted=workflowState.arm(true);
-    if(!accepted)swells->diagnostic("Recapture requires idle Capture mode; applies to the encountered pass");
+    if(!accepted)swells->diagnostic("Recapture requires idle Learn mode; applies to the encountered pass");
     return accepted;
 }
 
@@ -219,7 +220,8 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
 {
     const auto previous=workflowState.snapshot().mode;
     const auto readiness=getWorkflowReadiness();
-    if(const auto error=workflow::entryError(workflowState.snapshot(),mode,readiness)){swells->diagnostic(error);return false;}
+    if(const auto block=workflow::entryBlock(workflowState.snapshot(),mode,readiness);block!=workflow::EntryBlock::none)
+    {swells->diagnostic(m3::ui::entryExplanation(block));return false;}
     if(!workflowState.requestMode(mode,readiness))return false;
     swells->stop();if(previous!=mode)persistentStateChanged();return true;
 }
