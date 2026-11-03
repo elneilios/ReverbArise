@@ -1,0 +1,2 @@
+observations,p50_us,p99_us,max_us,deadline_us,overruns,median_thread_cycles,max_thread_cycles,thread_cycles_at_max_wall
+1000000,8.5,18.2,4164.2,666.667,9,40890,631680,103870

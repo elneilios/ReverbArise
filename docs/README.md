@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — source/thread inventory, disposable native benchmarks, resource limits and follow-up recommendations.
+
 - [Local Windows releases](development/releases.md) — validated ZIPs, immutable outputs, manual publication and redistribution gate.
 
 - [Product version and release identity](development/product-version.md) — CMake authority, exact tag checks, candidate labels and schema/host compatibility.

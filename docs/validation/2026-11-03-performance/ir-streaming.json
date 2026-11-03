@@ -1,0 +1,10 @@
+{
+  "rate": 96000.0,
+  "first_assignment_to_playable_ms": 1217.887699842453003,
+  "repeat_assignment_to_playable_ms": 87.435100078582764,
+  "paced_blocks_without_missing_pages": 229,
+  "sampled_accounted_peak_bytes": 144758520,
+  "process_peak_working_set_bytes": 86880256,
+  "baseline_cache_bytes": 15670235,
+  "final_cache_bytes": 35640190
+}
