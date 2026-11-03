@@ -63,6 +63,8 @@ inline void liveProcessorCases()
     REQUIRE(engine.snapshot().renderCount==count);
     armCaptureFixture(*p);position(500,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.25f);
     p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
+    waitM3([&]{return engine.savedSession().swells[1].phase==m3::Phase::stale;});
+    REQUIRE(engine.snapshot().renderCount==count);engine.generate(true);
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.renderCount>count && s.session.swells[1].phase==m3::Phase::ready;});
     buffer.setSize(2,16);position(490,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(std::abs(buffer.getSample(0,10)-41*.00025f)<1e-6f);

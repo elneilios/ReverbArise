@@ -40,6 +40,8 @@ inline const char* entryExplanation(workflow::EntryBlock block) noexcept
 }
 inline const char* workflowStatus(workflow::Snapshot state) noexcept
 {
+    if(state.mode==workflow::Mode::capture && state.admissionFailed)
+        return "Capture could not start - stop and play again";
     switch(state.phase)
     {
         case workflow::Phase::recording:return "Recording - stop the DAW to commit";

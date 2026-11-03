@@ -6,6 +6,7 @@ https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip
 | File | Release path | Weight |
 | --- | --- | --- |
 | Inter-Regular.ttf | extras/ttf/Inter-Regular.ttf | 400 |
+| Inter-Medium.ttf | extras/ttf/Inter-Medium.ttf | 500 |
 | Inter-SemiBold.ttf | extras/ttf/Inter-SemiBold.ttf | 600 |
 | Inter-Bold.ttf | extras/ttf/Inter-Bold.ttf | 700 |
 | Inter-Italic.ttf | extras/ttf/Inter-Italic.ttf | 400, italic |

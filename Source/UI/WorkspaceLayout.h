@@ -1,5 +1,5 @@
 #pragma once
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "UiGeometry.h"
 namespace m3::ui
 {
 // Reserve one notice row beneath the branding; showing it never moves controls.
@@ -8,8 +8,8 @@ struct WorkspaceLayout
     juce::Rectangle<int> header,notice,globals,workspace,swells,editor,inspector,audition,overview,info;
     explicit WorkspaceLayout(juce::Rectangle<int> bounds)
     {
-        auto a=bounds.reduced(bounds.getWidth()<1200?16:20);
-        header=a.removeFromTop(82);
+        auto a=bounds.reduced(workspaceGeometry::outerInset(bounds.getWidth()));
+        header=a.removeFromTop(workspaceGeometry::headerHeight);
         const auto selectorWidth=header.getWidth()<1200?330:360;
         notice={header.getX(),header.getY()+46,header.getWidth()-36-12-selectorWidth-16,32};
         globals=a.removeFromTop(66);

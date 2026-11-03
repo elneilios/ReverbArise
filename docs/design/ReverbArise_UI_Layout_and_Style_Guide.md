@@ -131,6 +131,7 @@ are historical evidence, not the current font-selection policy.
 | Inter **Bold** | Plugin brand, main headings, Swells / Selected Swell / Overview |
 | Inter **SemiBold** | Section labels and emphasized selected swell name |
 | Inter **Regular** | Control captions, target/pre-roll/length labels, numeric display, helper text, descriptions and secondary metadata |
+| Inter **Medium** | Learn control-label candidate (500), requested during issue #11 review; primary text above grey Regular descriptions, pending final visual approval |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
 Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.

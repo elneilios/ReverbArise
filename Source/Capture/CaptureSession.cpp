@@ -72,8 +72,9 @@ bool CaptureSession::makeRange(CaptureManifestRange& range, const float* samples
     return false;
 }
 
-bool CaptureSession::commit(int64_t start, double rate, const float* samples, uint32_t frames,double tolerance)
+bool CaptureSession::commit(int64_t start, double rate, const float* samples, uint32_t frames,double tolerance,const CaptureGenerationContext* context)
 {
+    lastCommitAudioChanged=false;
     if (state.unavailable) return false;
     if (frames == 0 || samples == nullptr || ! std::isfinite(rate) || rate <= 0.0
         || frames > 1920000 || static_cast<double>(frames) > rate * 5.0
@@ -91,69 +92,91 @@ bool CaptureSession::commit(int64_t start, double rate, const float* samples, ui
     // Loop capture often replays the same samples with different block/chunk
     // boundaries. Preserve the committed identity when the covered PCM agrees.
     // Comparison reads only bounded existing chunks and never runs in the callback.
+    bool identical=false;
     if(!state.manifest.ranges.empty())
     {
         juce::String compareError;
         PerformanceComparison comparison(rate,std::clamp(tolerance,0.0,.3));
-        if(m3::visitSource(store(),state.manifest,start,start+frames,false,
+        identical=m3::visitSource(store(),state.manifest,start,start+frames,false,
             [&](int64_t at,const float* existing,int count,bool)
             {const auto* incoming=samples+static_cast<size_t>(at-start)*2;
                 return tolerance>0?comparison.push(existing,incoming,count):std::equal(existing,existing+count*2,incoming);},compareError)
-            && (tolerance<=0 || comparison.finish()))
-            return true;
+            && (tolerance<=0 || comparison.finish());
     }
     auto next = state.manifest;
+    juce::String contextError;
+    if(context && next.schemaVersion==1)
+    {
+        CaptureManifest migrated;
+        if(!captureWithLegacyContext(next,*context,migrated,contextError)){state.status="Uncommitted: "+contextError;return false;}
+        next=std::move(migrated);
+    }
+    if(!context && next.schemaVersion==2 && !identical)
+    {state.status="Uncommitted: source changes require generation context";return false;}
     next.sampleRate = rate;
     ++next.revision;
-    next.ranges.clear();
-    const auto end = start + frames;
-    for (const auto& old : state.manifest.ranges)
+    if(!identical)
     {
-        const auto oldEnd = old.startSample + static_cast<int64_t>(old.frameCount);
-        if (oldEnd <= start || old.startSample >= end)
+        next.ranges.clear();
+        const auto end = start + frames;
+        for (const auto& old : state.manifest.ranges)
         {
-            next.ranges.push_back(old);
-            continue;
-        }
-        CaptureAudioChunk chunk;
-        juce::String error;
-        if (old.kind == CaptureCoverageKind::audio
-            && ! store().readAudioChunk(old, rate, chunk, error))
-        {
-            state.status = "Uncommitted: " + error;
-            return false;
-        }
-        for (const auto interval : {std::pair{old.startSample, std::min(start, oldEnd)},
-                                    std::pair{std::max(end, old.startSample), oldEnd}})
-        {
-            if (interval.first >= interval.second) continue;
-            auto remainder = old;
-            remainder.startSample = interval.first;
-            remainder.frameCount = static_cast<uint64_t>(interval.second - interval.first);
-            if (old.kind == CaptureCoverageKind::audio)
+            const auto oldEnd = old.startSample + static_cast<int64_t>(old.frameCount);
+            if (oldEnd <= start || old.startSample >= end)
             {
-                remainder.assetPath.clear();
-                remainder.checksum.clear();
-                const auto offset = static_cast<size_t>(interval.first - old.startSample) * 2;
-                if (! makeRange(remainder, chunk.interleavedSamples.data() + offset, rate)) return false;
+                next.ranges.push_back(old);
+                continue;
             }
-            next.ranges.push_back(std::move(remainder));
+            CaptureAudioChunk chunk;
+            juce::String error;
+            if (old.kind == CaptureCoverageKind::audio
+                && ! store().readAudioChunk(old, rate, chunk, error))
+            {
+                state.status = "Uncommitted: " + error;
+                return false;
+            }
+            for (const auto interval : {std::pair{old.startSample, std::min(start, oldEnd)},
+                                        std::pair{std::max(end, old.startSample), oldEnd}})
+            {
+                if (interval.first >= interval.second) continue;
+                auto remainder = old;
+                remainder.startSample = interval.first;
+                remainder.frameCount = static_cast<uint64_t>(interval.second - interval.first);
+                if (old.kind == CaptureCoverageKind::audio)
+                {
+                    remainder.assetPath.clear();
+                    remainder.checksum.clear();
+                    const auto offset = static_cast<size_t>(interval.first - old.startSample) * 2;
+                    if (! makeRange(remainder, chunk.interleavedSamples.data() + offset, rate)) return false;
+                }
+                next.ranges.push_back(std::move(remainder));
+            }
         }
+        CaptureManifestRange incoming{start, frames, CaptureCoverageKind::audio, next.revision, {}, {}};
+        if (! makeRange(incoming, samples, rate)) return false;
+        next.ranges.push_back(std::move(incoming));
+        std::sort(next.ranges.begin(), next.ranges.end(),
+                  [](const auto& a, const auto& b) { return a.startSample < b.startSample; });
     }
-    CaptureManifestRange incoming{start, frames, CaptureCoverageKind::audio, next.revision, {}, {}};
-    if (! makeRange(incoming, samples, rate)) return false;
-    next.ranges.push_back(std::move(incoming));
-    std::sort(next.ranges.begin(), next.ranges.end(),
-              [](const auto& a, const auto& b) { return a.startSample < b.startSample; });
-    return publish(std::move(next));
+    if(context)
+    {
+        CaptureManifest annotated;
+        if(!captureWithContext(next,*context,start,start+frames,annotated,contextError))
+        {state.status="Uncommitted: "+contextError;return false;}
+        next=std::move(annotated);
+    }
+    const auto metadataChanged=next.schemaVersion!=state.manifest.schemaVersion || next.generationContexts!=state.manifest.generationContexts || next.contextSpans!=state.manifest.contextSpans;
+    if(identical && !metadataChanged)return true;
+    const auto accepted=publish(std::move(next));if(accepted)lastCommitAudioChanged=!identical;return accepted;
 }
 
 bool CaptureSession::publish(CaptureManifest next)
 {
+    juce::String reference,error;
+    if(!isValidCaptureManifest(next,error)){state.status="Uncommitted: "+error;return false;}
     // Private candidate maps reuse exact chunk/slicing logic, but never expose
     // a source revision or write intermediate manifests during a capture pass.
     if(provisional){state.manifest=std::move(next);rebuildOverview();return !state.unavailable;}
-    juce::String reference, error;
     if (! store().publishSnapshot(next, reference, error))
     {
         state.status = "Uncommitted: " + error + "; previous committed map retained";
@@ -170,18 +193,20 @@ bool CaptureSession::clear(double rate)
     abortPass();
     auto next = state.manifest;
     next.ranges.clear();
+    next.contextSpans.clear();next.generationContexts.clear();
     next.sampleRate = std::isfinite(rate) && rate > 0 ? rate : next.sampleRate;
     if (next.revision >= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) return false;
     ++next.revision;
     return publish(std::move(next));
 }
 
-bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace)
+bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace,const CaptureGenerationContext* context)
 {
     if(!token || staged || state.unavailable)return false;
     staged=std::make_unique<CaptureSession>(root);staged->state=state;staged->provisional=true;
     passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
-    replaceMapped=replace;passUseful=false;passReplaced=false;passError.clear();passChanges.clear();return true;
+    replaceMapped=replace;passUseful=false;passReplaced=false;passAnyChanged=false;passError.clear();passChanges.clear();passContextChanges.clear();
+    passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
 }
 
 bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames)
@@ -216,9 +241,12 @@ bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const fl
         if(replaceMapped)for(const auto& old:state.manifest.ranges)
             if(a<old.startSample+static_cast<int64_t>(old.frameCount) && b>old.startSample)passReplaced=true;
         const auto revision=staged->state.manifest.revision;
-        if(!staged->commit(a,rate,input,count))
+        const auto previousContexts=staged->state.manifest.contextSpans;
+        if(!staged->commit(a,rate,input,count,0,passContext?&*passContext:nullptr))
         {passError=staged->state.status;return false;}
-        if(staged->state.manifest.revision!=revision)passChanges.emplace_back(a,b);
+        if(staged->state.manifest.revision!=revision)passAnyChanged=true;
+        if(staged->lastCommitAudioChanged)passChanges.emplace_back(a,b);
+        if(staged->state.manifest.contextSpans!=previousContexts)passContextChanges.emplace_back(a,b);
     }
     return true;
 }
@@ -231,7 +259,7 @@ CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t e
     result.error=passError;
     if(result.error.isEmpty())
     {
-        result.changed=!passChanges.empty();
+        result.changed=passAnyChanged;
         if(result.changed)
         {
             auto candidate=staged->state.manifest;candidate.revision=baseRevision+1;
@@ -241,7 +269,7 @@ CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t e
             else {prepared=std::make_unique<CaptureSessionSnapshot>(staged->state);prepared->manifest=std::move(candidate);prepared->reference=reference;prepared->status="Ready (committed)";}
         }
         if(result.error.isEmpty())
-        {result.success=true;result.useful=passUseful;result.replaced=passReplaced;result.changedIntervals=passChanges;}
+        {result.success=true;result.useful=passUseful;result.replaced=passReplaced;result.changedIntervals=passChanges;result.contextChangedIntervals=passContextChanges;}
     }
     return result;
 }
@@ -263,7 +291,7 @@ CaptureSession::PassResult CaptureSession::finishPass(uint64_t token,uint64_t ep
 }
 
 void CaptureSession::abortPass()
-{staged.reset();prepared.reset();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passUseful=false;passReplaced=false;}
+{staged.reset();prepared.reset();passContext.reset();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passContextChanges.clear();passAnyChanged=false;passUseful=false;passReplaced=false;}
 
 void CaptureSession::rebuildOverview()
 {

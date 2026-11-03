@@ -4,6 +4,7 @@
 #include "CaptureContinuity.h"
 #include "ScopedRecapture.h"
 #include "CaptureSession.h"
+#include "CaptureProgress.h"
 #include <Core/WorkflowState.h>
 
 using PluginCaptureQueue = SpscAudioCaptureQueue<32>;
@@ -32,10 +33,13 @@ public:
     void setRecaptureHandler(std::function<void(int64_t,int64_t)> handler) { const juce::ScopedLock guard(commandLock);recaptureHandler=std::move(handler); }
     void setCommitHandler(std::function<void(int64_t,int64_t,uint64_t,bool)> handler) {const juce::ScopedLock guard(commandLock);commitHandler=std::move(handler);}
     void setAcceptedStateHandler(std::function<void()> handler) {const juce::ScopedLock guard(commandLock);acceptedStateHandler=std::move(handler);}
+    void setPassContextProvider(std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider)
+    {const juce::ScopedLock guard(commandLock);passContextProvider=std::move(provider);}
     uint64_t captureGeneration() const noexcept { return generation.load(); }
     void requestRestore(const std::string& project, const std::string& instance,
                         const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture);
     CaptureSessionSnapshot snapshot() const;
+    CaptureProgress progressSnapshot() const;
     uint64_t discontinuities() const noexcept { return discontinuityCount.load(); }
     // Non-audio-thread barrier: capture must be disabled before calling.
     bool flush(int timeoutMilliseconds = 10000);
@@ -51,6 +55,10 @@ private:
     CaptureSession session;
     mutable juce::CriticalSection snapshotLock;
     CaptureSessionSnapshot published;
+    CaptureProgress progress,publishedProgress;
+    uint32_t progressPublishedAt=0;
+    bool progressDirty=false;
+    void publishProgress();
     mutable juce::CriticalSection commandLock;
     struct Restore { std::string project, instance; juce::String reference; uint64_t revision = 0; };
     Restore restore;
@@ -74,6 +82,8 @@ private:
     std::function<void(int64_t,int64_t)> recaptureHandler;
     std::function<void(int64_t,int64_t,uint64_t,bool)> commitHandler;
     std::function<void()> acceptedStateHandler;
+    std::function<std::optional<CaptureGenerationContext>(uint64_t)> passContextProvider;
+    juce::String passStartFailure;
     workflow::State* workflowState=nullptr;
     uint64_t activePass=0,activeEpoch=0;
     std::atomic<uint64_t> failedPass{0};

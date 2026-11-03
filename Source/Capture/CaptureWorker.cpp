@@ -42,6 +42,25 @@ CaptureSessionSnapshot CaptureWorker::snapshot() const
     return result;
 }
 
+CaptureProgress CaptureWorker::progressSnapshot() const
+{
+    const juce::ScopedLock commandGuard(commandLock);
+    const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    const juce::ScopedLock lock(snapshotLock);
+    if(loading.load() || clearRequested.load() || !flow.locked() || publishedProgress.pass!=flow.pass
+        || publishedProgress.epoch!=generation.load() || failedPass.load()==flow.pass)return {};
+    return publishedProgress;
+}
+
+void CaptureWorker::publishProgress()
+{
+    if(!progressDirty)return;
+    const auto now=juce::Time::getMillisecondCounter();
+    if(progressPublishedAt && now-progressPublishedAt<100)return;
+    const juce::ScopedLock lock(snapshotLock);publishedProgress=progress;
+    progressPublishedAt=now;progressDirty=false;
+}
+
 void CaptureWorker::requestRestore(const std::string& project, const std::string& instance,
                                     const juce::String& reference, uint64_t revision,workflow::Mode mode)
 {
@@ -130,6 +149,7 @@ void CaptureWorker::run()
             if(workflowState)handleWorkflowBlock(block);else handleBlock(block);
             lastBlock = juce::Time::getMillisecondCounter();
         }
+        publishProgress();
         if(workflowState)settleWorkflowPass();
         // A second restore can arrive while the first is reading assets. Do not acknowledge
         // a flush barrier until the latest queued restore/clear command has completed.
@@ -157,12 +177,24 @@ void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
     if(activePass!=state.pass || activeEpoch!=block.generation)
     {
         session.abortPass();pending.clear();continuity.reset();activePass=state.pass;activeEpoch=block.generation;
-        if(!session.beginPass(activePass,activeEpoch,state.recapture)){failedPass.store(activePass);return;}
+        passStartFailure.clear();
+        progress={};progress.pass=activePass;progress.epoch=activeEpoch;progressDirty=true;
+        std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider;
+        {const juce::ScopedLock guard(commandLock);provider=passContextProvider;}
+        // Engine locks and metadata copies stay outside the command fence and
+        // outside the callback. The same atomic pass still owns publication.
+        const auto context=provider?provider(activePass):std::nullopt;
+        const auto latest=workflowState->snapshot();
+        if(latest.pass!=activePass || !latest.locked() || generation.load()!=activeEpoch)return;
+        if(provider && !context){passStartFailure="Unable to pin capture generation settings; previous source retained";failedPass.store(activePass);return;}
+        if(!session.beginPass(activePass,activeEpoch,state.recapture,context?&*context:nullptr)){failedPass.store(activePass);return;}
     }
     hasPendingCapture.store(true);
     if(failedPass.load()==activePass)return;
     if(!std::isfinite(block.sampleRate) || std::abs(block.sampleRate-hostRate.load())>.001)
     {failedPass.store(activePass);return;}
+    if(block.frameCount && block.frameCount<=maxCaptureBlockFrames && block.startSample<=INT64_MAX-block.frameCount)
+    {progress.add(block.startSample,block.frameCount,block.interleavedSamples.data(),state.recapture,session.snapshot().manifest);progressDirty=true;}
     handleBlock(block); // Reuse bounded five-second/silence/discontinuity batching.
 }
 
@@ -183,12 +215,12 @@ void CaptureWorker::settleWorkflowPass()
         if(!workflowState->validating(state.pass))return;
         committedGeneration=generation.load();
     }
-    while(validationHold.load() && !threadShouldExit() && workflowState->snapshot().pass==state.pass)wait(2);
+    while(validationHold.load() && !threadShouldExit() && workflowState->snapshot().pass==state.pass){publishProgress();wait(2);}
     if(threadShouldExit())return;
     flushPending();
     if(activePass==state.pass && activeEpoch==committedGeneration && failedPass.load()!=state.pass)
         result=session.preparePass(state.pass,activeEpoch);
-    else if(failedPass.load()==state.pass)result.error=session.passFailure().isNotEmpty()?session.passFailure():juce::String("Capture queue/data failure; previous source retained");
+    else if(failedPass.load()==state.pass)result.error=session.passFailure().isNotEmpty()?session.passFailure():passStartFailure.isNotEmpty()?passStartFailure:juce::String("Capture queue/data failure; previous source retained");
     else {result.success=true;result.error="No source captured";}
     {
         const juce::ScopedLock guard(commandLock);

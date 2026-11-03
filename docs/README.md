@@ -22,6 +22,8 @@ This directory covers product identity, the existing implementation, development
 - [UI development standards](development/ui-development-standards.md) — shared controls, incremental consolidation, interaction tests and visual checkpoints for UI work.
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
+- [Learn source/context protocol](development/learn-source-context-protocol.md) — issue #11's pinned persistence and admission contract; implementation progress is tracked in its OpenSpec tasks.
+- [Learn workspace](design/learn-workspace.md) — approved Learn composition, control ownership, coverage inspection and stable dry fitting.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
 
 ## Documentation policy

@@ -27,6 +27,8 @@ inline void automaticProcessorCases()
         REQUIRE(processor->flushCaptureForTesting());
     };
     // Song bar 86 at 120 BPM/4:4, then bar 1, without any plugin capture/generate action.
+    // This fixture tests explicit Perform reanalysis, not missing-default capture.
+    waitM3([&]{return engine.savedSession().defaultIR.present();});
     pass(85*96000);pass(0);
     REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::live);engine.setAutoMarkers(true);
     waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=4 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});

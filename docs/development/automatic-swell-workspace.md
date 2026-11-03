@@ -1,15 +1,57 @@
 > Current UI: see [ReverbArise workspace](../design/ui-theme-and-layout.md) and [Settings/Diagnostics and current checks](../design/ui-diagnostics-and-acceptance.md). Song-synchronized playback is implemented; see [transport playback](transport-swell-playback.md). Earlier UI locations and deferred-transport statements below describe the preceding workspace iteration, not the current editor. Historical acceptance results remain separate.
 # Automatic swell workspace
 
-Current source ownership is defined by [workflow modes](workflow-modes.md).
-Fresh and legacy instances enter Capture with Recapture off. Source remains
-private until a successful explicit DAW Stop; only accepted changed intervals
-notify automatic discovery/refresh. Ordinary Capture protects both mapped audio
-and silence, and Live/Finalise never capture. Automatic markers and marker
-sensitivity cannot grant replacement permission. Saved regeneration tolerance
-is retained metadata, with its former global control retired. Explicit changed
-Recapture refreshes affected unfrozen dependencies even with discovery off;
-identical PCM reuses accepted assets and renders.
+## Current Learn / Perform policy
+
+Current source ownership is defined by [workflow modes](workflow-modes.md) and the
+[Learn source/context protocol](learn-source-context-protocol.md). Learn protects
+both mapped audio and exact-zero silence unless Recapture is explicitly armed.
+Dry source and immutable generation defaults publish together at successful DAW
+Stop acceptance. Perform/Export do not capture. Marker settings never grant
+permission to overwrite source.
+
+Each admitted pass owns effective Automatic Swells, sensitivity, separation and
+its accepted managed IR. New automatic targets resolve IR ownership at arrival,
+even if confirmation/extraction crosses a context boundary. Bounded eight-second
+worker cells use the accepted pass settings; later future-default edits do not
+relabel that work. Restore recovers deferred On work from committed provenance.
+Matched, manual, edited and frozen assignments and deletion suppression survive
+reconciliation. Context-only metadata is not an audio fingerprint or calibration
+input and cannot require reconvolution of unchanged accepted dependencies.
+
+Learn Automatic Swells off captures dry without automatic discovery or pass
+convolution, including explicit Recapture with legacy auto-refresh enabled.
+Changed unfrozen inputs become stale, retaining definitions and immutable assets;
+frozen results stay intact. Merely entering Perform or enabling future Learn
+defaults does not backfill Off capture. Accepted cached renders may still be
+verified/reused; that does not imply a new convolution. Recovery may reconstruct
+an already accepted non-frozen render whose file is missing only when its stored
+IR/source/timing dependency still matches verified inputs exactly. A changed
+Off-pass dependency or absent accepted render is not such a recovery. Previously admitted On
+work remains owned by its original accepted context; superseded source/session
+ownership cannot publish an obsolete result.
+
+Perform retains explicit Generate, manual target/IR/source edits and permitted
+marker reanalysis. These are distinct user requests, not new learning passes.
+They respect the saved processing/refresh policy and never silently turn on dry
+replacement or a saved-off master. A new manual target inherits the currently
+accepted future IR. New targets from reanalysis retain arrival-context IR
+ownership; no missing accepted IR is substituted with the latest default.
+Transient manual suggestions remain separate until confirmed. Rapid permitted
+marker edits coalesce and cancel older explicit-request generations.
+
+Executable acceptance is in `PassOwnedGenerationCases.h`,
+`LearnPassPolicyCases.h`, `automatic_targets_test.cpp`,
+`automatic_coordinator_test.cpp` and the processor integration fixtures. The
+four Recapture/Automatic combinations check actual analysis/convolution counts,
+source samples, sparse admission and untouched dry output; explicit Generate,
+creation/edits, legacy refresh and queued restore remain separately covered.
+
+## Earlier automatic workspace implementation
+
+The sections below document the original M3 extension. Current gain, monitoring,
+workflow and IR-library behavior is defined by their linked living guides and the
+current policy above; old UI positions/version numbers are historical context.
 
 This change extends M3. It prepares swells automatically; Song-synchronized swell
 playback remains a separate follow-up. Prepared swells are heard with manual

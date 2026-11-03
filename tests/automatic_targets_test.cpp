@@ -28,6 +28,30 @@ int main(){return runTest([]
         CaptureManifest extreme;extreme.ranges={{INT64_MAX-10,10,CaptureCoverageKind::silence}};
         REQUIRE(usableCompletedPasses(extreme,{{INT64_MAX-10,INT64_MAX}}).size()==1);
     }
+    { // Ownership follows the arrival, even when extraction crosses into B.
+        SongTime t{true,0,0,48000,120,4,4};juce::String error;
+        CaptureManifest map;map.schemaVersion=2;
+        CaptureGenerationContext a,b;a.automatic=b.automatic=true;
+        for(auto* c:{&a,&b}){const auto hash=juce::String::repeatedString(c==&a?"a":"b",64);
+            c->ir.path="irs/"+hash+".wav";c->ir.content=c->ir.checksum=hash;c->ir.rate=48000;c->ir.channels=1;c->ir.frames=32;
+            c->irName=c==&a?"Pass A":"Pass B";c->id=captureGenerationContextId(*c);}
+        map.generationContexts={a,b};map.contextSpans={{0,24000,a.id},{24000,96000,b.id}};
+        Session session;session.defaultIR=b.ir;session.defaultIRName=b.irName;
+        REQUIRE(reconcileTargets(session,{{23900,1},{60000,1}},0,96000,t,error,{},&map));
+        REQUIRE(session.swells.size()==2 && session.swells[0].sourceEnd>24000);
+        REQUIRE(session.swells[0].ir==a.ir && session.swells[1].ir==b.ir);
+        const auto first=session.swells[0].id,second=session.swells[1].id;
+        session.swells[0].render=a.ir;session.swells[0].render.path="renders/"+a.ir.content+".wav";
+        session.swells[0].frozen=true;session.swells[0].shape.gainDb=-7;
+        REQUIRE(reconcileTargets(session,{{23910,1},{60000,1}},0,96000,t,error,{},&map));
+        REQUIRE(find(session,first)->arrival==23900 && find(session,first)->shape.gainDb==-7 && find(session,first)->ir==a.ir);
+        REQUIRE(reconcileTargets(session,{},0,24000,t,error,{},&map) && find(session,first));
+        REQUIRE(suppressAndErase(session,second,error));
+        REQUIRE(reconcileTargets(session,{{60000,1}},24000,96000,t,error,{},&map) && session.swells.size()==1);
+        // Absent provenance never borrows the currently selected default.
+        REQUIRE(reconcileTargets(session,{{120000,1}},100000,140000,t,error,{},&map));
+        REQUIRE(session.swells.back().phase==Phase::error && !session.swells.back().ir.present());
+    }
     Session s;SongTime time{true,0,0,48000,120,4,4};juce::String error;
     {
         Session named;REQUIRE(reconcileTargets(named,{{1632000,1},{1638000,1}},1600000,1700000,time,error));

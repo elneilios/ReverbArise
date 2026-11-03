@@ -21,13 +21,13 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
         Segment(SegmentedSelector& group,size_t position):juce::Button(juce::String{}),owner(group),index(position)
         {setWantsKeyboardFocus(false);setMouseClickGrabsKeyboardFocus(false);onClick=[this]{owner.request(index);};}
         void mouseDown(const juce::MouseEvent& e)override{owner.focusChoice(index);juce::Button::mouseDown(e);}
-        void paintButton(juce::Graphics& g,bool over,bool down)override
+        void buttonStateChanged()override{owner.repaint();}
+        void paintButton(juce::Graphics& g,bool,bool)override
         {
             const auto& choice=owner.choices[index];const auto activeChoice=choice.id==owner.selected;
             const auto alpha=isEnabled()?1.0f:.4f;const auto box=getLocalBounds().toFloat().reduced(.5f);
             const auto path=owner.outlineFor(index,box);
             g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
-            g.setColour((over || down?aqua:outline).withAlpha(alpha));g.strokePath(path,juce::PathStrokeType(rule));
             g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(navigationFont());
             g.drawText(choice.label,getLocalBounds().reduced(5,0),juce::Justification::centred);
         }
@@ -109,6 +109,15 @@ public:
     }
     void paintOverChildren(juce::Graphics& g)override
     {
+        // The joined children overlap by one pixel. Paint their borders here,
+        // with hover/press last, so a neighbouring selected fill cannot erase
+        // the shared edge. Keep child/accessibility order and hit areas stable.
+        const auto highlighted=[&](size_t index){const auto& button=*buttons[index];return button.isEnabled()
+            && (button.getState()==juce::Button::buttonOver || button.getState()==juce::Button::buttonDown);};
+        const auto border=[&](size_t index){const auto& button=*buttons[index];g.setColour((highlighted(index)?aqua:outline).withAlpha(button.isEnabled()?1.0f:.4f));
+            g.strokePath(outlineFor(index,controlGeometry::insideStroke(button.getBounds(),rule)),juce::PathStrokeType(rule));};
+        for(size_t i=0;i<buttons.size();++i)if(!highlighted(i))border(i);
+        for(size_t i=0;i<buttons.size();++i)if(highlighted(i))border(i);
         if(hasKeyboardFocus(true) && focused<buttons.size())
         {g.setColour(choices[focused].id==selected?background:aqua);g.strokePath(outlineFor(focused,buttons[focused]->getBounds().toFloat().reduced(2)),juce::PathStrokeType(2));}
     }

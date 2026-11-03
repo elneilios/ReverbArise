@@ -6,6 +6,8 @@
 #include <UI/KnobValue.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
+#include <UI/Controls/InvocationSlider.h>
+#include <UI/LearnWorkspace.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer,private juce::ListBoxModel
 {
@@ -23,6 +25,7 @@ private:
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
+    m3::ui::IRPreparationNotice irPreparationNotice;
     juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {refresh();}
@@ -51,11 +54,16 @@ private:
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
     SongTime valueTime;
     m3::ui::InvocationComboBox irBox;
-    struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;};
+    struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;std::vector<m3::IRChoice> choices;};
     std::optional<IRInvocation> irInvocation;
+    std::vector<m3::IRChoice> irEntries;
     juce::TextButton resetMenu{"v"};
-    juce::String irOwner,irChoice;
+    juce::String irOwner,irChoice,irCatalogue;
     PreverbAudioProcessor& processor;
+    m3::ui::LearnWorkspace learnWorkspace;
+    bool learningLayout=false,hasPerformWorkspace=false;
+    std::map<juce::Component*,bool> performVisibility;
+    std::optional<m3::SwellViewport> performViewport;
     m3::EditorSnapshot state;
     m3::SwellTimeline timeline;
     m3::SwellOverview songOverview{timeline};
@@ -65,8 +73,11 @@ private:
     juce::TextButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"},previousButton{"Prev"},nextButton{"Next"},zoomInButton{"Zoom +"},zoomOutButton{"Zoom -"},fitButton{"Fit"};
     juce::TextButton recaptureButton{"Recapture & regenerate"},cancelButton{"Cancel recapture"},fullButton{"Full response"},resetButton{"Reset shape"},setBarsButton{"Set source from bars"},clearButton{"Clear map"};
     juce::TextButton assetInfoButton{"Copy asset info"};
-    juce::ToggleButton snapButton{"Snap"},autoButton{"Auto-refresh after recapture"},enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
-    juce::Slider auditionSlider,separationSlider,toneStartSlider,toneEndSlider;
+    juce::ToggleButton snapButton{"Snap"},enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
+    m3::ui::controls::InvocationToggle autoButton{"Auto-refresh after recapture"};
+    juce::Slider auditionSlider,toneStartSlider,toneEndSlider;
+    m3::ui::controls::InvocationSlider separationSlider;
+    std::optional<uint64_t> markerPass,separationPass,automaticPass,markingPass,refreshPass;
     juce::ComboBox candidateBox,spanBox,inCurveBox,outCurveBox;
     std::array<juce::Label,fieldCount> fieldLabels;
     std::array<juce::TextEditor,fieldCount> fields;
@@ -90,9 +101,9 @@ private:
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     juce::TextButton trimResetButton{"Trim 0 dB"};
     juce::TextButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};
-    juce::ToggleButton automaticButton{"Automatic processing"},sampleUnitsButton{"Exact sample positions"};
+    m3::ui::controls::InvocationToggle automaticButton{"Automatic processing"};juce::ToggleButton sampleUnitsButton{"Exact sample positions"};
     juce::Slider regenerationKnob;juce::Label regenerationLabel;juce::ToggleButton freezeButton{"Freeze render"};
-    juce::Slider markerKnob;juce::ToggleButton markerButton{"Auto markers"},isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
+    m3::ui::controls::InvocationSlider markerKnob;m3::ui::controls::InvocationToggle markerButton{"Auto markers"};juce::ToggleButton isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
     juce::Label markerLabel,markerState,placementLabel;juce::TextEditor placementEditor;
     juce::ToggleButton liveButton{"Live playback"};juce::ComboBox liveRoutingBox;juce::Slider liveLevel;
     juce::Label liveLevelLabel,gainPolicyLabel;juce::ComboBox gainPolicyBox;

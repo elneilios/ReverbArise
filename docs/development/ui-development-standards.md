@@ -54,13 +54,27 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
   painting: `fontFor(component, height, flags)` uses embedded Inter Regular,
   Bold and Italic; `navigationFont()` selects the actual Inter SemiBold face.
   `interTypeface(InterFace)` owns cached explicit face pointers. Label refresh
-  preserves named SemiBold rather than reducing it to a binary bold flag.
+  preserves named Medium/SemiBold rather than reducing them to a binary bold flag.
+  Learn's reviewed control-label refinement uses the pinned static Inter Medium
+  (500) face; header/navigation faces stay unchanged. Invocation sliders can set
+  explicit value typography through `setValueFont`, retained on child recreation.
   Do not use installed-family lookup, mix in system bold/italic, rely on an
   implicit default font or change JUCE's process-wide default LookAndFeel.
   Text-entry composites must refresh their font when their inherited LookAndFeel
   changes. Verify resolved typeface names/styles and embedded resource coverage.
 
 ## Incremental migration
+
+`Controls/SliderControl.h` is the reusable wheel-enabled slider/value family.
+It retains `InvocationSlider` ownership guards and JUCE range, interval,
+formatting and notification behavior. Its `NumericInputControl` is a reusable
+editable Label with named, keyboard-accessible increase/decrease buttons and
+binding callbacks `onBegin`/`onStep`; a binding owns validation and formatting.
+Use the same model path for wheel, buttons and typed values. Do not duplicate
+parameter mutation in the visual component. Learn is the first integration;
+the numeric up/down component received owner look/feel approval on 2026-11-03.
+Preserve that accepted component; revised families still require approval before
+wider rollout.
 
 For each UI issue, inventory the affected controls and identify which library
 components or specialized controls own them. Extract a family once, migrate its
@@ -144,7 +158,7 @@ native review fixture and are composed into the shared production WorkflowHeader
   Segments share square internal joins with one border; only the group's outer
   left/right ends are rounded, following owner checkpoint-A feedback.
   Navigation text uses the shared 18-pixel Semibold role; the mode description uses
-  a 13-pixel italic role, following integrated-header polish feedback.
+  a 16-pixel italic role, following integrated-header polish feedback.
 - `IconActionButton(ActionIcon::settings)` supplies a semantic Settings glyph,
   focus/hover/disabled feedback and native pointer/accessibility/Enter/Space
   activation. Bind `onClick` to the screen's Settings action. Component names

@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <PreverbUIResources.h>
+#include "UiGeometry.h"
 #include <array>
 
 namespace m3::ui
@@ -22,12 +23,12 @@ inline const char* resource(const juce::String& filename,int& bytes)
 }
 
 // Explicit embedded faces: no installed-family lookup or synthetic weights.
-enum class InterFace { regular, semibold, bold, italic };
+enum class InterFace { regular, semibold, bold, italic, medium };
 inline juce::Typeface::Ptr interTypeface(InterFace face)
 {
     static const auto faces=[]{
-        std::array<juce::Typeface::Ptr,4> result;
-        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf"};
+        std::array<juce::Typeface::Ptr,5> result;
+        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf","Inter-Medium.ttf"};
         for(size_t i=0;i<result.size();++i)
         {
             int size=0;const auto* bytes=resource(names[i],size);jassert(bytes && size>0);
@@ -42,6 +43,7 @@ inline InterFace interStyle(const juce::String& style)
 {
     if(style.containsIgnoreCase("italic"))return InterFace::italic;
     if(style.containsIgnoreCase("semi"))return InterFace::semibold;
+    if(style.containsIgnoreCase("medium"))return InterFace::medium;
     return style.containsIgnoreCase("bold")?InterFace::bold:InterFace::regular;
 }
 inline juce::Font interFont(float height,InterFace face=InterFace::regular)
@@ -64,7 +66,7 @@ class FlatViewport:public juce::Viewport
 {
 public:void paint(juce::Graphics& g)override{g.fillAll(background);}
 };
-class WorkspaceTheme final:public juce::LookAndFeel_V4
+class WorkspaceTheme:public juce::LookAndFeel_V4
 {
 public:
     WorkspaceTheme()
@@ -89,7 +91,7 @@ public:
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
     bool interAvailable()const{return interTypeface(InterFace::regular)!=nullptr && interTypeface(InterFace::semibold)!=nullptr
-        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr;}
+        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr && interTypeface(InterFace::medium)!=nullptr;}
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
