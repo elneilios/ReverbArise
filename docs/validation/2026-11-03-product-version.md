@@ -40,9 +40,46 @@ pinned sources. No other worktree's cache, objects or binaries were copied; no
 new dependency download was needed. Initial configure retained `/EHsc` and normal
 configuration defaults. `CMAKE_BUILD_PARALLEL_LEVEL=4` is set for compilation.
 
-`pwsh -NoProfile -File scripts/build.ps1 -Configuration Release -Test`: running.
+`pwsh -NoProfile -File scripts/build.ps1 -Configuration Release -Test`: **passed,
+exit 0; 35/35 CTest tests passed in 39.30 seconds**. This includes the actual
+compiled JUCE definition assertion, compiler-free fixtures, built VST3 manifest
+verification and the pre-existing persistence/processor tests. The wrapper started
+at `4ff6195 (dirty)`; tested implementation is captured in commit `19b052e`.
 Logs: `out/build-logs/Release/20261103-003135-f5126cb9/`.
 
-Actual binary version inspection and focused Debug verification: pending.
+## Actual binary and focused Debug results
+
+- Built Release verification with RELEASE_TAG=v0.1.0 and BINARY_DIR/CONFIGURATION
+  succeeded with tagVerified=true and builtVerified=true. Generated release JSON:
+  `out/release-identity.json`.
+- The same built check with CANDIDATE=rc.1 produced v0.1.0-rc.1 while retaining
+  numeric version 0.1.0; DLL SHA-256 was unchanged:
+  `7F160A1ECE55611F87C7ECA9875F734A936A13E75474AD004D485A2A4C9D02E0`.
+- Windows FileVersion and ProductVersion both report **0.1.0**; numeric resource
+  parts both report **0.1.0.0**. ProductName remains ReverbArise. Actual inspection:
+  `out/native-product-version.json`.
+- The VST3 check verified component CID `ABCDEF019182FAEB4B374D6150727631` and
+  controller CID `ABCDEF011234ABCD4B374D6150727631`, with version 0.1.0 on both.
+- With the full wrapper idle, the same Enter-BuildLock handle was held for
+  `cmake --build --preset windows-msvc-debug --target preverb_product_version_test`
+  and `ctest --preset windows-msvc-debug -R '^preverb_product_version_test$' --no-tests=error`.
+  **1/1 actual native Debug assertion passed**, test time 0.06 seconds. Logs:
+  `out/debug-product-version-build.log` and `out/debug-product-version-test.log`.
+  This compiled only the small assertion target; a full Debug VST3 build/suite
+  was deliberately not repeated. The supported full Release run used build.ps1.
+
+## Acceptance and scope
+
+| Issue #20 criterion | Verification |
+| --- | --- |
+| One authoritative numeric version | Root CMake remains 0.1.0; source-only query and changed-version fixtures pass |
+| Built intended version and stable identity | Actual JUCE assertions, VST3 class checks and Windows resources pass |
+| Mismatch stops release work | Negative tag cases fail nonzero; stale successful JSON is unchanged and must not be consumed after failure |
+| Independent persisted schemas | No Source/ or schema code changes; existing restore tests pass in the full native suite |
+| Documented manual procedure | docs/development/product-version.md, with source/tag/candidate/built commands executed |
+| No automation/service/packaging creep | Scoped CMake/scripts/tests/docs/OpenSpec diff; no CI, version service or #21 packaging implementation |
+
+Strict OpenSpec validation and diff checks are performed before the PR. The change
+remains active; neither archive nor merge is authorized.
 FL Studio manual save/reopen is not run and cannot be inferred from CTest. No
 product version change, persisted-state migration or host identity change occurs.
