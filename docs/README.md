@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Product version and release identity](development/product-version.md) — CMake authority, exact tag checks, candidate labels and schema/host compatibility.
+
 - [Development setup and local validation](development/development.md) — Windows prerequisites, Debug/Release builds, matching CTest and build-directory locking.
 - [UI development standards](development/ui-development-standards.md) — shared controls, incremental consolidation, interaction tests and visual checkpoints for UI work.
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.

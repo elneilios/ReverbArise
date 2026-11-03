@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Preverb VERSION 0.1.0 LANGUAGES C CXX)
 
+include(cmake/ProductVersion.cmake)
+reverbarise_product_version("${CMAKE_CURRENT_SOURCE_DIR}" product_version)
+if(NOT product_version STREQUAL PROJECT_VERSION)
+    message(FATAL_ERROR "Product version reader disagrees with PROJECT_VERSION")
+endif()
+
 include(CTest)
 include(FetchContent)
 
@@ -88,6 +94,7 @@ target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
 juce_add_plugin(preverb_plugin
+    VERSION ${PROJECT_VERSION}
     COMPANY_NAME "K7MA"
     BUNDLE_ID "com.k7ma.preverb"
     PLUGIN_MANUFACTURER_CODE K7Ma
@@ -98,6 +105,10 @@ juce_add_plugin(preverb_plugin
     NEEDS_MIDI_INPUT FALSE
     VST3_CATEGORIES Fx Stereo
 )
+
+# Derived metadata, never an independent handwritten version authority.
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
+"{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
 
 target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
@@ -133,6 +144,18 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
+    add_executable(preverb_product_version_test tests/product_version_test.cpp)
+    target_compile_definitions(preverb_product_version_test PRIVATE
+        $<TARGET_PROPERTY:preverb_plugin,COMPILE_DEFINITIONS>
+        EXPECTED_PRODUCT_VERSION="${PROJECT_VERSION}"
+        EXPECTED_PRODUCT_VERSION_CODE=${product_version_code})
+    add_test(NAME preverb_product_version_test COMMAND preverb_product_version_test)
+    add_test(NAME preverb_version_contract_test COMMAND ${CMAKE_COMMAND}
+        "-DTEST_ROOT=${CMAKE_BINARY_DIR}/version-contract-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/product_version_test.cmake")
+    add_test(NAME preverb_built_version_test COMMAND ${CMAKE_COMMAND}
+        "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DBINARY_DIR=${CMAKE_BINARY_DIR}" "-DCONFIGURATION=$<CONFIG>"
+        -P "${CMAKE_SOURCE_DIR}/scripts/verify-version.cmake")
     add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
     target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
     add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
