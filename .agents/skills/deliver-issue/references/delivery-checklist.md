@@ -24,10 +24,10 @@ Follow `CONTRIBUTING.md`, existing review conventions and all applicable upstrea
 ## PR body
 
 Include:
-1. **Issue:** link the issue(s); do not use an auto-closing keyword unless explicitly requested.
+1. **Issue:** link the issue(s) using the authoritative PR issue-reference convention in `CONTRIBUTING.md`.
 2. **OpenSpec:** link/name the selected change and its status, when applicable.
 3. **Summary:** what changed and why, including important design/compatibility choices.
 4. **Verification:** exact relevant checks and outcomes; note tests not run.
 5. **Review notes:** remaining risks, screenshots for UI when useful, and any owner-only host checks.
 
-Open or update **one** PR targeting `main`, leave it open for owner review, and do not self-merge, auto-close issues or archive OpenSpec changes.
+Open or update **one** PR targeting `main`, leave it open for owner review, and do not self-merge, independently close issues or archive OpenSpec changes.

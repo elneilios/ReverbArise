@@ -42,6 +42,6 @@ Preserve real-time safety, transaction atomicity, durable assets, concurrency se
 
 ## 4. Deliver for review
 
-Use `references/delivery-checklist.md` and `CONTRIBUTING.md`. Commit on an issue-specific branch and open or update one PR with issue/change links, key decisions, test evidence and remaining limitations. Do not push directly to `main`, self-merge, auto-close the issue or auto-archive OpenSpec.
+Use `references/delivery-checklist.md` and the authoritative PR issue-reference convention in `CONTRIBUTING.md`. Commit on an issue-specific branch and open or update one PR with issue/change links, key decisions, test evidence and remaining limitations. Do not push directly to `main`, self-merge, independently close issues or auto-archive OpenSpec.
 
 If a standard OpenSpec phase must stop, report its outcome and exact next invocation; do not silently continue across the boundary.
