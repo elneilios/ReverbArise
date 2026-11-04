@@ -7,8 +7,9 @@ list checkpoint from later production integration.
 
 Current automated outcome: **42/42 Release CTest passed** at clean commit
 `a2a014d` after the separately authorized frozen-tempo repair. Integrated owner
-approval is recorded; the single final FL Studio smoke test remains pending. Debug and
-physical Windows DPI/monitor-transition coverage were not run.
+approval is recorded, and the owner reported the final FL Studio live test
+passed on 4 November 2026 using the supplied build. Debug and a physical Windows
+DPI/monitor-transition matrix were not run.
 
 ## Execution and review scope
 
@@ -181,6 +182,15 @@ to `D:\Users\neila\Desktop\ReverbArise-Issue4-a2a014d\ReverbArise.vst3` and its
 parent folder opened in Explorer. All six bundle files were SHA-256 checked
 against the original; the binary hash matches the post-repair hash above. No
 existing bundle was overwritten. It is not installed into FL Studio automatically.
+
+The owner subsequently reported **“FL Studio live test passed”** in chat on
+4 November 2026, completing the requested final host smoke checkpoint after the
+integrated approval. This is owner-reported host acceptance, separate from the
+42/42 native automated result. Exact host/driver versions and a physical DPI
+matrix were not supplied; no additional coverage is inferred. Production source
+and the tested binary are unchanged. All eight implementation/review tasks are
+complete; PR #47 is ready for owner review, with merge, issue closure, canonical
+spec sync and archive left to the owner.
 
 Component event tests dispatch JUCE pointer/keyboard events in a native MSVC
 executable. Software-raster snapshots at multiple scales are not physical DPI
