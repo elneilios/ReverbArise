@@ -159,3 +159,68 @@ preparation. The dense portion produced the same 96/128/128 candidates and
 97/129/129 swells; preview-plus-commit measured 5057.6/5858.0/5770.9 ms, total
 33,516.7 ms, with 28,576,328 reported resident bytes. Native editor binding and
 initial handoff tests also passed (12.52 seconds). Full-suite results follow below.
+
+## Final acceptance matrix and native evidence
+
+| Scenario | Automated coverage | Remaining owner coverage |
+| --- | --- | --- |
+| Fresh OFF, legacy ON, strict restore and protected identities | Session, workflow processor, engine and automatic planner tests | OFF/ON save/reopen in one FL Studio smoke |
+| Read-only accepted/provisional candidates and refinement | Candidate, generation, timeline and native editor tests | Integrated marker appearance/interaction review |
+| Explicit/Stop atomic replacement, no-change/fault/cancellation | Generation, planner, workflow reservation and processor tests | Brief opted-in Stop host smoke |
+| Earliest first selection/reveal before wet, both triggers | Initial viewport and native generation/editor tests, including reversed vector order and editor-closed commit | Native first-swell framing, then host entry smoke |
+| Restored position, later mode return and delayed rendering | Native editor binding tests with newer selection/pan and failed/no-change requests | One ordinary host reopen/return check |
+| Dense full-song/gapped source, protected work, repeat/refine | Deterministic layered arrangement described above | Real music usefulness remains a listening judgement |
+
+The final editor fix captures mode and model coherently under the publication
+lock. Separate reads could otherwise consume a newly committed handoff using
+pre-commit definitions. First-generation preparation is held in the editor-closed
+fixture so a fast commit cannot accidentally turn that case into an open-editor
+visit. Open-editor keyboard invocation is tested separately.
+
+Final-source Release wrapper `20261104-201331-c97923b1` passed **51/51 CTest tests**
+in 75.46 seconds. Its editor handoff target passed in 2.57 seconds; a subsequent
+direct native run captured the supporting [Learn controls](2026-11-04-issue-38-learn.png)
+and [initial selected Perform view with wet still queued](2026-11-04-issue-38-initial-perform.png).
+These are JUCE-native component rasters; sizes 1100×850, 1400×1000 and 1600×1100
+and software scales 1/1.25/1.5/2 were exercised. They do not establish actual OS
+DPI or screen-reader acceptance. The passing Release dense portion again had
+96/128/128 candidates and 97/129/129 swells, with approximately 1.1 seconds per
+preview-plus-commit and about 28.6 MB of reported engine residence.
+
+Implementation commits are `af24e58` and `3a8bdba`, following the persistence and
+workflow commits recorded above. The Release wrapper records `af24e58 (dirty)`
+because the coherent editor fix was committed afterward as `3a8bdba`; the tested
+source is identical. Subsequent changes are evidence and task tracking only.
+Final Debug results and scoped owner/host outcomes are recorded below.
+
+Final-source warm Debug wrapper `20261104-201545-75dda709` passed **51/51 CTest
+tests**, 224.10 seconds. It also records `af24e58 (dirty)` and tests the source
+committed as `3a8bdba`. No source edits followed either final gate. The initial
+Debug configure/build was cold; these final runs reuse its valid object/cache
+tree. No cold-versus-warm speedup is claimed. UI standards passed (42 governed
+files, 61 existing bounded occurrences); strict OpenSpec validation and Git diff
+checks passed. The debt inventory and generated OpenSpec workflows are unchanged.
+
+The native owner preview was directly launched from the copied Release
+`out/review/Issue38NativeReview.exe --review` (initial PID 26116, title
+"ReverbArise control review"). Its private source is preloaded, with one protected
+disabled manual swell. It allows marker/sensitivity/default preference review,
+Generate and initial Perform selection/framing, and resizing through the editor
+corner. The agent did not close it. Launching it and inspecting automated rasters
+do **not** establish owner approval; task 5.4 remains open pending explicit feedback.
+
+After native acceptance, perform one brief FL Studio smoke on the final Release
+bundle, recording host version, sample rate, buffer and source commit `3a8bdba`:
+
+1. Fresh default-OFF capture/Stop stays Learn; markers refine with sensitivity.
+2. Generate opens Perform with the chronological first swell selected, lead-in
+   and arrival visible, and Selected Swell controls populated. Host playhead and
+   transport stay put; rendering status is honest.
+3. Preserve a manual edit/disabled swell through Learn/refine/Generate, and retain
+   the subsequent editing position on mode return.
+4. Opted-in Stop generates consistently; explicit OFF/ON and valid selection/mode
+   survive save/reopen. Do not repeat automated fault/concurrency edge cases.
+
+No FL Studio, actual OS-DPI or screen-reader acceptance has been performed or
+claimed. Task 6.3 remains open. No plugin installation, main-branch merge, issue
+closure, canonical spec sync or OpenSpec archive was performed.
