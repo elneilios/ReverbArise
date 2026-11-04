@@ -62,3 +62,7 @@ SHA-256 `FE5137F1700F6620A143C56FBC68395BF58D7F998843256CDA238CF55D274F88`.
 UI standards: 46 files / 61 bounded occurrences, unchanged inventory. Strict
 OpenSpec and diff checks are rerun at delivery. Task 5.4 awaits approval/adoption;
 6.2 retains final host acceptance. Previous editing/Snap/knob approvals remain.
+
+Native checkpoint source revision: a82e9e3f5316a7b3523dfaeb26a837a0d9170b66. The four focused tests and preview
+executable above use these identical source files; only this evidence line follows.
+Strict OpenSpec final validation: 20/20 passed.
