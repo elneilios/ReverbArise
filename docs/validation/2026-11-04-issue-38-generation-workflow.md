@@ -210,7 +210,7 @@ corner. The agent did not close it. Launching it and inspecting automated raster
 do **not** establish owner approval; task 5.4 remains open pending explicit feedback.
 
 After native acceptance, perform one brief FL Studio smoke on the final Release
-bundle, recording host version, sample rate, buffer and source commit `3a8bdba`:
+bundle, recording host version, sample rate, buffer and final source commit `e0ba6d6`:
 
 1. Fresh default-OFF capture/Stop stays Learn; markers refine with sensitivity.
 2. Generate opens Perform with the chronological first swell selected, lead-in
@@ -324,3 +324,22 @@ host/DPI/screen-reader coverage remains untested.
 The refined Release preview was launched directly as PID 32252, title
 `ReverbArise control review`, from the copied `out/review/Issue38NativeReview.exe --review`.
 It remains open for owner review; launching it does not establish acceptance.
+
+## Scoped native approval and final host handoff
+
+On 2026-11-04 the owner answered **Approve native preview** to the explicit
+review of the refined Learn layout, waveform/event emphasis, Generate controls
+and initial Perform selection/framing. This completes task 5.4 for source
+`e0ba6d6`. It does not imply actual FL Studio, OS-DPI or screen-reader testing.
+The directly launched preview is preserved; no source changes or repeat full
+suites are required for recording this acceptance.
+
+The final Release bundle for the single consolidated smoke is
+`out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`.
+Its native module SHA256 is `E83ECED3991F27795A93CA92CD2DE9C68923AA2BF1A0C82E79D7021254B24EC4`.
+Close FL Studio before replacing any installed test copy; use a separate test
+project and a fresh instance. Keep the four smoke steps above as one session:
+default-OFF preview/refinement, first Generate selection/lead-in/properties,
+protected-work return/refine/Generate, then opted-in Stop and OFF/ON save/reopen.
+Record actual host version, sample rate, buffer and pass/failure observations.
+Host outcome is pending; no plugin installation or host test is claimed here.

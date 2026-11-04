@@ -28,8 +28,8 @@ provisional/updating data. Emphasis never filters Generate or selects swells.
 One caption combines capture state, duration and event count. The canvas readout
 is musical time only. Exact samples, silence/coverage classifications, mapped
 totals and inspection details remain in existing Diagnostics. This revised
-composition/emphasis awaits native owner review; earlier checkpoint evidence
-does not by itself approve the new composition.
+composition/emphasis received scoped native owner approval on 2026-11-04.
+That acceptance does not establish FL Studio, OS-DPI or screen-reader coverage.
 
 Learn candidate snapshots are separate from saved swell definitions. Sensitivity
 edits update read-only background analysis across accepted mapped source, retaining
@@ -60,7 +60,7 @@ displayed candidate identities. Automatic Swells OFF hides these controls while
 retaining the saved preference. Neutral heads/guides show events, with timing
 emphasis for hover/pin; hollow heads identify provisional/updating positions. They are
 distinct from the white inspection pin and solid DAW cursor. Scoped native owner
-review remains required before rollout.
+review was approved on 2026-11-04; host smoke validation remains pending.
 
 ## Approved #11 foundation
 
