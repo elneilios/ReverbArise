@@ -93,13 +93,28 @@ inline void performanceExportCases()
     }
     engine.restore(verifiedRecovery);
     waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready;});
+    const auto recoverySource=p->getCaptureSnapshot().reference;const auto recoveryRenders=engine.snapshot().renderCount;
     head.position.setBpm(121);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(!p->getWorkflowReadiness().frozenWet && !p->requestWorkflowMode(workflow::Mode::live));
+    // Force the worker to observe the incompatible timing instead of allowing
+    // the round trip to pass only when both callbacks precede its next tick.
+    waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::stale;});
     head.position.setBpm(240);buffer.clear();p->processBlock(buffer,midi);
+    waitM3([&]{return p->getWorkflowReadiness().frozenWet;});
     REQUIRE(p->requestWorkflowMode(workflow::Mode::live)); // Verified frozen wet qualifies even after source Clear.
+    REQUIRE(engine.savedSession().swells[0].render==verifiedRecovery.swells[0].render);
+    REQUIRE(m3::sameSavedSwell(engine.savedSession().swells[0],verifiedRecovery.swells[0]));
+    REQUIRE(p->getCaptureSnapshot().reference==recoverySource && engine.snapshot().renderCount==recoveryRenders);
     const auto recovered=bounce({13,4096},0,800);REQUIRE(recovered[450]>0);
     // Corrupt/missing render is explicit, stable failure, never a successful silent bounce.
     const auto asset=engine.savedSession().swells[0].render;REQUIRE(engine.assetDirectory().getChildFile(asset.path).deleteFile());
+    p->setNonRealtime(false);head.position.setBpm(121);position(450,false);buffer.clear();p->processBlock(buffer,midi);
+    waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::stale;});
+    head.position.setBpm(240);buffer.clear();p->processBlock(buffer,midi);
+    waitM3([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});
+    REQUIRE(!p->getWorkflowReadiness().frozenWet && engine.savedSession().swells[0].render==asset && engine.savedSession().swells[0].frozen);
+    REQUIRE(engine.snapshot().renderCount==recoveryRenders && p->getCaptureSnapshot().reference==recoverySource);
+    p->setNonRealtime(true);
     p->prepareToPlay(1000,512);position(450,false);buffer.setSize(2,16);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.snapshot().liveStatus.startsWith("Export warning"));const auto failure=engine.snapshot().liveStatus;
     position(466,false);buffer.clear();p->processBlock(buffer,midi);REQUIRE(engine.snapshot().liveStatus==failure);

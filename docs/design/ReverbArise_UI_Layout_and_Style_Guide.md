@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.1 · **Production standards revision:** 1 · **Purpose:** Production UI authority and design reference.
+**Version:** 1.2 · **Production standards revision:** 2 · **Purpose:** Production UI authority and design reference.
 
 ## Validated production standards — Learn and shared header
 
@@ -100,6 +100,20 @@ production standards revision; this revision does not change plugin/state versio
 | Revision | Baseline / decision | Scope |
 | --- | --- | --- |
 | 1 | #11 and #35 approved native implementation, extracted in #37 | Learn comfortable and shared header; compact values await Perform review |
+| 2 | #4 standalone list look/feel approved 2026-11-04 | Swells list identity/scroll interaction policy; existing Perform row appearance retained, no new visual values or compact profile |
+
+### Chronological Swells list interaction
+
+`Controls/SwellList` owns the specialized virtualized list. Rows follow canonical
+absolute arrival samples with an ordinal persistent-ID tie-breaker. Names and wet
+placement never determine order. Selection and delayed commands follow IDs;
+snapshot refresh submits no edits. Keep the visible row's pixel offset during
+background insertion/reordering, reveal explicit selection or a moved visible
+primary minimally, and do not repeatedly reveal an offscreen primary. Clear
+ephemeral ownership on session replacement. Preserve the current row rendering
+through extraction; this does not validate legacy Perform measurements as new
+defaults. See [shared control policies](../development/ui-development-standards.md)
+and [scoped approval/evidence](../validation/2026-11-04-issue-4-swell-list.md).
 
 ## Historical design intent and provisional suggestions
 

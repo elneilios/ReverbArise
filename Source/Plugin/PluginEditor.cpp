@@ -51,7 +51,11 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(auto* box:{&candidateBox,&spanBox,&inCurveBox,&outCurveBox})addAndMakeVisible(box);
     spanBox.setName("detailBars");inCurveBox.setName("fadeInCurve");outCurveBox.setName("fadeOutCurve");
     loadIRButton.setName("loadIR");generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
-    list.setName("swellList");list.setMultipleSelectionEnabled(true);list.setRowHeight(44);list.setColour(juce::ListBox::backgroundColourId,m3::ui::background);
+    list.onSelection=[this](auto ids,auto primary)
+    {if(updating || destroying)return;processor.swellEngine().selectTargets(ids,primary,state.sessionEpoch);refresh();};
+    list.onToggleEnabled=[this](auto id)
+    {if(updating || destroying)return;processor.swellEngine().edit(id,[](auto& w,auto&){w.enabled=!w.enabled;return true;},state.sessionEpoch);refresh();};
+    list.onMenu=[this](auto row,const auto& event){if(!updating && !destroying)showSwellMenu(row,event);};
     addAndMakeVisible(list);addAndMakeVisible(timeline);
     addAndMakeVisible(songOverview);timeline.setInlineOverview(false);timeline.onEnvelopeEdited=[this]{refresh();};
     const std::array<juce::String,fieldCount> labels{"Name","Arrival (sample)","Source start (sample)","Source end exclusive","Audible start (sample)","Audible end exclusive","Fade in (ms)","Fade out (ms)"};
@@ -246,7 +250,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     initialiseSettings();
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
-    list.setRowHeight(64);setSize(1100,850);resized();refresh();startTimerHz(10);
+    setSize(1100,850);resized();refresh();startTimerHz(10);
 }
 PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){destroying=true;stopTimer();diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
@@ -258,53 +262,27 @@ void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
     for(const auto x:{layout.swells.getRight()+10,layout.inspector.getX()-10})
         g.drawVerticalLine(x,static_cast<float>(layout.workspace.getY()+10),static_cast<float>(layout.workspace.getBottom()-10));
 }
-int PreverbAudioProcessorEditor::getNumRows(){return static_cast<int>(state.session.swells.size());}
-void PreverbAudioProcessorEditor::paintListBoxItem(int row,juce::Graphics& g,int width,int height,bool selected)
+void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellListRow& w,const juce::MouseEvent& event)
 {
-    if(row<0 || row>=getNumRows())return;const auto& w=state.session.swells[static_cast<size_t>(row)];
-    if(selected){g.setColour(m3::ui::aqua.withAlpha(.06f));g.fillRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4);g.setColour(m3::ui::aqua);g.drawRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4,1);}
-    g.setColour(m3::ui::text);g.setFont(m3::ui::fontFor(*this,m3::ui::bodySize));g.drawText(w.name,32,2,width-62,20,juce::Justification::left);
-    g.drawRect(8,8,15,15);if(w.enabled){g.setColour(m3::ui::aqua);g.fillRect(11,11,9,9);}
-    g.setFont(m3::ui::fontFor(*this,m3::ui::smallSize));g.drawText(w.irName.isNotEmpty()?w.irName:"No IR",32,23,width-62,18,juce::Justification::left);
-    g.setFont(m3::ui::fontFor(*this,m3::ui::captionSize));g.setColour(w.phase==m3::Phase::error?m3::ui::warning:m3::ui::secondary);
-    g.drawText((w.phase==m3::Phase::ready?phaseName(w.phase):w.status)+(w.muted?" | mute":"")+(!w.enabled?" | off":"")+(w.solo?" | solo":"")+(w.frozen?" | frozen":""),32,43,width-62,height-43,juce::Justification::left);
-    g.setColour(m3::ui::secondary);
-    for(int n=0;n<3;++n)g.fillEllipse(juce::Rectangle<float>(3,3).withCentre({static_cast<float>(width-13),static_cast<float>(height/2-7+n*7)}));
-}
-void PreverbAudioProcessorEditor::listBoxItemClicked(int row,const juce::MouseEvent& event)
-{
-    if(row<0 || row>=getNumRows())return;
-    const auto& w=state.session.swells[static_cast<size_t>(row)];
-    if(event.mods.isPopupMenu() || (event.eventComponent && event.x>=event.eventComponent->getWidth()-26))
-    {
+        const auto epoch=state.sessionEpoch;
         juce::PopupMenu menu;menu.addItem(1,"Rename...");menu.addItem(2,"Delete");
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(event.eventComponent).withTargetScreenArea(swellMenuAnchor(event)),
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),id=w.id,name=w.name](int result)
+            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),id=w.id,name=w.name,epoch](int result)
         {
-            if(!safe)return;
-            if(result==2){safe->processor.swellEngine().selectTargets({id},id);safe->processor.swellEngine().removeSelected();safe->refresh();return;}
+            if(!safe || safe->processor.swellEngine().assignmentEpoch()!=epoch)return;
+            if(result==2){safe->processor.swellEngine().removeTarget(id,epoch);safe->refresh();return;}
             if(result!=1)return;
             auto* dialog=new juce::AlertWindow("Rename swell","",juce::MessageBoxIconType::NoIcon);
             dialog->addTextEditor("name",name);dialog->getTextEditor("name")->selectAll();
             dialog->addButton("OK",1,juce::KeyPress(juce::KeyPress::returnKey));dialog->addButton("Cancel",0,juce::KeyPress(juce::KeyPress::escapeKey));
-            dialog->enterModalState(true,juce::ModalCallbackFunction::create([safe,id,dialog](int button)
+            dialog->enterModalState(true,juce::ModalCallbackFunction::create([safe,id,dialog,epoch](int button)
             {
                 if(!safe || button!=1)return;
                 const auto text=dialog->getTextEditorContents("name");
-                if(text.isNotEmpty())safe->processor.swellEngine().edit(id,[&](auto& swell,auto&){swell.name=text;return true;});
+                if(text.isNotEmpty())safe->processor.swellEngine().edit(id,[&](auto& swell,auto&){swell.name=text;return true;},epoch);
                 safe->refresh();
             }),true);
         });
-        return;
-    }
-    if(event.x<28){processor.swellEngine().edit(w.id,[](auto& swell,auto&){swell.enabled=!swell.enabled;return true;});refresh();}
-}
-void PreverbAudioProcessorEditor::selectedRowsChanged(int row)
-{
-    if(updating || destroying)return;std::vector<juce::String> ids;
-    for(int i=0;i<getNumRows();++i)if(list.isRowSelected(i))ids.push_back(state.session.swells[static_cast<size_t>(i)].id);
-    const auto primary=row>=0 && row<getNumRows()?state.session.swells[static_cast<size_t>(row)].id:(ids.empty()?juce::String{}:ids.front());
-    processor.swellEngine().selectTargets(ids,primary);refresh();
 }
 void PreverbAudioProcessorEditor::setPreferences()
 {const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(static_cast<float>(auditionSlider.getValue()),s.sensitivity,s.separationSeconds,s.autoRegenerate);}
@@ -438,9 +416,14 @@ void PreverbAudioProcessorEditor::refresh()
     listLabel.setText("Swells ("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     const auto key=w?w->id:juce::String{};
     if(!learningLayout && key!=fittedKey && state.raw){if(!leavingLearn)timeline.fitSelection();fittedKey=key;}
-    if(!learningLayout){list.updateContent();juce::SparseSet<int> selectedRows;
-    for(size_t i=0;i<state.session.swells.size();++i)if(std::find(state.session.selected.begin(),state.session.selected.end(),state.session.swells[i].id)!=state.session.selected.end())selectedRows.addRange({static_cast<int>(i),static_cast<int>(i+1)});
-    list.setSelectedRows(selectedRows,juce::dontSendNotification);list.repaint();}
+    if(!learningLayout)
+    {
+        std::vector<m3::ui::controls::SwellListRow> rows;rows.reserve(state.session.swells.size());
+        for(const auto& swell:state.session.swells)
+            rows.push_back({swell.id,swell.name,swell.irName,swell.phase==m3::Phase::ready?phaseName(swell.phase):swell.status,
+                swell.arrival,swell.enabled,swell.muted,swell.solo,swell.frozen,swell.phase==m3::Phase::error});
+        list.display(std::move(rows),state.session.selected,state.session.primary,state.sessionEpoch);
+    }
     enabledButton.setToggleState(w && w->enabled,juce::dontSendNotification);muteButton.setToggleState(w && w->muted,juce::dontSendNotification);
     soloButton.setToggleState(w && w->solo,juce::dontSendNotification);freezeButton.setToggleState(w && w->frozen,juce::dontSendNotification);
     if(w){inCurveBox.setSelectedId(static_cast<int>(w->shape.inCurve)+1,juce::dontSendNotification);outCurveBox.setSelectedId(static_cast<int>(w->shape.outCurve)+1,juce::dontSendNotification);}
