@@ -26,6 +26,11 @@ messages will be supplied by the existing Perform binding during integration.
 `SwellViewport::snapToGrid` now exposes this checked grid through the existing
 coordinate authority, preserving the old API for adapters not yet migrated.
 Unavailable timing returns an empty optional, never an invented snapped position.
+`snapToGridWithin` additionally finds a valid grid point inside a closed sample
+domain or returns unavailable when none exists. It never substitutes an off-grid
+clamped endpoint. Its fixed-work adjacent-index search accounts for the final
+integer-sample rounding, including sub-sample grid spacing. This domain foundation
+is tested independently; handle/translation binding remains task 4.2.
 
 Perform timeline navigation now uses opt-in `constrain` / `zoomBounded` methods;
 Export's unbounded viewport arithmetic and its adapter-owned limits remain

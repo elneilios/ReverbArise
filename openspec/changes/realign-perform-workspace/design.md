@@ -29,7 +29,7 @@ Visual references: [#3 approved Perform viewer](https://github.com/elneilios/Rev
 
 Keep `WorkflowHeader`, NoticeBar and Learn composition intact. Introduce a Perform-scoped layout calculation/composite rather than altering shared dimensions used by Export. Keep one editor, its existing handle painting/hit geometry and separate Overview. Preserve all supported inspector fields via vertical scrolling, not reduced font heights. The owner's divider reference review clarifies that the old Perform auto-marker tooling is to be removed: omit its band, preserve saved instance detection preferences and Learn's controls, and do not adopt #38's generation behavior.
 
-The geometry below was measured in native revision 4 and explicitly approved by the owner on 4 November 2026. `PerformLayout.h::performGeometry` and standards revision 3 now record its scoped values; production editor integration awaits shared-file coordination. Retain current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
+The geometry below was measured in native revision 4 and explicitly approved by the owner on 4 November 2026. `PerformLayout.h::performGeometry` and standards revision 3 now record its scoped values; final production editor integration awaits #6's merge under the confirmed ownership contract. Retain current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
 
 | Approved allocation | Below editor width 1200 | At/above 1200 | Rationale |
 | --- | --- | --- | --- |
@@ -201,6 +201,14 @@ where it would destabilize the workspaces. This proposal does not absorb #6, #38
 waveform performance work or DSP.
 
 ## Risks / Trade-offs
+
+Current #6 ownership contract: [Agent 1's explicit handover](https://github.com/elneilios/ReverbArise/issues/46#issuecomment-6632200424)
+at Export baseline `13ec5bec36112540ec1eaa42d3e788413367d637` releases isolated
+SwellTimeline/SwellViewport and Snap/grid work with existing APIs preserved.
+Final PluginEditor and SwellSession integration waits until #6 merges; do not
+absorb unmerged Export implementation. Preserve special Export visibility,
+creative schema-10 fields/migrations and processor envelope 8. Export retains
+Fit/seek/pan/file ownership; this replaces earlier unresolved-coordination status.
 
 - [Minimum-width toolbar or inspector overflow] → native measured bounds and long text/focus tests before approval; revise scoped spacing, not typography.
 - [Stale timing, fractional origin or variable mapping] → mapping/epoch guard and explicit unavailable snap state; no fabricated tempo map.

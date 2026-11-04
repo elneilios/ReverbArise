@@ -446,3 +446,19 @@ passed after these changes (`out/perform-bounded-navigation-matrix/`). Task 3.1
 and task 4.1 each passed the refreshed Apply source-line/description guard and
 post-edit completion re-query: **5/17 tasks complete**. Final UI standards remain
 39 files / 61 bounded occurrences; strict OpenSpec and diff checks passed.
+
+Prepared task 4.2's bounded-domain numerical foundation without publishing any
+gesture edits: HostGrid/SwellViewport closed-domain methods choose an actual
+grid point or return unavailable, with no off-grid clamp. Independent exhaustive
+small-domain oracles cover all divisions/meters, no-grid intervals, singletons,
+negative and fractional origins, sub-sample intervals and unrepresentable bounds.
+Four focused pure native tests passed in 0.11 seconds at
+`out/build-logs/Release/20261104-perform-bounded-grid/`; final authority-wrapper
+rerun is recorded below. Task 4.2 remains unchecked until actual guarded gesture
+integration and its identity/source/support tests pass.
+
+Final bounded-domain authority-wrapper rebuild and all four pure tests passed in
+0.11 seconds, logs `out/build-logs/Release/20261104-perform-grid-authority-final/`.
+UI standards, strict OpenSpec and diff checks passed. Existing native editor and
+full composition results above remain applicable: these additional grid methods
+are not yet called from production gestures. No full-suite or host run is claimed.

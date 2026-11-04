@@ -61,6 +61,12 @@ struct SwellViewport
         const auto grid=HostGrid::make(accepted,now,captureRate,division);
         return grid?grid->snap(position):std::optional<int64_t>{};
     }
+    std::optional<int64_t> snapToGridWithin(int64_t position,int64_t lower,int64_t upper,const SongTime& accepted,
+                                          const SongTime& now,double captureRate,GridDivision division)const noexcept
+    {
+        const auto grid=HostGrid::make(accepted,now,captureRate,division);
+        return grid?grid->snapWithin(position,lower,upper):std::optional<int64_t>{};
+    }
     int64_t snap(int64_t position,const SongTime& time,bool enabled) const noexcept
     {
         if(!enabled || !time.valid || time.rate<=0 || time.bpm<=0)return position;

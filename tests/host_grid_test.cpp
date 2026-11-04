@@ -32,6 +32,20 @@ int main()
                 }
                 CHECK(grid->snap(1000+intervals[n]/2)==1000+intervals[n]);
                 CHECK(grid->snap(1000-intervals[n]/2)==1000-intervals[n]);
+                for(const auto domain:{std::pair<int64_t,int64_t>{-12345,23456},{100,500},{-500,-100},{1000,1000}})
+                    for(int64_t candidate=-40000;candidate<40000;candidate+=997)
+                    {
+                        std::optional<int64_t> expected;int64_t nearest=INT64_MAX,chosen=0;
+                        for(int64_t index=-64;index<=64;++index)
+                        {
+                            const auto tick=1000+index*intervals[n];if(tick<domain.first || tick>domain.second)continue;
+                            const auto distance=std::abs(tick-candidate);
+                            if(!expected || distance<nearest || (distance==nearest && std::abs(index)>std::abs(chosen)))
+                            {expected=tick;nearest=distance;chosen=index;}
+                        }
+                        CHECK(grid->snapWithin(candidate,domain.first,domain.second)==expected);
+                        CHECK(SwellViewport{}.snapToGridWithin(candidate,domain.first,domain.second,accepted,accepted,48000,gridChoices[n].division)==expected);
+                    }
             }
         }
         SongTime accepted{true,1000,.25,48000,120,4,4},now=accepted;
@@ -66,10 +80,14 @@ int main()
         accepted.ppq=.10001;
         grid=HostGrid::make(accepted,accepted,48000,GridDivision::quarterBeat);CHECK(grid);
         CHECK(grid->snap(4600)==4600); // Fractional sample origin, one final sample rounding.
+        CHECK(grid->snapWithin(4600,4500,4700)==4600);
+        CHECK(!grid->snapWithin(100,100,500));
         accepted={true,0,0,1,60,1,4};
         grid=HostGrid::make(accepted,accepted,1,GridDivision::sixteenthBeat);CHECK(grid);
         CHECK(!grid->snap(INT64_MAX) && !grid->snap(INT64_MIN));
         CHECK(grid->snap(0)==0);
+        CHECK(grid->snapWithin(1,1,1)==1 && grid->snapWithin(0,0,0)==0);
+        CHECK(!grid->snapWithin(INT64_MAX,INT64_MAX,INT64_MAX));
         std::cout<<"Host grid integer-oracle/meter/tie/mapping/overflow checks passed.\n";
         return 0;
     }
