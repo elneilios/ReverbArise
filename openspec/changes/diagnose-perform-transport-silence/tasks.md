@@ -23,7 +23,7 @@ The owner approved the live-clock planning revision on 4 November 2026 after rec
 ## 4. Integration and owner acceptance
 
 - [x] 4.1 Run scripts/build.ps1 -Configuration Debug -Test and scripts/build.ps1 -Configuration Release -Test using the existing warm tree and per-directory build lock, plus scripts/check-ui-standards.ps1 for diagnostic binding changes; verify native MSVC/CTest passes and record commands, revision, warm/cold status, results, skipped checks and host/DPI limitations once in dated docs/validation evidence. Keep fixture checks separate from native results.
-- [ ] 4.2 Prepare the validated plugin and one brief owner FL Studio acceptance using the previously failing instance or a preserved copy; verify audible Perform wet through the known interval, intact project/assets and unchanged Audition/Export. Record the owner's outcome or leave this task pending with the precise remaining host check; do not repeat passing automated edge cases.
+- [x] 4.2 Prepare the validated plugin and one brief owner FL Studio acceptance using the previously failing instance or a preserved copy; verify audible Perform wet through the known interval, intact project/assets and unchanged Audition/Export. Record the owner's outcome or leave this task pending with the precise remaining host check; do not repeat passing automated edge cases.
 
 ## Workflow follow-up
 

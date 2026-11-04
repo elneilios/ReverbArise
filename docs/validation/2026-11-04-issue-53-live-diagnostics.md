@@ -282,3 +282,13 @@ confirmed all six installed files match the staged Release manifest. The install
 binary hash is `5CE4A70D2A391C9957F2F2F8EBE3ADC11EEFAD4389536DE67AF6B718224D271E`.
 No project or captured/rendered asset was modified. Owner Song playback acceptance
 remains pending; task 4.2 is still unchecked.
+### Owner acceptance passed
+
+After reopening FL Studio with the verified installed fix, the owner responded
+"yes it is working now" to the requested Perform/Song playback through the
+previously silent swell. This completes the brief host acceptance for task 4.2
+on 2026-11-04. Project/asset preservation and unchanged Audition/Export remain
+supported by the native identity and sample-reference checks above; the owner
+was not asked to repeat those passing cases. Broader host/version/DPI coverage
+is not implied. OpenSpec Apply now reports 11/11 tasks complete. The change is
+ready for owner PR review; merge and archive remain separate actions.
