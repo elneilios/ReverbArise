@@ -1,7 +1,9 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
-Current delivery after the knob extension is source `a4e9262`: **53/53 Release
-tests passed**. See the [final knob/value/font evidence and current bundle hash](2026-11-04-issue-46-knob-audit.md#final-delivery-validation).
+Current requested knob refinement is source `b2d2ec3`: Level 1 dB / Shift 0.1 dB
+and corner-bracket focus, with **4/4 affected native tests** and a Release wrapper
+build passed. The full **53/53** result at `a4e9262` is retained for unchanged paths.
+See the [current revision evidence and bundle hash](2026-11-04-issue-46-knob-audit.md#requested-revision-level-increments-and-corner-focus).
 The initial 52-test results and pre-knob bundle identity below remain historical
 evidence; the shared output bundle path now contains the final rebuilt binary.
 

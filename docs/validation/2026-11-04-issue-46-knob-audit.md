@@ -226,6 +226,10 @@ source/bundle/preview hashes and full-suite result are recorded below.
 
 ### Final delivery validation
 
+This records the full integration run before the owner's two focused refinements.
+The current revision, focused results and bundle identity are in
+[Requested revision](#requested-revision-level-increments-and-corner-focus) below.
+
 Final implementation/test source: `a4e926262b0fff05f935a7be0bb3e2f0a4bb913d`.
 `scripts/build.ps1 -Configuration Release -Test` passed configure/build/test,
 exit 0, **53/53 tests**, **184.36 seconds**. Logs:
@@ -250,3 +254,47 @@ retained; only materially revised knob interaction needs this checkpoint.
 Owner response to this focused checkpoint: **Request changes**. Specific changes
 have been requested from the owner and are pending. The review window remains
 open. Task 4.4 is not complete; the changed knob family is not accepted yet.
+
+### Requested revision: Level increments and corner focus
+
+The owner clarified two changes: Level wheel changes should be 1 dB normally and
+0.1 dB with a modifier; knob focus should use four corner brackets. Their supplied
+reference shows brackets around the dial. Shift remains the fine modifier, keeping
+Ctrl available for Snap bypass. Normal/fine arrow steps match wheel steps; typed
+precision remains two displayed decimal places with unchanged saved precision.
+
+Revision source `b2d2ec3` changes only Level discrete-step/range metadata, the
+KnobValue focus painter and associated tests/captures/guidance. The bracket variant
+uses existing aqua and 2-pixel contained stroke, open sides and 20%-side-length
+legs (8 pixels on the 42-pixel dial). Standards revision 4 records its exact scope;
+other families and the accepted layout retain their previous focus treatment.
+
+Focused native MSVC/CTest: **4/4 passed**, **11.09 seconds**, logs
+`out/build-logs/Release/20261104-knob-bracket-build.log` and
+`20261104-knob-bracket-tests.log`. Actual Level wheel/arrow events prove +1 dB,
+Shift +0.1 dB and Shift-arrow -0.1 dB. Native focus pixels prove all four corners
+are visible and the sides are open. [Focus detail](2026-11-04-issue-46/knobs/corner-focus.png)
+and [actual editor context](2026-11-04-issue-46/knobs/corner-focus-context.png)
+are native component captures; the detail is rendered at software 300% for review.
+UI standards remain 46 files / 61 bounded occurrences; strict OpenSpec 20/20 and
+diff checks pass. No lint inventory or unrelated component was changed.
+
+The prior full 53-test result at `a4e9262` is retained for unchanged backend,
+state/identity and waveform paths. This focused UI revision uses the affected
+native regressions and a Release wrapper rebuild; the full suite is not repeated
+for step-size and focus-paint-only changes. Native owner acceptance remains pending.
+
+`scripts/build.ps1 -Configuration Release` passed configure/build, exit 0, from
+clean source `b2d2ec3d7d4c554c3e10c216b36d5fe27a1f322c`; tests were not requested
+by this build-only wrapper invocation. Logs: `20261104-185201-7b340127`.
+The focused native 4/4 result above supplies the affected interaction coverage;
+the prior full 53/53 result is retained only for unchanged paths.
+
+Updated Release bundle remains at the same workspace VST3 path. Inner binary
+SHA-256: `BC74A4D9B192D00676D9BEF4F301C9EA1A4B57BBD4E4C12E77B2172B02AAB8C8`.
+The revised native window was directly opened as PID 55860, title
+**Issue #46 - Integrated Perform review**, from
+`out/review-issue46-knobs-corners/perform-knob-corners.exe --review-integrated`.
+Preview SHA-256: `2650674A10E925B1FF94B0BD759D58121B043DE60D9CB308A5B92BE7D70ADCE7`.
+The prior window was already closed; no duplicate review window was opened.
+Task 4.4 remains unchecked pending this revision's native owner acceptance.
