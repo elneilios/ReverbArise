@@ -11,6 +11,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 ## Issue delivery orchestration
 - For requests to deliver, implement, or continue a GitHub issue, use the repository skill [`deliver-issue`](.agents/skills/deliver-issue/SKILL.md). It resolves issue context, reuses existing OpenSpec changes and applies risk-aware verification.
 - The skill orchestrates **vanilla** OpenSpec explore/propose/apply; it does not replace their generated instructions, approval gates or task tracking. Explicit requests for individual OpenSpec operations may use those workflows directly.
+- Follow the specialist [Apply policy](.agents/skills/deliver-issue/references/apply-policy.md) for risk-based verification and task completion. Efficiency advice never waives mandatory OpenSpec instruction refreshes, owner approvals, required tests or final validation gates.
 - Do not change generated OpenSpec skills or `openspec/config.yaml` to customise this delivery workflow.
 
 ## Contribution workflow
@@ -31,7 +32,9 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - Update living technical guidance for implemented changes; preserve dated validation evidence.
 
 ## Token and cost discipline
-- Read selectively: use targeted searches and file sections; do not traverse all archived OpenSpec changes or documentation by default.
-- Keep plans, progress summaries, and tool output concise. Prefer diffs and focused test results over full logs.
-- Implement in reviewable increments; test impacted functionality before widening the test scope.
+- **Bound discovery:** Use targeted searches and file sections. Follow references for concrete dependencies or uncertainty; once affected call paths and acceptance criteria are clear, stop broad scans and record unresolved questions. Avoid wholesale archive or backlog reads.
+- **Reuse warm environments:** Consult existing toolchain guidance and valid caches before probing or downloading. Preserve usable build trees and caches; avoid unexplained cache clearing or repeated cold setup. Respect the build lock described above.
+- **Batch independent reads:** Group bounded read-only searches, status checks and file reads when practical. Keep mutations sequential and check exit codes.
+- **Keep evidence proportionate:** Prefer diffs and focused result summaries over full logs. Record commands, revision, environment, results and limitations once; link to canonical docs and dated evidence elsewhere instead of duplicating narratives.
+- **Report efficiency honestly:** Distinguish warm/cached from cold runs and record skipped checks explicitly. Claim speedups only with comparable measurements; preserve the validation distinctions above.
 - If an unexpected architectural migration or major scope expansion appears necessary, report it before proceeding.
