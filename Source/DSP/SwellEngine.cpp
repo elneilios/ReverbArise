@@ -539,6 +539,13 @@ void SwellEngine::inspect(const PreviewContext& context)
                 ++monitoringGeneration;runtime[w.id].preparedShape=UINT64_MAX;invalidateLiveLocked(w.id);stopLocked();}
         }
     }
+    // Timing can recover without a new capture revision (including after Clear).
+    // Re-admit only matching frozen assets to the existing worker verification;
+    // metadata compatibility alone must never mark their audio Ready.
+    for(auto& w:model.swells)
+        if(w.frozen && w.phase==Phase::stale && w.render.rate==context.time.rate && w.render.bpm==context.time.bpm
+            && w.render.numerator==context.time.numerator && w.render.denominator==context.time.denominator)
+        {w.phase=Phase::checking;w.status="Checking frozen render";}
     if(captureReference==context.capture.reference && captureScope==scope && captureGeneration==context.captureGeneration) return;
     const auto cleared=captureScope.isNotEmpty() && (captureScope!=scope || captureGeneration!=context.captureGeneration);
     acceptedSourceLocked(context.capture.manifest);
@@ -552,8 +559,6 @@ void SwellEngine::inspect(const PreviewContext& context)
                 && auditionDryEnd(w,context.time.rate,model.postRollSeconds,model.isolateDry,dryEnd)
                 && r.monitorRevision!=juce::String(sourceDependency(context.capture.manifest,w.sourceStart,dryEnd))){
                 r.preparedMonitor=UINT64_MAX;++monitoringGeneration;stopLocked();}
-            if(w.phase==Phase::stale && w.render.rate==context.time.rate && w.render.bpm==context.time.bpm
-                && w.render.numerator==context.time.numerator && w.render.denominator==context.time.denominator){w.phase=Phase::checking;w.status="Checking frozen render";}
             continue;}
         if(r.revision!=revision){if(retainedIR.contains(w.id))invalidateLiveLocked(w.id);const auto anchor=runtime.find(model.primary);
             if(anchor!=runtime.end() && std::find(anchor->second.members.begin(),anchor->second.members.end(),w.id)!=anchor->second.members.end()){++monitoringGeneration;stopLocked();}}

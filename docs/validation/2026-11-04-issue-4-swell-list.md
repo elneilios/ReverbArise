@@ -125,6 +125,34 @@ its x64 binary SHA-256 is
 `e64ac48049dc4fca8facf8940f3df4a387ebf1edacd5c11db27df3088ebfbd32`.
 It has not been copied into a host's installed plugin location.
 
+## Authorized frozen-tempo recovery repair
+
+On 4 November 2026 the owner explicitly authorized investigation and repair of
+the adjacent final-suite failure. It is a conformance repair to the existing
+timing-incompatibility/render-freeze contract in `transport-swell-playback`,
+separate from #4's list behavior and from the original checkout's issue #6 work.
+
+The deterministic regression waits until the worker actually marks the frozen
+render stale at 121 BPM, then restores its saved 240 BPM without changing source.
+Before the repair, `preverb_processor_test performance-export` timed out at
+`PerformanceExportCases.h:102`: the unchanged-capture early return prevented
+the existing frozen compatibility/revalidation path from running. Build:
+`out/build-logs/Release/20261104-103506-42b55656/`; focused failure log:
+`out/issue4-fixture/frozen-recovery-before.log`.
+
+The repair moves the same frozen rate/tempo/meter admission check ahead of that
+early return. It schedules the existing worker's asset verification, never sets
+Ready from metadata alone and adds no callback I/O, stretching, source mutation
+or reconvolution. It preserves the saved render/edits and capture reference.
+The regression also deletes the test render and repeats the tempo round trip:
+verification reports Error, live eligibility stays false, and the frozen flag and
+saved reference remain intact. Existing offline missing-asset checks still run.
+
+Post-repair Release build passed through the wrapper
+(`out/build-logs/Release/20261104-103650-fefe84af/`). The deterministic focused
+native test passed in 0.72 s (exit 0), using this worktree's warm outputs, not the
+earlier isolated cached-library fixture. Final full-suite verification follows.
+
 Component event tests dispatch JUCE pointer/keyboard events in a native MSVC
 executable. Software-raster snapshots at multiple scales are not physical DPI
 or FL Studio acceptance. The standalone review owns only synthetic row metadata
