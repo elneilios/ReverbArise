@@ -59,7 +59,7 @@ int main(){return runTest([]
     await([&]{return !engine.snapshot().learnGeneration.generating;});fixture.ready();REQUIRE(engine.savedSession().swells.empty());
     engine.holdLearnRendersForTesting(true);REQUIRE(fixture.generate());
     await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
-    const auto generated=engine.snapshot();REQUIRE(generated.session.swells.size()>=8 && generated.renderCount==0 && generated.initialPerformHandoff);
+    const auto generated=engine.snapshot();REQUIRE(generated.workflowState.mode==workflow::Mode::live && generated.session.swells.size()>=8 && generated.renderCount==0 && generated.initialPerformHandoff);
     REQUIRE(!processor.getWorkflowReadiness().readySwell && processor.getWorkflowReadiness().usefulSource);
     for(const auto& swell:generated.session.swells)REQUIRE(swell.provenance==Provenance::automatic && swell.ir==generated.session.defaultIR && swell.generationSource.isNotEmpty());
     // Identical repeated Generate cannot fabricate success or consume a new handoff.

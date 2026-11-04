@@ -189,3 +189,6 @@ offer a handoff. The offer is consumed once; later wet/raw publications refresh
 content without fitting again, so a newer selection or viewport wins. This is
 editor navigation only and does not seek the DAW, audition or change enablement.
 Existing serialized mode values and navigation ownership remain unchanged.
+The editor reads mode and session from one engine snapshot under the publication
+lock, so a commit between separate reads cannot establish a Perform position
+from pre-commit definitions or consume the new handoff prematurely.

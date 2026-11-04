@@ -94,7 +94,7 @@ int main(int argc,char** argv){return runTest([&]
         late.provenance=Provenance::manualCreated;late.name="Protected later swell";late.enabled=false;
         seed.swells.push_back(late);seed.primary.clear();seed.selected.clear();engine.restore(seed,processor.getCaptureSnapshot().reference);
         editor->refresh(); // Empty selection in a restored Learn session is still eligible.
-        engine.holdLearnRendersForTesting(true);
+        engine.holdLearnRendersForTesting(true);engine.holdLearnGenerationForTesting(!review);
         if(automatic)REQUIRE(engine.setAutoGenerateOnStop(true,engine.assignmentEpoch(),processor.getWorkflowSnapshot().pass));
         fixture.record();auto ready=automatic?engine.snapshot():fixture.ready();editor->refresh();
         if(!automatic)
@@ -114,12 +114,17 @@ int main(int argc,char** argv){return runTest([&]
             if(review){engine.holdLearnRendersForTesting(false);controlReview::run(std::move(editor));return;}
             controlReview::pointerClick(*button);
         }
-        await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
-        const auto committed=engine.snapshot();REQUIRE(committed.initialPerformHandoff && committed.session.swells.size()>2);
+        // Pin preparation so neither fast explicit nor automatic completion can
+        // be consumed by a refresh before the editor-closed assertion begins.
+        await([&]{return engine.learnGenerationWaitingForTesting();});editor.reset();engine.holdLearnGenerationForTesting(false);
+        try{await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});}
+        catch(...){const auto view=engine.snapshot().learnGeneration;std::cerr<<"Initial handoff automatic="<<automatic<<" notice="<<view.notice<<" reason="<<view.reason
+            <<" generating="<<view.generating<<" pass="<<processor.getWorkflowSnapshot().pass<<'\n';throw;}
+        const auto committed=engine.snapshot();REQUIRE(committed.workflowState.mode==workflow::Mode::live && committed.initialPerformHandoff && committed.session.swells.size()>2);
         const auto first=m3::ui::firstChronologicalSwell(committed.session);
         REQUIRE(first!=committed.session.swells.front().id && committed.session.swells.front().id==late.id);
         // Commit with no editor refresh/reopen yet retains the pending handoff.
-        editor.reset();editor=std::make_unique<PreverbAudioProcessorEditor>(processor);editor->setVisible(true);editor->refresh();
+        editor=std::make_unique<PreverbAudioProcessorEditor>(processor);editor->setVisible(true);editor->refresh();
         selected(*editor,engine,first);REQUIRE(!engine.snapshot().initialPerformHandoff);
         REQUIRE(!find(engine.savedSession(),late.id)->enabled && processor.getWorkflowSnapshot().mode==workflow::Mode::live);
         REQUIRE(!fixture.host.position.getIsPlaying());

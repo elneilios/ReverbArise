@@ -51,6 +51,7 @@ std::optional<GenerationConfiguration> SwellEngine::passConfiguration(uint64_t p
 EditorSnapshot SwellEngine::snapshot() const
 {
     const juce::ScopedLock guard(lock); EditorSnapshot s;
+    s.workflowState=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){
         const auto pass=workflowState->snapshot().pass;s.songExport=exportState;
         if(exportState.session!=sessionGeneration.load() || exportState.pass!=pass)s.songExport={ExportPhase::preparing,"Preparing export mix",{}};

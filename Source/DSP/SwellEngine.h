@@ -48,6 +48,7 @@ struct ExportSnapshot
 };
 struct EditorSnapshot
 {
+    workflow::Snapshot workflowState; // Captured under the same model publication lock.
     LearnGenerationView learnGeneration;
     uint64_t initialPerformHandoff=0;
     ExportSnapshot songExport;

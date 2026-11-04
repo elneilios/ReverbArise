@@ -376,7 +376,7 @@ void PreverbAudioProcessorEditor::resized()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
-    const auto mode=processor.getWorkflowSnapshot().mode;
+    const auto mode=state.workflowState.mode;
     if(presentationSession!=state.sessionEpoch)
     {
         presentationSession=state.sessionEpoch;
