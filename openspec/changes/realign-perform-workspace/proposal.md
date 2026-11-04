@@ -48,3 +48,9 @@ Expected areas: `Source/Plugin/PluginEditor.*`, `Source/UI/WorkspaceLayout.h`, `
 Planning baseline: fetched main `33cd54b`, production standards revision 2 (superseding the issue's revision-1 wording). #6 remained separately owned during planning; final integration now uses merged #50 at `9b8e70f`, with the explicit Agent 1 handover and owner merge notice satisfying the shared-file gate. #38's future Generate transition is not implemented here. #5, #9, #25, Pattern policy and new DSP remain separate.
 
 Apply is authorized. The owner approved the actual revision-4 compact composition and latching Snap family on 4 November 2026; scoped layout values live in standards revision 3. Shared Zoom/Fit/ruler PR #49 is approved and merged. Agent 1's explicit handover releases isolated SwellTimeline/SwellViewport work and reserved final PluginEditor/serialization integration until #6 merged. That gate is now satisfied; preserve its schema-10 Export state and envelope 8.
+
+Latest owner steering replaces pop-up tooltips with one plugin-wide bottom hover
+help line, below the musical footer. All control and graph help uses that full
+width at the normal helper font; no graph overlay, small-font exception or popup.
+Existing control help metadata is reused through a generic recursive listener,
+including owned Settings/Diagnostics windows, without changing control actions.

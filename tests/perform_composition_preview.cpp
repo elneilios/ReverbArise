@@ -221,6 +221,7 @@ public:
     void verifyAudition();
     void verifyAuditionStrip();
     void verifyReadability();
+    void verifyHoverHelp();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -371,6 +372,7 @@ private:
 #include "PerformAuditionCases.h"
 #include "PerformAuditionStripCases.h"
 #include "PerformReadabilityCases.h"
+#include "PerformHoverHelpCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -410,7 +412,12 @@ public:
         REQUIRE(directory.createDirectory().wasOk());editor->stopAutomaticRefreshForReview();
         for(int scene=0;scene<3;++scene)
         {fixture->composition.setScene(scene);editor->refresh();editor->setSize(1100,850);const auto snapshot=editor->createComponentSnapshot(editor->getLocalBounds());
-            auto output=directory.getChildFile(juce::String(scene==0?"selected":scene==1?"empty":"dense")+"-1100.png").createOutputStream();REQUIRE(output && juce::PNGImageFormat().writeImageToStream(snapshot,*output));}
+            auto output=directory.getChildFile(juce::String(scene==0?"selected":scene==1?"empty":"dense")+"-1100.png").createOutputStream();REQUIRE(output && juce::PNGImageFormat().writeImageToStream(snapshot,*output));
+            if(scene==0){auto& control=require<controls::LatchingActionButton>(*editor,"performSnap");const auto point=control.getLocalBounds().getCentre().toFloat();const auto now=juce::Time::getCurrentTime();
+                editor->mouseEnter(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&control,&control,now,point,now,0,false));
+                const auto hovered=editor->createComponentSnapshot(editor->getLocalBounds());auto help=directory.getChildFile("hover-help-1100.png").createOutputStream();REQUIRE(help && juce::PNGImageFormat().writeImageToStream(hovered,*help));
+                editor->mouseExit(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),{-100,-100},{},0,0,0,0,0,editor.get(),editor.get(),now,{-100,-100},now,0,false));}
+        }
     }
 private:
     std::unique_ptr<Review> fixture;
@@ -446,6 +453,7 @@ int main(int argc,char** argv)
         if(command=="--test-audition"){content->composition.verifyAudition();std::cout<<"Perform looping audition/toggle/live gain/legacy/stale/status checks passed.\n";return;}
         if(command=="--test-audition-strip"){content->composition.verifyAuditionStrip();std::cout<<"Perform slim audition row/gaps/divider/heading checks passed.";return;}
         if(command=="--test-readability"){content->composition.verifyReadability();std::cout<<"Perform precision/ruler/grouping/mode/footer checks passed.";return;}
+        if(command=="--test-hover-help"){content->composition.verifyHoverHelp();std::cout<<"Perform bottom hover-help routing/lifetime/layout checks passed.";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")

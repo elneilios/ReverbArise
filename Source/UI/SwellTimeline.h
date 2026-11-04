@@ -91,7 +91,7 @@ private:
     bool inlineOverview=true;
     bool editingEnabled=true;
 };
-class SwellOverview final : public juce::Component
+class SwellOverview final : public juce::Component,public juce::SettableTooltipClient
 {
 public:
     explicit SwellOverview(SwellTimeline& value);

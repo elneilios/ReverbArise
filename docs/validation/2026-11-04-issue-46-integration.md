@@ -1,5 +1,10 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Latest owner steering routes all hover help to the normal-font bottom footer:
+[current native checkpoint](2026-11-04-issue-46-hover-footer.md). Floating tooltips
+are removed. OpenSpec remains **19/21** pending 5.4 visual acceptance/adoption
+and 6.2 final host acceptance; previous audio/interaction approvals remain valid.
+
 The [latest Perform clarity checkpoint](2026-11-04-issue-46-perform-clarity.md)
 addresses subsequent owner feedback with shared ruler/mode clarity, grouped
 inspector/exact editing, concise annotations, footer and heading alignment.

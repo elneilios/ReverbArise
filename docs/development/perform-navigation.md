@@ -215,3 +215,10 @@ for approvals and the [integration report](../validation/2026-11-04-issue-46-int
 for final commands/results and separately recorded host/DPI scope. Actual processor
 bindings, Fit and gestures run as `preverb_perform_binding_test`,
 `preverb_perform_fit_test` and `preverb_perform_gesture_test`.
+
+Hover help now reads each control's existing metadata through a recursive editor
+listener and displays it in the normal-font bottom footer, across all three
+workspaces and owned Settings/Diagnostics windows. It has no navigation/model
+callbacks or additional timer. SafePointer lifetime checks clear destroyed or
+hidden sources; moving into the footer retains text for reading. Popup help is
+removed. The revised native presentation is pending owner acceptance under 5.4.

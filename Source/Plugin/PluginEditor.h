@@ -25,6 +25,11 @@ public:
     void resized() override;
     void refresh();
     void modifierKeysChanged(const juce::ModifierKeys&)override;
+    void mouseEnter(const juce::MouseEvent& event)override{updateHoverHelp(event);}
+    void mouseMove(const juce::MouseEvent& event)override{updateHoverHelp(event);}
+    void mouseDrag(const juce::MouseEvent& event)override{updateHoverHelp(event);}
+    void mouseUp(const juce::MouseEvent& event)override{updateHoverHelp(event);}
+    void mouseExit(const juce::MouseEvent&)override;
     // Native review harnesses may own polling after borrowing these components.
     // Normal plugin construction retains its existing automatic refresh.
     void stopAutomaticRefreshForReview() {stopTimer();}
@@ -37,7 +42,10 @@ public:
 private:
     bool slimAuditionReview=false;
     m3::ui::WorkspaceTheme workspaceTheme;
-    juce::TooltipWindow tooltips{this};
+    m3::ui::controls::EllipsisLabel hoverHelp;
+    juce::Component::SafePointer<juce::Component> hoverHelpSource;
+    void updateHoverHelp(const juce::MouseEvent&);
+    void refreshHoverHelp();
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;

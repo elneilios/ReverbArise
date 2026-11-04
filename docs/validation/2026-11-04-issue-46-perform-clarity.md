@@ -1,5 +1,9 @@
 # Issue #46 — Perform clarity checkpoint
 
+The subsequent [bottom hover-help checkpoint](2026-11-04-issue-46-hover-footer.md)
+supersedes this revision's popup tooltip delivery. Earlier six-part refinements
+and the historical test results below remain; task 5.4 still awaits acceptance.
+
 4 November 2026. The owner requested six refinements while preserving three
 columns and the 52-pixel audition strip. This extends pending task 5.4; it does
 not discard previous editing, Snap, knob, reset or audition-audio validation.

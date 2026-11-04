@@ -29,6 +29,7 @@ void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
     {
         settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{});
         settingsWindow->setName("settingsWindow");settingsWindow->setLookAndFeel(&workspaceTheme);
+        settingsWindow->addMouseListener(this,true);
         settingsWindow->centreAroundComponent(this,640,570);
     }
     if(settingsWindow){settingsWindow->setVisible(open);if(open){refresh();settingsWindow->toFront(true);}}
@@ -43,12 +44,14 @@ void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
         diagnosticsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Diagnostics",diagnosticsViewport,1000,650,
             [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;});
         diagnosticsWindow->setName("diagnosticsWindow");diagnosticsWindow->setLookAndFeel(&workspaceTheme);
+        diagnosticsWindow->addMouseListener(this,true);
         diagnosticsWindow->centreAroundComponent(this,1000,650);
     }
     if(diagnosticsWindow){diagnosticsWindow->setVisible(open);if(open){refresh();diagnosticsWindow->toFront(true);}}
 }
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
+    settingsTabs.getProperties().set("contextHelp","Choose a settings tab. These settings apply to this plugin instance.");
     settingsTabs.setName("settingsTabs");settingsTabs.setTabBarDepth(36);
     settingsTabs.setColour(juce::TabbedComponent::backgroundColourId,m3::ui::background);
     settingsTabs.setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack);

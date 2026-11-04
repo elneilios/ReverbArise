@@ -180,7 +180,7 @@ Perform SHALL retain valid view, requested Snap state and grid across editor reo
 
 ### Requirement: Perform presentation supports precise musical inspection
 Perform SHALL retain its three columns while presenting a shared musical ruler
-aligned to both editable lanes, concise lane labels with explanatory tooltips,
+aligned to both editable lanes, concise lane labels with explanatory bottom context help,
 full Source labels, grouped timing/envelope/level controls and a readable musical
 footer. Preview metrics SHALL receive native owner acceptance before rollout.
 Compact values SHALL NOT reduce stored precision or change exact typed editing.
@@ -195,3 +195,18 @@ Overview and Audition headings SHALL share their role and text-box margin policy
 - **WHEN** a compact value receives focus and Return without a user change
 - **THEN** its full edit precision is exposed without mutating state, jobs or durable source/render identities
 - **AND** explicit typed values retain existing canonical validation and precision while musical display rounding carries across beat/bar boundaries correctly
+
+
+### Requirement: Hover context uses the plugin bottom footer
+All control and graph hover help SHALL appear in one full-width bottom row below
+the position readout, using normal helper typography, without popup tooltips or a
+graph overlay. Existing help metadata and control behavior SHALL be reused.
+
+#### Scenario: Hover any control or graph region
+- **WHEN** the pointer enters a control, nested value field, graph region or owned Settings/Diagnostics control
+- **THEN** the footer shows its help in normal-sized text without resizing or covering the work area, intercepting input, mutating state or scheduling audio work
+- **AND** leaving clears help, reading the footer retains it, dynamic control state updates its text and destroyed sources cannot leave unsafe callbacks
+
+#### Scenario: Change workspace or resize
+- **WHEN** Learn, Perform or Export is shown at a supported size
+- **THEN** the shared help footer remains visible at the plugin bottom and contained clear of workspace content and the position readout

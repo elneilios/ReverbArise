@@ -369,3 +369,24 @@ musical readouts, shared ruler alignment through zoom/pan/resize, all controls a
 reset reachability at 1100x850, heading insets and source/render/state identities.
 The actual refined native preview is the owner checkpoint; broader waveform,
 Export, Learn generation and DSP/cache work stay out of scope.
+
+### Bottom context help — supersedes popup help proposal
+
+The owner found tooltip popups intrusive and explicitly placed all hover help at
+the very bottom of the plugin, below the position readout, with full width and
+normal-sized text. Use existing EllipsisLabel/helper role (Inter Regular 14,
+20-pixel line), with no new role, small-font exception, raised panel or overlay.
+The row uses the existing bottom margin and the unused edge of the position band;
+main Perform graph/52-pixel strip geometry is unchanged. At minimum inset, the
+position row loses four blank pixels; Learn/Export body bounds stop above the
+shared footer (at most four pixels less available height), with no domain changes.
+
+Remove the TooltipWindow popup host. A recursive editor mouse listener reads the
+nearest control's existing TooltipClient/contextHelp metadata, with interactive
+name/title fallback; collapse line breaks into one line. Register owned Settings
+and Diagnostics windows too. Keep a SafePointer to the hovered source so refresh
+updates dynamic help and safely clears destroyed/hidden controls. Clear on exit,
+retain while reading the footer, never intercept graph/control pointer input and
+never publish model changes from hover. Standard font proportions and ellipsis
+handle long messages. Existing actionable gesture/status warnings remain visible.
+The native review remains the acceptance gate for this revised presentation.

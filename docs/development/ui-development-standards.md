@@ -1,5 +1,17 @@
 # UI development standards
 
+## Context help delivery — issue #46 review
+
+The editor routes existing `TooltipClient` or explicit `contextHelp` metadata
+from hovered controls and graph regions into one bottom `EllipsisLabel`, using
+the established helper text role and feedback height. Nested children inherit
+the nearest available message; owned Settings/Diagnostics windows participate.
+Keep help metadata on the control, with workspace-specific explanatory prose;
+do not introduce popup tooltip hosts or draw hover text over waveform content.
+Interactive title/name is only a fallback. Full text is also the footer's
+accessible description. Hover must not publish state, rebuild layouts or start
+jobs. The actual native presentation remains subject to owner review.
+
 Use these standards when implementing or refactoring ReverbArise UI. Consolidate
 controls as the planned work touches them; a separate whole-plugin migration is
 not required before the Learn / Perform / Export work can proceed. Existing UI

@@ -62,9 +62,18 @@ established Inter SemiBold section-heading role. See the
 The subsequent [Perform clarity checkpoint](../validation/2026-11-04-issue-46-perform-clarity.md)
 preserves that 52-pixel preview strip and three columns, while making audition
 mode explicit, composing the shared ruler, grouping the inspector, shortening
-annotations into tooltips and aligning footer/headings. Its metric/compact-value
+annotations into context help and aligning footer/headings. Its metric/compact-value
 profile remains review-only pending actual visual approval; existing roles and
 tokens are reused without a new visual exception.
+
+The owner's subsequent hover-help revision replaces floating tooltips with one
+shared bottom footer below the musical position. All existing control and graph
+help, including nested fields and owned Settings/Diagnostics controls, routes
+there at the normal Inter Regular 14 helper role. The existing 20-pixel feedback
+height and bottom margin contain it without a graph overlay. Long messages
+ellipsize without shrinking; full text remains in the accessible description.
+Hovering changes no musical, navigation or saved state. See the
+[bottom-help checkpoint](../validation/2026-11-04-issue-46-hover-footer.md).
 
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).

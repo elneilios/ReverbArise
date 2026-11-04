@@ -16,7 +16,7 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
     waveZoom.setTextBoxStyle(juce::Slider::TextBoxRight,false,60,20);waveZoom.setTextValueSuffix(" dB");
     waveZoom.setDoubleClickReturnValue(true,0);waveZoom.setTooltip("Display zoom for both source and audible wet. Does not change audio gain. Double-click to reset.");
     waveZoom.onValueChange=[this]{repaint();};addAndMakeVisible(waveZoom);
-    waveZoomLabel.setText("Height",juce::dontSendNotification);ui::applyTextRole(waveZoomLabel,ui::TextRole::controlLabel);addAndMakeVisible(waveZoomLabel);
+    waveZoomLabel.setTooltip(waveZoom.getTooltip());waveZoomLabel.setText("Height",juce::dontSendNotification);ui::applyTextRole(waveZoomLabel,ui::TextRole::controlLabel);addAndMakeVisible(waveZoomLabel);
 }
 void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available)
 {
@@ -473,6 +473,7 @@ void SwellTimeline::navigateOverview(double fraction)
 {if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();}
 SwellOverview::SwellOverview(SwellTimeline& value):timeline(value)
 {
+    setTooltip("Click the overview to navigate the waveform view without moving the DAW playhead.");
     setName("songOverview");addAndMakeVisible(heading);heading.setName("overviewHeading");heading.setText("Overview",juce::dontSendNotification);
     ui::applyTextRole(heading,ui::TextRole::sectionHeading);heading.setInterceptsMouseClicks(false,false);
 }
