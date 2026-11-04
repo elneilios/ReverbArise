@@ -71,6 +71,12 @@ public:
         }
         return best;
     }
+    std::optional<int64_t> adjacent(int64_t candidate,int direction)const noexcept
+    {
+        if(direction==1 && candidate<INT64_MAX)return snapWithin(candidate+1,candidate+1,INT64_MAX);
+        if(direction==-1 && candidate>INT64_MIN)return snapWithin(candidate-1,INT64_MIN,candidate-1);
+        return {};
+    }
 private:
     std::optional<int64_t> sampleAt(long double index)const noexcept
     {

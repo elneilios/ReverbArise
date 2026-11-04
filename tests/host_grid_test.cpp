@@ -32,6 +32,8 @@ int main()
                 }
                 CHECK(grid->snap(1000+intervals[n]/2)==1000+intervals[n]);
                 CHECK(grid->snap(1000-intervals[n]/2)==1000-intervals[n]);
+                CHECK(grid->adjacent(1000,1)==1000+intervals[n] && grid->adjacent(1000,-1)==1000-intervals[n]);
+                CHECK(grid->adjacent(1001,-1)==1000 && grid->adjacent(999,1)==1000);
                 for(const auto domain:{std::pair<int64_t,int64_t>{-12345,23456},{100,500},{-500,-100},{1000,1000}})
                     for(int64_t candidate=-40000;candidate<40000;candidate+=997)
                     {
@@ -88,6 +90,7 @@ int main()
         CHECK(grid->snap(0)==0);
         CHECK(grid->snapWithin(1,1,1)==1 && grid->snapWithin(0,0,0)==0);
         CHECK(!grid->snapWithin(INT64_MAX,INT64_MAX,INT64_MAX));
+        CHECK(grid->adjacent(1,1)==2 && grid->adjacent(1,-1)==0 && !grid->adjacent(INT64_MAX,1));
         std::cout<<"Host grid integer-oracle/meter/tie/mapping/overflow checks passed.\n";
         return 0;
     }

@@ -12,8 +12,9 @@ static void swellListCaptureCases(bool review=false)
     const auto listFor=[](PreverbAudioProcessorEditor& e)
     {auto* list=dynamic_cast<m3::ui::controls::SwellList*>(named(e,"swellList"));REQUIRE(list);return list;};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
-    const auto pass=[&](int64_t start,int loops,float amplitude)
+    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells)
     {
+        const auto previousAnalysis=engine.snapshot().analysisCount;
         REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));head.position.setIsPlaying(true);
         for(int repeat=0;repeat<loops;++repeat)for(int local=0;local<48000;local+=4096)
         {
@@ -23,21 +24,23 @@ static void swellListCaptureCases(bool review=false)
             head.position.setTimeInSamples(start+local);head.position.setPpqPosition((start+local)/24000.0);p->processBlock(buffer,midi);
         }
         finishCaptureFixture(*p,head.position);
-        waitUI([&]{const auto s=engine.snapshot();return !s.session.swells.empty() && !s.analyzing && s.pendingIntervals==0
+        // The previous pass can already be ready before the engine observes the
+        // newly committed source. Wait for this pass, not that old idle snapshot.
+        waitUI([&]{const auto s=engine.snapshot();return s.analysisCount>previousAnalysis && s.session.swells.size()==expectedSwells && !s.analyzing && s.pendingIntervals==0
             && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         editor->refresh();
     };
-    pass(192000,1,.3f);REQUIRE(engine.savedSession().swells.size()==1);const auto late=engine.savedSession().swells.front().id;
+    pass(192000,1,.3f,1);REQUIRE(engine.savedSession().swells.size()==1);const auto late=engine.savedSession().swells.front().id;
     REQUIRE(engine.edit(late,[](auto& w,auto&){w.name="AAA later section";w.enabled=false;w.muted=true;w.solo=true;w.shape.gainDb=-7;return true;}));
     REQUIRE(engine.setFrozen(late,true));const auto protectedLate=*m3::find(engine.savedSession(),late);
-    pass(0,2,.3f);const auto learned=engine.savedSession();REQUIRE(learned.swells.size()==2 && learned.swells.front().id==late);
+    pass(0,2,.3f,2);const auto learned=engine.savedSession();REQUIRE(learned.swells.size()==2 && learned.swells.front().id==late);
     const auto early=learned.swells.back().id;REQUIRE(m3::find(learned,early)->arrival<48000);
     REQUIRE(engine.edit(early,[](auto& w,auto&){w.name="ZZZ earlier section";return true;}));editor->refresh();
     auto* list=listFor(*editor);REQUIRE(list->rowAt(0)->id==early && list->rowAt(1)->id==late);
     REQUIRE(m3::sameSavedSwell(protectedLate,*m3::find(engine.savedSession(),late)));
     const auto capture=p->getCaptureSnapshot();REQUIRE(capture.manifest.ranges.size()>=2);
     REQUIRE(std::none_of(capture.manifest.ranges.begin(),capture.manifest.ranges.end(),[](const auto& r){return r.startSample>48000 && r.startSample<192000;}));
-    armCaptureFixture(*p);pass(0,1,.2f);editor->refresh();
+    armCaptureFixture(*p);pass(0,1,.2f,2);editor->refresh();
     REQUIRE(list->rowAt(0)->id==early && list->rowAt(1)->id==late);
     REQUIRE(m3::sameSavedSwell(protectedLate,*m3::find(engine.savedSession(),late)));
 

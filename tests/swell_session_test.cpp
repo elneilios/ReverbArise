@@ -2,6 +2,7 @@
 #include <Core/SwellSession.h>
 #include <limits>
 using namespace m3;
+#include "PerformNavigationStateCases.h"
 int main() { return runTest([]
 {
     Session s; CaptureManifest map; juce::String error;
@@ -68,7 +69,7 @@ int main() { return runTest([]
     shape.gainDb=std::numeric_limits<float>::infinity(); REQUIRE(! setShape(w,shape,-100,40,error));
     w.render={}; s.auditionDb=-24; s.autoRegenerate=true; s.sensitivity=0.7f; s.separationSeconds=0.12;
     shape.gainDb=-3;REQUIRE(setShape(w,shape,-100,40,error));
-    juce::String json; REQUIRE(encode(s,json,error)); Session restored;
+    juce::String json; REQUIRE(encode(s,json,error)); Session restored;performNavigationStateCases(s);
     REQUIRE(decode(json,restored,error));
     REQUIRE(restored.swells.size()==3 && restored.swells[0].name=="Edited" && restored.primary==first);
     REQUIRE(restored.auditionDb==-24 && restored.autoRegenerate && !restored.swells[0].shape.automaticStart);

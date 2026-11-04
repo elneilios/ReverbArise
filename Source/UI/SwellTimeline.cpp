@@ -13,10 +13,57 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
     waveZoom.setTextBoxStyle(juce::Slider::TextBoxRight,false,60,20);waveZoom.setTextValueSuffix(" dB");
     waveZoom.setDoubleClickReturnValue(true,0);waveZoom.setTooltip("Display zoom for both source and audible wet. Does not change audio gain. Double-click to reset.");
     waveZoom.onValueChange=[this]{repaint();};addAndMakeVisible(waveZoom);
-    waveZoomLabel.setText("Wave zoom",juce::dontSendNotification);waveZoomLabel.setColour(juce::Label::textColourId,ui::secondary);addAndMakeVisible(waveZoomLabel);
+    waveZoomLabel.setText("Height",juce::dontSendNotification);ui::applyTextRole(waveZoomLabel,ui::TextRole::controlLabel);addAndMakeVisible(waveZoomLabel);
 }
 void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available)
-{capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();}
+{
+    if(drag!=Drag::none && drag!=Drag::overview)
+    {
+        const bool wetDrag=drag!=Drag::arrival && drag!=Drag::sourceStart && drag!=Drag::sourceEnd;
+        const auto owner=find(s.session,dragId);
+        const bool timingChanged=t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
+            || s.session.timing.valid!=dragAcceptedTime.valid || (s.session.timing.valid && !transportMappingMatches(dragAcceptedTime,s.session.timing));
+        if(s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
+            || available!=dragSampleAvailable || (wetDrag && (owner->inputGeneration!=dragInput || owner->render.content!=dragRender
+                || !s.raw || !dragRaw || s.raw->start!=dragRaw->start || s.raw->end!=dragRaw->end)))
+        {drag=Drag::none;gestureMessage("Gesture cancelled: selection, source, mode or fixed timing changed");}
+    }
+    capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;
+    scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();
+}
+void SwellTimeline::setSnap(bool enabled){if(enabled!=snapEnabled){snapEnabled=enabled;rebaseDrag();}}
+void SwellTimeline::setGridDivision(GridDivision division)
+{
+    if(division==gridDivision || !std::any_of(gridChoices.begin(),gridChoices.end(),[&](const auto& c){return c.division==division;}))return;
+    gridDivision=division;if(drag!=Drag::none){drag=Drag::none;gestureMessage("Grid changed; start a new gesture");}
+}
+void SwellTimeline::setGestureModifiers(bool fine,bool bypassed)
+{if(fineDrag!=fine || snapBypassed!=bypassed){rebaseDrag();fineDrag=fine;snapBypassed=bypassed;}}
+void SwellTimeline::rebaseDrag()
+{
+    if(drag==Drag::none || drag==Drag::overview)return;
+    const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return;}
+    dragOrigin=lastPointer;initialEnvelope=w->shape;initialPlacement=w->placement;
+    initialTension=drag==Drag::inTension?w->shape.inTension:w->shape.outTension;
+    if(drag==Drag::arrival)initialSample=w->arrival;
+    else if(drag==Drag::sourceStart)initialSample=w->sourceStart;
+    else if(drag==Drag::sourceEnd)initialSample=w->sourceEnd;
+    else if(dragRaw)
+    {
+        int64_t a,b;if(!requestedShapeBounds(*w,dragRaw->start,a,b)){drag=Drag::none;return;}
+        initialSample=drag==Drag::audibleEnd?b:drag==Drag::fadeIn?a+std::min(w->shape.fadeIn,b-a-1)
+            :drag==Drag::fadeOut?(w->shape.fadeOut==0?b:b-1-std::min(w->shape.fadeOut,b-a-1)):a;
+    }
+}
+bool SwellTimeline::prepareDrag(juce::Point<float> point)
+{
+    if(data.sessionEpoch!=engine.assignmentEpoch()){drag=Drag::none;gestureMessage("Session changed; start a new gesture");return false;}
+    const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return false;}
+    dragEpoch=data.sessionEpoch;dragSelection=data.session.selected;dragTime=time;dragAcceptedTime=data.session.timing;
+    dragRaw=data.raw;dragInput=w->inputGeneration;dragRender=w->render.content;dragSampleAvailable=playheadAvailable;dragFrozen=w->frozen;
+    dragGrid=playheadAvailable?HostGrid::make(dragAcceptedTime,dragTime,capture.manifest.sampleRate,gridDivision):std::optional<HostGrid>{};
+    dragView=view;lastPointer=point;rebaseDrag();gestureMessage({});return drag!=Drag::none;
+}
 std::pair<double,double> SwellTimeline::globalBounds() const
 {
     double a=std::numeric_limits<double>::infinity(),b=-a;
@@ -61,10 +108,10 @@ double SwellTimeline::zoomFraction()const
 void SwellTimeline::setZoomFraction(double fraction)
 {
     if(!std::isfinite(fraction))return;
-    if(fraction<=0){view=navigationBounds();updateScroll();repaint();return;}
+    if(fraction<=0){view=navigationBounds();navigationChanged();return;}
     const auto maximum=navigationBounds().span(),minimum=minimumViewSpan();
     const auto wanted=maximum*std::pow(minimum/maximum,std::clamp(fraction,0.,1.));
-    view.zoomBounded(wanted/view.span(),navigationAnchor(),navigationBounds(),minimum);updateScroll();repaint();
+    view.zoomBounded(wanted/view.span(),navigationAnchor(),navigationBounds(),minimum);navigationChanged();
 }
 void SwellTimeline::updateScroll()
 {
@@ -73,26 +120,38 @@ void SwellTimeline::updateScroll()
     scrollbar.setCurrentRange(view.first,view.span(),juce::dontSendNotification);updatingScroll=false;
 }
 void SwellTimeline::scrollBarMoved(juce::ScrollBar*,double start)
-{if(updatingScroll)return;const auto size=view.span();view.first=start;view.last=start+size;repaint();}
+{if(updatingScroll)return;const auto size=view.span();view.first=start;view.last=start+size;constrainNavigation();navigationChanged();}
 void SwellTimeline::fitSelection()
 {
-    if(data.raw)
+    if(const auto selected=find(data.session,data.session.primary))
     {
-        auto a=data.raw->start,b=data.raw->end;
-        if(const auto w=find(data.session,data.session.primary)){checkedAdd(a,w->placement,a);checkedAdd(b,w->placement,b);}
-        if(const auto w=find(data.session,data.session.primary)){int64_t requestedA,requestedB;
-            if(requestedShapeBounds(*w,data.raw->start,requestedA,requestedB)){a=std::min(a,requestedA);b=std::max(b,requestedB);}}
-        view.fit(static_cast<double>(a),static_cast<double>(b));
+        double a=static_cast<double>(selected->sourceStart),b=static_cast<double>(selected->sourceEnd);
+        const auto wetBounds=[&](const Swell& w)
+        {
+            double first=static_cast<double>(w.arrival)+w.placement,last=first+1;
+            if(w.render.present()){first=static_cast<double>(w.render.start)+w.placement;last=first+w.render.frames;}
+            int64_t requestedA,requestedB;
+            const auto rawStart=w.id==selected->id && data.raw?data.raw->start:w.render.present()?w.render.start:w.sourceStart;
+            if(requestedShapeBounds(w,rawStart,requestedA,requestedB)){first=std::min(first,static_cast<double>(requestedA));last=std::max(last,static_cast<double>(requestedB));}
+            return std::pair{first,last};
+        };
+        const auto [first,last]=wetBounds(*selected);a=std::min(a,first);b=std::max(b,last);
+        const auto contextFirst=a,contextLast=b;
+        for(const auto& other:data.session.swells)if(other.id!=selected->id)
+        {const auto [left,right]=wetBounds(other);if(left<contextLast && right>contextFirst){a=std::min(a,left);b=std::max(b,right);}}
+        view.fit(a,b);
     }
-    else if(const auto w=find(data.session,data.session.primary)) view.fit(static_cast<double>(w->sourceStart),static_cast<double>(w->sourceEnd));
-    else {const auto [a,b]=globalBounds();view.fit(a,b);}updateScroll();repaint();
+    else if(!capture.manifest.ranges.empty())
+    {const auto& first=capture.manifest.ranges.front();const auto& last=capture.manifest.ranges.back();view.fit(static_cast<double>(first.startSample),static_cast<double>(last.startSample)+last.frameCount);}
+    else {const auto [a,b]=globalBounds();view.fit(a,b);}constrainNavigation();navigationChanged();
 }
-void SwellTimeline::page(int bars){view.page(bars,time);constrainNavigation();updateScroll();repaint();}
-void SwellTimeline::previous(){view.shift(-1);constrainNavigation();updateScroll();repaint();}
-void SwellTimeline::next(){view.shift(1);constrainNavigation();updateScroll();repaint();}
-void SwellTimeline::zoom(double factor){view.zoomBounded(factor,navigationAnchor(),navigationBounds(),minimumViewSpan());updateScroll();repaint();}
+void SwellTimeline::page(int bars){view.page(bars,time);constrainNavigation();navigationChanged();}
+void SwellTimeline::previous(){view.shift(-1);constrainNavigation();navigationChanged();}
+void SwellTimeline::next(){view.shift(1);constrainNavigation();navigationChanged();}
+void SwellTimeline::zoom(double factor){view.zoomBounded(factor,navigationAnchor(),navigationBounds(),minimumViewSpan());navigationChanged();}
 void SwellTimeline::resized()
 {
+    drag=Drag::none;
     auto area=getLocalBounds().toFloat().reduced(2);scrollbar.setBounds(area.removeFromBottom(16).toNearestInt());area.removeFromBottom(4);
     if(inlineOverview){overview=area.removeFromBottom(80);area.removeFromBottom(24);}
     else overview={-10000,-10000,0,0};
@@ -223,7 +282,8 @@ void SwellTimeline::paint(juce::Graphics& g)
             const auto handle=juce::Rectangle<float>(12,12).withCentre({at,source.getBottom()-9});
             g.setColour(ui::background);g.fillEllipse(handle);g.setColour(ui::secondary);g.drawEllipse(handle,1.5f);
         }
-        if(sourceHover.isNotEmpty()){g.setColour(ui::text);g.drawText(sourceHover,source.reduced(8).withHeight(20).translated(0,22),juce::Justification::left);}
+        const auto hint=gestureStatus.isNotEmpty()?gestureStatus:effectiveSnap() && !gridAvailable()?juce::String("Snap unavailable: fixed timing required; hold Ctrl or turn Snap off"):sourceHover;
+        if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
         if(data.raw)
         {
             int64_t a,b;juce::String error;
@@ -293,10 +353,7 @@ bool SwellTimeline::beginDrag(juce::Point<float> point)
         {
             if(const auto hit=hitEnvelope(grabPoints(),point))
             {
-                hover=hit;dragOrigin=point;initialFade=*hit==EnvelopePoint::fadeIn?w->shape.fadeIn:w->shape.fadeOut;initialTension=*hit==EnvelopePoint::inTension?w->shape.inTension:w->shape.outTension;
-                int64_t a,b;if(!requestedShapeBounds(*w,data.raw->start,a,b))return false;
-                initialSample=*hit==EnvelopePoint::start?a:b;
-                initialEnvelope=w->shape;
+                hover=hit;
                 switch(*hit){case EnvelopePoint::start:drag=Drag::audibleStart;break;case EnvelopePoint::end:drag=Drag::audibleEnd;break;
                     case EnvelopePoint::fadeIn:drag=Drag::fadeIn;break;case EnvelopePoint::fadeOut:drag=Drag::fadeOut;break;
                     case EnvelopePoint::inTension:drag=Drag::inTension;break;case EnvelopePoint::outTension:drag=Drag::outTension;break;}
@@ -304,13 +361,13 @@ bool SwellTimeline::beginDrag(juce::Point<float> point)
         }
         if(drag==Drag::none && wet.contains(point) && data.raw)
         {int64_t a,b;if(requestedShapeBounds(*w,data.raw->start,a,b) && point.x>=x(a) && point.x<=x(b))
-            {drag=Drag::move;dragOrigin=point;initialPlacement=w->placement;hover.reset();}}
-        if(drag!=Drag::none)return true;
+            {drag=Drag::move;hover.reset();}}
+        if(drag!=Drag::none)return prepareDrag(point);
     }
     if(source.contains(point))
     {
         for(const auto& w:data.session.swells)if(std::abs(point.x-x(w.arrival))<7)
-        {engine.selectTargets({w.id},w.id);dragId=w.id;drag=Drag::arrival;return true;}
+        {if(!engine.selectTargets({w.id},w.id,data.sessionEpoch))return false;dragId=w.id;drag=Drag::arrival;data.session=engine.savedSession();return prepareDrag(point);}
         for(size_t i=0;i<data.candidates.size();++i)if(std::abs(point.x-x(data.candidates[i].sample))<7)
         {if(onCandidateSelected)onCandidateSelected(static_cast<int>(i));return true;}
     }
@@ -319,40 +376,75 @@ bool SwellTimeline::beginDrag(juce::Point<float> point)
 void SwellTimeline::dragTo(juce::Point<float> point)
 {
     if(drag==Drag::overview)
-    {const auto [a,b]=globalBounds();const auto at=a+std::clamp((point.x-overview.getX())/overview.getWidth(),0.0f,1.0f)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();updateScroll();repaint();return;}
+    {const auto [a,b]=globalBounds();const auto at=a+std::clamp((point.x-overview.getX())/overview.getWidth(),0.0f,1.0f)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();return;}
     if(drag==Drag::none)return;
-    const auto editPoint=fineDrag?dragOrigin+(point-dragOrigin)*.1f:point;
-    const auto coarse=drag==Drag::arrival || drag==Drag::sourceStart || drag==Drag::sourceEnd;
-    const auto sample=view.snap(view.sample(editPoint.x,source.getX(),source.getWidth()),time,coarse && snapEnabled);
-    const auto raw=data.raw;const auto kind=drag;
-    engine.edit(dragId,[&](Swell& w,juce::String& error)
+    if(!std::isfinite(point.x) || !std::isfinite(point.y) || source.getWidth()<=0 || point==lastPointer)return;
+    lastPointer=point;const auto kind=drag;const bool vertical=kind==Drag::inTension || kind==Drag::outTension;
+    const auto snapping=effectiveSnap() && !vertical;
+    if(snapping && !dragGrid){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}
+    const auto delta=static_cast<long double>(point.x-dragOrigin.x)*dragView.span()/source.getWidth()*(fineDrag?.1L:1.L);
+    const auto candidate=static_cast<long double>(initialSample)+std::round(delta);
+    if(!vertical && (!std::isfinite(candidate) || candidate< -9223372036854775808.L || candidate>=9223372036854775808.L))
+    {gestureMessage("Timing candidate overflow");return;}
+    const auto requested=vertical?int64_t{0}:static_cast<int64_t>(candidate);
+    const auto raw=dragRaw;juce::String failure;bool stale=false,invoked=false;
+    const auto changed=engine.edit(dragId,[&](Swell& w,juce::String& error)
     {
-        if(kind==Drag::arrival)return moveArrival(w,sample,error);
-        if(kind==Drag::sourceStart)return setSource(w,std::min(sample,w.arrival),w.sourceEnd,error);
-        if(kind==Drag::sourceEnd){int64_t minimum;if(!checkedAdd(w.arrival,1,minimum))return false;return setSource(w,w.sourceStart,std::max(sample,minimum),error);}
-        if(kind==Drag::move){const auto delta=static_cast<long double>(editPoint.x-dragOrigin.x)*view.span()/source.getWidth();
-            const auto moved=static_cast<long double>(initialPlacement)+std::round(delta);
-            if(!std::isfinite(moved) || moved< -9223372036854775808.0L || moved>=9223372036854775808.0L){error="Wet placement overflow";return false;}return moveWet(w,static_cast<int64_t>(moved),error);}
+        invoked=true;
+        // edit(expected epoch) owns the engine's recursive UI lock. Recheck the
+        // current selection inside that same transaction, including secondary IDs.
+        const auto current=engine.savedSession();
+        if(current.primary!=dragId || current.selected!=dragSelection){stale=true;error=failure="Selection changed; start a new gesture";return false;}
+        const auto quantize=[&](int64_t at,int64_t lower,int64_t upper)->std::optional<int64_t>
+        {
+            if(lower>upper)return {};
+            return snapping?dragGrid->snapWithin(at,lower,upper):std::optional<int64_t>{std::clamp(at,lower,upper)};
+        };
+        const auto checkedCandidate=[&](int64_t lower,int64_t upper){auto value=quantize(requested,lower,upper);if(!value)error=failure="No valid grid point within this handle's timing bounds";return value;};
+        if(kind==Drag::arrival){const auto at=checkedCandidate(INT64_MIN,INT64_MAX);return at && moveArrival(w,*at,error);}
+        if(kind==Drag::sourceStart){const auto at=checkedCandidate(INT64_MIN,w.arrival);return at && setSource(w,*at,w.sourceEnd,error);}
+        if(kind==Drag::sourceEnd){int64_t minimum;if(!checkedAdd(w.arrival,1,minimum))return false;const auto at=checkedCandidate(minimum,INT64_MAX);return at && setSource(w,w.sourceStart,*at,error);}
+        if(kind==Drag::move)
+        {
+            const auto at=checkedCandidate(INT64_MIN,INT64_MAX);int64_t offset,placement;
+            if(!at || !checkedSubtract(*at,initialSample,offset) || !checkedAdd(initialPlacement,offset,placement))return false;
+            return moveWet(w,placement,error);
+        }
         if(!raw)return false;auto shape=w.shape;int64_t a,b;
         if(!requestedShapeBounds(w,raw->start,a,b))return false;
         int64_t positionedStart;if(!checkedAdd(raw->start,w.placement,positionedStart))return false;
         const auto toOffset=[&](int64_t at,int64_t& out){int64_t logical;return checkedSubtract(at,w.placement,logical) && checkedSubtract(logical,w.arrival,out);};
-        if(kind==Drag::audibleStart || kind==Drag::audibleEnd){
+        if(kind==Drag::audibleStart || kind==Drag::audibleEnd)
+        {
             shape=initialEnvelope;
-            const auto moved=static_cast<long double>(initialSample)+std::round(static_cast<long double>(editPoint.x-dragOrigin.x)*view.span()/source.getWidth());
-            if(!std::isfinite(moved) || moved< -9223372036854775808.0L || moved>=9223372036854775808.0L){error="Wet endpoint overflow";return false;}
-            const auto endpoint=static_cast<int64_t>(moved);
-            if(kind==Drag::audibleStart){if(positionedStart>=b){error="Wet start has no valid support before its end";return false;}shape.automaticStart=false;if(!toOffset(std::clamp(endpoint,positionedStart,b-1),shape.startOffset))return false;}
-            else if(!toOffset(std::max(endpoint,a+1),shape.endOffset))return false;
+            const auto at=kind==Drag::audibleStart?checkedCandidate(positionedStart,b-1):checkedCandidate(a+1,INT64_MAX);
+            if(!at)return false;
+            if(kind==Drag::audibleStart){shape.automaticStart=false;if(!toOffset(*at,shape.startOffset))return false;}
+            else if(!toOffset(*at,shape.endOffset))return false;
         }
-        const auto durationDelta=static_cast<long double>(editPoint.x-dragOrigin.x)*view.span()/source.getWidth();
-        if(kind==Drag::fadeIn || kind==Drag::fadeOut){const auto duration=std::clamp(static_cast<long double>(initialFade)+(kind==Drag::fadeIn?durationDelta:-durationDelta),0.0L,static_cast<long double>(b)-a-1);
-            if(kind==Drag::fadeIn)shape.fadeIn=static_cast<int64_t>(std::llround(duration));else shape.fadeOut=static_cast<int64_t>(std::llround(duration));}
-
-        if(kind==Drag::inTension)shape.inTension=std::clamp(initialTension+(editPoint.y-dragOrigin.y)/80.0,-1.0,1.0);
-        if(kind==Drag::outTension)shape.outTension=std::clamp(initialTension+(editPoint.y-dragOrigin.y)/80.0,-1.0,1.0);
+        if(kind==Drag::fadeIn){const auto at=checkedCandidate(a,b-1);if(!at || !checkedSubtract(*at,a,shape.fadeIn))return false;}
+        if(kind==Drag::fadeOut)
+        {
+            auto at=quantize(requested,a,b);
+            if(snapping)
+            {
+                const auto positive=b-a>1?quantize(requested,a,b-2):std::optional<int64_t>{};
+                const auto zero=quantize(b,b,b);at=positive;
+                long double origin=0;songOrigin(dragAcceptedTime,origin);
+                if(zero && (!at || std::abs(static_cast<long double>(*zero)-requested)<std::abs(static_cast<long double>(*at)-requested)
+                    || (std::abs(static_cast<long double>(*zero)-requested)==std::abs(static_cast<long double>(*at)-requested)
+                        && std::abs(*zero-origin)>std::abs(*at-origin))))at=zero;
+            }
+            if(!at){error=failure="No valid fade-out grid point";return false;}
+            shape.fadeOut=*at>=b-1?0:b-1-*at;
+        }
+        const auto verticalDelta=(point.y-dragOrigin.y)*(fineDrag?.1:1.);
+        if(kind==Drag::inTension)shape.inTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
+        if(kind==Drag::outTension)shape.outTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         return setShape(w,shape,raw->start,raw->end,error);
-    });
+    },dragEpoch);
+    if(!changed){if(!invoked || stale || engine.assignmentEpoch()!=dragEpoch)drag=Drag::none;gestureMessage(failure.isNotEmpty()?failure:"Edit rejected by current source/session/mode guard");return;}
+    gestureMessage({});
     // Canonical metadata only: no waveform preparation or FFT on the message thread.
     data.session=engine.savedSession();repaint();if(onEnvelopeEdited)onEnvelopeEdited();
 }
@@ -374,26 +466,39 @@ void SwellTimeline::mouseMove(const juce::MouseEvent& e)
 bool SwellTimeline::keyPressed(const juce::KeyPress& key)
 {
     if(key.getKeyCode()!=juce::KeyPress::leftKey && key.getKeyCode()!=juce::KeyPress::rightKey)return false;
+    setGestureModifiers(key.getModifiers().isShiftDown(),key.getModifiers().isCtrlDown());
     for(const auto& p:grabPoints())if(hover && p.kind==*hover){if(!beginDrag(p.point))return false;
         const auto step=key.getKeyCode()==juce::KeyPress::leftKey?-1:1;
         if(p.kind==EnvelopePoint::inTension || p.kind==EnvelopePoint::outTension)dragTo(p.point+juce::Point<float>{0,static_cast<float>(step)});
-        else dragTo(p.point+juce::Point<float>{static_cast<float>(view.pixel(view.first+step,source.getX(),source.getWidth())-view.pixel(view.first,source.getX(),source.getWidth())),0});
+        else
+        {
+            auto next=std::optional<int64_t>{};
+            if(effectiveSnap()){if(dragGrid)next=dragGrid->adjacent(initialSample,step);}
+            else {int64_t at;if(checkedAdd(initialSample,step,at))next=at;}
+            if(next){const juce::ScopedValueSetter<bool> normal(fineDrag,false);const auto pixels=(static_cast<long double>(*next)-initialSample)*source.getWidth()/dragView.span();dragTo(p.point+juce::Point<float>{static_cast<float>(pixels),0});}
+            else gestureMessage("No available grid point for this keyboard nudge");
+        }
         drag=Drag::none;return true;}return false;
 }
-void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(true);grabKeyboardFocus();fineDrag=e.mods.isShiftDown();beginDrag(e.position);repaint();}
-void SwellTimeline::mouseDrag(const juce::MouseEvent& e){fineDrag=e.mods.isShiftDown();dragTo(e.position);}
+void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(true);grabKeyboardFocus();setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());beginDrag(e.position);repaint();}
+void SwellTimeline::mouseDrag(const juce::MouseEvent& e){setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
 void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
 {
     if(!editingEnabled)return;
+    setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(!source.contains(e.position))return;
     for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}
-    engine.addTarget(view.snap(view.sample(e.position.x,source.getX(),source.getWidth()),time,snapEnabled));
+    const auto candidate=view.sample(e.position.x,source.getX(),source.getWidth());
+    if(effectiveSnap())
+    {const auto at=playheadAvailable?view.snapToGrid(candidate,data.session.timing,time,capture.manifest.sampleRate,gridDivision):std::optional<int64_t>{};
+        if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at);}
+    else engine.addTarget(candidate);
 }
 void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
-{if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}updateScroll();repaint();}
+{if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}navigationChanged();}
 void SwellTimeline::navigateOverview(double fraction)
-{if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();updateScroll();repaint();}
+{if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();}
 juce::Rectangle<float> SwellOverview::detailBounds()const
 {
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();

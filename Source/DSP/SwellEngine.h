@@ -93,6 +93,7 @@ public:
     std::optional<GenerationConfiguration> passConfiguration(uint64_t pass) const;
     EditorSnapshot snapshot() const;
     Session savedSession() const;
+    bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
     bool addTarget(int64_t arrival);

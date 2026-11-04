@@ -11,6 +11,9 @@
 #include <UI/LearnWorkspace.h>
 #include <UI/ExportWorkspace.h>
 #include <UI/Controls/SwellList.h>
+#include <UI/PerformLayout.h>
+#include <UI/Controls/TimelineZoomControls.h>
+#include <UI/Controls/LatchingActionButton.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
@@ -20,6 +23,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void refresh();
+    void modifierKeysChanged(const juce::ModifierKeys&)override;
     // Native review harnesses may own polling after borrowing these components.
     // Normal plugin construction retains its existing automatic refresh.
     void stopAutomaticRefreshForReview() {stopTimer();}
@@ -32,7 +36,7 @@ private:
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;
-    juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout;
+    juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {refresh();}
     void setDiagnosticsOpen(bool);
@@ -44,6 +48,8 @@ private:
     void setPreferences();
     void applyBarRange();
     void armSelected();
+    void refreshPerformNavigation();
+    void publishPerformNavigation();
     void shapeReset(bool full);
     enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
     void beginValueEdit(int);
@@ -74,20 +80,28 @@ private:
     m3::ui::controls::SwellList list;
     juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
     juce::TextButton addButton{"Add at playhead"},removeButton{"Delete"},loadIRButton{"Load IR..."},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet"},stopButton{"Stop"};
-    juce::TextButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"},previousButton{"Prev"},nextButton{"Next"},zoomInButton{"Zoom +"},zoomOutButton{"Zoom -"},fitButton{"Fit"};
+    juce::TextButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
+    m3::ui::controls::TimelineZoomControls performZoom;
+    m3::ui::controls::LatchingActionButton snapButton{"Snap"};
+    m3::ui::controls::DeliberateSelector gridBox;
+    struct NavigationScope {uint64_t epoch=0,pass=0;juce::String primary;};
+    std::optional<NavigationScope> navigationInvocation;
+    bool navigationIntentCurrent()const;
+    bool performFitted=false;
+    bool navigationDirty=false;
+    uint64_t navigationEpoch=0;
     juce::TextButton recaptureButton{"Recapture & regenerate"},cancelButton{"Cancel recapture"},fullButton{"Full response"},resetButton{"Reset shape"},setBarsButton{"Set source from bars"},clearButton{"Clear map"};
     juce::TextButton assetInfoButton{"Copy asset info"};
-    juce::ToggleButton snapButton{"Snap"},enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
+    juce::ToggleButton enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
     m3::ui::controls::InvocationToggle autoButton{"Auto-refresh after recapture"};
     juce::Slider auditionSlider,toneStartSlider,toneEndSlider;
     m3::ui::controls::InvocationSlider separationSlider;
     std::optional<uint64_t> markerPass,separationPass,automaticPass,markingPass,refreshPass;
-    juce::ComboBox candidateBox,spanBox,inCurveBox,outCurveBox;
+    juce::ComboBox candidateBox,inCurveBox,outCurveBox;
     std::array<juce::Label,fieldCount> fieldLabels;
     std::array<juce::TextEditor,fieldCount> fields;
     juce::TextEditor barStartEditor,barEndEditor;
     std::unique_ptr<juce::FileChooser> chooser;
-    juce::String fittedKey;
     std::optional<int64_t> chosenCandidate;
     bool updating=false,destroying=false;
     m3::ui::FlatViewport inspectorViewport,diagnosticsViewport;

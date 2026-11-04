@@ -971,7 +971,7 @@ int main(int argc,char* argv[]){return runTest([&]
     freeze->setToggleState(true,juce::dontSendNotification);freeze->onClick();REQUIRE(m3::find(engine.savedSession(),first)->frozen);
     freeze->setToggleState(false,juce::dontSendNotification);freeze->onClick();waitUI([&]{return m3::find(engine.savedSession(),first)->phase==m3::Phase::ready;});editor.refresh();
     auto marker=dynamic_cast<juce::Slider*>(named(editor,"markerSensitivity"));auto markerToggle=dynamic_cast<juce::ToggleButton*>(named(editor,"autoMarkers"));
-    REQUIRE(marker && markerToggle && visibleOffscreen(marker) && visibleOffscreen(markerToggle));marker->setValue(12,juce::sendNotificationSync);
+    REQUIRE(marker && markerToggle && !marker->isVisible() && !markerToggle->isVisible());marker->setValue(12,juce::sendNotificationSync);
     markerToggle->setToggleState(false,juce::dontSendNotification);markerToggle->onClick();
     REQUIRE(std::abs(engine.savedSession().sensitivity-.12f)<1e-5 && !engine.savedSession().autoMarkersEnabled);
     auto liveToggle=dynamic_cast<juce::ToggleButton*>(named(editor,"livePlayback"));auto liveMode=dynamic_cast<juce::ComboBox*>(named(editor,"liveRouting"));auto liveLevel=dynamic_cast<juce::Slider*>(named(editor,"liveWetLevel"));
@@ -1121,9 +1121,25 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto ends=timeline.grabPoints();const auto end=*std::find_if(ends.begin(),ends.end(),[](auto p){return p.kind==m3::EnvelopePoint::end;});
         const auto dryArrival=engine.savedSession().swells[0].arrival;
         REQUIRE(timeline.beginDrag(end.point));timeline.dragTo(end.point+juce::Point<float>{-100000,0});
-        REQUIRE(m3::requestedShapeBounds(engine.savedSession().swells[0],engine.snapshot().raw->start,afterA,afterB) && afterB==afterA+1);
+        REQUIRE(m3::requestedShapeBounds(engine.savedSession().swells[0],engine.snapshot().raw->start,afterA,afterB));
+        if(!snapState)REQUIRE(afterB==afterA+1);
+        else if(timeline.gridAvailable())
+        {
+            const auto timing=processor->getSongTime();long double origin;REQUIRE(songOrigin(timing,origin));
+            const auto step=timing.rate*60/timing.bpm/timing.denominator;const auto index=(afterB-origin)/step;
+            REQUIRE(afterB>afterA && afterB-afterA<=std::ceil(step)+1);
+            REQUIRE(std::abs(index-std::round(index))<=1/step);
+        }
+        else REQUIRE(afterB==b && timeline.interactionStatus().contains("Snap unavailable"));
         timeline.dragTo(end.point);REQUIRE(m3::requestedShapeBounds(engine.savedSession().swells[0],engine.snapshot().raw->start,afterA,afterB));
-        REQUIRE(afterA==a && afterB==b && engine.savedSession().swells[0].arrival==dryArrival);
+        REQUIRE(afterA==a && engine.savedSession().swells[0].arrival==dryArrival);
+        if(!snapState || !timeline.gridAvailable())REQUIRE(afterB==b);
+        else
+        {
+            const auto timing=processor->getSongTime();long double origin;REQUIRE(songOrigin(timing,origin));
+            const auto step=timing.rate*60/timing.bpm/timing.denominator;const auto index=(afterB-origin)/step;
+            REQUIRE(std::abs(static_cast<long double>(afterB)-b)<=std::ceil(step)+1 && std::abs(index-std::round(index))<=1/step);
+        }
         REQUIRE(engine.savedSession().swells[0].shape.fadeIn==shapeBeforeHandles.fadeIn && engine.savedSession().swells[0].shape.fadeOut==shapeBeforeHandles.fadeOut);
         REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape=shapeBeforeHandles;return true;}));
         timeline.setViewport(oldView);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();}
@@ -1142,13 +1158,14 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(timeline.grabPoints()[3].point!=tensionGrab.point);
     const auto retainedViewport=timeline.viewport();grabs=timeline.grabPoints();
     const auto endGrab=*std::find_if(grabs.begin(),grabs.end(),[](auto p){return p.kind==m3::EnvelopePoint::end;});
+    timeline.setGestureModifiers(false,true); // Exact unsnapped alternative retains requested Snap On.
     REQUIRE(timeline.beginDrag(endGrab.point));timeline.dragTo({static_cast<float>(view.pixel(2003,lane.getX(),lane.getWidth())),endGrab.point.y});
     REQUIRE(std::abs(engine.savedSession().swells[0].shape.endOffset-2003)<=1);
     REQUIRE(engine.savedSession().swells[0].shape.fadeOut==6000 && engine.savedSession().swells[0].arrival==0);
     waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(timeline.viewport().first==retainedViewport.first && engine.snapshot().renderCount==oldCount);
     const auto beforeKey=engine.savedSession().swells[0].shape.endOffset;
-    REQUIRE(timeline.keyPressed(juce::KeyPress(juce::KeyPress::rightKey)));
+    REQUIRE(timeline.keyPressed(juce::KeyPress(juce::KeyPress::rightKey,juce::ModifierKeys::ctrlModifier,0)));
     REQUIRE(engine.savedSession().swells[0].shape.endOffset==beforeKey+1);
     auto wetEndField=dynamic_cast<juce::TextEditor*>(named(editor,"audibleEnd"));REQUIRE(wetEndField && wetEndField->isReadOnly());
     waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();

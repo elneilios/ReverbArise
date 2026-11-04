@@ -29,22 +29,37 @@ public:
     void setZoomFraction(double fraction);
     void setWaveZoomDb(double db){waveZoom.setValue(db,juce::sendNotificationSync);}
     double waveZoomDb() const noexcept{return waveZoom.getValue();}
-    void setSnap(bool enabled) {snapEnabled=enabled;}
+    void setSnap(bool enabled);
+    bool requestedSnap()const noexcept{return snapEnabled;}
+    bool effectiveSnap()const noexcept{return snapEnabled && !snapBypassed;}
+    void setSnapBypassed(bool bypassed){setGestureModifiers(fineDrag,bypassed);}
+    void setGestureModifiers(bool fine,bool bypassed);
+    void modifierKeysChanged(const juce::ModifierKeys& mods)override{setGestureModifiers(mods.isShiftDown(),mods.isCtrlDown());}
+    void focusLost(FocusChangeType)override{drag=Drag::none;fineDrag=false;snapBypassed=false;}
+    void setGridDivision(GridDivision division);
+    GridDivision selectedGrid()const noexcept{return gridDivision;}
+    bool gridAvailable()const{return playheadAvailable && HostGrid::make(data.session.timing,time,capture.manifest.sampleRate,gridDivision).has_value();}
+    const juce::String& interactionStatus()const noexcept{return gestureStatus;}
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
     const SwellViewport& viewport() const noexcept {return view;}
-    void setViewport(SwellViewport v) {if(!std::isfinite(v.first) || !std::isfinite(v.last) || !std::isfinite(v.span()) || v.span()<=0)return;view=v;updateScroll();repaint();}
+    void setViewport(SwellViewport v) {if(!std::isfinite(v.first) || !std::isfinite(v.last) || !std::isfinite(v.span()) || v.span()<=0)return;if(v.first!=view.first || v.last!=view.last)drag=Drag::none;view=v;updateScroll();repaint();}
     void setInlineOverview(bool enabled){inlineOverview=enabled;resized();repaint();}
     void navigateOverview(double fraction);
     juce::Rectangle<float> sourceLane() const noexcept {return source;}
     juce::Rectangle<float> wetLane() const noexcept {return wet;}
     std::function<void(int)> onCandidateSelected;
     std::function<void()> onEnvelopeEdited;
+    std::function<void()> onViewportChanged;
 private:
     friend class SwellOverview;
     enum class Drag {none,overview,arrival,sourceStart,sourceEnd,audibleStart,audibleEnd,fadeIn,fadeOut,inTension,outTension,move};
     void scrollBarMoved(juce::ScrollBar*,double) override;
     void updateScroll();
+    void navigationChanged(){if(drag!=Drag::overview)drag=Drag::none;updateScroll();repaint();if(onViewportChanged)onViewportChanged();}
+    bool prepareDrag(juce::Point<float>);
+    void rebaseDrag();
+    void gestureMessage(const juce::String& text){if(gestureStatus!=text){gestureStatus=text;setDescription(text);repaint();}}
     void constrainNavigation();
     double navigationAnchor()const;
     std::pair<double,double> globalBounds() const;
@@ -57,10 +72,20 @@ private:
     juce::Rectangle<float> overview,source,wet;
     juce::String dragId;Drag drag=Drag::none;
     juce::String sourceHover;
-    juce::Point<float> dragOrigin;double initialTension=0;int64_t initialFade=0,initialPlacement=0,initialSample=0;
+    juce::Point<float> dragOrigin;double initialTension=0;int64_t initialPlacement=0,initialSample=0;
     Shape initialEnvelope;
+    SwellViewport dragView;
+    SongTime dragTime,dragAcceptedTime;
+    std::optional<HostGrid> dragGrid;
+    uint64_t dragEpoch=0,dragInput=0;
+    std::vector<juce::String> dragSelection;
+    juce::Point<float> lastPointer;
+    std::shared_ptr<const Waveform> dragRaw;
+    juce::String gestureStatus,dragRender;
+    bool dragSampleAvailable=false,dragFrozen=false;
     std::optional<EnvelopePoint> hover;bool fineDrag=false;
-    bool snapEnabled=true,updatingScroll=false;
+    bool snapEnabled=true,snapBypassed=false,updatingScroll=false;
+    GridDivision gridDivision=GridDivision::quarterBeat;
     bool playheadAvailable=false;
     bool inlineOverview=true;
     bool editingEnabled=true;

@@ -401,6 +401,14 @@ bool SwellEngine::initializeExport()
     if(!m3::initializeExport(model,message))return false;
     if(model.exportState!=before){persistentChangedLocked();notify();}return true;
 }
+bool SwellEngine::setPerformNavigation(PerformNavigationState preferences,uint64_t expectedSession)
+{
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=sessionGeneration.load())return false;
+    preferences=normalizedPerformNavigation(preferences);
+    if(preferences!=model.performUi){model.performUi=preferences;persistentChangedLocked();notify();}
+    return true;
+}
 bool SwellEngine::setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass)
 {
     const juce::ScopedLock guard(lock);

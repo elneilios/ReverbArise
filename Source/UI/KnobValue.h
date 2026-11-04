@@ -7,6 +7,11 @@ namespace m3::ui
 // pins an exact model value when begin is called and applies relative deltas.
 class KnobValue final:public juce::Component
 {
+    class Caption final:public juce::Label
+    {
+    public:void paint(juce::Graphics& g)override
+        {applyTextRole(g,TextRole::controlLabel);g.drawText(getText(),getLocalBounds(),juce::Justification::centredLeft);}
+    };
     class Entry final:public juce::TextEditor
     {
     public:
@@ -38,7 +43,7 @@ public:
             if(oneShot)finish(false);
         };
         knob.onDragEnd=[this]{cancelledGesture=false;finish(false);};
-        label.setFont(fontFor(*this,smallSize));
+        applyTextRole(label,TextRole::controlLabel);
     }
     std::function<void()> onBegin,onEnd;
     std::function<void(double)> onDelta;
@@ -46,6 +51,7 @@ public:
     void configure(const juce::String& title,const juce::String& name,const juce::String& tooltip)
     {
         label.setText(title,juce::dontSendNotification);setName(name+"Cell");
+        label.setTooltip(title);
         entry.setName(name);knob.setName(name+"Knob");
         entry.setTooltip(tooltip);knob.setTooltip(tooltip);
     }
@@ -58,17 +64,17 @@ public:
     }
     void cancel(){if(active && !typing)cancelledGesture=true;active=false;typing=false;restore();if(onEnd)onEnd();}
     bool editing()const noexcept{return active;}
-    void setCaption(const juce::String& caption){label.setText(caption,juce::dontSendNotification);}
+    void setCaption(const juce::String& caption){label.setText(caption,juce::dontSendNotification);label.setTooltip(caption);}
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
-    void lookAndFeelChanged()override{entry.setFont(fontFor(*this,controlSize));label.setFont(fontFor(*this,smallSize));}
+    void lookAndFeelChanged()override{entry.setFont(textFont(TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);}
     void resized()override
     {
-        auto bounds=getLocalBounds().reduced(0,2);
-        knob.setBounds(bounds.removeFromLeft(46).withSizeKeepingCentre(42,42));
-        bounds.removeFromLeft(8);
-        label.setBounds(bounds.removeFromTop(16));
-        entry.setBounds(bounds.reduced(0,3));
+        auto bounds=getLocalBounds();
+        knob.setBounds(bounds.removeFromLeft(42).withSizeKeepingCentre(42,42));
+        bounds.removeFromLeft(spacing::labelHelp);
+        label.setBounds(bounds.removeFromTop(controlGeometry::labelHeight));
+        entry.setBounds(bounds.removeFromTop(controlGeometry::valueHeight));
     }
 private:
     void begin(bool textEntry)
@@ -84,7 +90,7 @@ private:
         if(commit && typing && entry.getText()!=canonical && onCommit)onCommit(entry.getText());
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
-    juce::Label label;juce::Slider knob;Entry entry;
+    Caption label;juce::Slider knob;Entry entry;
     juce::String identity,canonical;
     double origin=0,canonicalFraction=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false;

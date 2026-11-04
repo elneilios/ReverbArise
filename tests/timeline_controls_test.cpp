@@ -97,7 +97,9 @@ static void cases()
     snap.display(false);REQUIRE(!accessibility->getCurrentState().isChecked() && edits==2);
     snap.display(true);REQUIRE(accessibility->getCurrentState().isChecked() && edits==2);
     REQUIRE(snap.getLocalBounds().toFloat().contains(snap.focusInkBounds()));
-    snap.removeFromDesktop();snap.setLookAndFeel(nullptr);
+    snap.removeFromDesktop();ctrl=true;display();click(snap);
+    REQUIRE(!requested && !snap.getToggleState() && edits==3);ctrl=false;display();REQUIRE(!snap.getToggleState());
+    snap.setLookAndFeel(nullptr);
 }
 
 // Small binding example: the workspace owns bounds, logarithmic domain and Fit.
