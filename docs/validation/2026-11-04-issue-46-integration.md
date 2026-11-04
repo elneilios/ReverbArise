@@ -1,12 +1,12 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
-Current knob reset refinement is source `a918f80`, with **5/5 affected native
-tests** and a Release wrapper build passed. The owner approved the preceding
-Level 1 dB / Shift 0.1 dB and corner-bracket focus revision, and subsequently
-approved the actual native reset interaction. Only the final FL Studio smoke
-remains pending. The full **53/53** result at `a4e9262`
-is retained for unchanged paths.
-See the [current revision evidence and bundle hash](2026-11-04-issue-46-knob-audit.md#reset-follow-up-defaults-and-current-editor-initial-positions).
+Current audition refinement is source `4e7aff9`, with **55/55 native Release
+CTests passed** in 152.64 s through the full wrapper. The owner approved layout,
+Snap, integrated editing, revised knob steps/focus and reset, and reported the
+host editing looks/feels good. The subsequently requested audition loop/Wet only/
+status refinement is implemented and its native preview is open; final host
+audition listening/save-reopen remains pending. OpenSpec is **19/20 complete**.
+See [current audition evidence and bundle identity](2026-11-04-issue-46-audition.md).
 The initial 52-test results and pre-knob bundle identity below remain historical
 evidence; the shared output bundle path now contains the final rebuilt binary.
 

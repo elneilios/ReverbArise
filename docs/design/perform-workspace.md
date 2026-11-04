@@ -49,8 +49,9 @@ trim restore unchanged until explicit toggle; the retained legacy trim is shown
 in Settings and inactive in live-level mode. Status uses Ready, Looping, Preparing
 or Unavailable with accepted mode and membership; overflow ellipsizes at the
 approved helper font size, and full reasons/protection details remain in tooltip.
-The refined row is prepared for a focused native checkpoint; existing layout,
-Snap and knob approvals remain valid.
+The refined row's actual native checkpoint is directly open for review; final
+host audition listening is pending. Existing layout, Snap and knob approvals
+remain valid.
 
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).

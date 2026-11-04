@@ -1,5 +1,9 @@
 # Issue #46 — knob standards and guardrail audit
 
+Subsequent audition refinement/build identity is recorded in the
+[current audition report](2026-11-04-issue-46-audition.md); knob approvals below
+remain valid, and their older bundle hashes are historical.
+
 Current status: the owner approved the revised Level steps and corner focus.
 The reset follow-up below is implemented, automated checks pass and the owner
 approved its native interaction. Only final FL Studio smoke remains pending. Earlier audit

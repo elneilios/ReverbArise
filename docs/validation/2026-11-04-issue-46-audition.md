@@ -85,3 +85,50 @@ their own existing edge gain during crossfade, so restarting at a shorter window
 start cannot mute the outgoing sample abruptly. An explicit first-sample continuity
 and allocation oracle accompanies that correction. A final wrapper run validates
 that exact follow-up source before delivery.
+
+## Final exact-source validation and review build
+
+Source `4e7aff9486f36cd59e395220f2c858f1c62b7eba`:
+`scripts/build.ps1 -Configuration Release -Test` **passed 55/55 native MSVC/CTest**,
+**152.64 s**. Logs `out/build-logs/Release/20261104-200714-15b80f84` (configure,
+build, test and wrapper result). This is the clean source revision used for the
+final artifact; later evidence/task-only commits do not require another rebuild.
+The loop/replacement sample and allocation oracles, legacy decoder, actual
+processor round trip, toggle bindings, unavailable-source recovery, reset popup,
+all existing audio/capture/export/state tests and software geometry passed.
+
+Final UI standards: 46 files / 61 bounded occurrences; strict OpenSpec 20/20;
+diff checks pass. No new styling debt/token inventory was generated. Agent 1's
+ActionButton SHA-256 is still
+`68EF2F339109F65C1044813C1CD074C5AA13E8DEE7470571452ECF2B1EEAAA16`.
+ExportVoice, ExportWorkspace and TimelineNavigation are unchanged against merged
+Export `9b8e70f`. The processor constructor sets the new instance default; its
+processBlock/capture routing is unchanged. The explicit changes in AuditionVoice
+and audition preparation are scoped to the requested manual listening behavior.
+
+Complete internal host-test bundle, all six files copied/hash-verified:
+`C:\Users\neila\.codex\worktrees\670e\k7ma-preverb\out\host-smoke\issue46-audition-4e7aff9-20261104-200714\ReverbArise.vst3`.
+The adjacent build-manifest.json records source, logs and every file hash;
+README.txt has the short installation/listening check. Inner
+`Contents/x86_64-win/ReverbArise.vst3` SHA-256:
+`864DD2287AFCDA0985E84EB1E599D0475EBF7F3A1E2F66584ACA5004B1C221EB`.
+The installed plugin is not overwritten automatically; prior smoke builds remain.
+
+Actual native selected/empty/dense captures were generated from the final review
+executable. [Selected audition row](2026-11-04-issue-46/audition-selected.png) was
+visually inspected: default Off Wet only, readable Ready / Dry + wet / membership,
+no percentage slider/Trim reset and continuous existing dividers. The actual
+**Issue #46 - Integrated Perform review** window was directly launched, PID 21524
+at launch, responding, and preserved. Executable
+`out/review-issue46-audition/perform-audition-review.exe` SHA-256:
+`C10D695FF0F690B6A1D285D64D309D5B824B7AC6CE7820D51E3BB48A22FCE167`.
+The review explicitly has no audio device; audible acceptance uses the VST3 in
+FL Studio. The completed prior reset review was closed before replacement.
+
+Task 5.3 is complete; exact task-text/line guard and refreshed Apply instructions
+confirm **19/20 complete**. Only 6.2 remains for the final host result. Earlier
+editing/layout/Snap/knob approvals are retained. The requested host check is the
+new audition loop/Stop, Wet only balance and save/reopen, not a repeat of accepted
+editing edge cases. Actual host listening and Windows DPI are not claimed here.
+Older schema-10 builds ignore the optional new bool and use retained legacy
+balance/trim; rollback does not preserve the new live-level monitoring semantics.
