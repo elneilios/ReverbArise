@@ -5,6 +5,7 @@
 #include "Controls/Switch.h"
 #include "Controls/SliderControl.h"
 #include "Controls/IconActionButton.h"
+#include "Controls/IrSelector.h"
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
 
@@ -21,13 +22,13 @@ public:
         setTooltip(inspectionHelp);setName("learnWorkspace");setTitle("Learn: source capture and generation preferences");
         for(auto* c:std::array<juce::Component*,14>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
             &irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity})addAndMakeVisible(c);
-        captureTitle.setText("Source Capture",juce::dontSendNotification);captureTitle.setFont(interFont(headingSize,InterFace::semibold));
+        captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
         recaptureLabel.setText("Recapture existing audio",juce::dontSendNotification);
-        automaticLabel.setText("Automatic Swells",juce::dontSendNotification);automaticLabel.setFont(interFont(headingSize,InterFace::semibold));
+        automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
         automaticToggleLabel.setText("Enable automatic swells",juce::dontSendNotification);
         irLabel.setText("Impulse Response (IR)",juce::dontSendNotification);sensitivityLabel.setText("Marker Sensitivity",juce::dontSendNotification);
-        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel}){label->setFont(interFont(bodySize,InterFace::medium));label->setColour(juce::Label::textColourId,text);}
-        for(auto* label:{&recaptureHelp,&automaticHelp,&irStatus}){label->setFont(interFont(learnTypography::secondarySize));label->setColour(juce::Label::textColourId,learnTypography::descriptionColour);label->setJustificationType(juce::Justification::topLeft);}
+        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel})applyTextRole(*label,TextRole::controlLabel);
+        for(auto* label:{&recaptureHelp,&automaticHelp,&irStatus})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
         irStatus.setMinimumHorizontalScale(1.f);
         irStatus.setText("Used for your next learning pass.",juce::dontSendNotification);
         irStatus.setTooltip(irStatus.getText());
@@ -39,13 +40,12 @@ public:
         recapture.beforeInvocation=[this]{recapturePass=flowNow().pass;};automatic.beforeInvocation=[this]{automaticPass=flowNow().pass;};
         recapture.onClick=[this]{if(recapturePass.value_or(flowNow().pass)==flowNow().pass && onRecapture)onRecapture(recapture.getToggleState());if(onRefresh)onRefresh();};
         automatic.onClick=[this]{engine.setLearningAutomatic(automatic.getToggleState(),automaticPass.value_or(flowNow().pass));if(onRefresh)onRefresh();};
-        sensitivity.setRange(0,100,.1);sensitivity.setSliderStyle(juce::Slider::LinearHorizontal);sensitivity.setTextBoxStyle(juce::Slider::TextBoxRight,false,controlGeometry::valueWidth,controlGeometry::valueHeight);
-        sensitivity.setValueFont(interFont(controlSize));
+        sensitivity.setRange(0,100,.1);
         sensitivity.setTextValueSuffix(" %");sensitivity.setNumDecimalPlacesToDisplay(1);
         sensitivity.setTooltip("Low: fewer, stronger attacks. High: finer event detail. Applies to your next learning pass.");
         sensitivity.beforeInvocation=[this]{sensitivityPass=flowNow().pass;};
         sensitivity.onValueChange=[this]{if(!refreshing){const auto s=engine.savedSession();engine.setPreferences(s.auditionDb,static_cast<float>(sensitivity.getValue()/100),s.separationSeconds,s.autoRegenerate,sensitivityPass.value_or(flowNow().pass));}};
-        irBox.setScrollWheelEnabled(false);irBox.beforeInvocation=[this]{irIntent=Intent{engine.assignmentEpoch(),flowNow().pass,choices};};
+        irBox.beforeInvocation=[this]{irIntent=Intent{engine.assignmentEpoch(),flowNow().pass,choices};};
         irBox.onChange=[this]{if(refreshing)return;const auto intent=irIntent.value_or(Intent{engine.assignmentEpoch(),flowNow().pass,choices});irIntent.reset();
             const auto at=irBox.getSelectedId()-1;if(at<0 || static_cast<size_t>(at)>=intent.choices.size())return;const auto& c=intent.choices[static_cast<size_t>(at)];
             if(c.presetId.isNotEmpty())engine.assignDefaultBundledIR(c.presetId,intent.session,intent.pass);else engine.assignDefaultManagedIR(c.managed,c.name,intent.session,intent.pass);if(onRefresh)onRefresh();};
@@ -160,11 +160,11 @@ public:
     void paint(juce::Graphics& g)override
     {
         g.setColour(separator);g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));
-        g.setColour(text);g.setFont(interFont(headingSize,InterFace::semibold));g.drawText("Capture Timeline",timelineHeading,juce::Justification::left);
-        g.setFont(interFont(learnTypography::secondarySize));g.setColour(learnTypography::descriptionColour);g.drawText(totalsText,timelineCaption,juce::Justification::left);
+        applyTextRole(g,TextRole::sectionHeading);g.drawText("Capture Timeline",timelineHeading,juce::Justification::left);
+        applyTextRole(g,TextRole::helper);g.drawText(totalsText,timelineCaption,juce::Justification::left);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         const auto x=[&](double sample){return chart.getX()+static_cast<float>((sample-first)/(last-first)*chart.getWidth());};
-        g.setFont(interFont(learnTypography::secondarySize,InterFace::medium));g.setColour(text);
+        applyTextRole(g,TextRole::ruler);
         long double origin;const auto musical=songOrigin(clock,origin);
         const auto ticks=musical?makeSongBarRuler(first,last,chart.getWidth(),clock.rate,clock.bpm,clock.numerator,clock.denominator,clock.sample,clock.ppq):std::vector<SongBarTick>{};
         const auto readable=!ticks.empty() && std::all_of(ticks.begin(),ticks.end(),[](const auto& tick){return std::abs(tick.bar)<1000000;});
@@ -202,8 +202,8 @@ public:
             g.setColour(learnTypography::descriptionColour);
             constexpr std::array<float,9> bars{8,17,29,13,38,22,32,16,7};
             for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
-            g.setColour(text);g.setFont(interFont(emptyHeadingSize,InterFace::semibold));g.drawFittedText("Press play in your DAW to begin capturing.",regions[1],juce::Justification::centred,1);
-            g.setColour(learnTypography::descriptionColour);g.setFont(interFont(bodySize));g.drawFittedText(automaticOn?"Audio will be analysed and swells created\nusing your selected settings.":"Capture dry audio now.\nCreate swells later in Perform.",regions[2],juce::Justification::centredTop,2);
+            applyTextRole(g,TextRole::emptyHeading);g.drawFittedText("Press play in your DAW to begin capturing.",regions[1],juce::Justification::centred,1);
+            applyTextRole(g,TextRole::emptyBody);g.drawFittedText(automaticOn?"Audio will be analysed and swells created\nusing your selected settings.":"Capture dry audio now.\nCreate swells later in Perform.",regions[2],juce::Justification::centredTop,2);
         }
         if(hasKeyboardFocus(false)){
             g.setColour(aqua.withAlpha(.7f));g.drawRoundedRectangle(controlGeometry::insideStroke(chart.reduced(3),rule),radius,rule);}
@@ -233,7 +233,7 @@ private:
     struct Intent{uint64_t session,pass;std::vector<IRChoice> choices;};
     SwellEngine& engine;std::function<workflow::Snapshot()> flowNow;
     controls::Switch recapture{"Recapture existing audio"},automatic{"Enable automatic swells"};
-    controls::IconActionButton fileButton{controls::ActionIcon::openFile};InvocationComboBox irBox;controls::SliderControl sensitivity;
+    controls::IconActionButton fileButton{controls::ActionIcon::openFile};controls::IrSelector irBox;controls::SliderControl sensitivity;
     juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,irLabel,irStatus,sensitivityLabel;
     std::unique_ptr<juce::FileChooser> chooser;std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;std::optional<Intent> irIntent;
     bool hasSource()const noexcept{return !capture.manifest.ranges.empty() || !capture.overview.empty() || !progress.ranges.empty();}

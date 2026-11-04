@@ -73,3 +73,75 @@ this existing truthful state is not a styling difference.
 
 Actual Windows 100/125/150/200% scaling, monitor transitions and new FL Studio
 checks have not been performed for #37. Software raster scaling is separate.
+
+## Text-role extraction (task 2.1)
+
+Release wrapper build passed (`20261104-022211-777f46df`); focused native CTest
+`preverb_swell_ui_test` passed 1/1 (19.66 s), with renders in
+`out/issue37-text-roles/`. `UiStandardsCases` checks nine roles against the prior
+faces/heights/inks/line boxes, actual glyph widths and label/custom-paint pixel
+equivalence. Existing native geometry and binding tests also passed.
+
+Reinspected the 1400x1000 Learn render. The sampled `header-empty-1068.png`,
+`header-ready-1360.png` and `fresh-1400.png` are byte-identical to the unchanged
+baseline. This is extraction evidence, not a permanent screenshot hash gate.
+No family look or interaction changed, so prior scoped owner acceptance remains.
+
+## Shared defaults and family review (tasks 2.2–2.3)
+
+Release wrapper build passed (`20261104-022441-4de98ad6`). Focused native CTest
+passed 1/1 (20.70 s), including wheel/key/typed numeric binding, existing pass locks,
+IR preparation/failure and session ownership cases. Added actual wheel/arrow-key
+tests verify IR wheel no-op, silent refresh, accepted selection and a queued key
+intent rejected after its binding epoch changes. The same prior invocation-aware
+combo mechanism is now `controls::IrSelector`; Learn and selected-swell IR share
+its single no-wheel default. No additional Settings/Diagnostics IR wheel policy
+exists; their unrelated selectors and KnobValue retain current behaviour.
+
+The same three sampled header/Learn PNGs remain byte-identical after consolidation
+(`out/issue37-shared-defaults/`). Switch, NumericInputControl, SliderControl,
+SegmentedSelector, IconActionButton, HeaderInformation and NoticeBar retain their
+existing geometry/input/disabled/focus/shared-edge tests and pass. IrSelector
+extracts the existing accepted selector policy; it introduces no new appearance
+or interaction family. No family is materially revised, so no new owner checkpoint
+is required and prior passing look/feel acceptance is not requested again.
+
+## Styling enforcement and governance (tasks 3.1–3.2)
+
+The repository scan passes across 32 governed files, with 61 exact bounded
+occurrences in 48 entries: 38 shared definitions, two shared defaults and eight
+retained consumer-debt entries. Entries are not a claim that legacy consumers
+have all been visually approved. The inventory contains baseline/review reference,
+rationale and scope; changing/removing or duplicating an occurrence fails.
+
+Command fixtures pass **35 assertions each** on Windows PowerShell
+5.1.26100.9818 and PowerShell 7.6.9. Registered CTest lint/check tests pass 2/2.
+During review, an initial heuristic mistook rectangle `withHeight` operations and
+font-returning declarations for font construction; the rules were narrowed and
+fixtures added. Ordinary layout arithmetic now passes without those exemptions.
+The default-path invocation was also corrected for PowerShell parameter binding.
+These development failures were not recorded as passing runs.
+
+The guide and `AGENTS.md` now point to the same revision/controls authority.
+Development standards document command scope, parser limitations, exact debt,
+versioning and a worked future Perform exception lifecycle. Local links pass;
+generated OpenSpec skills/configuration are unchanged.
+
+## Geometry and visual checklist (task 4.1)
+
+Release wrapper build passed (`20261104-022735-985fa51d`); focused registered
+CTest passed 3/3, with native UI 1/1 (21.64 s). `UiStandardsLayoutCases` checks
+empty and mapped Automatic Swells on/off at 1100x850, 1199x900, 1200x900,
+1239x900, 1240x900, 1400x900, 1400x1000 and 1600x1000. These include outer and
+inner-header breakpoint boundaries. Actual text widths, line boxes, child bounds,
+empty groups and complete switch focus ink are checked, with 1/1.25/1.5/2 native
+software snapshots. Existing family, notice and editor tests cover keyboard/edit
+lifecycle, long content, focused/disabled/error states and rejected intents.
+
+Inspected `out/issue37-validation/standards-automatic-on-1199x900.png` and
+`standards-automatic-off-1100x850.png`, along with earlier minimum/larger empty
+renders: text, controls, focus/column/viewport outlines and reserved header row
+remain contained; the dry canvas keeps its size and dominance. The reusable native
+checklist and test tolerances are in UI development standards. No brittle permanent
+screenshot gate was added. These results do not establish physical Windows DPI
+or FL Studio acceptance.
