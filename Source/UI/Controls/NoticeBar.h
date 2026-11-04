@@ -1,6 +1,7 @@
 #pragma once
 #include <UI/WorkspaceTheme.h>
 #include <optional>
+#include "HeaderInformation.h"
 
 namespace m3::ui::controls
 {
@@ -34,6 +35,7 @@ public:
         repaint();return true;
     }
     const std::optional<NoticeMessage>& currentMessage()const noexcept{return message;}
+    void setHeaderAppearance(bool enabled){headerAppearance=enabled;repaint();}
     void paint(juce::Graphics& g)override
     {
         if(!message)return;
@@ -41,12 +43,13 @@ public:
         g.fillAll(background);g.setColour(ink);g.fillRect(0,4,3,getHeight()-8);
         const auto cy=getHeight()*.5f;g.drawEllipse(13,cy-7,14,14,1.25f);
         g.setFont(fontFor(*this,controlSize,juce::Font::bold));g.drawText(message->tone==NoticeTone::information?"i":"!",12,0,16,getHeight(),juce::Justification::centred);
-        g.setColour(m3::ui::text);g.setFont(fontFor(*this,bodySize));
+        g.setColour(headerAppearance?headerBodyInk:m3::ui::text);g.setFont(fontFor(*this,bodySize));
         g.drawText(message->text,getLocalBounds().withTrimmedLeft(38).withTrimmedRight(8),juce::Justification::centredLeft);
     }
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
     {return std::make_unique<juce::AccessibilityHandler>(*this,juce::AccessibilityRole::staticText);}
 private:
     std::optional<NoticeMessage> message;
+    bool headerAppearance=false;
 };
 }

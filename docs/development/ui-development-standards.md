@@ -157,8 +157,17 @@ native review fixture and are composed into the shared production WorkflowHeader
   including disabled choices. Wheel and repeated active selection are no-ops.
   Segments share square internal joins with one border; only the group's outer
   left/right ends are rounded, following owner checkpoint-A feedback.
-  Navigation text uses the shared 18-pixel Semibold role; the mode description uses
-  a 16-pixel italic role, following integrated-header polish feedback.
+  Navigation text uses the shared 18-pixel Semibold role. Issue #35 adds an optional
+  semantic `ModeIcon` to each choice, defaulting to no icon. Canonical 16-pixel SVG
+  icons precede labels by 8 pixels; the combined group stays centred inside the
+  existing segment geometry. `ModeIconCache` prepares immutable source and separate
+  foreground variants before paint. Borders still paint above all child fills,
+  preserving the Issue #11 shared-edge and focus regressions.
+- `HeaderInformation` owns the regular 14-pixel Inter mode description in
+  `#C7CDD4`, centred in the 32-pixel information row. Its 2×16-pixel aqua accent
+  has an 8-pixel gap to text and an 8-pixel trailing inset. The screen supplies
+  the reserved right-column bounds; typography and global theme tokens are shared
+  through the existing font policy.
 - `IconActionButton(ActionIcon::settings)` supplies a semantic Settings glyph,
   focus/hover/disabled feedback and native pointer/accessibility/Enter/Space
   activation. Bind `onClick` to the screen's Settings action. Component names
@@ -169,6 +178,11 @@ native review fixture and are composed into the shared production WorkflowHeader
   priority and relevance from explicit state fields. Identical refresh is silent;
   detail-only changes do not reannounce the headline. Full detail remains in the
   tooltip/accessibility description. The preferred inline height is 32 pixels.
+  `setHeaderAppearance(true)` opts only the workspace header notice into the
+  matching `#C7CDD4` body ink. Severity icons/stripes and non-header defaults stay
+  intact. The description and notice use the same regular font and vertical
+  alignment. The Issue #35 native look/interaction checkpoint was owner-approved
+  on 4 November 2026; actual Windows DPI and FL Studio coverage remain separate.
 
 `tests/ControlLibraryCases.h` exercises native events, accessible state, silent
 refresh, rejected/stale intents and callback lifetime. The UI test executable's

@@ -12,6 +12,16 @@ labels. The approved library selector is composed into one shared WorkflowHeader
 the former temporary dropdown is removed. Component and integrated appearance
 acceptance are tracked separately in the dated header evidence.
 
+Issue #35 adds cached semantic SVGs before Learn (waveform), Perform (three-handle
+reverse swell) and Export (audio document/output), with the existing navigation
+geometry and guarded requests. The lower row uses 14-pixel regular Inter in
+`#C7CDD4` for both description and notice body. A 2×16-pixel aqua accent precedes
+the description by an 8-pixel gap; notice severity colours remain independent.
+The descriptions are “Capture audio and discover musical moments”, “Shape and
+place reverse swells with precision” and “Preview your prepared swells”. See
+[Issue #35 integration evidence](../validation/2026-11-04-issue-35-header-integration.md)
+for owner approval and native/host/DPI coverage.
+
 | Durable XML value / internal mode | Display label | Role |
 | --- | --- | --- |
 | Capture / capture | Learn | Capture audio and discover musical moments |

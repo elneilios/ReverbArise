@@ -5,6 +5,7 @@
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
+#include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
 
 struct UIPlayHead final:juce::AudioPlayHead
@@ -83,6 +84,9 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     REQUIRE(header->getBounds().contains(notice->getBounds()));
     REQUIRE(notice->getY()>=header->getY()+46 && notice->getBottom()<layout.globals.getY());
     const auto role=named(editor,"workflowRole");REQUIRE(role);
+    const auto information=dynamic_cast<m3::ui::controls::HeaderInformation*>(role);REQUIRE(information);
+    const auto productionHeader=dynamic_cast<m3::ui::WorkflowHeader*>(header);REQUIRE(productionHeader);
+    REQUIRE(information->getTitle()==m3::ui::modeSubtitle(static_cast<workflow::Mode>(productionHeader->modeSelector().selectedId()-1)));
     REQUIRE(header->getY()+role->getBounds().getCentreY()==notice->getBounds().getCentreY());
     for(auto* child:header->getChildren())REQUIRE(!notice->getBounds().intersects(header->getLocalArea(child,child->getLocalBounds()).translated(header->getX(),header->getY())));
     REQUIRE(layout.workspace.getBottom()==layout.audition.getY());
@@ -118,7 +122,9 @@ int main(int argc,char* argv[]){return runTest([&]
     learnTimelineCases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
+    modeIconCases();
     controlReview::cases();
+    controlReview::cases(true);
     workflowHeaderCases();
     noticeReview::cases();
     workspaceNoticeCases();
@@ -444,6 +450,10 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto handles=editor.timelineComponent().grabPoints();
         if(!handles.empty())REQUIRE(!editor.timelineComponent().beginDrag(handles.front().point));
         largeWorkflowSnapshot("workflow-finalise");
+        const auto originalSize=editor.getBounds();
+        for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1400,1000},juce::Point<int>{1600,1000}})
+        {editor.setSize(size.x,size.y);editor.refresh();snapshotEditor(editor,"issue35-export-"+juce::String(size.x)+"x"+juce::String(size.y));}
+        editor.setSize(originalSize.getWidth(),originalSize.getHeight());editor.refresh();
         const auto performView=editor.timelineComponent().viewport();const auto performBounds=editor.timelineComponent().getBounds();
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();snapshotEditor(editor,"workflow-capture");
         auto learning=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));REQUIRE(learning && visibleOffscreen(learning));
