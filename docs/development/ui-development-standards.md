@@ -8,7 +8,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 ## Shared controls and ownership
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 1). Its Learn/header table
+numerical authority (production standards revision 2). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -199,7 +199,7 @@ do not regenerate the file to make a failure disappear.
 
 For example, if a future Perform control needs a new named spacing role:
 
-1. Its ordinary OpenSpec design cites standards revision 1, the current shared
+1. Its ordinary OpenSpec design cites the current standards revision, the shared
    control and why comfortable spacing cannot satisfy the actual dense content.
 2. Prepare the named role/profile proposal and representative native fixture;
    present owner review of bounds, readability, focus and feel where affected.
@@ -317,3 +317,34 @@ remain on their existing implementations until their planned workspace refactors
 Timeline/Overview remain specialized controls with their current geometry and
 model guards. Retained name-based theme branches outside the new Settings action
 are follow-up consumers, not a precedent for new controls.
+
+## Swells list family — issue #4
+
+`Controls/SwellList.h` is the processor-independent, virtualized Swells list
+family. It retains the existing Perform row appearance and `swellList` identity;
+no new typography, colour, geometry or density value is established. It owns
+numeric arrival/ordinal persistent-ID ordering, row hit handling, multi-selection,
+keyboard anchoring and scrolling. Bindings supply immutable row values and
+selected/primary IDs and own model guards and asynchronous menu lifetime.
+Callbacks return IDs or row-value copies, never model row indices.
+
+Snapshot replacement suppresses selection callbacks and restores the primary
+keyboard anchor explicitly. Structural changes preserve the first surviving
+visible row and its pixel offset; missing anchors use nearby visible identities
+and then a clamped prior position. An explicitly selected primary or a moved
+visible primary is revealed with minimum scrolling. Routine/cosmetic refresh
+does not pull back to an offscreen primary. A changed session epoch resets
+ephemeral scroll ownership. No refresh edits state or initiates processing.
+
+`preverb_swell_list_test --review` runs the same control in a lightweight native
+fixture; normal execution tests real pointer/keyboard row interactions, snapshot
+replacement, scrolling and virtualization. The pure ordering contract is covered
+by `preverb_swell_list_order_test`. The owner approved the standalone family's
+look and interaction feel on 4 November 2026 before editor integration. The
+Perform editor now uses this family; delayed row commands carry a coherent
+snapshot session epoch checked under the engine lock, including atomic targeted
+deletion. `SwellListBindingCases.h` and `SwellListCaptureCases.h` cover production
+bindings, sparse captures, loops, recapture and restore. Integrated/host acceptance
+remains separately recorded in the [issue #4 evidence](../validation/2026-11-04-issue-4-swell-list.md). Settings and
+Diagnostics have no duplicate Swells list consumer. Other families and general
+menus/scroll containers remain outside this extraction.

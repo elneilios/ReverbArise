@@ -50,6 +50,7 @@ std::optional<GenerationConfiguration> SwellEngine::passConfiguration(uint64_t p
 EditorSnapshot SwellEngine::snapshot() const
 {
     const juce::ScopedLock guard(lock); EditorSnapshot s;
+    s.sessionEpoch=sessionGeneration.load();
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
@@ -144,14 +145,27 @@ void SwellEngine::removeSelected()
     ++monitoringGeneration;const auto selected=model.selected;
     for(const auto& id:selected) if(suppressAndErase(model,id,message)) { invalidateLiveLocked(id);runtime.erase(id); forceRefresh.erase(id);persistentChangedLocked(); }
 }
-bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce::String& primary)
+bool SwellEngine::removeTarget(const juce::String& id,uint64_t expectedSession)
+{
+    // Keep the existing select-then-delete policy atomic with session restore.
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=sessionGeneration.load() || !find(model,id) || !permitCreative())return false;
+    if(!selectTargets({id},id,expectedSession))return false;
+    removeSelected();return find(model,id)==nullptr;
+}
+bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce::String& primary,uint64_t expectedSession)
 {
     const juce::ScopedLock guard(lock);
+    if(expectedSession && expectedSession!=sessionGeneration.load())return false;
     if(ids==model.selected && primary==model.primary)return true;
     if(!select(model,ids,primary)) return false; stopLocked(); return true;
 }
+bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce::String& primary)
+{return selectTargets(ids,primary,0);}
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation)
 {return editChecked(id,operation);}
+bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,uint64_t expectedSession)
+{return editChecked(id,operation,false,expectedSession);}
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
     if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
@@ -181,10 +195,12 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
     message=policy==GainPolicy::musical?"Musical gain staging selected; preparing calibrated swells":"Legacy gain staging selected";
     persistentChangedLocked();notify();return true;
 }
-bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset)
+bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset,uint64_t expectedSession)
 {
     if(!permitCreative())return false;
-    const juce::ScopedLock guard(lock); auto w=find(model,id); if(!w) return false;
+    const juce::ScopedLock guard(lock);
+    if(expectedSession && expectedSession!=sessionGeneration.load())return false;
+    auto w=find(model,id); if(!w) return false;
     actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return false;
     if(candidate.id!=id) { message="Swell identity cannot be edited"; return false; }
     if(candidate.arrival==w->arrival && (candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd))candidate.supportOffset=0;

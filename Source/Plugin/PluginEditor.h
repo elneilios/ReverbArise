@@ -9,8 +9,9 @@
 #include <UI/WorkspaceNotice.h>
 #include <UI/Controls/InvocationSlider.h>
 #include <UI/LearnWorkspace.h>
+#include <UI/Controls/SwellList.h>
 
-class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer,private juce::ListBoxModel
+class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
 public:
     explicit PreverbAudioProcessorEditor(PreverbAudioProcessor&);
@@ -34,10 +35,7 @@ private:
     void setSettingsOpen(bool);
     void initialiseSettings();
     void layoutSettings();
-    int getNumRows() override;
-    void paintListBoxItem(int,juce::Graphics&,int,int,bool) override;
-    void selectedRowsChanged(int) override;
-    void listBoxItemClicked(int,const juce::MouseEvent&) override;
+    void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
     void curveChanged(bool);
     void setPreferences();
     void applyBarRange();
@@ -68,7 +66,7 @@ private:
     m3::EditorSnapshot state;
     m3::SwellTimeline timeline;
     m3::SwellOverview songOverview{timeline};
-    juce::ListBox list{"Swells",this};
+    m3::ui::controls::SwellList list;
     juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
     juce::TextButton addButton{"Add at playhead"},removeButton{"Delete"},loadIRButton{"Load IR..."},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet"},stopButton{"Stop"};
     juce::TextButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"},previousButton{"Prev"},nextButton{"Next"},zoomInButton{"Zoom +"},zoomOutButton{"Zoom -"},fitButton{"Fit"};

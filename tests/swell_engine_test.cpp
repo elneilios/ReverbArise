@@ -142,6 +142,12 @@ int main() { return runTest([]
         REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::error;});
         REQUIRE(find(edits.savedSession(),a)->ir==imported.ir && edits.savedSession().defaultIR==future);
         const auto oldEpoch=edits.assignmentEpoch();const auto restored=edits.savedSession();edits.restore(restored);
+        REQUIRE(edits.snapshot().sessionEpoch!=oldEpoch);
+        REQUIRE(!edits.selectTargets({b},b,oldEpoch));
+        REQUIRE(!edits.removeTarget(a,oldEpoch));
+        REQUIRE(!edits.edit(a,[](auto& w,auto&){w.name="Stale row command";return true;},oldEpoch));
+        REQUIRE(edits.savedSession().selected==restored.selected && edits.savedSession().primary==restored.primary);
+        REQUIRE(find(edits.savedSession(),a)->name==find(restored,a)->name && edits.savedSession().swells.size()==restored.swells.size());
         REQUIRE(!edits.assignIR(a,find(restored,a)->inputGeneration,custom,false,oldEpoch));
         waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::ready;});
         auto request=*find(edits.savedSession(),a);
