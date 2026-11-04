@@ -72,6 +72,15 @@ lists the integration baseline, component ownership and remaining legacy consume
 
 ## Incremental migration
 
+Issue #46's native revision-4 compact composition has owner approval. Its
+`PerformLayout::performGeometry` profile is scoped to Perform and tested by the
+native composition matrix; standards revision 3 records the accepted values.
+Production editor adoption awaits shared-file coordination. The new
+`LatchingActionButton` reuses ActionButton's unlatched drawing, invocation,
+keyboard and focus mechanism and adds accepted pressed-state ink. Its native
+look/feel checkpoint received owner approval on 4 November 2026; no new Snap
+behavior is integrated yet.
+
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns
 accepted bounds, logarithmic range, Fit and stale-session guards. The independent

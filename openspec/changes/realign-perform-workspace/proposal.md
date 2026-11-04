@@ -33,4 +33,4 @@ Expected areas: `Source/Plugin/PluginEditor.*`, `Source/UI/WorkspaceLayout.h`, `
 
 Planning baseline: fetched main `33cd54b`, production standards revision 2 (superseding the issue's revision-1 wording). #6 remains separately owned; its branch currently points to `33f1871` and supplies no final Export API to integrate. Shared composition/preview changes require a concrete owner-coordinated contract before implementation. #38's future Generate transition is not implemented here. #5, #9, #25, Pattern policy and new DSP remain separate.
 
-This proposal stops before Apply. A fresh user request authorizes the initial native review fixture; compact production metrics and materially revised families still require explicit native approval before broader implementation.
+Apply is authorized. The owner approved the actual revision-4 compact composition on 4 November 2026; its values now live in the scoped Perform profile and standards revision 3. Shared Zoom/Fit/ruler PR #49 is approved and merged. New latching-control look/feel and #6 shared-file/state ownership remain separate gates before production integration.

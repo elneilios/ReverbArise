@@ -330,3 +330,63 @@ request to coordinate shared timeline and optional preference ownership was agai
 rejected by Codex's active-writer restriction. No message was delivered and no
 shared production timeline/serialization paths were changed. Task 1.1 remains
 open rather than treating the merged stateless library as wider state ownership.
+
+## Compact approval and standalone navigation foundations (2026-11-04)
+
+The owner explicitly answered **Approve compact layout** for revision 4. Task 1.3
+was marked complete only after refreshing Apply instructions, matching its exact
+source checkbox/description and re-querying completion: **2/17 complete**.
+`PerformLayout.h` now owns the approved scoped values; native fixture placement
+consumes it. Standards revision 3 records the approved profile, with no change to
+comfortable Learn/header tokens or the exact-occurrence debt inventory. Existing
+production editor/timeline/decoder files remain untouched pending #6 coordination.
+
+New standalone `HostGrid` reuses existing transport mapping/origin/sample authority.
+Its integer oracle covers all seven divisions and 4/4, 3/4, 6/8, negative and
+fractional PPQ/origins, half ties, seeks/loops, one-sample host-origin tolerance,
+changed/incompatible/non-finite timing, invalid divisions and unrepresentable
+grid indices. This is a numerical foundation; existing viewport/gesture wiring
+is not yet extended, so task 4.1 remains incomplete.
+
+New `LatchingActionButton` leaves accepted ActionButton unchanged, inherits its
+unlatched drawing/invocation/focus and adds accepted On ink. Component tests cover
+pointer, Return/Space family behavior, silent effective display, requested-On Ctrl
+mask/release, saved-Off release, disabled delayed callbacks, native focus and
+accessible checked state. The owner/controller still owns modifiers and preference.
+The [native control specimen](2026-11-04-issue-46/snap-control/snap-control.png)
+was directly launched as “Issue #46 - Snap toggle control”; its separate family
+approval is pending. No production Snap/gesture behavior or persistence is claimed.
+
+Focused native Release builds / four CTests passed in 2.74 seconds at
+`out/build-logs/Release/20261104-perform-grid-control-final/` before the additional
+explicit accessibility-state assertions; final focused rerun is recorded below.
+No broad/full native suite or FL Studio/DPI repeat was needed for these isolated
+foundations. UI standards passed with 39 governed files / 61 bounded occurrences.
+
+The current ownership message to Agent 1 was successfully delivered through Codex
+after earlier active-writer failures. It asks for the editor/timeline and optional
+schema-10 Perform preference contract before shared mutations. The target chat
+currently reports an interrupted/not-loaded turn; no ownership reply has arrived.
+Do not infer approval from message delivery. Task 1.1 remains open.
+
+Final verification: the extracted approved profile passed the complete native
+60-case / 240-render matrix and live refresh checks, logs
+`out/build-logs/Release/20261104-perform-approved-profile/`. Parsed measurement
+JSON matches revision 4 exactly. Final native accessibility-state assertions and
+all four focused tests passed in **2.77 seconds**, logs
+`out/build-logs/Release/20261104-perform-snap-accessibility/`. Strict OpenSpec,
+UI standards (39 files / 61 bounded occurrences) and diff checks passed.
+
+The owner subsequently answered **Approve Snap button family** in the direct
+native review. Its look/feel gate is satisfied. This does not complete task 2.1's
+remaining selector/numeric/knob inventory and binding work, or any production
+gesture/state integration. Both layout and Snap family approval are retained;
+no repeat owner review is requested for those accepted visuals.
+
+Latest read-only Export recheck during this work: Agent 1 has committed and
+merged main in its branch at `13ec5be` (“Merge main with shared timeline controls
+and swell-list integration”). The overlapping editor/session files have no
+uncommitted diff at that revision. TimelineNavigation is now SHA256
+`AEE0CF5A3EAFD287EB46FD63E359B41A551DFB4DD0830BBB27A237FF86C1C465`;
+the schema-10 decoder hash is unchanged. This is a concrete integration baseline,
+not an inferred ownership release or permission to absorb Export into PR #48.

@@ -29,15 +29,15 @@ Visual references: [#3 approved Perform viewer](https://github.com/elneilios/Rev
 
 Keep `WorkflowHeader`, NoticeBar and Learn composition intact. Introduce a Perform-scoped layout calculation/composite rather than altering shared dimensions used by Export. Keep one editor, its existing handle painting/hit geometry and separate Overview. Preserve all supported inspector fields via vertical scrolling, not reduced font heights. The owner's divider reference review clarifies that the old Perform auto-marker tooling is to be removed: omit its band, preserve saved instance detection preferences and Learn's controls, and do not adopt #38's generation behavior.
 
-Candidate `performCompact` geometry below is **proposed logical-pixel arithmetic, not measured native evidence or approved tokens**. Begin with current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
+The geometry below was measured in native revision 4 and explicitly approved by the owner on 4 November 2026. `PerformLayout.h::performGeometry` and standards revision 3 now record its scoped values; production editor integration awaits shared-file coordination. Retain current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
 
-| Proposed allocation | Below editor width 1200 | At/above 1200 | Rationale |
+| Approved allocation | Below editor width 1200 | At/above 1200 | Rationale |
 | --- | --- | --- | --- |
 | Outer inset / header | existing 16 / 82 | existing 20 / 82 | Preserve shared baseline |
 | List / inspector / column gaps | 180 / 304 / 16 each | 210 / 320 / 16 each | Recover center width; inspector scrolls |
 | Perform globals / audition / Overview / info | none / 72 / 120 / 36 | same | Omit obsolete marker tooling; retain the other bands |
 | Column content inset from horizontal rules | 12 top/bottom for list/inspector; 12 top for timeline | same | Preserve full-width rules after opaque child painting |
-| Section heading / related gap / group gap | 30 / 8 / 12 | same | Named Perform spacing only; approval required |
+| Section heading / related gap / group gap | 30 / 8 / 12 | same | Scoped Perform spacing; native composition approved |
 | Toolbar footprint / internal control | 48 / 36 | same | One row with focus clearance |
 
 Derived budgets (outer content less header and bands):
@@ -54,7 +54,7 @@ to inset column content rather than joining the band rules. An opaque timeline
 placed on the header divider erased its middle in the first previews. Test the
 finished composite pixels across every horizontal rule, not just the parent paint
 or the gaps at vertical endpoints. Audition and Overview retain 8-pixel vertical
-insets. These are revised review candidates, not production-approved metrics.
+insets. These scoped values have native approval; production adoption still awaits coordinated ownership.
 
 The native fixture must report actual dry/wet lane, ruler, scrollbar, toolbar, focus and inspector bounds and adjust these proposals before approval. A two-line 14-high helper must fit its proper line boxes. Test 1199/1200/1201 and adjacent header breakpoint behavior separately. Stop if the one-row toolbar or hit targets cannot fit; do not rescue it with smaller fonts or a second row.
 
@@ -74,7 +74,8 @@ Alternative rejected: reusing legacy spacing as already approved, or globally sh
 | Zoom and audition sliders / exact numeric values | `SliderControl`, `NumericInputControl`, `InvocationSlider`; domain bindings keep units, ranges, active-edit text and validation |
 | Existing knobs/exact inspector controls | Extend working `KnobValue` with shared numeric/edit lifecycle; include corresponding affected Settings/Diagnostics consumers, keep independent domain steps |
 | Grid/IR selectors | Shared selector/no-wheel invocation policy; extend existing `IrSelector`/invocation patterns for grid, not a new screen-local interaction policy |
-| Zoom icon actions, Fit, Play/Stop and add | Existing `IconActionButton` and theme button policy; a missing reusable text-action primitive is an extraction from existing behavior, separately previewed before adoption |
+| Zoom actions and Fit | Approved shared `TimelineZoomControls` / `ActionButton` from merged PR #49; workspace owns limits, Fit and accepted state |
+| Play/Stop and add | Existing action mechanisms; consolidate only affected consumers without extending audition scope |
 | Headings, labels, help, empty states and notices | Named theme roles with embedded static Inter faces, semantic ink and reserved NoticeBar; no raw screen-local colour/font additions |
 | Timeline/Overview | Existing specialized components; preserve painting/hit transforms, coverage truth and disclosed amplitude scaling |
 
@@ -119,8 +120,8 @@ Use focused pure viewport/grid tests, actual component gestures and processor/ed
 The original interface proposal below was delivered independently in PR #49,
 approved by the owner and merged into main at `12182f2` on 4 November. Its shared
 Zoom/Fit row, ActionButton and musical ruler are now available. This approval does
-not approve Perform compact composition or transfer Export implementation/state
-ownership. The owner requested small composable boundaries across Learn/Perform/Export
+not transfer Export implementation/state ownership. The owner subsequently approved
+Perform compact revision 4 separately. The owner requested small composable boundaries across Learn/Perform/Export
 while retaining the existing native composition checkpoint and #6 ownership gate.
 
 **Safe existing shared foundation:** `SwellViewport` remains the sample/pixel and

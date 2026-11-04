@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.2 · **Production standards revision:** 2 · **Purpose:** Production UI authority and design reference.
+**Version:** 1.3 · **Production standards revision:** 3 · **Purpose:** Production UI authority and design reference.
 
 ## Validated production standards — Learn and shared header
 
@@ -114,6 +114,30 @@ ephemeral ownership on session replacement. Preserve the current row rendering
 through extraction; this does not validate legacy Perform measurements as new
 defaults. See [shared control policies](../development/ui-development-standards.md)
 and [scoped approval/evidence](../validation/2026-11-04-issue-4-swell-list.md).
+
+## Approved scoped Perform compact profile — issue #46
+
+The owner approved the actual revision-4 native composition on 4 November 2026.
+`PerformLayout.h::performGeometry` owns these scoped metrics; comfortable Learn
+and shared-header defaults remain unchanged. The fixture consumes the named
+profile; production editor migration is still pending shared-file coordination.
+
+| Allocation | Below / at-or-above editor width 1200 |
+| --- | --- |
+| List / inspector / column gap | 180 / 304 / 16; wide 210 / 320 / 16 |
+| Column content inset | 12 from horizontal rules |
+| Audition / Overview / info bands | 72 / 120 / 36 |
+| Toolbar / readout | 48 / 26 |
+| Toolbar inset / control / external gap | 6 / 36 / 8 |
+| Snap / grid widths | 96 / 136; remaining width belongs to approved shared Zoom/Fit row |
+| Audition and Overview vertical inset | 8 |
+
+Horizontal rules remain continuous after child painting; vertical rules stop
+short of band boundaries. Obsolete Perform marker tooling is omitted. Typography,
+list row heights, semantics and inspector field capabilities retain their separate
+authorities. This composition approval does not approve new control variants or
+claim working Snap/grid; the latching action family has its own native checkpoint.
+See [#46 evidence](../validation/2026-11-04-issue-46-perform-composition.md).
 
 ## Historical design intent and provisional suggestions
 

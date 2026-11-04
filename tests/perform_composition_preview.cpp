@@ -3,6 +3,7 @@
 #include "WorkflowTestSupport.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/Controls/TimelineZoomControls.h>
+#include <UI/PerformLayout.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
@@ -28,20 +29,7 @@ template<class F>static void wait(F predicate)
 struct Head final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
 
-// All candidate metrics live in this test translation unit until owner approval.
-struct Layout
-{
-    juce::Rectangle<int> header,work,list,detail,inspector,audition,overview,info,toolbar,readout;
-    explicit Layout(juce::Rectangle<int> bounds)
-    {
-        auto a=bounds.reduced(workspaceGeometry::outerInset(bounds.getWidth()));
-        header=a.removeFromTop(workspaceGeometry::headerHeight);
-        info=a.removeFromBottom(36);overview=a.removeFromBottom(120);audition=a.removeFromBottom(72);
-        work=a;list=a.removeFromLeft(bounds.getWidth()<1200?180:210);a.removeFromLeft(16);
-        inspector=a.removeFromRight(bounds.getWidth()<1200?304:320);a.removeFromRight(16);
-        toolbar=a.removeFromBottom(48);readout=a.removeFromBottom(26);detail=a;
-    }
-};
+using Layout=PerformLayout;
 
 class Composition final:public juce::Component,private juce::Timer
 {
@@ -230,8 +218,8 @@ public:
         parts.at("inspectorViewport")->setBounds(right);emptyInspector.setBounds(right);
         layoutInspector(right.getWidth());
         timeline().setBounds(l.detail.withTrimmedTop(spacing::related));parts.at("editorReadout")->setBounds(l.readout);emptyTimeline.setBounds(l.detail.reduced(16));
-        auto row=l.toolbar.reduced(6,6);grid.setBounds(row.removeFromRight(136));row.removeFromRight(8);
-        snap.setBounds(row.removeFromRight(96));row.removeFromRight(8);zoom.setBounds(row);
+        auto row=l.toolbar.reduced(performGeometry::toolbarInset);grid.setBounds(row.removeFromRight(performGeometry::gridWidth));row.removeFromRight(performGeometry::toolbarGap);
+        snap.setBounds(row.removeFromRight(performGeometry::snapWidth));row.removeFromRight(performGeometry::toolbarGap);zoom.setBounds(row);
         auto audition=l.audition.reduced(0,8);auto line=audition.removeFromTop(36);
         auditionHeading.setBounds(line.removeFromLeft(112));parts.at("audition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(8);
         parts.at("stopAudition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(24);
