@@ -48,6 +48,7 @@ struct EditorSnapshot
 {
     ExportSnapshot songExport;
     Session session;
+    uint64_t sessionEpoch=0; // Coherent UI ownership token; never persisted.
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
@@ -98,8 +99,11 @@ public:
     bool confirmCandidate(size_t index);
     bool confirmCandidateAt(int64_t sample);
     void removeSelected();
+    bool removeTarget(const juce::String&,uint64_t expectedSession);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
+    bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
+    bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession);
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
@@ -202,7 +206,7 @@ private:
     void acceptedSourceLocked(const CaptureManifest&);
     void importJob(const Import&);
     void resetJob(const Reset&);
-    bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false);
+    bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,uint64_t expectedSession=0);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
     void shapeJob(Swell,uint64_t session);

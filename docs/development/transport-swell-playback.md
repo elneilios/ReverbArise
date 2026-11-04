@@ -69,6 +69,16 @@ Regeneration sensitivity is a separate, typeable knob in the main header. It doe
 
 Freeze render in the selected-swell inspector fixes ready committed wet against automatic source changes. Frozen swells are marked in the list and protected from automatic detection reconciliation. Name, activity, shape, gain and wet placement remain editable. Unfreeze before changing source/arrival/IR or extending render support; unfreeze checks current source and regenerates as necessary. The saved frozen render works after capture clear or reopen without source/IR availability, provided its managed wet file is intact and rate/tempo/meter match. Captured Dry + Wet audition still needs genuine dry context. Timing incompatibility and missing/corrupt wet remain explicit failures. Existing sessions migrate to 50% Regeneration sensitivity and unfrozen swells.
 
+Returning to a frozen render's original rate/tempo/meter re-admits stale wet to
+background asset verification even when capture coverage/reference has not
+changed. Recovery can therefore follow a tempo round trip after Clear without
+recapture or reconvolution. Readiness remains unavailable until verification
+finishes; a missing/corrupt render retains its saved reference and reports an
+error. This recovery check does not change source, edits or placement and runs
+outside the audio callback. The deterministic timing/revalidation regression is
+in `PerformanceExportCases.h`; [issue #4 evidence](../validation/2026-11-04-issue-4-swell-list.md)
+records the separately authorized adjacent repair.
+
 For DAW WAV export, the host must identify offline processing (JUCE isNonRealtime, VST3 kOffline). The plugin then pauses background preparation, verifies/completes existing swell definitions and holds a fixed snapshot for the bounce. It skips recording export input and synchronously reads/shapes bounded pages before mixing. Pages are normally 16384 frames and shrink under budget pressure; host blocks are sliced into at most 512 frames. PCM shares the 256 MiB allowance. The whole song need not be resident. Eligible overlaps, fixed wet attenuation and saved routing apply; offline Wet Only starts without a dry-routing fade-in. Host Playing need not be true, but absolute sample/PPQ mapping is still required.
 
 Offline processing can wait, allocate and read disk; ordinary realtime processing still cannot. Waiting or missing individual swells produce a prominent `Export warning: ...` naming skipped members while all available wet continues rendering. This follows the same available-contribution policy as live playback. Fatal mapping, budget or unexpected admitted-page I/O failures still report `Export incomplete: ...` persistently. The VST API does not let this effect cancel the host's export dialog, so inspect the result: a skip warning means partial wet output, while a fatal export error means the bounce could not continue correctly. Hosts that do not flag offline processing retain the realtime prefetch behavior and need host-specific investigation. First capture the song and allow automatic marker creation before exporting; export is not a first-pass source discovery mode. Full project packaging and standalone export controls remain later work.

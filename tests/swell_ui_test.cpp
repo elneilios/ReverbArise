@@ -106,7 +106,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     juce::Image image(juce::Image::ARGB,editor.getWidth(),editor.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);editor.paintEntireComponent(graphics,true);
     REQUIRE(image.getPixelAt(layout.header.getX()+4,layout.globals.getY())==m3::ui::separator);
     auto stream=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(image,*stream));
-    if(tag=="fresh-1400" || tag=="fresh-1100" || tag=="ready" || tag.startsWith("learn-") || tag.startsWith("export-"))for(const auto scale:{1.25f,1.5f,2.0f})
+    if(tag=="fresh-1400" || tag=="fresh-1100" || tag=="ready" || tag.startsWith("learn-") || tag.startsWith("export-") || tag.startsWith("ordering-") || tag.startsWith("many-"))for(const auto scale:{1.25f,1.5f,2.0f})
     {
         juce::Image scaled(juce::Image::ARGB,juce::roundToInt(editor.getWidth()*scale),juce::roundToInt(editor.getHeight()*scale),true,juce::SoftwareImageType{});
         juce::Graphics canvas(scaled);canvas.addTransform(juce::AffineTransform::scale(scale));editor.paintEntireComponent(canvas,true);
@@ -119,6 +119,8 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "WorkspaceNoticeCases.h"
 #include "UiStandardsCases.h"
 #include "ExportControlCases.h"
+#include "SwellListBindingCases.h"
+#include "SwellListCaptureCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -184,6 +186,8 @@ int main(int argc,char* argv[]){return runTest([&]
         navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==5);
         panel.setLookAndFeel(nullptr);return;
     }
+    if(argc>1 && juce::String(argv[1])=="--review-ordering"){swellListCaptureCases(true);return;}
+    swellListCaptureCases();
     uiStandardsCases();
     learnTimelineCases();
     if(argc>1 && juce::String(argv[1])=="--review-export-controls"){exportControlReview::cases();controlReview::run(std::make_unique<exportControlReview::Panel>());return;}
@@ -511,6 +515,7 @@ int main(int argc,char* argv[]){return runTest([&]
     const auto largeWorkflowSnapshot=[&](const juce::String& tag){const auto bounds=editor.getBounds();
         editor.setSize(1400,1000);editor.refresh();snapshotEditor(editor,tag+"-1400");
         editor.setSize(bounds.getWidth(),bounds.getHeight());editor.refresh();};
+    swellListBindingCases(*processor,editor);
     {
         auto mode=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(editor,"workflowMode"));REQUIRE(mode && mode->selectedId()==2);
         REQUIRE(!dynamic_cast<juce::ComboBox*>(named(editor,"workflowMode")));
@@ -1156,6 +1161,9 @@ int main(int argc,char* argv[]){return runTest([&]
     for(int n=0;n<500;++n){auto w=saved.swells[0];w.id=juce::Uuid().toDashedString();w.name="Target "+juce::String(n+1);many.swells.push_back(w);}
     many.primary=many.swells[0].id;many.selected={many.primary};engine.restore(many);editor.refresh();
     const auto list=dynamic_cast<juce::ListBox*>(named(editor,"swellList"));REQUIRE(list && list->getModel()->getNumRows()==500 && list->getNumChildComponents()<30);snapshotEditor(editor,"many");
+    {const auto old=editor.getBounds();for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1400,1000},juce::Point<int>{1600,1000}})
+        {editor.setSize(size.x,size.y);editor.refresh();snapshotEditor(editor,"many-"+juce::String(size.x)+"x"+juce::String(size.y));}
+        editor.setSize(old.getWidth(),old.getHeight());editor.refresh();}
     {
         auto rows=const_cast<juce::ListBox*>(list);rows->scrollToEnsureRowIsOnscreen(250);
         const auto position=juce::Point<float>(static_cast<float>(rows->getWidth()-15),45);

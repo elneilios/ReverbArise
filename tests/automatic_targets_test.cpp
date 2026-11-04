@@ -1,9 +1,34 @@
 #include "TestSupport.h"
 #include <Analysis/AutomaticTargets.h>
 #include <Core/TransportTime.h>
+#include <UI/Controls/SwellListOrder.h>
 using namespace m3;
 int main(){return runTest([]
 {
+    {
+        Session s;SongTime t{true,0,0,48000,120,4,4};juce::String error;
+        REQUIRE(reconcileTargets(s,{{200000,1},{230000,1}},192000,250000,t,error));
+        const auto late=s.swells.front().id;
+        s.swells.front().name="AAA user name";s.swells.front().enabled=false;
+        s.swells.front().provenance=Provenance::manualEdited;s.swells.front().placement=37;s.swells.front().shape.gainDb=-8;
+        const auto pinned=s.swells.front();
+        REQUIRE(reconcileTargets(s,{{12000,1},{40000,1}},0,48000,t,error));
+        REQUIRE(s.swells.size()==4 && s.swells.front().id==late);
+        const auto early=s.swells[2].id;s.swells[2].name="ZZZ user name";
+        REQUIRE(select(s,{late,early},early));
+        const auto check=[&](const Session& state)
+        {
+            const auto order=m3::ui::controls::chronologicalSwellOrder(std::span<const Swell>(state.swells));
+            REQUIRE(state.swells[order.front()].id==early && state.swells[order.back()].arrival==230000);
+            REQUIRE(state.primary==early && state.selected==std::vector<juce::String>({late,early}));
+            REQUIRE(sameSavedSwell(pinned,*find(state,late)));
+        };
+        check(s);
+        REQUIRE(reconcileTargets(s,{{12010,1},{40000,1}},0,48000,t,error));check(s);
+        REQUIRE(reconcileTargets(s,{{12010,1},{40000,1}},0,48000,t,error));check(s);
+        juce::String json;Session restored;REQUIRE(encode(s,json,error) && decode(json,restored,error));check(restored);
+        REQUIRE(restored.swells.front().id==late);
+    }
     {Session tail;SongTime t{true,0,0,1000,120,4,4};juce::String error;
         REQUIRE(reconcileTargets(tail,{{990,1}},0,1000,t,error));auto& w=tail.swells[0];
         REQUIRE(w.sourceEnd==1490 && w.shape.endOffset==20);

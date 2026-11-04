@@ -12,6 +12,10 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
+
+- [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.
+
 - [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
 
 - [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — source/thread inventory, disposable native benchmarks, resource limits and follow-up recommendations.

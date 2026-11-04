@@ -20,7 +20,7 @@ juce::Rectangle<int> PreverbAudioProcessorEditor::swellMenuAnchor(const juce::Mo
 {
     // A row event's screen position already includes list scrolling, editor
     // embedding and the peer's desktop scale. Never anchor to the whole list.
-    return {event.getScreenPosition().x,event.getScreenPosition().y,1,1};
+    return m3::ui::controls::SwellList::menuAnchor(event);
 }
 void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
 {
