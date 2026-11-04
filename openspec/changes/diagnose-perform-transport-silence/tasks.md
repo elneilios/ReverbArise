@@ -11,7 +11,7 @@ Implementation starts only after a fresh Apply request. Groups are sequential; t
 
 ## 2. Establish the failed gate
 
-- [ ] 2.1 Gather read-only preserved-instance/copy evidence when available and/or create a deterministic injected reproduction of the specific defect; record failed predicate, expected/published/observed mapping, callback range, revisions/window, configuration exclusion and reproduction command in dated docs/validation evidence. Verify the fixture fails for the established reason before the fix and label whether it reproduces the owner's instance or only a demonstrated mechanism. If cause remains unproven, stop behavioral edits and identify the exact missing observation; do not mark this gate complete.
+- [x] 2.1 Gather read-only preserved-instance/copy evidence when available and/or create a deterministic injected reproduction of the specific defect; record failed predicate, expected/published/observed mapping, callback range, revisions/window, configuration exclusion and reproduction command in dated docs/validation evidence. Verify the fixture fails for the established reason before the fix and label whether it reproduces the owner's instance or only a demonstrated mechanism. If cause remains unproven, stop behavioral edits and identify the exact missing observation; do not mark this gate complete.
 
 ## 3. Narrow repair and recovery regressions
 

@@ -2,6 +2,7 @@
 #include "AllocationGuard.h"
 #include <Playback/TransportPlayback.h>
 #include <thread>
+#include <string_view>
 using namespace m3;
 static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=180)
 {
@@ -11,7 +12,40 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
         p->entries.push_back({n,1,a->start,a->start+120,.08f,a});}
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
-int main(){return runTest([]{
+int main(int argc,char* argv[]){return runTest([&]{
+    // Owner recording 2026-11-04: the ready stopped mapping differs from
+    // every playing observation by 16 samples. PCM here is synthetic; timing
+    // and publication identity are replayed from the host diagnostic evidence.
+    {auto replay=std::make_unique<TransportPlayback>();
+        const SongTime stopped{true,3399344,144,48000,122,4,4};
+        const SongTime playing{true,3436475,145.572232638889488,48000,122,4,4};
+        auto publication=std::make_unique<LivePublication>();publication->mapping=stopped;
+        publication->revision=30;publication->start=3387344;publication->end=3495344;
+        auto audio=std::make_shared<WetRender>();audio->start=playing.sample;audio->rate=48000;
+        audio->samples.resize(245*2,.07f);
+        publication->entries.push_back({0,1,playing.sample,playing.sample+245,.07f,audio});
+        juce::String error;REQUIRE(prepareLiveSegments(*publication,error));
+        replay->invalidate(0,1);REQUIRE(replay->publish(std::move(publication)));
+        float left[245],right[245];std::fill_n(left,245,.25f);std::fill_n(right,245,.25f);
+        TransportTime time{playing,true};
+        {AudioAllocationGuard guard;replay->process(left,right,245,time);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        if(argc>1 && std::string_view(argv[1])=="--issue-53-expected-wet"){
+            // Deliberately fails before a reviewed compatibility fix. The
+            // resident synthetic wet should be audible after its admission ramp.
+            REQUIRE(left[244]>.25f);return;
+        }
+        const auto rejected=replay->observation();REQUIRE(rejected);
+        REQUIRE(rejected->gate==LiveGate::origin && rejected->revision==30 && rejected->validCount);
+        REQUIRE(std::abs(rejected->originDelta-16)<.00001);
+        REQUIRE(replay->incompatible() && !replay->active() && left[244]==.25f);
+        time={stopped,false};replay->process(left,right,100,time);
+        REQUIRE(!replay->incompatible() && replay->observation()->gate==LiveGate::stopped);
+        REQUIRE(replay->lastRejection()->block==rejected->block);
+        time={playing,true};replay->process(left,right,245,time);
+        REQUIRE(replay->incompatible() && replay->observation()->revision==30);
+    }
+
     // Telemetry owns values, not publication pointers; Stop preserves rejection.
     {auto diagnostic=std::make_unique<TransportPlayback>();
         REQUIRE(!diagnostic->observation() && !diagnostic->lastRejection());
