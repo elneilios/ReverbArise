@@ -45,9 +45,11 @@ void Composition::verifyKnobResets()
     auto& inspector=require<juce::Viewport>(*panel,"inspectorViewport");inspector.setViewPosition(0,inspector.getViewedComponent()->getHeight()-inspector.getHeight());
     auto& level=cell("swellLevel").valueKnob();panel->toFront(true);level.grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     REQUIRE(level.hasKeyboardFocus(false));const auto menuClick=event(level,juce::ModifierKeys::rightButtonModifier,1);level.mouseDown(menuClick);level.mouseUp(event(level,{},1));
-    juce::MessageManager::getInstance()->runDispatchLoopUntil(40);juce::Component* popup=nullptr;auto& desktop=juce::Desktop::getInstance();
-    for(int n=0;n<desktop.getNumComponents();++n)if(desktop.getComponent(n)->getName()=="menu")popup=desktop.getComponent(n);
-    if(!popup)std::cerr<<"Reset popup missing; Level enabled="<<level.isEnabled()<<" showing="<<level.isShowing()<<" gain="<<current().shape.gainDb<<"\n";
+    juce::Component* popup=nullptr;auto& desktop=juce::Desktop::getInstance();
+    for(int attempt=0;attempt<50 && !popup;++attempt)
+    {juce::MessageManager::getInstance()->runDispatchLoopUntil(10);for(int n=0;n<desktop.getNumComponents();++n)if(desktop.getComponent(n)->getName()=="menu")popup=desktop.getComponent(n);}
+    if(!popup){std::cerr<<"Reset popup missing; Level enabled="<<level.isEnabled()<<" showing="<<level.isShowing()<<" gain="<<current().shape.gainDb<<" dial="<<level.getScreenBounds().toString()<<" viewport="<<inspector.getScreenBounds().toString()<<"\n";
+        for(int n=0;n<desktop.getNumComponents();++n)std::cerr<<"Desktop: "<<desktop.getComponent(n)->getName()<<" "<<desktop.getComponent(n)->getScreenBounds().toString()<<"\n";}
     REQUIRE(popup && current().shape.gainDb==-7);
     REQUIRE(popup->getScreenBounds().expanded(spacing::related).contains(menuClick.getScreenPosition()));
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_PERFORM_KNOB_OUTPUT",{});
