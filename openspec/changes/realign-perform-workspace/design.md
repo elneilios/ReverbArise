@@ -329,3 +329,43 @@ heading role. Align it to existing Inter SemiBold 21/30-box typography; no new
 font role, control family or density token is introduced. Test title ink against
 the actual Audition label font, row bounds/gaps, full rules and software scales.
 No audio, persistence or audition semantics change in this layout refinement.
+
+### Perform clarity revision — subsequent owner feedback
+
+Preserve the three-column composition and 52-pixel review strip. Keep the native
+instance-only metric gate until the complete revised visual checkpoint is accepted.
+The existing latching audition button names its selected state: Dry + wet when
+Off, Wet only when On. Short status reports readiness/playback/member count rather
+than a contradictory action label; accessibility and tooltip disclose state and
+next action. No mode, mix, legacy preference or playback semantics change.
+
+Reuse MusicalTimelineRuler unchanged, feeding the existing SwellViewport and host
+SongTime. One ruler sits above both aligned lanes; bar/beat guides use the same
+sample/pixel transform. Missing musical timing is explicit; this is not a new
+coordinate authority or timing-map implementation. Dry/Wet labels and the target
+anchor remain concise, while reference/scale/drag explanations move to native
+tooltips. Interaction warnings remain visible.
+
+In the preview inspector use existing control-label roles for Timing, Envelope
+and Level group captions, existing row/spacing tokens, full-width Source start/
+end cells and a content-derived scroll extent. Target/movement, endpoint/fade/
+curve pairs retain the existing KnobValue family. No typography shrinking, new
+card surfaces or unrelated settings migration. Compact display: seconds 3 places,
+ms/dB 1, curves 2, trimmed zeros; musical positions at most 3 fractional digits.
+Exact text focus exposes the prior full readout precision, with a separate edit
+baseline so focus/Return alone never writes a rounded value. Typed input and
+stored sample/float/double values keep their existing canonical precision and
+steps. Extend KnobValue composition with an optional exact text string, not a
+workspace-specific feature flag; unchanged consumers retain current behavior.
+
+UI-only musical formatting delegates to the existing exact musicalPosition then
+rounds presentation with correct beat/bar carry; durable names/parsing stay exact.
+Footer labels the resulting bar/beat position. Overview uses the same Label and
+section-heading role/border mechanism as Audition so text-box margins align.
+
+No new visual token, font, control painter or exception is proposed. Automated
+native tests cover selected-mode labels, compact/exact/no-op focus, negative/carry
+musical readouts, shared ruler alignment through zoom/pan/resize, all controls and
+reset reachability at 1100x850, heading insets and source/render/state identities.
+The actual refined native preview is the owner checkpoint; broader waveform,
+Export, Learn generation and DSP/cache work stay out of scope.

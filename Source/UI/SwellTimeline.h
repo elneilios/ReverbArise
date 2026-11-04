@@ -6,7 +6,7 @@
 
 namespace m3
 {
-class SwellTimeline final : public juce::Component,private juce::ScrollBar::Listener
+class SwellTimeline final : public juce::Component,public juce::SettableTooltipClient,private juce::ScrollBar::Listener
 {
 public:
     explicit SwellTimeline(SwellEngine& engine);
@@ -48,6 +48,7 @@ public:
     void navigateOverview(double fraction);
     juce::Rectangle<float> sourceLane() const noexcept {return source;}
     juce::Rectangle<float> wetLane() const noexcept {return wet;}
+    juce::Rectangle<int> musicalRulerBounds()const noexcept{return ruler;}
     std::function<void(int)> onCandidateSelected;
     std::function<void()> onEnvelopeEdited;
     std::function<void()> onViewportChanged;
@@ -66,7 +67,7 @@ private:
     void drawWave(juce::Graphics&,const Waveform&,juce::Rectangle<float>,juce::Colour,float gain,int64_t placement=0);
     float x(int64_t sample) const {return static_cast<float>(view.pixel(static_cast<double>(sample),source.getX(),source.getWidth()));}
     SwellEngine& engine;CaptureSessionSnapshot capture;EditorSnapshot data;SongTime time;
-    SwellViewport view;juce::ScrollBar scrollbar{false};
+    SwellViewport view;juce::ScrollBar scrollbar{false};juce::Rectangle<int> ruler;
     juce::Slider waveZoom;
     juce::Label waveZoomLabel;
     juce::Rectangle<float> overview,source,wet;
@@ -93,12 +94,13 @@ private:
 class SwellOverview final : public juce::Component
 {
 public:
-    explicit SwellOverview(SwellTimeline& value):timeline(value){setName("songOverview");}
+    explicit SwellOverview(SwellTimeline& value);
+    void resized()override;
     juce::Rectangle<float> waveformBounds()const noexcept{return getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
     juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}
     void mouseDrag(const juce::MouseEvent& e)override{const auto lane=waveformBounds();timeline.navigateOverview((e.position.x-lane.getX())/std::max(1.0f,lane.getWidth()));repaint();}
-private:SwellTimeline& timeline;
+private:SwellTimeline& timeline;juce::Label heading;
 };
 }

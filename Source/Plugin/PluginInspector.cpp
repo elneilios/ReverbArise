@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include <UI/MusicalPosition.h>
 #include <UI/TimingEdit.h>
+#include <UI/PerformText.h>
 #include <cmath>
 
 namespace
@@ -206,23 +207,23 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
     int64_t a=0,b=0;const auto shaped=valid && state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b);
     for(int index=0;index<valueCount;++index)
     {
-        if(index<=sourceEndValue)valueControls[index].setCaption(juce::String(index==targetValue?"Target":index==sourceStartValue?"Src start":"Src end")+(sampleUnitsButton.getToggleState()?" (samples)":" (bars)"),
+        if(index<=sourceEndValue)valueControls[index].setCaption(juce::String(index==targetValue?"Target":index==sourceStartValue?(slimAuditionReview?"Source start":"Src start"):(slimAuditionReview?"Source end":"Src end"))+(sampleUnitsButton.getToggleState()?" (samples)":" (bars)"),
             juce::String(index==targetValue?"Target":index==sourceStartValue?"Source Start":"Source End")+(sampleUnitsButton.getToggleState()?" (samples)":" (bar.beat.fraction)"));
         if(index==placementValue)valueControls[index].setCaption(sampleUnitsButton.getToggleState()?"Move Wet (samples)":"Move Wet (ms)");
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
         const auto enabled=valid && (index<=sourceEndValue?(!w->frozen):shaped);
-        juce::String text;double fraction=.5,domain=span;
+        juce::String text,exactText;double fraction=.5,domain=span;
         if(valid)
         {
             if(index<=sourceEndValue)
             {
                 const auto sample=index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd;
                 text=sampleUnitsButton.getToggleState()?juce::String(sample):m3::musicalPosition(sample,time);
-                fraction=static_cast<double>((static_cast<long double>(sample)-timeline.viewport().first)/span);
+                exactText=text;fraction=static_cast<double>((static_cast<long double>(sample)-timeline.viewport().first)/span);
             }
-            else if(index==levelValue){text=juce::String(w->shape.gainDb,2);fraction=(w->shape.gainDb+60)/72;domain=72;}
+            else if(index==levelValue){text=juce::String(w->shape.gainDb,2);exactText=m3::ui::preciseValue(w->shape.gainDb);fraction=(w->shape.gainDb+60)/72;domain=72;}
             else if(index==inCurveValue || index==outCurveValue)
-            {const auto tension=index==inCurveValue?w->shape.inTension:w->shape.outTension;text=juce::String(tension,3);fraction=(tension+1)/2;domain=2;}
+            {const auto tension=index==inCurveValue?w->shape.inTension:w->shape.outTension;text=juce::String(tension,3);exactText=m3::ui::preciseValue(tension);fraction=(tension+1)/2;domain=2;}
             else
             {
                 long double samples=0;
@@ -232,12 +233,19 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 if(index==placementValue)samples=static_cast<long double>(w->placement);
                 text=index==placementValue && sampleUnitsButton.getToggleState()?juce::String(w->placement):
                     juce::String(static_cast<double>(samples/rate*(index==preRollValue || index==endOffsetValue?1:1000)),index==preRollValue || index==endOffsetValue?6:3);
+                exactText=index==placementValue && sampleUnitsButton.getToggleState()?juce::String(w->placement):m3::ui::preciseValue(static_cast<double>(samples/rate*(index==preRollValue || index==endOffsetValue?1:1000)));
                 if(index==fadeInValue || index==fadeOutValue){domain=shaped?std::max(1.0,static_cast<double>(static_cast<long double>(b)-a-1)):span;fraction=static_cast<double>(samples/domain);}
                 else {domain=std::max(span,std::abs(static_cast<double>(samples))*2+1);fraction=.5+static_cast<double>(samples)/domain;}
             }
         }
+        if(!slimAuditionReview)exactText=text;
+        if(slimAuditionReview && valid)
+        {
+            if(index<=sourceEndValue && !sampleUnitsButton.getToggleState())text=m3::ui::musicalReadout(index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd,time);
+            else if(index>sourceEndValue && !(index==placementValue && sampleUnitsButton.getToggleState()))text=m3::ui::compactValue(exactText.getDoubleValue(),index==preRollValue || index==endOffsetValue?3:index==inCurveValue || index==outCurveValue?2:1);
+        }
         if(!valueControls[index].editing())valueSpans[index]=domain;
-        valueControls[index].display(w?juce::String(state.sessionEpoch)+"/"+w->id:juce::String{},text,fraction,enabled);
+        valueControls[index].display(w?juce::String(state.sessionEpoch)+"/"+w->id:juce::String{},text,fraction,enabled,exactText);
         const auto musical=index<=sourceEndValue && !sampleUnitsButton.getToggleState();long double origin=0;songOrigin(time,origin);
         const auto beat=rate*60/time.bpm*4/time.denominator;
         const auto units=index<=sourceEndValue?(musical?beat:1.):index==placementValue && sampleUnitsButton.getToggleState()?1.:index==preRollValue || index==endOffsetValue?rate:rate/1000.;
@@ -253,6 +261,6 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
             else {domainValue=index==placementValue?w->placement:index==preRollValue?static_cast<double>(w->arrival)-a:index==endOffsetValue?static_cast<double>(b)-w->arrival:index==fadeInValue?w->shape.fadeIn:w->shape.fadeOut;domainValue/=units;
                 if(index==fadeInValue || index==fadeOutValue){minimum=0;maximum=static_cast<double>(b-a-1)/units;}}
         }
-        valueControls[index].displayDomain({domainValue,minimum,maximum,step,unitsPerFraction,text});
+        valueControls[index].displayDomain({domainValue,minimum,maximum,step,unitsPerFraction,exactText});
     }
 }

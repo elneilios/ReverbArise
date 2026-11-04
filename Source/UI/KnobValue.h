@@ -99,10 +99,10 @@ public:
         setTitle(title);entry.setTitle(title+" exact value");knob.setTitle(title);
         entry.setTooltip(tooltip);knob.setTooltip(tooltip);
     }
-    void display(const juce::String& owner,const juce::String& valueText,double fraction,bool enabled)
+    void display(const juce::String& owner,const juce::String& valueText,double fraction,bool enabled,const juce::String& exactText={})
     {
         if(owner!=identity){++resetTicket;cancel();identity=owner;}
-        canonical=valueText;canonicalFraction=std::clamp(fraction,0.0,1.0);
+        canonical=valueText;canonicalExact=exactText.isEmpty()?valueText:exactText;canonicalFraction=std::clamp(fraction,0.0,1.0);
         if(!domainSupplied)domain={canonicalFraction,0,1,.01,1,canonical};
         setEnabled(enabled);
         if(!typing){refreshing=true;entry.setText(canonical,false);if(!active)knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}knob.repaint();
@@ -179,19 +179,20 @@ private:
         if(active && typing==textEntry)return;
         if(active)finish(typing);
         ++resetTicket;
+        if(textEntry){typingBaseline=canonicalExact;entry.setText(canonicalExact,false);entry.selectAll();}
         active=true;typing=textEntry;origin=canonicalFraction;if(onBegin)onBegin();
     }
     void restore(){refreshing=true;entry.setText(canonical,false);knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}
     void finish(bool commit)
     {
-        if(!active){if(commit && entry.getText()!=canonical)begin(true);else return;}
-        if(commit && typing && entry.getText()!=canonical && onCommit)onCommit(entry.getText());
+        if(!active){if(commit && entry.getText()!=canonical){const auto proposed=entry.getText();begin(true);entry.setText(proposed,false);}else return;}
+        if(commit && typing && entry.getText()!=typingBaseline && onCommit)onCommit(entry.getText());
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
     DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     std::function<ResetAction()> onResetInvocation;uint64_t resetTicket=0;
-    juce::String identity,canonical;
+    juce::String identity,canonical,canonicalExact,typingBaseline;
     double origin=0,canonicalFraction=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false;
 };

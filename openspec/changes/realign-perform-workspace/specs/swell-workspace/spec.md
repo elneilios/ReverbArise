@@ -176,3 +176,22 @@ Perform SHALL retain valid view, requested Snap state and grid across editor reo
 #### Scenario: Invalid preferences and copied instances
 - **WHEN** optional view/grid values are malformed or an instance is copied/restored
 - **THEN** invalid UI fields alone default safely, valid musical content survives, and subsequent navigation does not change another instance
+
+
+### Requirement: Perform presentation supports precise musical inspection
+Perform SHALL retain its three columns while presenting a shared musical ruler
+aligned to both editable lanes, concise lane labels with explanatory tooltips,
+full Source labels, grouped timing/envelope/level controls and a readable musical
+footer. Preview metrics SHALL receive native owner acceptance before rollout.
+Compact values SHALL NOT reduce stored precision or change exact typed editing.
+Overview and Audition headings SHALL share their role and text-box margin policy.
+
+#### Scenario: Inspect and edit at minimum size
+- **WHEN** Perform is shown at 1100x850 with selected/dense or empty data
+- **THEN** ruler/lanes/handles agree after zoom/pan, group labels and Source captions remain readable, and scrolling reaches every inspector field/reset without clipping
+- **AND** missing timing remains explicit and essential edit warnings remain visible
+
+#### Scenario: Compact readout preserves precision
+- **WHEN** a compact value receives focus and Return without a user change
+- **THEN** its full edit precision is exposed without mutating state, jobs or durable source/render identities
+- **AND** explicit typed values retain existing canonical validation and precision while musical display rounding carries across beat/bar boundaries correctly

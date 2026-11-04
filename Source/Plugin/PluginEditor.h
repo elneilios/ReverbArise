@@ -37,10 +37,12 @@ public:
 private:
     bool slimAuditionReview=false;
     m3::ui::WorkspaceTheme workspaceTheme;
+    juce::TooltipWindow tooltips{this};
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;
     juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
+    std::array<juce::Label,3> inspectorGroups;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
     void setDiagnosticsOpen(bool);

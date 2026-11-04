@@ -135,6 +135,18 @@ host or schedule work. Reset operates on the chosen control, never whole-swell R
 
 ## Audition transport and balance
 
+### Native clarity candidate
+
+The current review-only profile groups Timing / Envelope / Level, expands Source
+start/end to full-width cells and uses compact values (s: 3 places; ms/dB: 1;
+curves: 2; musical fractions: 3, with zeroes trimmed). Focusing an exact field
+exposes its decimal round-trip value; an unchanged Return never commits the
+rounded display. The approved production value table above remains the normal
+profile until visual acceptance. Adjustment increments and stored precision are
+unchanged. The shared ruler, concise lane labels/tooltips, Bar/Beat footer and
+selected-mode button copy are documented in the
+[native clarity evidence](../validation/2026-11-04-issue-46-perform-clarity.md).
+
 Play loops the prepared selected listening window. The audio callback wraps its
 cursor inside the immutable pinned buffer; there is no per-loop job, allocation,
 lock, decoding or buffer publication. Existing 2-ms wet edges and 5-ms outer replay

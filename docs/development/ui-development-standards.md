@@ -96,6 +96,12 @@ single line's approved font metrics for overflowing inspector status/IR text.
 See [value/unit policy and guards](perform-navigation.md) and
 [audit/remediation evidence](../validation/2026-11-04-issue-46-knob-audit.md).
 
+KnobValue may compose compact readout text with an optional exact-edit string.
+The binding owns formatting; the cell keeps a distinct typing baseline so focus
+and unchanged Return do not publish a rounded value. Existing consumers omit the
+optional string and retain their current behavior. The grouped Perform compact
+readout usage is staged in the native clarity checkpoint, before wider rollout.
+
 The owner requested the revision-4 KnobValue focus variant: four open corner
 brackets, using existing aqua and 2-pixel stroke, with legs at 20% of the contained
 focus box side. It changes only the dial focus painter; text fields and other

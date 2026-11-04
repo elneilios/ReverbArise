@@ -21,6 +21,13 @@ Owner-requested audition visual follow-up: one inline status/actions row, equal
 button gaps and proposed 52-pixel strip, gated by actual native metric approval;
 Overview reuses the established section-heading typography.
 
+Further owner-requested clarity pass preserves the three columns and 52-pixel
+preview strip: the audition button names the selected mode; the editor reuses the
+shared ruler; inspector groups/full Source labels and compact readouts retain
+exact editing/storage; essential lane copy/tooltips, musical footer and aligned
+section heading margins complete the native visual checkpoint. No audio or Export
+behavior changes. Reuse existing roles/tokens; any new exception remains gated.
+
 ## Capabilities
 
 ### New Capabilities

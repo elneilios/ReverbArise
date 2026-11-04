@@ -1,5 +1,10 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+The [latest Perform clarity checkpoint](2026-11-04-issue-46-perform-clarity.md)
+addresses subsequent owner feedback with shared ruler/mode clarity, grouped
+inspector/exact editing, concise annotations, footer and heading alignment.
+**9/9 focused native tests pass**; visual acceptance/adoption remains task 5.4.
+
 Latest: the owner requested a slimmer inline audition row and heading alignment.
 The [isolated 52-pixel native checkpoint](2026-11-04-issue-46-audition-strip.md)
 is open; production adoption awaits actual metric approval. OpenSpec is now

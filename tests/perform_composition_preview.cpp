@@ -5,6 +5,8 @@
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/PerformLayout.h>
 #include <UI/TimingEdit.h>
+#include <UI/PerformText.h>
+#include <UI/Controls/MusicalTimelineRuler.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
@@ -218,6 +220,7 @@ public:
     void verifyKnobResets();
     void verifyAudition();
     void verifyAuditionStrip();
+    void verifyReadability();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -367,6 +370,7 @@ private:
 #include "PerformKnobResetCases.h"
 #include "PerformAuditionCases.h"
 #include "PerformAuditionStripCases.h"
+#include "PerformReadabilityCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -397,7 +401,7 @@ public:
         scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
         sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);sizes.setSelectedId(1,juce::dontSendNotification);
         sizes.onChange=[this]{const std::array<juce::Point<int>,4> dimensions{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];setSize(size.x,size.y+44);};
-        applyTextRole(note,TextRole::helper);note.setText(slimAudition?"Audition row checkpoint | proposed 52 px strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(1100,894);
+        applyTextRole(note,TextRole::helper);note.setText(slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(1100,894);
     }
     void resized()override
     {auto area=getLocalBounds();auto strip=area.removeFromTop(44).reduced(6);scenes.setBounds(strip.removeFromLeft(210));strip.removeFromLeft(8);sizes.setBounds(strip.removeFromLeft(146));strip.removeFromLeft(12);note.setBounds(strip);editor->setBounds(area);}
@@ -441,6 +445,7 @@ int main(int argc,char** argv)
         if(command=="--test-knob-resets"){content->composition.verifyKnobResets();std::cout<<"Perform knob double-click/menu/default/initial/stale reset checks passed.\n";return;}
         if(command=="--test-audition"){content->composition.verifyAudition();std::cout<<"Perform looping audition/toggle/live gain/legacy/stale/status checks passed.\n";return;}
         if(command=="--test-audition-strip"){content->composition.verifyAuditionStrip();std::cout<<"Perform slim audition row/gaps/divider/heading checks passed.";return;}
+        if(command=="--test-readability"){content->composition.verifyReadability();std::cout<<"Perform precision/ruler/grouping/mode/footer checks passed.";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")

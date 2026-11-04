@@ -59,5 +59,12 @@ until approval; production retains 72 pixels meanwhile. Overview now uses the
 established Inter SemiBold section-heading role. See the
 [slim-strip checkpoint](../validation/2026-11-04-issue-46-audition-strip.md).
 
+The subsequent [Perform clarity checkpoint](../validation/2026-11-04-issue-46-perform-clarity.md)
+preserves that 52-pixel preview strip and three columns, while making audition
+mode explicit, composing the shared ruler, grouping the inspector, shortening
+annotations into tooltips and aligning footer/headings. Its metric/compact-value
+profile remains review-only pending actual visual approval; existing roles and
+tokens are reused without a new visual exception.
+
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).

@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <UI/PerformText.h>
 #include <UI/MusicalPosition.h>
 #include <DSP/DefaultImpulse.h>
 
@@ -20,7 +21,7 @@ juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gai
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p)
     :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
 {
-    setLookAndFeel(&workspaceTheme);
+    setLookAndFeel(&workspaceTheme);tooltips.setLookAndFeel(&workspaceTheme);
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
@@ -220,6 +221,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     headerStatus.setJustificationType(juce::Justification::centredRight);
     workflowHeader.settingsAction().setTooltip("Settings: playback, processing, selected swell, audition and recovery");
     markerButton.setButtonText("Auto-marker");
+    const char* groupNames[]={"Timing","Envelope","Level"};
+    for(size_t i=0;i<inspectorGroups.size();++i){auto& group=inspectorGroups[i];inspectorContent.addAndMakeVisible(group);group.setText(groupNames[i],juce::dontSendNotification);group.setName("inspector"+juce::String(groupNames[i])+"Group");m3::ui::applyTextRole(group,m3::ui::TextRole::controlLabel);}
     const std::array<juce::String,valueCount> valueTitles{"Target","Source Start","Source End","Pre-roll (s)","End Offset (s)","Fade In (ms)","Fade Out (ms)","Level (dB)","Curve In (unitless)","Curve Out (unitless)","Move Wet (ms)"};
     const std::array<juce::String,valueCount> valueNames{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","swellLevel","curveInTension","curveOutTension","wetPlacement"};
     // Keep the older exact-bound tools available in Settings until its dedicated
@@ -360,7 +363,7 @@ void PreverbAudioProcessorEditor::resized()
     if(slimAuditionReview){auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);}
     else monitorStatus.setBounds(audition.withTrimmedLeft(112));
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info);
-    const auto width=inspectorWidth-16;inspectorContent.setSize(width,650);
+    const auto width=inspectorWidth-16;inspectorContent.setSize(width,slimAuditionReview?650+3*controlGeometry::labelHeight+3*spacing::group+2*64:650);
     auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
     selectedStatus.setBounds(inspector.removeFromTop(24));
     fields[name].setBounds({});fieldLabels[name].setBounds({});
@@ -368,16 +371,29 @@ void PreverbAudioProcessorEditor::resized()
     irStatus.setBounds(inspector.removeFromTop(24));
     row=inspector.removeFromTop(34);loadIRButton.setBounds(row.removeFromRight(34));row.removeFromRight(6);irBox.setBounds(row);
     inspector.removeFromTop(12);
+    for(auto& group:inspectorGroups)group.setVisible(slimAuditionReview);
+    if(slimAuditionReview)
+    {
+        const auto group=[&](int index){inspectorGroups[index].setBounds(inspector.removeFromTop(controlGeometry::labelHeight));inspector.removeFromTop(performGeometry::toolbarGap);};
+        const auto pair=[&](int first,int second){auto line=inspector.removeFromTop(64);auto left=line.removeFromLeft((line.getWidth()-performGeometry::toolbarGap)/2);line.removeFromLeft(performGeometry::toolbarGap);valueControls[first].setBounds(left);valueControls[second].setBounds(line);};
+        group(0);pair(targetValue,placementValue);valueControls[sourceStartValue].setBounds(inspector.removeFromTop(64));valueControls[sourceEndValue].setBounds(inspector.removeFromTop(64));
+        inspector.removeFromTop(spacing::group);group(1);pair(preRollValue,endOffsetValue);pair(fadeInValue,fadeOutValue);pair(inCurveValue,outCurveValue);
+        inspector.removeFromTop(spacing::group);group(2);valueControls[levelValue].setBounds(inspector.removeFromTop(64));
+    }
+    else
+    {
     const std::array<int,valueCount> controlOrder{targetValue,placementValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,inCurveValue,outCurveValue,levelValue};
     for(int index=0;index<valueCount;index+=2)
     {
         row=inspector.removeFromTop(64);auto left=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
         valueControls[controlOrder[index]].setBounds(left);if(index+1<valueCount)valueControls[controlOrder[index+1]].setBounds(row);
     }
+    }
     // Destructive resets sit beneath all the knob controls.
     inspector.removeFromTop(12);
     row=inspector.removeFromTop(34);auto resetLeft=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
     resetButton.setBounds(resetLeft);resetMenu.setBounds(row);
+    if(slimAuditionReview)inspectorContent.setSize(width,row.getBottom()+spacing::tight);
     // Read-only precision/asset observations; musician edits live in the inspector.
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);
@@ -407,9 +423,10 @@ void PreverbAudioProcessorEditor::refresh()
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
     if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
-    hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::musicalPosition(time.sample,time):juce::String("Position unavailable"))
-        +"    |    "+(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
+    hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::ui::footerPosition(time.sample,time):juce::String("Position unavailable"))
+        +"    |    "+(diagnostics.tempoAvailable?m3::ui::compactValue(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
+    hostInfo.setTooltip("Bar and denominator-beat position; fractional beats are rounded for display. Exact: "+m3::musicalPosition(time.sample,time));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
     liveRoutingBox.setSelectedId(state.session.liveRouting==m3::LiveRouting::wetOnly?2:1,juce::dontSendNotification);
     gainPolicyBox.setSelectedId(state.session.gainPolicy==m3::GainPolicy::musical?(state.session.gainRevision==m3::approvedGainRevision?2:3):1,juce::dontSendNotification);
@@ -468,7 +485,10 @@ void PreverbAudioProcessorEditor::refresh()
     if(!separationSlider.isMouseButtonDown())separationSlider.setValue(state.session.separationSeconds*1000,juce::dontSendNotification);
     autoButton.setToggleState(state.session.autoRegenerate,juce::dontSendNotification);
     automaticButton.setToggleState(state.session.automaticProcessing,juce::dontSendNotification);
-    auditionWetOnly.display(state.session.auditionMode==m3::AuditionMode::wetOnly);
+    const bool wetOnly=state.session.auditionMode==m3::AuditionMode::wetOnly;
+    auditionWetOnly.display(wetOnly);auditionWetOnly.setButtonText(wetOnly?"Wet only":"Dry + wet");
+    auditionWetOnly.setTitle(wetOnly?"Audition mode: Wet only":"Audition mode: Dry + wet");
+    auditionWetOnly.setTooltip(wetOnly?"Selected: Wet only. Click to include captured dry at live levels.":"Selected: Dry + wet. Click to hear wet only. Wet uses Live Wet gain; safety protection remains active.");
     auditionSlider.setEnabled(!state.session.auditionFollowsLive);
     auditionSlider.setTooltip(state.session.auditionFollowsLive?"Stored legacy trim is inactive: audition follows Live Wet gain. Reset to 0 dB by double-click in legacy monitoring.":"Legacy monitoring trim, -60 to 0 dB. Double-click resets to 0 dB.");
     selectedStatus.setText(w?phaseName(w->phase)+" | "+w->name:"Select a swell",juce::dontSendNotification);
@@ -616,14 +636,14 @@ void PreverbAudioProcessorEditor::refresh()
     else if(w->phase==m3::Phase::empty || w->phase==m3::Phase::error || w->phase==m3::Phase::stale)monitoring="Unavailable: "+w->status;
     else monitoring="Preparing audition";
     if(w && state.auditionReady && !state.playing && state.session.liveEnabled && diagnostics.isPlaying)monitoring="DAW playback active - stop transport to audition";
-    if(w){monitoring<<" | "<<(state.session.auditionMode==m3::AuditionMode::wetOnly?"Wet only":"Dry + wet");
+    if(w){
         if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
         if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
         if(!state.session.auditionFollowsLive)monitoring<<" | saved balance";
         if(state.attenuationDb<0)monitoring<<" | wet protection "<<juce::String(state.attenuationDb,1)<<" dB";
         if(state.blendAttenuationDb<0)monitoring<<" | mix protection "<<juce::String(state.blendAttenuationDb,1)<<" dB";}
     monitorStatus.setText(monitoring,juce::dontSendNotification);
-    monitorStatus.setTooltip(monitoring+"\nManual audition loops captured audio until Stop; DAW transport is independent.\n"+(state.session.auditionFollowsLive?"Unity captured dry; Live Wet "+juce::String(state.session.liveWetDb,1)+" dB. Legacy trim is inactive.":"Legacy saved wet blend "+juce::String(state.session.wetBlend*100,1)+"%; trim "+juce::String(state.session.auditionDb,1)+" dB. Toggle Wet only to adopt live levels.")+"\n2 ms wet edges / 5 ms replay edges; wet and combined-mix protection can reduce audition level.\n"+state.dryStatus);
+    monitorStatus.setTooltip(monitoring+"\nSelected mode: "+(wetOnly?"Wet only":"Dry + wet")+"\nManual audition loops captured audio until Stop; DAW transport is independent.\n"+(state.session.auditionFollowsLive?"Unity captured dry; Live Wet "+juce::String(state.session.liveWetDb,1)+" dB. Legacy trim is inactive.":"Legacy saved wet blend "+juce::String(state.session.wetBlend*100,1)+"%; trim "+juce::String(state.session.auditionDb,1)+" dB. Toggle Wet only to adopt live levels.")+"\n2 ms wet edges / 5 ms replay edges; wet and combined-mix protection can reduce audition level.\n"+state.dryStatus);
     if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
     if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());

@@ -115,6 +115,7 @@ public:
         setColour(juce::Slider::thumbColourId,aqua);
         setColour(juce::Slider::trackColourId,aqua);
         setColour(juce::Slider::backgroundColourId,separator);
+        setColour(juce::TooltipWindow::backgroundColourId,background);setColour(juce::TooltipWindow::textColourId,secondary);setColour(juce::TooltipWindow::outlineColourId,outline);
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
     bool interAvailable()const{return interTypeface(InterFace::regular)!=nullptr && interTypeface(InterFace::semibold)!=nullptr

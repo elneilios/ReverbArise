@@ -15,12 +15,12 @@ extend the window or implement whole-song arrangement audition.
 - **THEN** existing smooth-stop or immediate-invalidation behavior terminates it and releases buffers outside the callback
 
 ### Requirement: Perform audition exposes a Wet only toggle
-Perform SHALL replace its blend slider and row Trim reset with a latching Wet only
-button. New instances SHALL default Off: unity captured dry plus saved Live Wet
-gain. On SHALL suppress captured dry and retain that wet gain. Existing wet/sum
-protection and replay boundary ramps SHALL remain disclosed. Export controls and
-live routing SHALL remain independent. Status SHALL truthfully identify Ready,
-Looping, Preparing or Unavailable, with full reasons available without shrinking text.
+Perform SHALL replace blend/row Trim reset with a latching button naming its
+selected mode: Dry + wet when Off, Wet only when On. New instances default Off
+with unity captured dry plus Live Wet gain; On excludes dry. Protection/ramps
+remain disclosed and Export/live routing independent. Status SHALL truthfully
+state Ready, Looping, Preparing or Unavailable, with full reasons available
+without shrinking text.
 
 #### Scenario: Toggle live-level listening
 - **WHEN** Wet only is toggled with an unchanged valid invocation

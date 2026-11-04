@@ -7,12 +7,12 @@ void Composition::verifyAudition()
     REQUIRE(!find(*panel,"auditionBlend") && !find(*panel,"resetAuditionTrim"));
     const auto saved=engine.savedSession();const auto capture=processor->getCaptureSnapshot().manifest.revision;const auto renders=engine.snapshot().renderCount;
     REQUIRE(saved.auditionFollowsLive && saved.auditionMode==m3::AuditionMode::dryWet && !toggle.getToggleState());
-    wait([&]{return engine.snapshot().auditionReady;});panel->refresh();REQUIRE(status.getText().startsWith("Ready") && status.getText().contains("Dry + wet"));
+    wait([&]{return engine.snapshot().auditionReady;});panel->refresh();REQUIRE(status.getText().startsWith("Ready") && toggle.getButtonText()=="Dry + wet");
     REQUIRE(toggle.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     wait([&]{return engine.snapshot().auditionReady;});panel->refresh();REQUIRE(toggle.getToggleState() && engine.savedSession().auditionMode==m3::AuditionMode::wetOnly);
     REQUIRE(engine.audition());float left[4096]{},right[4096]{};
     for(int n=0;n<80;++n){std::fill_n(left,4096,0);std::fill_n(right,4096,0);engine.processAudio(left,right,4096,processor->getSongTime());}
-    panel->refresh();REQUIRE(engine.snapshot().playing && status.getText().startsWith("Looping") && status.getText().contains("Wet only"));
+    panel->refresh();REQUIRE(engine.snapshot().playing && status.getText().startsWith("Looping") && toggle.getButtonText()=="Wet only");
     engine.stop();engine.processAudio(left,right,4096,processor->getSongTime());panel->refresh();REQUIRE(!engine.snapshot().playing && status.getText().startsWith("Ready"));
     auto legacy=saved;legacy.auditionFollowsLive=false;legacy.wetBlend=.65f;legacy.auditionDb=-24;engine.restore(legacy);
     wait([&]{return engine.snapshot().auditionReady;});panel->refresh();REQUIRE(status.getText().contains("saved balance") && status.getTooltip().contains("65.0%") && !toggle.getToggleState());

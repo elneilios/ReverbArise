@@ -31,8 +31,10 @@ void Composition::verifyAuditionStrip()
     juce::Label* auditionHeading=nullptr;for(auto* child:panel->getChildren())if(auto* label=dynamic_cast<juce::Label*>(child);label && label->getText()=="Audition")auditionHeading=label;
     REQUIRE(auditionHeading && auditionHeading->getFont().getHeight()==textStyle(TextRole::sectionHeading).height);
     auto& overview=require<m3::SwellOverview>(*panel,"songOverview");const auto actual=overview.createComponentSnapshot(overview.getLocalBounds());
+    auto& heading=require<juce::Label>(overview,"overviewHeading");REQUIRE(heading.getBorderSize()==auditionHeading->getBorderSize());
+    juce::Label reference;reference.setLookAndFeel(&overview.getLookAndFeel());reference.setText("Overview",juce::dontSendNotification);reference.setFont(auditionHeading->getFont());reference.setColour(juce::Label::textColourId,text);reference.setBorderSize(auditionHeading->getBorderSize());reference.setSize(overview.getWidth(),controlGeometry::headingHeight);
     juce::Image expected(juce::Image::ARGB,overview.getWidth(),controlGeometry::headingHeight,true);
-    {juce::Graphics g(expected);g.fillAll(background);g.setColour(text);g.setFont(auditionHeading->getFont());g.drawText("Overview",expected.getBounds(),juce::Justification::centredLeft);}
+    {juce::Graphics g(expected);g.fillAll(background);reference.paintEntireComponent(g,true);}
     for(int y=0;y<expected.getHeight();++y)for(int x=0;x<160;++x)if(actual.getPixelAt(x,y)!=expected.getPixelAt(x,y))
     {
         std::cerr<<"Overview heading mismatch at "<<x<<","<<y<<" actual="<<actual.getPixelAt(x,y).toString()<<" expected="<<expected.getPixelAt(x,y).toString()<<" font="<<auditionHeading->getFont().toString()<<"\n";

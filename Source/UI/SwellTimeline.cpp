@@ -1,6 +1,7 @@
 #include "SwellTimeline.h"
 #include "TimingEdit.h"
 #include "SongBarRuler.h"
+#include "Controls/MusicalTimelineRuler.h"
 #include "WorkspaceTheme.h"
 #include <limits>
 
@@ -8,6 +9,7 @@ namespace m3
 {
 SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
 {
+    setTooltip("Dry: captured source. Double-click dry audio to add a target. Wet: audible shaped audio; grey is the raw reference. Both lanes share a display amplitude scale. Drag the wet body to move audio and envelope.");
     setName("swellTimeline");scrollbar.addListener(this);addAndMakeVisible(scrollbar);setMouseCursor(juce::MouseCursor::CrosshairCursor);
     waveZoom.setName("waveZoom");waveZoom.setSliderStyle(juce::Slider::LinearHorizontal);
     waveZoom.setRange(-24,48,1);waveZoom.setValue(0,juce::dontSendNotification);
@@ -117,7 +119,7 @@ void SwellTimeline::setZoomFraction(double fraction)
 void SwellTimeline::updateScroll()
 {
     const auto [a,b]=globalBounds();updatingScroll=true;
-    scrollbar.setRangeLimits(std::min(a-view.span(),view.first),std::max(b+view.span(),view.last));
+    scrollbar.setRangeLimits(std::min(a-view.span(),view.first),std::max(b+view.span(),view.last),juce::dontSendNotification);
     scrollbar.setCurrentRange(view.first,view.span(),juce::dontSendNotification);updatingScroll=false;
 }
 void SwellTimeline::scrollBarMoved(juce::ScrollBar*,double start)
@@ -158,7 +160,8 @@ void SwellTimeline::resized()
     else overview={-10000,-10000,0,0};
     auto waveControls=area.removeFromTop(24);waveZoomLabel.setBounds(waveControls.removeFromLeft(76).toNearestInt());
     waveZoom.setBounds(waveControls.removeFromLeft(std::min(240.0f,waveControls.getWidth())).toNearestInt());
-    area.removeFromTop(42);
+    ruler=area.removeFromTop(ui::controlGeometry::headingHeight).toNearestInt();
+    area.removeFromTop(ui::controlGeometry::feedbackHeight+ui::spacing::tight);
     source=area.removeFromTop(std::max(40.0f,(area.getHeight()-32)/2));area.removeFromTop(32);wet=area;
     updateScroll();
 }
@@ -176,6 +179,8 @@ void SwellTimeline::drawWave(juce::Graphics& g,const Waveform& wave,juce::Rectan
 void SwellTimeline::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);g.setFont(ui::fontFor(*this,ui::smallSize));
+    ui::controls::paintMusicalTimelineRuler(g,ruler,view,time);
+    if(!time.valid){ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
     const auto waveGain=juce::Decibels::decibelsToGain(static_cast<float>(waveZoom.getValue()));
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
@@ -225,13 +230,12 @@ void SwellTimeline::paint(juce::Graphics& g)
     g.drawText("Song overview | last captured",overview.translated(0,-22).withHeight(20),juce::Justification::centredLeft);
     for(const auto& swell:data.session.swells)
     {const auto at=mini(static_cast<double>(swell.arrival));g.setColour(swell.id==data.session.primary?ui::aqua:ui::secondary);g.drawVerticalLine(static_cast<int>(at),overview.getBottom()-13,overview.getBottom());}
-    g.setColour(ui::secondary);g.drawText(data.session.auditionMode==AuditionMode::dryWet?"Source / arrivals | highlighted span: audition dry":"Source / arrivals   (double-click source to add a target)",source.translated(0,-24).withHeight(20),juce::Justification::centredLeft);
-    const auto ticks=time.valid?makeSongBarRuler(view.first,view.last,source.getWidth(),time.rate,time.bpm,time.numerator,time.denominator,time.sample,time.ppq):std::vector<SongBarTick>{};
+    ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Dry",source.translated(0,-24).withHeight(20),juce::Justification::centredLeft);
+    const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),time);
     for(const auto& tick:ticks)
     {
-        const auto at=static_cast<float>(view.pixel(tick.samplePosition,source.getX(),source.getWidth()));
-        g.setColour(ui::separator.withAlpha(.35f));g.drawVerticalLine(static_cast<int>(at),source.getY(),wet.getBottom());
-        g.setColour(ui::secondary);g.drawText(juce::String(tick.bar),static_cast<int>(at)+2,static_cast<int>(source.getY())-42,48,16,juce::Justification::left);
+        const auto at=static_cast<float>(view.pixel(tick.sample,source.getX(),source.getWidth()));
+        g.setColour(ui::separator.withAlpha(tick.bar?.35f:.15f));g.drawVerticalLine(static_cast<int>(at),source.getY(),wet.getBottom());
     }
     std::set<int> candidateColumns;
     for(size_t i=0;i<data.candidates.size();++i)
@@ -247,13 +251,13 @@ void SwellTimeline::paint(juce::Graphics& g)
         if(w.id==data.session.primary || (primary && std::abs(at-x(primary->arrival))<8) || !markerColumns.insert(static_cast<int>(at)/8).second)continue;
         const auto selected=std::find(data.session.selected.begin(),data.session.selected.end(),w.id)!=data.session.selected.end();
         g.setColour(selected?ui::text:ui::secondary);g.drawVerticalLine(static_cast<int>(at),source.getY(),wet.getBottom());
-        g.fillEllipse(at-4,source.getY()+12,8,8);g.drawText(w.name,juce::Rectangle<float>(at+6,source.getY()+10,120,18),juce::Justification::left);
+        g.fillEllipse(at-4,source.getY()+12,8,8);
     }
     if(primary && x(primary->arrival)>=source.getX() && x(primary->arrival)<=source.getRight())
     {const auto at=x(primary->arrival);g.setColour(ui::timing);const float dashes[]{4,4};
         g.drawDashedLine({at,source.getY(),at,wet.getBottom()},dashes,2,1);
         juce::Path marker;marker.addTriangle(at-5,source.getY()+5,at+5,source.getY()+5,at,source.getY()+14);g.fillPath(marker);
-        g.drawText("Target | "+primary->name,juce::Rectangle<float>(at+7,source.getY()+3,140,18),juce::Justification::left);}
+        g.drawText("Target",juce::Rectangle<float>(at+7,source.getY()+3,140,18),juce::Justification::left);}
     for(const auto& [id,wave]:data.wetSummaries)if(id!=data.session.primary && wave)
         drawWave(g,*wave,wet,ui::otherWet.withAlpha(.22f),.45f/std::max(.000001f,wave->peak),find(data.session,id)?find(data.session,id)->placement:0);
     if(data.raw)
@@ -262,7 +266,7 @@ void SwellTimeline::paint(juce::Graphics& g)
         const auto current=primary && primary->phase==Phase::ready;
         const auto colour=current?ui::aqua:ui::staleWet;
         if(data.shaped)drawWave(g,*data.shaped,wet,colour,waveGain);
-        g.setColour(colour);g.drawText("Audible wet | "+juce::String(current?(data.shaped?"current":"shape pending"):"previous / stale")+" | shared amplitude scale | grey: raw reference",wet.translated(0,-25).withHeight(20),juce::Justification::left);
+        ui::applyTextRole(g,ui::TextRole::helper);g.setColour(colour);g.drawText(current?(data.shaped?"Wet":"Wet - preparing"):"Wet - stale",wet.translated(0,-25).withHeight(20),juce::Justification::left);
     }
     else{g.setColour(ui::secondary);g.drawText(primary?primary->status:juce::String("Select a swell to inspect its wet audio"),wet,juce::Justification::centred);}
     if(data.dryAvailable && data.session.auditionMode==AuditionMode::dryWet){
@@ -283,7 +287,7 @@ void SwellTimeline::paint(juce::Graphics& g)
             const auto handle=juce::Rectangle<float>(12,12).withCentre({at,source.getBottom()-9});
             g.setColour(ui::background);g.fillEllipse(handle);g.setColour(ui::secondary);g.drawEllipse(handle,1.5f);
         }
-        const auto hint=gestureStatus.isNotEmpty()?gestureStatus:effectiveSnap() && !gridAvailable()?juce::String("Snap unavailable: fixed timing required; hold Ctrl or turn Snap off"):sourceHover;
+        const auto hint=gestureStatus.isNotEmpty()?gestureStatus:effectiveSnap() && !gridAvailable()?juce::String("Snap unavailable: fixed timing required; hold Ctrl or turn Snap off"):juce::String{};
         if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
         if(data.raw)
         {
@@ -305,7 +309,7 @@ void SwellTimeline::paint(juce::Graphics& g)
                 envelopeLine.lineTo(x(b),wet.getCentreY());
                 g.setColour(ui::aqua);g.strokePath(envelopeLine,juce::PathStrokeType(2.0f));
                 if(static_cast<long double>(b)-w->placement>data.raw->end){g.setColour(ui::warning);g.drawText("Requested wet support - capture through endpoint",wet.withHeight(22),juce::Justification::left);}
-                g.setColour(ui::secondary);g.drawText(editingEnabled?"Drag wet body to move audio + envelope":"Editing available in Perform mode",wet.withY(wet.getBottom()-22).withHeight(20),juce::Justification::centred);
+
                 const auto handles=grabPoints();for(const auto& handle:handles)
                 {
                     const auto active=hover && *hover==handle.kind;
@@ -428,7 +432,8 @@ void SwellTimeline::mouseMove(const juce::MouseEvent& e)
         else if(std::abs(e.position.x-x(w->arrival))<7)help="Target / Arrival (yellow; drag its top marker)";
     }
     if(help!=sourceHover){sourceHover=help;repaint();}
-    setTitle(help);setMouseCursor(help.isNotEmpty()?juce::MouseCursor::LeftRightResizeCursor:juce::MouseCursor::NormalCursor);
+    setTooltip(help.isNotEmpty()?help:wet.contains(e.position)?juce::String("Audible shaped wet; grey is the raw reference. Shared amplitude scale with dry. Drag the wet body to move audio and envelope. Ctrl bypasses Snap; Shift fine-adjusts."):source.contains(e.position)?juce::String("Captured dry source at its original position. Double-click to add a target; drag the source handles to edit bounds. The highlighted span is captured audition context."):juce::String("Musical ruler: bars and denominator beats, aligned with both lanes. Height changes display amplitude only."));
+    setTitle(help.isEmpty()?juce::String("Dry/wet waveform editor"):help);setMouseCursor(help.isNotEmpty()?juce::MouseCursor::LeftRightResizeCursor:juce::MouseCursor::NormalCursor);
 }
 bool SwellTimeline::keyPressed(const juce::KeyPress& key)
 {
@@ -466,6 +471,12 @@ void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWh
 {if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}navigationChanged();}
 void SwellTimeline::navigateOverview(double fraction)
 {if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();}
+SwellOverview::SwellOverview(SwellTimeline& value):timeline(value)
+{
+    setName("songOverview");addAndMakeVisible(heading);heading.setName("overviewHeading");heading.setText("Overview",juce::dontSendNotification);
+    ui::applyTextRole(heading,ui::TextRole::sectionHeading);heading.setInterceptsMouseClicks(false,false);
+}
+void SwellOverview::resized(){heading.setBounds(getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight));}
 juce::Rectangle<float> SwellOverview::detailBounds()const
 {
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
@@ -477,8 +488,7 @@ juce::Rectangle<float> SwellOverview::detailBounds()const
 void SwellOverview::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);
-    ui::applyTextRole(g,ui::TextRole::sectionHeading);
-    g.drawText("Overview",getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight),juce::Justification::centredLeft);
+
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
     g.setColour(ui::outline);g.drawRoundedRectangle(lane,6,1);
     if(timeline.capture.manifest.ranges.empty())
