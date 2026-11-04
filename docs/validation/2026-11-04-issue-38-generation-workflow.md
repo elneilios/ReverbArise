@@ -343,3 +343,58 @@ default-OFF preview/refinement, first Generate selection/lead-in/properties,
 protected-work return/refine/Generate, then opted-in Stop and OFF/ON save/reopen.
 Record actual host version, sample rate, buffer and pass/failure observations.
 Host outcome is pending; no plugin installation or host test is claimed here.
+
+## Host-reported low/high/low sensitivity correction
+
+The owner reported that the host workflow was working well, but Generate did not
+apply a lower sensitivity after a denser generation added 200+ swells. Host
+version/rate/buffer were not supplied, so this is scoped feedback, not a completed
+host acceptance record. Native visual approval remains valid; no presentation
+or shared control changed for this correction.
+
+The original planner deliberately rejected retirement-only changes. A focused
+native regression reproduced this at `automatic_generation_test.cpp`: reducing
+two valid automatic definitions to one with an unchanged survivor returned
+no-change. The pre-fix Release build was `20261104-215336-1ede4bee`; the regression
+exited 1 at the expected generated-outcome assertion. This was a planner-policy
+failure, not a disabled-button binding failure.
+
+The owner's expected refinement loop now counts a reduced **nonempty viable**
+automatic collection as an arrangement change. Eligible unmatched automatic
+definitions retire in the same guarded transaction; unchanged survivor IDs,
+selection, definitions and renders remain, without new render requests for those
+survivors. Empty/protected-only, identical, failed and cancelled results retain
+their existing rules. Manual/edited/frozen/outside-scope work and saved immutable
+assets remain protected. Explicit and Stop paths still share the same planner
+and publisher. No callback, persistence format, UI or capture change was needed.
+
+The pure regression checks reduction-only commit, survivor equality and selected
+ID cleanup, then identical-repeat no-change and empty retention. The dense
+64-second/gapped integration now generates low/high/low sensitivity, requiring
+the final count to return to its initial low count, successful mode transition,
+protected manual equality, unique IDs and subsequent no-change. Final gates and
+the corrected Release module identity follow below.
+
+Corrected production/test source is commit `9d05019`; the wrapper began at
+`be701c8` with that source content uncommitted. Warm Release
+`20261104-215457-93129da0` passed **51/51** CTest in **85.90 seconds**. Its dense
+fixture produced 96 → 128 → 128 → 96 candidates and 97 → 129 → 129 → 97 committed
+swells (including the protected manual swell). The final low-sensitivity
+preview/commit took 1046.65 ms in this fixture; no host performance or real-music
+quality claim follows from that measurement. The pure reduction regression and
+existing explicit/automatic parity, failure, cancellation and callback checks
+passed in the same suite.
+
+The corrected Release bundle stays at the same local path above. Its module
+SHA256 is now `8EFE902F40FD66C4186514868B2E16BF2C597BB2E0AA6549EF0AFC186B3FA675`.
+The earlier hash identifies the pre-correction bundle. Only the reported
+low/high/low host sequence needs a focused retry; no repeat native visual review
+or repeat of passing host steps is requested. Environment details remain needed
+to complete the host record.
+
+Warm Debug `20261104-215645-3e3d0173` also passed **51/51** CTest in **312.17
+seconds**, including the new planner and dense reduction checks. Final UI
+standards lint passed (42 files, 61 unchanged bounded occurrences), strict active
+change validation passed and diff checks passed. No production code changed
+after these final builds started; later edits record evidence and task status.
+No additional host pass, OS-DPI or screen-reader acceptance is inferred.
