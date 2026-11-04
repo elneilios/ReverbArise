@@ -77,7 +77,7 @@ int main() { return runTest([]
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
-    reject(json.replace("\"version\": 8", "\"version\": 9"));
+    reject(json.replace("\"version\": 9", "\"version\": 10"));
     reject(json.replace(second,first));
     reject(json.replace("\"gain\": -3", "\"gain\": \"nan\""));
     reject(json.replace("\"sourceEnd\": \"40\"", "\"sourceEnd\": \"3\""));
@@ -178,7 +178,7 @@ int main() { return runTest([]
     calibrated.calibration.referenceEnd=100;calibrated.calibration.sourceIdentity="source";calibrated.calibration.irIdentity="ir";
     calibrated.calibration.renderIdentity="render";calibrated.calibration.revision=candidateGainRevision;
     REQUIRE(musical.gainPolicy==GainPolicy::musical && encode(musical,json,error));
-    REQUIRE(json.contains("\"version\": 8") && decode(json,restored,error));
+    REQUIRE(json.contains("\"version\": 9") && decode(json,restored,error));
     REQUIRE(restored.gainPolicy==GainPolicy::musical && restored.gainRevision==candidateGainRevision && restored.liveWetDb==4);
     REQUIRE(restored.swells[0].calibration==calibrated.calibration);
     for(int version=1;version<=7;++version){auto old=juce::JSON::parse(json);old.getDynamicObject()->setProperty("version",version);

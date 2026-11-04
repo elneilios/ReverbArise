@@ -40,7 +40,7 @@ bool updateAutomaticWindows(Session& s,const SongTime& time,juce::String& error,
     const auto quarter=time.rate*60/time.bpm;
     if(!time.valid || !std::isfinite(quarter) || quarter<1 || quarter>=static_cast<double>(INT64_MAX))
     {error="Valid fixed timing required for automatic source windows";return false;}
-    for(auto& w:s.swells)if(w.provenance==Provenance::automatic)
+    for(auto& w:s.swells)if(w.provenance==Provenance::automatic && !w.frozen)
     {
         int64_t end;if(!checkedAdd(w.arrival,static_cast<int64_t>(std::llround(quarter)),end))
         {error="Automatic source position overflow";return false;}
@@ -62,10 +62,14 @@ bool updateAutomaticWindows(Session& s,const SongTime& time,juce::String& error,
     error.clear();return true;
 }
 bool reconcileTargets(Session& session,const std::vector<Candidate>& candidates,int64_t start,int64_t end,
-                      const SongTime& time,juce::String& error,const CompletedPasses& completed)
+                      const SongTime& time,juce::String& error,const CompletedPasses& completed,
+                      const CaptureManifest* sourceContexts,std::optional<double> detectorSeparation)
 {
     if(start>=end){error="Invalid reconciliation interval";return false;}
-    auto s=session;const auto tolerance=targetTolerance(time.rate,s.separationSeconds);
+    const auto separation=detectorSeparation.value_or(session.separationSeconds);
+    if(!std::isfinite(separation) || separation<.001 || separation>2){error="Invalid detector separation";return false;}
+    auto s=session;const auto tolerance=targetTolerance(time.rate,separation);
+    std::set<juce::String> missingContextIR;
     std::vector<Candidate> found;
     for(const auto& c:candidates)if(c.sample>=start && c.sample<end)found.push_back(c);
     std::sort(found.begin(),found.end(),[](const auto& a,const auto& b){return a.sample<b.sample;});
@@ -86,7 +90,7 @@ bool reconcileTargets(Session& session,const std::vector<Candidate>& candidates,
     for(const auto& e:edges)if(!matched.count(e.id) && !used.count(e.candidate))
     {
         matched.insert(e.id);used.insert(e.candidate);auto& w=*find(s,e.id);
-        if(w.provenance==Provenance::automatic && w.arrival!=e.sample)
+        if(w.provenance==Provenance::automatic && !w.frozen && w.arrival!=e.sample)
         {w.arrival=e.sample;w.detectorAnchor=e.sample;++w.inputGeneration;w.phase=Phase::stale;w.status="Detected arrival updated";}
     }
     // Protected anchors also suppress unmatched neighboring detector candidates.
@@ -94,20 +98,28 @@ bool reconcileTargets(Session& session,const std::vector<Candidate>& candidates,
     {
         bool suppressed=false;
         for(auto anchor:s.suppressed)if(distance(anchor,found[i].sample)<=tolerance)suppressed=true;
-        for(const auto& w:s.swells)if(w.provenance!=Provenance::automatic
+        for(const auto& w:s.swells)if((w.provenance!=Provenance::automatic || w.frozen)
             && distance(w.provenance==Provenance::manualCreated?w.arrival:w.detectorAnchor,found[i].sample)<=tolerance)suppressed=true;
         if(suppressed)continue;
         if(s.swells.size()>=maximumSwells){error="Session capacity: 4096 swells";return false;}
         Swell w;w.arrival=w.sourceStart=w.detectorAnchor=found[i].sample;
         if(!checkedAdd(w.arrival,1,w.sourceEnd)){error="Target overflow";return false;}
         w.shape=initialShape(time.rate);w.provenance=Provenance::automatic;w.ir=s.defaultIR;w.irName=s.defaultIRName;
+        if(sourceContexts && sourceContexts->schemaVersion>=2)
+        {
+            const auto* owner=captureContextAt(*sourceContexts,w.arrival);
+            w.ir=owner?owner->ir:Asset{};w.irName=owner?owner->irName:juce::String{};
+            if(!w.ir.present())missingContextIR.insert(w.id);
+        }
         w.name=defaultSwellName(w.arrival,time,&s);w.phase=Phase::stale;w.status="Waiting for source";
         matched.insert(w.id);s.swells.push_back(std::move(w));
     }
     std::vector<juce::String> retired;
-    for(const auto& w:s.swells)if(w.provenance==Provenance::automatic && w.detectorAnchor>=start && w.detectorAnchor<end && !matched.count(w.id))retired.push_back(w.id);
+    for(const auto& w:s.swells)if(w.provenance==Provenance::automatic && !w.frozen && w.detectorAnchor>=start && w.detectorAnchor<end && !matched.count(w.id))retired.push_back(w.id);
     for(const auto& id:retired)erase(s,id);
     if(!updateAutomaticWindows(s,time,error,completed) || !validate(s,error))return false;
+    for(auto& w:s.swells)if(missingContextIR.contains(w.id))
+    {w.phase=Phase::error;w.status="Missing accepted pass IR/context; assign an IR in Perform";}
     s.timing=time;session=std::move(s);error.clear();return true;
 }
 }

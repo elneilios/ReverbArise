@@ -1,6 +1,7 @@
 #pragma once
 #include <UI/Controls/SegmentedSelector.h>
 #include <UI/Controls/IconActionButton.h>
+#include <UI/Controls/SliderControl.h>
 #include <UI/WorkflowPresentation.h>
 
 namespace controlReview
@@ -12,7 +13,7 @@ using m3::ui::controls::ActionIcon;
 inline std::vector<SegmentChoice> choices(bool available=true)
 {
     return {{1,"Learn","Capture audio and discover musical moments",true,{}},
-        {2,"Perform","Shape, edit and play your swells",available,"Learn useful source audio first"},
+        {2,"Perform","Shape and place reverse swells with precision",available,"Learn useful source audio first"},
         {3,"Export","DAW wet bypassed; explicit preview only",available,"Export needs an enabled, compatible ready swell"}};
 }
 class Panel final:public juce::Component
@@ -66,8 +67,30 @@ inline void pointerClick(juce::Button& button)
     const auto event=[&](juce::ModifierKeys mods){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,mods,0,0,0,0,0,&button,&button,time,point,time,1,false);};
     static_cast<juce::Component&>(button).mouseDown(event(juce::ModifierKeys::leftButtonModifier));static_cast<juce::Component&>(button).mouseUp(event({}));
 }
-inline void cases()
+inline void cases(bool withIcons=false)
 {
+    const auto choices=[withIcons](bool available=true)
+    {
+        auto values=controlReview::choices(available);
+        if(withIcons){values[0].icon=m3::ui::controls::ModeIcon::learn;values[1].icon=m3::ui::controls::ModeIcon::perform;values[2].icon=m3::ui::controls::ModeIcon::exportAudio;}
+        return values;
+    };
+    {
+        m3::ui::controls::SliderControl value;value.setRange(0,100,.1);value.setValue(50,juce::dontSendNotification);value.setSize(304,34);
+        unsigned begins=0,changes=0,gestureStarts=0,gestureEnds=0;value.beforeInvocation=[&]{++begins;};value.onValueChange=[&]{++changes;};
+        value.onDragStart=[&]{++gestureStarts;};value.onDragEnd=[&]{++gestureEnds;};
+        auto* field=dynamic_cast<m3::ui::controls::NumericInputControl*>(value.getChildComponent(0));REQUIRE(field);
+        pointerClick(field->incrementButton());REQUIRE(value.getValue()==50.1 && changes==1 && begins>0);
+        pointerClick(field->decrementButton());REQUIRE(value.getValue()==50 && changes==2);
+        REQUIRE(gestureStarts==2 && gestureEnds==2);
+        static_cast<juce::Component&>(field->incrementButton()).keyPressed(juce::KeyPress(juce::KeyPress::returnKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(value.getValue()==50.1);
+        field->showEditor();REQUIRE(field->getCurrentTextEditor() && field->getCurrentTextEditor()->getRight()<=field->incrementButton().getX());
+        field->getCurrentTextEditor()->setText("75.5",false);field->hideEditor(false);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(value.getValue()==75.5);
+        value.setValue(100,juce::dontSendNotification);pointerClick(field->incrementButton());REQUIRE(value.getValue()==100);
+        value.setValue(0,juce::dontSendNotification);pointerClick(field->decrementButton());REQUIRE(value.getValue()==0);
+        value.setEnabled(false);pointerClick(field->incrementButton());REQUIRE(value.getValue()==0);value.setEnabled(true);
+        REQUIRE(field->getLocalBounds().contains(field->incrementButton().getBounds()) && field->getLocalBounds().contains(field->decrementButton().getBounds()));
+    }
     m3::ui::WorkspaceTheme theme;Panel panel;panel.setLookAndFeel(&theme);panel.addToDesktop(0);panel.setVisible(true);
     auto& selector=panel.groups[0];unsigned requests=0;int last=0;
     selector.grabKeyboardFocus();selector.moveKeyboardFocusToSibling(true);REQUIRE(panel.icons[0]->hasKeyboardFocus(true));
@@ -98,6 +121,7 @@ inline void cases()
     disposable->onRequest=[&](int){disposable.reset();};
     disposable->keyPressed(juce::KeyPress(juce::KeyPress::endKey));disposable->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));REQUIRE(!disposable);
     auto& icon=*panel.icons[0];unsigned clicks=0;icon.onClick=[&]{++clicks;};
+    REQUIRE(icon.getLocalBounds().toFloat().contains(icon.outlineBounds(true).expanded(m3::ui::controlGeometry::focusStroke*.5f)));
     pointerClick(icon);REQUIRE(clicks==1);
     icon.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(clicks==2);
     icon.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(clicks==3);
@@ -109,12 +133,39 @@ inline void cases()
     {auto removed=std::make_unique<IconActionButton>(ActionIcon::settings);removed->onClick=[&]{++clicks;};removed->triggerClick();removed.reset();}
     juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(clicks==3);
     selector.onRequest={};selector.display(choices(),1);panel.groups[2].grabKeyboardFocus();
+    if(withIcons)for(int width:{330,360})
+    {
+        selector.setSize(width,36);
+        for(int id:{1,2,3})
+        {
+            auto* button=selector.segment(id);
+            const auto labelWidth=juce::GlyphArrangement::getStringWidth(m3::ui::navigationFont(),button->getButtonText());
+            REQUIRE(16+8+labelWidth<=button->getWidth()-10);
+            REQUIRE(button->getAccessibilityHandler()->getTitle()==button->getButtonText());
+        }
+    }
     // Internal joins are square and contiguous; only the outer silhouette rounds.
     const auto middle=selector.segment(2);const auto middleImage=middle->createComponentSnapshot(middle->getLocalBounds());
     REQUIRE(middleImage.getPixelAt(1,1)==m3::ui::background);
     const auto firstImage=selector.segment(1)->createComponentSnapshot(selector.segment(1)->getLocalBounds());
     REQUIRE(firstImage.getPixelAt(firstImage.getWidth()-2,1)==m3::ui::aqua);
     REQUIRE(selector.segment(1)->getRight()==selector.segment(2)->getX()+1 && selector.segment(2)->getRight()==selector.segment(3)->getX()+1);
+    // A hovered neighbour keeps every edge when another segment is selected,
+    // including the left neighbour formerly overpainted by the selected child.
+    for(int selected=1;selected<=3;++selected)for(int hovered=1;hovered<=3;++hovered)if(std::abs(selected-hovered)==1)
+    {
+        panel.icons[0]->grabKeyboardFocus();selector.display(choices(),selected);selector.grabKeyboardFocus();
+        for(int id=1;id<=3;++id)selector.segment(id)->setState(juce::Button::buttonNormal);
+        auto* hover=selector.segment(hovered);hover->setState(juce::Button::buttonOver);
+        const auto frame=selector.createComponentSnapshot(selector.getLocalBounds());
+        const auto shared=hovered<selected?hover->getRight()-1:hover->getX();
+        REQUIRE(frame.getPixelAt(shared,selector.getHeight()/2)==m3::ui::aqua);
+        REQUIRE(frame.getPixelAt(hover->getBounds().getCentreX(),0)==m3::ui::aqua && frame.getPixelAt(hover->getBounds().getCentreX(),selector.getHeight()-1)==m3::ui::aqua);
+        REQUIRE(selector.selectedId()==selected && selector.focusedId()==selected);
+        for(int id=1;id<=3;++id)REQUIRE(selector.getChildComponent(id-1)==selector.segment(id));
+    }
+    panel.groups[2].grabKeyboardFocus();selector.display(choices(),1);
+    panel.groups[3].display(choices(),3);
     panel.groups[3].segment(2)->setState(juce::Button::buttonOver);panel.icons[3]->setState(juce::Button::buttonOver);
     REQUIRE(panel.groups[2].hasKeyboardFocus(true));snapshot(panel,"control-library-states");
     panel.setSize(560,540);

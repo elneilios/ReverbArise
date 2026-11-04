@@ -37,6 +37,10 @@ inline void multipleExportCases()
     // An explicit [0,4000) loop has real captured data through 4001 due to rounding.
     heads[1].position.setIsLooping(true);heads[1].position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});position(1,0,false);
     juce::AudioBuffer<float> tick(2,64);tick.clear();processors[1]->processBlock(tick,midi);
+    // This fixture learned with Automatic Swells off. A new extraction window
+    // needs explicit Perform generation rather than implicit Off-pass work.
+    waitM3([&]{const auto saved=processors[1]->swellEngine().savedSession();const auto w=m3::find(saved,finalIds[1]);return w && w->phase==m3::Phase::stale && w->sourceEnd==4000;});
+    processors[1]->swellEngine().generate(true);
     try {waitM3([&]{const auto saved=processors[1]->swellEngine().savedSession();const auto w=m3::find(saved,finalIds[1]);return w && w->phase==m3::Phase::ready && w->sourceEnd==4000;});}
     catch(...){const auto state=processors[1]->swellEngine().snapshot();const auto w=m3::find(state.session,finalIds[1]);const auto timing=processors[1]->getHostPositionDiagnostics();
         std::cerr<<"Final loop fit: end="<<w->sourceEnd<<" provenance="<<static_cast<int>(w->provenance)<<" status="<<w->status<<" automatic="<<state.session.automaticProcessing<<" loop="<<timing.loopStart<<":"<<timing.loopEnd<<" | "<<state.message<<"\n";throw;}

@@ -17,6 +17,7 @@ public:
 #include "M2ProcessorCases.h"
 #include "M3ProcessorCases.h"
 #include "AutomaticProcessorCases.h"
+#include "LearnPassPolicyCases.h"
 #include "LiveProcessorCases.h"
 #include "LiveResourceCases.h"
 #include "LoopCaptureCases.h"
@@ -28,6 +29,9 @@ int main(int argc,char** argv)
     // Optional focused iteration; CTest's argument-free command still executes
     // every processor regression below.
     if(argc==2 && juce::String(argv[1])=="multiple-export")return runTest([]{multipleExportCases();});
+    if(argc==2 && juce::String(argv[1])=="loop-capture")return runTest([]{coherentHostTimingCases();loopCaptureCases();});
+    if(argc==2 && juce::String(argv[1])=="performance-export")return runTest([]{performanceExportCases();});
+    if(argc==2 && juce::String(argv[1])=="learn-policy")return runTest([]{learnPassPolicyCases();});
     const auto root = juce::File::getSpecialLocation(juce::File::tempDirectory)
         .getChildFile("PreverbProcessorTest-" + juce::Uuid().toDashedString());
     struct Cleanup { juce::File directory; ~Cleanup() { directory.deleteRecursively(); } } cleanup{root};
@@ -185,6 +189,7 @@ int main(int argc,char** argv)
     if (m2Result != 0) return 29;
     const auto m3Result=runTest([]{m3ProcessorCases();});if(m3Result!=0)return 30;
     if(runTest([]{automaticProcessorCases();})!=0)return 31;
+    if(runTest([]{learnPassPolicyCases();})!=0)return 32;
     if(runTest([]{liveProcessorCases();})!=0)return 32;
     if(runTest([]{liveResourceCases();})!=0)return 33;
     if(runTest([]{coherentHostTimingCases();loopCaptureCases();})!=0)return 34;

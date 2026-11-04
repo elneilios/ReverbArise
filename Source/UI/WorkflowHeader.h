@@ -2,6 +2,7 @@
 #include "WorkflowPresentation.h"
 #include "Controls/SegmentedSelector.h"
 #include "Controls/IconActionButton.h"
+#include "Controls/HeaderInformation.h"
 
 namespace m3::ui
 {
@@ -13,9 +14,8 @@ public:
         setName("workflowHeader");wordmark.setName("brandWordmark");tagline.setName("brandTagline");selector.setName("workflowMode");
         selector.setTitle("Workflow mode");settings.setName("diagnostics");
         tagline.setText("Reverse Reverb for Creative Swells",juce::dontSendNotification);
-        tagline.setFont(fontFor(*this,headingSize,juce::Font::italic));tagline.setColour(juce::Label::textColourId,text);
-        role.setName("workflowRole");role.setBorderSize({});role.setColour(juce::Label::textColourId,secondary);
-        role.setFont(fontFor(*this,modeDescriptionSize,juce::Font::italic));
+        applyTextRole(tagline,TextRole::tagline);
+        role.setName("workflowRole");
         addAndMakeVisible(wordmark);addAndMakeVisible(tagline);addAndMakeVisible(selector);
         addAndMakeVisible(settings);addAndMakeVisible(role);
         selector.onRequest=[this](int id){const auto callback=onModeRequested;if(callback)callback(static_cast<workflow::Mode>(id-1));};
@@ -27,13 +27,19 @@ public:
     void display(const WorkflowPresentation& presentation,const juce::String& detail={})
     {
         std::vector<controls::SegmentChoice> choices;
-        for(const auto& choice:presentation.choices)choices.push_back({static_cast<int>(choice.mode)+1,choice.label,choice.subtitle,choice.available,choice.reason});
+        for(const auto& choice:presentation.choices)
+        {
+            const auto icon=choice.mode==workflow::Mode::capture?controls::ModeIcon::learn
+                :choice.mode==workflow::Mode::live?controls::ModeIcon::perform:controls::ModeIcon::exportAudio;
+            choices.push_back({static_cast<int>(choice.mode)+1,choice.label,choice.subtitle,choice.available,choice.reason,icon});
+        }
         selector.display(std::move(choices),static_cast<int>(presentation.selected)+1);
-        const auto subtitle=modeSubtitle(presentation.selected);role.setText(subtitle,juce::dontSendNotification);role.setTooltip(subtitle);
+        const auto subtitle=modeSubtitle(presentation.selected);role.display(subtitle);
         setDescription(juce::String(modeLabel(presentation.selected))+": "+subtitle);setHelpText(detail);
     }
     controls::SegmentedSelector& modeSelector()noexcept{return selector;}
     controls::IconActionButton& settingsAction()noexcept{return settings;}
+    controls::HeaderInformation& modeInformation()noexcept{return role;}
     void resized()override
     {
         constexpr int primaryHeight=46,controlHeight=36,controlY=(primaryHeight-controlHeight)/2;
@@ -44,7 +50,8 @@ public:
         area.removeFromLeft(16);tagline.setBounds(area.withY(0).withHeight(primaryHeight));
     }
 private:
-    Wordmark wordmark;juce::Label tagline,role;
+    Wordmark wordmark;juce::Label tagline;
+    controls::HeaderInformation role;
     controls::SegmentedSelector selector;
     controls::IconActionButton settings{controls::ActionIcon::settings};
 };

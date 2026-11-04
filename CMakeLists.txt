@@ -50,6 +50,7 @@ add_library(preverb_capture STATIC
     Source/Capture/CaptureAssetStore.cpp
     Source/Capture/CaptureChunkStore.cpp
     Source/Capture/CaptureManifest.cpp
+    Source/Capture/CaptureGenerationContext.cpp
     Source/Capture/SparseSongMap.cpp
     Source/Capture/SourceRangeReader.cpp
     Source/Capture/SourceVisitor.cpp
@@ -79,8 +80,12 @@ target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav
     resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
+    resources/icons/learn.svg
+    resources/icons/perform.svg
+    resources/icons/export.svg
     resources/logo/svg/reverbarise-wordmark-dark.svg
     resources/fonts/inter/Inter-Regular.ttf
+    resources/fonts/inter/Inter-Medium.ttf
     resources/fonts/inter/Inter-SemiBold.ttf
     resources/fonts/inter/Inter-Bold.ttf
     resources/fonts/inter/Inter-Italic.ttf
@@ -144,6 +149,11 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    find_program(PREVERB_UI_POWERSHELL NAMES powershell pwsh REQUIRED)
+    add_test(NAME preverb_ui_standards_check COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/scripts/check-ui-standards.ps1")
+    add_test(NAME preverb_ui_standards_lint_test COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/ui_standards_lint_test.ps1")
     math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
     add_executable(preverb_product_version_test tests/product_version_test.cpp)
     target_compile_definitions(preverb_product_version_test PRIVATE
@@ -162,6 +172,9 @@ if(BUILD_TESTING)
     add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
     target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
     add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)
+    add_executable(preverb_capture_context_test tests/capture_context_test.cpp)
+    target_link_libraries(preverb_capture_context_test PRIVATE preverb_capture)
+    add_test(NAME preverb_capture_context_test COMMAND preverb_capture_context_test)
     add_executable(preverb_workflow_state_test tests/workflow_state_test.cpp)
     target_link_libraries(preverb_workflow_state_test PRIVATE preverb_session)
     add_test(NAME preverb_workflow_state_test COMMAND preverb_workflow_state_test)
@@ -178,6 +191,12 @@ if(BUILD_TESTING)
     add_executable(preverb_ir_handover_test tests/ir_handover_test.cpp)
     target_link_libraries(preverb_ir_handover_test PRIVATE preverb_preview)
     add_test(NAME preverb_ir_handover_test COMMAND preverb_ir_handover_test)
+    add_executable(preverb_ir_choices_test tests/ir_choices_test.cpp)
+    target_link_libraries(preverb_ir_choices_test PRIVATE preverb_preview)
+    add_test(NAME preverb_ir_choices_test COMMAND preverb_ir_choices_test)
+    add_executable(preverb_generation_configuration_test tests/generation_configuration_test.cpp)
+    target_link_libraries(preverb_generation_configuration_test PRIVATE preverb_preview)
+    add_test(NAME preverb_generation_configuration_test COMMAND preverb_generation_configuration_test)
     add_executable(preverb_ir_streaming_test tests/ir_streaming_test.cpp)
     target_link_libraries(preverb_ir_streaming_test PRIVATE preverb_preview psapi)
     add_test(NAME preverb_ir_streaming_test COMMAND preverb_ir_streaming_test "${CMAKE_BINARY_DIR}/ir-streaming-metrics-$<CONFIG>.json")

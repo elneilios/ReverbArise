@@ -1,6 +1,111 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.0 · **Purpose:** Design reference and implementation handoff · **Status:** Visual direction approved; numerical design tokens proposed for validation against the approved mockups.
+**Version:** 1.1 · **Production standards revision:** 1 · **Purpose:** Production UI authority and design reference.
+
+## Validated production standards — Learn and shared header
+
+This section takes precedence over historical numerical suggestions below. Values
+are extracted from approved Learn #11/PR #39 and header #35/PR #40 code at main
+`2848fcd`, with [approval and validation scope](../validation/2026-11-04-issue-37-ui-standards.md).
+They preserve existing appearance; they do not approve unrelated legacy controls.
+All sizes are JUCE logical pixels/font heights, not typographic points or physical
+Windows pixels. Use the embedded static Inter faces and shared role APIs; installed
+font lookup, synthetic weights and implicit default fonts are not alternatives.
+
+### Typography and semantic ink
+
+| Role / consumer | Height, face and line box | Code authority / ink |
+| --- | --- | --- |
+| Learn section heading / timeline title | 21 SemiBold, 30 box | `WorkspaceTheme` / `UiGeometry`; primary `#F8FAFC` |
+| Learn control label | 14 Medium, 24 box; switch labels vertically centred | Same; primary |
+| Learn helper and metadata | 14 Regular, 20 per line; helper supports two lines | `learnTypography`; `#C4CCD4` |
+| Learn ruler | 14 Medium, 20 box | Learn painting; primary |
+| Learn empty heading | 24 SemiBold, 32 box | Theme / `learnGeometry`; primary |
+| Learn empty body | 14 Regular, 40 box for two lines | Theme / `learnGeometry`; Learn helper ink |
+| Header tagline | 21 Italic, 46 primary row | Theme / `WorkflowHeader`; primary |
+| Mode navigation | 18 SemiBold, 36 control | Theme / `SegmentedSelector`; selected/inactive semantic ink |
+| Header description and notice body | 14 Regular, 32 information row | Theme / `HeaderInformation`, header `NoticeBar`; `#C7CDD4` |
+| Numeric control value / dropdown | 13 Regular, 28 value / 34 control | Theme / control geometry; primary |
+
+There is no universal line-height multiplier. Preserve the actual text box and
+face as well as font height. General legacy `smallSize=12`, `captionSize=11` and
+`modeDescriptionSize=16` are not permission to shrink a new production role;
+the actual approved header description uses the 14 body role.
+
+| Semantic role | Value | Authority and use |
+| --- | --- | --- |
+| background / aqua / hover | `#0F1418` / `#00EFFF` / `#00C2CC` | `WorkspaceTheme`; uniform surface / accent / hover |
+| timing | `#FFC700` | Theme; restrained timing/targets |
+| primary / general secondary | `#F8FAFC` / `#EDF1F5` | Theme; retain general secondary separately |
+| separator / outline | `#4A5058` / `#6B737C` | Theme; thin dividers / interactive outlines |
+| danger / warning | `#FF6B5E` / `#E6BB72` | Theme; error / warning semantics |
+| Learn helper / header body | `#C4CCD4` / `#C7CDD4` | Scoped roles above; do not merge near-matching colours |
+
+Existing captured-silence, unavailable-source, wet-data, stale and preview-cursor
+colours remain named data roles in `WorkspaceTheme`; data classification is not
+a general accent variant. Copy, severity and real coverage supplement colour.
+
+### Comfortable geometry and responsive layout
+
+| Role | Approved Learn/header measurement | Authority |
+| --- | --- | --- |
+| Comfortable rhythm | tight 4, label-help 6, related 12, group 16, section 24 | `UiGeometry::spacing` |
+| Control / label / heading heights | 34 / 24 / 30 | `controlGeometry` |
+| Numeric value / step strip | 74 x 28 / 18 wide | `controlGeometry` |
+| Switch track / component | 44 x 24 / 56 x 36 | `Switch` and control geometry |
+| Focus | 2 stroke, 3 outset, 6 padding | Control geometry; contain the full stroke |
+| Rule / ordinary radius | 1 / 4 | Theme; switches and joined segments retain their own geometry |
+| Learn settings / column gap | 304 / 28 | `workspaceGeometry` |
+| Outer inset | 16 below editor width 1200, otherwise 20 | `workspaceGeometry::outerInset` |
+| Header | 82 high; 46 primary and 32 information row | `WorkflowHeader`, `WorkspaceLayout` |
+| Header navigation | 330 below header width 1200, otherwise 360; 36 high | `WorkflowHeader`; inner-width breakpoint differs from editor inset |
+| Mode icon / label gap | canonical 16 canvas / 8 | `ModeIcon`, `SegmentedSelector` |
+| Header description accent | 2 x 16, 8 text gap, 8 trailing inset | `HeaderInformation` |
+| Learn metadata / ruler gap | 6 / 10 | `learnGeometry` |
+| Empty icon / heading / body boxes | 38 / 32 / 40; gaps 12 / 6 | `learnGeometry` |
+
+Supported logical sizes are 1100x850 minimum/default, 1400x900, 1400x1000 and
+1600x1000. Learn remains a narrow settings column and one dominant dry canvas;
+Perform retains its current composition until separately redesigned. The notice
+row remains reserved without shifting controls. Preserve the wordmark SVG,
+canonical monochrome mode SVGs, square inner segment joins, outer rounded ends
+and focus/shared-edge painting. Do not add raised cards, shadows or new controls.
+
+### Shared controls and density governance
+
+Use `Controls/Switch`, `SliderControl` with `NumericInputControl`,
+`SegmentedSelector`, `IconActionButton`, `HeaderInformation` and `NoticeBar`.
+Use the invocation-aware IR selector's shared no-wheel policy. Screen code owns
+placement and domain copy; bindings retain ranges, units, validation, accepted
+model state and stale invocation rejection. See [UI development standards](../development/ui-development-standards.md)
+for ownership, remaining migration, tests and review fixtures. Shared styling
+alone does not make an independent widget a shared library control.
+
+Comfortable means the approved Learn usage of the existing spacing/geometry
+roles. `compactInset` is an existing width-breakpoint name, **not** a compact
+density profile. Compact has no approved production values or runtime toggle.
+A future profile proposal may alter named spacing, row/group gaps and column
+allocation only after assessment with representative dense Perform content.
+Typography, semantic ink, legibility, focus and interaction language are
+invariants. Do not solve density by shrinking text. Review overflow, waveform
+room, hit targets and keyboard access at supported sizes before adopting values.
+
+New tokens, visual variants and one-off exceptions need explicit owner review
+with rationale, named scope/consumers, native evidence where applicable and
+regression coverage. Materially changed/new families need both look and feel
+approval before wider rollout. An unchanged extraction retains prior acceptance.
+Record approved changes in code and this guide together and increment the
+production standards revision; this revision does not change plugin/state versions.
+
+| Revision | Baseline / decision | Scope |
+| --- | --- | --- |
+| 1 | #11 and #35 approved native implementation, extracted in #37 | Learn comfortable and shared header; compact values await Perform review |
+
+## Historical design intent and provisional suggestions
+
+The remaining Parts I–III retain the original design reference. Their generic
+eight-region layout, palette/type tables and numerical starting suggestions do
+not override the production section above or authorise unimplemented features.
 
 This document combines two design references: **(1) Layout Structure / Border Specification** and **(2) UI Visual Style Guide**. The product name is **ReverbArise** (previously Preverb). The objective is a professional, minimal, high-contrast audio-plugin interface: dark charcoal, aqua/teal highlights, carefully restrained yellow timing markers, and a large waveform editor.
 
@@ -131,6 +236,7 @@ are historical evidence, not the current font-selection policy.
 | Inter **Bold** | Plugin brand, main headings, Swells / Selected Swell / Overview |
 | Inter **SemiBold** | Section labels and emphasized selected swell name |
 | Inter **Regular** | Control captions, target/pre-roll/length labels, numeric display, helper text, descriptions and secondary metadata |
+| Inter **Medium** | Learn control labels (500), subsequently approved in #11; see production section above |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
 Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.

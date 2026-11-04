@@ -18,12 +18,14 @@ juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gai
 
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p)
-    :AudioProcessorEditor(p),processor(p),timeline(p.swellEngine())
+    :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),timeline(p.swellEngine())
 {
     setLookAndFeel(&workspaceTheme);
+    addChildComponent(learnWorkspace);
+    learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
-    noticeBar.setName("workspaceNotice");addChildComponent(noticeBar);
-    recaptureExisting.setName("recaptureExisting");
+    noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
+    recaptureExisting.setName("legacyRecaptureExisting");
     workflowHeader.onModeRequested=[this](workflow::Mode mode){if(!updating && !destroying){processor.requestWorkflowMode(mode);refresh();}};
     recaptureExisting.onClick=[this]{processor.setRecaptureExisting(recaptureExisting.getToggleState());refresh();};
     setResizable(true,true);setResizeLimits(1100,850,2000,1400);
@@ -45,7 +47,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             <<"\nRender: "<<(w->render.present()?directory.getChildFile(w->render.path).getFullPathName():juce::String("not generated"));}
         juce::SystemClipboard::copyTextToClipboard(info);
     };
-    for(auto* button:{&snapButton,&autoButton,&enabledButton,&muteButton,&soloButton,&mappingButton,&toneButton})addAndMakeVisible(button);
+    for(auto* button:std::array<juce::Button*,7>{&snapButton,&autoButton,&enabledButton,&muteButton,&soloButton,&mappingButton,&toneButton})addAndMakeVisible(button);
     for(auto* box:{&candidateBox,&spanBox,&inCurveBox,&outCurveBox})addAndMakeVisible(box);
     spanBox.setName("detailBars");inCurveBox.setName("fadeInCurve");outCurveBox.setName("fadeOutCurve");
     loadIRButton.setName("loadIR");generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
@@ -85,7 +87,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{processor.swellEngine().generate(true);refresh();};
     auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
-    separationSlider.onValueChange=[this]{if(!updating)setPreferences();};autoButton.onClick=[this]{setPreferences();};
+    separationSlider.beforeInvocation=[this]{separationPass=processor.getWorkflowSnapshot().pass;};
+    separationSlider.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,separationSlider.getValue()/1000,s.autoRegenerate,separationPass.value_or(processor.getWorkflowSnapshot().pass));}};
+    autoButton.beforeInvocation=[this]{refreshPass=processor.getWorkflowSnapshot().pass;};
+    autoButton.onClick=[this]{const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,s.separationSeconds,autoButton.getToggleState(),refreshPass.value_or(processor.getWorkflowSnapshot().pass));};
     analyzeButton.onClick=[this]
     {
         const auto capture=processor.getCaptureSnapshot();
@@ -129,20 +134,22 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     liveButton.onClick=updateLive;liveRoutingBox.onChange=updateLive;liveLevel.onValueChange=updateLive;
     helper.setFont(juce::FontOptions(m3::ui::smallSize));
     for(auto* button:{&trimResetButton,&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
-    for(auto* button:{&automaticButton,&sampleUnitsButton})addAndMakeVisible(button);
+    for(auto* button:std::array<juce::Button*,2>{&automaticButton,&sampleUnitsButton})addAndMakeVisible(button);
     sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");
     trimResetButton.setName("resetAuditionTrim");
     blendSlider.setName("auditionBlend");slider(blendSlider,0,100,.1," % Wet");
     workflowHeader.onSettings=[this]{if(!destroying)setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
-    automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState());refresh();};
+    automaticButton.beforeInvocation=[this]{automaticPass=processor.getWorkflowSnapshot().pass;};
+    automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),automaticPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
     sampleUnitsButton.onClick=[this]{refresh();};
     suppressionButton.onClick=[this]{processor.swellEngine().resetSuppression();refresh();};
     defaultIRButton.onClick=[this]
     {
+        const auto epoch=processor.swellEngine().assignmentEpoch();const auto pass=processor.getWorkflowSnapshot().pass;
         chooser=std::make_unique<juce::FileChooser>("Default IR for future swells",juce::File{},"*.wav;*.wv");
         chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)](const juce::FileChooser& file)
-            {if(safe && file.getResult()!=juce::File{})safe->processor.swellEngine().loadDefaultIR(file.getResult());});
+            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),epoch,pass](const juce::FileChooser& file)
+            {if(safe && file.getResult()!=juce::File{})safe->processor.swellEngine().assignDefaultIR(file.getResult(),epoch,pass);});
     };
     blendSlider.onValueChange=[this]{if(!updating){const auto value=static_cast<float>(blendSlider.getValue()/100);const auto saved=processor.swellEngine().savedSession();processor.swellEngine().setMonitoring(value>=1?m3::AuditionMode::wetOnly:m3::AuditionMode::dryWet,value>=1?saved.wetBlend:value);}};
     trimResetButton.onClick=[this]{const auto& s=state.session;processor.swellEngine().setPreferences(0,s.sensitivity,s.separationSeconds,s.autoRegenerate);refresh();};
@@ -160,7 +167,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     slider(markerKnob,0,100,.1," %");markerKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     markerKnob.setTooltip("Lower: fewer, stronger attacks. Higher: finer detail. Changes reanalyse captured audio and preserve manual edits. This does not detect musical keys.");
     addAndMakeVisible(markerButton);addAndMakeVisible(isolateButton);
-    markerKnob.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,static_cast<float>(markerKnob.getValue()/100),s.separationSeconds,s.autoRegenerate);}};
+    markerKnob.beforeInvocation=[this]{markerPass=processor.getWorkflowSnapshot().pass;};
+    markerKnob.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,static_cast<float>(markerKnob.getValue()/100),s.separationSeconds,s.autoRegenerate,markerPass.value_or(processor.getWorkflowSnapshot().pass));}};
     addAndMakeVisible(regenerationLabel);regenerationLabel.setText("Regeneration sensitivity",juce::dontSendNotification);
     slider(regenerationKnob,0,100,.1," %");regenerationKnob.setName("regenerationSensitivity");regenerationKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     regenerationKnob.setTooltip("Lower tolerates more performance variation against the retained capture; 100% compares exact samples. Separate from marker detection. Explicit recapture remains exact.");
@@ -168,7 +176,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     inspectorContent.addAndMakeVisible(freezeButton);freezeButton.setName("freezeRender");
     freezeButton.setTooltip("Keep this rendered wet audio fixed against source changes. Unfreeze to change source/IR or extend render support. Envelope, gain and placement remain editable.");
     freezeButton.onClick=[this]{processor.swellEngine().setFrozen(state.session.primary,freezeButton.getToggleState());refresh();};
-    markerButton.onClick=[this]{processor.swellEngine().setAutoMarkers(markerButton.getToggleState());refresh();};
+    markerButton.beforeInvocation=[this]{markingPass=processor.getWorkflowSnapshot().pass;};
+    markerButton.onClick=[this]{processor.swellEngine().setAutoMarkers(markerButton.getToggleState(),markingPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
     addAndMakeVisible(isolateDryButton);isolateDryButton.setName("isolateDry");
     isolateDryButton.setTooltip("Replay captured dry only within the selected source interval; overlapping mixed notes inside it cannot be separated. Live input is unchanged. Off includes the listening context.");
     isolateDryButton.onClick=[this]{processor.swellEngine().setIsolateDry(isolateDryButton.getToggleState());refresh();};
@@ -215,13 +224,15 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     }
     irBox.setName("selectedIR");inspectorContent.addAndMakeVisible(irBox);
     irBox.setTooltip("Choose a bundled response, or load WAV/WavPack for this swell only. Monumental is deliberately intense; Shimmer is static coloration.");
-    irBox.setScrollWheelEnabled(false);
-    irBox.beforeInvocation=[this]{const auto session=processor.swellEngine().savedSession();if(const auto w=m3::find(session,session.primary))irInvocation=IRInvocation{w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch()};else irInvocation.reset();};
+    irBox.beforeInvocation=[this]{const auto session=processor.swellEngine().savedSession();if(const auto w=m3::find(session,session.primary))irInvocation=IRInvocation{w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch(),irEntries};else irInvocation.reset();};
     irBox.onChange=[this]{if(updating)return;const auto invocation=std::exchange(irInvocation,std::nullopt);
-        const auto index=irBox.getSelectedId()-1;const auto choices=m3::bundledImpulses();if(index<0 || static_cast<size_t>(index)>=choices.size())return;
-        const auto preset=choices[static_cast<size_t>(index)].id;
-        if(invocation)processor.swellEngine().assignBundledIR(invocation->id,invocation->input,preset,invocation->epoch);
-        else if(const auto w=m3::find(state.session,irOwner))processor.swellEngine().assignBundledIR(w->id,w->inputGeneration,preset,processor.swellEngine().assignmentEpoch());};
+        const auto index=irBox.getSelectedId()-1;const auto& choices=invocation?invocation->choices:irEntries;
+        if(index<0 || static_cast<size_t>(index)>=choices.size())return;const auto& entry=choices[static_cast<size_t>(index)];
+        const auto assign=[&](const auto& id,uint64_t input,uint64_t epoch){
+            if(entry.presetId.isNotEmpty())processor.swellEngine().assignBundledIR(id,input,entry.presetId,epoch);
+            else processor.swellEngine().assignManagedIR(id,input,entry.managed,entry.name,epoch);};
+        if(invocation)assign(invocation->id,invocation->input,invocation->epoch);
+        else if(const auto w=m3::find(state.session,irOwner))assign(w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch());};
     loadIRButton.setButtonText({});loadIRButton.setTooltip("Load a mono/stereo WAV or WavPack IR file for this swell");
     resetButton.setButtonText("Reset");resetButton.setName("resetWetShape");
     resetButton.setTooltip("Reset only the wet shape: start/end, fades, curves, level and placement return to defaults. Source points, IR and activity stay unchanged.");
@@ -241,6 +252,7 @@ PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){destroying=true;stop
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
+    if(learningLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
     for(const auto y:{layout.header.getBottom(),layout.globals.getBottom(),layout.workspace.getBottom(),layout.audition.getBottom(),layout.overview.getBottom()})
         g.drawHorizontalLine(y,static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));
     for(const auto x:{layout.swells.getRight()+10,layout.inspector.getX()-10})
@@ -295,7 +307,7 @@ void PreverbAudioProcessorEditor::selectedRowsChanged(int row)
     processor.swellEngine().selectTargets(ids,primary);refresh();
 }
 void PreverbAudioProcessorEditor::setPreferences()
-{processor.swellEngine().setPreferences(static_cast<float>(auditionSlider.getValue()),processor.swellEngine().savedSession().sensitivity,separationSlider.getValue()/1000,autoButton.getToggleState());}
+{const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(static_cast<float>(auditionSlider.getValue()),s.sensitivity,s.separationSeconds,s.autoRegenerate);}
 void PreverbAudioProcessorEditor::curveChanged(bool in)
 {
     if(updating || destroying)return;const auto curve=static_cast<m3::Curve>((in?inCurveBox:outCurveBox).getSelectedId()-1);
@@ -327,6 +339,7 @@ void PreverbAudioProcessorEditor::resized()
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     workflowHeader.setBounds(layout.header);
     noticeBar.setBounds(layout.notice);
+    if(learningLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);learnWorkspace.setBounds(body);return;}
     auto globals=layout.globals.reduced(0,8);
     markerButton.setBounds(globals.removeFromLeft(160));globals.removeFromLeft(16);
     markerLabel.setBounds(globals.removeFromLeft(118));markerKnob.setBounds(globals.removeFromLeft(150));globals.removeFromLeft(24);
@@ -382,7 +395,16 @@ void PreverbAudioProcessorEditor::resized()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
-    timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);
+    const auto nextLearning=processor.getWorkflowSnapshot().mode==workflow::Mode::capture;const auto leavingLearn=learningLayout && !nextLearning;
+    const auto isShared=[this](juce::Component* c){return c==&workflowHeader || c==&noticeBar || c==&learnWorkspace
+        || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
+    if(nextLearning!=learningLayout)
+    {
+        if(nextLearning){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
+        else {for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
+        learningLayout=nextLearning;resized();
+    }
+    if(!learningLayout){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
     hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::musicalPosition(time.sample,time):juce::String("Position unavailable"))
         +"    |    "+(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
@@ -415,10 +437,10 @@ void PreverbAudioProcessorEditor::refresh()
     refreshValues(w,time);
     listLabel.setText("Swells ("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     const auto key=w?w->id:juce::String{};
-    if(key!=fittedKey && state.raw){timeline.fitSelection();fittedKey=key;}
-    list.updateContent();juce::SparseSet<int> selectedRows;
+    if(!learningLayout && key!=fittedKey && state.raw){if(!leavingLearn)timeline.fitSelection();fittedKey=key;}
+    if(!learningLayout){list.updateContent();juce::SparseSet<int> selectedRows;
     for(size_t i=0;i<state.session.swells.size();++i)if(std::find(state.session.selected.begin(),state.session.selected.end(),state.session.swells[i].id)!=state.session.selected.end())selectedRows.addRange({static_cast<int>(i),static_cast<int>(i+1)});
-    list.setSelectedRows(selectedRows,juce::dontSendNotification);list.repaint();
+    list.setSelectedRows(selectedRows,juce::dontSendNotification);list.repaint();}
     enabledButton.setToggleState(w && w->enabled,juce::dontSendNotification);muteButton.setToggleState(w && w->muted,juce::dontSendNotification);
     soloButton.setToggleState(w && w->solo,juce::dontSendNotification);freezeButton.setToggleState(w && w->frozen,juce::dontSendNotification);
     if(w){inCurveBox.setSelectedId(static_cast<int>(w->shape.inCurve)+1,juce::dontSendNotification);outCurveBox.setSelectedId(static_cast<int>(w->shape.outCurve)+1,juce::dontSendNotification);}
@@ -451,12 +473,14 @@ void PreverbAudioProcessorEditor::refresh()
         const auto text=(state.liveActive?juce::String("Playing "):juce::String("Retained "))+state.retainedIRName+" | Requested "+state.requestedIRName;
         irStatus.setText(text,juce::dontSendNotification);irStatus.setTooltip(text+" | "+(w?w->status:state.message));}
     const auto choice=w?w->ir.content+"|"+w->irName:juce::String{};
-    if(irOwner!=(w?w->id:juce::String{}) || irChoice!=choice)
+    auto entries=processor.swellEngine().irChoices();juce::String catalogue;
+    for(const auto& entry:entries)catalogue<<entry.id<<"|"<<entry.name<<"\n";
+    if(irOwner!=(w?w->id:juce::String{}) || irChoice!=choice || irCatalogue!=catalogue)
     {
         irBox.hidePopup();irOwner=w?w->id:juce::String{};irChoice=choice;irBox.clear(juce::dontSendNotification);int selected=0,index=0;
-        for(const auto& entry:m3::bundledImpulses()){irBox.addItem(entry.name,++index);
-            if(w && w->ir.present() && w->ir.content==entry.decodedHash && w->irName==entry.name){selected=index;irBox.setTooltip(entry.description);}}
-        if(w && w->ir.present() && !selected){selected=1000;irBox.addItem(w->irName,selected);irBox.setTooltip("Saved immutable response; catalogue/file assignment changes only this swell, preserving old saved content and labels.");}
+        irCatalogue=catalogue;irEntries=std::move(entries);
+        for(const auto& entry:irEntries){irBox.addItem(entry.name,++index);
+            if(w && w->ir.present() && w->ir.content==entry.content){selected=index;irBox.setTooltip(entry.description);}}
         if(selected)irBox.setSelectedId(selected,juce::dontSendNotification);else irBox.setTextWhenNothingSelected("Choose an IR");
     }
     irBox.setEnabled(w && !w->frozen);loadIRButton.setEnabled(w && !w->frozen);
@@ -555,7 +579,8 @@ void PreverbAudioProcessorEditor::refresh()
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
     workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),capture.status);
-    noticeBar.display(m3::ui::workspaceNotice(flow,capture,state));
+    noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
+        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes())));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
@@ -571,8 +596,10 @@ void PreverbAudioProcessorEditor::refresh()
     stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
     if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
     if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
-    automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise);markerButton.setEnabled(flow.mode!=workflow::Mode::finalise);markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise);
-    gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise);suppressionButton.setEnabled(edit);
+    automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
+    gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
+    if(learningLayout){learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());for(auto* c:getChildren())if(!isShared(c))c->setVisible(false);}
+    learnWorkspace.setVisible(learningLayout);
     updating=false;
 }

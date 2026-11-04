@@ -15,6 +15,27 @@ struct SavedStateListener final:juce::AudioProcessorListener
 };
 
 int main(){return runTest([]{
+    {
+        CaptureProgress progress;CaptureManifest committed;
+        committed.ranges.push_back({16,16,CaptureCoverageKind::silence});
+        std::array<float,128> input;input.fill(.25f);
+        progress.add(0,64,input.data(),false,committed);
+        REQUIRE(progress.ranges.size()==2 && progress.ranges[0].range.frameCount==16 && progress.ranges[1].range.startSample==32);
+        input.fill(.75f);progress.add(0,64,input.data(),false,committed);
+        REQUIRE(progress.ranges[0].peaks.front().maximum==.25f); // First received wins; protected silence stays protected.
+        progress.add(8,32,input.data(),true,committed);
+        REQUIRE(progress.ranges.size()==1 && progress.ranges[0].range.frameCount==64);
+        REQUIRE(std::any_of(progress.ranges[0].peaks.begin(),progress.ranges[0].peaks.end(),[](const auto& p){return p.startSample==8 && p.maximum==.75f;}));
+        REQUIRE(std::none_of(progress.ranges[0].peaks.begin(),progress.ranges[0].peaks.end(),[](const auto& p){return p.startSample<8 && p.startSample+p.frameCount>8;}));
+        REQUIRE(progress.bytes()<4*1024*1024);
+        CaptureProgress sparse;for(size_t i=0;i<CaptureProgress::maxRanges;++i){CaptureOverviewRange r;r.range.startSample=static_cast<int64_t>(i*2);r.range.frameCount=1;sparse.ranges.push_back(r);}
+        sparse.add(10000,1,input.data(),false,{});
+        REQUIRE(sparse.limited && sparse.ranges.empty()); // Telemetry loss cannot invent coverage.
+        CaptureProgress dense;CaptureOverviewRange full;full.range={0,65536*512,CaptureCoverageKind::audio};full.peaks.resize(CaptureProgress::maxPeaks);
+        dense.ranges.push_back(std::move(full));REQUIRE(dense.bytes()<4*1024*1024);
+        dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
+        std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
+    }
     juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     WorkflowHost host;p->prepareToPlay(1000,64);p->setPlayHead(&host);juce::AudioBuffer<float> block(2,64);juce::MidiBuffer midi;
@@ -27,19 +48,33 @@ int main(){return runTest([]{
     const auto defaultDeadline=juce::Time::getMillisecondCounter()+10000;
     while(!e.savedSession().defaultIR.present() && juce::Time::getMillisecondCounter()<defaultDeadline)juce::Thread::sleep(2);
     REQUIRE(e.savedSession().defaultIR.present());p->flushHostStateChangesForTesting();p->addListener(&listener);
+    e.setLearningAutomatic(true);p->flushHostStateChangesForTesting();REQUIRE(listener.changes==1);
+    e.setLearningAutomatic(false);p->flushHostStateChangesForTesting();REQUIRE(listener.changes==2);
+    e.setLearningAutomatic(false);p->flushHostStateChangesForTesting();REQUIRE(listener.changes==2 && !listener.wrongThread);
+    listener.changes=0;
     REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
     REQUIRE(p->setRecaptureExisting(true) && p->setRecaptureExisting(false));p->flushHostStateChangesForTesting();
     REQUIRE(listener.changes==0); // Same mode and temporary arm are not saved edits.
     REQUIRE(p->getName()=="ReverbArise" && p->getParameters().isEmpty());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture);
     REQUIRE(!e.addTarget(0) && !e.audition());process(0,true,.125f);
+    e.setLearningAutomatic(true);p->flushHostStateChangesForTesting();REQUIRE(!e.savedSession().automaticProcessing && listener.changes==0);
     REQUIRE(!p->requestWorkflowMode(workflow::Mode::live));REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getCaptureSnapshot().manifest.ranges.empty());
+    const auto progressDeadline=juce::Time::getMillisecondCounter()+2000;
+    while(p->getCaptureProgress().ranges.empty() && juce::Time::getMillisecondCounter()<progressDeadline)juce::Thread::sleep(2);
+    const auto recording=p->getCaptureProgress();
+    REQUIRE(recording.pass==p->getWorkflowSnapshot().pass && recording.ranges.size()==1);
+    REQUIRE(recording.ranges[0].range.startSample==0 && recording.ranges[0].range.frameCount==64 && recording.ranges[0].peaks[0].maximum==.125f);
+    REQUIRE(p->getCaptureSnapshot().manifest.ranges.empty()); // Before storage batching; save/readers remain committed-only.
     juce::MemoryBlock midPass;p->getStateInformation(midPass);
     process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);
     p->flushHostStateChangesForTesting();REQUIRE(listener.changes==1 && !listener.wrongThread);
     auto accepted=p->getCaptureSnapshot();REQUIRE(!accepted.manifest.ranges.empty());
+    REQUIRE(accepted.manifest.schemaVersion==2 && captureContextAt(accepted.manifest,0));
+    REQUIRE(!captureContextAt(accepted.manifest,0)->automatic && captureContextAt(accepted.manifest,0)->ir==e.savedSession().defaultIR);
+    REQUIRE(p->getCaptureProgress().ranges.empty());
     juce::MemoryBlock liveBytes;p->getStateInformation(liveBytes);
     auto liveRestore=std::make_unique<PreverbAudioProcessor>(root.file);liveRestore->setStateInformation(liveBytes.getData(),static_cast<int>(liveBytes.getSize()));
     REQUIRE(liveRestore->flushCaptureForTesting() && liveRestore->getWorkflowSnapshot().mode==workflow::Mode::live);liveRestore.reset();
@@ -154,11 +189,13 @@ int main(){return runTest([]{
     REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::validating && !p->requestWorkflowMode(workflow::Mode::live));
     // Restore supersedes the validating pass; late completion cannot change it.
     p->setStateInformation(old.getData(),static_cast<int>(old.getSize()));p->holdCaptureValidationForTesting(false);
+    REQUIRE(p->getCaptureProgress().ranges.empty()); // Restore immediately fences the obsolete pass overlay.
     REQUIRE(p->flushCaptureForTesting() && p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getCaptureSnapshot().reference==replaced.reference);
     // Saturated capture queue aborts the whole pass, retaining accepted source.
     p->holdCaptureWorkerForTesting(true);juce::Thread::sleep(5);process(0,false,0);
     for(int i=0;i<40;++i)process(1000+i*64,true,.2f);process(3560,false,0);
     p->holdCaptureWorkerForTesting(false);REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(p->getCaptureProgress().ranges.empty()); // Failed pass overlay cannot survive settlement.
     REQUIRE(p->getDroppedCaptureBlockCount()>0 && p->getWorkflowSnapshot().phase==workflow::Phase::failed && p->getCaptureSnapshot().reference==replaced.reference);
     p->holdCaptureValidationForTesting(true);process(4000,false,0);process(4000,true,.1f);process(4064,false,0);
     const auto validationDeadline=juce::Time::getMillisecondCounter()+2000;
@@ -167,6 +204,19 @@ int main(){return runTest([]{
     p->setNonRealtime(true);process(0,false,.375f);p->holdCaptureValidationForTesting(false);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);process(32,false,.375f);
     REQUIRE(block.getSample(0,63)==.375f); // A Capture-entered bounce cannot acquire wet mid-export.
+    {
+        auto cancelled=std::make_unique<PreverbAudioProcessor>(root.file.getChildFile("cancel-progress"));WorkflowHost cancelHost;
+        cancelled->prepareToPlay(1000,64);cancelled->setPlayHead(&cancelHost);cancelled->swellEngine().setLearningAutomatic(false);
+        cancelHost.position.setBpm(120);cancelHost.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+        cancelHost.position.setTimeInSamples(0);cancelHost.position.setPpqPosition(0);cancelHost.position.setIsPlaying(true);
+        juce::AudioBuffer<float> input(2,64);for(int c=0;c<2;++c)std::fill_n(input.getWritePointer(c),64,.25f);
+        {AudioAllocationGuard guard;cancelled->processBlock(input,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        const auto until=juce::Time::getMillisecondCounter()+2000;
+        while(cancelled->getCaptureProgress().ranges.empty() && juce::Time::getMillisecondCounter()<until)juce::Thread::sleep(2);
+        REQUIRE(!cancelled->getCaptureProgress().ranges.empty());cancelled->cancelCapturePass();
+        REQUIRE(cancelled->getCaptureProgress().ranges.empty());REQUIRE(cancelled->flushCaptureForTesting());
+        REQUIRE(cancelled->getCaptureSnapshot().manifest.ranges.empty());
+    }
     {
         auto quiet=std::make_unique<PreverbAudioProcessor>(root.file.getChildFile("quiet"));WorkflowHost quietHost;
         quiet->prepareToPlay(1000,64);quiet->setPlayHead(&quietHost);juce::AudioBuffer<float> silent(2,64);silent.clear();

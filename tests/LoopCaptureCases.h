@@ -21,6 +21,9 @@ inline void coherentHostTimingCases()
 inline void loopCaptureCases()
 {
     TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();
+    // This is a loop/readiness oracle, not an asynchronous factory-load race.
+    // The latter is tested explicitly by generation_configuration_test.
+    waitM3([&]{return engine.savedSession().defaultIR.present();});
     p->prepareToPlay(48000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setIsPlaying(true);
     head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     std::vector<float> source(96000*2);

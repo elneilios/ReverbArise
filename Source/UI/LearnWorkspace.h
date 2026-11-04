@@ -1,0 +1,243 @@
+#pragma once
+#include "WorkspaceTheme.h"
+#include "SongBarRuler.h"
+#include "LearnTimelineModel.h"
+#include "Controls/Switch.h"
+#include "Controls/SliderControl.h"
+#include "Controls/IconActionButton.h"
+#include "Controls/IrSelector.h"
+#include <DSP/SwellEngine.h>
+#include <Capture/CaptureProgress.h>
+
+namespace m3::ui
+{
+// Learn owns a separate dry-only canvas. It has no access to Perform navigation
+// or wet editing. Provisional display telemetry is separate from accepted source.
+class LearnWorkspace final:public juce::Component,public juce::SettableTooltipClient
+{
+public:
+    LearnWorkspace(SwellEngine& source,std::function<workflow::Snapshot()> readFlow):engine(source),flowNow(std::move(readFlow))
+    {
+        setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
+        setTooltip(inspectionHelp);setName("learnWorkspace");setTitle("Learn: source capture and generation preferences");
+        for(auto* c:std::array<juce::Component*,14>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
+            &irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity})addAndMakeVisible(c);
+        captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
+        recaptureLabel.setText("Recapture existing audio",juce::dontSendNotification);
+        automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
+        automaticToggleLabel.setText("Enable automatic swells",juce::dontSendNotification);
+        irLabel.setText("Impulse Response (IR)",juce::dontSendNotification);sensitivityLabel.setText("Marker Sensitivity",juce::dontSendNotification);
+        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel})applyTextRole(*label,TextRole::controlLabel);
+        for(auto* label:{&recaptureHelp,&automaticHelp,&irStatus})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+        irStatus.setMinimumHorizontalScale(1.f);
+        irStatus.setText("Used for your next learning pass.",juce::dontSendNotification);
+        irStatus.setTooltip(irStatus.getText());
+        for(auto* label:{&captureTitle,&recaptureLabel,&automaticLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&irStatus})label->setBorderSize({});
+        automaticHelp.setText("Detect musical events\nand create swells.",juce::dontSendNotification);
+        captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");recaptureLabel.setName("learnRecaptureLabel");automaticToggleLabel.setName("learnAutomaticLabel");
+        irLabel.setName("learnIRLabel");sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
+        recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");irBox.setName("learnDefaultIR");fileButton.setName("learnImportIR");irStatus.setName("learnIRStatus");sensitivity.setName("learnMarkerSensitivity");
+        recapture.beforeInvocation=[this]{recapturePass=flowNow().pass;};automatic.beforeInvocation=[this]{automaticPass=flowNow().pass;};
+        recapture.onClick=[this]{if(recapturePass.value_or(flowNow().pass)==flowNow().pass && onRecapture)onRecapture(recapture.getToggleState());if(onRefresh)onRefresh();};
+        automatic.onClick=[this]{engine.setLearningAutomatic(automatic.getToggleState(),automaticPass.value_or(flowNow().pass));if(onRefresh)onRefresh();};
+        sensitivity.setRange(0,100,.1);
+        sensitivity.setTextValueSuffix(" %");sensitivity.setNumDecimalPlacesToDisplay(1);
+        sensitivity.setTooltip("Low: fewer, stronger attacks. High: finer event detail. Applies to your next learning pass.");
+        sensitivity.beforeInvocation=[this]{sensitivityPass=flowNow().pass;};
+        sensitivity.onValueChange=[this]{if(!refreshing){const auto s=engine.savedSession();engine.setPreferences(s.auditionDb,static_cast<float>(sensitivity.getValue()/100),s.separationSeconds,s.autoRegenerate,sensitivityPass.value_or(flowNow().pass));}};
+        irBox.beforeInvocation=[this]{irIntent=Intent{engine.assignmentEpoch(),flowNow().pass,choices};};
+        irBox.onChange=[this]{if(refreshing)return;const auto intent=irIntent.value_or(Intent{engine.assignmentEpoch(),flowNow().pass,choices});irIntent.reset();
+            const auto at=irBox.getSelectedId()-1;if(at<0 || static_cast<size_t>(at)>=intent.choices.size())return;const auto& c=intent.choices[static_cast<size_t>(at)];
+            if(c.presetId.isNotEmpty())engine.assignDefaultBundledIR(c.presetId,intent.session,intent.pass);else engine.assignDefaultManagedIR(c.managed,c.name,intent.session,intent.pass);if(onRefresh)onRefresh();};
+        fileButton.onClick=[this]{const auto session=engine.assignmentEpoch(),pass=flowNow().pass;
+            chooser=std::make_unique<juce::FileChooser>("Import default impulse response",juce::File{},"*.wav;*.wv");
+            chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
+                [safe=juce::Component::SafePointer<LearnWorkspace>(this),session,pass](const auto& dialog){if(safe && dialog.getResult()!=juce::File{})safe->engine.assignDefaultIR(dialog.getResult(),session,pass);});};
+    }
+    std::function<void(bool)> onRecapture;
+    std::function<void()> onRefresh;
+    void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,workflow::Snapshot flow,bool position,const CaptureProgress& pending={})
+    {
+        refreshing=true;capture=source;clock=time;playhead=position;automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
+        phase=flow.phase;progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
+        recapture.setToggleState(flow.recapture,juce::dontSendNotification);automatic.setToggleState(automaticOn,juce::dontSendNotification);
+        recapture.setEnabled(!flow.locked());automatic.setEnabled(!flow.locked());irBox.setEnabled(!flow.locked());fileButton.setEnabled(!flow.locked());sensitivity.setEnabled(!flow.locked());
+        if(!sensitivity.isMouseButtonDown() && !sensitivity.hasKeyboardFocus(true))sensitivity.setValue(editor.session.sensitivity*100,juce::dontSendNotification);
+        recaptureHelp.setText(flow.recapture?"Replace encountered source\nwhen the DAW stops.":"Fill uncaptured positions;\nexisting audio stays protected.",juce::dontSendNotification);
+        const auto list=engine.irChoices();juce::String key;for(const auto& c:list)key<<c.id<<"|"<<c.name<<"\n";
+        if(key!=catalogue){irBox.hidePopup();catalogue=key;choices=list;irBox.clear(juce::dontSendNotification);int index=0;for(const auto& c:choices)irBox.addItem(c.name,++index);}
+        int selected=0;for(size_t i=0;i<choices.size();++i)if(choices[i].content==editor.session.defaultIR.content){selected=static_cast<int>(i+1);break;}
+        irBox.setSelectedId(selected,juce::dontSendNotification);if(!selected)irBox.setTextWhenNothingSelected("Default IR not ready");
+        for(auto* c:std::array<juce::Component*,6>{&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity})c->setVisible(automaticOn);
+        const auto scope=juce::String(source.manifest.projectId)+"/"+source.manifest.instanceId;
+        const auto session=engine.assignmentEpoch();
+        // A mode roundtrip/reset may complete between paints. A recording pass
+        // increment alone must retain the pin throughout recording/settlement.
+        const auto modeReset=flow.phase==workflow::Phase::idle && flow.result==workflow::Result::none && flow.pass!=inspectionWorkflow;
+        inspectionWorkflow=flow.pass;
+        if(scope!=viewScope || session!=inspectionSession || modeReset){
+            if(scope!=viewScope)view.reset();clearInspection();viewScope=scope;inspectionSession=session;}
+        view.update(capture,progress,clock);first=view.first;last=view.last;
+        const auto rate=clock.rate>0?clock.rate:capture.manifest.sampleRate;
+        const auto duration=[&](long double frames){return rate>0?juce::String(static_cast<double>(frames/rate),1)+" s":juce::String(static_cast<double>(frames),0)+" samples";};
+        totalsText="Mapped "+duration(learnMappedFrames(capture.manifest))+" | Recording "+duration(learnProvisionalFrames(progress))+" | Extent "+duration(learnExtentFrames(capture,progress,clock));
+        statusText=phase==workflow::Phase::recording?"Recording source | Stop your DAW to accept capture.":phase==workflow::Phase::draining?"Finishing capture | Settings remain locked.":phase==workflow::Phase::validating?"Accepting captured source | Settings remain locked.":phase==workflow::Phase::failed?"Capture was not accepted | Previous source retained.":flow.result==workflow::Result::cancelled?"Capture cancelled | Previous source retained.":source.unavailable?"Some captured source is unavailable.":hasSource()?"Captured source ready.":"Ready to capture source from your DAW.";
+        if(progress.limited)statusText+=" Live preview limit reached; source capture continues.";
+        updateAccessibleDescription();
+        refreshing=false;resized();repaint();
+    }
+    void visibilityChanged()override{if(isVisible()){view.reset();clearInspection();}}
+    void fitDrySource(){view.reset();view.update(capture,progress,clock);first=view.first;last=view.last;repaint();}
+    std::pair<double,double> dryViewport()const noexcept{return {first,last};}
+    const juce::String& coverageTotalsText()const noexcept{return totalsText;}
+    LearnCoverageInfo coverageAt(int64_t sample)const{return learnCoverageAt(capture,progress,sample,sampleBound(first),sampleBound(last));}
+    void mouseMove(const juce::MouseEvent& e)override
+    {
+        if(inspectionPinned)return;
+        if(chart.contains(e.position.toInt())){inspection=pointerSample(e.position);updateAccessibleDescription();repaint(timelineStatus);}else clearInspection();
+    }
+    void mouseExit(const juce::MouseEvent&)override{if(!inspectionPinned)clearInspection();}
+    void mouseDown(const juce::MouseEvent& e)override
+    {if(e.mods.isLeftButtonDown() && chart.contains(e.position.toInt())){inspection=pointerSample(e.position);inspectionPinned=true;grabKeyboardFocus();updateAccessibleDescription();repaint();}}
+    void focusGained(juce::Component::FocusChangeType)override{repaint(chart);}
+    void focusLost(juce::Component::FocusChangeType)override{repaint(chart);}
+    bool hasPinnedInspection()const noexcept{return inspectionPinned;}
+    std::optional<int64_t> inspectedSample()const noexcept{return inspection;}
+    juce::String inspectionText()const{return inspection?learnInspectionReadout(*inspection,coverageAt(*inspection),clock,capture.manifest.sampleRate).text:coverageKey;}
+    bool keyPressed(const juce::KeyPress& key)override
+    {
+        if(!hasKeyboardFocus(false))return false;
+        if(key==juce::KeyPress::escapeKey){clearInspection();return true;}
+        auto sample=inspection.value_or(sampleBound(first));
+        if(key==juce::KeyPress::homeKey)sample=sampleBound(first);
+        else if(key==juce::KeyPress::endKey)sample=sampleBound(last)-1;
+        else if(key==juce::KeyPress::rightKey)sample=coverageAt(sample).end;
+        else if(key==juce::KeyPress::leftKey){const auto start=coverageAt(sample).start;sample=start>INT64_MIN?start-1:start;}
+        else return false;
+        inspection=std::clamp(sample,sampleBound(first),sampleBound(last)-1);inspectionPinned=true;updateAccessibleDescription();repaint();return true;
+    }
+    juce::Rectangle<int> timelineBounds()const noexcept{return chart;}
+    juce::Rectangle<int> timelineHeadingBounds()const noexcept{return timelineHeading;}
+    juce::Rectangle<int> timelineCaptionBounds()const noexcept{return timelineCaption;}
+    juce::Rectangle<int> timelineRulerBounds()const noexcept{return timelineRuler;}
+    juce::Rectangle<int> timelineStatusBounds()const noexcept{return timelineStatus;}
+    bool showsEmptyPrompt()const noexcept{return !hasSource() && phase!=workflow::Phase::recording && phase!=workflow::Phase::draining && phase!=workflow::Phase::validating;}
+    const juce::String& timelineStatusText()const noexcept{return statusText;}
+    std::array<juce::Rectangle<int>,3> emptyStateRegions()const noexcept
+    {
+        const auto area=chart.reduced(spacing::section);
+        constexpr auto total=learnGeometry::emptyIconHeight+learnGeometry::emptyIconGap+learnGeometry::emptyHeadingHeight+learnGeometry::emptyTextGap+learnGeometry::emptyTextHeight;
+        auto group=area.withSizeKeepingCentre(area.getWidth(),total);
+        const auto icon=group.removeFromTop(learnGeometry::emptyIconHeight);group.removeFromTop(learnGeometry::emptyIconGap);
+        const auto heading=group.removeFromTop(learnGeometry::emptyHeadingHeight);group.removeFromTop(learnGeometry::emptyTextGap);
+        return {icon,heading,group};
+    }
+    void resized()override
+    {
+        auto a=getLocalBounds();left=a.removeFromLeft(workspaceGeometry::learnSettingsWidth);a.removeFromLeft(workspaceGeometry::columnGap);right=a;
+        auto controls=left.withTrimmedTop(spacing::related);
+        const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& label,juce::Label& description)
+        {
+            auto row=controls.removeFromTop(controlGeometry::switchHeight);toggle.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(spacing::related);
+            label.setBounds(row.withSizeKeepingCentre(row.getWidth(),juce::roundToInt(bodySize)));
+            description.setBounds(row.getX(),label.getBottom()+spacing::labelHelp,row.getWidth(),2*learnTypography::secondaryLineHeight);
+            controls.removeFromTop(std::max(0,description.getBottom()-controls.getY()));
+        };
+        captureTitle.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
+        toggleGroup(recapture,recaptureLabel,recaptureHelp);
+        controls.removeFromTop(spacing::related);divider=controls.getY();controls.removeFromTop(spacing::related);
+        automaticLabel.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
+        toggleGroup(automatic,automaticToggleLabel,automaticHelp);
+        if(automaticOn){controls.removeFromTop(spacing::related);irLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);
+            auto row=controls.removeFromTop(controlGeometry::height);fileButton.setBounds(row.removeFromRight(controlGeometry::height));row.removeFromRight(spacing::tight);irBox.setBounds(row);
+            controls.removeFromTop(spacing::labelHelp);irStatus.setBounds(controls.removeFromTop(controlGeometry::feedbackHeight));controls.removeFromTop(spacing::group);
+            sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));}
+        auto canvas=right.reduced(0,spacing::related);timelineHeading=canvas.removeFromTop(controlGeometry::headingHeight);canvas.removeFromTop(spacing::tight);
+        timelineCaption=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::metadataGap);
+        timelineRuler=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::rulerViewportGap);
+        timelineStatus=canvas.removeFromBottom(2*learnTypography::secondaryLineHeight);canvas.removeFromBottom(spacing::related);chart=canvas;
+    }
+    void paint(juce::Graphics& g)override
+    {
+        g.setColour(separator);g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));
+        applyTextRole(g,TextRole::sectionHeading);g.drawText("Capture Timeline",timelineHeading,juce::Justification::left);
+        applyTextRole(g,TextRole::helper);g.drawText(totalsText,timelineCaption,juce::Justification::left);
+        g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
+        const auto x=[&](double sample){return chart.getX()+static_cast<float>((sample-first)/(last-first)*chart.getWidth());};
+        applyTextRole(g,TextRole::ruler);
+        long double origin;const auto musical=songOrigin(clock,origin);
+        const auto ticks=musical?makeSongBarRuler(first,last,chart.getWidth(),clock.rate,clock.bpm,clock.numerator,clock.denominator,clock.sample,clock.ppq):std::vector<SongBarTick>{};
+        const auto readable=!ticks.empty() && std::all_of(ticks.begin(),ticks.end(),[](const auto& tick){return std::abs(tick.bar)<1000000;});
+        if(readable)for(const auto& tick:ticks)
+        {const auto width=std::min(static_cast<float>(controlGeometry::rulerLabelWidth),static_cast<float>(chart.getWidth())),at=std::clamp(x(tick.samplePosition)-width*.5f,static_cast<float>(chart.getX()),static_cast<float>(chart.getRight())-width);
+            g.drawText(juce::String(tick.bar)+".1",juce::Rectangle<float>(at,static_cast<float>(timelineRuler.getY()),width,static_cast<float>(timelineRuler.getHeight())),juce::Justification::centred);}
+        else g.drawText("Samples "+juce::String(sampleBound(first))+" to "+juce::String(sampleBound(last))+(musical?"":" | timing unavailable"),timelineRuler,juce::Justification::left);
+        const auto mid=static_cast<float>(chart.getCentreY()),height=chart.getHeight()*.4f;
+        const auto drawSource=[&](const auto& regions,bool provisional)
+        {
+            juce::Graphics::ScopedSaveState scope(g);g.reduceClipRegion(chart.reduced(1));
+            for(const auto& region:regions)
+            {
+                const auto a=x(static_cast<double>(region.range.startSample)),b=x(static_cast<double>(region.range.startSample)+region.range.frameCount);
+                if(!region.available || region.range.kind==CaptureCoverageKind::silence){
+                    g.setColour(!region.available?danger.withAlpha(.15f):secondary.withAlpha(.09f));
+                    g.fillRect(juce::Rectangle<float>(a,static_cast<float>(chart.getY()),std::max(1.f,b-a),static_cast<float>(chart.getHeight())));
+                    if(b-a>90){g.setColour(!region.available?danger:secondary);g.drawText(!region.available?"Unavailable":"Silence",juce::Rectangle<float>(a+4,static_cast<float>(chart.getY()+4),b-a-8,20),juce::Justification::left);}
+                }
+                if(provisional){g.setColour(timing.withAlpha(.08f));g.fillRect(juce::Rectangle<float>(a,static_cast<float>(chart.getY()),std::max(1.f,b-a),static_cast<float>(chart.getHeight())));}
+                g.setColour(region.available?provisional?text.withAlpha(.8f):text:danger);
+                if(region.range.kind==CaptureCoverageKind::silence)g.drawHorizontalLine(static_cast<int>(mid),a,b);
+                for(const auto& peak:region.peaks){const auto at=static_cast<int>(x(static_cast<double>(peak.startSample)));if(chart.contains(at,chart.getCentreY()))g.drawVerticalLine(at,mid-std::clamp(peak.maximum,-1.0f,1.0f)*height,mid-std::clamp(peak.minimum,-1.0f,1.0f)*height+1);}
+                if(provisional){g.setColour(timing.withAlpha(.6f));g.drawHorizontalLine(chart.getBottom()-2,a,b);}
+            }
+        };
+        // The dark background is genuine uncaptured space; never infer silence
+        // from a small peak or extend a neighbouring region across a seek.
+        drawSource(capture.overview,false);drawSource(progress.ranges,true);
+        if(musical && first<origin && origin<last){g.setColour(secondary);g.drawVerticalLine(static_cast<int>(x(static_cast<double>(origin))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));
+            g.drawText("Song start",juce::Rectangle<float>(x(static_cast<double>(origin))+4,static_cast<float>(chart.getY()+4),80,20),juce::Justification::left);}
+        if(showsEmptyPrompt())
+        {
+            const auto regions=emptyStateRegions();const auto iconCentre=regions[0].getCentre();
+            g.setColour(learnTypography::descriptionColour);
+            constexpr std::array<float,9> bars{8,17,29,13,38,22,32,16,7};
+            for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
+            applyTextRole(g,TextRole::emptyHeading);g.drawFittedText("Press play in your DAW to begin capturing.",regions[1],juce::Justification::centred,1);
+            applyTextRole(g,TextRole::emptyBody);g.drawFittedText(automaticOn?"Audio will be analysed and swells created\nusing your selected settings.":"Capture dry audio now.\nCreate swells later in Perform.",regions[2],juce::Justification::centredTop,2);
+        }
+        if(hasKeyboardFocus(false)){
+            g.setColour(aqua.withAlpha(.7f));g.drawRoundedRectangle(controlGeometry::insideStroke(chart.reduced(3),rule),radius,rule);}
+        if(inspectionPinned && inspection){const auto at=x(static_cast<double>(*inspection));
+            const auto region=coverageAt(*inspection);const auto a=std::clamp(x(static_cast<double>(region.start)),static_cast<float>(chart.getX()),static_cast<float>(chart.getRight()));
+            const auto b=std::clamp(x(static_cast<double>(region.end)),static_cast<float>(chart.getX()),static_cast<float>(chart.getRight()));
+            g.setColour(text.withAlpha(.04f));g.fillRect(juce::Rectangle<float>(a,static_cast<float>(chart.getY()+4),std::max(0.f,b-a),static_cast<float>(chart.getHeight()-8)));
+            g.setColour(text);const float dash[]{3,3};g.drawDashedLine({at,static_cast<float>(chart.getY()+5),at,static_cast<float>(chart.getBottom()-5)},dash,2,1);
+            g.fillEllipse(at-3,static_cast<float>(chart.getY()+5),6,6);
+        }
+        if(playhead && clock.sample>=first && clock.sample<=last){g.setColour(timing);g.drawVerticalLine(static_cast<int>(x(static_cast<double>(clock.sample))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));}
+        g.setColour(secondary);g.setFont(interFont(learnTypography::secondarySize));auto status=timelineStatus;g.drawText(statusText,status.removeFromTop(learnTypography::secondaryLineHeight),juce::Justification::left);
+        g.setColour(learnTypography::descriptionColour);g.drawText(inspectionText(),status,juce::Justification::left);
+    }
+private:
+    static int64_t sampleBound(double value)noexcept
+    {return static_cast<int64_t>(std::clamp(static_cast<long double>(value),static_cast<long double>(INT64_MIN),static_cast<long double>(INT64_MAX)));}
+    int64_t pointerSample(juce::Point<float> point)const noexcept{return sampleBound(first+(last-first)*(point.x-chart.getX())/chart.getWidth());}
+    void updateAccessibleDescription(){
+        const auto details=inspection?learnInspectionReadout(*inspection,coverageAt(*inspection),clock,capture.manifest.sampleRate).details:coverageKey;
+        setTooltip(inspectionHelp+"\n"+details);setDescription(inspectionHelp+" "+statusText+" "+totalsText+" "+details);}
+    void clearInspection(){const auto changed=inspection.has_value() || inspectionPinned;inspection.reset();inspectionPinned=false;
+        if(changed){updateAccessibleDescription();repaint();}}
+    inline static const juce::String inspectionHelp="Left-click to pin/relocate inspection. The pin survives focus changes. Home/End and left/right inspect regions; Escape clears with waveform focus.";
+    inline static const juce::String coverageKey="Audio | Silence | Gap: uncaptured | Unavailable | Recording";
+    LearnDryView view;uint64_t inspectionSession=0,inspectionWorkflow=0;bool inspectionPinned=false;std::optional<int64_t> inspection;juce::String totalsText,viewScope;
+    struct Intent{uint64_t session,pass;std::vector<IRChoice> choices;};
+    SwellEngine& engine;std::function<workflow::Snapshot()> flowNow;
+    controls::Switch recapture{"Recapture existing audio"},automatic{"Enable automatic swells"};
+    controls::IconActionButton fileButton{controls::ActionIcon::openFile};controls::IrSelector irBox;controls::SliderControl sensitivity;
+    juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,irLabel,irStatus,sensitivityLabel;
+    std::unique_ptr<juce::FileChooser> chooser;std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;std::optional<Intent> irIntent;
+    bool hasSource()const noexcept{return !capture.manifest.ranges.empty() || !capture.overview.empty() || !progress.ranges.empty();}
+    std::vector<IRChoice> choices;juce::String catalogue,statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
+    juce::Rectangle<int> left,right,chart,timelineHeading,timelineCaption,timelineRuler,timelineStatus;int divider=0;double first=0,last=1;bool automaticOn=true,refreshing=false,playhead=false;
+};
+}

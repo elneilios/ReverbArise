@@ -5,6 +5,23 @@ inline void workspaceNoticeCases()
 {
     using namespace m3;using namespace m3::ui;using controls::NoticeTone;
     CaptureSessionSnapshot capture;EditorSnapshot editor;workflow::Snapshot flow;
+    {
+        IRPreparationNotice progress;EditorSnapshot pending;pending.defaultIRPending=true;pending.requestedDefaultIRName="Monumental";
+        REQUIRE(!progress.update(pending,1,0) && !progress.update(pending,1,599));
+        pending.defaultIRPending=false;REQUIRE(!progress.update(pending,1,600)); // A quick completion never emits a progress/success flash.
+        pending.defaultIRPending=true;REQUIRE(!progress.update(pending,1,1000));
+        const auto slow=progress.update(pending,1,1600);REQUIRE(slow && slow->text=="Preparing IR: Monumental");
+        REQUIRE(workspaceNotice(flow,capture,pending,slow)==slow);
+        pending.defaultIRError="Cannot decode file";
+        const auto error=workspaceNotice(flow,capture,pending,slow);REQUIRE(error->tone==NoticeTone::error && error->detail.contains("Cannot decode file") && error->text.contains("retry"));
+        REQUIRE(workspaceNotice(flow,capture,pending,{} )==error); // Errors have no presentation timeout.
+        pending.defaultIRError.clear();pending.requestedDefaultIRName="Whisper";REQUIRE(!progress.update(pending,1,1700));
+        REQUIRE(!progress.update(pending,2,2300)); // Session supersession restarts the presentation delay.
+        pending.defaultIRPending=false;REQUIRE(!progress.update(pending,2,3000));
+        pending.defaultIRPending=true;REQUIRE(!progress.update(pending,2,3100));
+        flow.phase=workflow::Phase::recording;const auto queued=progress.update(pending,2,3700);
+        REQUIRE(workspaceNotice(flow,capture,pending,queued)->text.startsWith("Recording"));flow={};
+    }
     REQUIRE(!workspaceNotice(flow,capture,editor));
     flow.mode=workflow::Mode::live;editor.message="Ordinary ready/progress text";
     REQUIRE(!workspaceNotice(flow,capture,editor));
@@ -17,7 +34,7 @@ inline void workspaceNoticeCases()
     editor.liveStatus="Export warning: retained prepared sound";
     REQUIRE(workspaceNotice(flow,capture,editor)->tone==NoticeTone::warning);
     editor.defaultIRError="Default IR failed";
-    REQUIRE(workspaceNotice(flow,capture,editor)->text==editor.defaultIRError);
+    REQUIRE(workspaceNotice(flow,capture,editor)->detail.contains(editor.defaultIRError) && workspaceNotice(flow,capture,editor)->text.contains("retry"));
     editor.actionError="Edit rejected";
     REQUIRE(workspaceNotice(flow,capture,editor)->text==editor.actionError);
     capture.unavailable=true;capture.status="Missing capture asset";

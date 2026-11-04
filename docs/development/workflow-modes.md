@@ -12,6 +12,20 @@ labels. The approved library selector is composed into one shared WorkflowHeader
 the former temporary dropdown is removed. Component and integrated appearance
 acceptance are tracked separately in the dated header evidence.
 
+Issue #35 adds cached semantic SVGs before Learn (waveform), Perform (three-handle
+reverse swell) and Export (audio document/output), with the existing navigation
+geometry and guarded requests. The lower row uses 14-pixel regular Inter in
+`#C7CDD4` for both description and notice body. A 2×16-pixel aqua accent precedes
+the description by an 8-pixel gap; notice severity colours remain independent.
+The descriptions are “Capture audio and discover musical moments”, “Shape and
+place reverse swells with precision” and “Preview your prepared swells”. See
+[Issue #35 integration evidence](../validation/2026-11-04-issue-35-header-integration.md)
+for owner approval and native/host/DPI coverage.
+The implemented header contract is synced into `openspec/specs/swell-workspace/`;
+its [archived change](../../openspec/changes/archive/2026-11-04-enhance-header-mode-navigation/proposal.md)
+and [archive checks](../validation/2026-11-04-issue-41-openspec-archive.md) preserve
+the planning history and validation limits.
+
 | Durable XML value / internal mode | Display label | Role |
 | --- | --- | --- |
 | Capture / capture | Learn | Capture audio and discover musical moments |
@@ -121,3 +135,15 @@ New builds are named ReverbArise.vst3. The VST3 component/controller IDs,
 com.k7ma.preverb bundle identity, K7Ma/Prv1 codes and empty parameter inventory
 remain unchanged. An installed older Preverb Spike bundle is not removed by
 building; host rescan/reload behavior requires explicit FL Studio verification.
+
+## Learn generation settings
+
+Learn's effective Automatic Swells policy is the conjunction of the saved
+processing and marker switches. Explicit On enables both; Off disables
+processing without resetting hidden IR/sensitivity/marker preferences. Idle
+Learn edits configure future passes, rather than enqueuing reanalysis of old
+source. Explicit Perform marking/reanalysis remains separate. The whole-pass
+configuration pin and stale-input fences are documented in
+[the Learn protocol](learn-source-context-protocol.md). Source/context
+persistence and dry-only scheduling verification remain tracked implementation
+work; these settings changes alone do not claim those tasks are complete.

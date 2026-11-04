@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <juce_core/juce_core.h>
+#include "CaptureGenerationContext.h"
 
 enum class CaptureCoverageKind
 {
@@ -24,15 +25,20 @@ struct CaptureManifestRange
 
 struct CaptureManifest
 {
-    static constexpr int currentSchemaVersion = 1;
+    static constexpr int legacySchemaVersion = 1,currentSchemaVersion = 2;
+    static constexpr int latestSupportedSchemaVersion = currentSchemaVersion;
 
-    int schemaVersion = currentSchemaVersion;
+    // Contextless low-level adapters retain legacy output. Workflow capture
+    // explicitly publishes schema 2 together with complete pinned ownership.
+    int schemaVersion = legacySchemaVersion;
     std::string projectId;
     std::string instanceId;
     double sampleRate = 48000.0;
     int channelCount = 2;
     uint64_t revision = 0;
     std::vector<CaptureManifestRange> ranges;
+    std::vector<CaptureGenerationContext> generationContexts;
+    std::vector<CaptureContextSpan> contextSpans;
 };
 
 bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error);
