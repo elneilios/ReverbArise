@@ -1,7 +1,8 @@
 #pragma once
 inline void liveProcessorCases()
 {
-    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();
+    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();engine.setMonitoring(m3::AuditionMode::wetOnly,.5f); // Preserve the wet-only numerical/resource oracle.
+
     REQUIRE(engine.setGainPolicy(m3::GainPolicy::legacy)); // Original live sample oracle.
     engine.setAutomaticProcessing(false);p->prepareToPlay(1000,1000);TestPlayHead head;p->setPlayHead(&head);
     head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});

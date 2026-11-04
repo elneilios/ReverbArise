@@ -26,6 +26,7 @@ None.
 ### Modified Capabilities
 
 - `swell-workspace`: production Perform composition, toolbar, horizontal navigation and safe host-grid gestures with truthful states and compatibility.
+- `audition-monitoring`: owner-requested finite-window looping, Wet only toggle with live-level balance, removal of the row's trim reset and truthful concise status. Preserve legacy monitoring preferences and Export independence.
 
 The existing `ui-design-system` review requirements already govern scoped density/control approval; they are not weakened or duplicated by this change.
 

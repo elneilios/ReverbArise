@@ -93,6 +93,7 @@ struct Session
     float regenerationSensitivity=.5f;
     AuditionMode auditionMode = AuditionMode::wetOnly;
     float wetBlend = 0.5f;
+    bool auditionFollowsLive = false; // Absent metadata preserves legacy monitoring.
     double postRollSeconds = 2;
     ExportState exportState;
     Asset defaultIR;

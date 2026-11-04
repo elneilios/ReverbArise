@@ -133,6 +133,32 @@ context. Changes to that context, a subsequent knob edit, disabled controls or e
 destruction invalidate the queued action. Already-default resets do not dirty the
 host or schedule work. Reset operates on the chosen control, never whole-swell Reset.
 
+## Audition transport and balance
+
+Play loops the prepared selected listening window. The audio callback wraps its
+cursor inside the immutable pinned buffer; there is no per-loop job, allocation,
+lock, decoding or buffer publication. Existing 2-ms wet edges and 5-ms outer replay
+ramps apply on each repeat, including shortened ramps for tiny intervals. Stop
+uses the existing fade; selection/session/mode/dependency invalidation and live
+DAW playback priority retain their existing stop rules. ExportVoice and the old
+PreviewEngine's default one-shot voice starts are unchanged.
+
+New instances default to Wet only Off. Off adds unity captured dry to wet at saved
+Live Wet gain; On uses the same wet gain without captured dry. The existing wet
+and combined-sum safety guards remain active and disclosed. This matches nominal
+live branch levels, not arbitrary downstream DAW processing or a whole-song gain
+plan with different membership. Live Wet gain edits reprepare monitoring only.
+No convolution or durable source/IR/render edits are caused by this toggle.
+
+Optional schema-10 boolean `auditionFollowsLive` records the new behavior. Missing
+metadata defaults false, retaining legacy mode/blend/trim; malformed types reject
+transactionally. New instances set true/Off, and explicit toggles set true while
+retaining old blend/trim values. Live-level monitoring ignores legacy trim. The
+Settings legacy trim remains visible and double-click-resettable for old-mode
+sessions, disabled with an explanation in live-level mode. Envelope 8 is unchanged;
+restore never starts playback. A queued toggle captures session epoch/workflow
+pass and rejects obsolete or disabled invocations. Export mix remains independent.
+
 ## Fit lifecycle
 
 Fit includes selected dry source, requested envelope, placed raw tail and overlapping

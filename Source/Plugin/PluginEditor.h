@@ -126,10 +126,12 @@ private:
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
-    juce::Label headerStatus,monitorStatus,helper;
+    juce::Label headerStatus,helper;
+    m3::ui::controls::EllipsisLabel monitorStatus;
     m3::ui::controls::EllipsisLabel selectedStatus,irStatus;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
-    juce::TextButton trimResetButton{"Trim 0 dB"};
+    m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};
+    std::optional<std::pair<uint64_t,uint64_t>> auditionInvocation;
     juce::TextButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};
     m3::ui::controls::InvocationToggle automaticButton{"Automatic processing"};juce::ToggleButton sampleUnitsButton{"Exact sample positions"};
     juce::Slider regenerationKnob;juce::Label regenerationLabel;juce::ToggleButton freezeButton{"Freeze render"};
@@ -137,7 +139,7 @@ private:
     juce::Label markerLabel,markerState,placementLabel;juce::TextEditor placementEditor;
     juce::ToggleButton liveButton{"Live playback"};juce::ComboBox liveRoutingBox;juce::Slider liveLevel;
     juce::Label liveLevelLabel,gainPolicyLabel;juce::ComboBox gainPolicyBox;
-    juce::Slider blendSlider,tailSlider;
+    juce::Slider tailSlider;
     juce::Label tailLabel;
     bool diagnosticsOpen=false;
     double diagnosticsRefreshedAt=-1;

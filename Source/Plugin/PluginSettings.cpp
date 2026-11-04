@@ -71,10 +71,10 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     const juce::StringArray captions{"Routing","Default IR","Fade-in curve","Fade-out curve","Source range (bars)","Audition scope","Manual preparation","Onset suggestions","Fresh capture","Test tone range","Details",""};
     const int labelPages[]{0,1,2,2,2,3,4,4,4,4,4,4};
     for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);settingsLabels[i].setFont(juce::FontOptions(m3::ui::bodySize));settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
-    settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive wet affects mixer output; audition blend/trim are separate.",juce::dontSendNotification);
+    settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive Wet also sets new audition wet gain; legacy blend/trim stay separate.",juce::dontSendNotification);
     settingsHelp[1].setText("Both sensitivities stay in the main workspace.\nThe default IR applies to future swells; existing swells keep their own IR.",juce::dontSendNotification);
     settingsHelp[2].setText("Applies to the selected swell. Rename from its three-dot list menu.\nSource, envelope, Enabled, Solo and Freeze stay in the inspector.",juce::dontSendNotification);
-    settingsHelp[3].setText("Preview only. Isolation and listening tail affect captured audition audio.\nLive playback settings remain separate.",juce::dontSendNotification);
+    settingsHelp[3].setText("Audition loops captured audio. Isolation/tail affect its listening window.\nWet only uses Live Wet gain; stored legacy trim is inactive in live-level mode.",juce::dontSendNotification);
     settingsHelp[4].setText("Recovery actions run only when clicked. Clear map keeps swell assets.\nReset deleted targets allows automatic rediscovery.",juce::dontSendNotification);
     openDiagnosticsButton.setName("openDiagnostics");openDiagnosticsButton.onClick=[this]{setDiagnosticsOpen(true);};
     toneButton.setTooltip("Explicit scheduled 440 Hz test tone. Turn off here after testing.");

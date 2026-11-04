@@ -1,7 +1,8 @@
 #pragma once
 inline void liveResourceCases()
 {
-    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();engine.setAutomaticProcessing(false);
+    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();engine.setMonitoring(m3::AuditionMode::wetOnly,.5f); // Preserve the wet-only numerical/resource oracle.
+    engine.setAutomaticProcessing(false);
     p->prepareToPlay(48000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setTimeInSamples(at);head.position.setPpqPosition(at/12000.0);head.position.setIsPlaying(playing);};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;

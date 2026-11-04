@@ -149,11 +149,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         liveRoutingBox.getSelectedId()==2?m3::LiveRouting::wetOnly:m3::LiveRouting::dryWet,static_cast<float>(liveLevel.getValue()));};
     liveButton.onClick=updateLive;liveRoutingBox.onChange=updateLive;liveLevel.onValueChange=updateLive;
     helper.setFont(juce::FontOptions(m3::ui::smallSize));
-    for(auto* button:{&trimResetButton,&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
+    for(auto* button:{&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
+    addAndMakeVisible(auditionWetOnly);auditionWetOnly.setName("auditionWetOnly");monitorStatus.setName("auditionStatus");
     for(auto* button:std::array<juce::Button*,2>{&automaticButton,&sampleUnitsButton})addAndMakeVisible(button);
     sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");
-    trimResetButton.setName("resetAuditionTrim");
-    blendSlider.setName("auditionBlend");slider(blendSlider,0,100,.1," % Wet");
     workflowHeader.onSettings=[this]{if(!destroying)setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
     automaticButton.beforeInvocation=[this]{automaticPass=processor.getWorkflowSnapshot().pass;};
     automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),automaticPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
@@ -167,9 +166,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),epoch,pass](const juce::FileChooser& file)
             {if(safe && file.getResult()!=juce::File{})safe->processor.swellEngine().assignDefaultIR(file.getResult(),epoch,pass);});
     };
-    blendSlider.onValueChange=[this]{if(!updating){const auto value=static_cast<float>(blendSlider.getValue()/100);const auto saved=processor.swellEngine().savedSession();processor.swellEngine().setMonitoring(value>=1?m3::AuditionMode::wetOnly:m3::AuditionMode::dryWet,value>=1?saved.wetBlend:value);}};
-    trimResetButton.onClick=[this]{const auto& s=state.session;processor.swellEngine().setPreferences(0,s.sensitivity,s.separationSeconds,s.autoRegenerate);refresh();};
-    auditionButton.setTooltip("Play audition preview; does not start the DAW");stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Monitoring trim",juce::dontSendNotification);
+    auditionWetOnly.beforeInvocation=[this]{auditionInvocation=std::pair{state.sessionEpoch,processor.getWorkflowSnapshot().pass};};
+    auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
+    auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop; safety protection remains active.");
+    auditionButton.setTooltip("Loop the selected audition window until Stop; does not start the DAW");stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
     inspectorViewport.setViewedComponent(&inspectorContent,false);diagnosticsViewport.setViewedComponent(&diagnosticsContent,false);
     inspectorViewport.setName("inspectorViewport");diagnosticsViewport.setName("diagnosticsViewport");
     inspectorViewport.setScrollBarsShown(true,false);diagnosticsViewport.setScrollBarsShown(true,false);
@@ -356,7 +356,7 @@ void PreverbAudioProcessorEditor::resized()
     timeline.setBounds(perform.detail.withTrimmedTop(performGeometry::columnInset));
     auto audition=perform.audition.reduced(0,performGeometry::bandInset);auto auditionRow=audition.removeFromTop(36);
     auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(24);
-    trimResetButton.setBounds(auditionRow.removeFromRight(138));auditionRow.removeFromRight(16);blendSlider.setBounds(auditionRow);
+    auditionWetOnly.setBounds(auditionRow.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
     monitorStatus.setBounds(audition.withTrimmedLeft(112));
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info);
     const auto width=inspectorWidth-16;inspectorContent.setSize(width,650);
@@ -467,12 +467,9 @@ void PreverbAudioProcessorEditor::refresh()
     if(!separationSlider.isMouseButtonDown())separationSlider.setValue(state.session.separationSeconds*1000,juce::dontSendNotification);
     autoButton.setToggleState(state.session.autoRegenerate,juce::dontSendNotification);
     automaticButton.setToggleState(state.session.automaticProcessing,juce::dontSendNotification);
-    if(!blendSlider.isMouseButtonDown() && !blendSlider.hasKeyboardFocus(true))blendSlider.setValue(state.session.auditionMode==m3::AuditionMode::wetOnly?100:state.session.wetBlend*100,juce::dontSendNotification);
-    trimResetButton.setButtonText("Trim "+juce::String(state.session.auditionDb,1)+" dB"+(state.session.auditionDb!=0?" | reset":""));
-    juce::String monitoring="Preview only | "+(state.dryStatus.isNotEmpty()?state.dryStatus:(state.session.isolateSelected?juce::String("Isolated"):juce::String("Overlaps"))+" | "+juce::String(static_cast<int>(state.auditionMembers.size()))+" wet | "+(state.session.isolateDry?"selected dry":"dry context"));
-    if(state.attenuationDb<0)monitoring<<" | wet safety "<<juce::String(state.attenuationDb,1)<<" dB";
-    if(state.blendAttenuationDb<0)monitoring<<" | sum safety "<<juce::String(state.blendAttenuationDb,1)<<" dB";
-    monitorStatus.setText(monitoring,juce::dontSendNotification);monitorStatus.setTooltip(monitoring+". Live playback routing and gain are independent.");
+    auditionWetOnly.display(state.session.auditionMode==m3::AuditionMode::wetOnly);
+    auditionSlider.setEnabled(!state.session.auditionFollowsLive);
+    auditionSlider.setTooltip(state.session.auditionFollowsLive?"Stored legacy trim is inactive: audition follows Live Wet gain. Reset to 0 dB by double-click in legacy monitoring.":"Legacy monitoring trim, -60 to 0 dB. Double-click resets to 0 dB.");
     selectedStatus.setText(w?phaseName(w->phase)+" | "+w->name:"Select a swell",juce::dontSendNotification);
     selectedStatus.setTooltip(w?w->status:state.message);
     if(w && musical){const auto& g=w->calibration;const auto calibrationText=g.state==m3::CalibrationState::unavailable?
@@ -608,6 +605,24 @@ void PreverbAudioProcessorEditor::refresh()
     for(auto* button:{&generateButton,&allButton,&analyzeButton,&confirmButton,&timingButton})button->setEnabled(edit && button->isEnabled());
     auditionButton.setEnabled(caps.preview && state.auditionReady && !(flow.mode==workflow::Mode::live && state.session.liveEnabled && diagnostics.isPlaying));
     stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
+    auditionWetOnly.setEnabled(flow.mode==workflow::Mode::live && !flow.locked());
+    juce::String monitoring;
+    if(!w)monitoring="Select a swell to audition";
+    else if(state.auditionReady)monitoring=state.playing?"Looping":"Ready";
+    else if(state.auditionPreparing && w->phase==m3::Phase::ready)monitoring="Preparing audition";
+    else if(state.dryStatus.isNotEmpty())monitoring=state.dryStatus.contains("Dry source not captured")?
+        "Unavailable: capture the dry listening window in Learn":"Unavailable: "+state.dryStatus;
+    else if(w->phase==m3::Phase::empty || w->phase==m3::Phase::error || w->phase==m3::Phase::stale)monitoring="Unavailable: "+w->status;
+    else monitoring="Preparing audition";
+    if(w && state.auditionReady && !state.playing && state.session.liveEnabled && diagnostics.isPlaying)monitoring="DAW playback active - stop transport to audition";
+    if(w){monitoring<<" | "<<(state.session.auditionMode==m3::AuditionMode::wetOnly?"Wet only":"Dry + wet");
+        if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
+        if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
+        if(!state.session.auditionFollowsLive)monitoring<<" | saved balance";
+        if(state.attenuationDb<0)monitoring<<" | wet protection "<<juce::String(state.attenuationDb,1)<<" dB";
+        if(state.blendAttenuationDb<0)monitoring<<" | mix protection "<<juce::String(state.blendAttenuationDb,1)<<" dB";}
+    monitorStatus.setText(monitoring,juce::dontSendNotification);
+    monitorStatus.setTooltip(monitoring+"\nManual audition loops captured audio until Stop; DAW transport is independent.\n"+(state.session.auditionFollowsLive?"Unity captured dry; Live Wet "+juce::String(state.session.liveWetDb,1)+" dB. Legacy trim is inactive.":"Legacy saved wet blend "+juce::String(state.session.wetBlend*100,1)+"%; trim "+juce::String(state.session.auditionDb,1)+" dB. Toggle Wet only to adopt live levels.")+"\n2 ms wet edges / 5 ms replay edges; wet and combined-mix protection can reduce audition level.\n"+state.dryStatus);
     if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
     if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());

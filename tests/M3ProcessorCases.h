@@ -11,6 +11,7 @@ template<class F> static void waitM3(F condition,const std::source_location loca
 inline void m3ProcessorCases()
 {
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    processor->swellEngine().setMonitoring(m3::AuditionMode::wetOnly,.5f); // This historical oracle explicitly exercises wet-only monitoring.
     REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy)); // Retain the pre-upgrade numerical oracle.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0);
     processor->swellEngine().setAutomaticProcessing(false);

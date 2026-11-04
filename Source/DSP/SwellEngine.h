@@ -56,7 +56,7 @@ struct EditorSnapshot
     juce::String actionError;
     std::optional<int64_t> auditionSample;
     int64_t auditionDryStart=0,auditionDryEnd=0;
-    bool playing=false,auditionReady=false,analyzing=false;
+    bool playing=false,auditionReady=false,auditionPreparing=false,analyzing=false;
     float attenuationDb=0;
     float blendAttenuationDb=0,monitorPeak=0;
     bool dryAvailable=false,cachedWetOnly=false;
@@ -122,6 +122,7 @@ public:
     void setIsolateDry(bool);
     void setPostRoll(double seconds);
     void setMonitoring(AuditionMode,float blend);
+    bool setAuditionWetOnly(bool,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     void setLivePlayback(bool,LiveRouting,float db);
     bool setGainPolicy(GainPolicy);
     void setRegenerationSensitivity(float);

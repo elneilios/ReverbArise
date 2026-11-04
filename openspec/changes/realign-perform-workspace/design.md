@@ -173,6 +173,36 @@ Store optional validated Perform view span/first, Snap requested flag and stable
 
 ### 6. Integration boundaries and verification
 
+#### Owner-requested audition refinement after host review
+
+The owner reports the existing editing looks/feels good, then explicitly requests
+looping, a Wet only toggle default Off, no row Trim button and clearer statuses.
+This adds finite selected-window audition only; #5 arrangement playback stays out.
+Reuse LatchingActionButton unchanged and the existing 72-high band/row geometry.
+Use Ready/Looping/Preparing/Unavailable status, actual mode/membership, and
+ellipsis with full diagnostic tooltip rather than compressed or misleading copy.
+
+The owner's balance clarification is unity captured dry plus saved Live Wet gain,
+not a 50/50 crossfade. Keep existing audition wet/sum safety disclosed: nominal
+balance matches live levels, but no bit-identical whole-song/host-chain claim is
+made for a bounded audition window with its own guard and edge ramps. New instances
+and deliberate Wet only toggles opt into this balance. Preserve old projects'
+mode/blend/trim until an explicit toggle; an additive optional bool defaults false
+in legacy state and never changes schema 10/envelope 8. Live-level mode ignores
+legacy audition trim while retaining its stored value for compatibility. Live Wet
+gain changes invalidate monitoring preparation without convolution. Export mix
+and live routing remain independently owned.
+
+Extend AuditionVoice with a per-start loop flag default false, enabled only by
+SwellEngine's manual audition. Wrap inside the bounded per-frame callback without
+allocation, file I/O or republishing buffers; retain pin/retirement ownership,
+5-ms outer and 2-ms wet ramps, tiny buffers, smooth Stop, replacement and priority
+guards. Previous PreviewEngine one-shot calls and ExportVoice stay unchanged.
+Test exact repeated samples/position, Stop near wrap, invalidation, replacement,
+allocation guards, real editor toggle/disabled/stale behavior and actual decoder
+legacy/current/malformed/restore-without-playback paths. Record native and host
+results separately; previous accepted editing needs no repeat owner checkpoint.
+
 #4 is merged and consumed directly; its active OpenSpec delta remains unarchived, so do not duplicate or rewrite chronological-list requirements. Current canonical specs still say eight-region Perform and lack the toolbar details; this change refines those through a delta. Existing multi-selection is retained without #9 mixed inspector or new bulk actions. Preserve current audition position/mix APIs; #5 owns arrangement playback.
 
 The planning audit saw #6 at `33f1871` without final APIs. Agent 1 subsequently supplied an explicit handover; final integration follows owner-confirmed merged #50 at `9b8e70f`. No other worktree is modified. #38 contract reviewed: accept source-ready Perform with pending wet, preserve manual/frozen IDs and return-to-Learn edits; do not change current Stop transition or Generate behavior. The final delta preserves merged Export composition and current-WAV truth rather than reverting its requirements.

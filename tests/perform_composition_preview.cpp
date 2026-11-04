@@ -40,6 +40,7 @@ public:
         setLookAndFeel(&theme);
         processor=std::make_unique<PreverbAudioProcessor>(directory.file);
         processor->swellEngine().setAutomaticProcessing(false);
+        processor->swellEngine().setPostRoll(.25); // Fixture dry coverage excludes a deliberate gap.
         head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
         head.position.setIsPlaying(true);processor->setPlayHead(&head);processor->prepareToPlay(48000,4096);
         juce::AudioBuffer<float> audio(2,4096);juce::MidiBuffer midi;
@@ -77,7 +78,7 @@ public:
         // Borrow the actual production components and their domain bindings.
         // The hidden owning editor stays alive; only this fixture reparents them.
         for(const auto* name:{"workflowHeader","workspaceNotice","swellList","swellTimeline","songOverview",
-                "inspectorViewport","audition","stopAudition","auditionBlend","resetAuditionTrim","hostInfo",
+                "inspectorViewport","audition","stopAudition","auditionWetOnly","hostInfo",
                 "editorReadout"})
         {
             auto* component=find(*editor,name);REQUIRE(component);
@@ -215,6 +216,7 @@ public:
     void verifyFit();
     void verifyKnobs();
     void verifyKnobResets();
+    void verifyAudition();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -268,8 +270,7 @@ public:
         auto audition=l.audition.reduced(0,8);auto line=audition.removeFromTop(36);
         auditionHeading.setBounds(line.removeFromLeft(112));parts.at("audition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(8);
         parts.at("stopAudition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(24);
-        parts.at("resetAuditionTrim")->setBounds(line.removeFromRight(138));line.removeFromRight(16);
-        parts.at("auditionBlend")->setBounds(line);
+        parts.at("auditionWetOnly")->setBounds(line.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
         monitor.setBounds(audition.withTrimmedLeft(112));
         parts.at("songOverview")->setBounds(l.overview.reduced(0,8));parts.at("hostInfo")->setBounds(l.info);
     }
@@ -363,6 +364,7 @@ private:
 #include "PerformFitCases.h"
 #include "PerformKnobCases.h"
 #include "PerformKnobResetCases.h"
+#include "PerformAuditionCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -434,6 +436,7 @@ int main(int argc,char** argv)
         if(command=="--test-fit"){content->composition.verifyFit();std::cout<<"Perform selected/pending/overlap/sparse/empty Fit checks passed.\n";return;}
         if(command=="--test-knobs"){content->composition.verifyKnobs();std::cout<<"Perform knob grid/accepted feedback/guards/focus/accessibility/font checks passed.\n";return;}
         if(command=="--test-knob-resets"){content->composition.verifyKnobResets();std::cout<<"Perform knob double-click/menu/default/initial/stale reset checks passed.\n";return;}
+        if(command=="--test-audition"){content->composition.verifyAudition();std::cout<<"Perform looping audition/toggle/live gain/legacy/stale/status checks passed.\n";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")

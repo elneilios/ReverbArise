@@ -56,7 +56,7 @@ EditorSnapshot SwellEngine::snapshot() const
         s.songExport.session=sessionGeneration.load();s.songExport.pass=pass;s.songExport.cursor=exportVoice->position();s.songExport.previewRequested=exportVoice->requested(exportVoice->request());
         if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";}
     s.sessionEpoch=sessionGeneration.load();
-    s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
+    s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=audioAllowed.load()?voice.position():std::nullopt;s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
     s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;s.liveAttenuationDb=liveAttenuationDb;
@@ -72,6 +72,7 @@ EditorSnapshot SwellEngine::snapshot() const
         s.retainedIRName=kept->second.accepted.irName;s.requestedIRName=kept->second.requestedName;}
     if(at!=runtime.end())
     {
+        s.auditionPreparing=at->second.preparedMonitor!=monitoringGeneration;
         s.raw=at->second.rawWave;s.sourceDetail=at->second.sourceWave;
         if(w && at->second.preparedShape==w->shapeGeneration && at->second.preparedRender==w->render.content)s.shaped=at->second.shapeWave;
         if(w && at->second.shaped && at->second.preparedShape==w->shapeGeneration && at->second.preparedRender==w->render.content)
@@ -82,7 +83,7 @@ EditorSnapshot SwellEngine::snapshot() const
             s.auditionMembers=at->second.members;s.dryAvailable=at->second.dryAvailable;s.dryStatus=at->second.dryStatus;s.cachedWetOnly=at->second.cachedWetOnly;
             if(at->second.monitor){s.auditionDryStart=at->second.monitor->sourceStart;s.auditionDryEnd=at->second.monitor->sourceEnd;}
             s.blendAttenuationDb=at->second.blendAttenuation;
-            if(at->second.monitor)s.monitorPeak=at->second.monitor->peak*juce::Decibels::decibelsToGain(model.auditionDb);
+            if(at->second.monitor)s.monitorPeak=at->second.monitor->peak*juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb);
             s.attenuationDb=at->second.wetAttenuation;
         }
     }
@@ -102,7 +103,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
     recoverPassBounds=true;
     liveEnabled=model.liveEnabled;live.configure(model.liveEnabled,model.liveRouting,model.liveWetDb);
     awaitingCaptureReference=std::move(expectedCaptureReference);
-    captureReference.clear(); captureScope.clear(); voice.setLevel(juce::Decibels::decibelsToGain(model.auditionDb));
+    captureReference.clear(); captureScope.clear(); voice.setLevel(juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb));
     message="Restoring saved swell session; audition stopped";
 }
 void SwellEngine::clear()
@@ -391,7 +392,7 @@ void SwellEngine::setPreferences(float db,float sensitivity,double separation,bo
     model.auditionDb=std::clamp(db,-60.0f,0.0f); model.sensitivity=std::clamp(sensitivity,0.0f,1.0f);
     model.separationSeconds=std::clamp(separation,0.001,2.0); model.autoRegenerate=automatic;
     if(savedChanged)persistentChangedLocked();
-    voice.setLevel(juce::Decibels::decibelsToGain(model.auditionDb));notify();
+    voice.setLevel(juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb));notify();
 }
 bool SwellEngine::initializeExport()
 {
@@ -431,7 +432,7 @@ bool SwellEngine::audition()
     const auto context=contextProvider();
     if(!sameMusicalMapping(model.timing,context.time) || context.capture.manifest.sampleRate!=context.time.rate) return false;
     setExpected(context.time); audioAllowed=true;
-    return voice.start(at->second.monitor);
+    return voice.start(at->second.monitor,1,true);
 }
 void SwellEngine::stop() { const juce::ScopedLock guard(lock);
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && exportState.prepared)

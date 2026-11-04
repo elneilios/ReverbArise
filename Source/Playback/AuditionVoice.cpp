@@ -3,14 +3,14 @@
 #include <algorithm>
 #include <cmath>
 
-bool AuditionVoice::start(std::shared_ptr<const WetRender> buffer, float attenuation)
+bool AuditionVoice::start(std::shared_ptr<const WetRender> buffer, float attenuation, bool loop)
 {
     collect();
     if (! buffer || buffer->samples.empty() || ! std::isfinite(attenuation) || attenuation < 0 || attenuation > 1) return false;
     const auto w = write.load(std::memory_order_relaxed);
     if (w - read.load(std::memory_order_acquire) >= commands.size()) return false;
     pins.push_back({++serial, buffer});
-    commands[w % commands.size()] = {buffer.get(), serial, stopEpoch.load(), attenuation};
+    commands[w % commands.size()] = {buffer.get(), serial, stopEpoch.load(), attenuation,false,loop};
     write.store(w + 1, std::memory_order_release);
     return true;
 }
@@ -78,12 +78,13 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
                 if(active && active->rate==command.buffer->rate)
                 {
                     const auto offset=static_cast<long double>(active->start)+cursor-command.buffer->start;
-                    if(offset<0 || offset>=command.buffer->frames())
+                    const auto outside=offset<0 || offset>=command.buffer->frames();
+                    if(outside && (!looping || rampRemaining>0))
                     {active=previous=nullptr;activeId=previousId=0;transitionRemaining=0;}
                     else
                     {
                         previous=active;previousId=activeId;previousCursor=cursor;previousAttenuation=activeAttenuation;
-                        active=command.buffer;activeId=command.serial;cursor=static_cast<size_t>(offset);activeAttenuation=1;
+                        active=command.buffer;activeId=command.serial;cursor=outside?0:static_cast<size_t>(offset);activeAttenuation=1;
                         transitionLength=std::max(1,static_cast<int>(rate*.005));transitionRemaining=transitionLength;
                     }
                 }
@@ -91,7 +92,7 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
             }
             previous=nullptr;previousId=0;transitionRemaining=0;
             active = command.buffer; activeId = command.serial;
-            cursor = 0; rampRemaining = 0;
+            cursor = 0; rampRemaining = 0;looping=command.loop;
             activeAttenuation = command.attenuation;
             smoothedLevel = targetLevel = level.load(); levelRemaining = 0;
         }
@@ -124,7 +125,8 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
         if(transitionRemaining>0 && --transitionRemaining==0){previous=nullptr;previousId=0;}
         ++cursor;
         const auto rampEnded = rampRemaining > 0 && --rampRemaining == 0;
-        if (cursor == active->frames() || rampEnded) { active = previous = nullptr; activeId = previousId = 0;transitionRemaining=0; }
+        if(cursor==active->frames() && looping && rampRemaining==0 && !rampEnded)cursor=0;
+        else if (cursor == active->frames() || rampEnded) { active = previous = nullptr; activeId = previousId = 0;transitionRemaining=0; }
     }
     activeSerial.store(activeId, std::memory_order_release);
     transitionSerial.store(previousId,std::memory_order_release);

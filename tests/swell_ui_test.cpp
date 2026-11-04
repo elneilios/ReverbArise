@@ -99,7 +99,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     const auto learning=visibleOffscreen(named(editor,"learnWorkspace"));
     const auto exporting=visibleOffscreen(named(editor,"exportWorkspace"));
     if(!learning && !exporting){if(const auto old=geometry.find(key);old!=geometry.end())REQUIRE(old->second==regions);else geometry.emplace(key,regions);}
-    else {for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview","auditionBlend"})REQUIRE(!visibleOffscreen(named(editor,name)));
+    else {for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview","auditionWetOnly"})REQUIRE(!visibleOffscreen(named(editor,name)));
         REQUIRE(editor.getLocalBounds().contains(named(editor,exporting?"exportWorkspace":"learnWorkspace")->getBounds()));}
     const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
@@ -834,31 +834,22 @@ int main(int argc,char* argv[]){return runTest([&]
     {const auto& current=afterOpening.swells[i];const auto& prior=baseline.swells[i];
         REQUIRE(current.id==prior.id && current.ir==prior.ir && current.render==prior.render && current.shape==prior.shape);}
     {
-        auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(blend);
-        REQUIRE(baseline.auditionMode==m3::AuditionMode::wetOnly && baseline.wetBlend==.5f && blend->getValue()==100);
+        auto toggle=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"auditionWetOnly"));REQUIRE(toggle);
+        REQUIRE(!named(editor,"auditionBlend") && !named(editor,"resetAuditionTrim"));
         REQUIRE(afterOpening.auditionMode==baseline.auditionMode && afterOpening.wetBlend==baseline.wetBlend && !engine.snapshot().playing);
         const auto renderCount=engine.snapshot().renderCount;const auto liveRouting=baseline.liveRouting;const auto liveDb=baseline.liveWetDb;
-        for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,1000}})
+        for(bool wetOnly:{false,true})
         {
-            editor.setSize(size.x,size.y);editor.refresh();
-            const auto minimum=blend->getPositionOfValue(0),maximum=blend->getPositionOfValue(100);
-            for(double percent:{0.,50.,65.,100.})
-            {
-                blend->setValue(percent,juce::sendNotificationSync);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-                REQUIRE(std::abs((blend->getPositionOfValue(percent)-minimum)/(maximum-minimum)-percent/100)<1e-6);
-                const auto frame=blend->createComponentSnapshot(blend->getLocalBounds());
-                const auto track=blend->getLookAndFeel().getSliderLayout(*blend).sliderBounds;
-                const auto pixel=frame.getPixelAt(juce::roundToInt(blend->getPositionOfValue(percent)),track.getCentreY()-4);
-                REQUIRE(pixel.getGreen()>180 && pixel.getBlue()>180 && pixel.getRed()<80);
-                const auto session=engine.savedSession();REQUIRE(session.liveRouting==liveRouting && session.liveWetDb==liveDb);
-                REQUIRE(session.auditionMode==(percent==100?m3::AuditionMode::wetOnly:m3::AuditionMode::dryWet));
-                REQUIRE(engine.snapshot().renderCount==renderCount && m3::find(session,first)->render==baseline.swells[0].render);
-            }
+            toggle->beforeInvocation();toggle->setToggleState(wetOnly,juce::dontSendNotification);toggle->onClick();
+            waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+            const auto session=engine.savedSession();REQUIRE(session.auditionFollowsLive && session.liveRouting==liveRouting && session.liveWetDb==liveDb);
+            REQUIRE(session.auditionMode==(wetOnly?m3::AuditionMode::wetOnly:m3::AuditionMode::dryWet));
+            REQUIRE(engine.snapshot().renderCount==renderCount && m3::find(session,first)->render==baseline.swells[0].render);
         }
-        auto mixedState=baseline;mixedState.auditionMode=m3::AuditionMode::dryWet;mixedState.wetBlend=.65f;
+        auto mixedState=baseline;mixedState.auditionFollowsLive=false;mixedState.auditionMode=m3::AuditionMode::dryWet;mixedState.wetBlend=.65f;
         engine.restore(mixedState);waitUI([&]{return engine.snapshot().auditionReady;});
-        {auto reopenedOwner=std::make_unique<PreverbAudioProcessorEditor>(*processor);auto& reopened=*reopenedOwner;reopened.refresh();auto value=dynamic_cast<juce::Slider*>(named(reopened,"auditionBlend"));
-            REQUIRE(value && value->getValue()==65 && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f);}
+        {auto reopenedOwner=std::make_unique<PreverbAudioProcessorEditor>(*processor);auto& reopened=*reopenedOwner;reopened.refresh();auto value=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(reopened,"auditionWetOnly"));
+            REQUIRE(value && !value->getToggleState() && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f && !engine.savedSession().auditionFollowsLive);}
         engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.setSize(1100,850);editor.refresh();
     }
     {
@@ -995,16 +986,15 @@ int main(int argc,char* argv[]){return runTest([&]
     liveLevel->setValue(0,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::legacy);editor.refresh();
     REQUIRE(liveLevel->getMaximum()==0);
     const auto monitorRenderCount=engine.snapshot().renderCount;
-    auto blend=dynamic_cast<juce::Slider*>(named(editor,"auditionBlend"));REQUIRE(blend);
-    REQUIRE(!named(editor,"wetOnly") && !named(editor,"dryWet"));
-    const auto mixed=[&]{blend->setValue(engine.savedSession().wetBlend*100,juce::sendNotificationSync);};
-    const auto wet=[&]{blend->setValue(100,juce::sendNotificationSync);};
+    auto toggle=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"auditionWetOnly"));REQUIRE(toggle);
+    const auto mixed=[&]{toggle->beforeInvocation();toggle->setToggleState(false,juce::dontSendNotification);toggle->onClick();};
+    const auto wet=[&]{toggle->beforeInvocation();toggle->setToggleState(true,juce::dontSendNotification);toggle->onClick();};
     auto isolate=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateSelected"));REQUIRE(isolate);
     isolate->setToggleState(false,juce::dontSendNotification);isolate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});
     REQUIRE(!engine.savedSession().isolateSelected);
     isolate->setToggleState(true,juce::dontSendNotification);isolate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});
     mixed();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-    blend->setValue(35,juce::dontSendNotification);blend->onValueChange();waitUI([&]{return engine.snapshot().auditionReady;});
+    engine.setMonitoring(m3::AuditionMode::dryWet,.35f);waitUI([&]{return engine.snapshot().auditionReady;});
     wet();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().wetBlend==.35f && engine.snapshot().renderCount==monitorRenderCount);
     engine.setPreferences(-24,.5f,.08,false);editor.refresh();
@@ -1016,8 +1006,9 @@ int main(int argc,char* argv[]){return runTest([&]
     snapshotEditor(editor,"isolated-dry");dryIsolation->setToggleState(false,juce::dontSendNotification);dryIsolation->onClick();
     waitUI([&]{return engine.snapshot().auditionReady;});
     wet();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-    auto resetTrim=dynamic_cast<juce::TextButton*>(named(editor,"resetAuditionTrim"));REQUIRE(resetTrim && resetTrim->getButtonText().contains("-24"));
-    resetTrim->onClick();REQUIRE(engine.savedSession().auditionDb==0);
+    REQUIRE(!named(editor,"resetAuditionTrim") && engine.savedSession().auditionDb==-24);
+    REQUIRE(engine.savedSession().auditionFollowsLive);
+    engine.setMonitoring(m3::AuditionMode::wetOnly,.35f);engine.setPreferences(0,.5f,.08,false);editor.refresh();
     auto sampleUnits=dynamic_cast<juce::ToggleButton*>(named(editor,"sampleUnits"));REQUIRE(sampleUnits);
     auto tone=dynamic_cast<juce::ToggleButton*>(named(editor,"scheduledTone"));auto processing=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(tone && processing);
     tone->setToggleState(true,juce::dontSendNotification);tone->onClick();editor.refresh();REQUIRE(processing->getText().contains("test tone armed"));

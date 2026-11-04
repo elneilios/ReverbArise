@@ -39,5 +39,18 @@ editable source/wet gestures and grid policy; Learn owns captured dry inspection
 Export owns read-only mix preview, transport and files. No generalized waveform
 viewer or Export behavior is added to the shared controls.
 
+The audition row uses Play/Stop and the existing latching action family for
+**Wet only**. New instances default Off: captured dry at unity plus saved Live
+Wet gain, with existing disclosed wet/mix protection. On suppresses captured dry.
+Play loops the finite prepared listening window until Stop or existing safety/
+workflow/selection/DAW-priority guards stop it. It does not seek or start the host.
+The percentage slider and row Trim reset are removed. Legacy project balance and
+trim restore unchanged until explicit toggle; the retained legacy trim is shown
+in Settings and inactive in live-level mode. Status uses Ready, Looping, Preparing
+or Unavailable with accepted mode and membership; overflow ellipsizes at the
+approved helper font size, and full reasons/protection details remain in tooltip.
+The refined row is prepared for a focused native checkpoint; existing layout,
+Snap and knob approvals remain valid.
+
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).

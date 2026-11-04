@@ -313,6 +313,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
     put(v,"auditionMode",static_cast<int>(s.auditionMode)); put(v,"wetBlend",s.wetBlend);
+    put(v,"auditionFollowsLive",s.auditionFollowsLive);
     put(v,"defaultIR",assetMetadata(s.defaultIR)); put(v,"defaultIRName",s.defaultIRName);
     juce::Array<juce::var> imported;
     for(const auto& entry:s.importedIRs){auto item=object();put(item,"asset",assetMetadata(entry.asset));put(item,"name",entry.name);imported.add(item);}
@@ -414,6 +415,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         { const auto text=value.toString();const auto anchor=text.getLargeIntValue();if(!value.isString() || juce::String(anchor)!=text)p.ok=false;s.suppressed.push_back(anchor); }
     }
     else {s.mappingEnabled=false;s.automaticProcessing=false;}
+    if(v.hasProperty("auditionFollowsLive"))s.auditionFollowsLive=p.boolean(v,"auditionFollowsLive");
     if(version>=3)s.postRollSeconds=p.number(v,"postRollSeconds");
     s.auditionDb=static_cast<float>(p.number(v,"auditionDb")); s.sensitivity=static_cast<float>(p.number(v,"sensitivity"));
     s.separationSeconds=p.number(v,"separation"); s.autoRegenerate=p.boolean(v,"autoRegenerate"); s.primary=p.string(v,"primary");

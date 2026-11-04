@@ -4,6 +4,31 @@
 
 int main() { return runTest([]
 {
+    for(const auto length:{1,2,3,19,100})
+    {
+        AuditionVoice looping;auto audio=std::make_shared<WetRender>();audio->start=-40;audio->rate=1000;audio->samples.assign(length*2,.25f);
+        const auto original=audio->samples;REQUIRE(looping.start(audio,1,true));
+        std::vector<float> l(length*3+7),r(l.size());
+        {AudioAllocationGuard guard;looping.process(l.data(),r.data(),static_cast<int>(l.size()),1000);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && looping.isPlaying());
+        REQUIRE(looping.position()==audio->start+static_cast<int64_t>(l.size()%length));
+        for(size_t n=0;n<l.size();++n){const auto i=n%length;const auto ramp=std::min(5,(length-1)/2);const auto expected=length<3?0:.25*std::min({1.,static_cast<double>(i)/ramp,static_cast<double>(length-1-i)/ramp});REQUIRE(std::abs(l[n]-expected)<1e-6 && l[n]==r[n]);}
+        looping.collect();REQUIRE(looping.pinnedCount()==1 && audio->samples==original);
+        looping.stop();{AudioAllocationGuard guard;looping.process(l.data(),r.data(),static_cast<int>(l.size()),1000);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && !looping.isPlaying() && !looping.position());
+        looping.collect();REQUIRE(looping.pinnedCount()==0);
+        REQUIRE(looping.start(audio,1,true));looping.stop(true);looping.process(l.data(),r.data(),1,1000);REQUIRE(!looping.isPlaying());
+        REQUIRE(looping.start(audio,1,true));looping.process(l.data(),r.data(),1,1000,false);REQUIRE(!looping.isPlaying());
+        REQUIRE(looping.start(audio,1,true));looping.process(l.data(),r.data(),1,2000);REQUIRE(!looping.isPlaying());
+    }
+    {AuditionVoice looping;auto audio=std::make_shared<WetRender>();audio->rate=1000;audio->samples.assign(200,.1f);
+        REQUIRE(looping.start(audio,1,true));float l[7]{},r[7]{};looping.process(l,r,7,1000);
+        auto replacement=std::make_shared<WetRender>(*audio);replacement->samples.assign(200,.2f);REQUIRE(looping.replace(replacement));
+        for(int n=0;n<50;++n){AudioAllocationGuard guard;looping.process(l,r,7,1000);REQUIRE(watchedAllocations==0 && watchedDeallocations==0);}
+        REQUIRE(looping.isPlaying() && looping.position()==57);looping.collect();REQUIRE(looping.pinnedCount()==1);
+        auto shorter=std::make_shared<WetRender>(*audio);shorter->samples.resize(20);REQUIRE(looping.replace(shorter));
+        looping.process(l,r,7,1000);REQUIRE(looping.isPlaying() && looping.position()==7);
+        looping.stop(true);looping.process(l,r,0,1000);looping.collect();REQUIRE(!looping.isPlaying() && looping.pinnedCount()==0);}
     {AuditionVoice edge;auto constant=std::make_shared<WetRender>();constant->rate=1000;constant->samples.assign(200,.25f);
         REQUIRE(edge.start(constant));float l[100]{},r[100]{};edge.process(l,r,100,1000);
         std::cout << "Boundary samples: " << l[0] << ", " << l[99] << "\n";
