@@ -286,6 +286,7 @@ void SwellEngine::generate(bool all)
     {
         if(w.frozen || w.status=="Importing IR")continue;
         if(all ? w.phase==Phase::ready : std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end()) continue;
+        deferredLearnDependencies.erase(w.id);protectedGenerationCalibration.erase(w.id);forceRefresh.insert(w.id);
         ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;
     }
 }

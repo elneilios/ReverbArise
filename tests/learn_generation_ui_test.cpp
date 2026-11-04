@@ -13,6 +13,19 @@ static bool visible(juce::Component* value)
 {if(!value)return false;for(;value;value=value->getParentComponent())if(!value->isVisible())return false;return true;}
 static bool sameView(const SwellViewport& a,const SwellViewport& b)
 {return a.first==b.first && a.last==b.last;}
+static void pendingProtectedFraming()
+{
+    GenerationFixture fixture;const auto accepted=fixture.engine().savedSession();
+    const auto time=fixture.processor->getSongTime();Swell pending;pending.ir=accepted.defaultIR;
+    pending.arrival=pending.sourceStart=-2*static_cast<int64_t>(pending.ir.frames);pending.sourceEnd=pending.arrival+32;
+    pending.phase=Phase::checking;REQUIRE(pending.generationSource.isEmpty() && pending.provenance==Provenance::manualCreated);
+    EditorSnapshot shown;shown.session=accepted;shown.session.swells={pending};shown.session.primary=pending.id;shown.session.selected={pending.id};
+    SwellTimeline timeline(fixture.engine());timeline.setSize(600,400);timeline.setData({},shown,time,true);timeline.revealInitialSelection();
+    const auto bounds=m3::ui::initialSwellBounds(pending,time);const auto view=timeline.viewport();
+    REQUIRE(view.first<=bounds.first && view.last>=bounds.second);
+    REQUIRE(view.first>=timeline.navigationBounds().first && view.last<=timeline.navigationBounds().last);
+    REQUIRE(fixture.engine().savedSession().swells.empty() && fixture.engine().snapshot().renderCount==0);
+}
 static void controlBindings()
 {
     GenerationFixture fixture;auto& engine=fixture.engine();PreverbAudioProcessorEditor editor(*fixture.processor);editor.addToDesktop(0);editor.setVisible(true);editor.refresh();
@@ -112,6 +125,7 @@ int main(int argc,char** argv){return runTest([&]
     juce::ScopedJuceInitialiser_GUI gui;
     const bool review=argc>1 && juce::String(argv[1])=="--review";
     if(!review)controlBindings();
+    if(!review)pendingProtectedFraming();
     for(bool automatic:{false,true})
     {
         GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
@@ -169,6 +183,8 @@ int main(int argc,char** argv){return runTest([&]
         // Commit with no editor refresh/reopen yet retains the pending handoff.
         editor=std::make_unique<PreverbAudioProcessorEditor>(processor);editor->setVisible(true);editor->refresh();
         selected(*editor,engine,first);REQUIRE(!engine.snapshot().initialPerformHandoff);
+        const auto initialNavigation=engine.savedSession().performUi;
+        REQUIRE(initialNavigation.hasView && sameView({initialNavigation.first,initialNavigation.last},editor->timelineComponent().viewport()));
         REQUIRE(!find(engine.savedSession(),late.id)->enabled && processor.getWorkflowSnapshot().mode==workflow::Mode::live);
         REQUIRE(!fixture.host.position.getIsPlaying());
         captureImage(*editor,automatic?"issue38-auto-first-pending":"issue38-explicit-first-pending");
