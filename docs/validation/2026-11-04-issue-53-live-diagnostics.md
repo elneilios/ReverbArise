@@ -270,3 +270,15 @@ different from this branch's tested Release binary
 `5CE4A70D2A391C9957F2F2F8EBE3ADC11EEFAD4389536DE67AF6B718224D271E`.
 The pre-copy identity guard stopped before any backup or installation mutation.
 Do not overwrite that unknown loaded build until its installer is coordinated.
+### Owner test installation
+
+The owner identified the external build as one they installed, then confirmed FL
+Studio was closed. On 2026-11-04 at 19:46 UTC, the complete installed bundle was
+copied to `out/issue-53/installed-backup-20261104-194616/ReverbArise.vst3` and all
+six files verified against its backup manifest. The initial ordinary copy was
+blocked by Windows access controls; an administrator-approved helper then installed
+the tested fix from commit `e1fe0b7`. Independent post-install SHA-256 verification
+confirmed all six installed files match the staged Release manifest. The installed
+binary hash is `5CE4A70D2A391C9957F2F2F8EBE3ADC11EEFAD4389536DE67AF6B718224D271E`.
+No project or captured/rendered asset was modified. Owner Song playback acceptance
+remains pending; task 4.2 is still unchecked.
