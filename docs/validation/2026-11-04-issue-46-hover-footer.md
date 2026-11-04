@@ -7,6 +7,9 @@ and owned Settings/Diagnostics windows. Metadata remains on the controls; a
 recursive editor listener selects the nearest message. Interactive title/name
 is a fallback, not a second control implementation.
 
+Validated source: `15aee34e85fc330a27cc138253eeb47ee4a7ea47` (following
+metadata-only evidence update does not change the tested executable).
+
 The footer reuses EllipsisLabel, normal Inter Regular 14 helper typography and
 the existing 20-pixel feedback height. Long text ellipsizes without condensing;
 the full message is also its accessible description. No new font/geometry token
