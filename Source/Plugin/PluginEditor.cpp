@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include <UI/MusicalPosition.h>
 #include <DSP/DefaultImpulse.h>
+#include <UI/InitialPerformView.h>
 
 namespace
 {
@@ -376,6 +377,24 @@ void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
     const auto mode=processor.getWorkflowSnapshot().mode;
+    if(presentationSession!=state.sessionEpoch)
+    {
+        presentationSession=state.sessionEpoch;
+        // Restored/current valid selection owns its existing viewport. A later
+        // raw-wave publication must not treat it as a fresh selection intent.
+        fittedKey=m3::find(state.session,state.session.primary)?state.session.primary:juce::String{};
+    }
+    bool initialFrame=false;
+    if(mode==workflow::Mode::live && !state.session.swells.empty())
+    {
+        const auto first=m3::ui::firstChronologicalSwell(state.session);
+        if(state.initialPerformHandoff && processor.swellEngine().selectInitialPerform(state.sessionEpoch,state.initialPerformHandoff,first))
+        {
+            state=processor.swellEngine().snapshot();initialFrame=state.sessionEpoch==presentationSession
+                && state.session.primary==first && processor.getWorkflowSnapshot().mode==workflow::Mode::live;
+        }
+        processor.swellEngine().establishPerformPosition(state.sessionEpoch);
+    }
     const auto nextLearning=mode==workflow::Mode::capture,nextExport=mode==workflow::Mode::finalise;
     if(exportLayout && !nextExport)exportWorkspace.resetView();
     const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
@@ -388,7 +407,9 @@ void PreverbAudioProcessorEditor::refresh()
         else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
-    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);
+        if(initialFrame){timeline.revealInitialSelection();performViewport=timeline.viewport();fittedKey=state.session.primary;}
+        hasPerformWorkspace=true;}
     hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::musicalPosition(time.sample,time):juce::String("Position unavailable"))
         +"    |    "+(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
@@ -421,7 +442,7 @@ void PreverbAudioProcessorEditor::refresh()
     refreshValues(w,time);
     listLabel.setText("Swells ("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     const auto key=w?w->id:juce::String{};
-    if(!learningLayout && !exportLayout && key!=fittedKey && state.raw){if(!leavingLearn)timeline.fitSelection();fittedKey=key;}
+    if(!learningLayout && !exportLayout && key!=fittedKey){if(!leavingLearn && state.raw)timeline.fitSelection();fittedKey=key;}
     if(!learningLayout && !exportLayout)
     {
         std::vector<m3::ui::controls::SwellListRow> rows;rows.reserve(state.session.swells.size());

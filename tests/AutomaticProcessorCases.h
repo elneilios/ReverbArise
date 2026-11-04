@@ -30,7 +30,8 @@ inline void automaticProcessorCases()
     // This fixture tests explicit Perform reanalysis, not missing-default capture.
     waitM3([&]{return engine.savedSession().defaultIR.present();});
     pass(85*96000);pass(0);
-    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::live);engine.setAutoMarkers(true);
+    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::capture);
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));engine.setAutoMarkers(true);
     waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=4 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     auto s=engine.savedSession();REQUIRE(s.automaticProcessing && s.auditionDb==0);
     const auto map=processor->getCaptureSnapshot().manifest;

@@ -101,6 +101,10 @@ int main(){return runTest([]{
     REQUIRE(published && locked && playRejected && navigationRejected && settingsRejected);
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && state.snapshot().mode==Mode::live && !state.snapshot().generationCommit);
     REQUIRE(!state.publishGenerated(generation,[]()noexcept{}));
+    state.reset();token=state.begin(true);REQUIRE(state.stop(token));REQUIRE(state.complete(token,false,false,false));
+    REQUIRE(state.snapshot().phase==Phase::failed);
+    generation=state.snapshot();REQUIRE(state.publishGenerated(generation,[]()noexcept{}));
+    REQUIRE(state.snapshot().mode==Mode::live && state.snapshot().phase==Phase::idle);
     for(int iteration=0;iteration<200;++iteration)
     {
         state.reset();generation=state.snapshot();std::atomic<bool> start{false},committed{false};uint64_t admitted=0;bool generated=false;

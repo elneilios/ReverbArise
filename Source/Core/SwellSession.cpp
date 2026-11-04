@@ -265,6 +265,7 @@ bool validate(const Session& s, juce::String& error)
             || w.sourceStart > w.arrival || w.sourceEnd <= w.arrival
             || ! checkedSubtract(w.sourceEnd, w.sourceStart, length) || length <= 0 || ! validShape(w.shape)
             || static_cast<int>(w.provenance)<0 || static_cast<int>(w.provenance)>2
+            || (w.generationSource.isNotEmpty() && (w.generationSource.length()!=64 || !w.generationSource.containsOnly("0123456789abcdef")))
             || ! validAsset(w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
             || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/"))
             || static_cast<int>(w.calibration.state)<0 || static_cast<int>(w.calibration.state)>3
@@ -338,7 +339,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(g,"referenceStart",integer(w.calibration.referenceStart));put(g,"referenceEnd",integer(w.calibration.referenceEnd));
         put(g,"sourceIdentity",w.calibration.sourceIdentity);put(g,"irIdentity",w.calibration.irIdentity);
         put(g,"renderIdentity",w.calibration.renderIdentity);put(g,"revision",w.calibration.revision);put(a,"calibration",g);
-        put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));
+        put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));put(a,"generationSource",w.generationSource);
         put(a,"ir",assetMetadata(w.ir)); put(a,"render",assetMetadata(w.render));
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
         put(h,"end",integer(w.shape.endOffset)); put(h,"fadeIn",integer(w.shape.fadeIn)); put(h,"fadeOut",integer(w.shape.fadeOut));
@@ -439,6 +440,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
                 w.calibration.windowFrames=p.big(g,"windowFrames");w.calibration.hopFrames=p.big(g,"hopFrames");}}
         if(version>=2) {w.provenance=static_cast<Provenance>(p.small(a,"provenance"));w.detectorAnchor=p.big(a,"detectorAnchor");}
         else {w.provenance=Provenance::manualEdited;w.detectorAnchor=w.arrival;}
+        if(version>=11)w.generationSource=p.string(a,"generationSource");
         w.ir=p.asset(p.field(a,"ir")); w.render=p.asset(p.field(a,"render"));
         const auto h=p.field(a,"shape"); w.shape.automaticStart=p.boolean(h,"automaticStart");
         w.shape.startOffset=p.big(h,"start"); w.shape.endOffset=p.big(h,"end"); w.shape.fadeIn=p.big(h,"fadeIn"); w.shape.fadeOut=p.big(h,"fadeOut");

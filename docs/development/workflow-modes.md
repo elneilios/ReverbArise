@@ -66,8 +66,9 @@ entry refinement; dedicated WAV delivery remains in progress. Issue #38 separate
 source settlement from Perform entry: a successful useful Stop settles idle
 Learn, retaining dry readiness and consuming a successful Recapture arm. Only a
 subsequent successful shared Generate transaction may automatically enter
-Perform; source acceptance alone does not qualify. The persisted opt-in request
-and candidate-generation pipeline are tracked in the active #38 change. Manual
+Perform; source acceptance alone does not qualify. The persisted opt-in Stop
+request waits for matching final candidate analysis and uses the same safe
+generation transaction as the explicit button. Manual
 Perform/Export navigation retains its existing readiness rules. Empty/failed
 passes remain Learn. Restored saved modes may
 remain selected while dependency readiness is unavailable; unavailable controls
@@ -115,7 +116,7 @@ Failed passes keep the old reference; no destructive cleanup is implemented.
 `preverb_capture_transaction_test` checks partial overlaps, sparse gaps, mapped
 silence, loops, private source reads/save references, exact/changed recapture,
 old snapshot/clone isolation, invalid data/rate/overflow and publication failure.
-`preverb_workflow_processor_test` exercises actual host Stop, automatic Perform,
+`preverb_workflow_processor_test` exercises actual host Stop, explicit navigation,
 protected mapped playback, explicit recapture, Perform no-capture, Export dry-only
 realtime/offline and old/new mode restore. Full UI/host acceptance remains open.
 
@@ -162,9 +163,29 @@ building; host rescan/reload behavior requires explicit FL Studio verification.
 Learn's effective Automatic Swells policy is the conjunction of the saved
 processing and marker switches. Explicit On enables both; Off disables
 processing without resetting hidden IR/sensitivity/marker preferences. Idle
-Learn edits configure future passes, rather than enqueuing reanalysis of old
-source. Explicit Perform marking/reanalysis remains separate. The whole-pass
+Learn edits refresh read-only candidates across accepted source, including
+earlier dry-only capture, without changing swell definitions or queuing wet
+renders. Explicit Perform marking/reanalysis remains separate. The whole-pass
 configuration pin and stale-input fences are documented in
 [the Learn protocol](learn-source-context-protocol.md). Source/context
-persistence and dry-only scheduling verification remain tracked implementation
-work; these settings changes alone do not claim those tasks are complete.
+persistence, scheduling and verification are recorded in the issue #38 validation
+report linked from that protocol.
+
+## Initial Perform presentation
+
+The first successful Generate commit offers one editor handoff, shared by explicit
+Generate and opted-in Stop, even when the editor was closed during completion.
+The editor selects the committed swell with the earliest arrival using the same
+chronological ordering as the list, then uses canonical engine selection to bind
+list, waveform/envelope and Selected Swell controls. The timeline reveals its
+lead-in and arrival using definition/source/IR timing while wet rendering is
+pending. Useful zoom is retained with minimal panning; an unsuitable span is fit.
+Overview reads the same timeline viewport. Queued/rendering status remains honest.
+
+A valid restored selection, an established nonempty Perform editing position,
+and later mode returns retain the user's selection and navigation. Empty visits
+do not establish an editing position. Empty/no-change/failure/cancellation never
+offer a handoff. The offer is consumed once; later wet/raw publications refresh
+content without fitting again, so a newer selection or viewport wins. This is
+editor navigation only and does not seek the DAW, audition or change enablement.
+Existing serialized mode values and navigation ownership remain unchanged.

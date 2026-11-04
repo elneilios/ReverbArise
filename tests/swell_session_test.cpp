@@ -125,6 +125,11 @@ int main() { return runTest([]
     REQUIRE(encode(automatic,json,error) && decode(json,restored,error));
     REQUIRE(restored.swells[0].id==target.id && restored.swells[0].detectorAnchor==17);
     REQUIRE(restored.swells[0].provenance==Provenance::automatic && restored.suppressed==automatic.suppressed);
+    target.generationSource=juce::String::repeatedString("a",64);
+    REQUIRE(encode(automatic,json,error) && decode(json,restored,error));
+    REQUIRE(restored.swells[0].generationSource==target.generationSource);
+    {auto bad=juce::JSON::parse(json);bad["swells"][0].getDynamicObject()->setProperty("generationSource","invalid");
+        REQUIRE(!decode(juce::JSON::toString(bad),restored,error) && restored.swells[0].generationSource==target.generationSource);}
     REQUIRE(restored.auditionMode==AuditionMode::dryWet && restored.wetBlend==0.35f);
     const auto retained=restored.swells[0].id;
     auto legacy=juce::JSON::parse(json);legacy.getDynamicObject()->setProperty("version",1);

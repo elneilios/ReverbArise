@@ -8,6 +8,35 @@ Perform's list, inspector, audition band and compact Overview are hidden, with
 its navigation and selection retained for return. Learn navigation never seeks
 the DAW.
 
+## Issue #38 preview and generation backend
+
+Learn candidate snapshots are separate from saved swell definitions. Sensitivity
+edits update read-only background analysis across accepted mapped source, retaining
+previous marker positions marked updating. Progressive markers can use immutable
+staged capture chunks, but remain provisional until Stop accepts source and a
+matching final snapshot is ready. Abandoning a pass restores the prior settled
+display; no provisional source can generate swells.
+
+New projects default Auto-generate on Stop OFF and settle in Learn. Explicit
+Generate and eligible opted-in Stop share one guarded replacement transaction;
+only a changed viable automatic result enters Perform, before wet rendering
+finishes. Current accepted Default IR applies to that request without changing
+markers or protected assignments. Manual/edited/frozen and outside-scope work
+remain intact. Returning to Learn or restoring state never generates by itself.
+See the [source/context protocol](../development/learn-source-context-protocol.md)
+and [in-progress validation](../validation/2026-11-04-issue-38-generation-workflow.md).
+The Auto-generate switch reuses `Switch`; Generate Swells reuses the emphasized
+`ActionButton` directly below sensitivity. Its persistent manual-placement helper
+stays visible even while generation is disabled. A separate readable reason and
+accessible description explain readiness. Invocations pin session, pass and
+displayed candidate identities. Automatic Swells OFF hides these controls while
+retaining the saved preference. Timing-yellow triangle heads and dashed stems
+show candidates; hollow heads identify provisional/updating positions. They are
+distinct from the white inspection pin and solid DAW cursor. Scoped native owner
+review remains required before rollout.
+
+## Approved #11 foundation
+
 Checkpoint-A polish uses the existing Inter heading role for Source Capture,
 Automatic Swells and Capture Timeline. Enable automatic swells is a separate
 Medium field label; toggle, IR and sensitivity labels share the primary-white
@@ -52,7 +81,7 @@ The real factory/retained-import catalogue drives the Default IR dropdown and
 adjacent folder action. It displays the accepted choice while a pending import
 prepares, and explains a failed or superseded request. Successful imports remain
 available when unused and after reopening.
-The helper remains "Used for your next learning pass." throughout selection,
+The helper remains "Used by your next Generate." throughout selection,
 preparation, success and failure; neither its text nor its geometry changes.
 Editor-owned presentation logic suppresses IR progress for the first 600 ms.
 Longer pending work uses the existing contextual message bar, without changing

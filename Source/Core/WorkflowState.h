@@ -90,7 +90,7 @@ public:
     template<class Publish> bool publishGenerated(const Snapshot& expected,Publish&& publish) noexcept
     {
         static_assert(std::is_nothrow_invocable_v<Publish>);
-        if(expected.mode!=Mode::capture || expected.phase!=Phase::idle || expected.locked())return false;
+        if(expected.mode!=Mode::capture || (expected.phase!=Phase::idle && expected.phase!=Phase::failed) || expected.locked())return false;
         auto old=pack(expected.mode,expected.phase,expected.recapture,expected.result,expected.pass,expected.configurationSlot);
         if(!word.compare_exchange_strong(old,old|commitBit,std::memory_order_acq_rel))return false;
         publish();

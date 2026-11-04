@@ -22,7 +22,7 @@ static void swellListCaptureCases(bool review=false)
                 {const auto value=static_cast<float>(amplitude*std::exp(-at/1800.)*std::sin(at*.17));buffer.setSample(0,n,value);buffer.setSample(1,n,value*.7f);}}
             head.position.setTimeInSamples(start+local);head.position.setPpqPosition((start+local)/24000.0);p->processBlock(buffer,midi);
         }
-        finishCaptureFixture(*p,head.position);
+        finishCaptureFixture(*p,head.position,true);
         waitUI([&]{const auto s=engine.snapshot();return !s.session.swells.empty() && !s.analyzing && s.pendingIntervals==0
             && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         editor->refresh();

@@ -34,6 +34,8 @@ Reuse `targetTolerance(rate, separation)` (minimum of analysis-window samples an
 
 Compare durable definitions/dependency identities, excluding progress, transient generation counters and render phase. If no viable definition is new or genuinely regenerated, return empty/protected-only/no-change without any mutation. Retirement alone cannot qualify as success. If a changed eligible result exists, remove superseded eligible unfrozen automatic definitions only in that same commit. Bound capacity, matching edges, source scans and preparation; overflow fails the whole request without truncation. Preserve last-good render references until replacement audio is verified; no asset purge occurs.
 
+Implementation: v11 swell metadata stores the last committed automatic source PCM fingerprint as `generationSource`, independently of wet readiness. This allows repeated Generate while FFT work is still queued to return no-change. Supported older swells use a present verified render's dependency conservatively; absent evidence requires genuine generation. The field is strict empty-or-64-lowercase-hex metadata, never an instruction or a claim that wet audio is ready, and is excluded from audible export identity.
+
 Blindly calling current `reconcileTargets` once per run is rejected: it could publish a partial arrangement, retire on an empty result or alter outside-scope windows. Refactor the existing planner to prepare all runs in one candidate copy with protected-first matching and an explicit outcome.
 
 ### Commit and mode entry share a guarded linearization point

@@ -22,6 +22,7 @@ public:
     void mouseDoubleClick(const juce::MouseEvent&) override;
     void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&) override;
     void fitSelection();
+    void revealInitialSelection();
     void page(int bars);void previous();void next();void zoom(double factor);
     void setWaveZoomDb(double db){waveZoom.setValue(db,juce::sendNotificationSync);}
     double waveZoomDb() const noexcept{return waveZoom.getValue();}

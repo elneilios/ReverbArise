@@ -1,6 +1,7 @@
 #include "SwellTimeline.h"
 #include "SongBarRuler.h"
 #include "WorkspaceTheme.h"
+#include "InitialPerformView.h"
 
 namespace m3
 {
@@ -48,6 +49,11 @@ void SwellTimeline::fitSelection()
     else {const auto [a,b]=globalBounds();view.fit(a,b);}updateScroll();repaint();
 }
 void SwellTimeline::page(int bars){view.page(bars,time);updateScroll();repaint();}
+void SwellTimeline::revealInitialSelection()
+{
+    if(const auto* swell=find(data.session,data.session.primary))view=ui::revealInitialSwell(view,*swell,time);
+    updateScroll();repaint();
+}
 void SwellTimeline::previous(){view.shift(-1);updateScroll();repaint();}
 void SwellTimeline::next(){view.shift(1);updateScroll();repaint();}
 void SwellTimeline::zoom(double factor){view.zoom(factor);updateScroll();repaint();}

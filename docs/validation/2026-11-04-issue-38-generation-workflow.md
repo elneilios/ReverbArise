@@ -83,3 +83,79 @@ The full CTest suite was not run at this intermediate boundary: remaining
 generation-policy fixtures still require the shared Generate API in tasks 3–4.
 The earlier 46/46 result predates these workflow changes and is not represented
 as final validation of them.
+
+## Candidate analysis and generation integration
+
+Warm Release build-only wrapper `20261104-192527-7b5256b7` passed. Direct native
+Release `preverb_learn_candidates_test`, `preverb_automatic_generation_test`,
+`preverb_learn_generation_test` and `preverb_initial_perform_view_test` passed.
+Earlier integration iterations were also built with the wrapper; this is the
+current focused boundary, not final full-suite validation.
+
+The candidate tests exercise whole/incremental convergence, sparse and negative
+coordinates, explicit silence, missing mapped assets, identity mismatches and
+cancellation without replacing the previous display. The real processor fixture
+checks staged provisional versus accepted candidates, coalesced sensitivity,
+unchanged definitions/assets/render counts during preview, dry-only source
+preview without recapture, default changes without re-detection, restored source
+without implicit generation, strict source/IR failures, capture/settings/mode
+cancellation, explicit/Stop parity, protection, no-change and source replacement.
+Its callback allocation/deallocation guard remains enabled.
+
+The pure navigation test verifies chronological selection independent of vector
+order, deterministic equal-arrival ties, lead-in prediction before wet rendering,
+minimal panning with retained useful zoom, necessary fitting, negative pre-roll
+and rejection of obsolete wet timing. Native editor integration is still under
+verification. UI standards lint passes with the existing 61 bounded occurrences;
+the debt inventory was not regenerated.
+
+## Integrated editor and dense arrangement boundary
+
+Warm wrapper `20261104-193942-c799f983` built successfully. Direct native Release
+`preverb_swell_ui_test` and `preverb_processor_test` passed after adapting legacy
+fixtures to explicit Generate. Learn keeps definitions unchanged; existing
+explicit Perform reanalysis and new Live boundary fitting remain available.
+Cancelled analysis attempts are retryable on returning to the same identity.
+Source settlement fences readiness until its final candidate identity matches.
+
+The new native `preverb_learn_generation_ui_test` passes chronological initial
+selection/reveal for both triggers, reversed vector order, editor-closed commit,
+pending wet rendering, list/inspector/Overview binding, empty Perform visits,
+restored valid selection/current viewport and later mode return. After selecting
+another swell and panning, render completion preserves both. Pointer/keyboard
+binding, hidden preference retention, stale invocation and injected failure checks
+are included. The final full gate below supersedes intermediate results.
+
+Dense fixture: 64 seconds of deterministic layered transient/quiet offbeat and
+sustained harmonic input at 48 kHz / 120 BPM, in two 16-bar sections separated by
+an uncaptured 16-bar gap (96-second extent). It is synthetic, not a listening
+quality oracle. With sensitivity 0.2 / 0.5 / 0.8 it detected 96 / 128 / 128
+candidates and committed 97 / 129 / 129 swells including a protected disabled
+manual edit. Repeat Generate returned no-change without accumulation. Preview
+retained asset and render counts. Measured preview-plus-commit was 930.7 / 1067.4 /
+1046.6 ms in one warm Release run, with 28,576,328 reported resident bytes including
+the conservative Learn metadata reservation; total fixture time was 6297.9 ms.
+These are fixture measurements, not comparative speedup claims or guarantees for
+real music. Callback allocation/deallocation guards remained enabled.
+
+Intermediate full Release gate `20261104-194109-d2d511c2`: 49/51 passed; failures
+were the new helper minimum-scale lint occurrence and a UI injected-failure
+fixture racing restored-render recovery. Helper text now wraps at the existing
+role size without a new presentation token or debt exception. The fixture waits
+for permitted recovery before injecting the independent IR fault. No host,
+Windows DPI, screen-reader or owner visual acceptance is inferred from rasters.
+
+The repeated dense run exposed a fresh-instance race: a provisional RT Stop could
+be collected against the previous empty schema-1 manifest and leave legacy
+reconciliation work for a later Perform visit. Learn boundary collection now
+requires successful source settlement; it never queues legacy reconciliation.
+The fixture deliberately holds first-pass validation to exercise this timing.
+It drains its private writer every 16 blocks because its synthetic input runs
+faster than wall-clock audio; capture overflow is tested separately.
+
+Warm Debug wrapper `20261104-200228-ae4a6322` passed the complete generation
+fixture in 51.76 seconds, including this deterministic race and save during held
+preparation. The dense portion produced the same 96/128/128 candidates and
+97/129/129 swells; preview-plus-commit measured 5057.6/5858.0/5770.9 ms, total
+33,516.7 ms, with 28,576,328 reported resident bytes. Native editor binding and
+initial handoff tests also passed (12.52 seconds). Full-suite results follow below.
