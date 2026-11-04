@@ -483,3 +483,24 @@ No additional host steps, physical DPI or screen-reader coverage are inferred
 from this confirmation. Task 6.3 stays open for its incomplete host environment
 record; the confirmed retry does not need to be repeated. No production changes
 or repeat native suites are needed for this evidence-only update.
+
+## Host environment completed during merge preparation
+
+On 2026-11-04 the owner supplied **48000 Hz / 512 samples** for the passing
+issue #38 tests. Combined with the directly identified FL Studio
+**26.1.7.5653**, this completes the previously missing environment record.
+The owner's earlier overall workflow report, explicit native preview approval,
+Ready-state regeneration confirmation and successful pending-render retry above
+are retained; passing steps are not requested again. The final accepted #38
+implementation was `a235fa9`, with the Release module hash recorded above.
+
+At the owner's explicit request, latest-main merge preparation reuses those
+passing results where applicable. The same #38 implementation is integrated
+with independently accepted main transport/Export work. These retained results
+are not relabelled as a fresh host run of the combined binary. Native integrated
+Debug/Release results, exact merge/base identity and preservation review are in
+[the main reconciliation evidence](2026-11-04-issue-38-main-reconciliation.md).
+Task 6.3's host evidence is complete; actual physical DPI and screen-reader
+coverage remain unverified. Desktop inspection was stopped with Escape; no
+further desktop actions were taken and no audio settings or installed plugin
+were changed by the agent.
