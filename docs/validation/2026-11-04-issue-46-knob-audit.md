@@ -246,3 +246,7 @@ The directly launched window is **Issue #46 - Integrated Perform review**;
 for the owner's focused knob review. The captures linked above were refreshed
 from this exact executable. The ordinary header/layout/Snap-button acceptance is
 retained; only materially revised knob interaction needs this checkpoint.
+
+Owner response to this focused checkpoint: **Request changes**. Specific changes
+have been requested from the owner and are pending. The review window remains
+open. Task 4.4 is not complete; the changed knob family is not accepted yet.
