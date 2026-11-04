@@ -25,6 +25,13 @@ static void controlBindings()
     stop->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(engine.savedSession().autoGenerateOnStop);
     controlReview::pointerClick(*automatic);REQUIRE(!visible(stop) && !visible(generate) && engine.savedSession().autoGenerateOnStop);
+    REQUIRE(visible(helper) && helper->getY()>named(editor,"learnAutomaticHelp")->getBottom());
+    {
+        PreverbAudioProcessorEditor reopened(*fixture.processor);reopened.setVisible(true);reopened.refresh();
+        auto* retained=named(reopened,"learnManualSwellsHelp");
+        REQUIRE(visible(retained) && !retained->getBounds().isEmpty() && retained->getParentComponent()->getLocalBounds().contains(retained->getBounds()));
+        REQUIRE(!visible(named(reopened,"learnGenerateSwells")));
+    }
     controlReview::pointerClick(*automatic);REQUIRE(visible(stop) && stop->getToggleState());
     stop->beforeInvocation();engine.restore(engine.savedSession(),fixture.processor->getCaptureSnapshot().reference);
     stop->setToggleState(false,juce::dontSendNotification);stop->onClick();REQUIRE(engine.savedSession().autoGenerateOnStop);

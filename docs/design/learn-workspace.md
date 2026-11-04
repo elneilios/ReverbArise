@@ -30,7 +30,10 @@ swells, before the IR group. Generate Swells reuses the emphasized `ActionButton
 directly below sensitivity. Its contextual marker count/readiness helper sits
 directly below the button; the persistent manual-placement hint follows last,
 flowing naturally across the available width without a forced break after the
-question. Both remain readable when generation is disabled. The accessible
+question. Both remain readable when generation is disabled. The manual hint
+also remains visible beneath the enable-switch group when Automatic Swells is
+OFF, including on editor reopen; generation controls and their contextual
+helper stay hidden. The accessible
 description also explains readiness. Invocations pin session, pass and
 displayed candidate identities. Automatic Swells OFF hides these controls while
 retaining the saved preference. Timing-yellow triangle heads and dashed stems

@@ -75,7 +75,11 @@ Generate Swells SHALL be the primary Automatic Swells action directly below Mark
 - **THEN** the not-yet-committed request is cancelled and no lock hides the cancellation path
 
 ### Requirement: Manual placement guidance remains readable
-A subdued manual-placement helper after the contextual Generate helper SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL flow across the available width without a forced break after the question, use existing embedded Inter helper typography and stay visible when Generate is disabled. Supported minimum and larger sizes SHALL preserve readable wrapping, focus bounds and dominant dry-waveform space without shrinking text or adding a competing button.
+A subdued helper SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL follow Generate's contextual helper when Automatic Swells is ON and remain below the enable-switch group when OFF. It SHALL use existing Inter helper typography, wrap naturally without a forced break after the question and remain readable with Generate disabled at minimum/larger sizes.
+
+#### Scenario: Automatic Swells off and editor reopen
+- **WHEN** Automatic Swells is disabled in an open editor or before reopening it
+- **THEN** manual-placement guidance remains visible with valid layout while generation controls and their contextual helper stay hidden
 
 #### Scenario: Minimum-size busy workspace
 - **WHEN** Automatic Swells is ON at 1100x850 and generation is disabled or busy

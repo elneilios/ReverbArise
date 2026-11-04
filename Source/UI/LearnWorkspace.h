@@ -88,7 +88,7 @@ public:
         if(key!=catalogue){irBox.hidePopup();catalogue=key;choices=list;irBox.clear(juce::dontSendNotification);int index=0;for(const auto& c:choices)irBox.addItem(c.name,++index);}
         int selected=0;for(size_t i=0;i<choices.size();++i)if(choices[i].content==editor.session.defaultIR.content){selected=static_cast<int>(i+1);break;}
         irBox.setSelectedId(selected,juce::dontSendNotification);if(!selected)irBox.setTextWhenNothingSelected("Default IR not ready");
-        for(auto* c:std::array<juce::Component*,12>{&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&manualHelp,&generateReason})c->setVisible(automaticOn);
+        for(auto* c:std::array<juce::Component*,11>{&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
         const auto scope=juce::String(source.manifest.projectId)+"/"+source.manifest.instanceId;
         const auto session=engine.assignmentEpoch();
         // A mode roundtrip/reset may complete between paints. A recording pass
@@ -176,8 +176,9 @@ public:
             controls.removeFromTop(spacing::labelHelp);irStatus.setBounds(controls.removeFromTop(controlGeometry::feedbackHeight));controls.removeFromTop(spacing::group);
             sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::related);generate.setBounds(controls.removeFromTop(controlGeometry::height));
-            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
-            controls.removeFromTop(spacing::labelHelp);manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
+            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
+        controls.removeFromTop(automaticOn?spacing::labelHelp:spacing::group);
+        manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
         auto canvas=right.reduced(0,spacing::related);timelineHeading=canvas.removeFromTop(controlGeometry::headingHeight);canvas.removeFromTop(spacing::tight);
         timelineCaption=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::metadataGap);
         timelineRuler=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::rulerViewportGap);
