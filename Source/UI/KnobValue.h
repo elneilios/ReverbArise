@@ -107,7 +107,12 @@ public:
     }
     void rebaseGesture(){if(active && !typing){origin=knob.getValue();if(onRebase)onRebase();}}
     struct DomainValue {double value=0,minimum=0,maximum=1,step=.01,unitsPerFraction=1;juce::String text;};
-    void displayDomain(DomainValue value){domain=std::move(value);domainSupplied=true;}
+    void displayDomain(DomainValue value)
+    {
+        domainValid=std::isfinite(value.value) && std::isfinite(value.minimum) && std::isfinite(value.maximum) && value.minimum<=value.maximum
+            && std::isfinite(value.step) && value.step>0 && std::isfinite(value.unitsPerFraction) && value.unitsPerFraction>0;
+        domain=domainValid?std::move(value):DomainValue{0,0,1,.01,1,"unavailable"};domainSupplied=true;
+    }
     double displayedFraction()const noexcept{return canonicalFraction;}
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
@@ -128,14 +133,14 @@ private:
         class Value final:public juce::AccessibilityValueInterface
         {
         public:explicit Value(KnobValue& cell):owner(cell){}
-            bool isReadOnly()const override{return !owner.isEnabled();}
+            bool isReadOnly()const override{return !owner.isEnabled() || !owner.domainValid || owner.domain.minimum==owner.domain.maximum;}
             double getCurrentValue()const override{return owner.domain.value;}
             juce::String getCurrentValueAsString()const override{return owner.domain.text.isNotEmpty()?owner.domain.text:owner.canonical;}
             void setValue(double value)override
-            {if(!owner.isEnabled() || !std::isfinite(value) || owner.domain.unitsPerFraction<=0)return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
+            {if(isReadOnly() || !std::isfinite(value))return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
             void setValueAsString(const juce::String& value)override
-            {if(!owner.isEnabled())return;owner.begin(true);if(owner.onCommit)owner.onCommit(value);owner.finish(false);}
-            AccessibleValueRange getRange()const override{return {{owner.domain.minimum,owner.domain.maximum},owner.domain.step};}
+            {if(isReadOnly())return;owner.begin(true);if(owner.onCommit)owner.onCommit(value);owner.finish(false);}
+            AccessibleValueRange getRange()const override{return owner.domainValid && owner.domain.minimum<owner.domain.maximum?AccessibleValueRange{{owner.domain.minimum,owner.domain.maximum},owner.domain.step}:AccessibleValueRange{};}
         private:KnobValue& owner;
         };
         return std::make_unique<juce::AccessibilityHandler>(component,juce::AccessibilityRole::slider,juce::AccessibilityActions{},juce::AccessibilityHandler::Interfaces{std::make_unique<Value>(*this)});
@@ -154,7 +159,7 @@ private:
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
-    DomainValue domain;int modifiers=0;bool domainSupplied=false;
+    DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     juce::String identity,canonical;
     double origin=0,canonicalFraction=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false;

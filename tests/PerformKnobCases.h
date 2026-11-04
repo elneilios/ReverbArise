@@ -2,6 +2,13 @@
 void Composition::verifyKnobs()
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
+    {
+        KnobValue empty;empty.setSize(180,64);empty.configure("Unavailable timing (s)","emptyTiming","Timing unavailable");empty.display("empty","",0,false);
+        empty.displayDomain({0,-std::numeric_limits<double>::infinity(),std::numeric_limits<double>::infinity(),0,0,{}});
+        empty.addToDesktop(juce::ComponentPeer::windowIsTemporary);empty.setVisible(true);auto* handler=empty.valueKnob().getAccessibilityHandler();REQUIRE(handler);
+        auto* value=handler->getValueInterface();REQUIRE(value && value->isReadOnly() && std::isfinite(value->getCurrentValue()) && !value->getRange().isValid());
+        empty.displayDomain({0,0,0,1,1,"0.000"});REQUIRE(value->isReadOnly() && value->getCurrentValueAsString()=="0.000" && !value->getRange().isValid());empty.removeFromDesktop();
+    }
     auto original=*m3::find(baseline,firstId);original.placement=2300;original.shape.automaticStart=false;
     original.shape.startOffset=-18000;original.shape.endOffset=18000;original.shape.fadeIn=original.shape.fadeOut=6000;
     auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);
