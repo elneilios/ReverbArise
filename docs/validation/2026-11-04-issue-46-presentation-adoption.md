@@ -7,7 +7,9 @@ On 4 November 2026 the owner answered **“Host smoke passes”** for the exact
 FL Studio audition looping/Stop, Dry + wet versus Wet only listening balance and
 save/reopen. Earlier native presentation and editing approvals remain recorded.
 No additional Windows DPI setting, host version or wider DPI matrix was supplied;
-those are not inferred from the host pass. No source or binary changed afterward.
+those are not inferred from the host pass. The later [main reconciliation](2026-11-04-issue-46-main-reconciliation.md)
+retains this acceptance against its original bundle and records the combined
+build separately; it does not claim a new owner run of that binary.
 
 Task 6.2 is now complete. Guarded task editing and refreshed Apply confirm
 **21/21 tasks complete**. The earlier pending-host statements below describe the

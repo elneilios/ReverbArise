@@ -1,5 +1,9 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Latest-main [reconciliation evidence](2026-11-04-issue-46-main-reconciliation.md)
+records the subsequent integration of owner-merged #53 and #4 changes, preserving
+the exact scope of the #46 host acceptance and the original tested bundle.
+
 Final: the owner reports **Host smoke passes** for the final presentation bundle.
 All **21/21** OpenSpec tasks are complete; [final host acceptance and exact bundle
 identity](2026-11-04-issue-46-presentation-adoption.md) supersede the historical
