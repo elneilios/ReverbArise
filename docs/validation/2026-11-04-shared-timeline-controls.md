@@ -46,3 +46,27 @@ Not tested: actual Windows DPI combinations, screen-reader use, FL Studio or
 Export binding/transport/state behavior. Those implementations are unchanged by
 this library slice. Family look/feel approval remains required before wider
 adoption. No whole parent OpenSpec task is marked complete by this partial slice.
+
+## Owner review correction — 2026-11-04
+
+The owner approved the shared-component design and Export handover approach,
+requesting a bounded beat-count conversion before merge. The numerical helper
+now caps the floating-point visible beat count to the pixel budget before any
+`int` conversion or edge-tick addition. The regression directly exercises that
+conversion (so the existing density gate cannot mask it), and checks the public
+ruler for a valid two-trillion-sample viewport with a beat ratio beyond `INT_MAX`.
+The 64/1024-pixel cases retain finite, bounded bar ticks without minor-tick flooding.
+
+Focused native Release target builds and CTest passed **2/2** in 2.72 seconds:
+`preverb_timeline_controls_test` and `preverb_song_bar_ruler_test`. The targeted
+CMake/CTest invocation used the existing wrapper's `Enter-BuildLock`, tool
+resolution and cache checks; logs:
+`out/build-logs/Release/20261104-pr49-beat-bound-final/`.
+UI standards and diff checks passed. No broad build or full-suite repeat was
+needed; no other runtime paths or visuals changed.
+
+`ActionButton.h` still matches Agent 1's accepted working file byte-for-byte,
+with the same SHA256 `68EF2F339109F65C1044813C1CD074C5AA13E8DEE7470571452ECF2B1EEAAA16`.
+The handover requires no Export-specific behavior inside shared controls:
+accepted sample bounds, Fit, navigation and playback remain workspace-owned.
+Main Perform implementation and merge ownership remain separate.

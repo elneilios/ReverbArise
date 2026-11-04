@@ -55,6 +55,21 @@ static void cases()
     clock.numerator=6;clock.denominator=8;view.first=0;view.last=72000;ticks=musicalTimelineTicks(view,900,clock);
     REQUIRE(std::any_of(ticks.begin(),ticks.end(),[](const auto& t){return t.label=="1.2" && t.sample==12000;}));
     clock.bpm=0;REQUIRE(musicalTimelineTicks(view,900,clock).empty());
+    // Valid fixed timing with a huge meter keeps bar offsets supported while the
+    // fine denominator beat count is far beyond int. Density must stay pixel-bound.
+    clock={true,0,0,48000,120,INT_MAX,INT_MAX};view.first=-1.e12;view.last=1.e12;
+    const auto fineBeat=clock.rate*60/clock.bpm*4/clock.denominator;
+    REQUIRE(view.span()/fineBeat>static_cast<double>(INT_MAX));
+    // Check the numerical conversion directly too: the ruler's density gate
+    // would otherwise mask a regression in this calculation for tiny beats.
+    for(const auto [width,budget]:{std::pair{64,6},std::pair{1024,66}})
+    {
+        REQUIRE(m3::ui::controls::detail::visibleMusicalBeatCount(view.span(),fineBeat,width)==budget);
+        ticks=musicalTimelineTicks(view,width,clock);
+        REQUIRE(!ticks.empty() && ticks.size()<=static_cast<size_t>(budget));
+        for(const auto& tick:ticks)
+            REQUIRE(tick.bar && std::isfinite(tick.sample) && tick.sample>=view.first && tick.sample<=view.last);
+    }
     clock={true,0,0,48000,120,4,4};view.first=-96000;view.last=384000;
     const auto image=[&](SongTime timing){juce::Image result(juce::Image::ARGB,500,34,true);juce::Graphics g(result);
         paintMusicalTimelineRuler(g,{0,0,500,34},view,timing);return result;};

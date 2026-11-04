@@ -6,6 +6,16 @@
 namespace m3::ui::controls
 {
 struct MusicalRulerTick {double sample;juce::String label;bool bar;};
+namespace detail
+{
+// Called with validated positive span/beat and width. Clamp before narrowing;
+// the pixel budget leaves room for the two edge ticks within int.
+inline int visibleMusicalBeatCount(double span,double beat,int width)
+{
+    const auto visibleBeats=std::min(std::ceil(span/beat),static_cast<double>(width/spacing::group));
+    return static_cast<int>(visibleBeats)+2;
+}
+}
 inline std::vector<MusicalRulerTick> musicalTimelineTicks(const SwellViewport& view,int width,const SongTime& timing)
 {
     if(!timing.valid || width<=0)return {};
@@ -25,7 +35,7 @@ inline std::vector<MusicalRulerTick> musicalTimelineTicks(const SwellViewport& v
     if(anchors.empty())return result;
     const auto& anchor=anchors.front();
     const auto first=std::ceil((view.first-anchor.samplePosition)/beat-1.e-9);
-    const auto count=std::min(static_cast<int>(width/spacing::group)+2,static_cast<int>(std::ceil(view.span()/beat))+2);
+    const auto count=detail::visibleMusicalBeatCount(view.span(),beat,width);
     for(int i=0;i<count;++i)
     {
         const auto index=first+i;const auto sample=anchor.samplePosition+index*beat;
