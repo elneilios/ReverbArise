@@ -72,6 +72,13 @@ lists the integration baseline, component ownership and remaining legacy consume
 
 ## Incremental migration
 
+`Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
+`InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns
+accepted bounds, logarithmic range, Fit and stale-session guards. The independent
+`MusicalTimelineRuler` painter reuses the existing timing/coordinate authorities.
+See [interface and review scope](shared-timeline-controls.md); this library slice
+does not migrate production screens or approve Perform compact metrics.
+
 `Controls/SliderControl.h` is the reusable wheel-enabled slider/value family.
 It retains `InvocationSlider` ownership guards and JUCE range, interval,
 formatting and notification behavior. Its `NumericInputControl` is a reusable
