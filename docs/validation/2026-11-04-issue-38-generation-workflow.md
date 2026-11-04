@@ -224,3 +224,36 @@ bundle, recording host version, sample rate, buffer and source commit `3a8bdba`:
 No FL Studio, actual OS-DPI or screen-reader acceptance has been performed or
 claimed. Task 6.3 remains open. No plugin installation, main-branch merge, issue
 closure, canonical spec sync or OpenSpec archive was performed.
+
+## Owner-requested Learn layout refinement
+
+The owner requested three refinements to the native preview: Auto-generate on
+Stop beneath Enable automatic swells (before IR), contextual marker/readiness
+text directly under Generate, then the manual-placement hint last with natural
+width-based wrapping instead of a forced break after the question. These changes
+reuse the same Switch, ActionButton, helper role and named spacing; no new tokens,
+control variants, capture or DSP behavior were introduced. The active workspace
+delta/design and living Learn guide now record this order. The previous Learn
+raster above is retained as historical evidence; the [refined Learn raster](2026-11-04-issue-38-learn-refined.png)
+shows the requested arrangement.
+
+Native geometry checks now assert each requested relationship at minimum and
+larger sizes, the manual sentence flowing through "? Add", retained helper font
+size and containment. Release wrapper `20261104-204220-06390798` passed 51/51 CTest
+tests in 80.17 seconds. Debug's first run `20261104-204419-e1ebb553` passed the UI
+targets but timed out waiting for provisional candidates in the shared capture
+fixture (50/51 overall). That accelerated fixture can outrun its 32-slot input
+queue under Debug disk scheduling. It now drains its private writer every 16
+blocks, as the existing dense fixture already does. No production capture path
+was changed or overflow checks weakened. Final rerun results follow below.
+
+Final refinement gates: warm Debug `20261104-204900-e930dd84` passed **51/51**
+CTest tests in 217.22 seconds; warm Release `20261104-205253-81115322` passed
+**51/51** in 76.30 seconds. Debug's generation and editor targets passed in
+49.34 and 10.91 seconds. UI lint and strict change validation passed, with the
+existing standards inventory intact. Production layout commit `7bb0a1c` and
+fixture-only commit `3885058` describe the tested changes; subsequent edits are
+evidence/task tracking. A fresh Release preview was launched directly after the
+automated UI tests finished. Owner visual acceptance remains pending, followed
+by the previously consolidated FL Studio smoke. No host or OS-DPI acceptance is
+inferred from the updated native raster.
