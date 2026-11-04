@@ -5,6 +5,11 @@ proposal commit `edb7dff` / PR #47. The owner approved the proposal in chat on
 4 November 2026 and requested Apply. This record distinguishes the standalone
 list checkpoint from later production integration.
 
+Current automated outcome: **42/42 Release CTest passed** at clean commit
+`a2a014d` after the separately authorized frozen-tempo repair. Integrated owner
+approval and the single final FL Studio smoke test remain pending; Debug and
+physical Windows DPI/monitor-transition coverage were not run.
+
 ## Execution and review scope
 
 | Tasks | Type / risk | Verification and dependency |
@@ -122,7 +127,7 @@ reused that unchanged-source evidence rather than regenerating the gallery.
 The validated VST3 bundle is under
 `out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`;
 its x64 binary SHA-256 is
-`e64ac48049dc4fca8facf8940f3df4a387ebf1edacd5c11db27df3088ebfbd32`.
+`667460d8a18543f4beaa3a5c6a23d77e1028673a748506572bb4d2979e5ce55b` (post-repair).
 It has not been copied into a host's installed plugin location.
 
 ## Authorized frozen-tempo recovery repair
@@ -152,6 +157,25 @@ Post-repair Release build passed through the wrapper
 (`out/build-logs/Release/20261104-103650-fefe84af/`). The deterministic focused
 native test passed in 0.72 s (exit 0), using this worktree's warm outputs, not the
 earlier isolated cached-library fixture. Final full-suite verification follows.
+
+Final gate: `scripts/build.ps1 -Configuration Release -Test` passed at **clean
+`a2a014d`**; preflight/configure/build/test all pass, **42/42 CTest**, 47.19 s,
+exit 0. Logs: `out/build-logs/Release/20261104-103840-1d79528c/`. The worktree's
+build outputs were warm; no source/cache deletion or dependency download was
+needed. `scripts/check-ui-standards.ps1` passed (34 files, 61 bounded occurrences),
+strict OpenSpec validation and diff whitespace checks passed. No production
+source changed after this gate. The historical 41/42 failures above are resolved
+by the deterministic repair, not waived or hidden by retrying the old assertion.
+
+The real production editor preview was directly launched with
+`preverb_swell_ui_test --review-ordering` (PID 58488), then its unique
+`ReverbArise control review` window and row accessibility were inspected through
+the computer-use plugin. It uses a temporary synthetic project with actual
+captured source and restored selections, independent of the user's DAW projects.
+The standalone review window had already closed; no duplicate review was opened.
+Task 3.1 was guarded, checked and confirmed through refreshed Apply instructions:
+**7/8 complete**. Integrated composition approval and the single FL Studio smoke
+remain pending. The current build is not installed into FL Studio automatically.
 
 Component event tests dispatch JUCE pointer/keyboard events in a native MSVC
 executable. Software-raster snapshots at multiple scales are not physical DPI
