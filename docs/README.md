@@ -29,7 +29,7 @@ This directory covers product identity, the existing implementation, development
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
 - [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implementation progress is tracked in the active OpenSpec change.
-- [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 candidate/Generate control ownership, coverage inspection and stable dry fitting.
+- [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and remaining owner/host checks.
 - [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — issue #6 implementation contracts and reviewed control mapping (implementation in progress).
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.

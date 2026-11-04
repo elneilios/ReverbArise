@@ -257,3 +257,70 @@ evidence/task tracking. A fresh Release preview was launched directly after the
 automated UI tests finished. Owner visual acceptance remains pending, followed
 by the previously consolidated FL Studio smoke. No host or OS-DPI acceptance is
 inferred from the updated native raster.
+
+The next owner refinement keeps manual-placement guidance visible when Automatic
+Swells is OFF. The hint is excluded from generation-control visibility gating,
+and its layout is computed in both states. Native binding checks cover switching
+OFF and reopening an editor with OFF already saved, including visible, nonempty,
+contained helper bounds while Generate remains hidden. The ON ordering and
+natural text flow are retained. This is Learn presentation only; no DSP, capture,
+serialized preferences or generation admission behavior changed.
+
+The OFF-hint refinement (`b559e6f`) passed warm native Release
+`20261104-210019-eea5a3b2` **51/51** in 119.37 seconds and Debug
+`20261104-210249-afb0175f` **51/51** in 232.56 seconds. The following owner
+request superseded its native review composition before acceptance.
+
+## Musician-focused Learn refinement
+
+Source commit `e0ba6d6` incorporates the owner's shorter timeline, waveform,
+marker, copy/status and Default IR refinements. The native waveform now fills
+each existing PCM min/max bucket's time span at unchanged amplitude, within a
+width-proportional band capped at half its width. No normalization or source/DSP
+processing was added. Neutral guides brighten on hover or pinned inspection;
+provisional/updating heads remain hollow. The full-song mapping and missing
+coverage remain truthful. Hover/pin never changes generation scope or DAW state.
+
+Detect events and Event sensitivity distinguish analysis from Generate Swells
+and Generate on Stop. Default IR distinguishes the generation default from
+per-swell assignments. One caption combines capture phase, duration and event
+count; exact sample/coverage/totals information moved to the existing Diagnostics
+view. The natural manual-placement hint remains last and visible with detection
+OFF, including reopen. Shared control families and production roles/tokens are
+unchanged; this composition still needs scoped native owner acceptance.
+
+Focused native checks cover ordinary/hovered/pinned guide colours, hollow
+updating heads, a 2:1 displayed amplitude ratio for 0.5 versus 0.25 PCM peaks,
+shorter plot geometry at minimum/larger sizes, concise status and musical-only
+visible inspection. Existing technical inspection, sparse/unavailable/zero
+coverage, source timing, explicit/automatic handoff, restored navigation and
+delayed-render checks remain active. Initial Perform selection remains earliest
+by arrival, before wet completion, without transport/audition changes.
+
+Supporting rasters: [Learn](2026-11-04-issue-38-learn-musician.png) and
+[hover emphasis](2026-11-04-issue-38-event-hover.png). These are native synthetic
+fixtures, not host or OS-DPI acceptance. Earlier rasters and failure/recovery
+records above remain historical evidence.
+
+Final warm Windows MSVC gates for the `e0ba6d6` source content (wrapper metadata
+reports its parent `b559e6f` with the then-uncommitted refinement):
+
+| Command | Build log ID | Native result |
+| --- | --- | --- |
+| `scripts/build.ps1 -Configuration Release -Test` | `20261104-212717-dc8ab7f1` | 51/51 CTest, 105.95 s |
+| `scripts/build.ps1 -Configuration Debug -Test` | `20261104-212920-8f3ce86f` | 51/51 CTest, 252.69 s |
+| `scripts/check-ui-standards.ps1` | Final refinement | Passed: 42 files, 61 bounded existing occurrences |
+| `openspec validate preview-and-generate-swells --strict` | Final refinement | Passed |
+| `git diff --check` | Final refinement | Passed |
+
+The shorter-timeline fixtures required updating old shaded-silence and helper
+geometry expectations; focused reruns preceded these final suites. This is a warm
+build-tree result, with no claimed speedup. No production source changed after
+the final suites began. Only documentation, task tracking and supporting rasters
+followed. Native visual acceptance remains open; final FL Studio smoke must use
+this final Release source, including first-swell selection/framing. Actual
+host/DPI/screen-reader coverage remains untested.
+
+The refined Release preview was launched directly as PID 32252, title
+`ReverbArise control review`, from the copied `out/review/Issue38NativeReview.exe --review`.
+It remains open for owner review; launching it does not establish acceptance.
