@@ -1,11 +1,11 @@
 # Tasks
 
-Planning complete; all checkboxes below are future implementation, not completed work. A fresh user Apply request is required. Native compact/family approval is a separate gate within Apply, before production rollout.
+Apply was authorized by the owner on 4 November 2026 after proposal review. Checkboxes record verified implementation progress. Native compact/family approval remains a separate gate within Apply, before production rollout.
 
 ## 1. Shared ownership and native composition checkpoint
 
 - [ ] 1.1 Record owner-coordinated #6 shared-file, timeline/preview and additive UI-state ownership against its current revision; verify merged #4 list APIs and #38 pending-render/return contracts remain compatible, with the integration record in dated docs/validation evidence before shared mutations.
-- [ ] 1.2 Prepare an isolated native Perform fixture using real timeline/list/inspector paths and proposed scoped geometry; add bounds/typeface/focus assertions for empty, sparse, dense/long-name, selected/multiple, pending/error states at four supported sizes, 1199/1200/1201 and software 100/125/150/200%, and publish actual row/panel/gap/lane measurements in dated evidence.
+- [x] 1.2 Prepare an isolated native Perform fixture using real timeline/list/inspector paths and proposed scoped geometry; add bounds/typeface/focus assertions for empty, sparse, dense/long-name, selected/multiple, pending/error states at four supported sizes, 1199/1200/1201 and software 100/125/150/200%, and publish actual row/panel/gap/lane measurements in dated evidence.
 - [ ] 1.3 Directly launch and preserve the prepared fixture for owner composition/compact approval; verify the one-row toolbar and canvas room, record explicit approval or requested adjustments, and do not adopt new production metrics before approval.
 
 ## 2. Control families and production composition

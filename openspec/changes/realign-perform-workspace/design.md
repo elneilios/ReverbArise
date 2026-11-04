@@ -96,7 +96,7 @@ Alternative rejected: quantizing pixel distances or local durations, which break
 
 ### 5. Backward-compatible UI preferences, no audio authority changes
 
-Store optional validated Perform view span/first, Snap requested flag and stable division key in the existing session JSON as a UI preference object; keep version 9 and processor envelope 8. Old readers ignore unknown properties; old states default to Fit, On, quarter beat. Invalid optional UI values reset only those preferences; never discard valid musical data. Retain per-instance preferences across editor close/reopen, project save/reopen and mode return; reset navigation ownership on session replacement. Coalesce UI preference publication outside the audio callback and follow host dirty policy. Do not persist active gestures, playhead, pending workers or inspection cursors. No host parameters or durable asset changes. Coordinate the additive object with #6 before either writer changes serialization.
+Store optional validated Perform view span/first, Snap requested flag and stable division key in the existing session JSON as a UI preference object. Planning main used session version 9/envelope 8; the subsequent read-only Export audit found its unmerged session version 10/envelope 8. Integrate into the then-current agreed merged decoder without downgrading Export or incrementing versions merely for optional UI fields. Readers of that same schema ignore unknown properties; compatibility with older schema versions remains governed by their actual decoder, not a claim of universal backward readability. Old states default to Fit, On, quarter beat. Invalid optional UI values reset only those preferences; never discard valid musical data. Retain per-instance preferences across editor close/reopen, project save/reopen and mode return; reset navigation ownership on session replacement. Coalesce UI preference publication outside the audio callback and follow host dirty policy. Do not persist active gestures, playhead, pending workers or inspection cursors. No host parameters or durable asset changes. Coordinate the additive object with #6 before either writer changes serialization.
 
 ### 6. Integration boundaries and verification
 
@@ -105,6 +105,88 @@ Store optional validated Perform view span/first, Snap requested flag and stable
 #6 local branch `feat/6-export-mixed-song-wav` was at `33f1871` with no divergence to inspect. This is not evidence of final APIs or authorization to edit another worktree. At Apply entry obtain owner-coordinated shared-file/timeline/preview/state ownership against its then-current revision. Until recorded, keep Perform fixture/composition isolated and stop shared refactors. #38 contract reviewed: accept source-ready Perform with pending wet, preserve manual/frozen IDs and return-to-Learn edits; do not change current Stop transition or Generate behavior. Reconcile canonical requirement wording with #6/#38 at final integration rather than reverting their approved behavior.
 
 Use focused pure viewport/grid tests, actual component gestures and processor/editor bindings, then Release wrapper full CTest and `scripts/check-ui-standards.ps1`. Cover source/render/IR identity, no navigation-triggered jobs, no audio callback lock/allocation/I/O, native geometry and embedded typefaces. Save dated evidence under `docs/validation/`, update implemented design/development guides and standards together; canonical sync/archive is a separately requested ordinary lifecycle step. Owner-approved native fixture precedes one brief FL Studio smoke on the exact Release bundle, with usual scale, pending-render transition, editing/zoom/snap and save/reopen. Software scales and actual Windows DPI/host results remain separately labelled.
+
+### 7. Shared waveform composition proposal — owner steering, 4 November
+
+This is an interface proposal, not an implemented extraction or adoption approval.
+The owner requested small composable boundaries across Learn/Perform/Export while
+retaining the existing native composition checkpoint and #6 ownership gate.
+
+**Safe existing shared foundation:** `SwellViewport` remains the sample/pixel and
+viewport arithmetic authority; `makeSongBarRuler` remains the musical tick authority.
+Named theme roles and focus/accessibility conventions remain shared. Learn keeps
+`LearnDryView`'s stable coverage-driven extent policy; no manual navigation or new
+toolbar is added to Learn as part of #46.
+
+**Proposed small presentation interface:** a processor-independent
+`TimelineZoomControls` under `UI/Controls`, composing existing action/slider
+families, with no source/render data, viewport copy, snap logic or playback state:
+
+```cpp
+struct ZoomControlState
+{
+    double fraction; // Validated [0,1] position in the owner's zoom domain.
+    bool canZoomIn, canZoomOut, canFit;
+};
+void display(const ZoomControlState&); // Silent accepted-state refresh.
+std::function<void(double factor)> onZoomStep;
+std::function<void(double fraction)> onZoomFraction;
+std::function<void()> onFit;
+```
+
+Callbacks express UI intent, never host seek or model edits. The binding supplies
+the logarithmic fraction/span conversion and validated limits; only the workspace's
+existing viewport owner accepts a change. The component owns minus/slider/plus/Fit
+layout, names, focus, keyboard/wheel policy and accessibility. It does not own Fit
+bounds or automatically fit on data refresh. Fit remains Learn dry coverage,
+Perform selected source/pre-roll/arrival/tail, or Export audible mix extent.
+No workspace enum or collection of feature flags belongs in this component.
+
+Agent 1's unmerged `Controls/ActionButton.h` already provides the accepted generic
+command family (focus, keyboard activation, invocation hook and named text roles).
+Once its revision/interface is coordinated, prefer that family for zoom/Fit rather
+than introducing a competing command button. The initial test-only composition
+uses existing main-branch buttons; final shared-family font/padding/bounds must be
+remeasured at its own checkpoint. Snap is a separate Perform-only latching action,
+not a new Export flag or a reason to change the generic command family's semantics.
+
+Read-only inspection of Agent 1's unmerged `TimelineNavigation.h` found an existing
+`viewport()`, `setRange(audibleFirst,audibleLast,fileFirst,fileLast,rate,reset)`,
+`zoom(factor,anchor)`, `pan(fraction)`, `fit()` and `onChange` API. Export currently
+owns one view through that component, including its sample-rate-derived minimum
+span, read-only pan/wheel/key gestures and detail requests. A binding could feed
+the shared toolbar's intents into that API and report accepted zoom state back;
+Agent 1 must agree the exact accepted-state/min/max accessor needed to compute
+the slider fraction. Do not replace its ownership with a second view or silently
+impose Perform's minimum-span/gesture policy. Perform retains editable gestures
+and Ctrl snap bypass, with shared named conventions only where they agree.
+
+**Small later extractions:** a ruler paint helper can consume existing ticks,
+absolute viewport, bounds and named text/ink roles once two call sites demonstrate
+identical drawing requirements. Cursor/coverage overlays can share simple drawing
+primitives only where semantics and geometry match. No extraction of a monolithic
+waveform renderer, decoded data model, worker cache or generalized feature-flag
+viewer is proposed. Real peak/layer differences and invalidation remain local.
+
+Before adopting shared production changes, agree the interface and shared-file
+ownership with Agent 1 and record the then-current revision. Direct chat delivery
+was rejected twice with an active-writer error. The owner subsequently supplied
+[Agent 1's handover](https://github.com/elneilios/ReverbArise/issues/46#issuecomment-6629874432),
+which agrees canonical absolute bounds, accepted timing, `SwellViewport` and
+navigation intents, with a workspace-owned Export Fit target. Export's current
+visual acceptance is retained; only the fuller musical ruler and shared zoom row
+are coordinated refinements. Preserve pointer zoom/pan, manual view across refresh,
+once-per-accepted-mix Fit, last-good pending display and current-revision delivery.
+Agent 1 retains Export/mix/voice/state ownership and is not building a competing
+toolbar or generalized viewer. Its merge/archive is held for this integration or
+an explicit owner-approved follow-up. Review the proposed toolbar's accepted-state
+adapter/accessors before shared-file adoption; the isolated fixture remains
+independent. Add component tests for
+silent display, bounds/focus/accessibility and intent callbacks, plus independent
+Perform/Export binding tests proving one viewport, distinct Fit policy and no host
+seeking, audio jobs or serialization side effects. Wider extraction is deferred
+where it would destabilize the workspaces. This proposal does not absorb #6, #38,
+waveform performance work or DSP.
 
 ## Risks / Trade-offs
 
