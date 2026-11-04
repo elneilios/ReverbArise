@@ -62,7 +62,9 @@ static juce::TextButton* button(juce::Component& root,const juce::String& text)
 static void snapshotPanel(juce::Component& panel,const juce::String& tag)
 {
     std::cerr<<"Native panel: "<<tag<<'\n';
-    const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
+    auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});
+    if(folder.isEmpty() && tag=="live-admission-evidence")folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_LIVE_OUTPUT",{});
+    if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image surface(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(surface);panel.paintEntireComponent(canvas,true);
     auto output=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(output && output->setPosition(0) && output->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(surface,*output));
@@ -131,10 +133,12 @@ int main(int argc,char* argv[]){return runTest([&]
         callback.gate=m3::LiveGate::origin;callback.originsValid=true;callback.originDelta=1.125;
         callback.observed={true,3730574,158.031,48000,122,4,4};
         diagnosticState.liveLastRejection=callback;callback.block=18;callback.gate=m3::LiveGate::stopped;
+        callback.usesLiveClock=true;callback.liveRun=9;callback.liveReference=callback.observed;
         diagnosticState.liveObservation=callback;
         const auto text=m3::ui::liveDiagnosticsText(diagnosticState);
         REQUIRE(text.contains("Current callback | block 18 | stopped (not playing admission)"));
         REQUIRE(text.contains("Historical last rejection (not current) | block 17 | PPQ-zero origin mismatch"));
+        REQUIRE(text.contains("Live run 9 | session") && text.contains("Live reference:"));
         REQUIRE(text.contains("1.125000000000") && text.contains("3730574") && text.contains("Worker (separate observation)"));
     }
 
@@ -965,6 +969,10 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(liveEvidence->getText().contains("Current callback") && liveEvidence->getText().contains("stopped (not playing admission)"));
     REQUIRE(liveEvidence->getFont().getHeight()==m3::ui::textStyle(m3::ui::TextRole::helper).height);
     REQUIRE(liveEvidence->getParentComponent()->getLocalBounds().contains(liveEvidence->getBounds()));
+    for(const auto& line:juce::StringArray::fromLines(liveEvidence->getText())){
+        juce::GlyphArrangement glyphs;glyphs.addLineOfText(liveEvidence->getFont(),line,0,0);
+        REQUIRE(glyphs.getBoundingBox(0,-1,true).getWidth()<liveEvidence->getWidth());
+    }
     snapshotPanel(*liveEvidence,"live-admission-evidence");
 
     juce::String beforeJson,afterJson,jsonError;REQUIRE(m3::encode(beforeSettings,beforeJson,jsonError) && m3::encode(engine.savedSession(),afterJson,jsonError));

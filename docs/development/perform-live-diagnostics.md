@@ -22,17 +22,39 @@ samples at a musically silent point. Routing and linear wet gain remain visible.
 
 The observed/published timing tuple includes sample, PPQ, rate, BPM and meter.
 Inferred origin is `sample - PPQ * rate * 60 / BPM`; delta is observed minus
-published origin in samples. Values are formatted with sufficient precision to
-inspect the current one-sample origin tolerance. Unsupported/nonfinite origins
-are unavailable rather than a fabricated zero difference. No timing tolerance
-or asset-position reinterpretation is authorized by opening Diagnostics.
+published origin in samples. This source/publication delta is informational:
+valid live playing transport may have a different origin from parked/source
+timing. The owner recording demonstrates an approximately 16-sample difference.
+No fixed 16-sample subtraction is applied and saved coordinates are unchanged.
+
+`Live run` and its `reference` identify the callback-owned ephemeral clock used
+for actual live admission. The first valid playing observation establishes the
+run; later observations must match it within the existing one-sample origin
+allowance. A valid Stop ends the run. Invalid timing or callback ranges do not
+create a baseline or pretend that the host stopped; seeks, loops and output
+controls cannot erase a rejected mapping during continuous Play. Session/audio
+reset requires a new runtime observation. Source/render rate, tempo, meter and
+identity checks remain independent and mandatory.
+
+A supported source-to-playing origin delta can therefore appear alongside
+`admitted`. A current `PPQ-zero origin mismatch` with a live run instead means
+that the host departed from that run's reference. Values retain sufficient
+precision to inspect this distinction. Unsupported/nonfinite origins remain
+unavailable. The shared strict mapping helper and Capture, Audition, internal
+Export and host offline validation keep their existing contracts.
 
 Worker observations are separate from callback observations. Service and attempt
 sequences distinguish eligibility checks from actual preparation work. Monotonic
 service/attempt times are process-local milliseconds, not wall-clock timestamps.
 Current/prepared revisions and window bounds describe the worker observation;
 callback publication revision/bounds describe what that block actually consumed.
-The latest service result and last actual attempt result distinguish an unchanged
+The worker live-run reference is copied from the same bounded control publication
+used for eligibility, independently of developer telemetry. Publication rechecks
+run/session identity and source/render dependencies; unavailable observations or
+transient rejection remain retryable. An unchanged render revision/window alone
+does not certify a new live clock. Verified resident PCM can be reused with its
+original sample coordinates. The latest service result and last actual attempt
+result distinguish an unchanged
 resident window from successful publication, rejection and a later retry.
 
 Stopping clears the play-gated incompatibility flag. A stopped prepared status

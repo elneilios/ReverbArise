@@ -26,7 +26,7 @@ int main(){return runTest([]
     REQUIRE(engine.selectTargets({a},a));
     const auto original=engine.savedSession();SwellAssetStore assets(engine.assetDirectory());WetRender rawA,rawB;juce::String error;
     REQUIRE(assets.readRender(find(original,a)->render,previewMemoryBudget,rawA,error));REQUIRE(assets.readRender(find(original,b)->render,previewMemoryBudget,rawB,error));
-    const auto position=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=p/250.;return TransportTime{context.time,playing};};
+    const auto position=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=(p-(playing?16:0))/250.;return TransportTime{context.time,playing};};
     float l[80]{},r[80]{};auto time=position(950,false);engine.processTransportAudio(l,r,16,time);waitFor([&]{return engine.snapshot().liveReady;});
     time=position(950,true);engine.processTransportAudio(l,r,16,time);
     REQUIRE(std::abs(l[15]-sample(*find(original,a),rawA,965)-sample(*find(original,b),rawB,965))<1e-6);

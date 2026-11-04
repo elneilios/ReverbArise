@@ -39,6 +39,15 @@ public:
 };
 enum class LiveGate { admitted, workflow, disabled, stopped, noPublication, invalidRange,
     invalidTiming, rate, tempo, meter, origin, reset, missingCoverage };
+inline LiveGate liveAssetGate(const SongTime& prepared,const SongTime& now) noexcept
+{
+    long double a,b;
+    if(!songOrigin(prepared,a) || !songOrigin(now,b))return LiveGate::invalidTiming;
+    if(prepared.rate!=now.rate)return LiveGate::rate;
+    if(prepared.bpm!=now.bpm)return LiveGate::tempo;
+    if(prepared.numerator!=now.numerator || prepared.denominator!=now.denominator)return LiveGate::meter;
+    return LiveGate::admitted;
+}
 inline LiveGate liveMappingGate(const SongTime& prepared,const SongTime& now) noexcept
 {
     if(!prepared.valid || !now.valid)return LiveGate::invalidTiming;
@@ -50,7 +59,9 @@ inline LiveGate liveMappingGate(const SongTime& prepared,const SongTime& now) no
 }
 struct LiveCallbackObservation
 {
-    uint64_t block=0,revision=0;
+    uint64_t block=0,revision=0,liveRun=0,liveSession=0,liveReset=0;
+    SongTime liveReference{};
+    bool usesLiveClock=false;
     SongTime observed{},published{};
     int64_t start=0,end=0,loopStart=0,loopEnd=0;
     double publishedOrigin=0,observedOrigin=0,originDelta=0;

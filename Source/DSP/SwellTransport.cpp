@@ -108,18 +108,22 @@ void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
     liveEnabled=enabled;live.configure(enabled,routing,db);
     if(gainChanged && model.gainPolicy==GainPolicy::musical)invalidateLiveLocked();else notify();
 }
-bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const PreviewContext& context) const
+bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const PreviewContext& context,const LiveClockSnapshot* liveContext) const
 {
     const auto& a=kept.accepted;
     return w.enabled && !w.frozen && w.sourceStart==a.sourceStart && w.sourceEnd==a.sourceEnd
         && w.arrival==a.arrival && w.shape==a.shape && w.placement==a.placement
-        && transportMappingMatches(kept.timing,context.time)
+        && (liveContext?liveContext->accepts(kept.timing,context.time)==LiveGate::admitted:transportMappingMatches(kept.timing,context.time))
         && kept.revision==juce::String(sourceDependency(context.capture.manifest,a.sourceStart,renderInputEnd(a)));
 }
 bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,const juce::String& requestedName)
 {
+    const auto clock=liveClock.snapshot(sessionGeneration.load());
+    const auto useLive=!offlineActive.load() && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live)
+        && clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted;
+    const auto* liveContext=useLive?&*clock:nullptr;
     if(auto found=retainedIR.find(w.id);found!=retainedIR.end()){
-        if(retainedCompatible(found->second,w,context)){found->second.requestedName=requestedName;return true;}
+        if(retainedCompatible(found->second,w,context,liveContext)){found->second.requestedName=requestedName;return true;}
         retainedIR.erase(found);}
     const auto r=runtime.find(w.id);int64_t a,b;juce::String error;
     if(w.phase!=Phase::ready || w.frozen || !w.enabled || r==runtime.end() || r->second.cachedWetOnly
@@ -127,7 +131,7 @@ bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,co
     const auto revision=juce::String(sourceDependency(context.capture.manifest,w.sourceStart,renderInputEnd(w)));
     if(r->second.revision!=revision)return false; // A commit may precede the worker's next inspect pass.
     RetainedIR kept{w,model.timing,revision,requestedName};
-    if(!retainedCompatible(kept,w,context))return false;
+    if(!retainedCompatible(kept,w,context,liveContext))return false;
     retainedIR.emplace(w.id,std::move(kept));return true;
 }
 void SwellEngine::setRegenerationSensitivity(float value)
@@ -268,7 +272,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     LivePreparationObservation observation;
     {const juce::ScopedLock guard(lock);observation=livePreparation;
         ++observation.service;observation.observed=context.time;observation.source=model.timing;
-        observation.latest={};observation.revision=liveRevision;observation.preparedRevision=preparedLiveRevision;
+        observation.latest={};observation.clock.reset();observation.revision=liveRevision;observation.preparedRevision=preparedLiveRevision;
         observation.start=liveWindowStart;observation.end=liveWindowEnd;
         observation.loopStart=preparedLoopStart;observation.loopEnd=preparedLoopEnd;}
     observation.servicedAtMs=juce::Time::getMillisecondCounterHiRes();
@@ -280,6 +284,8 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     if(!hostObserved.load(std::memory_order_acquire)){observation.result="No host observation";return;}
     if(!context.time.valid){observation.result="Host timing unavailable";return;}
     if(!liveEnabled.load()){observation.result="Live disabled";return;}
+    const auto clock=liveClock.snapshot(sessionGeneration.load());observation.clock=clock;
+    if(!clock){observation.result="Awaiting coherent live clock";return;}
     Session session;uint64_t revision,generation;std::set<juce::String> held,replacements;
     int64_t loopFrom=0,loopTo=0;
     for(int attempt=0;attempt<8;++attempt){const auto sequence=loopSequence.load(std::memory_order_acquire);if(sequence&1)continue;
@@ -287,7 +293,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(sequence==loopSequence.load(std::memory_order_acquire)){if(on && b>a){loopFrom=a;loopTo=b;}break;}}
     {
         const juce::ScopedLock guard(lock);live.collect();
-        if(!transportMappingMatches(model.timing,context.time)){observation.result="Source/host mapping incompatible";return;}
+        if(clock->session!=sessionGeneration.load() || clock->accepts(model.timing,context.time)!=LiveGate::admitted){observation.result="Live clock or asset timing incompatible";return;}
         // Restore validates members serially. Avoid rebuilding an ever-growing
         // full-support gain plan after each member; publish once restoration
         // has settled (failed members are still explicitly unavailable).
@@ -314,7 +320,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         attempted=true;++observation.attempt;observation.attemptedAtMs=observation.servicedAtMs;
         observation.result="Preparation cancelled or dependencies changed";observation.loopStart=loopFrom;observation.loopEnd=loopTo;
         for(auto& w:session.swells)if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end()){
-            if(!retainedCompatible(kept->second,w,context)){invalidateLiveLocked(w.id);observation.result="Retained dependencies incompatible";return;}
+            if(!retainedCompatible(kept->second,w,context,&*clock)){invalidateLiveLocked(w.id);observation.result="Retained dependencies incompatible";return;}
             if(w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content)){
                 const auto enabled=w.enabled,muted=w.muted,solo=w.solo;w=kept->second.accepted;w.phase=Phase::ready;
                 w.enabled=enabled;w.muted=muted;w.solo=solo;held.insert(w.id);
@@ -400,14 +406,26 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
                 gainPlanPreparationMs=juce::Time::getMillisecondCounterHiRes()-started;++gainPlanBuilds;}}}
     }
     if(error.isEmpty() && !prepareLiveSegments(*pub,error)){}
+    if(livePublicationHold.load()){
+        livePublicationWaiting=true;
+        while(livePublicationHold.load() && !threadShouldExit() && !cancel())juce::Thread::sleep(2);
+        livePublicationWaiting=false;
+    }
     const auto latest=contextProvider();observation.latest=latest.time;
-    if(latest.captureGeneration!=context.captureGeneration || !transportMappingMatches(session.timing,latest.time)){observation.result="Latest source generation or mapping changed";return;}
+    const auto latestClock=liveClock.snapshot(sessionGeneration.load());
+    if(!latestClock || !clock->sameRun(*latestClock) || latestClock->accepts(session.timing,latest.time)!=LiveGate::admitted){
+        ++liveClockRejections;observation.result="Live clock changed during preparation; retry";return;}
+    if(latest.captureGeneration!=context.captureGeneration || liveAssetGate(session.timing,latest.time)!=LiveGate::admitted){observation.result="Latest source generation or mapping changed";return;}
     for(const auto& w:session.swells)if(!w.frozen && w.render.present()
         && sourceDependency(latest.capture.manifest,w.sourceStart,renderInputEnd(w))!=sourceDependency(context.capture.manifest,w.sourceStart,renderInputEnd(w))){observation.result="Latest source dependency changed";return;}
+    if(!((latest.time.sample>=pub->start && latest.time.sample<pub->end)
+        || (latest.time.sample>=pub->loopStart && latest.time.sample<pub->loopEnd))){
+        observation.result="Live position left candidate coverage; retry";return;}
     const juce::ScopedLock guard(lock);if(cancel())return;
     if(error.isNotEmpty()){liveStatus=error;observation.result=error;return;}
     const auto start=pub->start,end=pub->end;const auto attenuation=pub->attenuation;
     if(pub->bytes()>available()){liveStatus="256 MiB live publication budget exceeded";observation.result=liveStatus;return;}
+    if(livePublicationFail.exchange(false)){++livePublicationFailures;observation.result="Injected transient live publication miss";return;}
     if(live.publish(std::move(pub))){for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;observation.preparedRevision=revision;observation.result="Published complete window";liveWindowStart=start;liveWindowEnd=end;
         preparedLoopStart=loopFrom;preparedLoopEnd=loopTo;
         liveAttenuationDb=juce::Decibels::gainToDecibels(attenuation);liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}

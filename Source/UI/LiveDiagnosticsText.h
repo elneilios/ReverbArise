@@ -34,6 +34,9 @@ inline juce::String liveCallbackText(const std::optional<LiveCallbackObservation
     const auto& d=*observation;
     juce::String evidence=title+" | block "+juce::String(static_cast<juce::int64>(d.block))+" | "+liveGateText(d.gate)
         +" | publication "+juce::String(d.hasPublication?1:0)+" revision "+juce::String(static_cast<juce::int64>(d.revision));
+    if(d.usesLiveClock)evidence+="\nLive run "+juce::String(static_cast<juce::int64>(d.liveRun))
+        +" | session "+juce::String(static_cast<juce::int64>(d.liveSession))+" reset "+juce::String(static_cast<juce::int64>(d.liveReset))
+        +"\nLive reference: "+liveTimingText(d.liveReference);
     evidence+="\nObserved: "+liveTimingText(d.observed);
     if(d.hasPublication)evidence+="\nPublished: "+liveTimingText(d.published);
     evidence+="\nOrigins published / observed / delta samples: ";
@@ -51,6 +54,8 @@ inline juce::String liveDiagnosticsText(const EditorSnapshot& state)
     evidence+="\n"+liveCallbackText(state.liveLastRejection,"Historical last rejection (not current)");
     const auto& w=state.livePreparation;
     evidence+="\nWorker (separate observation) | service "+juce::String(static_cast<juce::int64>(w.service))+" | "+w.result;
+    if(w.clock)evidence+="\nWorker live run "+juce::String(static_cast<juce::int64>(w.clock->run))+" | "+liveGateText(w.clock->gate)
+        +" | session "+juce::String(static_cast<juce::int64>(w.clock->session))+"\nWorker run reference: "+liveTimingText(w.clock->reference);
     evidence+="\nService ms "+juce::String(w.servicedAtMs,3)+" | attempt "+juce::String(static_cast<juce::int64>(w.attempt))
         +" at ms "+juce::String(w.attemptedAtMs,3)+" | last attempt: "+w.lastAttemptResult;
     evidence+="\nRevision current / prepared: "+juce::String(static_cast<juce::int64>(w.revision))+" / "+juce::String(static_cast<juce::int64>(w.preparedRevision))

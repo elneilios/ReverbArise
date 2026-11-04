@@ -5,9 +5,10 @@ OpenSpec: `diagnose-perform-transport-silence`.
 
 ## Scope and causal status
 
-This increment adds read-only callback/worker observations and the existing
-Diagnostics binding. It does not change timing tolerance, rewrite source/render
-positions, reset an instance or claim to repair the reported silence.
+The initial increment added read-only callback/worker observations and the existing
+Diagnostics binding. The subsequent owner-approved live clock repair is described
+below; historical pre-fix results remain preserved. No stored source/render
+positions, project identities or timing tolerance constants were migrated.
 
 Code inspection confirms that playing admission can reject an existing
 publication and that Stop clears the play-gated incompatibility flag. This does
@@ -72,9 +73,9 @@ passing automated cases as owner UAT.
 
 ## Handoff status
 
-OpenSpec tasks 1.1-1.4 and 2.1 are complete (5/11). Repair/retry/lifecycle tasks
-and final fix acceptance remain open. Task 3.1 needs owner review of the mapping
-contract change described below before behavioral edits. Although native
+At the diagnostic/evidence handoff, tasks 1.1-1.4 and 2.1 were complete (5/11).
+The owner subsequently approved the revised live mapping plan. Current repair
+verification and remaining owner acceptance are recorded below. Although native
 Debug/Release validation passed for this diagnostic increment, task 4.1 remains
 open for the eventual repair's final integrated validation. Task 4.2 is not a
 request to perform acceptance on a diagnostic-only build.
@@ -175,3 +176,97 @@ silently migrate saved mappings, shift rendered audio, hard-code 16 as a global
 correction, or remove genuine incompatibility reporting. The exact admission and
 rejection rules must be captured in revised planning artifacts and reviewed before
 implementation. No behavioral repair or tolerance change has been made.
+
+## Implemented live clock repair
+
+The callback now owns an ephemeral live run mapping, published independently of
+read-only telemetry for worker validation. Parked/source origin difference is
+informational. Within a run the existing strict one-sample mapping guard remains
+unchanged; invalid timing/ranges do not fake Stop, and seeks, loops and output
+controls do not silently rebase a rejected mapping. Session/audio reset requires
+fresh runtime ownership. Fixed asset metadata and generation checks still gate
+actual output. Stored sample positions and the shared strict mapping helper are
+unchanged. Capture, Audition, internal Export and host offline retain their
+original timing contracts.
+
+The worker validates this same live authority before eligibility/fast-path reuse
+and again before publication. It rejects superseded clock/session/source/render
+work and stale windows that no longer cover the current destination, then retries
+without claiming candidate readiness. Existing resident PCM can join at its
+original absolute position; no 16-sample correction or waveform regeneration is
+needed merely because the host starts playing.
+
+### Regression coverage and results
+
+- The exact recorded-value `--issue-53-expected-wet` mode now exits **0** with
+  actual resident synthetic wet, including first-block admission; previously it
+  failed its wet-output assertion. Source/publication origin delta remains 16
+  samples while the actual run reference is compatible.
+- Managed-asset engine cases cover **7 current, 61 current and 61 frozen** swells
+  at 48 kHz / 122 BPM / 4/4, with zero, 16 and 64-sample cross-state offsets.
+  They assert warm/cold/later/loop samples, within-run drift refusal, unavailable
+  timing, live/Perform gating, confirmed Stop/Play, independent instances,
+  unchanged persisted data/asset identities and no replay of elapsed wet.
+- Held preparations deterministically exercise Stop/Play, restore, shape/render
+  revision, source generation and late destinations. An injected publication
+  fault verifies bounded retry. The stale-window case rejects an obsolete window
+  before consuming that fault, proving revalidation rather than eventual luck.
+- Real processor cases compare Audition samples before/after offset live playback,
+  preserve captured source references and persisted session encoding, and compare
+  internal Export samples while host timing has the offset. Accepted IR replacement
+  live samples and host offline samples retain their existing references.
+- Callback allocation/deallocation and concurrent clock/diagnostic-reader checks
+  pass. Fresh-run rate/tempo/meter incompatibilities still reject assets. The shared
+  strict transport-time tests remain unchanged.
+- Native Debug wrapper `scripts/build.ps1 -Configuration Debug -Test`:
+  **46/46 CTest checks passed**, 176.44 seconds; logs
+  `out/build-logs/Debug/20261104-191911-bb91516d/`. This includes the final worker
+  coverage guard. The later line-wrap cleanup and extra 61-current case are covered
+  by final Release and supplementary focused Debug validation below.
+- Final native Release wrapper `scripts/build.ps1 -Configuration Release -Test`:
+  **46/46 passed**, 75.66 seconds; logs
+  `out/build-logs/Release/20261104-192255-54dcfc50/`. A single diagnostic panel was
+  rendered via `PREVERB_UI_LIVE_OUTPUT`; other screenshot output was disabled.
+- Supplementary focused native Debug on final text and all expanded cases:
+  **6/6 passed**, 82.41 seconds, after wrapper build
+  `out/build-logs/Debug/20261104-192803-298743a7/`. The idle-tree CTest filter was
+  `^preverb_(transport_(playback|time)|swell_engine|ir_handover|workflow_processor|swell_ui)_test$`.
+  The final recorded-value `--issue-53-expected-wet` invocation also exited 0.
+- A final test-only lifetime cleanup makes fixture workflow state outlive its
+  engine worker. Debug wrapper build `20261104-193625-0219615b` passed, followed
+  by the focused native engine test passing in 67.96 seconds. Production source
+  and the validated Release binary were unchanged by this cleanup.
+- UI standards guard passed (42 files / 61 existing bounded definition/debt
+  occurrences); strict OpenSpec and diff checks passed. PowerShell wrapper/lint
+  fixtures are distinct from MSVC compilation and the native C++ tests; registered
+  fixture checks also pass within the full CTest gates.
+
+Builds reuse populated caches and report base revision `548ea0f` dirty. The earlier
+screenshot-enabled Debug run passed 46/46 in 257.20 seconds before the final
+coverage guard, with logs `out/build-logs/Debug/20261104-191340-7d66168e/`.
+Timings have different configurations/output scopes and are not a speed comparison.
+Two new fixture setup mistakes (a >5-second capture commit and a metadata revision
+instead of the persisted PCM fingerprint) were corrected using the existing
+admission/fingerprint APIs; production source/asset guards were not weakened.
+
+The final [native diagnostic screenshot](2026-11-04-issue-53-fixed-live-admission.png)
+was visually inspected. Live and worker references have separate rows; a glyph
+width assertion checks the panel text fits without shrinking its shared font.
+No new control family, style token or exception was introduced. This synthetic
+native screenshot is not proof of host playback or DPI acceptance.
+
+### Remaining owner check
+
+The native recorded-timing failure is fixed. One brief Song playback of the known
+swell on the previously failing instance/copy is still required for task 4.2.
+Automated edge cases, Audition/Export sample comparisons and asset integrity checks
+need not be repeated by the owner. FL Studio/DPI coverage remains unclaimed until
+observed. Do not merge or archive based solely on native passes.
+
+Installation is pending coordination: the installed standard-path VST3 changed
+externally during validation and FL Studio loaded it. Its binary SHA-256 was
+`1A38813E7960935DD058C18C48F5ED60903B0C6C4B4467AEDB8DDB8A78AB6BD1`,
+different from this branch's tested Release binary
+`5CE4A70D2A391C9957F2F2F8EBE3ADC11EEFAD4389536DE67AF6B718224D271E`.
+The pre-copy identity guard stopped before any backup or installation mutation.
+Do not overwrite that unknown loaded build until its installer is coordinated.

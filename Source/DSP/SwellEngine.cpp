@@ -448,6 +448,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     transportActive.store(time.playing,std::memory_order_relaxed);
     hostObserved.store(true,std::memory_order_release);
     const auto session=sessionGeneration.load(std::memory_order_acquire);
+    const auto clock=liveClock.observe(time,frames,session);
     if(previousTransportSession!=session){previousTransportPlaying=false;previousTransportSession=session;}
     const auto publishPass=[&](int64_t start,int64_t end){if(start>=end)return;
         if(passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
@@ -465,7 +466,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto modeAllows=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
     const auto priority=modeAllows && liveEnabled.load() && time.playing;
     if(priority && !songPriority)voice.stop();songPriority=priority;
-    live.process(left,right,frames,time,modeAllows);
+    live.process(left,right,frames,time,modeAllows,&clock);
     processAudio(left,right,frames,time.song);
 }
 void SwellEngine::captureStopped() noexcept

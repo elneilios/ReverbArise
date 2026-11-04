@@ -16,7 +16,7 @@ int main(int argc,char* argv[]){return runTest([&]{
     // Owner recording 2026-11-04: the ready stopped mapping differs from
     // every playing observation by 16 samples. PCM here is synthetic; timing
     // and publication identity are replayed from the host diagnostic evidence.
-    {auto replay=std::make_unique<TransportPlayback>();
+    {auto replay=std::make_unique<TransportPlayback>();LiveTransportClock clock;
         const SongTime stopped{true,3399344,144,48000,122,4,4};
         const SongTime playing{true,3436475,145.572232638889488,48000,122,4,4};
         auto publication=std::make_unique<LivePublication>();publication->mapping=stopped;
@@ -28,23 +28,66 @@ int main(int argc,char* argv[]){return runTest([&]{
         replay->invalidate(0,1);REQUIRE(replay->publish(std::move(publication)));
         float left[245],right[245];std::fill_n(left,245,.25f);std::fill_n(right,245,.25f);
         TransportTime time{playing,true};
-        {AudioAllocationGuard guard;replay->process(left,right,245,time);}
+        {AudioAllocationGuard guard;const auto current=clock.observe(time,245,1);replay->process(left,right,245,time,true,&current);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
         if(argc>1 && std::string_view(argv[1])=="--issue-53-expected-wet"){
-            // Deliberately fails before a reviewed compatibility fix. The
-            // resident synthetic wet should be audible after its admission ramp.
+            // Exact owner timing must now admit resident synthetic wet without
+            // changing any stored audio/sample coordinate.
             REQUIRE(left[244]>.25f);return;
         }
-        const auto rejected=replay->observation();REQUIRE(rejected);
-        REQUIRE(rejected->gate==LiveGate::origin && rejected->revision==30 && rejected->validCount);
-        REQUIRE(std::abs(rejected->originDelta-16)<.00001);
-        REQUIRE(replay->incompatible() && !replay->active() && left[244]==.25f);
-        time={stopped,false};replay->process(left,right,100,time);
+        const auto admitted=replay->observation();REQUIRE(admitted);
+        REQUIRE(admitted->gate==LiveGate::admitted && admitted->revision==30 && admitted->validCount);
+        REQUIRE(admitted->usesLiveClock && admitted->liveRun==1 && admitted->liveReference.sample==playing.sample);
+        REQUIRE(std::abs(admitted->originDelta-16)<.00001); // Informational source delta.
+        REQUIRE(!replay->incompatible() && replay->active() && left[0]>.25f && std::abs(left[244]-.32f)<1e-6f);
+        time={stopped,false};auto current=clock.observe(time,100,1);replay->process(left,right,100,time,true,&current);
         REQUIRE(!replay->incompatible() && replay->observation()->gate==LiveGate::stopped);
-        REQUIRE(replay->lastRejection()->block==rejected->block);
-        time={playing,true};replay->process(left,right,245,time);
-        REQUIRE(replay->incompatible() && replay->observation()->revision==30);
+        REQUIRE(!replay->lastRejection());
+        time={playing,true};current=clock.observe(time,245,1);replay->process(left,right,245,time,true,&current);
+        REQUIRE(!replay->incompatible() && replay->observation()->revision==30 && replay->observation()->liveRun==2);
     }
+
+    // A continuous run cannot be silently rebased by a seek, invalid timing,
+    // output gating or revision changes. Confirmed Stop and session reset can.
+    {LiveTransportClock clock;TransportTime at{{true,16,0,1000,120,4,4},true};
+        auto current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::admitted && current.run==1);
+        at.song.sample=516;at.song.ppq=1;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::admitted);
+        at.song.sample=18;at.song.ppq=0;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::origin && current.reference.sample==16);
+        at.song.valid=false;at.playing=false;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::invalidTiming);
+        at.song.valid=true;at.playing=true;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::origin && current.run==1);
+        at.playing=false;current=clock.observe(at,0,1);REQUIRE(current.gate==LiveGate::invalidRange);
+        at.playing=true;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::origin);
+        at.song.sample=16;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::admitted);
+        at.playing=false;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::stopped);
+        at.playing=true;at.song.sample=64;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::admitted && current.run==2);
+        at.song.bpm=121;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::tempo);
+        at.song.bpm=120;at.song.rate=44100;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::rate);
+        at.song.rate=1000;at.song.numerator=3;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::meter);
+        at.song.numerator=4;at.song.sample=INT64_MAX-2;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::invalidRange);
+        clock.reset();REQUIRE(!clock.snapshot(1));at.song.sample=32;current=clock.observe(at,20,1);REQUIRE(current.gate==LiveGate::admitted);
+        REQUIRE(!clock.snapshot(2));current=clock.observe(at,20,2);REQUIRE(current.session==2 && current.gate==LiveGate::admitted);
+        auto player=std::make_unique<TransportPlayback>();player->invalidate(0,1);player->invalidate(1,1);REQUIRE(player->publish(fixture()));
+        float l[20]{},r[20]{};at.song.sample=60;at.song.ppq=.12;clock.reset();current=clock.observe(at,20,2);
+        player->process(l,r,20,at,true,&current);REQUIRE(!player->incompatible() && std::abs(l[19]-.07f)<1e-6f);
+        at.song.sample+=8;current=clock.observe(at,20,2);
+        player->configure(false,LiveRouting::dryWet,0);player->process(l,r,20,at,true,&current);
+        player->configure(true,LiveRouting::dryWet,0);player->process(l,r,20,at,false,&current);
+        player->process(l,r,20,at,true,&current);REQUIRE(player->incompatible() && player->observation()->gate==LiveGate::origin);
+        for(int dimension=0;dimension<3;++dimension){
+            LiveTransportClock fresh;TransportTime incompatible{{true,60,.12,1000,120,4,4},true};
+            if(dimension==0)incompatible.song.rate=44100;if(dimension==1)incompatible.song.bpm=121;if(dimension==2)incompatible.song.numerator=3;
+            const auto validated=fresh.observe(incompatible,20,1);REQUIRE(validated.gate==LiveGate::admitted);
+            player->process(l,r,20,incompatible,true,&validated);
+            const auto expected=dimension==0?LiveGate::rate:dimension==1?LiveGate::tempo:LiveGate::meter;
+            REQUIRE(player->incompatible() && player->observation()->gate==expected);
+        }
+    }
+    {LiveTransportClock clock;TransportTime at{{true,0,0,1000,120,4,4},true};clock.observe(at,16,1);
+        std::atomic<bool> done{false},coherent{true};std::thread reader([&]{while(!done.load())if(const auto d=clock.snapshot(1))
+            if(d->gate!=LiveGate::admitted || d->observed.ppq!=d->observed.sample/500.0 || d->reference.sample!=0)coherent=false;});
+        for(int n=0;n<2000;++n){at.song.sample=n;at.song.ppq=n/500.0;
+            {AudioAllocationGuard guard;clock.observe(at,16,1);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);}
+        done=true;reader.join();REQUIRE(coherent.load());}
 
     // Telemetry owns values, not publication pointers; Stop preserves rejection.
     {auto diagnostic=std::make_unique<TransportPlayback>();

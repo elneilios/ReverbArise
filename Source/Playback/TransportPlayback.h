@@ -2,7 +2,7 @@
 #include <Core/SwellSession.h>
 #include <Core/TransportTime.h>
 #include <DSP/ReverseConvolution.h>
-#include "LiveDiagnostics.h"
+#include "LiveTransportClock.h"
 #include <array>
 #include <atomic>
 
@@ -53,7 +53,7 @@ public:
     // Offline start has no previous route to crossfade from.
     void primeForOffline() noexcept {gain=gainTarget=level.load();dry=dryTarget=enabled.load() && wetOnly.load()?0.0f:1.0f;gainRemaining=dryRemaining=0;}
     void reset() noexcept {epoch.fetch_add(1);}
-    void process(float*,float*,int,const TransportTime&,bool workflowAllows=true) noexcept;
+    void process(float*,float*,int,const TransportTime&,bool workflowAllows=true,const LiveClockSnapshot* clock=nullptr) noexcept;
     bool missing() const noexcept {return missed.load();}
     bool incompatible() const noexcept {return badMapping.load();}
     bool active() const noexcept {return liveActive.load();}
@@ -62,7 +62,7 @@ public:
 private:
     LiveObservationSlot<LiveCallbackObservation> callbackObservation,rejectionObservation;
     uint64_t observedBlocks=0;
-    void observe(const LivePublication*,int,const TransportTime&,bool,bool,bool,bool,bool) noexcept;
+    void observe(const LivePublication*,int,const TransportTime&,bool,bool,bool,bool,bool,LiveGate,const LiveClockSnapshot*) noexcept;
     enum State{free,ready,activeSlot,retired};
     struct Slot{std::atomic<int> state{free};std::unique_ptr<LivePublication> data;};
     struct Voice
