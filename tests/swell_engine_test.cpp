@@ -21,8 +21,10 @@ template<class F> static void waitFor(F condition,const std::source_location loc
     const auto deadline=juce::Time::getMillisecondCounter()+30000;
     while(!condition()) { if(juce::Time::getMillisecondCounter()>deadline) throw std::runtime_error("Timeout at "+std::to_string(location.line())); juce::Thread::sleep(2); }
 }
+#include "LiveClockEngineCases.h"
 int main() { return runTest([]
 {
+    runLiveClockEngineCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
     REQUIRE(capture.commit(0,1000,source.data(),3000));
@@ -38,6 +40,27 @@ int main() { return runTest([]
     waitFor([&]{auto s=engine.savedSession();return s.swells[0].irName=="ir.wav" && s.swells[1].irName=="ir.wav";});
     engine.generate(true); waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
     const auto initial=engine.snapshot(); REQUIRE(initial.renderCount==2 && initial.raw && initial.shaped);
+    // Preparation telemetry is worker-owned and does not imply playing admission.
+    {float l[16]{},r[16]{};TransportTime at{context.time,false};
+        engine.processTransportAudio(l,r,16,at);
+        waitFor([&]{const auto s=engine.snapshot();return s.liveReady && s.livePreparation.result=="Prepared window retained";});
+        const auto prepared=engine.snapshot().livePreparation;
+        REQUIRE(prepared.attempt>0 && prepared.preparedRevision==prepared.revision);
+        REQUIRE(prepared.lastAttemptResult=="Published complete window" && prepared.end>prepared.start);
+        REQUIRE(prepared.attemptedAtMs>0 && prepared.servicedAtMs>=prepared.attemptedAtMs);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=1;}
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Live clock or asset timing incompatible";});
+        const auto rejected=engine.snapshot().livePreparation;
+        REQUIRE(rejected.service>prepared.service && rejected.attempt==prepared.attempt);
+        REQUIRE(rejected.observed.ppq==1 && rejected.source.ppq==0);
+        REQUIRE(rejected.lastAttemptResult==prepared.lastAttemptResult);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=0;}
+        engine.setLivePlayback(false,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Live disabled";});
+        engine.setLivePlayback(true,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Prepared window retained";});
+    }
+
     REQUIRE(engine.edit(first,[&](auto& w,auto& text){return fullShape(w,initial.raw->start,initial.raw->end,text);}));
     waitFor([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.audition());
     float checkLeft[64]{},checkRight[64]{};engine.processAudio(checkLeft,checkRight,64,context.time);REQUIRE(engine.snapshot().playing);

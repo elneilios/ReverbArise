@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Perform live diagnostics](development/perform-live-diagnostics.md) � read-only callback admission, historical rejection and worker preparation evidence for transport silence.
+
 - [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
 
 - [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.

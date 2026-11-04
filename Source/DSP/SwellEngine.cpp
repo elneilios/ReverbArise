@@ -59,6 +59,8 @@ EditorSnapshot SwellEngine::snapshot() const
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
+    s.livePreparation=livePreparation;
+    s.liveObservation=live.observation();s.liveLastRejection=live.lastRejection();
     s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;s.liveAttenuationDb=liveAttenuationDb;
     s.gainPlanPeak=gainPlanPeak;s.gainPlanPreparationMs=gainPlanPreparationMs;s.gainPlanBuilds=gainPlanBuilds;s.gainPlanCacheHits=gainPlanCacheHits;
     s.liveReady=preparedLiveRevision>0 && preparedLiveRevision==liveRevision;
@@ -446,6 +448,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     transportActive.store(time.playing,std::memory_order_relaxed);
     hostObserved.store(true,std::memory_order_release);
     const auto session=sessionGeneration.load(std::memory_order_acquire);
+    const auto clock=liveClock.observe(time,frames,session);
     if(previousTransportSession!=session){previousTransportPlaying=false;previousTransportSession=session;}
     const auto publishPass=[&](int64_t start,int64_t end){if(start>=end)return;
         if(passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
@@ -463,7 +466,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto modeAllows=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
     const auto priority=modeAllows && liveEnabled.load() && time.playing;
     if(priority && !songPriority)voice.stop();songPriority=priority;
-    live.process(left,right,frames,time,modeAllows);
+    live.process(left,right,frames,time,modeAllows,&clock);
     processAudio(left,right,frames,time.song);
 }
 void SwellEngine::captureStopped() noexcept
