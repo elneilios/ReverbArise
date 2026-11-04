@@ -3,6 +3,7 @@
 inline void automaticProcessorCases()
 {
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    processor->swellEngine().setMonitoring(m3::AuditionMode::wetOnly,.5f); // This historical oracle explicitly exercises wet-only monitoring.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0);
     auto& engine=processor->swellEngine();engine.setAutoMarkers(false);REQUIRE(processor->isMappingEnabled());
     processor->prepareToPlay(48000,4096);TestPlayHead head;juce::MidiBuffer midi;

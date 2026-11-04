@@ -1,6 +1,7 @@
 #include "TestSupport.h"
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/MusicalTimelineRuler.h>
+#include <UI/Controls/LatchingActionButton.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
 using namespace m3::ui;
@@ -76,6 +77,29 @@ static void cases()
     auto available=image(clock);clock.valid=false;auto unavailable=image(clock);int marked=0;
     for(int x=0;x<500;++x)for(int y=0;y<34;++y){marked+=available.getPixelAt(x,y).getAlpha()!=0;REQUIRE(unavailable.getPixelAt(x,y).getAlpha()==0);}
     REQUIRE(marked>0);row.setLookAndFeel(nullptr);
+    LatchingActionButton snap("Snap");snap.setLookAndFeel(&theme);snap.setBounds(0,0,96,34);snap.setVisible(true);
+    bool requested=true,ctrl=false;int edits=0;
+    const auto display=[&]{snap.display(requested && !ctrl);};
+    snap.onClick=[&]{if(snap.isEnabled()){requested=!requested;++edits;display();}};
+    display();REQUIRE(snap.getToggleState() && edits==0);
+    ctrl=true;display();REQUIRE(!snap.getToggleState() && requested && edits==0);
+    ctrl=false;display();REQUIRE(snap.getToggleState() && requested && edits==0);
+    click(snap);REQUIRE(!requested && !snap.getToggleState() && edits==1);
+    ctrl=true;display();ctrl=false;display();REQUIRE(!snap.getToggleState() && !requested && edits==1);
+    snap.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));pump();REQUIRE(requested && snap.getToggleState() && edits==2);
+    snap.triggerClick();snap.setEnabled(false);pump();REQUIRE(requested && edits==2);
+    snap.display(true);REQUIRE(edits==2);snap.setEnabled(true);
+    for(const float scale:{1.f,1.25f,1.5f,2.f})REQUIRE(snap.createComponentSnapshot(snap.getLocalBounds(),true,scale).isValid());
+    snap.addToDesktop(juce::ComponentPeer::windowIsTemporary);snap.grabKeyboardFocus();pump();
+    REQUIRE(snap.hasKeyboardFocus(false) && snap.getAccessibilityHandler()!=nullptr);
+    auto* accessibility=snap.getAccessibilityHandler();snap.display(true);
+    REQUIRE(accessibility->getCurrentState().isCheckable() && accessibility->getCurrentState().isChecked());
+    snap.display(false);REQUIRE(!accessibility->getCurrentState().isChecked() && edits==2);
+    snap.display(true);REQUIRE(accessibility->getCurrentState().isChecked() && edits==2);
+    REQUIRE(snap.getLocalBounds().toFloat().contains(snap.focusInkBounds()));
+    snap.removeFromDesktop();ctrl=true;display();click(snap);
+    REQUIRE(!requested && !snap.getToggleState() && edits==3);ctrl=false;display();REQUIRE(!snap.getToggleState());
+    snap.setLookAndFeel(nullptr);
 }
 
 // Small binding example: the workspace owns bounds, logarithmic domain and Fit.
@@ -110,10 +134,48 @@ public:
     {setUsingNativeTitleBar(true);setContentOwned(new Example,true);centreWithSize(560,210);setVisible(true);}
     void closeButtonPressed()override{setVisible(false);juce::MessageManager::getInstance()->stopDispatchLoop();}
 };
+class SnapExample final:public juce::Component,private juce::Timer
+{
+public:
+    SnapExample()
+    {
+        setLookAndFeel(&theme);for(auto* component:std::initializer_list<juce::Component*>{&on,&off,&disabled,&help})addAndMakeVisible(component);
+        on.setTitle("Snap requested On");off.setTitle("Snap requested Off");disabled.setEnabled(false);disabled.display(true);
+        on.onClick=[this]{requestedOn=!requestedOn;refresh();};off.onClick=[this]{requestedOff=!requestedOff;refresh();};
+        applyTextRole(help,TextRole::helper);help.setText("Saved On / Saved Off / Disabled\nHold Ctrl to bypass; release to restore. Control preview only.",juce::dontSendNotification);
+        refresh();startTimerHz(30);
+    }
+    ~SnapExample()override{stopTimer();setLookAndFeel(nullptr);}
+    void resized()override
+    {auto area=getLocalBounds().reduced(spacing::section);auto row=area.removeFromTop(controlGeometry::height);
+        for(auto* button:{&on,&off,&disabled}){button->setBounds(row.removeFromLeft(96));row.removeFromLeft(spacing::related);}
+        area.removeFromTop(spacing::related);help.setBounds(area);}
+    void paint(juce::Graphics& g)override{g.fillAll(background);}
+private:
+    void timerCallback()override{refresh();}
+    void refresh(){const auto bypass=juce::ModifierKeys::getCurrentModifiersRealtime().isCtrlDown();on.display(requestedOn && !bypass);off.display(requestedOff && !bypass);}
+    WorkspaceTheme theme;LatchingActionButton on{"Snap"},off{"Snap"},disabled{"Snap"};juce::Label help;
+    bool requestedOn=true,requestedOff=false;
+};
+class SnapReview final:public juce::DocumentWindow
+{
+public:
+    SnapReview():DocumentWindow("Issue #46 - Snap toggle control",background,DocumentWindow::closeButton)
+    {setUsingNativeTitleBar(true);setContentOwned(new SnapExample,true);centreWithSize(560,190);setVisible(true);}
+    void closeButtonPressed()override{setVisible(false);juce::MessageManager::getInstance()->stopDispatchLoop();}
+};
 int main(int argc,char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     return runTest([&]{cases();
+        const auto snapOutput=juce::SystemStats::getEnvironmentVariable("PREVERB_SNAP_OUTPUT",{});
+        if(snapOutput.isNotEmpty())
+        {
+            SnapExample example;example.setSize(560,190);example.setVisible(true);
+            juce::File file(snapOutput);REQUIRE(file.getParentDirectory().createDirectory().wasOk());
+            auto stream=file.createOutputStream();REQUIRE(stream);juce::PNGImageFormat png;
+            REQUIRE(png.writeImageToStream(example.createComponentSnapshot(example.getLocalBounds()),*stream));
+        }
         const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_TIMELINE_OUTPUT",{});
         if(output.isNotEmpty())
         {
@@ -123,5 +185,6 @@ int main(int argc,char** argv)
             {auto stream=directory.getChildFile("shared-timeline-"+juce::String(juce::roundToInt(scale*100))+".png").createOutputStream();
                 REQUIRE(stream);juce::PNGImageFormat png;REQUIRE(png.writeImageToStream(example.createComponentSnapshot(example.getLocalBounds(),true,scale),*stream));}
         }
-        if(argc>1 && juce::String(argv[1])=="--review"){Review window;juce::MessageManager::getInstance()->runDispatchLoop();}});
+        if(argc>1 && juce::String(argv[1])=="--review"){Review window;juce::MessageManager::getInstance()->runDispatchLoop();}
+        if(argc>1 && juce::String(argv[1])=="--review-snap"){SnapReview window;juce::MessageManager::getInstance()->runDispatchLoop();}});
 }

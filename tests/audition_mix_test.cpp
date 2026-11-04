@@ -34,6 +34,19 @@ int main(){return runTest([]
     // Equal musical membership and unity path controls produce the same wet
     // interior samples; live admission ramps remain a documented boundary.
     WetRender quiet;quiet.start=0;quiet.rate=1000;quiet.samples.assign(80,.25f);quiet.peak=.25f;
+    for(const float db:{-12.f,0.f,6.f})for(const auto mode:{AuditionMode::wetOnly,AuditionMode::dryWet})
+    {
+        SourceInterval captured;captured.start=0;captured.end=40;captured.rate=1000;captured.samples.assign(80,.01f);
+        WetRender result;REQUIRE(prepareAuditionMix(quiet,&captured,mode,.05f,previewMemoryBudget,result,branch,sum,error,false,GainPolicy::musical,db));
+        const auto gain=juce::Decibels::decibelsToGain(db);const auto expected=.25f*gain+(mode==AuditionMode::dryWet?.01f:0.f);
+        REQUIRE(branch==0 && sum==0);for(auto sample:result.samples)REQUIRE(std::abs(sample-expected)<1e-6);
+        auto pub=std::make_unique<LivePublication>();pub->mapping={true,0,0,1000,120,4,4};pub->start=0;pub->end=40;
+        pub->attenuation=1;pub->measuredAttenuation=true;pub->entries.push_back({0,1,0,40,.25f,std::make_shared<WetRender>(quiet)});REQUIRE(prepareLiveSegments(*pub,error));
+        TransportPlayback transport;transport.invalidate(0,1);transport.configure(true,mode==AuditionMode::wetOnly?LiveRouting::wetOnly:LiveRouting::dryWet,db);REQUIRE(transport.publish(std::move(pub)));
+        float a[40],b[40];std::fill_n(a,40,.01f);std::fill_n(b,40,.01f);transport.process(a,b,40,{{true,0,0,1000,120,4,4},true});
+        for(int n=6;n<40;++n)REQUIRE(std::abs(a[n]-result.samples[n*2])<1e-6 && std::abs(b[n]-result.samples[n*2+1])<1e-6);
+    }
+    REQUIRE(!prepareAuditionMix(quiet,nullptr,AuditionMode::wetOnly,.5f,previewMemoryBudget,out,branch,sum,error,false,GainPolicy::musical,std::numeric_limits<float>::quiet_NaN()));
     WetRender monitored;REQUIRE(prepareAuditionMix(quiet,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,monitored,branch,sum,error,false,GainPolicy::musical));
     auto publication=std::make_unique<LivePublication>();publication->mapping={true,0,0,1000,120,4,4};publication->start=0;publication->end=40;
     publication->attenuation=1;publication->measuredAttenuation=true;publication->entries.push_back({0,1,0,40,.25f,std::make_shared<WetRender>(quiet)});

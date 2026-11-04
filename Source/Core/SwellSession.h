@@ -2,6 +2,7 @@
 #include <Capture/CaptureManifest.h>
 #include <Core/SongTime.h>
 #include <Core/ManagedAsset.h>
+#include <Core/PerformNavigationState.h>
 #include <Core/ExportState.h>
 #include <juce_core/juce_core.h>
 #include <optional>
@@ -76,6 +77,7 @@ struct Session
     std::vector<juce::String> selected;
     juce::String primary;
     SongTime timing;
+    PerformNavigationState performUi;
     float auditionDb = 0, sensitivity = 0.5f;
     double separationSeconds = 0.08;
     bool autoRegenerate = false;
@@ -91,6 +93,7 @@ struct Session
     float regenerationSensitivity=.5f;
     AuditionMode auditionMode = AuditionMode::wetOnly;
     float wetBlend = 0.5f;
+    bool auditionFollowsLive = false; // Absent metadata preserves legacy monitoring.
     double postRollSeconds = 2;
     ExportState exportState;
     Asset defaultIR;

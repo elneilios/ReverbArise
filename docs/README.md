@@ -12,7 +12,9 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [Perform live diagnostics](development/perform-live-diagnostics.md) � read-only callback admission, historical rejection and worker preparation evidence for transport silence.
+- [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
+
+- [Perform live diagnostics](development/perform-live-diagnostics.md) — read-only callback admission, historical rejection and worker preparation evidence for transport silence.
 
 - [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
 
