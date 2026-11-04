@@ -11,7 +11,7 @@ Overview and info remain anchored. The window remains 1100x850 by default.
 Issue #16 replaces the temporary mode dropdown with one `WorkflowHeader` reused
 across Learn, Perform and Export. It composes the existing wordmark/italic tagline,
 the approved library SegmentedSelector and semantic Settings IconActionButton,
-plus an italic role description. Only outer selector ends are rounded; internal
+plus a regular, aqua-accented role description (Issue #35). Only outer selector ends are rounded; internal
 joins are square. The header includes reserved notice space; the 1100x850 opening size remains.
 Visible selection comes from accepted model state; recording/commit locks expose
 accessible reasons without switching modes. Display names are separate from saved
@@ -43,9 +43,12 @@ Custom-painted navigation, notices, list rows and waveform text explicitly use
 only a size/style can bypass the component's LookAndFeel and is not sufficient.
 Menus, tabs, dialogs and numeric inputs use the same explicit Inter policy. Secondary text is brighter off-white (#EDF1F5). Logo, tagline, mode toggles
 and Settings share one primary-row vertical center; the toggles/cog share top,
-bottom and 36-pixel height. The italic mode description sits below the toggles
-and does not influence primary-row alignment. Its 16-pixel italic text shares
-the reserved notice row's vertical center.
+bottom and 36-pixel height. The mode description sits below the toggles and does
+not influence primary-row alignment. Issue #35 uses 14-pixel regular Inter and
+`#C7CDD4` body ink on both sides of the reserved notice row. A centred 2×16-pixel
+aqua accent has an 8-pixel gap to the description. Semantic 16-pixel SVG icons
+precede the mode labels by 8 pixels; the combined group is centred inside each
+unchanged segment. Notice severity icons and colours keep their own roles.
 
 The current logical opening default and minimum are both 1100x850, with maximum
 2000x1400. The former 1400x1000 opening size remains a supported reference size.

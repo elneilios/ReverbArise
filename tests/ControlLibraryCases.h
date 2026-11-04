@@ -13,7 +13,7 @@ using m3::ui::controls::ActionIcon;
 inline std::vector<SegmentChoice> choices(bool available=true)
 {
     return {{1,"Learn","Capture audio and discover musical moments",true,{}},
-        {2,"Perform","Shape, edit and play your swells",available,"Learn useful source audio first"},
+        {2,"Perform","Shape and place reverse swells with precision",available,"Learn useful source audio first"},
         {3,"Export","DAW wet bypassed; explicit preview only",available,"Export needs an enabled, compatible ready swell"}};
 }
 class Panel final:public juce::Component

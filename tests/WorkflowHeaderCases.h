@@ -31,9 +31,16 @@ static void workflowHeaderCases()
         REQUIRE(header.modeSelector().selectedId()==static_cast<int>(item.state.mode)+1 && requests==0);
         REQUIRE(header.settingsAction().getY()==header.modeSelector().getY() && header.settingsAction().getBottom()==header.modeSelector().getBottom());
         for(const char* name:{"brandWordmark","brandTagline"}){const auto component=findNamed(header,name);REQUIRE(component && component->getBounds().getCentreY()==header.modeSelector().getBounds().getCentreY());}
-        auto description=dynamic_cast<juce::Label*>(findNamed(header,"workflowRole"));REQUIRE(description && description->getFont().isItalic());
+        auto description=dynamic_cast<m3::ui::controls::HeaderInformation*>(findNamed(header,"workflowRole"));REQUIRE(description);
+        const auto descriptionFont=m3::ui::fontFor(*description,m3::ui::bodySize);
+        REQUIRE(!descriptionFont.isItalic() && approvedFont(descriptionFont));
         REQUIRE(description->getY()>=header.modeSelector().getBottom()+4);
-        REQUIRE(description->getBounds().getCentreY()==62 && description->getFont().getHeight()==16);
+        REQUIRE(description->getBounds().getCentreY()==62 && descriptionFont.getHeight()==14);
+        REQUIRE(description->getTitle()==m3::ui::modeSubtitle(item.state.mode));
+        REQUIRE(description->accentBounds()==juce::Rectangle<int>(0,8,2,16));
+        REQUIRE(juce::GlyphArrangement::getStringWidth(descriptionFont,description->getTitle())<=description->textBounds().getWidth());
+        const auto informationImage=description->createComponentSnapshot(description->getLocalBounds());
+        REQUIRE(informationImage.getPixelAt(0,16)==m3::ui::aqua);
         REQUIRE(!findNamed(header,"workflowStatus")); // Operational messages have their own inline bar.
         for(const auto target:{workflow::Mode::capture,workflow::Mode::live,workflow::Mode::finalise})
         {

@@ -14,7 +14,7 @@ public:
         addAndMakeVisible(header);header.display(m3::ui::presentWorkflow({workflow::Mode::live},{true,true,true}));
         prepareHeader(workflow::Mode::live);
         header.onModeRequested=[this](auto mode){prepareHeader(mode);};
-        header.addAndMakeVisible(information);header.addAndMakeVisible(headerNotice);
+        header.addAndMakeVisible(headerNotice);
         headerNotice.setHeaderAppearance(true);
         headerNotice.display({{"Recording - stop your DAW when finished","Source captured at the DAW song position.",NoticeTone::information}});
         for(size_t i=0;i<states.size();++i)
@@ -42,9 +42,6 @@ public:
     void prepareHeader(workflow::Mode mode)
     {
         header.display(m3::ui::presentWorkflow({mode},{true,true,true}));
-        header.modeSelector().display(iconChoices(),static_cast<int>(mode)+1);
-        for(auto* child:header.getChildren())if(child->getName()=="workflowRole")child->setVisible(false);
-        information.display(mode==workflow::Mode::live?"Shape and place reverse swells with precision":m3::ui::modeSubtitle(mode));
     }
     void paint(juce::Graphics& g)override
     {
@@ -58,12 +55,12 @@ public:
     {
         header.setBounds(16,16,getWidth()-32,82);explanation.setBounds(16,102,getWidth()-32,25);
         const auto column=header.modeSelector().getBounds();
-        information.setBounds(column.withY(46).withHeight(32));headerNotice.setBounds(0,46,column.getX()-16,32);
+        headerNotice.setBounds(0,46,column.getX()-16,32);
         for(size_t i=0;i<states.size();++i)states[i].setBounds(16,302+static_cast<int>(i)*58,330,36);
         for(size_t i=0;i<bars.size();++i)bars[i].setBounds(16,136+static_cast<int>(i)*48,getWidth()-32,NoticeBar::preferredHeight);
     }
     m3::ui::WorkflowHeader header;std::array<NoticeBar,3> bars;
-    NoticeBar headerNotice;m3::ui::controls::HeaderInformation information;
+    NoticeBar headerNotice;m3::ui::controls::HeaderInformation& information=header.modeInformation();
     std::array<m3::ui::controls::SegmentedSelector,3> states;
 private:juce::Label explanation;
 };

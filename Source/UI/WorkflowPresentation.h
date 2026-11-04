@@ -20,7 +20,7 @@ inline const char* modeSubtitle(workflow::Mode mode) noexcept
     switch(mode)
     {
         case workflow::Mode::capture:return "Capture audio and discover musical moments";
-        case workflow::Mode::live:return "Shape, edit and play your swells";
+        case workflow::Mode::live:return "Shape and place reverse swells with precision";
         case workflow::Mode::finalise:return "Preview your prepared swells";
     }
     return "Mode unavailable";
