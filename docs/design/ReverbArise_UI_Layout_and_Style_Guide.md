@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.4 · **Production standards revision:** 4 · **Purpose:** Production UI authority and design reference. Revision 4's scoped knob focus variant is owner-requested; native acceptance remains pending.
+**Version:** 1.4 · **Production standards revision:** 4 · **Purpose:** Production UI authority and design reference. Revision 4's scoped knob focus variant has owner native approval.
 
 ## Validated production standards — Learn and shared header
 
@@ -102,7 +102,7 @@ production standards revision; this revision does not change plugin/state versio
 | 1 | #11 and #35 approved native implementation, extracted in #37 | Learn comfortable and shared header; compact values await Perform review |
 | 2 | #4 standalone list look/feel approved 2026-11-04 | Swells list identity/scroll interaction policy; existing Perform row appearance retained, no new visual values or compact profile |
 | 3 | #46 revision-4 native compact composition and Snap family approved 2026-11-04 | Perform-only profile below; shared Zoom/Fit controls from merged #49, no Learn/header density changes |
-| 4 | #46 owner requested Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); native look/feel review pending. Other families and layout tokens unchanged |
+| 4 | #46 owner approved Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); actual native look/feel approved 2026-11-04. Other families and layout tokens unchanged |
 
 ### Chronological Swells list interaction
 

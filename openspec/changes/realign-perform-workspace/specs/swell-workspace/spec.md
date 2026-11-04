@@ -150,6 +150,18 @@ Effective Snap SHALL quantize horizontal target, source-bound and editable envel
 - **AND** unsnapped wheel/arrow increments are independent of zoom: timing 1 ms, level 1 dB, curves 0.01; Shift divides by ten with internal sample rounding, while snapped actions advance one grid point
 - **AND** user-facing labels expose musical position or time units, seconds display six decimals, milliseconds three, level two and curves three, without reducing valid typed/saved precision
 
+### Requirement: Knob reset is explicit and identity guarded
+Knobs SHALL support double-click reset and a right-click reset action using existing model defaults or automatic wet start. Target and Source Start/End SHALL restore positions first loaded for that swell in the current editor. Reset SHALL bypass Snap, preserve canonical validity and unrelated musical/source/IR identities, and SHALL NOT invoke whole-swell reset or persist transient initial positions.
+
+#### Scenario: Reset one knob
+- **WHEN** an enabled knob is double-clicked or its reset menu action is selected
+- **THEN** its guarded canonical default/initial operation runs, dial/text/canvas show accepted state and invalid bounds leave the prior state intact
+- **AND** resetting an already-default value does not schedule work or dirty state, and the right-click menu names default versus initial/automatic semantics truthfully
+
+#### Scenario: Reset menu becomes stale
+- **WHEN** selection, source, fixed timing, workflow/session or component lifetime changes before a queued reset is delivered
+- **THEN** the obsolete action cannot edit another swell/session or revive a destroyed component
+
 ### Requirement: Perform navigation preferences survive reopen safely
 Perform SHALL retain valid view, requested Snap state and grid across editor reopen, mode return and project save/reopen, independently per instance. Legacy or malformed optional navigation values SHALL fall back safely without discarding valid musical state. Held modifiers and active gestures SHALL remain ephemeral; restore SHALL not autoplay, recapture or regenerate audio.
 

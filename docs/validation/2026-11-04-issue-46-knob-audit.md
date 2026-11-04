@@ -1,5 +1,10 @@
 # Issue #46 — knob standards and guardrail audit
 
+Current status: the owner approved the revised Level steps and corner focus.
+The reset follow-up below is implemented and automated checks pass; its focused
+native reset acceptance and final FL Studio smoke remain pending. Earlier audit
+and checkpoint outcomes below are historical.
+
 4 November 2026. Reviewed source at `cfb4d26`; this audit makes no production
 changes. The owner approved adding Snap/grid to timing-knob drag/wheel input and
 requested this review. The existing plan now records that extension as task 4.4;
@@ -298,3 +303,52 @@ The revised native window was directly opened as PID 55860, title
 Preview SHA-256: `2650674A10E925B1FF94B0BD759D58121B043DE60D9CB308A5B92BE7D70ADCE7`.
 The prior window was already closed; no duplicate review window was opened.
 Task 4.4 remains unchecked pending this revision's native owner acceptance.
+
+The owner subsequently approved the revised Level increments and corner brackets:
+“the new changes are approved”. Task 4.4 is verified complete; prior layout and
+Snap-button approvals are retained. Their additional double-click/context-menu
+reset request is separate follow-up work, not rejection of this revision.
+
+### Reset follow-up: defaults and current-editor initial positions
+
+Owner-approved semantics: Target and Source Start/End restore the first positions
+loaded for that swell in the current editor. Other controls use existing model
+defaults, with Pre-roll returning to automatic IR start. Initial coordinates are
+per-ID/epoch editor memory only; schema 10/envelope 8 remain unchanged.
+
+KnobValue owns double-click, the existing-themed one-action popup, SafePointer and
+invocation tickets. The Perform binding captures selection/session/input/render/
+workflow/fixed-timing context, then rechecks the canonical edit transaction. Reset
+bypasses Snap and modifiers. Related envelope values retain canonical constraints;
+invalid source ordering rejects without mutation. Already-default actions do not
+dirty the host or schedule renders. Exact text fields retain their native menus
+and text-selection double-click.
+
+Focused native MSVC/CTest: **5/5 passed in 13.16 seconds**, including the new
+`preverb_perform_knob_reset_test`, existing knob, binding, gesture and swell UI
+checks. Logs: `out/build-logs/Release/20261104-knob-reset-build-v4.log` and
+`20261104-knob-reset-tests-v4.log`. Tests exercise real two-click sequences,
+keyboard selection in the asynchronous popup, menu cancellation, defaults with
+Snap On, per-bound initial restoration, constrained rejection, same-ID epoch
+replacement, no-op dirty/jobs, disabled controls and stale selection/session/
+mode/source/timing/other-knob/freeze/destruction actions. A real open popup is
+also dismissed after its editor is destroyed. Capture revision is preserved.
+
+The initial popup test exposed hidden Level placement/focus in the test fixture;
+scrolling the inspector and focusing the right-clicked dial fixed that setup.
+A new pointer-position assertion then caught a point-pair rectangle being used as
+a size; using explicit x/y/1/1 anchors the menu correctly. The final five-test run
+passes both checks. [Native popup capture](2026-11-04-issue-46/knobs/reset-menu.png)
+is the actual component image, not a mockup.
+
+UI standards: **46 files / 61 bounded occurrences**, unchanged debt inventory.
+Strict OpenSpec validation and `git diff --check` pass. ActionButton remains
+Agent 1's accepted SHA-256
+`68EF2F339109F65C1044813C1CD074C5AA13E8DEE7470571452ECF2B1EEAAA16`;
+ExportWorkspace, TimelineNavigation and PluginProcessor.cpp remain unchanged
+against merged Export `9b8e70f`. No shared Export-specific reset behavior exists.
+
+No repeat full backend suite is claimed for this UI refinement. The prior native
+**53/53** run at `a4e9262` remains evidence for unchanged audio/state/export paths.
+Actual Windows DPI, screen-reader and FL Studio coverage remain unverified.
+Task 4.5 awaits focused native reset acceptance; 6.2 awaits the final host smoke.

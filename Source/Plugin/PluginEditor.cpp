@@ -238,6 +238,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         cell.onDelta=[this,index](double delta){commitValueEdit(index,{},delta);};
         cell.onRebase=[this,index]{rebaseValueEdit(index);};
         cell.onStep=[this,index](double amount){stepValueEdit(index,amount);};
+        cell.setResetAction([this,index]{return prepareValueReset(index);});
         cell.onModifierInput=[this](const juce::ModifierKeys& mods){modifierKeysChanged(mods);};
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
     }

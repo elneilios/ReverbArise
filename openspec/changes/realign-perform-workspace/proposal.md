@@ -15,6 +15,7 @@ The working Perform editor still uses legacy composition and navigation while Le
 - Extend the existing viewport and gesture paths for bounded zoom, contextual Fit and host-coordinate snapping of horizontal target/envelope timing. Preserve exact numeric entry and continuous vertical edits; fail honestly when reliable musical timing is unavailable.
 - Owner-approved follow-up: timing-knob drags and wheel changes follow the same Snap/grid using corresponding absolute timeline anchors. Ctrl bypasses, Shift retains fine drag and Ctrl+Shift combines both. Typed values remain exact and unsnapped; curve and level knobs remain continuous. Audit existing knob standards/guards before this binding change; wider family remediation requires its own scoped review.
 - Preserve source PCM, durable IDs/assets, workflow guards and existing audition authority. Handle pending/failed renders, sparse coverage and return from other modes without inventing ready audio.
+- Owner-requested final knob refinement: double-click reset and a right-click reset menu. Use model defaults for neutral/relative values and automatic wet start; Target/Source restore positions first loaded for that swell in the current editor. Explicit resets are unsnapped, guarded and limited to the chosen control's canonical operation; initial positions are ephemeral, not new project state.
 
 ## Capabilities
 

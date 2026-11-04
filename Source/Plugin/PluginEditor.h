@@ -56,6 +56,9 @@ private:
     void beginValueEdit(int);
     void rebaseValueEdit(int);
     void stepValueEdit(int,double);
+    m3::ui::KnobValue::ResetAction prepareValueReset(int);
+    struct InitialValuePositions {int64_t arrival=0,start=0,end=1;};
+    void resetValueEdit(int,InitialValuePositions);
     bool valueIntentCurrent(int)const;
     bool commitValueEdit(int,const juce::String&,std::optional<double> delta={});
     void refreshValues(const m3::Swell*,const SongTime&);
@@ -68,6 +71,8 @@ private:
     struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;};
     std::array<ValueInvocation,valueCount> valueInvocations;
     int valueModifierFlags=0;
+    std::map<juce::String,InitialValuePositions> initialValuePositions;
+    uint64_t initialValueEpoch=0,valueResetRevision=0;
     m3::ui::controls::IrSelector irBox;
     struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;std::vector<m3::IRChoice> choices;};
     std::optional<IRInvocation> irInvocation;

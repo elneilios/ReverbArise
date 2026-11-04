@@ -214,6 +214,7 @@ public:
     void verifyEditorBindings();
     void verifyFit();
     void verifyKnobs();
+    void verifyKnobResets();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -361,6 +362,7 @@ private:
 #include "PerformEditorBindingCases.h"
 #include "PerformFitCases.h"
 #include "PerformKnobCases.h"
+#include "PerformKnobResetCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -431,6 +433,7 @@ int main(int argc,char** argv)
         if(command=="--test-editor"){content->composition.verifyEditorBindings();std::cout<<"Perform actual editor layout/navigation/restore/Export binding checks passed.\n";return;}
         if(command=="--test-fit"){content->composition.verifyFit();std::cout<<"Perform selected/pending/overlap/sparse/empty Fit checks passed.\n";return;}
         if(command=="--test-knobs"){content->composition.verifyKnobs();std::cout<<"Perform knob grid/accepted feedback/guards/focus/accessibility/font checks passed.\n";return;}
+        if(command=="--test-knob-resets"){content->composition.verifyKnobResets();std::cout<<"Perform knob double-click/menu/default/initial/stale reset checks passed.\n";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")

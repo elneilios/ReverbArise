@@ -90,8 +90,8 @@ The #46 knob audit corrections separate accepted dial painting from JUCE's raw
 pointer accumulator, add explicit rotary keyboard/focus and domain accessibility,
 and keep fixed wheel/arrow increments in the binding. They reuse existing focus
 ink/geometry and text roles; no new density/profile token is introduced. The
-changed knob interaction requires focused native family acceptance; prior compact
-layout and Snap-button acceptance remain valid. `EllipsisLabel` preserves a
+changed knob interaction received focused native family acceptance on 4 November
+2026; prior compact layout and Snap-button acceptance remain valid. `EllipsisLabel` preserves a
 single line's approved font metrics for overflowing inspector status/IR text.
 See [value/unit policy and guards](perform-navigation.md) and
 [audit/remediation evidence](../validation/2026-11-04-issue-46-knob-audit.md).
@@ -99,9 +99,12 @@ See [value/unit policy and guards](perform-navigation.md) and
 The owner requested the revision-4 KnobValue focus variant: four open corner
 brackets, using existing aqua and 2-pixel stroke, with legs at 20% of the contained
 focus box side. It changes only the dial focus painter; text fields and other
-library families retain their own focus treatment. Native approval of the prepared
-variant remains pending; do not interpret the request as whole-family acceptance.
-Level wheel/arrow steps are 1 dB normally and 0.1 dB with Shift after this review.
+library families retain their own focus treatment. The owner approved the actual
+native variant and Level wheel/arrow steps of 1 dB normally and 0.1 dB with Shift.
+The subsequent double-click/context-menu reset interaction has its own focused
+checkpoint. KnobValue owns menu lifetime and invocation tickets; bindings own
+default/initial semantics, canonical validation and identity guards. See the
+[reset policy](perform-navigation.md#knob-reset).
 
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns

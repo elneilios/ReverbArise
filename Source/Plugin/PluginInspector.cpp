@@ -20,6 +20,7 @@ bool decimal(const juce::String& text,double& value)
 }
 void PreverbAudioProcessorEditor::beginValueEdit(int index)
 {
+    ++valueResetRevision;
     valueWorkflowTokens[index]=processor.getWorkflowSnapshot().pass;
     const auto current=processor.swellEngine().snapshot();const auto w=m3::find(current.session,current.session.primary);
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;
@@ -27,6 +28,53 @@ void PreverbAudioProcessorEditor::beginValueEdit(int index)
         processor.getCaptureSnapshot().manifest.sampleRate,processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
     valueTokens[index]=w?w->inputGeneration:0;
     valueRawStarts[index]=current.raw?current.raw->start:0;valueRawEnds[index]=current.raw?current.raw->end:0;
+}
+m3::ui::KnobValue::ResetAction PreverbAudioProcessorEditor::prepareValueReset(int index)
+{
+    const auto current=processor.swellEngine().snapshot();
+    if(destroying || updating || current.sessionEpoch!=state.sessionEpoch || current.session.primary!=state.session.primary || current.session.selected!=state.session.selected)
+        return {"Reset unavailable: selection changed",{}};
+    const auto initial=initialValuePositions.find(current.session.primary);if(initial==initialValuePositions.end())return {"Reset unavailable",{}};
+    beginValueEdit(index);if(!valueAnchors[index] || !valueIntentCurrent(index))return {"Reset unavailable",{}};
+    const auto anchor=*valueAnchors[index];const auto invocation=valueInvocations[index];const auto input=valueTokens[index],pass=valueWorkflowTokens[index],revision=valueResetRevision;
+    const auto rawStart=valueRawStarts[index],rawEnd=valueRawEnds[index];const auto positions=initial->second;
+    const auto label=index<=sourceEndValue?"Reset to initial position":index==preRollValue?"Reset to automatic start":
+        index==levelValue?"Reset to default (0 dB)":index==inCurveValue || index==outCurveValue?"Reset tension to default (0)":
+        index==endOffsetValue?"Reset to default (0.020 s)":index==fadeOutValue?"Reset to default (20 ms)":"Reset to default (0 ms)";
+    const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+    return {label,[safe,index,anchor,invocation,input,pass,revision,rawStart,rawEnd,positions]
+    {
+        if(!safe || safe->destroying || safe->valueResetRevision!=revision)return;
+        safe->valueAnchors[index]=anchor;safe->valueInvocations[index]=invocation;safe->valueTokens[index]=input;safe->valueWorkflowTokens[index]=pass;
+        safe->valueRawStarts[index]=rawStart;safe->valueRawEnds[index]=rawEnd;
+        safe->resetValueEdit(index,positions);safe->valueAnchors[index].reset();
+    }};
+}
+void PreverbAudioProcessorEditor::resetValueEdit(int index,InitialValuePositions initial)
+{
+    if(!valueIntentCurrent(index)){processor.swellEngine().diagnostic("Reset superseded by changed session, selection, source or timing");refresh();return;}
+    const auto anchor=*valueAnchors[index];const auto invocation=valueInvocations[index];
+    processor.swellEngine().edit(anchor.id,[&](auto& w,auto& error)
+    {
+        const auto current=processor.swellEngine().savedSession();
+        if(current.primary!=anchor.id || current.selected!=invocation.selected || w.inputGeneration!=valueTokens[index]){error="Reset selection/source changed";return false;}
+        if(index==targetValue)return w.arrival!=initial.arrival && m3::moveArrival(w,initial.arrival,error);
+        if(index==sourceStartValue)return w.sourceStart!=initial.start && m3::setSource(w,initial.start,w.sourceEnd,error);
+        if(index==sourceEndValue)return w.sourceEnd!=initial.end && m3::setSource(w,w.sourceStart,initial.end,error);
+        if(index==placementValue)return w.placement!=0 && m3::moveWet(w,0,error);
+        const auto defaults=m3::initialShape(invocation.time.rate);auto shape=w.shape;
+        if(index==levelValue)shape.gainDb=defaults.gainDb;
+        if(index==inCurveValue)shape.inTension=defaults.inTension;
+        if(index==outCurveValue)shape.outTension=defaults.outTension;
+        if(index==preRollValue){shape.automaticStart=true;shape.startOffset=0;}
+        if(index==endOffsetValue && !m3::checkedSubtract(defaults.endOffset,w.placement,shape.endOffset)){error="Reset wet endpoint overflow";return false;}
+        if(index==fadeInValue)shape.fadeIn=defaults.fadeIn;
+        if(index==fadeOutValue)shape.fadeOut=defaults.fadeOut;
+        auto candidate=w;if(!m3::setShape(candidate,shape,valueRawStarts[index],valueRawEnds[index],error))return false;
+        if(candidate.shape==w.shape && candidate.supportOffset==w.supportOffset)return false;
+        w=std::move(candidate);return true;
+    },invocation.epoch);
+    refresh();
 }
 bool PreverbAudioProcessorEditor::valueIntentCurrent(int index)const
 {
@@ -151,6 +199,8 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
 }
 void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTime& time)
 {
+    if(initialValueEpoch!=state.sessionEpoch){initialValuePositions.clear();initialValueEpoch=state.sessionEpoch;}
+    if(w)initialValuePositions.try_emplace(w->id,InitialValuePositions{w->arrival,w->sourceStart,w->sourceEnd});
     const auto rate=time.rate;const auto valid=w && time.valid && std::isfinite(rate) && rate>0;
     const auto span=std::max(1.0,timeline.viewport().span());
     int64_t a=0,b=0;const auto shaped=valid && state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b);

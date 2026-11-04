@@ -143,7 +143,29 @@ around the focused dial and supplied a visual reference. Retain the existing aqu
 and 2-pixel stroke; bracket legs are 20% of the inside-stroke box side, with no
 continuous edge. This is a scoped KnobValue focus variant, not a layout change or
 a replacement for other controls' focus language. Standards revision 4 records
-the requested variant; actual native look/feel acceptance remains task 4.4's gate.
+the variant; the owner approved its actual native look/feel, completing task 4.4.
+
+#### Approved knob reset follow-up
+
+The owner approved the knob revision and requested double-click/right-click reset.
+Task 4.5 adds only the chosen knob's reset operation, not whole-swell Reset.
+Level/placement/tensions reset to zero; Fade In to zero, Fade Out to the existing
+20-ms initialized default subject to canonical bounds; End Offset to 20 ms as
+displayed (placement inverted); Pre-roll restores automatic IR start. Snap and
+held fine modifiers do not quantize explicit resets. Target/Source use positions
+first loaded for that swell in the current editor, explicitly approved by the
+owner. Cache these small initial coordinates per ID/epoch in the editor only;
+clear on session replacement and never persist them or invent a zero target.
+
+The shared KnobValue owns double-click and a one-action right-click menu, with
+SafePointer/lifetime and invocation-ticket guards. The binding captures immutable
+ID/full-selection/session/input/render/timing context when the menu opens, checks
+the existing guarded edit transaction when delivered, and rejects stale actions.
+Context labels distinguish default, initial position and automatic start. Invalid
+canonical bounds preserve prior state. Already-default resets are no-ops without
+host dirty/jobs. Typed-field double-click and native text menus retain text-edit
+semantics. Reuse the accepted corner/step appearance; review only the new reset
+interaction before final host smoke.
 
 ### 5. Backward-compatible UI preferences, no audio authority changes
 

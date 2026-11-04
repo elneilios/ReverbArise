@@ -106,6 +106,33 @@ Inspector status and retained/requested IR helper lines use `EllipsisLabel` to
 retain the approved Inter Regular 14 proportions. Overflow truncates with an
 ellipsis and full tooltip; it never condenses the font to fit a long name.
 
+## Knob reset
+
+Double-click the dial or right-click it and choose its reset action. Exact-value
+fields retain normal text selection and text context menus. Explicit resets bypass
+Snap and fine modifiers; they use the existing canonical setters and bounds.
+
+| Control | Reset operation |
+| --- | --- |
+| Target, Source Start/End | Position first loaded for that swell in the current editor |
+| Move Wet | 0 ms |
+| Pre-roll | Automatic start from the current IR support |
+| End Offset | Displayed endpoint +0.020 s, accounting for current wet placement |
+| Fade In / Fade Out | 0 ms / initialized 20 ms, subject to envelope bounds |
+| Level | 0 dB |
+| Curve In/Out | Zero tension, retaining the curve preset |
+
+Initial positions are cached per swell ID and session epoch in the editor only.
+Selection changes retain them; replacing the session clears them, and closing the
+editor discards them. No initial-position data is serialized. A source-bound reset
+preserves the other bound; if current ordering prevents it, the edit is rejected.
+Canonical envelope normalization can constrain related fades to valid support.
+
+Menus capture identity, full selection, source/render, workflow and fixed timing
+context. Changes to that context, a subsequent knob edit, disabled controls or editor
+destruction invalidate the queued action. Already-default resets do not dirty the
+host or schedule work. Reset operates on the chosen control, never whole-swell Reset.
+
 ## Fit lifecycle
 
 Fit includes selected dry source, requested envelope, placed raw tail and overlapping
