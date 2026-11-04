@@ -54,7 +54,7 @@ public:
                 const auto value=static_cast<float>(.25*std::exp(-local/6500.0)*std::sin(local*.07));
                 audio.setSample(0,i,value);audio.setSample(1,i,value*.7f);
             }
-            processor->processBlock(audio,midi);juce::Thread::sleep(1);
+            processor->processBlock(audio,midi);REQUIRE(processor->flushCaptureForTesting());
         }
         finishCaptureFixture(*processor,head.position);REQUIRE(processor->flushCaptureForTesting());
         auto& engine=processor->swellEngine();

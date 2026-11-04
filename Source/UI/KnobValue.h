@@ -23,7 +23,7 @@ class KnobValue final:public juce::Component
         {owner.inputModifiers(e.mods);if(owner.onStep && isEnabled() && !e.mods.isAnyMouseButtonDown())
             {if(e.eventTime!=lastWheel){lastWheel=e.eventTime;const auto amount=std::abs(wheel.deltaX)>std::abs(wheel.deltaY)?-wheel.deltaX:wheel.deltaY;owner.step(amount*10*(wheel.isReversed?-1:1));}}
             else juce::Slider::mouseWheelMove(e,wheel);}
-        void modifierKeysChanged(const juce::ModifierKeys& mods)override{owner.inputModifiers(mods);}
+        void modifierKeysChanged(const juce::ModifierKeys& mods)override{owner.inputModifiers(mods);juce::Slider::modifierKeysChanged(mods);}
         bool keyPressed(const juce::KeyPress& key)override
         {
             const auto code=key.getKeyCode();const auto direction=code==juce::KeyPress::rightKey || code==juce::KeyPress::upKey?1:code==juce::KeyPress::leftKey || code==juce::KeyPress::downKey?-1:0;

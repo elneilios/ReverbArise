@@ -28,7 +28,7 @@ void Composition::verifyKnobs()
     {load(original);change(cell(test.name),test.delta);REQUIRE(at(test.kind)==test.expected);}
     load(original);auto& end=cell("endOffset");auto& dial=end.valueKnob();dial.onDragStart();const auto raw=dial.getValue();
     dial.setValue(raw+.04375,juce::sendNotificationSync);REQUIRE(at(A::end)==72000);const auto accepted=current();
-    panel->modifierKeysChanged(juce::ModifierKeys::ctrlModifier|juce::ModifierKeys::shiftModifier);REQUIRE(current().shape==accepted.shape);
+    dial.modifierKeysChanged(juce::ModifierKeys::ctrlModifier|juce::ModifierKeys::shiftModifier);REQUIRE(current().shape==accepted.shape);
     dial.setValue(dial.getValue()+.001,juce::sendNotificationSync);REQUIRE(at(A::end)==72096);
     const auto beforeKeys=current();panel->modifierKeysChanged({});REQUIRE(current().shape==beforeKeys.shape);dial.onDragEnd();
     // A no-grid domain retains the accepted dial pixels, not the raw pointer value.
