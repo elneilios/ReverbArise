@@ -64,7 +64,7 @@ Initial Perform selection/reveal SHALL use available definition/source timing wh
 - **THEN** the initial handoff uses available lead-in/arrival timing immediately, and delayed completion updates only matching content/status without stealing selection or moving the user's viewport
 
 ### Requirement: Learn offers one explicit Generate action
-Generate Swells SHALL be the primary action in Automatic Swells directly below Marker Sensitivity and any supported conditional parameters. It SHALL reuse the shared button family, retain the same label on repeated runs and expose accessible progress/unavailable reasons from accepted model readiness. Auto-generate on Stop SHALL use the shared switch family without competing navigation or a new card.
+Generate Swells SHALL be the primary Automatic Swells action directly below Marker Sensitivity and supported conditional parameters. It SHALL reuse ActionButton, retain its label across runs and expose accessible readiness/progress reasons. Auto-generate on Stop SHALL reuse Switch below Enable automatic swells, before IR controls. The contextual marker-count/readiness helper SHALL sit directly below Generate.
 
 #### Scenario: Ready or disabled action
 - **WHEN** Learn is ready, capturing, settling, analysing, generating or missing usable source/IR
@@ -75,7 +75,7 @@ Generate Swells SHALL be the primary action in Automatic Swells directly below M
 - **THEN** the not-yet-committed request is cancelled and no lock hides the cancellation path
 
 ### Requirement: Manual placement guidance remains readable
-A subdued helper directly beneath Generate SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL use existing embedded Inter helper typography and stay visible when Generate is disabled. Supported minimum and larger sizes SHALL preserve readable wrapping, focus bounds and dominant dry-waveform space without shrinking text or adding a competing button.
+A subdued manual-placement helper after the contextual Generate helper SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL flow across the available width without a forced break after the question, use existing embedded Inter helper typography and stay visible when Generate is disabled. Supported minimum and larger sizes SHALL preserve readable wrapping, focus bounds and dominant dry-waveform space without shrinking text or adding a competing button.
 
 #### Scenario: Minimum-size busy workspace
 - **WHEN** Automatic Swells is ON at 1100x850 and generation is disabled or busy

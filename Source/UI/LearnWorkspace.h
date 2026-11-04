@@ -22,7 +22,7 @@ public:
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
         setTooltip(inspectionHelp);setName("learnWorkspace");setTitle("Learn: source capture and generation preferences");
         for(auto* c:std::array<juce::Component*,20>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
-            &irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&manualHelp,&generateReason})addAndMakeVisible(c);
+            &autoStopLabel,&autoStopHelp,&autoStop,&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
         captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
         recaptureLabel.setText("Recapture existing audio",juce::dontSendNotification);
         automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
@@ -37,8 +37,8 @@ public:
         for(auto* label:{&captureTitle,&recaptureLabel,&automaticLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&irStatus,&autoStopLabel,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
         automaticHelp.setText("Preview musical events,\nthen generate swells.",juce::dontSendNotification);
         autoStopHelp.setText("Generate after useful capture\nis accepted.",juce::dontSendNotification);
-        manualHelp.setText("Want to place swells yourself?\nAdd manual swells in Perform.",juce::dontSendNotification);
-        manualHelp.setTooltip(manualHelp.getText());
+        manualHelp.setText(wrappedHelper("Want to place swells yourself? Add manual swells in Perform."),juce::dontSendNotification);
+        manualHelp.setTooltip(manualHelp.getText().replace("\n"," "));
         captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");recaptureLabel.setName("learnRecaptureLabel");automaticToggleLabel.setName("learnAutomaticLabel");
         irLabel.setName("learnIRLabel");sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
         recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");irBox.setName("learnDefaultIR");fileButton.setName("learnImportIR");irStatus.setName("learnIRStatus");sensitivity.setName("learnMarkerSensitivity");
@@ -170,14 +170,14 @@ public:
         controls.removeFromTop(spacing::related);divider=controls.getY();controls.removeFromTop(spacing::related);
         automaticLabel.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
         toggleGroup(automatic,automaticToggleLabel,automaticHelp);
-        if(automaticOn){controls.removeFromTop(spacing::related);irLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);
+        if(automaticOn){controls.removeFromTop(spacing::related);toggleGroup(autoStop,autoStopLabel,autoStopHelp);controls.removeFromTop(spacing::group);
+            irLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);
             auto row=controls.removeFromTop(controlGeometry::height);fileButton.setBounds(row.removeFromRight(controlGeometry::height));row.removeFromRight(spacing::tight);irBox.setBounds(row);
             controls.removeFromTop(spacing::labelHelp);irStatus.setBounds(controls.removeFromTop(controlGeometry::feedbackHeight));controls.removeFromTop(spacing::group);
-            toggleGroup(autoStop,autoStopLabel,autoStopHelp);controls.removeFromTop(spacing::group);
             sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::related);generate.setBounds(controls.removeFromTop(controlGeometry::height));
-            controls.removeFromTop(spacing::labelHelp);manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
-            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
+            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
+            controls.removeFromTop(spacing::labelHelp);manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
         auto canvas=right.reduced(0,spacing::related);timelineHeading=canvas.removeFromTop(controlGeometry::headingHeight);canvas.removeFromTop(spacing::tight);
         timelineCaption=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::metadataGap);
         timelineRuler=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::rulerViewportGap);

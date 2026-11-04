@@ -104,10 +104,16 @@ int main(int argc,char** argv){return runTest([&]
             auto* helper=dynamic_cast<juce::Label*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
             REQUIRE(helper->getText().replace("\n"," ")=="Want to place swells yourself? Add manual swells in Perform.");
             REQUIRE(helper->getText().containsChar('\n') && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
+            REQUIRE(!helper->getText().contains("?\n") && helper->getText().contains("? Add"));
             for(auto size:{juce::Point{1100,850},juce::Point{1400,1000},juce::Point{1600,1100}})
             {
                 editor->setSize(size.x,size.y);editor->refresh();
                 REQUIRE(helper->getWidth()>0 && helper->getHeight()>=40);
+                const auto* reason=named(*editor,"learnGenerateReason");REQUIRE(reason);
+                REQUIRE(reason->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
+                REQUIRE(helper->getY()-reason->getBottom()==m3::ui::spacing::labelHelp);
+                REQUIRE(named(*editor,"learnAutoGenerateOnStop")->getY()-named(*editor,"learnAutomaticHelp")->getBottom()==m3::ui::spacing::related);
+                REQUIRE(helper->getParentComponent()->getLocalBounds().contains(helper->getBounds()));
                 for(float scale:{1.f,1.25f,1.5f,2.f})captureImage(*editor,"issue38-learn-"+juce::String(size.x)+"-"+juce::String(scale),scale);
             }
             editor->setSize(1100,850);editor->refresh();

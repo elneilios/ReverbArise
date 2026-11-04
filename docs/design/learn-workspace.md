@@ -25,10 +25,13 @@ markers or protected assignments. Manual/edited/frozen and outside-scope work
 remain intact. Returning to Learn or restoring state never generates by itself.
 See the [source/context protocol](../development/learn-source-context-protocol.md)
 and [in-progress validation](../validation/2026-11-04-issue-38-generation-workflow.md).
-The Auto-generate switch reuses `Switch`; Generate Swells reuses the emphasized
-`ActionButton` directly below sensitivity. Its persistent manual-placement helper
-stays visible even while generation is disabled. A separate readable reason and
-accessible description explain readiness. Invocations pin session, pass and
+The Auto-generate switch reuses `Switch` immediately beneath Enable automatic
+swells, before the IR group. Generate Swells reuses the emphasized `ActionButton`
+directly below sensitivity. Its contextual marker count/readiness helper sits
+directly below the button; the persistent manual-placement hint follows last,
+flowing naturally across the available width without a forced break after the
+question. Both remain readable when generation is disabled. The accessible
+description also explains readiness. Invocations pin session, pass and
 displayed candidate identities. Automatic Swells OFF hides these controls while
 retaining the saved preference. Timing-yellow triangle heads and dashed stems
 show candidates; hollow heads identify provisional/updating positions. They are

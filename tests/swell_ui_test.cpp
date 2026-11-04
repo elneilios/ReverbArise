@@ -754,8 +754,9 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(defaultIR->getY()-irLabelBounds.getBottom()==m3::ui::spacing::tight);
         REQUIRE(irStatusBounds.getY()-defaultIR->getBottom()==m3::ui::spacing::labelHelp);
         const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds(),autoStopHelpBounds=named(editor,"learnAutoGenerateHelp")->getBounds();
-        REQUIRE(autoStopBounds.getY()-irStatusBounds.getBottom()==m3::ui::spacing::group);
-        REQUIRE(sensitivityLabelBounds.getY()-autoStopHelpBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(autoStopBounds.getY()-named(editor,"learnAutomaticHelp")->getBottom()==m3::ui::spacing::related);
+        REQUIRE(irLabelBounds.getY()-autoStopHelpBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(sensitivityLabelBounds.getY()-irStatusBounds.getBottom()==m3::ui::spacing::group);
         REQUIRE(sensitivity->getY()-sensitivityLabelBounds.getBottom()==m3::ui::spacing::tight);
         REQUIRE(sensitivity->getPositionOfValue(0)>=5 && sensitivity->getPositionOfValue(100)+5<=sensitivity->getWidth()-m3::ui::controlGeometry::valueWidth);
         juce::Label* percentage=nullptr;for(auto* child:sensitivity->getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))percentage=label;
