@@ -121,8 +121,9 @@ int main(int argc,char** argv){return runTest([&]
         await([&]{return processor.getWorkflowReadiness().usefulSource && !processor.getWorkflowSnapshot().locked();});
         // A useful-source, empty Perform visit does not establish an editing position.
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));editor->refresh();
+        const auto emptyView=editor->timelineComponent().viewport();
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));editor->refresh();
-        REQUIRE(sameView(original,editor->timelineComponent().viewport()));
+        REQUIRE(sameView(emptyView,editor->timelineComponent().viewport()));
         auto seed=engine.savedSession();Swell late;late.arrival=late.sourceStart=200000;late.sourceEnd=204000;
         late.provenance=Provenance::manualCreated;late.name="Protected later swell";late.enabled=false;
         seed.swells.push_back(late);seed.primary.clear();seed.selected.clear();engine.restore(seed,processor.getCaptureSnapshot().reference);
@@ -174,6 +175,7 @@ int main(int argc,char** argv){return runTest([&]
         // Rendering cannot steal a newer selection or viewport, even across mode return.
         const auto second=committed.session.swells.back().id;REQUIRE(engine.selectTargets({second},second,engine.assignmentEpoch()));editor->refresh();
         const SwellViewport editing{90000,220000};editor->timelineComponent().setViewport(editing);
+        editor->timelineComponent().onViewportChanged(); // Publish through the accepted #48 navigation binding.
         engine.holdLearnRendersForTesting(false);
         await([&]{const auto s=engine.snapshot();const auto* firstSwell=find(s.session,first);return firstSwell && firstSwell->phase==Phase::ready;});
         editor->refresh();REQUIRE(engine.savedSession().primary==second && sameView(editing,editor->timelineComponent().viewport()));

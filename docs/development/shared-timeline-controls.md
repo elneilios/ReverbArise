@@ -38,7 +38,7 @@ navigation.zoom(desiredSpan / navigation.viewport().span());
 
 Agent 1 should expose accepted minimum/maximum spans from its existing
 `TimelineNavigation` clamp, rather than recalculate or duplicate those limits in
-`ExportWorkspace`. This PR does not change that unmerged adapter. For a degenerate
+`ExportWorkspace`. Merged #50 owns that adapter. For a degenerate
 domain disable zoom and display fraction 0. The binding must use the adapter's
 accepted post-clamp view when refreshing, and retain its existing `onChange`
 handler (repaint/update this row there). Never Fit from a routine refresh.
@@ -72,9 +72,9 @@ timing message. Fixed accepted tempo/meter only; no tempo-map inference or Snap.
   pointer-anchored zoom, right-drag pan, keyboard navigation, current-file readiness,
   last-good pending view, and once-per-accepted-mix Fit. Fit covers the accepted
   audible mix plus margins, independent of WAV song-origin duration.
-- Perform retains editable dry/wet lanes, envelope gestures and future Snap/grid.
-  Production layout and materially revised controls still require their review
-  checkpoints. Its independent amplitude zoom is not horizontal timeline zoom.
+- Perform owns editable dry/wet lanes, envelope gestures and Snap/grid, with
+  separately approved compact layout and latching button checkpoints. Its Height
+  control scales display amplitude independently of horizontal timeline zoom.
 - Learn retains captured dry coverage and inspection. No controls or generation
   behavior are migrated by this PR.
 

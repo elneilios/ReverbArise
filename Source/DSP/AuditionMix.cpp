@@ -4,10 +4,11 @@
 namespace m3
 {
 bool prepareAuditionMix(const WetRender& wet,const SourceInterval* dry,AuditionMode mode,float blend,
-                        uint64_t budget,WetRender& output,float& wetDb,float& sumDb,juce::String& error,bool wetEdges,GainPolicy policy)
+                        uint64_t budget,WetRender& output,float& wetDb,float& sumDb,juce::String& error,bool wetEdges,GainPolicy policy,std::optional<float> liveWetDb)
 {
     if(wet.frames()==0 || !std::isfinite(blend) || blend<0 || blend>1 || wet.rate<=0
         || (mode!=AuditionMode::wetOnly && mode!=AuditionMode::dryWet)) {error="Invalid audition inputs";return false;}
+    if(liveWetDb && (!std::isfinite(*liveWetDb) || *liveWetDb< -60 || *liveWetDb>12)){error="Invalid live audition gain";return false;}
     const auto mixed=mode==AuditionMode::dryWet;
     if(mixed && (!dry || dry->rate!=wet.rate || dry->samples.empty() || dry->end<=dry->start
         || dry->samples.size()/2!=static_cast<uint64_t>(dry->end-dry->start)))
@@ -19,10 +20,12 @@ bool prepareAuditionMix(const WetRender& wet,const SourceInterval* dry,AuditionM
     {error="256 MiB working budget exceeded by aligned audition";return false;}
     const auto ceiling=juce::Decibels::decibelsToGain(policy==GainPolicy::musical?candidateWetCeilingDb:-6.0f);
     float peak=0;for(size_t i=0;i<wet.samples.size();++i){const auto v=wet.samples[i]*(wetEdges?monitorEdgeGain(i/2,wet.frames(),wet.rate,.002):1);if(!std::isfinite(v)){error="Non-finite wet audition";return false;}peak=std::max(peak,std::abs(v));}
-    const auto wetGuard=peak>ceiling?ceiling/peak:1.0f;
+    const auto liveGain=liveWetDb?juce::Decibels::decibelsToGain(*liveWetDb):1.0f;
+    const auto protectedPeak=peak*liveGain;
+    const auto wetGuard=protectedPeak>ceiling?ceiling/protectedPeak:1.0f;
     WetRender result;result.start=start;result.rate=wet.rate;result.sourceStart=wet.sourceStart;result.sourceEnd=wet.sourceEnd;
     result.samples.resize(static_cast<size_t>(frames)*2);
-    const auto wetWeight=mixed?blend:1.0f,dryWeight=mixed?1-blend:0.0f;
+    const auto wetWeight=liveWetDb?liveGain:mixed?blend:1.0f,dryWeight=mixed?(liveWetDb?1.0f:1-blend):0.0f;
     for(int64_t frame=0;frame<frames;++frame)
     {
         const auto at=start+frame;

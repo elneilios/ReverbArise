@@ -29,6 +29,7 @@ void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
     {
         settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{});
         settingsWindow->setName("settingsWindow");settingsWindow->setLookAndFeel(&workspaceTheme);
+        settingsWindow->addMouseListener(this,true);
         settingsWindow->centreAroundComponent(this,640,570);
     }
     if(settingsWindow){settingsWindow->setVisible(open);if(open){refresh();settingsWindow->toFront(true);}}
@@ -43,12 +44,14 @@ void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
         diagnosticsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Diagnostics",diagnosticsViewport,1000,650,
             [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;});
         diagnosticsWindow->setName("diagnosticsWindow");diagnosticsWindow->setLookAndFeel(&workspaceTheme);
+        diagnosticsWindow->addMouseListener(this,true);
         diagnosticsWindow->centreAroundComponent(this,1000,650);
     }
     if(diagnosticsWindow){diagnosticsWindow->setVisible(open);if(open){refresh();diagnosticsWindow->toFront(true);}}
 }
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
+    settingsTabs.getProperties().set("contextHelp","Choose a settings tab. These settings apply to this plugin instance.");
     settingsTabs.setName("settingsTabs");settingsTabs.setTabBarDepth(36);
     settingsTabs.setColour(juce::TabbedComponent::backgroundColourId,m3::ui::background);
     settingsTabs.setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack);
@@ -71,10 +74,10 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     const juce::StringArray captions{"Routing","Default IR","Fade-in curve","Fade-out curve","Source range (bars)","Audition scope","Manual preparation","Onset suggestions","Fresh capture","Test tone range","Details",""};
     const int labelPages[]{0,1,2,2,2,3,4,4,4,4,4,4};
     for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);settingsLabels[i].setFont(juce::FontOptions(m3::ui::bodySize));settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
-    settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive wet affects mixer output; audition blend/trim are separate.",juce::dontSendNotification);
+    settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive Wet also sets new audition wet gain; legacy blend/trim stay separate.",juce::dontSendNotification);
     settingsHelp[1].setText("Both sensitivities stay in the main workspace.\nThe default IR applies to future swells; existing swells keep their own IR.",juce::dontSendNotification);
     settingsHelp[2].setText("Applies to the selected swell. Rename from its three-dot list menu.\nSource, envelope, Enabled, Solo and Freeze stay in the inspector.",juce::dontSendNotification);
-    settingsHelp[3].setText("Preview only. Isolation and listening tail affect captured audition audio.\nLive playback settings remain separate.",juce::dontSendNotification);
+    settingsHelp[3].setText("Audition loops captured audio. Isolation/tail affect its listening window.\nWet only uses Live Wet gain; stored legacy trim is inactive in live-level mode.",juce::dontSendNotification);
     settingsHelp[4].setText("Recovery actions run only when clicked. Clear map keeps swell assets.\nReset deleted targets allows automatic rediscovery.",juce::dontSendNotification);
     openDiagnosticsButton.setName("openDiagnostics");openDiagnosticsButton.onClick=[this]{setDiagnosticsOpen(true);};
     toneButton.setTooltip("Explicit scheduled 440 Hz test tone. Turn off here after testing.");
@@ -89,7 +92,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
     mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
-    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds(left+180,20,350,30);
+    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
     row(settingsLabels[2],inCurveBox,60);row(settingsLabels[3],outCurveBox,100);
     settingsLabels[4].setBounds(left,146,width,24);barStartLabel.setBounds(left,178,70,30);barStartEditor.setBounds(left+75,178,90,30);
     barEndLabel.setBounds(left+185,178,70,30);barEndEditor.setBounds(left+260,178,90,30);setBarsButton.setBounds(left+365,178,225,30);

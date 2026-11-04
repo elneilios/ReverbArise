@@ -3,6 +3,16 @@
 #include <Core/MonitoringSafety.h>
 namespace m3
 {
+bool SwellEngine::setAuditionWetOnly(bool wetOnly,uint64_t expectedSession,uint64_t expectedPass)
+{
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=sessionGeneration.load())return false;
+    if(workflowState){const auto flow=workflowState->snapshot();if(flow.mode!=workflow::Mode::live || flow.locked() || (expectedPass!=UINT64_MAX && flow.pass!=expectedPass))return false;}
+    const auto mode=wetOnly?AuditionMode::wetOnly:AuditionMode::dryWet;
+    if(model.auditionFollowsLive && model.auditionMode==mode)return true;
+    model.auditionFollowsLive=true;model.auditionMode=mode;voice.setLevel(1);
+    persistentChangedLocked();++monitoringGeneration;notify();return true;
+}
 void SwellEngine::setPostRoll(double seconds)
 {
     const juce::ScopedLock guard(lock);
@@ -14,8 +24,8 @@ void SwellEngine::setMonitoring(AuditionMode mode,float blend)
     const juce::ScopedLock guard(lock);
     if((mode!=AuditionMode::wetOnly && mode!=AuditionMode::dryWet) || !std::isfinite(blend) || blend<0 || blend>1)
     {message="Invalid audition mode or percentage";return;}
-    if(model.auditionMode==mode && model.wetBlend==blend)return;
-    model.auditionMode=mode;model.wetBlend=blend;persistentChangedLocked();++monitoringGeneration;notify();
+    if(!model.auditionFollowsLive && model.auditionMode==mode && model.wetBlend==blend)return;
+    model.auditionFollowsLive=false;model.auditionMode=mode;model.wetBlend=blend;voice.setLevel(juce::Decibels::decibelsToGain(model.auditionDb));persistentChangedLocked();++monitoringGeneration;notify();
 }
 void SwellEngine::setIsolateSelected(bool enabled)
 {
@@ -107,7 +117,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     }
     auto prepared=std::make_shared<WetRender>();float branch=0,sum=0;
     if(error.isEmpty() && !prepareAuditionMix(aggregate,dryReady?&dry:nullptr,mode,saved.wetBlend,
-        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false,saved.gainPolicy)){}
+        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false,saved.gainPolicy,saved.auditionFollowsLive?std::optional<float>{saved.liveWetDb}:std::nullopt)){}
     const auto latest=contextProvider();const juce::ScopedLock guard(lock);if(cancel())return;
     bool changed=context.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(context.time,latest.time);
     if(mode==AuditionMode::dryWet)changed=changed || sourceDependency(context.capture.manifest,requested.sourceStart,dryEnd)!=sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd);

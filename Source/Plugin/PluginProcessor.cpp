@@ -25,6 +25,7 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
         return PreviewContext{std::move(capture), getSongTime(), captureWorker.captureGeneration()};
     },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
+    swells->setAuditionWetOnly(false,swells->assignmentEpoch());
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
     swells->useProvisionalSource([this]{return captureWorker.provisionalSnapshot();});
     captureWorker.setSettlementHandler([this](uint64_t pass,uint64_t generation,bool useful){swells->captureSettled(pass,generation,useful);});

@@ -34,7 +34,7 @@
     },
     {
       "id": "ui37-004",
-      "path": "Source/UI/Controls/IrSelector.h",
+      "path": "Source/UI/Controls/DeliberateSelector.h",
       "rule": "interaction-default",
       "occurrence": "setScrollWheelEnabled(false)",
       "count": 1,

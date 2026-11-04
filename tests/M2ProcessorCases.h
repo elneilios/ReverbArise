@@ -7,6 +7,8 @@ inline void m2ProcessorCases()
     juce::ScopedJuceInitialiser_GUI gui;
     TestDirectory root;
     auto processor = std::make_unique<PreverbAudioProcessor>(root.file);
+    REQUIRE(processor->swellEngine().savedSession().auditionFollowsLive && processor->swellEngine().savedSession().auditionMode==m3::AuditionMode::dryWet);
+    processor->swellEngine().setMonitoring(m3::AuditionMode::wetOnly,.5f); // This historical oracle explicitly exercises wet-only monitoring.
     REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy)); // Original preview sample oracle.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0); // Exercise independent manual preview.
     processor->swellEngine().setAutomaticProcessing(false);
@@ -73,7 +75,7 @@ inline void m2ProcessorCases()
         if (block == 0)
         { const auto gain = 1.0f;
           REQUIRE(buffer.getSample(0,0)==0); REQUIRE(std::abs(buffer.getSample(1,2) + .5f * (.95f*.95f*(3-2*.95f)) * .4f * gain)<1e-5); }
-        if (block == 4) REQUIRE(buffer.getMagnitude(0, 250) < 1e-5);
+        if (block == 4) REQUIRE(processor->swellEngine().snapshot().playing); // The finite window now loops until Stop.
     }
     REQUIRE(processor->auditionPreview());
     head.position.setIsPlaying(true); head.position.setTimeInSamples(4000); head.position.setPpqPosition(16);

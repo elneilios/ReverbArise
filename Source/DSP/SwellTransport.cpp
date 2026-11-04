@@ -105,6 +105,7 @@ void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
     const auto gainChanged=model.liveWetDb!=db;
     if(model.liveEnabled!=enabled || model.liveRouting!=routing || gainChanged)persistentChangedLocked();
     model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
+    if(gainChanged && model.auditionFollowsLive)++monitoringGeneration;
     liveEnabled=enabled;live.configure(enabled,routing,db);
     if(gainChanged && model.gainPolicy==GainPolicy::musical)invalidateLiveLocked();else notify();
 }

@@ -1,5 +1,17 @@
 # UI development standards
 
+## Context help delivery — issue #46 review
+
+The editor routes existing `TooltipClient` or explicit `contextHelp` metadata
+from hovered controls and graph regions into one bottom `EllipsisLabel`, using
+the established helper text role and feedback height. Nested children inherit
+the nearest available message; owned Settings/Diagnostics windows participate.
+Keep help metadata on the control, with workspace-specific explanatory prose;
+do not introduce popup tooltip hosts or draw hover text over waveform content.
+Interactive title/name is only a fallback. Full text is also the footer's
+accessible description. Hover must not publish state, rebuild layouts or start
+jobs. The owner approved the actual native presentation on 4 November 2026.
+
 Use these standards when implementing or refactoring ReverbArise UI. Consolidate
 controls as the planned work touches them; a separate whole-plugin migration is
 not required before the Learn / Perform / Export work can proceed. Existing UI
@@ -8,7 +20,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 ## Shared controls and ownership
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 2). Its Learn/header table
+numerical authority (production standards revision 5; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -72,12 +84,52 @@ lists the integration baseline, component ownership and remaining legacy consume
 
 ## Incremental migration
 
+Issue #46's native revision-4 compact composition has owner approval. Its
+`PerformLayout::performGeometry` profile is scoped to Perform and tested by the
+native composition matrix; standards revision 3 records the accepted values.
+The production editor consumes this profile following #50's merge. The
+`LatchingActionButton` reuses ActionButton's unlatched drawing, invocation,
+keyboard and focus mechanism and adds accepted pressed-state ink. Its native
+look/feel checkpoint received owner approval on 4 November 2026. Perform owns
+requested/effective Snap, transient Ctrl bypass and its guarded grid gestures.
+`DeliberateSelector` owns the accepted no-wheel invocation policy shared by IR
+and grid selectors. `KnobValue` retains exact-entry/gesture ownership while using
+the approved 14-Medium/24 caption and 28-high value roles. Long captions ellipsize
+with full tooltips; they do not shrink the font. Unaffected Settings/Diagnostics
+consumers retain the same shared lifecycle and domain-specific steps.
+
+The #46 knob audit corrections separate accepted dial painting from JUCE's raw
+pointer accumulator, add explicit rotary keyboard/focus and domain accessibility,
+and keep fixed wheel/arrow increments in the binding. They reuse existing focus
+ink/geometry and text roles; no new density/profile token is introduced. The
+changed knob interaction received focused native family acceptance on 4 November
+2026; prior compact layout and Snap-button acceptance remain valid. `EllipsisLabel` preserves a
+single line's approved font metrics for overflowing inspector status/IR text.
+See [value/unit policy and guards](perform-navigation.md) and
+[audit/remediation evidence](../validation/2026-11-04-issue-46-knob-audit.md).
+
+KnobValue may compose compact readout text with an optional exact-edit string.
+The binding owns formatting; the cell keeps a distinct typing baseline so focus
+and unchanged Return do not publish a rounded value. Existing consumers omit the
+optional string and retain their current behavior. The grouped Perform compact
+readout usage is staged in the native clarity checkpoint, before wider rollout.
+
+The owner requested the revision-4 KnobValue focus variant: four open corner
+brackets, using existing aqua and 2-pixel stroke, with legs at 20% of the contained
+focus box side. It changes only the dial focus painter; text fields and other
+library families retain their own focus treatment. The owner approved the actual
+native variant and Level wheel/arrow steps of 1 dB normally and 0.1 dB with Shift.
+The subsequent double-click/context-menu reset interaction received focused native
+owner approval on 4 November 2026. KnobValue owns menu lifetime and invocation tickets; bindings own
+default/initial semantics, canonical validation and identity guards. See the
+[reset policy](perform-navigation.md#knob-reset).
+
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns
 accepted bounds, logarithmic range, Fit and stale-session guards. The independent
 `MusicalTimelineRuler` painter reuses the existing timing/coordinate authorities.
 See [interface and review scope](shared-timeline-controls.md); this library slice
-does not migrate production screens or approve Perform compact metrics.
+contains no workspace-specific Fit, gesture, transport or serialization behavior.
 
 `Controls/SliderControl.h` is the reusable wheel-enabled slider/value family.
 It retains `InvocationSlider` ownership guards and JUCE range, interval,
@@ -124,6 +176,16 @@ command or run a launcher. Reuse an already open review window rather than
 spawning duplicates; leave it open while they review. Screenshots remain useful
 supplementary evidence. If a review executable is open, preserve that process and
 defer relinking its binary until the owner has finished.
+
+A native harness borrowing the production editor's components must have one
+refresh owner. After construction, call `stopAutomaticRefreshForReview()` on that
+hidden editor and drive its public `refresh()` from the harness; normal plugin
+construction retains automatic polling. Apply specimen overrides before yielding
+to the event loop and retain callback ownership when rebinding borrowed controls.
+Keep layout/font setup in actual resize/layout changes rather than idle polling.
+Verify live timer/event-loop stability as well as static rasters; the
+[issue #46 follow-up](../validation/2026-11-04-issue-46-perform-composition.md)
+records the owner-approved review seam and a competing-timer regression test.
 
 - Add focused tests at the shared component boundary using actual wheel, drag,
   keyboard, text-entry and focus events where practical. Exercise limits,

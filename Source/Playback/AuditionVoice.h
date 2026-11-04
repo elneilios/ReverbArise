@@ -13,7 +13,7 @@
 class AuditionVoice
 {
 public:
-    bool start(std::shared_ptr<const WetRender> buffer, float attenuation = 1.0f);
+    bool start(std::shared_ptr<const WetRender> buffer, float attenuation = 1.0f, bool loop = false);
     bool replace(std::shared_ptr<const WetRender> buffer);
     void setLevel(float gain) noexcept { level.store(std::isfinite(gain) ? std::clamp(gain, 0.0f, 1.0f) : 0.0f); }
     void stop(bool immediately = false) noexcept;
@@ -31,7 +31,7 @@ public:
     size_t pinnedCount() const noexcept { return pins.size(); }
     uint64_t pinnedBytes() const noexcept;
 private:
-    struct Command { const WetRender* buffer = nullptr; uint64_t serial = 0, epoch = 0; float attenuation = 1; bool replace=false; };
+    struct Command { const WetRender* buffer = nullptr; uint64_t serial = 0, epoch = 0; float attenuation = 1; bool replace=false,loop=false; };
     struct Pin { uint64_t serial; std::shared_ptr<const WetRender> buffer; };
     std::array<Command, 8> commands;
     std::vector<Pin> pins;
@@ -50,6 +50,7 @@ private:
     int transitionRemaining=0,transitionLength=1;
     float previousAttenuation=1;
     size_t cursor = 0;
+    bool looping = false;
     int rampRemaining = 0, rampLength = 1;
     std::atomic<float> level{1};
     float activeAttenuation = 1, smoothedLevel = 1, levelStep = 0, targetLevel = 1;

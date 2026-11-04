@@ -2,6 +2,7 @@
 #include <Core/SwellSession.h>
 #include <limits>
 using namespace m3;
+#include "PerformNavigationStateCases.h"
 int main() { return runTest([]
 {
     Session s; CaptureManifest map; juce::String error;
@@ -94,7 +95,7 @@ int main() { return runTest([]
     shape.gainDb=std::numeric_limits<float>::infinity(); REQUIRE(! setShape(w,shape,-100,40,error));
     w.render={}; s.auditionDb=-24; s.autoRegenerate=true; s.sensitivity=0.7f; s.separationSeconds=0.12;
     shape.gainDb=-3;REQUIRE(setShape(w,shape,-100,40,error));
-    juce::String json; REQUIRE(encode(s,json,error)); Session restored;
+    juce::String json; REQUIRE(encode(s,json,error)); Session restored;performNavigationStateCases(s);
     REQUIRE(decode(json,restored,error));
     REQUIRE(restored.swells.size()==3 && restored.swells[0].name=="Edited" && restored.primary==first);
     REQUIRE(restored.auditionDb==-24 && restored.autoRegenerate && !restored.swells[0].shape.automaticStart);
@@ -131,6 +132,14 @@ int main() { return runTest([]
     {auto bad=juce::JSON::parse(json);bad["swells"][0].getDynamicObject()->setProperty("generationSource","invalid");
         REQUIRE(!decode(juce::JSON::toString(bad),restored,error) && restored.swells[0].generationSource==target.generationSource);}
     REQUIRE(restored.auditionMode==AuditionMode::dryWet && restored.wetBlend==0.35f);
+    automatic.auditionFollowsLive=true;automatic.auditionDb=-24;
+    REQUIRE(encode(automatic,json,error) && decode(json,restored,error));
+    REQUIRE(restored.auditionFollowsLive && restored.auditionDb==-24 && restored.wetBlend==.35f);
+    auto metadata=juce::JSON::parse(json);metadata.getDynamicObject()->removeProperty("auditionFollowsLive");
+    REQUIRE(decode(juce::JSON::toString(metadata),restored,error) && !restored.auditionFollowsLive && restored.auditionDb==-24);
+    metadata.getDynamicObject()->setProperty("auditionFollowsLive","true");const auto safe=restored;
+    REQUIRE(!decode(juce::JSON::toString(metadata),restored,error) && restored.auditionDb==safe.auditionDb && restored.swells[0].id==safe.swells[0].id);
+    automatic.auditionFollowsLive=false;REQUIRE(encode(automatic,json,error) && decode(json,restored,error));
     const auto retained=restored.swells[0].id;
     auto legacy=juce::JSON::parse(json);legacy.getDynamicObject()->setProperty("version",1);
     legacy.getDynamicObject()->setProperty("auditionDb",-12.0);

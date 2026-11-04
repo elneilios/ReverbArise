@@ -1,13 +1,9 @@
 #pragma once
-#include <UI/WorkspaceTheme.h>
+#include "DeliberateSelector.h"
 
 namespace m3::ui::controls
 {
 // IR selection is deliberate: wheel movement must not reassign a response.
 // Invocation capture stays shared; the binding owns target/session validation.
-class IrSelector final:public InvocationComboBox
-{
-public:
-    IrSelector(){setScrollWheelEnabled(false);}
-};
+class IrSelector final:public DeliberateSelector {};
 }
