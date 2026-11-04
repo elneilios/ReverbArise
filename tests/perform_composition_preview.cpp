@@ -4,6 +4,7 @@
 #include <Plugin/PluginEditor.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/PerformLayout.h>
+#include <UI/TimingEdit.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
@@ -18,7 +19,7 @@ static juce::Component* find(juce::Component& root,const juce::String& name)
     return nullptr;
 }
 template<class T>static T& require(juce::Component& root,const juce::String& name)
-{auto* result=dynamic_cast<T*>(find(root,name));REQUIRE(result);return *result;}
+{auto* result=dynamic_cast<T*>(find(root,name));if(!result)throw std::runtime_error("Missing native fixture control: "+name.toStdString());return *result;}
 template<class F>static void wait(F predicate)
 {
     const auto end=juce::Time::getMillisecondCounter()+30000;
@@ -212,6 +213,7 @@ public:
     void verifyGestures();
     void verifyEditorBindings();
     void verifyFit();
+    void verifyKnobs();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -358,6 +360,7 @@ private:
 #include "PerformGestureCases.h"
 #include "PerformEditorBindingCases.h"
 #include "PerformFitCases.h"
+#include "PerformKnobCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -391,6 +394,13 @@ public:
     }
     void resized()override
     {auto area=getLocalBounds();auto strip=area.removeFromTop(44).reduced(6);scenes.setBounds(strip.removeFromLeft(210));strip.removeFromLeft(8);sizes.setBounds(strip.removeFromLeft(146));strip.removeFromLeft(12);note.setBounds(strip);editor->setBounds(area);}
+    void capture(const juce::File& directory)
+    {
+        REQUIRE(directory.createDirectory().wasOk());editor->stopAutomaticRefreshForReview();
+        for(int scene=0;scene<3;++scene)
+        {fixture->composition.setScene(scene);editor->refresh();editor->setSize(1100,850);const auto snapshot=editor->createComponentSnapshot(editor->getLocalBounds());
+            auto output=directory.getChildFile(juce::String(scene==0?"selected":scene==1?"empty":"dense")+"-1100.png").createOutputStream();REQUIRE(output && juce::PNGImageFormat().writeImageToStream(snapshot,*output));}
+    }
 private:
     std::unique_ptr<Review> fixture;
     std::unique_ptr<PreverbAudioProcessorEditor> editor;
@@ -405,6 +415,7 @@ int main(int argc,char** argv)
     {
         using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
+        if(command=="--capture-integrated"){REQUIRE(argc==3);IntegratedReview review(std::move(content));review.capture(juce::File(argv[2]));return;}
         if(command=="--review-integrated")
         {
             class Window final:public juce::DocumentWindow
@@ -419,6 +430,7 @@ int main(int argc,char** argv)
         if(command=="--test-gestures"){content->composition.verifyGestures();std::cout<<"Perform grid/translation/modifier/stale-owner/source checks passed.\n";return;}
         if(command=="--test-editor"){content->composition.verifyEditorBindings();std::cout<<"Perform actual editor layout/navigation/restore/Export binding checks passed.\n";return;}
         if(command=="--test-fit"){content->composition.verifyFit();std::cout<<"Perform selected/pending/overlap/sparse/empty Fit checks passed.\n";return;}
+        if(command=="--test-knobs"){content->composition.verifyKnobs();std::cout<<"Perform knob grid/accepted feedback/guards/focus/accessibility/font checks passed.\n";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")

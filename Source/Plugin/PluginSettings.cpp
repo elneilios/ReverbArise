@@ -89,7 +89,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
     mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
-    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds(left+180,20,350,30);
+    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
     row(settingsLabels[2],inCurveBox,60);row(settingsLabels[3],outCurveBox,100);
     settingsLabels[4].setBounds(left,146,width,24);barStartLabel.setBounds(left,178,70,30);barStartEditor.setBounds(left+75,178,90,30);
     barEndLabel.setBounds(left+185,178,70,30);barEndEditor.setBounds(left+260,178,90,30);setBarsButton.setBounds(left+365,178,225,30);

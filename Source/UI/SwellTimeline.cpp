@@ -1,4 +1,5 @@
 #include "SwellTimeline.h"
+#include "TimingEdit.h"
 #include "SongBarRuler.h"
 #include "WorkspaceTheme.h"
 #include <limits>
@@ -395,49 +396,15 @@ void SwellTimeline::dragTo(juce::Point<float> point)
         // current selection inside that same transaction, including secondary IDs.
         const auto current=engine.savedSession();
         if(current.primary!=dragId || current.selected!=dragSelection){stale=true;error=failure="Selection changed; start a new gesture";return false;}
-        const auto quantize=[&](int64_t at,int64_t lower,int64_t upper)->std::optional<int64_t>
+        if(!vertical)
         {
-            if(lower>upper)return {};
-            return snapping?dragGrid->snapWithin(at,lower,upper):std::optional<int64_t>{std::clamp(at,lower,upper)};
-        };
-        const auto checkedCandidate=[&](int64_t lower,int64_t upper){auto value=quantize(requested,lower,upper);if(!value)error=failure="No valid grid point within this handle's timing bounds";return value;};
-        if(kind==Drag::arrival){const auto at=checkedCandidate(INT64_MIN,INT64_MAX);return at && moveArrival(w,*at,error);}
-        if(kind==Drag::sourceStart){const auto at=checkedCandidate(INT64_MIN,w.arrival);return at && setSource(w,*at,w.sourceEnd,error);}
-        if(kind==Drag::sourceEnd){int64_t minimum;if(!checkedAdd(w.arrival,1,minimum))return false;const auto at=checkedCandidate(minimum,INT64_MAX);return at && setSource(w,w.sourceStart,*at,error);}
-        if(kind==Drag::move)
-        {
-            const auto at=checkedCandidate(INT64_MIN,INT64_MAX);int64_t offset,placement;
-            if(!at || !checkedSubtract(*at,initialSample,offset) || !checkedAdd(initialPlacement,offset,placement))return false;
-            return moveWet(w,placement,error);
+            const auto anchorKind=kind==Drag::arrival?TimingAnchor::arrival:kind==Drag::sourceStart?TimingAnchor::sourceStart:kind==Drag::sourceEnd?TimingAnchor::sourceEnd:
+                kind==Drag::audibleStart?TimingAnchor::start:kind==Drag::audibleEnd?TimingAnchor::end:kind==Drag::fadeIn?TimingAnchor::fadeIn:kind==Drag::fadeOut?TimingAnchor::fadeOut:TimingAnchor::move;
+            auto anchor=w;anchor.shape=initialEnvelope;anchor.placement=initialPlacement;long double origin=0;songOrigin(dragAcceptedTime,origin);
+            const auto ok=applyTimingCandidate(w,anchor,anchorKind,requested,raw?raw->start:0,raw?raw->end:0,snapping,dragGrid?&*dragGrid:nullptr,origin,error);
+            if(!ok)failure=error;return ok;
         }
-        if(!raw)return false;auto shape=w.shape;int64_t a,b;
-        if(!requestedShapeBounds(w,raw->start,a,b))return false;
-        int64_t positionedStart;if(!checkedAdd(raw->start,w.placement,positionedStart))return false;
-        const auto toOffset=[&](int64_t at,int64_t& out){int64_t logical;return checkedSubtract(at,w.placement,logical) && checkedSubtract(logical,w.arrival,out);};
-        if(kind==Drag::audibleStart || kind==Drag::audibleEnd)
-        {
-            shape=initialEnvelope;
-            const auto at=kind==Drag::audibleStart?checkedCandidate(positionedStart,b-1):checkedCandidate(a+1,INT64_MAX);
-            if(!at)return false;
-            if(kind==Drag::audibleStart){shape.automaticStart=false;if(!toOffset(*at,shape.startOffset))return false;}
-            else if(!toOffset(*at,shape.endOffset))return false;
-        }
-        if(kind==Drag::fadeIn){const auto at=checkedCandidate(a,b-1);if(!at || !checkedSubtract(*at,a,shape.fadeIn))return false;}
-        if(kind==Drag::fadeOut)
-        {
-            auto at=quantize(requested,a,b);
-            if(snapping)
-            {
-                const auto positive=b-a>1?quantize(requested,a,b-2):std::optional<int64_t>{};
-                const auto zero=quantize(b,b,b);at=positive;
-                long double origin=0;songOrigin(dragAcceptedTime,origin);
-                if(zero && (!at || std::abs(static_cast<long double>(*zero)-requested)<std::abs(static_cast<long double>(*at)-requested)
-                    || (std::abs(static_cast<long double>(*zero)-requested)==std::abs(static_cast<long double>(*at)-requested)
-                        && std::abs(*zero-origin)>std::abs(*at-origin))))at=zero;
-            }
-            if(!at){error=failure="No valid fade-out grid point";return false;}
-            shape.fadeOut=*at>=b-1?0:b-1-*at;
-        }
+        if(!raw)return false;auto shape=w.shape;
         const auto verticalDelta=(point.y-dragOrigin.y)*(fineDrag?.1:1.);
         if(kind==Drag::inTension)shape.inTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         if(kind==Drag::outTension)shape.outTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);

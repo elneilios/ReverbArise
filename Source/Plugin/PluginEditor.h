@@ -4,6 +4,7 @@
 #include <UI/WorkspaceTheme.h>
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
+#include <UI/Controls/EllipsisLabel.h>
 #include <UI/Controls/IrSelector.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
@@ -38,7 +39,7 @@ private:
     m3::ui::IRPreparationNotice irPreparationNotice;
     juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
-    void timerCallback() override {refresh();}
+    void timerCallback() override {modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
     void setDiagnosticsOpen(bool);
     void setSettingsOpen(bool);
     void initialiseSettings();
@@ -53,6 +54,9 @@ private:
     void shapeReset(bool full);
     enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
     void beginValueEdit(int);
+    void rebaseValueEdit(int);
+    void stepValueEdit(int,double);
+    bool valueIntentCurrent(int)const;
     bool commitValueEdit(int,const juce::String&,std::optional<double> delta={});
     void refreshValues(const m3::Swell*,const SongTime&);
     std::array<m3::ui::KnobValue,valueCount> valueControls;
@@ -61,7 +65,9 @@ private:
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
-    SongTime valueTime;
+    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;};
+    std::array<ValueInvocation,valueCount> valueInvocations;
+    int valueModifierFlags=0;
     m3::ui::controls::IrSelector irBox;
     struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;std::vector<m3::IRChoice> choices;};
     std::optional<IRInvocation> irInvocation;
@@ -115,7 +121,8 @@ private:
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
-    juce::Label headerStatus,selectedStatus,irStatus,monitorStatus,helper;
+    juce::Label headerStatus,monitorStatus,helper;
+    m3::ui::controls::EllipsisLabel selectedStatus,irStatus;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     juce::TextButton trimResetButton{"Trim 0 dB"};
     juce::TextButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};

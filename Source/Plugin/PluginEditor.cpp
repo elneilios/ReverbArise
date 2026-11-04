@@ -118,8 +118,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     performZoom.onZoomStep=[this](double factor){if(navigationIntentCurrent()){timeline.zoom(factor);refreshPerformNavigation();songOverview.repaint();}};
     performZoom.onZoomFraction=[this](double fraction){if(navigationIntentCurrent()){timeline.setZoomFraction(fraction);refreshPerformNavigation();songOverview.repaint();}};
     performZoom.onFit=[this]{if(navigationIntentCurrent()){timeline.fitSelection();performFitted=true;refreshPerformNavigation();songOverview.repaint();}};
-    snapButton.onClick=[this]{if(navigationIntentCurrent()){timeline.setSnap(!timeline.requestedSnap());navigationDirty=true;publishPerformNavigation();}refreshPerformNavigation();};
-    gridBox.onChange=[this]{const auto index=gridBox.getSelectedId()-1;if(navigationIntentCurrent() && index>=0 && index<static_cast<int>(m3::gridChoices.size())){timeline.setGridDivision(m3::gridChoices[static_cast<size_t>(index)].division);navigationDirty=true;publishPerformNavigation();}refreshPerformNavigation();};
+    snapButton.onClick=[this]{if(navigationIntentCurrent()){timeline.setSnap(!timeline.requestedSnap());for(auto& cell:valueControls)cell.rebaseGesture();navigationDirty=true;publishPerformNavigation();}refreshPerformNavigation();};
+    gridBox.onChange=[this]{const auto index=gridBox.getSelectedId()-1;if(navigationIntentCurrent() && index>=0 && index<static_cast<int>(m3::gridChoices.size())){timeline.setGridDivision(m3::gridChoices[static_cast<size_t>(index)].division);for(auto& cell:valueControls)cell.cancel();navigationDirty=true;publishPerformNavigation();}refreshPerformNavigation();};
     recaptureButton.onClick=[this]{armSelected();};cancelButton.onClick=[this]{processor.cancelRecapture();refresh();};
     fullButton.onClick=[this]{shapeReset(true);};resetButton.onClick=[this]{shapeReset(false);};setBarsButton.onClick=[this]{applyBarRange();};
     inCurveBox.onChange=[this]{curveChanged(true);};outCurveBox.onChange=[this]{curveChanged(false);};
@@ -130,7 +130,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneButton.onClick=[this]{processor.setTestToneEnabled(toneButton.getToggleState());};
     toneStartSlider.onValueChange=[this]{if(!updating)processor.setToneStartBar(static_cast<int>(toneStartSlider.getValue()));};
     toneEndSlider.onValueChange=[this]{if(!updating)processor.setToneEndBar(static_cast<int>(toneEndSlider.getValue()));};
-    for(auto* label:{&headerStatus,&selectedStatus,&irStatus,&monitorStatus,&helper})
+    for(auto* label:std::initializer_list<juce::Label*>{&headerStatus,&selectedStatus,&irStatus,&monitorStatus,&helper})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
     headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");irStatus.setName("irAssignmentStatus");
     headerStatus.setBorderSize(juce::BorderSize<int>(0,24,0,8));
@@ -220,7 +220,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     headerStatus.setJustificationType(juce::Justification::centredRight);
     workflowHeader.settingsAction().setTooltip("Settings: playback, processing, selected swell, audition and recovery");
     markerButton.setButtonText("Auto-marker");
-    const std::array<juce::String,valueCount> valueTitles{"Target","Source Start","Source End","Pre-roll (s)","End Offset (s)","Fade In (ms)","Fade Out (ms)","Level (dB)","Curve In","Curve Out","Move Wet (ms)"};
+    const std::array<juce::String,valueCount> valueTitles{"Target","Source Start","Source End","Pre-roll (s)","End Offset (s)","Fade In (ms)","Fade Out (ms)","Level (dB)","Curve In (unitless)","Curve Out (unitless)","Move Wet (ms)"};
     const std::array<juce::String,valueCount> valueNames{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","swellLevel","curveInTension","curveOutTension","wetPlacement"};
     // Keep the older exact-bound tools available in Settings until its dedicated
     // cleanup stage; only the new cells own the primary timing/shape names.
@@ -229,13 +229,16 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(int index=0;index<valueCount;++index)
     {
         auto& cell=valueControls[index];inspectorContent.addAndMakeVisible(cell);
-        cell.configure(valueTitles[index],valueNames[index],index<=sourceEndValue?"Absolute Playlist position. Choose exact sample units in Settings. Numeric entry is never snapped.":
+        cell.configure(valueTitles[index],valueNames[index],index<=sourceEndValue?"Absolute musical position: bar.beat.fraction. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.":
             index==preRollValue?"Seconds before the fixed dry target. Negative values start after it. Placement is inverted when editing.":
             index==endOffsetValue?"Signed seconds from the dry target. Negative creates a gap; positive overlaps unchanged dry audio.":
-            index==placementValue?"Move wet audio and envelope together; dry stays fixed. Exact sample alternative is in Settings.":
+            index==placementValue?"Move wet audio and envelope together in milliseconds; dry stays fixed. Typed entry is never snapped.":
             index==inCurveValue || index==outCurveValue?"Independent curve tension, -1 to +1. Curve preset is in Settings.":"Type an exact value, or drag the knob. Shift-drag for fine adjustment.");
         cell.onBegin=[this,index]{beginValueEdit(index);};cell.onEnd=[this,index]{valueAnchors[index].reset();};
         cell.onDelta=[this,index](double delta){commitValueEdit(index,{},delta);};
+        cell.onRebase=[this,index]{rebaseValueEdit(index);};
+        cell.onStep=[this,index](double amount){stepValueEdit(index,amount);};
+        cell.onModifierInput=[this](const juce::ModifierKeys& mods){modifierKeysChanged(mods);};
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
     }
     irBox.setName("selectedIR");inspectorContent.addAndMakeVisible(irBox);
@@ -261,7 +264,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneButton.setName("scheduledTone");
     initialiseSettings();
     for(auto* heading:{&listLabel,&inspectorHeading,&auditionHeading})m3::ui::applyTextRole(*heading,m3::ui::TextRole::sectionHeading);
-    for(auto* label:{&selectedStatus,&irStatus,&monitorStatus,&editorReadout,&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
+    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&irStatus,&monitorStatus,&editorReadout,&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
@@ -477,9 +480,11 @@ void PreverbAudioProcessorEditor::refresh()
         if(w->phase==m3::Phase::ready && (g.state==m3::CalibrationState::unavailable || g.state==m3::CalibrationState::capped))
             selectedStatus.setText(phaseName(w->phase)+" | "+(g.state==m3::CalibrationState::unavailable?"Calibration unavailable":"Calibration capped"),juce::dontSendNotification);}
     irStatus.setText("Impulse Response (IR)",juce::dontSendNotification);
+    irStatus.setTooltip("Impulse Response (IR)");
     if(state.retainedIRName.isNotEmpty()){
         const auto text=(state.liveActive?juce::String("Playing "):juce::String("Retained "))+state.retainedIRName+" | Requested "+state.requestedIRName;
         irStatus.setText(text,juce::dontSendNotification);irStatus.setTooltip(text+" | "+(w?w->status:state.message));}
+    selectedStatus.setTooltip(selectedStatus.getText()+"\n"+selectedStatus.getTooltip());
     const auto choice=w?w->ir.content+"|"+w->irName:juce::String{};
     auto entries=processor.swellEngine().irChoices();juce::String catalogue;
     for(const auto& entry:entries)catalogue<<entry.id<<"|"<<entry.name<<"\n";
@@ -623,7 +628,6 @@ bool PreverbAudioProcessorEditor::navigationIntentCurrent()const
 }
 void PreverbAudioProcessorEditor::refreshPerformNavigation()
 {
-    modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});
     const auto fraction=timeline.zoomFraction();const bool active=!learningLayout && !exportLayout;
     performZoom.setEnabled(active);performZoom.display({fraction,fraction<1-1.e-9,fraction>1.e-9,hasPerformWorkspace});
     snapButton.setEnabled(active);snapButton.display(timeline.effectiveSnap());
@@ -633,7 +637,9 @@ void PreverbAudioProcessorEditor::refreshPerformNavigation()
 }
 void PreverbAudioProcessorEditor::modifierKeysChanged(const juce::ModifierKeys& modifiers)
 {
+    valueModifierFlags=modifiers.getRawFlags();
     timeline.setGestureModifiers(modifiers.isShiftDown(),modifiers.isCtrlDown());
+    for(auto& cell:valueControls)cell.setGestureModifiers(modifiers);
     snapButton.display(timeline.effectiveSnap());
     snapButton.setDescription(timeline.requestedSnap() && !timeline.effectiveSnap()?"Snap temporarily off while Ctrl is held; release Ctrl to restore":"Snap requested state; hold Ctrl for temporary bypass and Shift for fine drag");
     if(timeline.effectiveSnap() && !timeline.gridAvailable())snapButton.setDescription("Snap requested On, but compatible fixed host timing is unavailable. Hold Ctrl or turn Snap off for sample edits.");
