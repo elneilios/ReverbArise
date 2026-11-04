@@ -224,7 +224,6 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     }
     irBox.setName("selectedIR");inspectorContent.addAndMakeVisible(irBox);
     irBox.setTooltip("Choose a bundled response, or load WAV/WavPack for this swell only. Monumental is deliberately intense; Shimmer is static coloration.");
-    irBox.setScrollWheelEnabled(false);
     irBox.beforeInvocation=[this]{const auto session=processor.swellEngine().savedSession();if(const auto w=m3::find(session,session.primary))irInvocation=IRInvocation{w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch(),irEntries};else irInvocation.reset();};
     irBox.onChange=[this]{if(updating)return;const auto invocation=std::exchange(irInvocation,std::nullopt);
         const auto index=irBox.getSelectedId()-1;const auto& choices=invocation?invocation->choices:irEntries;

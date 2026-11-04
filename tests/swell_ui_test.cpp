@@ -116,9 +116,11 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "WorkflowHeaderCases.h"
 #include "NoticeBarCases.h"
 #include "WorkspaceNoticeCases.h"
+#include "UiStandardsCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    uiStandardsCases();
     learnTimelineCases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
@@ -306,6 +308,7 @@ int main(int argc,char* argv[]){return runTest([&]
             REQUIRE(std::abs((regions[0].getY()+regions[2].getBottom())/2-emptyLearn->timelineBounds().getCentreY())<=1);
             for(const auto& r:regions)REQUIRE(emptyLearn->timelineBounds().contains(r));
         }
+        uiStandardsLayoutCases(empty,"empty");
         REQUIRE(!findNamed(empty,"learnPassHelp"));
         if(argc>1 && juce::String(argv[1])=="--review-learn-empty")
         {auto review=std::make_unique<PreverbAudioProcessorEditor>(fresh);review->refresh();controlReview::run(std::move(review));return;}
@@ -596,7 +599,7 @@ int main(int argc,char* argv[]){return runTest([&]
         auto numeric=dynamic_cast<m3::ui::controls::NumericInputControl*>(percentage);REQUIRE(numeric);
         sensitivity->setValue(37.5,juce::sendNotificationSync);controlReview::pointerClick(numeric->incrementButton());editor.refresh();REQUIRE(sensitivity->getValue()==37.6 && engine.savedSession().sensitivity==.376f);
         controlReview::pointerClick(numeric->decrementButton());editor.refresh();REQUIRE(sensitivity->getValue()==37.5 && engine.savedSession().sensitivity==.375f);
-        snapshotEditor(editor,"learn-on");largeWorkflowSnapshot("learn-on");
+        snapshotEditor(editor,"learn-on");largeWorkflowSnapshot("learn-on");uiStandardsLayoutCases(editor,"automatic-on");
         const auto stableSensitivity=sensitivity->getBounds(),stableIRFeedback=named(editor,"learnIRStatus")->getBounds();
         static_cast<juce::Component&>(numeric->incrementButton()).keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live) && processor->requestWorkflowMode(workflow::Mode::capture));
@@ -621,7 +624,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(sensitivity->getBounds()==stableSensitivity && irStatus->getBounds()==stableIRFeedback);
         REQUIRE(engine.assignDefaultBundledIR(m3::defaultImpulseId));waitUI([&]{return !engine.snapshot().defaultIRPending;});REQUIRE(engine.savedSession().defaultIR==savedDefault);
         automatic->setToggleState(false,juce::sendNotificationSync);editor.refresh();REQUIRE(!visibleOffscreen(defaultIR) && !visibleOffscreen(sensitivity));
-        REQUIRE(engine.savedSession().sensitivity==.375f);snapshotEditor(editor,"learn-off");largeWorkflowSnapshot("learn-off");
+        REQUIRE(engine.savedSession().sensitivity==.375f);snapshotEditor(editor,"learn-off");largeWorkflowSnapshot("learn-off");uiStandardsLayoutCases(editor,"automatic-off");
         engine.setPreferences(baseline.auditionDb,baseline.sensitivity,baseline.separationSeconds,baseline.autoRegenerate);editor.refresh();
         REQUIRE(!named(editor,"workspaceNotice")->isVisible());
         REQUIRE(!engine.assignIR(first,baseline.swells[0].inputGeneration,file,false,engine.assignmentEpoch()));

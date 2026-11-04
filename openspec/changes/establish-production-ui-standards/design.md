@@ -20,11 +20,12 @@ Relevant authorities:
 - `docs/validation/2026-11-03-issue-35-header-navigation.md`: baseline and native
   test evidence; its candidate-era pending approval entry is historical. Use the
   later living standards approval record, not a fabricated rewrite of that entry.
-- `openspec/specs/swell-workspace/spec.md`: current workspace contracts.
-  Its italic header description is superseded in production by the completed,
-  unarchived `enhance-header-mode-navigation` delta. Do not sync/archive that
-  change or overwrite its requirement here. `bound-waveform-paint-work` also
-  remains separate and untouched.
+- `openspec/specs/swell-workspace/spec.md`: current workspace contracts. At
+  proposal discovery its italic description lagged the completed header delta.
+  Implementation integrated main `fd33ae5` / PR #43, which already synced and
+  archived that delta at `archive/2026-11-04-enhance-header-mode-navigation`.
+  Its regular-description contract now agrees with production. This change does
+  not repeat that sync/archive; `bound-waveform-paint-work` remains untouched.
 
 ### Observed inventory and gaps
 

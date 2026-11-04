@@ -4,6 +4,7 @@
 #include <UI/WorkspaceTheme.h>
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
+#include <UI/Controls/IrSelector.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
 #include <UI/Controls/InvocationSlider.h>
@@ -53,7 +54,7 @@ private:
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
     SongTime valueTime;
-    m3::ui::InvocationComboBox irBox;
+    m3::ui::controls::IrSelector irBox;
     struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;std::vector<m3::IRChoice> choices;};
     std::optional<IRInvocation> irInvocation;
     std::vector<m3::IRChoice> irEntries;

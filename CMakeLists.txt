@@ -149,6 +149,11 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    find_program(PREVERB_UI_POWERSHELL NAMES powershell pwsh REQUIRED)
+    add_test(NAME preverb_ui_standards_check COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/scripts/check-ui-standards.ps1")
+    add_test(NAME preverb_ui_standards_lint_test COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/ui_standards_lint_test.ps1")
     math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
     add_executable(preverb_product_version_test tests/product_version_test.cpp)
     target_compile_definitions(preverb_product_version_test PRIVATE

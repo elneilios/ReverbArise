@@ -1,0 +1,486 @@
+{
+  "schema": 1,
+  "baseline": "2848fcd",
+  "entries": [
+    {
+      "id": "ui37-001",
+      "path": "Source/Plugin/PluginEditor.cpp",
+      "rule": "font-construction",
+      "occurrence": "juce::FontOptions(",
+      "count": 12,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-002",
+      "path": "Source/Plugin/PluginSettings.cpp",
+      "rule": "font-construction",
+      "occurrence": "juce::FontOptions(",
+      "count": 2,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-003",
+      "path": "Source/Plugin/PluginSettings.cpp",
+      "rule": "literal-style",
+      "occurrence": "setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack",
+      "count": 1,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-004",
+      "path": "Source/UI/Controls/IrSelector.h",
+      "rule": "interaction-default",
+      "occurrence": "setScrollWheelEnabled(false)",
+      "count": 1,
+      "scope": "shared control default",
+      "reason": "Existing accepted interaction default consolidated in its shared family; no behaviour change.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-005",
+      "path": "Source/UI/Controls/SliderControl.h",
+      "rule": "interaction-default",
+      "occurrence": "setScrollWheelEnabled(true)",
+      "count": 1,
+      "scope": "shared control default",
+      "reason": "Existing accepted interaction default consolidated in its shared family; no behaviour change.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-006",
+      "path": "Source/UI/KnobValue.h",
+      "rule": "interaction-default",
+      "occurrence": "setScrollWheelEnabled(true)",
+      "count": 1,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-007",
+      "path": "Source/UI/KnobValue.h",
+      "rule": "interaction-default",
+      "occurrence": "setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier)",
+      "count": 1,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-008",
+      "path": "Source/UI/LearnWorkspace.h",
+      "rule": "literal-style",
+      "occurrence": "setMinimumHorizontalScale(1.f)",
+      "count": 1,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-013",
+      "path": "Source/UI/SwellTimeline.cpp",
+      "rule": "literal-style",
+      "occurrence": "setColour(juce::Colours::black",
+      "count": 1,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-014",
+      "path": "Source/UI/SwellTimeline.cpp",
+      "rule": "literal-style",
+      "occurrence": "setColour(juce::Colours::white",
+      "count": 2,
+      "scope": "retained legacy consumer",
+      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-015",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffc4ccd4",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-016",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprfloatfocusStroke=2,focusOutset=3,focusPadding=6;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-017",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprfloatsecondarySize=14;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-018",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintemptyIconGap=12,emptyTextGap=6;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-019",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintemptyIconHeight=38,emptyHeadingHeight=32,emptyTextHeight=40;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-020",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintheaderHeight=82,compactInset=16,largeInset=20;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-021",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintheight=34,labelHeight=24,headingHeight=30,helperLineHeight=18;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-022",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintlearnSettingsWidth=304,columnGap=28;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-023",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintmetadataGap=6,rulerViewportGap=10;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-024",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintnumericStepWidth=18,feedbackHeight=20;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-025",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintsecondaryLineHeight=20;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-026",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintswitchHeight=switchTrackHeight+static_cast<int>(2*focusPadding);",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-027",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintswitchTrackWidth=44,switchTrackHeight=24;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-028",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintswitchWidth=switchTrackWidth+static_cast<int>(2*focusPadding);",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-029",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprinttight=4,labelHelp=6,related=12,group=16,section=24;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-030",
+      "path": "Source/UI/UiGeometry.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprintvalueWidth=74,valueHeight=28,rulerLabelWidth=40;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-032",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "font-construction",
+      "occurrence": "juce::Font(",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-039",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "font-construction",
+      "occurrence": "juce::FontOptions(",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-040",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff00c2cc",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-041",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff00efff",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-042",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff0f1418",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-043",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff242a30",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-044",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff4a5058",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-045",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff63716e",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-046",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff6b737c",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-047",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff773d3d",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-048",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xff80938f",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-049",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffa54444",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-050",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffc7cdd4",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-051",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffdba66f",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-052",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffe6bb72",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-053",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffedf1f5",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-054",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xfff8fafc",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-055",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffff6b5e",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-056",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffffb4e9",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-057",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "raw-colour",
+      "occurrence": "0xffffc700",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-058",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprfloatnavigationSize=18,modeDescriptionSize=16;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui37-059",
+      "path": "Source/UI/WorkspaceTheme.h",
+      "rule": "token-definition",
+      "occurrence": "inlineconstexprfloatrule=1,radius=4,headingSize=21,bodySize=14,controlSize=13,smallSize=12,captionSize=11,emptyHeadingSize=24;",
+      "count": 1,
+      "scope": "shared definition",
+      "reason": "Existing production role/embedded-font authority; preserve scoped baseline values.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    }
+  ]
+}

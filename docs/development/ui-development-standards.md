@@ -7,6 +7,13 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
+numerical authority (production standards revision 1). Its Learn/header table
+takes precedence over the retained historical mockup suggestions. Current code
+and scoped native approval establish measurements; do not sample a generated
+mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
+lists the integration baseline, component ownership and remaining legacy consumers.
+
 - Use a repository-owned control library for all new or refactored application
   controls: knobs, sliders, numeric/text entries, buttons and icon buttons,
   toggles, dropdowns, menus, lists, tabs, scroll containers and auxiliary windows.
@@ -142,6 +149,105 @@ PRs touching UI should state the component families reused/extracted, deliberate
 policy exceptions, remaining migration and validation gaps, and visual approval
 status. Reviewers should flag duplicated interaction setup as a maintenance issue,
 not defer it automatically because the screen already looks correct.
+
+## Production text roles and shared defaults
+
+Shared namespace functions in `m3::ui` extend the existing `WorkspaceTheme.h`
+authority. `textStyle(TextRole)`
+returns height, embedded face, semantic ink and line-box height;
+`textFont(TextRole)` resolves the cached face. `applyTextRole(Label&, role,
+justification)` and `applyTextRole(Graphics&, role)` keep label/custom paint
+consistent. Roles cover section headings, control labels, helpers, rulers, empty
+heading/body, tagline, header body and control values. Screen layout still owns
+actual rectangles; applying a role must not resize, focus or bind a component.
+Default Label justification is centred-left; helpers explicitly use top-left.
+Do not reinterpret line-box height as a font size or change numerical precision.
+
+`controls::IrSelector` builds on the existing invocation-aware combo box and
+owns the no-wheel IR selection default. Learn and selected-swell IR use it;
+managed identities, asynchronous requests and pass/session validation remain in
+their bindings. `SliderControl` already owns horizontal style, wheel availability,
+value typography and numeric bounds; Learn supplies only range/interval, suffix,
+precision and model callbacks. Unrelated settings selectors and legacy knob/slider
+families retain their current semantics until planned migration. See the evidence
+inventory rather than claiming all consumers have moved.
+
+## Styling guard and exceptions
+
+Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-ui-standards.ps1`
+from the repository root. Command fixtures are
+`powershell -NoProfile -ExecutionPolicy Bypass -File tests/ui_standards_lint_test.ps1`
+(also supported with `pwsh -NoProfile -File`). Both are registered with CTest.
+`-ListFindings` is a read-only diagnostic report, not a passing enforcement run.
+
+The targeted scan covers C++ headers/sources under `Source/UI` and `Source/Plugin`.
+Rules reject raw colours/factories, direct/default/system font construction,
+literal typography and styling setters, duplicated interaction defaults, and
+changed/new numeric token definitions in the existing theme/geometry authorities.
+It is not a complete C++ parser: ordinary placement/domain arithmetic is allowed,
+and custom glyph/path geometry still needs review. Comments are masked with line
+positions preserved; escaped quoted strings are retained. C++ raw string parsing,
+macro expansion and semantic alias analysis are outside this lightweight guard.
+Native/component tests and review remain necessary.
+
+`scripts/ui-standards-baseline.json` bounds approved definitions and retained debt
+by exact path, rule, normalised occurrence and count. Every entry includes a
+stable ID, scope, rationale and review reference. A duplicate new occurrence,
+changed token or stale exception fails. There is no file-wide legacy exemption
+or automatic baseline-update mode. Remove exceptions when their debt is removed;
+do not regenerate the file to make a failure disappear.
+
+For example, if a future Perform control needs a new named spacing role:
+
+1. Its ordinary OpenSpec design cites standards revision 1, the current shared
+   control and why comfortable spacing cannot satisfy the actual dense content.
+2. Prepare the named role/profile proposal and representative native fixture;
+   present owner review of bounds, readability, focus and feel where affected.
+3. Record approval before rollout. Update the token, guide revision/change record,
+   affected consumers and component tests together. If the guard flags the approved
+   definition, add the exact scoped entry referencing that approval.
+4. Run the guard, command fixtures and affected native tests. Record Windows/host
+   gaps separately and remove obsolete exceptions. A screenshot alone cannot
+   approve interaction or actual Windows scaling.
+
+New tokens, visual variants and one-off exceptions follow this same review path.
+Existing owner-approved families retain acceptance when extraction demonstrably
+preserves look and behaviour. Do not reopen passing owner checks without a concrete
+change. Standards revisions are independent of product and saved-state versions.
+Future UI OpenSpec artifacts must identify standards revision, affected control
+inventory/reuse, justified exceptions and review checkpoints; generated OpenSpec
+skills and configuration remain unchanged.
+
+## Reusable native visual checklist
+
+Use the existing `preverb_swell_ui_test` fixtures: `--review-controls` for family
+states, `--review-messages` for all modes/severities and long notices,
+`--review-learn-empty` for real empty composition, `--review-learn` for mapped
+source and `--review-workspace` for integrated navigation/Settings. Agents launch
+the prepared fixture directly when owner review is needed and preserve the window
+through review. Set `PREVERB_UI_M3_OUTPUT` during normal native UI tests to retain
+the same fixture renders; these are JUCE software renders, not Windows DPI passes.
+
+At 1100x850, 1400x900, 1400x1000 and 1600x1000, plus width-breakpoint boundaries:
+
+- Check full headings/labels and helper lines, numeric value/unit/stepper bounds,
+  long IR names, empty prompt, reserved notice row and unclipped dividers.
+- Exercise generation on/off, all header modes and severities, selected/hovered
+  adjacent borders, focused/disabled/error states and keyboard order/activation.
+- Confirm complete focus strokes remain inside bounds, text fits its line boxes,
+  controls remain reachable and waveform space remains dominant.
+- Preserve active typed text on refresh, validate Return/Escape/focus loss, and
+  verify shared wheel/stepper input plus silent programmatic display. Bindings
+  must reject stale intents without changing another object/session.
+
+Automated geometric comparisons use logical bounds, actual embedded font metrics
+and small floating-point tolerances (0.01 logical pixels for metrics); renders
+exercise 1/1.25/1.5/2 software scales without whole-image golden gates. Real Windows
+100/125/150/200% DPI and monitor transitions are recorded separately as passed,
+failed or untested, with actual display/host context. Do not infer them from a
+scaled image. Retain prior owner acceptance for unchanged families; consolidate
+any remaining concrete host integration/feel checks into one brief FL Studio
+smoke rather than repeating passing automated edge cases.
 
 ## Initial control-library API (issue #16)
 

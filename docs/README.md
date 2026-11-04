@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
+
 - [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — source/thread inventory, disposable native benchmarks, resource limits and follow-up recommendations.
 
 - [Local Windows releases](development/releases.md) — validated ZIPs, immutable outputs, manual publication and redistribution gate.

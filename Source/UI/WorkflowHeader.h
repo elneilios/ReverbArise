@@ -14,7 +14,7 @@ public:
         setName("workflowHeader");wordmark.setName("brandWordmark");tagline.setName("brandTagline");selector.setName("workflowMode");
         selector.setTitle("Workflow mode");settings.setName("diagnostics");
         tagline.setText("Reverse Reverb for Creative Swells",juce::dontSendNotification);
-        tagline.setFont(fontFor(*this,headingSize,juce::Font::italic));tagline.setColour(juce::Label::textColourId,text);
+        applyTextRole(tagline,TextRole::tagline);
         role.setName("workflowRole");
         addAndMakeVisible(wordmark);addAndMakeVisible(tagline);addAndMakeVisible(selector);
         addAndMakeVisible(settings);addAndMakeVisible(role);

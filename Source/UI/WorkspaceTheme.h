@@ -51,6 +51,33 @@ inline juce::Font interFont(float height,InterFace face=InterFace::regular)
 inline juce::Font interFont(float height,int flags)
 {return interFont(height,(flags&juce::Font::italic)?InterFace::italic:(flags&juce::Font::bold)?InterFace::bold:InterFace::regular);}
 
+// Production standards revision 1: appearance roles, independent of bindings.
+inline const juce::Colour headerBodyInk{0xffc7cdd4};
+enum class TextRole { sectionHeading,controlLabel,helper,ruler,emptyHeading,emptyBody,tagline,headerBody,controlValue };
+struct TextStyle {float height;InterFace face;juce::Colour ink;int lineHeight;};
+inline TextStyle textStyle(TextRole role)
+{
+    switch(role)
+    {
+        case TextRole::sectionHeading:return {headingSize,InterFace::semibold,text,controlGeometry::headingHeight};
+        case TextRole::controlLabel:return {bodySize,InterFace::medium,text,controlGeometry::labelHeight};
+        case TextRole::helper:return {learnTypography::secondarySize,InterFace::regular,learnTypography::descriptionColour,learnTypography::secondaryLineHeight};
+        case TextRole::ruler:return {learnTypography::secondarySize,InterFace::medium,text,learnTypography::secondaryLineHeight};
+        case TextRole::emptyHeading:return {emptyHeadingSize,InterFace::semibold,text,learnGeometry::emptyHeadingHeight};
+        case TextRole::emptyBody:return {bodySize,InterFace::regular,learnTypography::descriptionColour,learnGeometry::emptyTextHeight};
+        case TextRole::tagline:return {headingSize,InterFace::italic,text,46};
+        case TextRole::headerBody:return {bodySize,InterFace::regular,headerBodyInk,32};
+        case TextRole::controlValue:return {controlSize,InterFace::regular,text,controlGeometry::valueHeight};
+    }
+    jassertfalse;return {bodySize,InterFace::regular,text,learnTypography::secondaryLineHeight};
+}
+inline juce::Font textFont(TextRole role)
+{const auto style=textStyle(role);return interFont(style.height,style.face);}
+inline void applyTextRole(juce::Label& label,TextRole role,juce::Justification alignment=juce::Justification::centredLeft)
+{label.setFont(textFont(role));label.setColour(juce::Label::textColourId,textStyle(role).ink);label.setJustificationType(alignment);}
+inline void applyTextRole(juce::Graphics& graphics,TextRole role)
+{graphics.setFont(textFont(role));graphics.setColour(textStyle(role).ink);}
+
 class FlatSurface:public juce::Component
 {
 public:void paint(juce::Graphics& g)override{g.fillAll(background);}
