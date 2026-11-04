@@ -272,6 +272,14 @@ file was copied or edited. Interface agreement and actual integrated decoder tes
 remain pending.
 # Revision 3: divider continuity (2026-11-04)
 
+Owner-requested dependency split: [PR #49](https://github.com/elneilios/ReverbArise/pull/49),
+commit `04aa597`, independently supplies the shared Zoom/Fit row, musical ruler
+and Agent 1's unchanged ActionButton. Its API guide and focused/native test
+evidence live on `codex/46-shared-timeline-controls`. It adopts no Perform metrics
+and completes no whole parent task. Agent 1 retains Export integration ownership;
+direct chat handover was rejected because its chat has an active writer, so the
+reviewable PR is the handover record. The shared family preview is open separately.
+
 Owner comparison screenshots identified the remaining interrupted horizontal rules: the opaque timeline overlapped its parent's rule. The isolated fixture now insets timeline content and list/inspector headings, keeps vertical separators clear of horizontal rules, and removes the obsolete Perform auto-marker band. No production compact metrics have been adopted.
 
 Release build `out/build-logs/Release/20261104-123546-e3672efb` passed. Native fixture passed 60 geometry cases and 240 software renders, including composite-pixel checks across all horizontal rules, vertical endpoint gaps and live refresh stability. Captures and measurements are in `2026-11-04-issue-46/revision-3/`. This is fixture evidence, not host/DPI acceptance. Layout approval remains pending. A copied executable under `out/review-issue46-revision3/` preserves the review window independently of subsequent shared-control builds.
