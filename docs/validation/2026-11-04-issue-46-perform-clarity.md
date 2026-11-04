@@ -91,3 +91,7 @@ PID 36544 at launch. The review strip reads **Perform clarity checkpoint**;
 the native window retains its **Issue #46 - Audition strip layout checkpoint**
 title. Task 5.4 remains pending actual visual acceptance/adoption; task 6.2 retains
 final host acceptance. No merge, issue closure or OpenSpec archive was performed.
+
+Native clarity source revision: e6a76b40e9bb3efdf99356d1d3666731f7c55e00. The nine focused tests and native
+executable above use these identical source files; only this evidence line follows.
+Final strict OpenSpec: 20/20; worktree diff checks passed.
