@@ -1,5 +1,11 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Final: the owner reports **Host smoke passes** for the final presentation bundle.
+All **21/21** OpenSpec tasks are complete; [final host acceptance and exact bundle
+identity](2026-11-04-issue-46-presentation-adoption.md) supersede the historical
+pending-host/progress notes below. No further code changes or repeated builds
+were needed for this acceptance record. Actual Windows DPI details remain unspecified.
+
 Owner acceptance: **Approve revised presentation**, 4 November 2026. The reviewed
 profile is adopted in production; see [adoption validation](2026-11-04-issue-46-presentation-adoption.md)
 for the new build and remaining host check. Earlier checkpoint measurements below

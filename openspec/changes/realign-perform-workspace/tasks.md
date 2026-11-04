@@ -42,7 +42,7 @@ Apply was authorized by the owner on 4 November 2026 after proposal review. Chec
 
 
 - [x] 6.1 Run scripts/build.ps1 -Configuration Release -Test and scripts/check-ui-standards.ps1, strict OpenSpec validation and diff checks; record exact revision/environment, native MSVC/CTest versus fixture results, affected audio/state/identity regressions, callback safety evidence and all skipped/failed coverage in one dated validation report.
-- [ ] 6.2 Directly launch the final native dense/empty Perform preview for integrated owner approval; provide exact validated Release VST3 bundle path/hash and one brief FL Studio smoke covering usual-scale Perform editing, Ctrl/Shift/Ctrl+Shift, zoom/Fit, mode return and save/reopen, recording actual Windows DPI/host outcomes separately from software scaling and leaving untested coverage explicit.
+- [x] 6.2 Directly launch the final native dense/empty Perform preview for integrated owner approval; provide exact validated Release VST3 bundle path/hash and one brief FL Studio smoke covering usual-scale Perform editing, Ctrl/Shift/Ctrl+Shift, zoom/Fit, mode return and save/reopen, recording actual Windows DPI/host outcomes separately from software scaling and leaving untested coverage explicit.
 - [x] 6.3 Recheck #6 shared ownership and #38 interaction contracts against final integration, verify issue-scoped source/docs/evidence and canonical-delta coherence, then commit/push the issue branch and update this change's one PR for owner review without merging, auto-closing issues or archiving OpenSpec.
 
 ## Workflow follow-up

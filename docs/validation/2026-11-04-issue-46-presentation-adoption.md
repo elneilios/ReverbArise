@@ -1,5 +1,19 @@
 # Issue #46 — approved presentation adoption
 
+## Final owner host acceptance
+
+On 4 November 2026 the owner answered **“Host smoke passes”** for the exact
+`issue46-presentation-31a969b-20261104-220251` bundle documented below. This confirms
+FL Studio audition looping/Stop, Dry + wet versus Wet only listening balance and
+save/reopen. Earlier native presentation and editing approvals remain recorded.
+No additional Windows DPI setting, host version or wider DPI matrix was supplied;
+those are not inferred from the host pass. No source or binary changed afterward.
+
+Task 6.2 is now complete. Guarded task editing and refreshed Apply confirm
+**21/21 tasks complete**. The earlier pending-host statements below describe the
+build handover before this response. PR #48 remains for owner review/merge;
+OpenSpec sync/archive and issue closure have not been performed.
+
 The owner answered **Approve revised presentation** on 4 November 2026 for the
 [bottom-help native checkpoint](2026-11-04-issue-46-hover-footer.md). This accepts
 the revised three-column presentation and 52-pixel audition strip before rollout.
