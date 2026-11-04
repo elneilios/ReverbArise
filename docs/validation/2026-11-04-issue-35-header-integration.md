@@ -59,5 +59,7 @@ behavior was introduced; any owner host check can be a single brief navigation,
 Settings and notice smoke test at their usual scale, rather than repeating the
 passing automated state/audio/persistence cases.
 
+Implementation PR: [#40](https://github.com/elneilios/ReverbArise/pull/40),
+branch `codex/35-header-mode-navigation`; all eight implementation tasks complete.
 The existing OpenSpec change remains active for owner review. No canonical-spec
 sync, archive, issue closure or PR merge is performed by this implementation.
