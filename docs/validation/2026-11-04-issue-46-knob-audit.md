@@ -1,8 +1,8 @@
 # Issue #46 — knob standards and guardrail audit
 
 Current status: the owner approved the revised Level steps and corner focus.
-The reset follow-up below is implemented and automated checks pass; its focused
-native reset acceptance and final FL Studio smoke remain pending. Earlier audit
+The reset follow-up below is implemented, automated checks pass and the owner
+approved its native interaction. Only final FL Studio smoke remains pending. Earlier audit
 and checkpoint outcomes below are historical.
 
 4 November 2026. Reviewed source at `cfb4d26`; this audit makes no production
@@ -371,3 +371,9 @@ PID 44660 at launch, responding; `out/review-issue46-knob-reset/perform-knob-res
 The prior approved preview was closed before replacement; the reset preview is
 preserved for the owner. Prior layout/Snap/knob steps/focus acceptance remains
 valid. OpenSpec is **17/19**: reset acceptance (4.5) and host smoke (6.2) pending.
+
+Owner response to the reset checkpoint on 4 November 2026: **Approve knob reset;
+FL Studio smoke pending**. This completes task 4.5; refreshed Apply instructions
+confirm **18/19 complete**. Prior approvals remain recorded. Only task 6.2's final
+host smoke remains. Source, tests and the validated bundle hash above are unchanged;
+no native rebuild or test repetition is needed for this approval-only update.

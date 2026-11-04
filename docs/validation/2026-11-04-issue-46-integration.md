@@ -2,8 +2,9 @@
 
 Current knob reset refinement is source `a918f80`, with **5/5 affected native
 tests** and a Release wrapper build passed. The owner approved the preceding
-Level 1 dB / Shift 0.1 dB and corner-bracket focus revision. Reset acceptance and
-the final FL Studio smoke remain pending. The full **53/53** result at `a4e9262`
+Level 1 dB / Shift 0.1 dB and corner-bracket focus revision, and subsequently
+approved the actual native reset interaction. Only the final FL Studio smoke
+remains pending. The full **53/53** result at `a4e9262`
 is retained for unchanged paths.
 See the [current revision evidence and bundle hash](2026-11-04-issue-46-knob-audit.md#reset-follow-up-defaults-and-current-editor-initial-positions).
 The initial 52-test results and pre-knob bundle identity below remain historical

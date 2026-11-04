@@ -101,8 +101,8 @@ brackets, using existing aqua and 2-pixel stroke, with legs at 20% of the contai
 focus box side. It changes only the dial focus painter; text fields and other
 library families retain their own focus treatment. The owner approved the actual
 native variant and Level wheel/arrow steps of 1 dB normally and 0.1 dB with Shift.
-The subsequent double-click/context-menu reset interaction has its own focused
-checkpoint. KnobValue owns menu lifetime and invocation tickets; bindings own
+The subsequent double-click/context-menu reset interaction received focused native
+owner approval on 4 November 2026. KnobValue owns menu lifetime and invocation tickets; bindings own
 default/initial semantics, canonical validation and identity guards. See the
 [reset policy](perform-navigation.md#knob-reset).
 
