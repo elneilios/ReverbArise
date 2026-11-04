@@ -362,7 +362,10 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(frame.getPixelAt(mx(250),static_cast<int>(mini.getCentreY()))==m3::ui::background);
         const auto missing=frame.getPixelAt(mx(350),static_cast<int>(mini.getY()+mini.getHeight()*.3f));REQUIRE(missing.getRed()>missing.getGreen()*1.5);
         const auto hostBefore=processor->getSongTime().sample;probe.navigateOverview(.75);
-        REQUIRE(std::abs(probe.viewport().first-325)<1e-6 && processor->getSongTime().sample==hostBefore);
+        // The 500-sample context is shorter than the logical lane width: bounded
+        // navigation shows the whole context with the existing 4% Fit margins.
+        REQUIRE(std::abs(probe.viewport().first+20)<1e-6 && std::abs(probe.viewport().last-520)<1e-6);
+        REQUIRE(processor->getSongTime().sample==hostBefore);
         snapshotPanel(overview,"sparse-overview-oracle");
         m3::Swell edit;edit.arrival=96000;edit.sourceStart=96000;edit.sourceEnd=120000;edit.shape.automaticStart=false;edit.shape.startOffset=-48000;edit.shape.endOffset=16800;
         display.session.swells={edit};display.session.primary=edit.id;display.session.selected={edit.id};

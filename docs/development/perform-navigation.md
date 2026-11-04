@@ -3,7 +3,8 @@
 Implementation status: the owner approved the revision-4 compact composition.
 `UI/PerformLayout.h` records that scoped profile, consumed by the native fixture.
 Production editor adoption and navigation/gesture/persistence bindings remain
-pending coordinated shared-file ownership with #6. The approved shared Zoom/Fit
+pending #6's merge for the reserved editor/decoder paths. Agent 1 released isolated
+SwellTimeline/SwellViewport work in its explicit ownership handover. The approved shared Zoom/Fit
 interface is documented in [shared timeline controls](shared-timeline-controls.md).
 
 `Core/HostGrid.h` is a standalone fixed-mapping quantizer, not a second viewport.
@@ -21,6 +22,21 @@ on Windows double/long-double return unavailable rather than claiming a snapped
 coordinate. This helper performs no edits, starts no jobs and persists no state.
 Actual gesture-domain bounds, stale-gesture cancellation and unavailable-state
 messages will be supplied by the existing Perform binding during integration.
+
+`SwellViewport::snapToGrid` now exposes this checked grid through the existing
+coordinate authority, preserving the old API for adapters not yet migrated.
+Unavailable timing returns an empty optional, never an invented snapped position.
+
+Perform timeline navigation now uses opt-in `constrain` / `zoomBounded` methods;
+Export's unbounded viewport arithmetic and its adapter-owned limits remain
+unchanged. Limits cover known capture, selected/source definitions, real render
+frames and requested shape extents plus existing 4% Fit margins. Minimum span is
+one sample per logical source-lane pixel (or the complete context when shorter),
+with an additional double-precision floor at extreme absolute coordinates.
+The horizontal fraction is logarithmic from complete context (0) to closest (1).
+Toolbar zoom anchors a visible selected target, then a visible host playhead,
+then center; Ctrl-wheel anchors at the pointer. Overview/pan stay inside the same
+limits without seeking the host. Navigation never edits source/model coordinates.
 
 `UI/Controls/LatchingActionButton.h` extends the accepted ActionButton family
 without modifying it. The shared control owns accepted pressed-state presentation,

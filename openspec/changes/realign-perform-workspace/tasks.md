@@ -4,7 +4,7 @@ Apply was authorized by the owner on 4 November 2026 after proposal review. Chec
 
 ## 1. Shared ownership and native composition checkpoint
 
-- [ ] 1.1 Record owner-coordinated #6 shared-file, timeline/preview and additive UI-state ownership against its current revision; verify merged #4 list APIs and #38 pending-render/return contracts remain compatible, with the integration record in dated docs/validation evidence before shared mutations.
+- [x] 1.1 Record owner-coordinated #6 shared-file, timeline/preview and additive UI-state ownership against its current revision; verify merged #4 list APIs and #38 pending-render/return contracts remain compatible, with the integration record in dated docs/validation evidence before shared mutations.
 - [x] 1.2 Prepare an isolated native Perform fixture using real timeline/list/inspector paths and proposed scoped geometry; add bounds/typeface/focus assertions for empty, sparse, dense/long-name, selected/multiple, pending/error states at four supported sizes, 1199/1200/1201 and software 100/125/150/200%, and publish actual row/panel/gap/lane measurements in dated evidence.
 - [x] 1.3 Directly launch and preserve the prepared fixture for owner composition/compact approval; verify the one-row toolbar and canvas room, record explicit approval or requested adjustments, and do not adopt new production metrics before approval.
 
@@ -16,13 +16,13 @@ Apply was authorized by the owner on 4 November 2026 after proposal review. Chec
 
 ## 3. Horizontal navigation
 
-- [ ] 3.1 Add focused viewport oracles and implement bounded logarithmic horizontal zoom through the existing transform; verify min/max, pointer/target/playhead anchoring, negative coordinates, overflow, alignment and real Overview viewport while documenting navigation bounds and unchanged audio/source identities.
+- [x] 3.1 Add focused viewport oracles and implement bounded logarithmic horizontal zoom through the existing transform; verify min/max, pointer/target/playhead anchoring, negative coordinates, overflow, alignment and real Overview viewport while documenting navigation bounds and unchanged audio/source identities.
 - [ ] 3.2 Implement contextual initial/explicit Fit and retained return views; verify selected source/pre-roll/arrival/tail/overlap context, pending renders, no-selection sparse coverage, empty view and background/selection non-refit behavior with native component/binding tests and document lifecycle semantics.
 - [ ] 3.3 Bind the one-row minus/slider/plus/Fit/Snap/grid toolbar and remove Prev/Next/page-span controls; verify keyboard focus, minimum-width long labels, disclosed independent amplitude control and all supported resize/software-scale bounds, retaining screenshots and interaction results in dated evidence.
 
 ## 4. Musical grid and gesture safety
 
-- [ ] 4.1 Add an independent host-grid numerical oracle before changing snapping, then extend the existing coordinate authority for explicit beat/bar divisions, denominator-aware PPQ and checked rounding; verify 4/4, 3/4, 6/8, fractional/negative PPQ, half ties, loops/seeks, non-finite/overflow and incompatible/changed timing, and document fixed-mapping support and unavailable behavior.
+- [x] 4.1 Add an independent host-grid numerical oracle before changing snapping, then extend the existing coordinate authority for explicit beat/bar divisions, denominator-aware PPQ and checked rounding; verify 4/4, 3/4, 6/8, fractional/negative PPQ, half ties, loops/seeks, non-finite/overflow and incompatible/changed timing, and document fixed-mapping support and unavailable behavior.
 - [ ] 4.2 Apply the grid to horizontal target/source/envelope timing candidates and a whole-wet translation anchor through existing guarded setters; verify nonzero placement, ordered bounds, zero fades, overlaps, sparse gaps, missing support, exact unsnapped fields and continuous vertical curves, including stale session/selection/mode/timing cancellation and source PCM/render dependency protection.
 - [ ] 4.3 Implement requested/effective Snap state with Ctrl temporary bypass, Shift fine-drag and combined Ctrl+Shift; verify toggle-button visible/accessibility Off while Ctrl is held, restoration on release, saved Off behavior, key-only nonmutation, mid-drag no-jump baselines, focus loss/return, unchanged Ctrl-wheel/list shortcuts and no dirty/job notifications, and document these shortcuts alongside exact-entry behavior.
 

@@ -1,4 +1,5 @@
 #include <Core/HostGrid.h>
+#include <UI/SwellViewport.h>
 #include <iostream>
 #include <stdexcept>
 #include <limits>
@@ -25,7 +26,10 @@ int main()
             {
                 const auto grid=HostGrid::make(accepted,accepted,48000,gridChoices[n].division);CHECK(grid);
                 for(int64_t sample=-200000;sample<=200000;sample+=137)
+                {
                     CHECK(grid->snap(sample)==oracle(sample,1000,intervals[n]));
+                    CHECK(SwellViewport{}.snapToGrid(sample,accepted,accepted,48000,gridChoices[n].division)==oracle(sample,1000,intervals[n]));
+                }
                 CHECK(grid->snap(1000+intervals[n]/2)==1000+intervals[n]);
                 CHECK(grid->snap(1000-intervals[n]/2)==1000-intervals[n]);
             }
@@ -45,6 +49,7 @@ int main()
             if(field==5)now.ppq=std::numeric_limits<double>::quiet_NaN();
             if(field==6)now.ppq=1.e300;if(field==7)now.sample=INT64_MAX;
             CHECK(!HostGrid::make(accepted,now,48000,GridDivision::beat));
+            CHECK(!SwellViewport{}.snapToGrid(100,accepted,now,48000,GridDivision::beat));
         }
         CHECK(!HostGrid::make(accepted,accepted,44100,GridDivision::beat));
         CHECK(!HostGrid::make(accepted,accepted,std::numeric_limits<double>::quiet_NaN(),GridDivision::beat));

@@ -390,3 +390,59 @@ uncommitted diff at that revision. TimelineNavigation is now SHA256
 `AEE0CF5A3EAFD287EB46FD63E359B41A551DFB4DD0830BBB27A237FF86C1C465`;
 the schema-10 decoder hash is unchanged. This is a concrete integration baseline,
 not an inferred ownership release or permission to absorb Export into PR #48.
+
+## Confirmed #6 ownership handover (2026-11-04)
+
+The owner forwarded [Agent 1's explicit reply](https://github.com/elneilios/ReverbArise/issues/46#issuecomment-6632200424).
+Baseline: `feat/6-export-mixed-song-wav` at `13ec5bec36112540ec1eaa42d3e788413367d637`,
+saved Export/seek implementation `d551afc`; shared-control placement remains a
+working diff. Agent 1 explicitly releases isolated SwellTimeline/SwellViewport
+and standalone Snap/grid work, preserving existing APIs and coordinate authority.
+It is not editing those files. Final PluginEditor and SwellSession integration
+must wait until #6 merges; retain Export's special layout/visibility, creative
+schema-10 fields/migrations and processor envelope 8. No unmerged Export code is
+absorbed. Export keeps Fit/seek/pan/file authorities and the shared #49 controls.
+
+This resolves task 1.1's ownership contract, with the reserved-file sequencing
+recorded rather than waived. Merged #4 identity/epoch/sort/scroll APIs and #38's
+source-ready/pending-wet/manual/frozen-ID/return constraints remain the reviewed
+integration contracts; this handover changes none of them.
+
+## Released timeline/viewport implementation (2026-11-04)
+
+Task 1.1 was completed through the refreshed Apply source-line/description guard
+and confirmed re-query: **3/17**. Existing PluginEditor and SwellSession files
+remain reserved and unchanged; #6 is not yet on main (`12182f2` at this recheck).
+
+The existing SwellViewport now exposes opt-in bounded navigation and checked
+`snapToGrid` through HostGrid. Existing Export arithmetic/API behavior remains
+available. Perform uses known source/capture/render/requested-shape bounds with
+4% margins, a logical-pixel/precision minimum, logarithmic fraction and exact
+maximum endpoint. Target/playhead/center toolbar anchors and pointer Ctrl-wheel
+use the same transform; Overview and pan share the limits. Malformed explicit
+viewport assignments are ignored. Overview's one-pixel clipped highlight remains
+inside its real lane at extreme margins.
+
+Native Release builds and **6/6 CTests passed** in 12.83 seconds, logs
+`out/build-logs/Release/20261104-perform-navigation-endpoints/`. The independent
+integer grid oracle also checks every meter/division through SwellViewport, not
+just the helper. Pure viewport tests cover anchors, negative coordinates,
+min/max, non-finite arguments, overflow-safe clamping and invalid bounds.
+`--test-navigation` passed real timeline target/playhead/center/pointer anchoring,
+slider extremes, repeated zoom saturation, Overview containment, unchanged host
+position/source capture revision, IDs/assets, shape/source/arrival/placement and
+input/shape generations.
+
+Initial focused checks exposed two intentional/corrected differences: the old
+synthetic 500-sample Overview test assumed a sub-pixel 100-sample navigation span;
+its oracle now verifies full short-context plus 4% margins. A new exact maximum
+endpoint assertion caught ratio/multiplication rounding; the endpoint is now
+assigned exactly rather than relaxing the assertion. Final focused checks pass.
+Contextual Fit/return lifecycle and actual Snap gesture/modifier/state wiring are
+still later work; this boundary does not claim them complete.
+
+The complete native 60-case / 240-render matrix and live refresh checks also
+passed after these changes (`out/perform-bounded-navigation-matrix/`). Task 3.1
+and task 4.1 each passed the refreshed Apply source-line/description guard and
+post-edit completion re-query: **5/17 tasks complete**. Final UI standards remain
+39 files / 61 bounded occurrences; strict OpenSpec and diff checks passed.

@@ -1,6 +1,7 @@
 #include "SwellTimeline.h"
 #include "SongBarRuler.h"
 #include "WorkspaceTheme.h"
+#include <limits>
 
 namespace m3
 {
@@ -18,13 +19,52 @@ void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t
 {capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();}
 std::pair<double,double> SwellTimeline::globalBounds() const
 {
-    double a=0,b=time.rate>0?time.rate*8:384000;
-    if(!capture.manifest.ranges.empty()) {a=std::min(a,static_cast<double>(capture.manifest.ranges.front().startSample));const auto& r=capture.manifest.ranges.back();b=static_cast<double>(r.startSample)+r.frameCount;}
-    for(const auto& w:data.session.swells)if(w.render.present())
-    {a=std::min(a,static_cast<double>(w.render.start)+w.placement);b=std::max(b,static_cast<double>(w.render.sourceEnd)+w.placement);
-        int64_t start,end;if(requestedShapeBounds(w,w.render.start,start,end)){a=std::min(a,static_cast<double>(start));b=std::max(b,static_cast<double>(end));}}
-    if(b<=a)b=a+1;
+    double a=std::numeric_limits<double>::infinity(),b=-a;
+    const auto include=[&](double first,double last){if(std::isfinite(first) && std::isfinite(last) && last>first){a=std::min(a,first);b=std::max(b,last);}};
+    for(const auto& range:capture.manifest.ranges)include(static_cast<double>(range.startSample),static_cast<double>(range.startSample)+range.frameCount);
+    for(const auto& w:data.session.swells)
+    {
+        include(static_cast<double>(w.sourceStart),static_cast<double>(w.sourceEnd));
+        if(w.render.present())include(static_cast<double>(w.render.start)+w.placement,static_cast<double>(w.render.start)+w.render.frames+w.placement);
+        int64_t first,last;if(requestedShapeBounds(w,w.render.present()?w.render.start:w.sourceStart,first,last))include(static_cast<double>(first),static_cast<double>(last));
+    }
+    if(!std::isfinite(a) || !std::isfinite(b) || b<=a){a=0;b=std::isfinite(time.rate) && time.rate>0?time.rate*8:384000;if(!std::isfinite(b))b=384000;}
     return {a,b};
+}
+SwellViewport SwellTimeline::navigationBounds()const
+{
+    const auto [first,last]=globalBounds();SwellViewport bounds;bounds.fit(first,last);
+    bounds.first=std::max(bounds.first,-9223372036854775808.);
+    bounds.last=std::min(bounds.last,std::nextafter(9223372036854775808.,0.));
+    if(bounds.last<=bounds.first){bounds.first=0;bounds.last=384000;}
+    return bounds;
+}
+double SwellTimeline::minimumViewSpan()const
+{
+    const auto bounds=navigationBounds();
+    const auto precision=std::max(std::abs(bounds.first),std::abs(bounds.last))*std::numeric_limits<double>::epsilon()*16;
+    return std::min(bounds.span(),std::max({1.,static_cast<double>(source.getWidth()),precision}));
+}
+double SwellTimeline::navigationAnchor()const
+{
+    const auto visible=[&](double at){return at>=view.first && at<=view.last;};
+    if(const auto w=find(data.session,data.session.primary);w && visible(static_cast<double>(w->arrival)))return (w->arrival-view.first)/view.span();
+    if(playheadAvailable && visible(static_cast<double>(time.sample)))return (time.sample-view.first)/view.span();
+    return .5;
+}
+void SwellTimeline::constrainNavigation(){view.constrain(navigationBounds(),minimumViewSpan());}
+double SwellTimeline::zoomFraction()const
+{
+    const auto maximum=navigationBounds().span(),minimum=minimumViewSpan();
+    return maximum>minimum?std::clamp(std::log(maximum/std::clamp(view.span(),minimum,maximum))/std::log(maximum/minimum),0.,1.):0.;
+}
+void SwellTimeline::setZoomFraction(double fraction)
+{
+    if(!std::isfinite(fraction))return;
+    if(fraction<=0){view=navigationBounds();updateScroll();repaint();return;}
+    const auto maximum=navigationBounds().span(),minimum=minimumViewSpan();
+    const auto wanted=maximum*std::pow(minimum/maximum,std::clamp(fraction,0.,1.));
+    view.zoomBounded(wanted/view.span(),navigationAnchor(),navigationBounds(),minimum);updateScroll();repaint();
 }
 void SwellTimeline::updateScroll()
 {
@@ -47,10 +87,10 @@ void SwellTimeline::fitSelection()
     else if(const auto w=find(data.session,data.session.primary)) view.fit(static_cast<double>(w->sourceStart),static_cast<double>(w->sourceEnd));
     else {const auto [a,b]=globalBounds();view.fit(a,b);}updateScroll();repaint();
 }
-void SwellTimeline::page(int bars){view.page(bars,time);updateScroll();repaint();}
-void SwellTimeline::previous(){view.shift(-1);updateScroll();repaint();}
-void SwellTimeline::next(){view.shift(1);updateScroll();repaint();}
-void SwellTimeline::zoom(double factor){view.zoom(factor);updateScroll();repaint();}
+void SwellTimeline::page(int bars){view.page(bars,time);constrainNavigation();updateScroll();repaint();}
+void SwellTimeline::previous(){view.shift(-1);constrainNavigation();updateScroll();repaint();}
+void SwellTimeline::next(){view.shift(1);constrainNavigation();updateScroll();repaint();}
+void SwellTimeline::zoom(double factor){view.zoomBounded(factor,navigationAnchor(),navigationBounds(),minimumViewSpan());updateScroll();repaint();}
 void SwellTimeline::resized()
 {
     auto area=getLocalBounds().toFloat().reduced(2);scrollbar.setBounds(area.removeFromBottom(16).toNearestInt());area.removeFromBottom(4);
@@ -279,7 +319,7 @@ bool SwellTimeline::beginDrag(juce::Point<float> point)
 void SwellTimeline::dragTo(juce::Point<float> point)
 {
     if(drag==Drag::overview)
-    {const auto [a,b]=globalBounds();const auto at=a+std::clamp((point.x-overview.getX())/overview.getWidth(),0.0f,1.0f)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;updateScroll();repaint();return;}
+    {const auto [a,b]=globalBounds();const auto at=a+std::clamp((point.x-overview.getX())/overview.getWidth(),0.0f,1.0f)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();updateScroll();repaint();return;}
     if(drag==Drag::none)return;
     const auto editPoint=fineDrag?dragOrigin+(point-dragOrigin)*.1f:point;
     const auto coarse=drag==Drag::arrival || drag==Drag::sourceStart || drag==Drag::sourceEnd;
@@ -351,14 +391,15 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
     engine.addTarget(view.snap(view.sample(e.position.x,source.getX(),source.getWidth()),time,snapEnabled));
 }
 void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
-{if(e.mods.isCtrlDown())view.zoom(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth());else view.shift(-wheel.deltaY*0.5);updateScroll();repaint();}
+{if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}updateScroll();repaint();}
 void SwellTimeline::navigateOverview(double fraction)
-{const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;updateScroll();repaint();}
+{if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();updateScroll();repaint();}
 juce::Rectangle<float> SwellOverview::detailBounds()const
 {
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
+    if(lane.getWidth()<=0)return {};
     const auto pixel=[&](double sample){return std::clamp(lane.getX()+static_cast<float>((sample-a)/(b-a))*lane.getWidth(),lane.getX(),lane.getRight());};
-    const auto left=pixel(timeline.view.first),right=pixel(timeline.view.last);
+    const auto left=std::min(pixel(timeline.view.first),lane.getRight()-1),right=std::max(pixel(timeline.view.last),left+1);
     return {left,lane.getY(),std::max(1.0f,right-left),lane.getHeight()};
 }
 void SwellOverview::paint(juce::Graphics& g)

@@ -105,9 +105,7 @@ public:
         addAndMakeVisible(zoom);addAndMakeVisible(grid);
         zoom.onZoomStep=[this](double factor){timeline().zoom(factor);refreshZoom();parts.at("songOverview")->repaint();};
         zoom.onFit=[this]{timeline().fitSelection();refreshZoom();parts.at("songOverview")->repaint();};
-        // Review binding over the existing viewport's limits; final Perform
-        // context/pixel-derived limits remain task 3.1 after layout approval.
-        zoom.onZoomFraction=[this](double fraction){timeline().zoom(std::pow(1.e12,1-fraction)/timeline().viewport().span());refreshZoom();parts.at("songOverview")->repaint();};
+        zoom.onZoomFraction=[this](double fraction){timeline().setZoomFraction(fraction);refreshZoom();parts.at("songOverview")->repaint();};
         for(auto* child:timeline().getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))
             if(label->getText()=="Wave zoom")
             {label->setText("Height",juce::dontSendNotification);applyTextRole(*label,TextRole::controlLabel);
@@ -171,6 +169,45 @@ public:
                 else REQUIRE(!timeline().grabPoints().empty());
             }
         }
+    }
+    void verifyNavigation()
+    {
+        setScene(0);const auto saved=processor->swellEngine().savedSession();const auto captureRevision=processor->getCaptureSnapshot().manifest.revision;
+        const auto selected=m3::find(saved,saved.primary);REQUIRE(selected);
+        const auto lane=timeline().sourceLane();
+        const auto selectedPixel=timeline().viewport().pixel(selected->arrival,lane.getX(),lane.getWidth());
+        timeline().zoom(.8);
+        REQUIRE(std::abs(timeline().viewport().pixel(selected->arrival,lane.getX(),lane.getWidth())-selectedPixel)<.001);
+        const auto playhead=processor->getSongTime().sample;
+        timeline().setViewport({static_cast<double>(playhead)-10000,static_cast<double>(playhead)+10000});
+        const auto playheadPixel=timeline().viewport().pixel(playhead,lane.getX(),lane.getWidth());timeline().zoom(.8);
+        REQUIRE(std::abs(timeline().viewport().pixel(playhead,lane.getX(),lane.getWidth())-playheadPixel)<.001);
+        timeline().setViewport({100000,140000});const auto centre=timeline().viewport().pixel(120000,lane.getX(),lane.getWidth());timeline().zoom(.8);
+        REQUIRE(std::abs(timeline().viewport().pixel(120000,lane.getX(),lane.getWidth())-centre)<.001);
+        const auto validView=timeline().viewport();timeline().setZoomFraction(std::numeric_limits<double>::quiet_NaN());
+        REQUIRE(timeline().viewport().first==validView.first && timeline().viewport().last==validView.last);
+        timeline().setZoomFraction(1);REQUIRE(std::abs(timeline().viewport().span()-timeline().minimumViewSpan())<.001);
+        timeline().setZoomFraction(0);const auto bounds=timeline().navigationBounds();
+        REQUIRE(timeline().viewport().first==bounds.first && timeline().viewport().last==bounds.last);
+        const auto point=juce::Point<float>{lane.getX()+lane.getWidth()*.3f,lane.getCentreY()};
+        const auto before=timeline().viewport().sample(point.x,lane.getX(),lane.getWidth());
+        const auto now=juce::Time::getCurrentTime();
+        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),point,juce::ModifierKeys::ctrlModifier,0,0,0,0,0,&timeline(),&timeline(),now,point,now,1,false);
+        juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;timeline().mouseWheelMove(event,wheel);
+        REQUIRE(std::abs(timeline().viewport().sample(point.x,lane.getX(),lane.getWidth())-before)<=1);
+        for(int n=0;n<100;++n)timeline().zoom(.01);
+        REQUIRE(std::abs(timeline().viewport().span()-timeline().minimumViewSpan())<.001);
+        timeline().navigateOverview(1);REQUIRE(timeline().viewport().last<=bounds.last);
+        auto& overview=require<m3::SwellOverview>(*this,"songOverview");
+        REQUIRE(overview.waveformBounds().contains(overview.detailBounds()));
+        for(int n=0;n<100;++n)timeline().zoom(100);
+        REQUIRE(timeline().viewport().first==bounds.first && timeline().viewport().last==bounds.last);
+        const auto after=processor->swellEngine().savedSession();REQUIRE(saved.primary==after.primary && saved.selected==after.selected && saved.swells.size()==after.swells.size());
+        for(size_t n=0;n<saved.swells.size();++n)
+        {const auto& a=saved.swells[n];const auto& b=after.swells[n];
+            REQUIRE(a.id==b.id && a.render==b.render && a.ir==b.ir && a.shape==b.shape && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.arrival==b.arrival && a.placement==b.placement);
+            REQUIRE(a.inputGeneration==b.inputGeneration && a.shapeGeneration==b.shapeGeneration);}
+        REQUIRE(processor->getCaptureSnapshot().manifest.revision==captureRevision);
     }
     void refresh()
     {
@@ -300,8 +337,8 @@ public:
 private:
     void refreshZoom()
     {
-        const auto span=std::clamp(timeline().viewport().span(),1.,1.e12);
-        zoom.display({1-std::log(span)/std::log(1.e12),span>1,span<1.e12,scene!=1});
+        const auto span=timeline().viewport().span();
+        zoom.display({timeline().zoomFraction(),span>timeline().minimumViewSpan(),span<timeline().navigationBounds().span(),scene!=1});
     }
     void timerCallback()override{refresh();}
     TestDirectory directory;WorkspaceTheme theme;Head head;
@@ -340,6 +377,7 @@ int main(int argc,char** argv)
     {
         using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
+        if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}
         if(command=="--test-refresh" || command=="--test-competing-refresh")
         {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")
