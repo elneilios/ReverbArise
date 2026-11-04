@@ -99,12 +99,13 @@ int main(){return runTest([]{
     REQUIRE(p->getCaptureSnapshot().manifest.ranges.empty()); // Before storage batching; save/readers remain committed-only.
     juce::MemoryBlock midPass;p->getStateInformation(midPass);
     process(64,false,0);REQUIRE(p->flushCaptureForTesting());
-    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);
+    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getWorkflowReadiness().usefulSource);
     p->flushHostStateChangesForTesting();REQUIRE(listener.changes==1 && !listener.wrongThread);
     auto accepted=p->getCaptureSnapshot();REQUIRE(!accepted.manifest.ranges.empty());
     REQUIRE(accepted.manifest.schemaVersion==2 && captureContextAt(accepted.manifest,0));
     REQUIRE(!captureContextAt(accepted.manifest,0)->automatic && captureContextAt(accepted.manifest,0)->ir==e.savedSession().defaultIR);
     REQUIRE(p->getCaptureProgress().ranges.empty());
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
     juce::MemoryBlock liveBytes;p->getStateInformation(liveBytes);
     auto liveRestore=std::make_unique<PreverbAudioProcessor>(root.file);liveRestore->setStateInformation(liveBytes.getData(),static_cast<int>(liveBytes.getSize()));
     REQUIRE(liveRestore->flushCaptureForTesting() && liveRestore->getWorkflowSnapshot().mode==workflow::Mode::live);liveRestore.reset();
@@ -116,7 +117,8 @@ int main(){return runTest([]{
     process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getCaptureSnapshot().reference==accepted.reference);
     REQUIRE(p->setRecaptureExisting(true));process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
-    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live && !p->getWorkflowSnapshot().recapture);
+    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && !p->getWorkflowSnapshot().recapture);
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
     REQUIRE(p->getCaptureSnapshot().reference!=accepted.reference);
     const auto replaced=p->getCaptureSnapshot();
     REQUIRE(e.addTarget(0));const auto id=e.savedSession().primary;
@@ -255,7 +257,7 @@ int main(){return runTest([]{
     while(p->getWorkflowSnapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<validationDeadline)juce::Thread::sleep(1);
     REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::validating);
     p->setNonRealtime(true);process(0,false,.375f);p->holdCaptureValidationForTesting(false);REQUIRE(p->flushCaptureForTesting());
-    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);process(32,false,.375f);
+    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture);process(32,false,.375f);
     REQUIRE(block.getSample(0,63)==.375f); // A Capture-entered bounce cannot acquire wet mid-export.
     {
         auto cancelled=std::make_unique<PreverbAudioProcessor>(root.file.getChildFile("cancel-progress"));WorkflowHost cancelHost;

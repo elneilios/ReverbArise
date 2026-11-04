@@ -62,17 +62,35 @@ Export entry requires an enabled, unmuted, solo-eligible compatible ready wet
 render independently of dry availability; verified frozen-wet recovery therefore
 also supports Export. Dry alone does not unlock Export, and its selected mix or
 pending file preparation does not eject the mode. This is the implemented #6
-entry refinement; dedicated WAV delivery remains in progress. A successful useful Stop commit selects Perform before wet
-renders finish. Empty/failed passes remain Learn. Restored saved modes may
+entry refinement; dedicated WAV delivery remains in progress. Issue #38 separates
+source settlement from Perform entry: a successful useful Stop settles idle
+Learn, retaining dry readiness and consuming a successful Recapture arm. Only a
+subsequent successful shared Generate transaction may automatically enter
+Perform; source acceptance alone does not qualify. The persisted opt-in request
+and candidate-generation pipeline are tracked in the active #38 change. Manual
+Perform/Export navigation retains its existing readiness rules. Empty/failed
+passes remain Learn. Restored saved modes may
 remain selected while dependency readiness is unavailable; unavailable controls
 must explain the reason.
 
-PR #18 review refinement: a successful explicit mapped replacement can enter
-Perform using remaining useful committed material, even when that replacement is
-silence. Erasing the last useful source stays Learn; fresh silence-only,
+PR #18's source usefulness refinement is retained: a successful explicit mapped
+replacement can leave useful committed material even when the replacement is
+silence. Under #38 this settles Learn and disarms Recapture; Perform entry still
+requires a successful generation or an eligible manual mode request. Erasing the last useful source stays Learn; fresh silence-only,
 ordinary mapped-only and empty passes do not gain automatic Perform entry.
 Export and frozen-wet admission share ready-render rate/tempo/meter checks.
 This is foundation eligibility, not #6's later full export preflight.
+
+The workflow word has a transient generation-publication reservation, separate
+from persisted mode/phase values. After background preparation and identity
+checks, a bounded CAS reserves the exact idle Learn/pass/configuration snapshot;
+the caller performs only a nonthrowing prepared-session swap and releases to
+Perform. A losing Play/mode/settings request cannot observe partial publication.
+Play admission never waits, locks or allocates. Off-callback reset/cancel orders
+after the short swap; it cannot interrupt the swap and leave only half a commit.
+Preparation itself holds no reservation, so user edits, capture restarts and
+navigation can supersede it. Generation identities also fence source/settings
+changes; the configuration slot alone is not an ABA-proof settings identity.
 
 `preverb_workflow_state_test` checks the eligibility matrix, all guarded
 recording/settling transitions, successful/empty/failed Stop, duplicate and stale

@@ -68,3 +68,18 @@ origin, musical/activity/name/IR/freeze ownership and full saved-field retention
 for protected reconciled swells. Native tests do not establish FL Studio or DPI
 acceptance. The new candidate/planner modules are still unintegrated drafts and
 are not covered by these four results.
+
+## Source settlement and reservation boundary
+
+Tasks 2.1 and 2.2: warm Release build-only wrapper
+`20261104-183523-99f7cdd0` passed. Direct native Release workflow state, workflow
+processor, capture transaction and generation configuration executables passed.
+The state fixture exercises 200 Play-versus-publication races, lost pass/settings
+admission, callback allocation/deallocation guards and held publication versus
+off-callback reset. Source transactions retain failure/empty/silence/identical
+Recapture semantics while ending Learn; manual navigation is explicit.
+
+The full CTest suite was not run at this intermediate boundary: remaining
+generation-policy fixtures still require the shared Generate API in tasks 3–4.
+The earlier 46/46 result predates these workflow changes and is not represented
+as final validation of them.

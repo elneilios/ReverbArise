@@ -7,8 +7,8 @@
 
 ## 2. Workflow authority
 
-- [ ] 2.1 Split useful source settlement from Perform entry in workflow/processor capture completion, preserving Recapture consumption, dry readiness and existing manual navigation; verify OFF, Automatic Swells OFF, silence, mapped-only, identical Recapture, failed/duplicate/cancelled Stop and sparse/seek/loop outcomes with workflow-state/processor and capture-transaction tests; update living workflow-mode guidance.
-- [ ] 2.2 Add bounded generation reservation/invalidation authority shared by Play, settings, mode changes, restore and cancellation; verify deterministic CAS-loss/held-worker races prevent both partial definitions and stale mode entry, with callback allocation/deallocation/lock/I/O guards and focused state/processor tests before wiring any generation publisher.
+- [x] 2.1 Split useful source settlement from Perform entry in workflow/processor capture completion, preserving Recapture consumption, dry readiness and existing manual navigation; verify OFF, Automatic Swells OFF, silence, mapped-only, identical Recapture, failed/duplicate/cancelled Stop and sparse/seek/loop outcomes with workflow-state/processor and capture-transaction tests; update living workflow-mode guidance.
+- [x] 2.2 Add bounded generation reservation/invalidation authority shared by Play, settings, mode changes, restore and cancellation; verify deterministic CAS-loss/held-worker races prevent both partial definitions and stale mode entry, with callback allocation/deallocation/lock/I/O guards and focused state/processor tests before wiring any generation publisher.
 
 ## 3. Read-only candidate analysis
 
