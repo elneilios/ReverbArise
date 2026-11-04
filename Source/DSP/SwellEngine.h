@@ -3,6 +3,8 @@
 #include "SwellAssetStore.h"
 #include "SwellShape.h"
 #include "GenerationConfiguration.h"
+#include "ExportFiles.h"
+#include <Playback/ExportVoice.h>
 #include <Analysis/OnsetAnalysis.h>
 #include <Analysis/AutomaticTargets.h>
 #include <Core/TransportTime.h>
@@ -20,8 +22,31 @@ struct Waveform
     float peak=0;
     std::vector<CapturePeak> peaks;
 };
+enum class ExportPhase { idle, preparing, ready, error };
+struct PreparedExport
+{
+    std::shared_ptr<const SongExportPlan> plan;
+    SongMixMetrics metrics;
+    ExportFile file;
+    juce::String acceptedNotice;
+};
+struct ExportSnapshot
+{
+    ExportPhase phase=ExportPhase::idle;
+    juce::String message;
+    std::shared_ptr<const PreparedExport> prepared;
+    std::shared_ptr<const PreparedExport> previous;
+    std::shared_ptr<const SongMixDetail> detail;
+    juce::String detailMessage;
+    std::optional<int64_t> cursor;
+    std::optional<int64_t> previewPosition;
+    uint64_t session=0,pass=0;
+    bool previewRequested=false;
+    uint64_t delivery=0;bool delivering=false,dragReady=false;juce::String deliveryPath,deliveryMessage;
+};
 struct EditorSnapshot
 {
+    ExportSnapshot songExport;
     Session session;
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
@@ -108,6 +133,15 @@ public:
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
+    bool hasExportableWet(const SongTime&)const;
+    bool initializeExport();
+    bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
+    bool playExport(uint64_t expectedSession);
+    bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
+    void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
+    uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
+    void holdExportForTesting(bool hold) noexcept {exportHold.store(hold);notify();}
+    bool exportWaitingForTesting()const noexcept{return exportWaiting.load();}
     bool audition();
     void stop();
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
@@ -154,6 +188,10 @@ private:
     struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
     struct Analysis { int64_t start,end; float sensitivity; double separation; uint64_t session,request; };
     void run() override;
+    void prepareExport(const PreviewContext&);
+    void serviceExportPreview();
+    void serviceExportDelivery();
+    void serviceExportDetail();
     void inspect(const PreviewContext&);
     void prepareDefault(const PreviewContext&);
     bool automaticJob();
@@ -197,6 +235,19 @@ private:
     std::set<juce::String> forceRefresh;
     uint64_t captureGeneration=0,renderCount=0,useSerial=0;
     uint64_t activeJobBytes=0;
+    ExportSnapshot exportState;
+    struct DetailRequest{uint64_t session,serial,mix,pass;int64_t first,end;size_t bins;double due;std::shared_ptr<const PreparedExport> accepted;};
+    std::optional<DetailRequest> detailWork;std::atomic<uint64_t> detailSerial{0};
+    struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;};
+    uint64_t exportDeliverySerial=0;std::optional<ExportDelivery> exportDelivery;
+    std::unique_ptr<ExportVoice> exportVoice=std::make_unique<ExportVoice>();
+    std::unique_ptr<juce::AudioFormatReader> exportPreviewReader;
+    std::shared_ptr<const PreparedExport> exportPreviewPin;
+    uint64_t exportPreviewTicket=0;
+    int64_t exportPreviewNext=0,exportPreviewStart=0;
+    juce::String exportAttempt;
+    std::atomic<uint64_t> exportRequest{0};
+    std::atomic<bool> exportHold{false},exportWaiting{false};
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};
     std::atomic<bool> audioAllowed{false},timingChanged{false};
     std::atomic<double> expectedRate{0},expectedBpm{0};

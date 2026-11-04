@@ -96,8 +96,13 @@ inline void performanceExportCases()
     head.position.setBpm(121);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(!p->getWorkflowReadiness().frozenWet && !p->requestWorkflowMode(workflow::Mode::live));
     head.position.setBpm(240);buffer.clear();p->processBlock(buffer,midi);
+    // Restoring tempo can require the worker to reverify the frozen revision.
+    waitM3([&]{return p->getWorkflowReadiness().frozenWet;});
     REQUIRE(p->requestWorkflowMode(workflow::Mode::live)); // Verified frozen wet qualifies even after source Clear.
     const auto recovered=bounce({13,4096},0,800);REQUIRE(recovered[450]>0);
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::finalise));
+    REQUIRE(engine.setExportMix(0,engine.assignmentEpoch()) && p->getWorkflowSnapshot().mode==workflow::Mode::finalise);
+    REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
     // Corrupt/missing render is explicit, stable failure, never a successful silent bounce.
     const auto asset=engine.savedSession().swells[0].render;REQUIRE(engine.assetDirectory().getChildFile(asset.path).deleteFile());
     p->prepareToPlay(1000,512);position(450,false);buffer.setSize(2,16);buffer.clear();p->processBlock(buffer,midi);

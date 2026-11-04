@@ -16,7 +16,7 @@ SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context
     :Thread("Preverb Swells"),persistentChange(std::move(changed)),root(std::move(path)),contextProvider(std::move(context))
 { voice.setLevel(1); startThread(); }
 SwellEngine::~SwellEngine() { signalThreadShouldExit(); sessionGeneration.fetch_add(1); stopThread(-1); }
-void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true); }
+void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true);exportVoice->stop(true); }
 void SwellEngine::setExpected(const SongTime& time)
 { expectedRate=time.rate; expectedBpm=time.bpm; expectedNumerator=time.numerator; expectedDenominator=time.denominator; }
 juce::File SwellEngine::instanceRoot(const CaptureManifest& map) const
@@ -50,6 +50,11 @@ std::optional<GenerationConfiguration> SwellEngine::passConfiguration(uint64_t p
 EditorSnapshot SwellEngine::snapshot() const
 {
     const juce::ScopedLock guard(lock); EditorSnapshot s;
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){
+        const auto pass=workflowState->snapshot().pass;s.songExport=exportState;
+        if(exportState.session!=sessionGeneration.load() || exportState.pass!=pass)s.songExport={ExportPhase::preparing,"Preparing export mix",{}};
+        s.songExport.session=sessionGeneration.load();s.songExport.pass=pass;s.songExport.cursor=exportVoice->position();s.songExport.previewRequested=exportVoice->requested(exportVoice->request());
+        if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";}
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
@@ -86,6 +91,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 {
     juce::String error; if(!validate(session,error)) { const juce::ScopedLock guard(lock); message=error; return; }
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
+    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
@@ -104,6 +110,7 @@ void SwellEngine::clear()
     {diagnostic("Clear requires stopped idle Learn mode");return;}
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
     publishGenerationLocked(model,UINT64_MAX,true);
+    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
@@ -370,8 +377,26 @@ void SwellEngine::setPreferences(float db,float sensitivity,double separation,bo
     if(savedChanged)persistentChangedLocked();
     voice.setLevel(juce::Decibels::decibelsToGain(model.auditionDb));notify();
 }
+bool SwellEngine::initializeExport()
+{
+    const juce::ScopedLock guard(lock);
+    if(!workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
+    const auto before=model.exportState;
+    if(!m3::initializeExport(model,message))return false;
+    if(model.exportState!=before){persistentChangedLocked();notify();}return true;
+}
+bool SwellEngine::setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass)
+{
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
+    if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return false;
+    const auto before=model.exportState;
+    if(!m3::setExportMix(model,wet,message))return false;
+    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();exportVoice->stop();exportState={ExportPhase::preparing,"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
+}
 bool SwellEngine::audition()
 {
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise)return playExport(sessionGeneration.load());
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return false;
     if((!workflowState || workflowState->snapshot().mode==workflow::Mode::live) && liveEnabled.load() && transportActive.load())return false;
     const juce::ScopedLock guard(lock); const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
@@ -384,7 +409,10 @@ bool SwellEngine::audition()
     setExpected(context.time); audioAllowed=true;
     return voice.start(at->second.monitor);
 }
-void SwellEngine::stop() { const juce::ScopedLock guard(lock); voice.stop(); }
+void SwellEngine::stop() { const juce::ScopedLock guard(lock);
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && exportState.prepared)
+        if(const auto at=exportVoice->position())exportState.previewPosition=*at;
+    voice.stop();exportVoice->stop(); }
 void SwellEngine::processAudio(float* left,float* right,int frames,const SongTime& time) noexcept
 {
     auto allowed=audioAllowed.load() && (!workflowState || workflowState->snapshot().mode!=workflow::Mode::capture);
@@ -392,6 +420,10 @@ void SwellEngine::processAudio(float* left,float* right,int frames,const SongTim
         || time.numerator!=expectedNumerator.load() || time.denominator!=expectedDenominator.load()))
     { if(time.valid)timingChanged=true; allowed=false; audioAllowed=false; }
     voice.process(left,right,frames,time.rate,allowed);
+    const auto exportAllowed=workflowState && workflowState->snapshot().mode==workflow::Mode::finalise
+        && time.valid && time.rate==expectedRate.load() && time.bpm==expectedBpm.load()
+        && time.numerator==expectedNumerator.load() && time.denominator==expectedDenominator.load();
+    exportVoice->process(left,right,frames,time.rate,exportAllowed);
 }
 void SwellEngine::processTransportAudio(float* left,float* right,int frames,const TransportTime& time) noexcept
 {
@@ -444,12 +476,18 @@ uint64_t SwellEngine::occupiedLocked() const
         if(r.shapeWave) bytes+=r.shapeWave->peaks.capacity()*sizeof(CapturePeak);
         if(r.sourceWave) bytes+=r.sourceWave->peaks.capacity()*sizeof(CapturePeak);
     }
-    return bytes+activeJobBytes;
+    std::set<const PreparedExport*> countedExports;
+    const auto countExport=[&](const std::shared_ptr<const PreparedExport>& p){if(p && countedExports.insert(p.get()).second)bytes+=(p->metrics.dryPeaks.capacity()+p->metrics.wetPeaks.capacity())*sizeof(CapturePeak);};
+    countExport(exportState.prepared);countExport(exportState.previous);countExport(exportPreviewPin);if(detailWork)countExport(detailWork->accepted);
+    if(exportState.detail)bytes+=(exportState.detail->dry.capacity()+exportState.detail->wet.capacity())*sizeof(CapturePeak);
+    // Reserve bounded metadata still held by an editor between snapshot refreshes.
+    return bytes+activeJobBytes+exportVoice->workingBytes()+exportPageFrames*4*sizeof(float)+16384+1024*1024;
 }
 uint64_t SwellEngine::residentBytes() const { const juce::ScopedLock guard(lock); return occupiedLocked(); }
 uint64_t SwellEngine::available(uint64_t extra)
 {
-    const juce::ScopedLock guard(lock); voice.collect();live.collect();
+    const juce::ScopedLock guard(lock); voice.collect();
+    live.collect();
     uint64_t peakBytes=0;std::vector<std::pair<uint64_t,juce::String>> peakOrder;
     for(auto& [id,r]:runtime)
     {
@@ -498,6 +536,7 @@ std::shared_ptr<Waveform> SwellEngine::waveform(const WetRender& audio)
 void SwellEngine::inspect(const PreviewContext& context)
 {
     const juce::ScopedLock guard(lock); voice.collect();
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && !model.exportState.initialized)initializeExport();
     if(context.capture.status.startsWith("Loading") || (awaitingCaptureReference.isNotEmpty() && context.capture.reference!=awaitingCaptureReference)) return;
     awaitingCaptureReference.clear();
     // A reader can temporarily miss the host's coherent timing publication.
@@ -890,7 +929,7 @@ void SwellEngine::run()
         {const juce::ScopedLock guard(lock);if(offlinePlayer || !offlineAccepted.empty()){offlinePlayer.reset();offlineEntries.clear();offlineMembers.clear();offlineAccepted.clear();offlineIRNotice.clear();offlineSession={};}}
         try
         {
-            const auto context=contextProvider();collectCompletedPass(context);inspect(context);prepareDefault(context);dispatchAutomatic(context);prepareTransport(context);
+            const auto context=contextProvider();collectCompletedPass(context);inspect(context);prepareDefault(context);dispatchAutomatic(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);
             if(analysisTurn && automaticJob()){analysisTurn=false;continue;}
             analysisTurn=true;
@@ -925,11 +964,12 @@ void SwellEngine::run()
             else if(work) renderJob(*work,context,session,restoreOrCheck);
             else if(shape) shapeJob(*shape,session);
             else if(monitor)monitorJob(*monitor,session,settings);
-            else { available(); wait(10); }
+            else { prepareExport(context);serviceExportDelivery();serviceExportDetail();available(); wait(10); }
         }
         catch(const std::exception& e)
         {
             const juce::ScopedLock guard(lock); message="Background operation failed: "+juce::String(e.what()); stopLocked();
+            if(exportState.phase==ExportPhase::preparing)exportState={ExportPhase::error,message,{}};
             for(auto& w:model.swells) if(w.phase==Phase::rendering || w.phase==Phase::checking) {w.phase=Phase::error;w.status=message;}
             wait(10);
         }

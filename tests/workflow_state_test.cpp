@@ -28,7 +28,7 @@ int main(){return runTest([]{
     REQUIRE(entryBlock({},Mode::live,{true,false,true})==EntryBlock::timing);
     REQUIRE(entryBlock({},Mode::finalise,{true,true,false})==EntryBlock::wet);
     REQUIRE(entryBlock({},Mode::live,{false,true,true,true})==EntryBlock::none);
-    REQUIRE(entryBlock({},Mode::finalise,{false,true,true,true})==EntryBlock::source);
+    REQUIRE(entryBlock({},Mode::finalise,{false,true,true,true})==EntryBlock::none);
     REQUIRE(std::string_view(m3::ui::workflowStatus({Mode::capture,Phase::recording})).find("Recording")!=std::string_view::npos);
     REQUIRE(std::string_view(m3::ui::workflowStatus({Mode::capture,Phase::draining})).find("Committing")!=std::string_view::npos);
     REQUIRE(std::string_view(m3::ui::workflowStatus({Mode::capture,Phase::validating})).find("Validating")!=std::string_view::npos);
@@ -49,7 +49,7 @@ int main(){return runTest([]{
         for(auto target:{Mode::capture,Mode::live,Mode::finalise})
         {
             state.reset();Readiness r{source!=0,timing!=0,wet!=0};
-            const bool expected=target==Mode::capture || (source && timing && (target!=Mode::finalise || wet));
+            const bool expected=target==Mode::capture || (timing && (target==Mode::finalise?wet:source));
             REQUIRE(state.requestMode(target,r)==expected);
             const auto c=capabilities(state.snapshot(),r);
             REQUIRE(c.edit==(expected && target==Mode::live && source && timing));
@@ -68,7 +68,8 @@ int main(){return runTest([]{
     state.reset();REQUIRE(state.requestMode(Mode::live,{false,true,true,true}));
     REQUIRE(capabilities(state.snapshot(),{false,true,true,true}).edit);
     state.reset();REQUIRE(!state.requestMode(Mode::live,{false,false,true,true}));
-    REQUIRE(!state.requestMode(Mode::finalise,{false,true,true,true}));
+    REQUIRE(state.requestMode(Mode::finalise,{false,true,true,true}));
+    REQUIRE(capabilities(state.snapshot(),{false,true,true,true}).preview && !capabilities(state.snapshot(),{false,true,true,true}).capture);
     for(auto outcome:{Result::empty,Result::failed}){
         state.reset();token=state.begin(true);REQUIRE(state.stop(token));
         REQUIRE(state.complete(token,outcome!=Result::failed,false,false));

@@ -221,7 +221,7 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
     const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.frozen && ready(w);});
     return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
         && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
-        std::any_of(session.swells.begin(),session.swells.end(),ready),frozen};
+        swells->hasExportableWet(time),frozen};
 }
 bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
 {
@@ -230,7 +230,7 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
     if(const auto block=workflow::entryBlock(workflowState.snapshot(),mode,readiness);block!=workflow::EntryBlock::none)
     {swells->diagnostic(m3::ui::entryExplanation(block));return false;}
     if(!workflowState.requestMode(mode,readiness))return false;
-    swells->stop();if(previous!=mode)persistentStateChanged();return true;
+    swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();if(previous!=mode)persistentStateChanged();return true;
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {

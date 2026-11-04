@@ -97,15 +97,16 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     static std::map<std::pair<int,int>,decltype(regions)> geometry;
     const auto key=std::pair{editor.getWidth(),editor.getHeight()};
     const auto learning=visibleOffscreen(named(editor,"learnWorkspace"));
-    if(!learning){if(const auto old=geometry.find(key);old!=geometry.end())REQUIRE(old->second==regions);else geometry.emplace(key,regions);}
+    const auto exporting=visibleOffscreen(named(editor,"exportWorkspace"));
+    if(!learning && !exporting){if(const auto old=geometry.find(key);old!=geometry.end())REQUIRE(old->second==regions);else geometry.emplace(key,regions);}
     else {for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview","auditionBlend"})REQUIRE(!visibleOffscreen(named(editor,name)));
-        REQUIRE(editor.getLocalBounds().contains(named(editor,"learnWorkspace")->getBounds()));}
+        REQUIRE(editor.getLocalBounds().contains(named(editor,exporting?"exportWorkspace":"learnWorkspace")->getBounds()));}
     const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image image(juce::Image::ARGB,editor.getWidth(),editor.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);editor.paintEntireComponent(graphics,true);
     REQUIRE(image.getPixelAt(layout.header.getX()+4,layout.globals.getY())==m3::ui::separator);
     auto stream=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk());REQUIRE(juce::PNGImageFormat().writeImageToStream(image,*stream));
-    if(tag=="fresh-1400" || tag=="fresh-1100" || tag=="ready" || tag.startsWith("learn-"))for(const auto scale:{1.25f,1.5f,2.0f})
+    if(tag=="fresh-1400" || tag=="fresh-1100" || tag=="ready" || tag.startsWith("learn-") || tag.startsWith("export-"))for(const auto scale:{1.25f,1.5f,2.0f})
     {
         juce::Image scaled(juce::Image::ARGB,juce::roundToInt(editor.getWidth()*scale),juce::roundToInt(editor.getHeight()*scale),true,juce::SoftwareImageType{});
         juce::Graphics canvas(scaled);canvas.addTransform(juce::AffineTransform::scale(scale));editor.paintEntireComponent(canvas,true);
@@ -117,11 +118,77 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "NoticeBarCases.h"
 #include "WorkspaceNoticeCases.h"
 #include "UiStandardsCases.h"
+#include "ExportControlCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--test-export-paint"){
+        TestDirectory root;m3::SwellEngine engine(root.file,[]{return PreviewContext{};});m3::ui::WorkspaceTheme theme;m3::ui::ExportWorkspace panel(engine);panel.setLookAndFeel(&theme);panel.setSize(1068,736);panel.setVisible(true);
+        auto plan=std::make_shared<m3::SongExportPlan>();plan->timing={true,0,0,1000,120,4,4};plan->origin=0;plan->end=1000;plan->wet=.5f;plan->identity=juce::String::repeatedString("a",64);
+        auto prepared=std::make_shared<m3::PreparedExport>();prepared->plan=plan;prepared->metrics.dryPeaks={{100,300,-.5f,.5f}};prepared->metrics.wetPeaks={{100,300,-.5f,.5f}};
+        m3::EditorSnapshot snapshot;snapshot.songExport.phase=m3::ExportPhase::ready;snapshot.songExport.prepared=prepared;
+        // Antiphase cancellation may leave nonzero component peaks but no audible sum.
+        panel.display(snapshot);REQUIRE(!named(panel,"exportPlay")->isEnabled() && named(panel,"exportSave")->isEnabled());
+        juce::Image image(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);panel.paintEntireComponent(graphics,true);
+        const auto area=panel.waveformBounds().reduced(1);unsigned wet=0;
+        for(int y=area.getY();y<area.getBottom();++y)for(int x=area.getX();x<area.getRight();++x)wet+=image.getPixelAt(x,y)==m3::ui::aqua;
+        REQUIRE(wet==0);snapshot.songExport.previewRequested=true;panel.display(snapshot);REQUIRE(named(panel,"exportStop")->isEnabled());
+        snapshot.songExport.phase=m3::ExportPhase::preparing;snapshot.songExport.prepared.reset();panel.display(snapshot);REQUIRE(!named(panel,"exportSave")->isEnabled() && !named(panel,"exportDrag")->isEnabled());
+        snapshot.songExport.phase=m3::ExportPhase::error;snapshot.songExport.message="Required wet unavailable";panel.display(snapshot);REQUIRE(panel.notice()->tone==m3::ui::controls::NoticeTone::error);
+        snapshot.songExport.phase=m3::ExportPhase::ready;snapshot.songExport.prepared=prepared;prepared->metrics.audibleStart=100;prepared->metrics.audibleEnd=400;
+        plan->identity=juce::String::repeatedString("b",64);panel.display(snapshot);
+        auto navigation=dynamic_cast<m3::ui::controls::TimelineNavigation*>(named(panel,"exportNavigation"));REQUIRE(navigation);
+        REQUIRE(panel.viewport().first<100 && panel.viewport().last>400);const auto fitted=panel.viewport();
+        const auto anchor=fitted.first+fitted.span()*.25;
+        const auto now=juce::Time::getCurrentTime();const juce::Point<float> point{navigation->getWidth()*.25f,20};
+        juce::MouseEvent wheelEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,navigation,navigation,now,point,now,0,false);
+        juce::MouseWheelDetails wheel{};wheel.deltaY=.25f;navigation->mouseWheelMove(wheelEvent,wheel);
+        REQUIRE(panel.viewport().span()<fitted.span());
+        REQUIRE(std::abs(panel.viewport().first+panel.viewport().span()*.25-anchor)<1e-7);
+        navigation->keyPressed(juce::KeyPress(juce::KeyPress::rightKey));const auto inspected=panel.viewport();panel.display(snapshot);
+        REQUIRE(panel.viewport().first==inspected.first && panel.viewport().last==inspected.last);
+        int64_t positioned=0;unsigned seeks=0;navigation->onPosition=[&](int64_t at){positioned=at;++seeks;};
+        const auto pointer=[&](float x,juce::ModifierKeys keys){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),{x,20},keys,0,0,0,0,0,navigation,navigation,now,{point.x,20},now,1,true);};
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));
+        REQUIRE(seeks==1 && positioned==panel.viewport().sample(point.x,0,navigation->getWidth()));
+        navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier));
+        REQUIRE(seeks==2 && positioned==panel.viewport().sample(point.x+25,0,navigation->getWidth()));
+        REQUIRE(panel.viewport().first==inspected.first && panel.viewport().last==inspected.last);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::rightButtonModifier));REQUIRE(seeks==2);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
+        navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
+        REQUIRE(seeks==2 && panel.viewport().first!=inspected.first);
+        navigation->fit();navigation->mouseWheelMove(wheelEvent,wheel);navigation->keyPressed(juce::KeyPress(juce::KeyPress::rightKey));
+        snapshot.songExport.previous=prepared;snapshot.songExport.prepared.reset();snapshot.songExport.phase=m3::ExportPhase::preparing;
+        panel.display(snapshot);REQUIRE(!named(panel,"exportPlay")->isEnabled() && !named(panel,"exportSave")->isEnabled());
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==2);
+        REQUIRE(panel.viewport().first==inspected.first);juce::Image pending(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics pg(pending);panel.paintEntireComponent(pg,true);
+        unsigned retained=0;for(int y=area.getY();y<area.getBottom();++y)for(int x=area.getX();x<area.getRight();++x){const auto c=pending.getPixelAt(x,y);retained+=c.getAlpha()>0 && c.getGreen()>c.getRed()+60 && c.getBlue()>c.getRed()+60;}REQUIRE(retained>0);
+        navigation->keyPressed(juce::KeyPress(juce::KeyPress::homeKey));REQUIRE(panel.viewport().first==fitted.first);
+        for(int i=0;i<100;++i)navigation->zoom(.01);REQUIRE(panel.viewport().span()>=10);
+        navigation->pan(-100000);REQUIRE(std::isfinite(panel.viewport().first) && panel.viewport().first>=-40);
+        navigation->setRange(9e18,9e18,9e18,9e18,48000);navigation->zoom(.01);REQUIRE(std::isfinite(panel.viewport().span()) && panel.viewport().span()>0);
+        snapshot.songExport.phase=m3::ExportPhase::ready;snapshot.songExport.prepared=prepared;snapshot.songExport.session=11;panel.display(snapshot);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==3);
+        ++snapshot.songExport.pass;panel.display(snapshot);navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==3);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==4);
+        snapshot.songExport.phase=m3::ExportPhase::preparing;panel.display(snapshot);
+        navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==4);
+        navigation->zoom(.8);navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
+        navigation->mouseDrag(pointer(point.x+10,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));const auto pendingPan=panel.viewport();
+        panel.display(snapshot);navigation->mouseDrag(pointer(point.x+20,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
+        REQUIRE(seeks==4 && panel.viewport().first!=pendingPan.first);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));
+        snapshot.songExport.phase=m3::ExportPhase::ready;panel.display(snapshot);
+        navigation->mouseDrag(pointer(point.x+20,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==4);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==5);
+        panel.setLookAndFeel(nullptr);return;
+    }
     uiStandardsCases();
     learnTimelineCases();
+    if(argc>1 && juce::String(argv[1])=="--review-export-controls"){exportControlReview::cases();controlReview::run(std::make_unique<exportControlReview::Panel>());return;}
+    if(argc>1 && juce::String(argv[1])=="--test-export-controls"){exportControlReview::cases();return;}
+    exportControlReview::cases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
     modeIconCases();
@@ -423,6 +490,17 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(engine.snapshot().raw->peak>1);
     const auto baseline=engine.savedSession();
     auto editorOwner=std::make_unique<PreverbAudioProcessorEditor>(*processor);auto& editor=*editorOwner;editor.setVisible(true);editor.refresh();snapshotEditor(editor,"ready");
+    if(argc>1 && juce::String(argv[1])=="--review-export"){
+        REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+        // Silent fixture clock exercises actual preview paging/cursor without an
+        // audio device or the owner's DAW. Product audio still uses processBlock.
+        class PreviewClock final:private juce::Timer{
+        public:explicit PreviewClock(m3::SwellEngine& owner):owner(owner){startTimerHz(50);}
+        private:void timerCallback()override{const auto s=owner.snapshot().songExport;if(s.prepared){
+            std::array<float,960> l{},r{};owner.processAudio(l.data(),r.data(),960,s.prepared->plan->timing);}}
+            m3::SwellEngine& owner;
+        } clock(engine);
+        snapshotEditor(editor,"export-ready");controlReview::run(std::make_unique<PreverbAudioProcessorEditor>(*processor));return;}
     if(argc>1 && (juce::String(argv[1])=="--review-workspace" || juce::String(argv[1])=="--review-learn"))
     {
         // The same real processor/editor fixture, isolated from DAW projects.
@@ -450,8 +528,35 @@ int main(int argc,char* argv[]){return runTest([&]
         auto inspector=dynamic_cast<juce::Viewport*>(named(editor,"inspectorViewport"));REQUIRE(inspector && !inspector->getViewedComponent()->isEnabled());
         REQUIRE(!engine.edit(first,[](auto& w,auto&){w.shape.gainDb=7;return true;}));snapshotEditor(editor,"workflow-finalise");
         REQUIRE(!engine.assignIR(first,baseline.swells[0].inputGeneration,file,false,engine.assignmentEpoch()));
-        const auto handles=editor.timelineComponent().grabPoints();
-        if(!handles.empty())REQUIRE(!editor.timelineComponent().beginDrag(handles.front().point));
+        REQUIRE(!visibleOffscreen(named(editor,"swellTimeline")) && visibleOffscreen(named(editor,"exportWorkspace")));
+        waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+        auto exportView=dynamic_cast<m3::ui::ExportWorkspace*>(named(editor,"exportWorkspace"));REQUIRE(exportView);
+        for(float wet:{0.f,.5f,1.f}){REQUIRE(engine.setExportMix(wet,engine.assignmentEpoch()));
+            waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+            REQUIRE(named(editor,"exportSave")->isEnabled() && named(editor,"exportDrag")->isEnabled());
+            REQUIRE(exportView->getLocalBounds().contains(exportView->waveformBounds()));
+            juce::Image pixels(juce::Image::ARGB,exportView->getWidth(),exportView->getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(pixels);exportView->paintEntireComponent(canvas,true);
+            unsigned aquaPixels=0,dryPixels=0;const auto plot=exportView->waveformBounds().reduced(1);
+            for(int y=plot.getY();y<plot.getBottom();++y)for(int x=plot.getX();x<plot.getRight();++x){const auto colour=pixels.getPixelAt(x,y);aquaPixels+=colour==m3::ui::aqua;dryPixels+=colour==m3::ui::text;}
+            std::cerr<<"Export pixel oracle "<<wet<<": aqua "<<aquaPixels<<", dry "<<dryPixels<<"\n";
+            if(wet==0)REQUIRE(aquaPixels==0 && dryPixels>0);if(wet==1)REQUIRE(aquaPixels>0 && dryPixels==0);
+            snapshotEditor(editor,"export-mix-"+juce::String(juce::roundToInt(wet*100)));}
+        {
+            auto fixture=engine.snapshot();fixture.songExport.phase=m3::ExportPhase::preparing;fixture.songExport.previous=fixture.songExport.prepared;fixture.songExport.prepared.reset();fixture.session.exportState.wet=.35f;exportView->display(fixture);
+            REQUIRE(!named(editor,"exportSave")->isEnabled() && !named(editor,"exportDrag")->isEnabled());snapshotEditor(editor,"export-pending");
+            fixture.songExport.phase=m3::ExportPhase::error;fixture.songExport.message="Required wet asset unavailable";exportView->display(fixture);
+            auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice);notice->display(exportView->notice());
+            REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::error);snapshotEditor(editor,"export-unavailable");
+            fixture=engine.snapshot();auto prepared=std::make_shared<m3::PreparedExport>(*fixture.songExport.prepared);
+            auto plan=std::make_shared<m3::SongExportPlan>(*prepared->plan);plan->warnings={{plan->origin,plan->origin+100,m3::ExportCoverage::gap}};plan->identity=juce::String::repeatedString("a",64);prepared->plan=plan;
+            fixture.songExport.prepared=prepared;exportView->display(fixture);notice->display(exportView->notice());REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning);snapshotEditor(editor,"export-warned-dry");
+            prepared->metrics.audibleStart.reset();prepared->metrics.audibleEnd.reset();prepared->metrics.wetPeaks.clear();prepared->metrics.dryPeaks.clear();
+            exportView->display(fixture);REQUIRE(!named(editor,"exportPlay")->isEnabled() && named(editor,"exportSave")->isEnabled());snapshotEditor(editor,"export-silent");
+            editor.refresh();
+        }
+        {
+            auto nav=dynamic_cast<m3::ui::controls::TimelineNavigation*>(named(editor,"exportNavigation"));REQUIRE(nav);const auto fit=exportView->viewport();nav->zoom(.3,.7);snapshotEditor(editor,"export-zoomed");nav->pan(-.2);const auto pan=exportView->viewport();editor.refresh();REQUIRE(exportView->viewport().first==pan.first);snapshotEditor(editor,"export-panned");nav->fit();REQUIRE(exportView->viewport().first==fit.first);
+        }
         largeWorkflowSnapshot("workflow-finalise");
         const auto originalSize=editor.getBounds();
         for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1400,1000},juce::Point<int>{1600,1000}})
