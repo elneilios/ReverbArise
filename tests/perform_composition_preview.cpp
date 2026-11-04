@@ -2,7 +2,7 @@
 #include "AudioTestFiles.h"
 #include "WorkflowTestSupport.h"
 #include <Plugin/PluginEditor.h>
-#include <UI/Controls/SliderControl.h>
+#include <UI/Controls/TimelineZoomControls.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
@@ -113,11 +113,17 @@ public:
         emptyList.setText("No swells yet\n\nAdd a swell with +",juce::dontSendNotification);
         emptyInspector.setText("No swell selected\n\nSelect a swell to edit",juce::dontSendNotification);
         emptyTimeline.setText("No source audio\n\nUse Learn to capture your song",juce::dontSendNotification);
-        for(auto* button:{&minus,&plus,&fit,&snap,&add})addAndMakeVisible(button);
+        for(auto* button:{&snap,&add})addAndMakeVisible(button);
         addAndMakeVisible(zoom);addAndMakeVisible(grid);
-        zoom.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);zoom.setWantsKeyboardFocus(true);zoom.setRange(0,1,.001);zoom.setValue(.5);
-        minus.onClick=[this]{timeline().zoom(2);};plus.onClick=[this]{timeline().zoom(.5);};fit.onClick=[this]{timeline().fitSelection();};
-        zoom.onValueChange=[this]{const auto amount=zoom.getValue();timeline().zoom(std::pow(2.0,(lastZoom-amount)*4));lastZoom=amount;};
+        zoom.onZoomStep=[this](double factor){timeline().zoom(factor);refreshZoom();parts.at("songOverview")->repaint();};
+        zoom.onFit=[this]{timeline().fitSelection();refreshZoom();parts.at("songOverview")->repaint();};
+        // Review binding over the existing viewport's limits; final Perform
+        // context/pixel-derived limits remain task 3.1 after layout approval.
+        zoom.onZoomFraction=[this](double fraction){timeline().zoom(std::pow(1.e12,1-fraction)/timeline().viewport().span());refreshZoom();parts.at("songOverview")->repaint();};
+        for(auto* child:timeline().getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))
+            if(label->getText()=="Wave zoom")
+            {label->setText("Height",juce::dontSendNotification);applyTextRole(*label,TextRole::controlLabel);
+                label->setTooltip("Waveform display height only; does not change audio gain or horizontal zoom.");}
         snap.setClickingTogglesState(true);snap.setToggleState(true,juce::dontSendNotification);
         snap.setTooltip("Layout specimen only. Ctrl bypass and new grid snapping follow layout approval.");
         snap.setEnabled(false);
@@ -150,7 +156,7 @@ public:
         processor->swellEngine().restore(state);
         if(scene!=1)wait([&]{const auto s=processor->swellEngine().snapshot();const auto* w=m3::find(s.session,s.session.primary);
             return w && w->phase==m3::Phase::ready && s.raw && s.auditionReady;});
-        refresh();timeline().fitSelection();
+        refresh();timeline().fitSelection();refreshZoom();
         revealSelection();
     }
     void revealSelection()
@@ -208,6 +214,7 @@ public:
             require<m3::ui::controls::SwellList>(*this,"swellList").display(std::move(rows),shown.session.selected,shown.session.primary,shown.sessionEpoch);
         }
         else parts.at("inspectorViewport")->setEnabled(true);
+        refreshZoom();
         // Bindings repaint changed data. Geometry belongs only to resized(), not
         // the polling loop: reapplying every child font/bounds caused extra work.
     }
@@ -223,10 +230,8 @@ public:
         parts.at("inspectorViewport")->setBounds(right);emptyInspector.setBounds(right);
         layoutInspector(right.getWidth());
         timeline().setBounds(l.detail.withTrimmedTop(spacing::related));parts.at("editorReadout")->setBounds(l.readout);emptyTimeline.setBounds(l.detail.reduced(16));
-        auto row=l.toolbar.reduced(6,6);minus.setBounds(row.removeFromLeft(34));row.removeFromLeft(8);
-        const auto sliderWidth=row.getWidth()-34-40-96-136-4*8;
-        zoom.setBounds(row.removeFromLeft(sliderWidth));row.removeFromLeft(8);plus.setBounds(row.removeFromLeft(34));row.removeFromLeft(8);
-        fit.setBounds(row.removeFromLeft(40));row.removeFromLeft(8);snap.setBounds(row.removeFromLeft(96));row.removeFromLeft(8);grid.setBounds(row);
+        auto row=l.toolbar.reduced(6,6);grid.setBounds(row.removeFromRight(136));row.removeFromRight(8);
+        snap.setBounds(row.removeFromRight(96));row.removeFromRight(8);zoom.setBounds(row);
         auto audition=l.audition.reduced(0,8);auto line=audition.removeFromTop(36);
         auditionHeading.setBounds(line.removeFromLeft(112));parts.at("audition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(8);
         parts.at("stopAudition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(24);
@@ -278,13 +283,15 @@ public:
         rect("sourceLane",timeline().sourceLane().toNearestInt());rect("wetLane",timeline().wetLane().toNearestInt());rect("toolbar",l.toolbar);
         rect("overview",parts.at("songOverview")->getBounds());o->setProperty("scene",scene);
         REQUIRE(l.detail.getWidth()>=552 && l.detail.getHeight()>=370);
-        REQUIRE(l.toolbar.contains(minus.getBounds()) && l.toolbar.contains(grid.getBounds()));
-        std::array<juce::Component*,6> controls{&minus,&zoom,&plus,&fit,&snap,&grid};
+        REQUIRE(l.toolbar.contains(zoom.getBounds()) && l.toolbar.contains(grid.getBounds()));
+        REQUIRE(zoom.getWidth()>=controls::TimelineZoomControls::minimumWidth());
+        std::array<juce::Component*,6> controls{&zoom.zoomOutButton(),&zoom.zoomSlider(),&zoom.zoomInButton(),&zoom.fitButton(),&snap,&grid};
         for(size_t i=0;i<controls.size();++i){REQUIRE(controls[i]->getHeight()==36 && controls[i]->getWidth()>=34);
-            const auto focus=controls[i]->getBounds().toFloat().expanded(controlGeometry::focusOutset+controlGeometry::focusStroke*.5f);
+            const auto bounds=getLocalArea(controls[i],controls[i]->getLocalBounds());
+            const auto focus=bounds.toFloat().expanded(controlGeometry::focusOutset+controlGeometry::focusStroke*.5f);
             REQUIRE(l.toolbar.toFloat().contains(focus));
             if(controls[i]->isEnabled())REQUIRE(controls[i]->getWantsKeyboardFocus());
-            for(size_t j=0;j<i;++j)REQUIRE(!controls[i]->getBounds().intersects(controls[j]->getBounds()));}
+            for(size_t j=0;j<i;++j)REQUIRE(!bounds.intersects(getLocalArea(controls[j],controls[j]->getLocalBounds())));}
         REQUIRE(timeline().sourceLane().getHeight()>=90 && timeline().wetLane().getHeight()>=90);
         REQUIRE(swellsHeading.getFont().getTypefacePtr()==interTypeface(InterFace::semibold));
         REQUIRE(countLabel.getFont().getTypefacePtr()==interTypeface(InterFace::regular));
@@ -303,14 +310,19 @@ public:
         return juce::var(o);
     }
 private:
+    void refreshZoom()
+    {
+        const auto span=std::clamp(timeline().viewport().span(),1.,1.e12);
+        zoom.display({1-std::log(span)/std::log(1.e12),span>1,span<1.e12,scene!=1});
+    }
     void timerCallback()override{refresh();}
     TestDirectory directory;WorkspaceTheme theme;Head head;
     std::unique_ptr<PreverbAudioProcessor> processor;std::unique_ptr<PreverbAudioProcessorEditor> editor;
     std::map<juce::String,juce::Component*> parts;std::vector<std::pair<juce::Component*,juce::Component*>> borrowed;
-    m3::Session baseline;juce::String firstId,secondId;int scene=0;double lastZoom=.5;int layoutPasses=0;
+    m3::Session baseline;juce::String firstId,secondId;int scene=0;int layoutPasses=0;
     juce::Label swellsHeading,countLabel,inspectorHeading,auditionHeading,emptyList,emptyInspector,emptyTimeline,monitor;
-    juce::TextButton minus{"-"},plus{"+"},fit{"Fit"},snap{"Snap"},add{"+"};
-    controls::SliderControl zoom;InvocationComboBox grid;
+    juce::TextButton snap{"Snap"},add{"+"};
+    controls::TimelineZoomControls zoom;InvocationComboBox grid;
 };
 
 class Review final:public juce::Component

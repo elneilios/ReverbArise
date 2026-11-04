@@ -58,7 +58,7 @@ insets. These are revised review candidates, not production-approved metrics.
 
 The native fixture must report actual dry/wet lane, ruler, scrollbar, toolbar, focus and inspector bounds and adjust these proposals before approval. A two-line 14-high helper must fit its proper line boxes. Test 1199/1200/1201 and adjacent header breakpoint behavior separately. Stop if the one-row toolbar or hit targets cannot fit; do not rescue it with smaller fonts or a second row.
 
-Toolbar width starting budget inside the minimum center: minus 34, slider 96, plus 34, Fit 40, Snap toggle button 96, grid selector 136, five 8 gaps = 476, leaving 76 for insets/focus and responsive growth. Labels use explicit units and tooltips; text/focus containment determines final approved widths. Slider grows at larger sizes.
+The owner-approved shared row from merged PR #49 supersedes the initial toolbar arithmetic. In the minimum native fixture, the row receives 292 pixels: minus/plus 34 each, Fit 74, three shared 12-pixel gaps and a 114-pixel slider. Snap 96 and grid 136 retain two external 8-pixel gaps inside the 540-pixel inset toolbar. Slider grows at larger sizes. This is measured fixture composition, still awaiting compact-layout approval; no production tokens are adopted.
 
 After a new Apply request, build the isolated native fixture using real component/data paths with empty, sparse, many/long-name, loading/error, selected and existing multiple-selection states. Launch it directly and preserve the review window. Record measured values, screenshots and explicit look/feel decisions. Only then roll approved metrics into production and update code, standards revision and tests together. This planning phase cannot create native fixture code; arithmetic above does not satisfy that checkpoint.
 
@@ -82,7 +82,7 @@ Materially revised families receive a small native interaction checkpoint before
 
 ### 3. One bounded viewport, explicit Fit lifecycle
 
-Use `SwellViewport` and timeline methods for every slider/button/wheel/Overview action. Slider is logarithmic in horizontal span; plus/minus change span by factor two. Minimum is one sample per logical lane pixel (or whole available context when shorter); maximum covers known capture and real swell extent with existing 4% Fit padding, never beyond checked representable bounds. Pointer wheel anchors at pointer; toolbar anchors visible selected target, else visible playhead, else center. No navigation changes audio/model coordinates.
+Use `SwellViewport` and timeline methods for every slider/button/wheel/Overview action. Slider is logarithmic in horizontal span; plus/minus use the owner-approved shared row's .8/1.25 span factors. Minimum is one sample per logical lane pixel (or whole available context when shorter); maximum covers known capture and real swell extent with existing 4% Fit padding, never beyond checked representable bounds. Pointer wheel anchors at pointer; toolbar anchors visible selected target, else visible playhead, else center. No navigation changes audio/model coordinates.
 
 Fit includes the selected swell's source context, requested audible pre-roll/end, placed raw render and actual tail/overlaps intersecting that context; a pending render uses truthful requested/source bounds. Without selection use accepted capture extent, retaining gaps and negative coordinates. Empty has a finite neutral view. Initial Perform entry Fits once when relevant source is ready; selection/background refresh does not repeatedly Fit. Explicit Fit resets context; return from Learn/Export restores prior user view. Overview viewport is derived from exactly the same span, never seeks the host. Keep display-amplitude control disclosed in the detail heading, outside the horizontal toolbar, using existing gain law.
 
@@ -116,9 +116,12 @@ Use focused pure viewport/grid tests, actual component gestures and processor/ed
 
 ### 7. Shared waveform composition proposal — owner steering, 4 November
 
-This is an interface proposal, not an implemented extraction or adoption approval.
-The owner requested small composable boundaries across Learn/Perform/Export while
-retaining the existing native composition checkpoint and #6 ownership gate.
+The original interface proposal below was delivered independently in PR #49,
+approved by the owner and merged into main at `12182f2` on 4 November. Its shared
+Zoom/Fit row, ActionButton and musical ruler are now available. This approval does
+not approve Perform compact composition or transfer Export implementation/state
+ownership. The owner requested small composable boundaries across Learn/Perform/Export
+while retaining the existing native composition checkpoint and #6 ownership gate.
 
 **Safe existing shared foundation:** `SwellViewport` remains the sample/pixel and
 viewport arithmetic authority; `makeSongBarRuler` remains the musical tick authority.

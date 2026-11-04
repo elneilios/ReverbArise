@@ -283,3 +283,50 @@ reviewable PR is the handover record. The shared family preview is open separate
 Owner comparison screenshots identified the remaining interrupted horizontal rules: the opaque timeline overlapped its parent's rule. The isolated fixture now insets timeline content and list/inspector headings, keeps vertical separators clear of horizontal rules, and removes the obsolete Perform auto-marker band. No production compact metrics have been adopted.
 
 Release build `out/build-logs/Release/20261104-123546-e3672efb` passed. Native fixture passed 60 geometry cases and 240 software renders, including composite-pixel checks across all horizontal rules, vertical endpoint gaps and live refresh stability. Captures and measurements are in `2026-11-04-issue-46/revision-3/`. This is fixture evidence, not host/DPI acceptance. Layout approval remains pending. A copied executable under `out/review-issue46-revision3/` preserves the review window independently of subsequent shared-control builds.
+
+## Revision 4: consume merged shared row (2026-11-04)
+
+The owner approved PR #49's shared design/handover and merged it into main
+(`12182f2`). That main revision is merged into the Perform branch. The isolated
+fixture now consumes `TimelineZoomControls` instead of duplicating its buttons
+and slider. In the minimum 1100x850 composition the shared row is 292 pixels,
+including a 114-pixel slider and 74-pixel Fit button; all six toolbar controls
+remain on one row. No production Perform metrics or controls are adopted.
+
+The former Wave zoom label reads Height in this fixture, with a tooltip explaining
+display amplitude only, independent of audio gain and horizontal zoom. Review
+callbacks use the existing timeline viewport/Fit paths and silently refresh the
+shared controls. The fixture's existing 1..1e12 span domain is not claimed as the
+final context/pixel-derived Perform navigation bounds. Snap/grid remain disabled
+specimens until layout approval; no snapping work has started.
+
+Focused native Release builds of the composition and shared-control test targets
+passed using the existing build lock/cache helpers, logs
+`out/build-logs/Release/20261104-perform-shared-preview/build.log`. The native
+composition matrix passed **60 geometry cases / 240 software-scale renders plus
+live refresh checks**; the merged shared-control native test passed. Full-width
+composite rule checks, endpoint gaps and idle-layout stability remain enabled.
+UI standards passed (37 files / 61 bounded occurrences); strict OpenSpec and diff
+checks passed. No full suite, actual DPI or host acceptance is claimed here.
+[Selected](2026-11-04-issue-46/revision-4/sparse-1100x850-100.png),
+[dense](2026-11-04-issue-46/revision-4/dense-1100x850-100.png),
+[empty](2026-11-04-issue-46/revision-4/empty-1100x850-100.png) and
+[measurements](2026-11-04-issue-46/revision-4/measurements.json) are retained.
+
+The verified native window is open from `out/review-issue46-revision4/perform-review.exe`,
+SHA256 `71A1D422B0391507D95408E2503C83E43AEDF4F813E58664F41BC23C8B78C013`.
+Owner compact-layout approval was requested separately and remains pending;
+task 1.3 and the partially delivered control-family task remain unchecked.
+
+Read-only #6 recheck: Agent 1 remains at branch HEAD `33f1871` with uncommitted
+Export work. The latest issue comments confirm left click/drag internal-preview
+positioning, Shift-drag pan and stopped/playing seek semantics remain its ownership.
+Its current TimelineNavigation SHA256 is
+`DA5AD8F28ADF30032A21627811B06078FB45C551E578DFA238A884EF22B7951D`;
+SwellSession decoder remains schema 10 and SHA256
+`A7CC163FD31C4F96969A04CD9C9A5F43A887417ECFD04EF3DF37EEDDBBA1141D`.
+SwellViewport text still matches after line-ending normalization. A concrete
+request to coordinate shared timeline and optional preference ownership was again
+rejected by Codex's active-writer restriction. No message was delivered and no
+shared production timeline/serialization paths were changed. Task 1.1 remains
+open rather than treating the merged stateless library as wider state ownership.
