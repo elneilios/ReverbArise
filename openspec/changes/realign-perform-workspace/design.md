@@ -330,7 +330,7 @@ font role, control family or density token is introduced. Test title ink against
 the actual Audition label font, row bounds/gaps, full rules and software scales.
 No audio, persistence or audition semantics change in this layout refinement.
 
-### Perform clarity revision � subsequent owner feedback
+### Perform clarity revision — subsequent owner feedback
 
 Preserve the three-column composition and 52-pixel review strip. Keep the native
 instance-only metric gate until the complete revised visual checkpoint is accepted.
@@ -370,7 +370,7 @@ reset reachability at 1100x850, heading insets and source/render/state identitie
 The actual refined native preview is the owner checkpoint; broader waveform,
 Export, Learn generation and DSP/cache work stay out of scope.
 
-### Bottom context help � supersedes popup help proposal
+### Bottom context help — supersedes popup help proposal
 
 The owner found tooltip popups intrusive and explicitly placed all hover help at
 the very bottom of the plugin, below the position readout, with full width and
@@ -390,3 +390,10 @@ retain while reading the footer, never intercept graph/control pointer input and
 never publish model changes from hover. Standard font proportions and ellipsis
 handle long messages. Existing actionable gesture/status warnings remain visible.
 The native review remains the acceptance gate for this revised presentation.
+
+Owner acceptance recorded on 4 November 2026: “Approve revised presentation”.
+Adopt the reviewed profile in the ordinary production editor, remove the temporary
+preview flag and legacy layout/display branches, and update standards revision 5.
+Keep task 6.2 open for the final FL Studio result; earlier accepted editing checks
+do not need repeating. Verify the ordinary editor with the same native tests and
+provide a separately copied/hash-verified final host bundle.

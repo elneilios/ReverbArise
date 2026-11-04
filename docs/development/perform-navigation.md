@@ -1,5 +1,13 @@
 # Perform navigation and editing — issue #46
 
+Current: the owner approved the complete revised native presentation on 4 November 2026.
+Production now adopts the 52-pixel audition strip, grouped/full Source inspector,
+compact readouts with exact editing, shared ruler, aligned headings and normal-font
+bottom hover-help footer (standards revision 5). The temporary preview-only switch
+is removed; native tests exercise the ordinary production editor. Earlier review
+chronology below is retained; the latest approval supersedes pending-adoption wording.
+
+
 Implementation status: the owner approved the revision-4 compact composition.
 `UI/PerformLayout.h` records that scoped profile, consumed by the production editor
 and native fixture. Integration follows merged Export PR #50 (`9b8e70f`), preserving

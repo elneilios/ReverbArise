@@ -397,7 +397,6 @@ public:
     explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false):fixture(std::move(scope))
     {
         editor=fixture->composition.productionEditor();addAndMakeVisible(*editor);
-        if(slimAudition)editor->previewSlimAuditionStrip();
         addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);
         scenes.addItemList({"Sparse / selected","Empty swells","Dense / long labels"},1);scenes.setSelectedId(1,juce::dontSendNotification);
         scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};

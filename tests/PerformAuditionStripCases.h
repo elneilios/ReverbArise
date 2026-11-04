@@ -2,10 +2,9 @@
 void Composition::verifyAuditionStrip()
 {
     stopTimer();setScene(0);auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);panel->refresh();
-    const PerformLayout previous(panel->getLocalBounds());const auto initial=panel->timelineComponent().getBounds();
-    REQUIRE(previous.audition.getHeight()==72); // Production profile stays approved until this checkpoint.
-    panel->previewSlimAuditionStrip();
-    REQUIRE(panel->timelineComponent().getHeight()==initial.getHeight()+20);
+    const PerformLayout approved(panel->getLocalBounds());
+    REQUIRE(approved.audition.getHeight()==52);
+    REQUIRE(panel->timelineComponent().getBounds()==approved.detail.withTrimmedTop(performGeometry::columnInset));
     for(int scene:{0,1,2})
     {
         setScene(scene);panel->refresh();

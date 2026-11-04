@@ -1,5 +1,11 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Owner acceptance: **Approve revised presentation**, 4 November 2026. The reviewed
+profile is being adopted in production; see [adoption validation](2026-11-04-issue-46-presentation-adoption.md)
+for the new build and remaining host check. Earlier checkpoint measurements below
+retain their original scope.
+
+
 Latest owner steering routes all hover help to the normal-font bottom footer:
 [current native checkpoint](2026-11-04-issue-46-hover-footer.md). Floating tooltips
 are removed. OpenSpec remains **19/21** pending 5.4 visual acceptance/adoption

@@ -8,7 +8,7 @@ namespace m3::ui
 namespace performGeometry
 {
 inline constexpr int listWidth=180,wideListWidth=210,inspectorWidth=304,wideInspectorWidth=320;
-inline constexpr int columnGap=16,columnInset=12,auditionHeight=72,overviewHeight=120,infoHeight=36;
+inline constexpr int columnGap=16,columnInset=12,auditionHeight=52,overviewHeight=120,infoHeight=36;
 inline constexpr int toolbarHeight=48,readoutHeight=26,toolbarInset=6,toolbarControlHeight=36;
 inline constexpr int toolbarGap=8,snapWidth=96,gridWidth=136,bandInset=8;
 }

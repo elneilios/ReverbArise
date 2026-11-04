@@ -33,14 +33,11 @@ public:
     // Native review harnesses may own polling after borrowing these components.
     // Normal plugin construction retains its existing automatic refresh.
     void stopAutomaticRefreshForReview() {stopTimer();}
-    // Temporary native checkpoint: production retains its approved band until review.
-    void previewSlimAuditionStrip() {slimAuditionReview=true;resized();repaint();}
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
 private:
-    bool slimAuditionReview=false;
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::controls::EllipsisLabel hoverHelp;
     juce::Component::SafePointer<juce::Component> hoverHelpSource;

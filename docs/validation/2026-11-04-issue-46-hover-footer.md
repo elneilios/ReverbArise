@@ -1,5 +1,11 @@
 # Issue #46 — bottom hover-help checkpoint
 
+Owner acceptance: **Approve revised presentation**, 4 November 2026. The reviewed
+profile is being adopted in production; see [adoption validation](2026-11-04-issue-46-presentation-adoption.md)
+for the new build and remaining host check. Earlier checkpoint measurements below
+retain their original scope.
+
+
 4 November 2026. The owner replaces intrusive floating tooltips with one plugin-wide
 help line below the musical-position footer. All controls with existing hover
 help use this area, including graph regions, nested fields, Learn/Perform/Export

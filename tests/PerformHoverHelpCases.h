@@ -2,7 +2,7 @@
 void Composition::verifyHoverHelp()
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
-    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->previewSlimAuditionStrip();panel->setSize(1100,850);panel->refresh();
+    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);panel->refresh();
     panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);panel->toFront(true);
     auto& help=require<controls::EllipsisLabel>(*panel,"hoverHelp");const auto original=engine.savedSession();const auto renders=engine.snapshot().renderCount,capture=processor->getCaptureSnapshot().manifest.revision;
     auto stamp=juce::Time::currentTimeMillis();

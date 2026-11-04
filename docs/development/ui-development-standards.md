@@ -10,7 +10,7 @@ Keep help metadata on the control, with workspace-specific explanatory prose;
 do not introduce popup tooltip hosts or draw hover text over waveform content.
 Interactive title/name is only a fallback. Full text is also the footer's
 accessible description. Hover must not publish state, rebuild layouts or start
-jobs. The actual native presentation remains subject to owner review.
+jobs. The owner approved the actual native presentation on 4 November 2026.
 
 Use these standards when implementing or refactoring ReverbArise UI. Consolidate
 controls as the planned work touches them; a separate whole-plugin migration is
@@ -20,7 +20,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 ## Shared controls and ownership
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 4; scoped knob focus review below). Its Learn/header table
+numerical authority (production standards revision 5; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

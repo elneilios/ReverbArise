@@ -281,7 +281,7 @@ void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
     if(learningLayout || exportLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
-    const m3::ui::PerformLayout perform(getLocalBounds(),slimAuditionReview?m3::ui::performGeometry::toolbarControlHeight+2*m3::ui::performGeometry::bandInset:m3::ui::performGeometry::auditionHeight);
+    const m3::ui::PerformLayout perform(getLocalBounds());
     for(const auto y:{perform.header.getBottom(),perform.work.getBottom(),perform.audition.getBottom(),perform.overview.getBottom()})
         g.drawHorizontalLine(y,static_cast<float>(perform.header.getX()),static_cast<float>(perform.header.getRight()));
     for(const auto x:{perform.list.getRight()+m3::ui::performGeometry::columnGap/2,perform.inspector.getX()-m3::ui::performGeometry::columnGap/2})
@@ -346,7 +346,7 @@ void PreverbAudioProcessorEditor::resized()
     noticeBar.setBounds(layout.notice);
     if(learningLayout || exportLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);
         body.setBottom(std::min(body.getBottom(),hoverHelp.getY()));learnWorkspace.setBounds(body);exportWorkspace.setBounds(body);return;}
-    const m3::ui::PerformLayout perform(getLocalBounds(),slimAuditionReview?m3::ui::performGeometry::toolbarControlHeight+2*m3::ui::performGeometry::bandInset:m3::ui::performGeometry::auditionHeight);
+    const m3::ui::PerformLayout perform(getLocalBounds());
     using namespace m3::ui;
     for(auto* component:std::initializer_list<juce::Component*>{&markerButton,&markerLabel,&markerKnob,&recaptureExisting,&headerStatus,&spanLabel}){component->setBounds({});component->setVisible(false);}
     regenerationLabel.setBounds({});regenerationKnob.setBounds({});
@@ -363,12 +363,11 @@ void PreverbAudioProcessorEditor::resized()
     editorReadout.setBounds(perform.readout);editorReadout.setName("editorReadout");
     timeline.setBounds(perform.detail.withTrimmedTop(performGeometry::columnInset));
     auto audition=perform.audition.reduced(0,performGeometry::bandInset);auto auditionRow=audition.removeFromTop(36);
-    auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(slimAuditionReview?performGeometry::toolbarGap:24);
+    auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(performGeometry::toolbarGap);
     auditionWetOnly.setBounds(auditionRow.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
-    if(slimAuditionReview){auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);}
-    else monitorStatus.setBounds(audition.withTrimmedLeft(112));
+    auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info.withBottom(std::min(perform.info.getBottom(),hoverHelp.getY())));
-    const auto width=inspectorWidth-16;inspectorContent.setSize(width,slimAuditionReview?650+3*controlGeometry::labelHeight+3*spacing::group+2*64:650);
+    const auto width=inspectorWidth-16;inspectorContent.setSize(width,650+3*controlGeometry::labelHeight+3*spacing::group+2*64);
     auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
     selectedStatus.setBounds(inspector.removeFromTop(24));
     fields[name].setBounds({});fieldLabels[name].setBounds({});
@@ -376,8 +375,7 @@ void PreverbAudioProcessorEditor::resized()
     irStatus.setBounds(inspector.removeFromTop(24));
     row=inspector.removeFromTop(34);loadIRButton.setBounds(row.removeFromRight(34));row.removeFromRight(6);irBox.setBounds(row);
     inspector.removeFromTop(12);
-    for(auto& group:inspectorGroups)group.setVisible(slimAuditionReview);
-    if(slimAuditionReview)
+    for(auto& group:inspectorGroups)group.setVisible(true);
     {
         const auto group=[&](int index){inspectorGroups[index].setBounds(inspector.removeFromTop(controlGeometry::labelHeight));inspector.removeFromTop(performGeometry::toolbarGap);};
         const auto pair=[&](int first,int second){auto line=inspector.removeFromTop(64);auto left=line.removeFromLeft((line.getWidth()-performGeometry::toolbarGap)/2);line.removeFromLeft(performGeometry::toolbarGap);valueControls[first].setBounds(left);valueControls[second].setBounds(line);};
@@ -385,20 +383,11 @@ void PreverbAudioProcessorEditor::resized()
         inspector.removeFromTop(spacing::group);group(1);pair(preRollValue,endOffsetValue);pair(fadeInValue,fadeOutValue);pair(inCurveValue,outCurveValue);
         inspector.removeFromTop(spacing::group);group(2);valueControls[levelValue].setBounds(inspector.removeFromTop(64));
     }
-    else
-    {
-    const std::array<int,valueCount> controlOrder{targetValue,placementValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,inCurveValue,outCurveValue,levelValue};
-    for(int index=0;index<valueCount;index+=2)
-    {
-        row=inspector.removeFromTop(64);auto left=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
-        valueControls[controlOrder[index]].setBounds(left);if(index+1<valueCount)valueControls[controlOrder[index+1]].setBounds(row);
-    }
-    }
     // Destructive resets sit beneath all the knob controls.
     inspector.removeFromTop(12);
     row=inspector.removeFromTop(34);auto resetLeft=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
     resetButton.setBounds(resetLeft);resetMenu.setBounds(row);
-    if(slimAuditionReview)inspectorContent.setSize(width,row.getBottom()+spacing::tight);
+    inspectorContent.setSize(width,row.getBottom()+spacing::tight);
     // Read-only precision/asset observations; musician edits live in the inspector.
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);

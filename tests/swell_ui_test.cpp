@@ -880,7 +880,7 @@ int main(int argc,char* argv[]){return runTest([&]
         auto curve=dynamic_cast<m3::ui::KnobValue*>(named(editor,"curveInTensionCell"));REQUIRE(curve);
         auto& knob=curve->valueKnob();knob.onDragStart();const auto start=knob.getValue();knob.setValue(start+.1,juce::sendNotificationSync);
         REQUIRE(std::abs(m3::find(engine.savedSession(),first)->shape.inTension-.45)<1e-6);
-        REQUIRE(curve->valueField().getText()=="0.450");
+        REQUIRE(curve->valueField().getText()=="0.45"); // Approved compact readout; stored precision checked above.
         REQUIRE(engine.selectTargets({second},second));editor.refresh();const auto otherShape=m3::find(engine.savedSession(),second)->shape;
         knob.setValue(.9,juce::sendNotificationSync);knob.onDragEnd();REQUIRE(m3::find(engine.savedSession(),second)->shape==otherShape);
         REQUIRE(engine.selectTargets({first},first));editor.refresh();knob.onDragStart();engine.removeSelected();

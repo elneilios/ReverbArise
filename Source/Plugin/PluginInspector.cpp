@@ -207,7 +207,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
     int64_t a=0,b=0;const auto shaped=valid && state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b);
     for(int index=0;index<valueCount;++index)
     {
-        if(index<=sourceEndValue)valueControls[index].setCaption(juce::String(index==targetValue?"Target":index==sourceStartValue?(slimAuditionReview?"Source start":"Src start"):(slimAuditionReview?"Source end":"Src end"))+(sampleUnitsButton.getToggleState()?" (samples)":" (bars)"),
+        if(index<=sourceEndValue)valueControls[index].setCaption(juce::String(index==targetValue?"Target":index==sourceStartValue?"Source start":"Source end")+(sampleUnitsButton.getToggleState()?" (samples)":" (bars)"),
             juce::String(index==targetValue?"Target":index==sourceStartValue?"Source Start":"Source End")+(sampleUnitsButton.getToggleState()?" (samples)":" (bar.beat.fraction)"));
         if(index==placementValue)valueControls[index].setCaption(sampleUnitsButton.getToggleState()?"Move Wet (samples)":"Move Wet (ms)");
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
@@ -238,8 +238,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 else {domain=std::max(span,std::abs(static_cast<double>(samples))*2+1);fraction=.5+static_cast<double>(samples)/domain;}
             }
         }
-        if(!slimAuditionReview)exactText=text;
-        if(slimAuditionReview && valid)
+        if(valid)
         {
             if(index<=sourceEndValue && !sampleUnitsButton.getToggleState())text=m3::ui::musicalReadout(index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd,time);
             else if(index>sourceEndValue && !(index==placementValue && sampleUnitsButton.getToggleState()))text=m3::ui::compactValue(exactText.getDoubleValue(),index==preRollValue || index==endOffsetValue?3:index==inCurveValue || index==outCurveValue?2:1);

@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.4 · **Production standards revision:** 4 · **Purpose:** Production UI authority and design reference. Revision 4's scoped knob focus variant has owner native approval.
+**Version:** 1.5 · **Production standards revision:** 5 · **Purpose:** Production UI authority and design reference. Revision 5 adopts the owner-approved Perform clarity presentation and bottom context help.
 
 ## Validated production standards — Learn and shared header
 
@@ -103,6 +103,7 @@ production standards revision; this revision does not change plugin/state versio
 | 2 | #4 standalone list look/feel approved 2026-11-04 | Swells list identity/scroll interaction policy; existing Perform row appearance retained, no new visual values or compact profile |
 | 3 | #46 revision-4 native compact composition and Snap family approved 2026-11-04 | Perform-only profile below; shared Zoom/Fit controls from merged #49, no Learn/header density changes |
 | 4 | #46 owner approved Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); actual native look/feel approved 2026-11-04. Other families and layout tokens unchanged |
+| 5 | #46 owner approved revised presentation on 2026-11-04 | Perform 52-pixel single-row audition strip, grouped inspector/full Source labels, compact values with exact editing, shared ruler and aligned headings; normal-font bottom context help across modes. Existing typography/control families reused; no popup tooltips |
 
 ### Chronological Swells list interaction
 
@@ -128,7 +129,7 @@ consume the named profile following merged Export PR #50.
 | --- | --- |
 | List / inspector / column gap | 180 / 304 / 16; wide 210 / 320 / 16 |
 | Column content inset | 12 from horizontal rules |
-| Audition / Overview / info bands | 72 / 120 / 36 |
+| Audition / Overview / info bands | 52 / 120 / 36; bottom help consumes existing padding and at most four pixels of position/body space |
 | Toolbar / readout | 48 / 26 |
 | Toolbar inset / control / external gap | 6 / 36 / 8 |
 | Snap / grid widths | 96 / 136; remaining width belongs to approved shared Zoom/Fit row |
@@ -211,7 +212,7 @@ The **background is one continuous dark-charcoal field**. Large filled cards, se
 
 **5 — Selected Swell (right):** Context inspector, blank instructional state if nothing selected. For a selection: swell title, per-swell IR selector; Pre-roll/Start; End Offset (overlap); Fade In; Fade Out; Level; Curve. Knobs and typeable exact values mirror changes made by dragging main-editor handles. Do not repeat the envelope graph as a second editor here.
 
-**6 — Audition:** Play/Stop and one continuous Dry ↔ Wet mix slider with editable percentage (100% = wet only). Audition settings apply to audition only, **not** the plugin’s main mixer output. No redundant “Wet Only” mode button.
+**6 — Audition:** Play/Stop and the accepted latching listening-mode button, showing Dry + wet when Off and Wet only when On. Equal 8-pixel action gaps and inline readiness status fit the approved 52-pixel strip. Play loops the finite prepared window until Stop or an existing safety guard. Audition remains independent of Export; existing protection and legacy monitoring preferences remain disclosed.
 
 **7 — Overview:** Header must read **“Overview”** (not “Song Overview”). Contains the **only major rounded outline** around the complete-song timeline. Shows actually captured regions versus unmapped gaps, current viewport and swell locations; empty state “No audio mapped yet”. Do not invent waveform data for uncaptured regions.
 
@@ -345,7 +346,7 @@ The style mockup is an **end-goal appearance**, not permission to add new DSP fe
 - [ ] Per-swell IR selection; knobs plus typeable exact numbers.
 - [ ] Positive/negative end offset around unchanged dry event.
 - [ ] Auto-marker on/off and sensitivity.
-- [ ] One audition Dry↔Wet mix slider; wet-only equals 100%.
+- [ ] One audition listening-mode toggle, showing its selected Dry + wet / Wet only state, and inline truthful status.
 - [ ] Overview visible in both empty and loaded states, titled **Overview**.
 - [ ] No speculative or duplicated controls; preserve source/processing correctness.
 

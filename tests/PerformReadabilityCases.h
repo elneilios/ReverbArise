@@ -10,7 +10,7 @@ void Composition::verifyReadability()
     musical.denominator=8;musical.numerator=6;REQUIRE(m3::ui::musicalReadout(71999,musical)=="2.1");
     musical.valid=false;REQUIRE(m3::ui::footerPosition(0,musical)=="Position unavailable");
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
-    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->previewSlimAuditionStrip();panel->setSize(1100,850);panel->refresh();
+    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);panel->refresh();
     const auto saved=engine.savedSession();const auto renders=engine.snapshot().renderCount;const auto capture=processor->getCaptureSnapshot().manifest.revision;
     auto& viewport=require<juce::Viewport>(*panel,"inspectorViewport");auto* content=viewport.getViewedComponent();REQUIRE(content);
     auto& timing=require<juce::Label>(*panel,"inspectorTimingGroup");auto& envelope=require<juce::Label>(*panel,"inspectorEnvelopeGroup");auto& level=require<juce::Label>(*panel,"inspectorLevelGroup");

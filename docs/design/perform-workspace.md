@@ -1,5 +1,13 @@
 # Perform workspace
 
+Current: the owner approved the complete revised native presentation on 4 November 2026.
+Production now adopts the 52-pixel audition strip, grouped/full Source inspector,
+compact readouts with exact editing, shared ruler, aligned headings and normal-font
+bottom hover-help footer (standards revision 5). The temporary preview-only switch
+is removed; native tests exercise the ordinary production editor. Earlier review
+chronology below is retained; the latest approval supersedes pending-adoption wording.
+
+
 Perform uses the owner-approved revision-4 compact composition and production
 standards revision 3. `PerformLayout.h` owns its scoped geometry; Learn and the
 shared header retain their approved comfortable measurements.
