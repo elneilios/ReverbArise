@@ -9,8 +9,8 @@ Implementation branch: `codex/37-production-ui-implementation`.
 Production baseline is main `2848fcd1faed56b4ba7c741abcb1620f8f102035`, plus
 proposal-only commit `57cef97`. The extraction changes no DSP, model validation,
 persistent state or assets. The completed header change and waveform-paint proposal
-remain separate. The header's unarchived delta owns the regular-description spec
-correction; this implementation does not archive or sync it.
+remain separate. Main's later PR #43 (`fd33ae5`) already synced/archived the header
+delta and was integrated without conflicts. #37 does not perform that operation.
 
 Prior acceptance is supported by records, not merely closed issues:
 
@@ -145,3 +145,49 @@ remain contained; the dry canvas keeps its size and dominance. The reusable nati
 checklist and test tolerances are in UI development standards. No brittle permanent
 screenshot gate was added. These results do not establish physical Windows DPI
 or FL Studio acceptance.
+
+## Final integration validation (task 4.2)
+
+At committed source `1970d4c`, `scripts/build.ps1 -Configuration Release -Test`
+passed preflight/configure/build and **40/40 CTest checks** (68.04 s), including
+the two styling check/fixture tests. Native `preverb_swell_ui_test` passed in
+23.46 s and retained 227 fixture PNGs under `out/issue37-final/`.
+Logs: `out/build-logs/Release/20261104-023116-d6e3706d/`.
+The separate two-shell command fixture results above are not MSVC test results.
+
+Subsequent main integration brought only docs/OpenSpec archive/spec files, and
+the remaining delivery edits are documentation/task tracking. Source, build and
+test inputs match the validated revision; the passing native suite was not
+repeated for those metadata edits. Strict validation of this change and diff/link
+checks pass. Debug was not rerun: Release exercises all nine role cases and the
+affected native event/binding paths; no Debug-specific acceptance change is made.
+
+| Evidence category | #37 result |
+| --- | --- |
+| Native Release MSVC build / full CTest | Passed, 40/40 (includes registered script checks) |
+| PowerShell command fixtures | Passed, 35 assertions on each of 5.1 and 7 |
+| Native/software render and geometry | Passed; supported sizes/breakpoints and 1/1.25/1.5/2 scales |
+| Owner look/feel | Prior #11/#35 scoped approvals retained; no material family change |
+| Actual Windows 100/125/150/200% DPI and monitor transitions | Untested for #37 |
+| New FL Studio smoke | Not performed; no new unresolved host-specific behaviour introduced |
+| Debug build/CTest | Not run for #37 |
+
+## Perform handover (task 4.3)
+
+After owner acceptance of the implementation PR, Perform visual work can use
+production standards revision 1: theme text roles, `UiGeometry` comfortable roles,
+the shared control inventory and `check-ui-standards.ps1` in the normal CTest path.
+Preserve Learn/header appearance and invocation/model guards. Consult the living
+style guide first; historical mockup tables and retained legacy consumer exceptions
+are not new defaults. Existing legacy styling remains explicitly bounded debt.
+
+Compact spacing has **no approved numerical profile**. A Perform proposal must
+assess dense real content with invariant typography, ink, legibility, focus and
+interaction language, then obtain the scoped owner review described in UI
+development standards before adopting spacing values or rolling out revised
+families. Carry Windows/host coverage gaps honestly and do not request repetition
+of prior passing automated/owner checks without a concrete changed behaviour.
+
+The separate implementation PR links #37 and proposal #42. Neither proposal merge
+nor this completed task list authorises self-merge, automatic issue closure or
+OpenSpec archive. Owner merge/acceptance remains outstanding.
