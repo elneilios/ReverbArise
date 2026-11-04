@@ -24,6 +24,14 @@ inline void learnPassPolicyCases()
             tick(0,false,0);for(int n=0;n<32;++n){tick(n*1024,true,scale);juce::Thread::sleep(1);}
             if(sparse)for(int n=0;n<32;++n){tick(65536+n*1024,true,scale);juce::Thread::sleep(1);}
             tick(sparse?98304:32768,false,0);REQUIRE(processor->flushCaptureForTesting());
+            REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::capture);
+            if(engine.savedSession().automaticProcessing)
+            {
+                waitM3([&]{return engine.snapshot().learnGeneration.canGenerate;});const auto snapshot=engine.snapshot();
+                REQUIRE(engine.generateLearn(snapshot.sessionEpoch,processor->getWorkflowSnapshot().pass,snapshot.learnGeneration.displayed->serial));
+                waitM3([&]{return processor->getWorkflowSnapshot().mode==workflow::Mode::live;});
+            }
+            else REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
         };
         pass(false,1);
         waitM3([&]{const auto s=engine.savedSession();return !s.swells.empty() && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
@@ -53,21 +61,23 @@ inline void learnPassPolicyCases()
                 REQUIRE(engine.snapshot().renderCount==before.renderCount);
             }
             REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
-            engine.setLearningAutomatic(true); // Future defaults do not backfill Off.
+            engine.setLearningAutomatic(true); // Enabling previews dry-only coverage, without creating definitions.
+            waitM3([&]{return engine.snapshot().learnGeneration.canGenerate;});
+            const auto previewAnalysis=engine.snapshot().analysisCount;REQUIRE(previewAnalysis>before.analysisCount);
             REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));juce::Thread::sleep(100);
-            REQUIRE(engine.snapshot().analysisCount==before.analysisCount && engine.snapshot().renderCount==before.renderCount);
+            REQUIRE(engine.snapshot().analysisCount==previewAnalysis && engine.snapshot().renderCount==before.renderCount);
             // Merely entering Perform does no disabled-pass work; an explicit
             // Generate is still allowed, including changed dry-only source.
             REQUIRE(engine.selectTargets({w->id},w->id));engine.generate(false);
             waitM3([&]{return m3::find(engine.savedSession(),initial.swells[0].id)->phase==m3::Phase::ready;});
-            REQUIRE(engine.snapshot().analysisCount==before.analysisCount);
+            REQUIRE(engine.snapshot().analysisCount==previewAnalysis);
             REQUIRE(engine.snapshot().renderCount==before.renderCount+1);
             REQUIRE(engine.addTarget(65536+14000));const auto manual=engine.savedSession().primary;
             waitM3([&]{return m3::find(engine.savedSession(),manual)->phase==m3::Phase::ready;});
             const auto ready=engine.snapshot().renderCount;
             REQUIRE(engine.edit(manual,[](auto& w,auto&){--w.sourceEnd;return true;}));
             waitM3([&]{return m3::find(engine.savedSession(),manual)->phase==m3::Phase::ready && engine.snapshot().renderCount>ready;});
-            REQUIRE(engine.snapshot().analysisCount==before.analysisCount);
+            REQUIRE(engine.snapshot().analysisCount==previewAnalysis);
         }
         const auto map=processor->getCaptureSnapshot().manifest;
         CaptureAssetStore assets(engine.assetDirectory());SourceInterval original,newAudio;juce::String error;

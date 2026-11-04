@@ -27,6 +27,8 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     swells->setGainPolicy(m3::GainPolicy::musical);
     swells->setAuditionWetOnly(false,swells->assignmentEpoch());
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
+    swells->useProvisionalSource([this]{return captureWorker.provisionalSnapshot();});
+    captureWorker.setSettlementHandler([this](uint64_t pass,uint64_t generation,bool useful){swells->captureSettled(pass,generation,useful);});
     captureWorker.setPassContextProvider([this](uint64_t pass)->std::optional<CaptureGenerationContext>
     {
         const auto pinned=swells->passConfiguration(pass);if(!pinned)return {};
@@ -481,6 +483,8 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>8)
     {swells->diagnostic("Unsupported or malformed plugin state");return;}
     const auto version=state->getIntAttribute("stateVersion");m3::Session session;juce::String error;
+    // Envelopes predating creative metadata also retain the legacy Stop journey.
+    if(version<3)session.autoGenerateOnStop=true;
     auto savedMode=workflow::Mode::capture;
     if(version>=8)
     {

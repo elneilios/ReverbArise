@@ -41,6 +41,8 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
     if(editor.actionError.isNotEmpty())return NoticeMessage{editor.actionError,{},NoticeTone::error};
     if(editor.defaultIRError.isNotEmpty())return NoticeMessage{"IR could not be loaded - choose another or retry",
         editor.defaultIRError+"\nUse the IR dropdown or folder button to retry. Your previous IR is retained.",NoticeTone::error};
+    if(flow.mode==workflow::Mode::capture && editor.learnGeneration.notice.isNotEmpty())
+        return NoticeMessage{editor.learnGeneration.notice,{},editor.learnGeneration.failed?NoticeTone::error:NoticeTone::warning};
     if(const auto* swell=find(editor.session,editor.session.primary);swell && swell->phase==Phase::error)
         return NoticeMessage{"Unable to prepare " + swell->name,swell->status,NoticeTone::error};
     // These are the existing offline-result prefixes, also used by the editor's

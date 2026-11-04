@@ -63,7 +63,7 @@ static void uiStandardsLayoutCases(PreverbAudioProcessorEditor& editor,const juc
         const auto chart=learn->timelineBounds();REQUIRE(chart.getWidth()>0 && chart.getHeight()>0);
         for(auto* child:learn->getChildren())if(child->isVisible())REQUIRE(learn->getLocalBounds().contains(child->getBounds()));
         REQUIRE(juce::GlyphArrangement::getStringWidth(heading->getFont(),heading->getText())<=heading->getWidth());
-        REQUIRE(helper->getHeight()>=textStyle(TextRole::helper).lineHeight*2);
+        REQUIRE(helper->getText().isEmpty()?helper->getHeight()==0:helper->getHeight()>=textStyle(TextRole::helper).lineHeight);
         for(const auto* name:{"learnRecaptureLabel","learnAutomaticLabel","learnIRLabel","learnSensitivityLabel"})
         {
             auto* label=dynamic_cast<juce::Label*>(named(editor,name));REQUIRE(label);

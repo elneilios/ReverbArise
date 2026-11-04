@@ -3,6 +3,7 @@
 #include <UI/MusicalPosition.h>
 #include <UI/LiveDiagnosticsText.h>
 #include <DSP/DefaultImpulse.h>
+#include <UI/InitialPerformView.h>
 
 namespace
 {
@@ -415,7 +416,19 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
-    const auto mode=processor.getWorkflowSnapshot().mode;
+    const auto mode=state.workflowState.mode;
+    if(presentationSession!=state.sessionEpoch)presentationSession=state.sessionEpoch;
+    bool initialFrame=false;
+    if(mode==workflow::Mode::live && !state.session.swells.empty())
+    {
+        const auto first=m3::ui::firstChronologicalSwell(state.session);
+        if(state.initialPerformHandoff && processor.swellEngine().selectInitialPerform(state.sessionEpoch,state.initialPerformHandoff,first))
+        {
+            state=processor.swellEngine().snapshot();initialFrame=state.sessionEpoch==presentationSession
+                && state.session.primary==first && processor.getWorkflowSnapshot().mode==workflow::Mode::live;
+        }
+        processor.swellEngine().establishPerformPosition(state.sessionEpoch);
+    }
     const auto nextLearning=mode==workflow::Mode::capture,nextExport=mode==workflow::Mode::finalise;
     if(exportLayout && !nextExport)exportWorkspace.resetView();
     const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
@@ -466,6 +479,10 @@ void PreverbAudioProcessorEditor::refresh()
         navigationEpoch=state.sessionEpoch;performFitted=false;navigationDirty=false;performViewport.reset();navigationInvocation.reset();
         const auto preferences=m3::normalizedPerformNavigation(state.session.performUi);timeline.setSnap(preferences.snap);timeline.setGridDivision(preferences.grid);
         if(preferences.hasView){auto view=m3::SwellViewport{preferences.first,preferences.last};view.constrain(timeline.navigationBounds(),timeline.minimumViewSpan());timeline.setViewport(view);performFitted=true;}
+    }
+    if(!learningLayout && !exportLayout && initialFrame)
+    {
+        timeline.revealInitialSelection();performViewport=timeline.viewport();performFitted=true;navigationDirty=true;
     }
     if(!learningLayout && !exportLayout && !performFitted && (!capture.manifest.ranges.empty() || !state.session.swells.empty()))
     {timeline.fitSelection();performFitted=true;}
@@ -578,6 +595,7 @@ void PreverbAudioProcessorEditor::refresh()
         <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
     juce::String captured="Capture / assets\n";captured<<capture.status<<" | revision "<<juce::String(static_cast<juce::int64>(capture.manifest.revision))<<" | dropped "<<juce::String(static_cast<juce::int64>(processor.getDroppedCaptureBlockCount()))<<" | discontinuities "<<juce::String(static_cast<juce::int64>(processor.getTimelineDiscontinuityCount()));
+    if(learningLayout)captured<<"\nLearn inspection\n"<<learnWorkspace.diagnosticDetails();
     captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
     policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
@@ -663,7 +681,7 @@ void PreverbAudioProcessorEditor::refresh()
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;
     refreshHoverHelp();
-    updating=false;
+    updating=false;if(initialFrame)publishPerformNavigation();
 }
 bool PreverbAudioProcessorEditor::navigationIntentCurrent()const
 {

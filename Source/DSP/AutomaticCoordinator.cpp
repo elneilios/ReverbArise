@@ -15,7 +15,7 @@ void SwellEngine::setLearningAutomatic(bool enabled,uint64_t expectedPass)
     if(next.automaticProcessing==model.automaticProcessing && next.autoMarkersEnabled==model.autoMarkersEnabled)return;
     if(!publishGenerationLocked(next,expectedPass)){actionError=message;return;}actionError.clear();
     model.automaticProcessing=next.automaticProcessing;model.autoMarkersEnabled=next.autoMarkersEnabled;
-    ++markerGeneration;persistentChangedLocked();automaticBoundsDirty=true;notify();
+    ++markerGeneration;invalidateLearnLocked();persistentChangedLocked();automaticBoundsDirty=true;notify();
 }
 void SwellEngine::setAutomaticProcessing(bool enabled,uint64_t expectedPass)
 {
@@ -23,8 +23,9 @@ void SwellEngine::setAutomaticProcessing(bool enabled,uint64_t expectedPass)
     const auto context=contextProvider();const juce::ScopedLock guard(lock);
     if(model.automaticProcessing==enabled)return;
     auto next=model;next.automaticProcessing=enabled;if(!publishGenerationLocked(next,expectedPass)){actionError=message;return;}actionError.clear();
-    if(model.automaticProcessing!=enabled){++markerGeneration;persistentChangedLocked();}model.automaticProcessing=enabled;
+    if(model.automaticProcessing!=enabled){++markerGeneration;invalidateLearnLocked();persistentChangedLocked();}model.automaticProcessing=enabled;
     automaticBoundsDirty=true;
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::live)performWindowsRequested=true;
     if(enabled && model.autoMarkersEnabled && (!workflowState || workflowState->snapshot().mode!=workflow::Mode::capture))for(const auto& r:context.capture.manifest.ranges)
     {int64_t end;if(r.frameCount<=INT64_MAX && checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))dirtyLocked(r.startSample,end);}
     notify();
@@ -34,6 +35,7 @@ void SwellEngine::setAutoMarkers(bool enabled,uint64_t expectedPass)
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){diagnostic("Marker settings are locked in Export");return;}
     const auto context=contextProvider();const juce::ScopedLock guard(lock);
     if(model.autoMarkersEnabled==enabled)return;auto next=model;next.autoMarkersEnabled=enabled;if(!publishGenerationLocked(next,expectedPass)){actionError=message;return;}actionError.clear();model.autoMarkersEnabled=enabled;persistentChangedLocked();++markerGeneration;
+    invalidateLearnLocked();
     if(enabled && model.automaticProcessing && (!workflowState || workflowState->snapshot().mode!=workflow::Mode::capture))for(const auto& r:context.capture.manifest.ranges)
     {int64_t end;if(r.frameCount<=INT64_MAX && checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))dirtyLocked(r.startSample,end);}
     notify();
@@ -61,6 +63,7 @@ bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& pres
     std::erase_if(imports,[](const auto& job){return job.futureDefault;});
     if(imports.size()>=32){message="IR import queue full";return false;}
     Import job;job.file=file;job.presetId=presetId;job.managed=asset;job.label=label;job.session=sessionGeneration.load();job.futureDefault=true;
+    cancelLearnGenerationLocked();
     job.defaultRequest=++defaultRequest;job.workflowPass=flow.pass;imports.push_back(std::move(job));
     defaultPending=true;requestedDefaultName=label;defaultError.clear();defaultStatus="Preparing requested Default IR";notify();return true;
 }
@@ -76,6 +79,7 @@ void SwellEngine::dirtyLocked(int64_t a,int64_t b,bool acceptedPass)
 }
 void SwellEngine::acceptedSourceLocked(const CaptureManifest& map)
 {
+    if(workflowState){acceptedSource=map;return;}
     // Durable provenance is the queue's recovery journal. Only new/changed
     // accepted On spans are admitted; future preference edits cannot backfill Off.
     if(map.schemaVersion>=2)for(const auto& span:map.contextSpans)
@@ -102,6 +106,16 @@ void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool 
 {
     const auto context=contextProvider();if(context.captureGeneration!=generation)return;
     const juce::ScopedLock guard(lock);if(captureEpochProvider && captureEpochProvider()!=generation)return;
+    if(workflowState)
+    {
+        invalidateLearnLocked();automaticBoundsDirty=false;
+        for(auto& w:model.swells)if(!w.frozen && w.sourceStart<b && renderInputEnd(w)>a)
+        {
+            ++w.inputGeneration;w.phase=Phase::stale;w.status="Source changed; waiting for explicit generation";
+            deferredLearnDependencies.insert(w.id);forceRefresh.erase(w.id);passRenderRequests.erase(w.id);invalidateLiveLocked(w.id);
+        }
+        notify();return;
+    }
     automaticBoundsDirty=true;if(context.capture.manifest.schemaVersion<2 && model.automaticProcessing && model.autoMarkersEnabled)dirtyLocked(a,b);
     for(auto& w:model.swells)if(!w.frozen && w.sourceStart<b && renderInputEnd(w)>a)
     {
@@ -118,7 +132,7 @@ void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool 
     }
     notify();
 }
-void SwellEngine::collectCompletedPass(const PreviewContext& context)
+void SwellEngine::collectCompletedPass(const PreviewContext& context,bool acceptedCapture)
 {
     {const juce::ScopedLock guard(lock);
         if(recoverPassBounds && !context.capture.status.startsWith("Loading") && (awaitingCaptureReference.isEmpty() || context.capture.reference==awaitingCaptureReference)){
@@ -132,6 +146,10 @@ void SwellEngine::collectCompletedPass(const PreviewContext& context)
                     const auto recovered=std::pair{run.first,w.sourceEnd};
                     if(std::find(completedPasses.begin(),completedPasses.end(),recovered)==completedPasses.end())completedPasses.push_back(recovered);}}
         }}
+    // In Learn, an RT Stop boundary is still provisional until source settlement
+    // accepts it. It must never become legacy reconciliation work, including
+    // while a fresh instance still exposes an empty schema-1 manifest.
+    if(workflowState && !acceptedCapture && workflowState->snapshot().mode!=workflow::Mode::live)return;
     for(int attempt=0;attempt<8;++attempt){const auto version=passSequence.load(std::memory_order_acquire);if(version&1)continue;
         const auto first=passStart.load(),last=passEnd.load();const auto session=passSession.load();
         if(version!=passSequence.load(std::memory_order_acquire))continue;
@@ -144,7 +162,8 @@ void SwellEngine::collectCompletedPass(const PreviewContext& context)
             if(unchanged)return;}
         else {if(completedPasses.size()>=128){message="Completed-pass boundary capacity reached; capture extra tail or clear";return;}completedPasses.push_back({first,last});}
         automaticBoundsDirty=true;
-        if(context.capture.manifest.schemaVersion<2 && model.automaticProcessing && model.autoMarkersEnabled && context.time.valid){int64_t before;
+        if(workflowState && workflowState->snapshot().mode==workflow::Mode::live)performWindowsRequested=true;
+        if(!workflowState && context.capture.manifest.schemaVersion<2 && model.automaticProcessing && model.autoMarkersEnabled && context.time.valid){int64_t before;
             if(!checkedSubtract(last,static_cast<int64_t>(analysisWindow(context.time.rate))*100,before))before=first;
             dirtyLocked(std::max(first,before),last);}
         return;
@@ -168,20 +187,22 @@ void SwellEngine::prepareDefault(const PreviewContext& context)
     auto next=model;next.defaultIR=asset;next.defaultIRName="Preverb Hall";
     if(!publishGenerationLocked(next)){defaultAttemptScope.clear();return;}
     if(model.defaultIR!=asset || model.defaultIRName!="Preverb Hall")persistentChangedLocked();model.defaultIR=asset;model.defaultIRName="Preverb Hall";
-    for(auto& w:model.swells)if(!w.ir.present() && w.status=="Waiting for default IR")
+    if(!workflowState)for(auto& w:model.swells)if(!w.ir.present() && w.status=="Waiting for default IR")
     {w.ir=asset;w.irName=model.defaultIRName;w.phase=Phase::stale;w.status="Waiting for source";}
 }
 void SwellEngine::dispatchAutomatic(const PreviewContext& context)
 {
     const juce::ScopedLock guard(lock);
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return;
     if((!model.automaticProcessing && passRenderRequests.empty() && forceRefresh.empty()) || !context.time.valid || context.time.rate!=context.capture.manifest.sampleRate
        || (model.timing.valid && !transportMappingMatches(model.timing,context.time)) || juce::Time::getMillisecondCounterHiRes()<nextAutomaticEdit)return;
-    if(automaticBoundsDirty){auto trial=model;juce::String error;
+    if(automaticBoundsDirty && (!workflowState || performWindowsRequested)){auto trial=model;juce::String error;
         if(!updateAutomaticWindows(trial,context.time,error,applicableCompletedPasses(context.capture.manifest))){message=error;return;}
         for(const auto& old:model.swells)if(const auto* now=find(trial,old.id);now && (now->inputGeneration!=old.inputGeneration || now->shapeGeneration!=old.shapeGeneration))invalidateLiveLocked(old.id);
-        model=std::move(trial);automaticBoundsDirty=false;}
+        model=std::move(trial);automaticBoundsDirty=false;performWindowsRequested=false;}
     for(auto& w:model.swells)
     {
+        if(deferredLearnDependencies.contains(w.id) && !forceRefresh.contains(w.id))continue;
         if(w.frozen || (!model.automaticProcessing && !passRenderRequests.contains(w.id) && !forceRefresh.contains(w.id)) || (w.phase!=Phase::stale && w.phase!=Phase::empty))continue;
         if(!captureAllowsAutomatic(context.capture.manifest,w.sourceStart,renderInputEnd(w)) && !passRenderRequests.contains(w.id) && !forceRefresh.contains(w.id))continue;
         if(!w.ir.present()){w.status="Missing IR: assign an impulse response";continue;}
@@ -198,6 +219,8 @@ void SwellEngine::dispatchAutomatic(const PreviewContext& context)
 }
 bool SwellEngine::automaticJob()
 {
+    const auto workflowPass=workflowState?workflowState->snapshot().pass:0;
+    if(workflowState && workflowState->snapshot().mode!=workflow::Mode::live)return false;
     PreviewContext context;
     int64_t a=0,b=0;uint64_t generation,controls;float sensitivity;double separation;bool playing,acceptedPass=false;juce::String contextId;
     {
@@ -231,7 +254,8 @@ bool SwellEngine::automaticJob()
         automaticBusy=true;
     }
     struct BusyReset {std::atomic<bool>& flag;~BusyReset(){flag=false;}} busy{automaticBusy};
-    const auto cancel=[&]{return threadShouldExit() || generation!=sessionGeneration.load() || (!acceptedPass && controls!=markerGeneration.load());};
+    const auto cancel=[&]{return threadShouldExit() || generation!=sessionGeneration.load() || (!acceptedPass && controls!=markerGeneration.load())
+        || (workflowState && (workflowState->snapshot().mode!=workflow::Mode::live || workflowState->snapshot().pass!=workflowPass));};
     const auto window=analysisWindow(context.time.rate);const auto history=static_cast<int64_t>(window)*100;
     const auto tolerance=targetTolerance(context.time.rate,separation);
     CaptureAssetStore store(instanceRoot(context.capture.manifest));

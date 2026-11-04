@@ -123,6 +123,7 @@ private:
     std::array<juce::TextEditor,fieldCount> fields;
     juce::TextEditor barStartEditor,barEndEditor;
     std::unique_ptr<juce::FileChooser> chooser;
+    uint64_t presentationSession=0;
     std::optional<int64_t> chosenCandidate;
     bool updating=false,destroying=false;
     m3::ui::FlatViewport inspectorViewport,diagnosticsViewport;

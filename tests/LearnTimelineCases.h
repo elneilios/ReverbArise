@@ -35,7 +35,9 @@ static void learnTimelineCases()
     REQUIRE(!learnInspectionReadout(INT64_MAX,gap,time,48000).timingAvailable);
     for(const auto kind:{"Audio","Silence","Unavailable","Gap (uncaptured)"}){
         auto info=gap;info.kind=kind;const auto text=learnInspectionReadout(108000,info,time,48000).text;
-        REQUIRE(text.contains(kind) && text.contains("Sample 108000"));}
+        REQUIRE(text.contains(kind) && text.contains("Sample 108000"));
+        const auto musical=learnInspectionReadout(108000,info,time,48000).musical;
+        REQUIRE(musical.contains("Bar") && !musical.contains("Sample") && !musical.contains(kind));}
     REQUIRE(learnInspectionReadout(50010,provisional,time,48000).text.contains("Recording Audio"));
     LearnDryView view;view.update(source,pending,time);const auto original=std::pair{view.first,view.last};
     view.update(source,pending,time);REQUIRE(std::pair(view.first,view.last)==original);

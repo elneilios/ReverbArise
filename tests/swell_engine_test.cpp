@@ -24,6 +24,37 @@ template<class F> static void waitFor(F condition,const std::source_location loc
 #include "LiveClockEngineCases.h"
 int main() { return runTest([]
 {
+    {
+        TestDirectory directory;PreviewContext empty;
+        SwellEngine editor(directory.file,[&]{return empty;});
+        Session base;base.automaticProcessing=false;base.swells.emplace_back();
+        auto& automatic=base.swells.front();automatic.provenance=Provenance::automatic;
+        automatic.arrival=automatic.sourceStart=automatic.detectorAnchor=100;automatic.sourceEnd=500;
+        const auto id=automatic.id;
+        for(int change=0;change<9;++change)
+        {
+            editor.restore(base);
+            REQUIRE(editor.edit(id,[&](auto& w,auto&)
+            {
+                if(change==0)w.name="User name";
+                if(change==1)w.enabled=false;
+                if(change==2)w.muted=true;
+                if(change==3)w.solo=true;
+                if(change==4)w.shape.gainDb=-6;
+                if(change==5)w.placement=50;
+                if(change==6)w.sourceEnd=450;
+                if(change==7)w.arrival=101;
+                if(change==8)w.irName="User IR label";
+                return true;
+            }));
+            const auto saved=editor.savedSession();
+            REQUIRE(saved.swells.front().id==id && saved.swells.front().detectorAnchor==100);
+            // An IR label alone is metadata; all actual musical/activity/name edits protect origin.
+            REQUIRE(saved.swells.front().provenance==(change==8?Provenance::automatic:Provenance::manualEdited));
+        }
+        editor.restore(base);REQUIRE(editor.assignBundledIR(id,0,"monumental",editor.assignmentEpoch()));
+        REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
+    }
     runLiveClockEngineCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
@@ -205,11 +236,13 @@ int main() { return runTest([]
         REQUIRE(edits.setGainPolicy(GainPolicy::musical));waitFor([&]{const auto state=edits.savedSession();return std::all_of(state.swells.begin(),state.swells.end(),[](const auto& w){return w.phase!=Phase::checking && w.phase!=Phase::rendering;});});
         REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
         REQUIRE(edits.setFrozen(calibrationTarget,true));const auto energySaved=edits.savedSession();
+        REQUIRE(find(energySaved,calibrationTarget)->provenance==Provenance::manualEdited);
         juce::String energyJson,energyError;Session energyDecoded;
         REQUIRE(encode(energySaved,energyJson,energyError) && decode(energyJson,energyDecoded,energyError));
         edits.restore(energyDecoded);waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
         REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
         REQUIRE(edits.setFrozen(calibrationTarget,false));waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
+        REQUIRE(find(edits.savedSession(),calibrationTarget)->provenance==Provenance::manualEdited);
         REQUIRE(edits.setFrozen(a,true));request=*find(edits.savedSession(),a);
         REQUIRE(!edits.assignIR(a,request.inputGeneration,custom) && find(edits.savedSession(),a)->ir==request.ir);
         REQUIRE(edits.edit(a,[](auto& w,auto&){w.shape.gainDb=-8;w.shape.fadeIn=5;w.placement=10;w.enabled=false;w.solo=true;w.name="Keep name";return true;}));

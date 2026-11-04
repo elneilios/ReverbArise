@@ -3,6 +3,7 @@
 #include "SongBarRuler.h"
 #include "Controls/MusicalTimelineRuler.h"
 #include "WorkspaceTheme.h"
+#include "InitialPerformView.h"
 #include <limits>
 
 namespace m3
@@ -75,6 +76,9 @@ std::pair<double,double> SwellTimeline::globalBounds() const
     for(const auto& w:data.session.swells)
     {
         include(static_cast<double>(w.sourceStart),static_cast<double>(w.sourceEnd));
+        // Pending source/IR timing keeps the initial lead-in inside navigation bounds.
+        if(w.ir.present() && w.phase!=Phase::ready)
+        {const auto [lead,end]=ui::initialSwellBounds(w,time);include(lead,end);}
         if(w.render.present())include(static_cast<double>(w.render.start)+w.placement,static_cast<double>(w.render.start)+w.render.frames+w.placement);
         int64_t first,last;if(requestedShapeBounds(w,w.render.present()?w.render.start:w.sourceStart,first,last))include(static_cast<double>(first),static_cast<double>(last));
     }
@@ -152,6 +156,12 @@ void SwellTimeline::page(int bars){view.page(bars,time);constrainNavigation();na
 void SwellTimeline::previous(){view.shift(-1);constrainNavigation();navigationChanged();}
 void SwellTimeline::next(){view.shift(1);constrainNavigation();navigationChanged();}
 void SwellTimeline::zoom(double factor){view.zoomBounded(factor,navigationAnchor(),navigationBounds(),minimumViewSpan());navigationChanged();}
+void SwellTimeline::revealInitialSelection()
+{
+    if(const auto* swell=find(data.session,data.session.primary))
+    {view=ui::revealInitialSwell(view,*swell,time);constrainNavigation();}
+    navigationChanged();
+}
 void SwellTimeline::resized()
 {
     drag=Drag::none;

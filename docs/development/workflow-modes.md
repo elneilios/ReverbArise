@@ -62,17 +62,36 @@ Export entry requires an enabled, unmuted, solo-eligible compatible ready wet
 render independently of dry availability; verified frozen-wet recovery therefore
 also supports Export. Dry alone does not unlock Export, and its selected mix or
 pending file preparation does not eject the mode. This is the implemented #6
-entry refinement; dedicated WAV delivery remains in progress. A successful useful Stop commit selects Perform before wet
-renders finish. Empty/failed passes remain Learn. Restored saved modes may
+entry refinement; dedicated WAV delivery remains in progress. Issue #38 separates
+source settlement from Perform entry: a successful useful Stop settles idle
+Learn, retaining dry readiness and consuming a successful Recapture arm. Only a
+subsequent successful shared Generate transaction may automatically enter
+Perform; source acceptance alone does not qualify. The persisted opt-in Stop
+request waits for matching final candidate analysis and uses the same safe
+generation transaction as the explicit button. Manual
+Perform/Export navigation retains its existing readiness rules. Empty/failed
+passes remain Learn. Restored saved modes may
 remain selected while dependency readiness is unavailable; unavailable controls
 must explain the reason.
 
-PR #18 review refinement: a successful explicit mapped replacement can enter
-Perform using remaining useful committed material, even when that replacement is
-silence. Erasing the last useful source stays Learn; fresh silence-only,
+PR #18's source usefulness refinement is retained: a successful explicit mapped
+replacement can leave useful committed material even when the replacement is
+silence. Under #38 this settles Learn and disarms Recapture; Perform entry still
+requires a successful generation or an eligible manual mode request. Erasing the last useful source stays Learn; fresh silence-only,
 ordinary mapped-only and empty passes do not gain automatic Perform entry.
 Export and frozen-wet admission share ready-render rate/tempo/meter checks.
 This is foundation eligibility, not #6's later full export preflight.
+
+The workflow word has a transient generation-publication reservation, separate
+from persisted mode/phase values. After background preparation and identity
+checks, a bounded CAS reserves the exact idle Learn/pass/configuration snapshot;
+the caller performs only a nonthrowing prepared-session swap and releases to
+Perform. A losing Play/mode/settings request cannot observe partial publication.
+Play admission never waits, locks or allocates. Off-callback reset/cancel orders
+after the short swap; it cannot interrupt the swap and leave only half a commit.
+Preparation itself holds no reservation, so user edits, capture restarts and
+navigation can supersede it. Generation identities also fence source/settings
+changes; the configuration slot alone is not an ABA-proof settings identity.
 
 `preverb_workflow_state_test` checks the eligibility matrix, all guarded
 recording/settling transitions, successful/empty/failed Stop, duplicate and stale
@@ -97,7 +116,7 @@ Failed passes keep the old reference; no destructive cleanup is implemented.
 `preverb_capture_transaction_test` checks partial overlaps, sparse gaps, mapped
 silence, loops, private source reads/save references, exact/changed recapture,
 old snapshot/clone isolation, invalid data/rate/overflow and publication failure.
-`preverb_workflow_processor_test` exercises actual host Stop, automatic Perform,
+`preverb_workflow_processor_test` exercises actual host Stop, explicit navigation,
 protected mapped playback, explicit recapture, Perform no-capture, Export dry-only
 realtime/offline and old/new mode restore. Full UI/host acceptance remains open.
 
@@ -144,9 +163,40 @@ building; host rescan/reload behavior requires explicit FL Studio verification.
 Learn's effective Automatic Swells policy is the conjunction of the saved
 processing and marker switches. Explicit On enables both; Off disables
 processing without resetting hidden IR/sensitivity/marker preferences. Idle
-Learn edits configure future passes, rather than enqueuing reanalysis of old
-source. Explicit Perform marking/reanalysis remains separate. The whole-pass
+Learn edits refresh read-only candidates across accepted source, including
+earlier dry-only capture, without changing swell definitions or queuing wet
+renders. Explicit Perform marking/reanalysis remains separate. The whole-pass
 configuration pin and stale-input fences are documented in
 [the Learn protocol](learn-source-context-protocol.md). Source/context
-persistence and dry-only scheduling verification remain tracked implementation
-work; these settings changes alone do not claim those tasks are complete.
+persistence, scheduling and verification are recorded in the issue #38 validation
+report linked from that protocol.
+
+## Initial Perform presentation
+
+The first successful Generate commit offers one editor handoff, shared by explicit
+Generate and opted-in Stop, even when the editor was closed during completion.
+The editor selects the committed swell with the earliest arrival using the same
+chronological ordering as the list, then uses canonical engine selection to bind
+list, waveform/envelope and Selected Swell controls. The timeline reveals its
+lead-in and arrival using definition/source/IR timing while wet rendering is
+pending. Useful zoom is retained with minimal panning; an unsuitable span is fit.
+Overview reads the same timeline viewport. Queued/rendering status remains honest.
+
+A valid restored selection, an established nonempty Perform editing position,
+and later mode returns retain the user's selection and navigation. Empty visits
+do not establish an editing position. Empty/no-change/failure/cancellation never
+offer a handoff. The offer is consumed once; later wet/raw publications refresh
+content without fitting again, so a newer selection or viewport wins. This is
+editor navigation only and does not seek the DAW, audition or change enablement.
+Existing serialized mode values and navigation ownership remain unchanged.
+The editor reads mode and session from one engine snapshot under the publication
+lock, so a commit between separate reads cannot establish a Perform position
+from pre-commit definitions or consume the new handoff prematurely.
+
+With the approved Perform workspace, restore its optional `performUi` view/Snap
+preferences before applying a new eligible handoff. The reveal uses the same
+bounded navigation and persistence bindings, marks the initial fit complete and
+keeps pending source/IR lead-in timing inside the navigation bounds. A real user
+pan/zoom is persisted through that existing binding; a delayed render never
+replays the initial fit. The optional Perform/audition preferences remain intact
+when migrating an accepted v10 project to strict #38 v11 state.

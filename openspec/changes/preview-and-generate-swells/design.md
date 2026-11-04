@@ -1,0 +1,109 @@
+# Design
+
+## Context
+
+See proposal.md for motivation and issue scope. Baseline main is `9b8e70f`, with #11 merged. `AutomaticCoordinator.cpp::automaticStep` currently runs `suggestOnsets` and immediately calls `reconcileTargets`, marks persistent changes and queues pass rendering. `WorkflowState::complete` independently changes useful accepted captures to Live. These are the two authorities that must change together.
+
+`AutomaticTargets` already copies the session, uses deterministic one-to-one matching and protects manual/frozen targets, but permits empty retirement and adjusts automatic windows across the collection. Reuse its mechanisms with explicit transaction scope and outcome guards. `Session` already persists automatic/manualCreated/manualEdited provenance (v2 onward), frozen (v6 onward), detector anchors and deletion suppression. Version-1 decoding conservatively maps origin to manualEdited. Creative metadata is v10; processor envelope is v8. No new inference from names or positions is needed.
+
+Learn uses shared Switch, SliderControl/NumericInputControl, IrSelector and IconActionButton, an existing source timeline model and ephemeral inspection. ActionButton already supplies a primary visual role. Focused tests include automatic targets/coordinator, generation configuration, capture transactions/context, workflow state/processor and Learn timeline/editor cases.
+
+## Goals / Non-Goals
+
+**Goals:** Separate detection from mutation, define one safe Generate admission/publication authority, and preserve recoverable creative/source history. Make refinement usable for dense and noncontiguous songs.
+
+**Non-Goals:** Do not replace onset DSP, the capture admission model, render engine, timeline navigation or whole UI library. Do not implement adjacent open issues or modify generated OpenSpec workflows.
+
+## Decisions
+
+### Candidate snapshots are read-only worker products
+
+Extract the existing onset scan/cache path from automatic reconciliation. Publish an immutable bounded candidate snapshot keyed by instance/session epoch, accepted source/coverage revision, detector policy, canonical sensitivity/separation and coherent fixed timing. Record actual eligible mapped runs, completed-pass boundaries, candidate positions and final/provisional status. Progressive analysis uses safely published capture data; never access mutable callback buffers or duplicate whole-song PCM. Keep the previous displayed snapshot with Updating/stale metadata while latest work runs, including cancellation. No candidate refresh writes assets, definitions, persistent change notifications or convolution requests.
+
+Provisional snapshots carry pass/display authority and can never satisfy Generate. Stop acceptance schedules a final full-arrangement snapshot; failure discards provisional authority and retains prior accepted data. Current Learn settings apply across all accepted mapped coverage, including earlier dry-only passes. Accepted pass contexts remain immutable recording history, not an authority to silently generate. This explicitly replaces the old deferred pass-generation journal behavior. Existing supported Perform analysis/edit commands remain separate; returning to Learn itself cannot reconcile definitions. Reuse detector implementations and bounded caches rather than introducing a second detector.
+
+Default IR is not a detector dependency. Changing it cancels pending generation and updates generation readiness but reuses settled marker positions. Host timing changes invalidate analysis/generation; unknown or incompatible timing is unavailable, never guessed. Coalesce rapid sensitivity edits and check identity again at publication.
+
+### One generation request and replacement planner
+
+Both entry paths call one request API with a trigger origin. Freeze the currently displayed final snapshot plus accepted source/coverage, session/model revision, current accepted Default IR, automatic policy, timing and workflow token. Verify IR/source outside realtime processing. No pending import can substitute for the accepted selected IR. The explicit path requires idle Learn; source validation, stale/provisional analysis, capture, another request or unavailable dependencies return an accessible reason. The Stop path pins these same references when the useful source commit is accepted, waits only for its matching final analysis and cancels on any later incompatible edit.
+
+Prepare a complete replacement session off the audio thread. Scope is the union of committed mapped runs; unmapped gaps are never a bounding-box deletion domain. Candidates require real covered extraction windows under existing completed-loop/tail rules. Incomplete candidates do not authorize retirement of corresponding pending/out-of-scope work. Preserve outside-eligible-scope automatic definitions, manualCreated/manualEdited, frozen and conservatively classified legacy work byte-for-byte. Preserve deletion suppression.
+
+Reuse `targetTolerance(rate, separation)` (minimum of analysis-window samples and half the selected separation, at least one sample). Deduplicate candidates by absolute sample. Protected targets reserve collision neighborhoods first, using both actual arrival and retained detector anchor where relevant; no unprotected match consumes their priority. Then deterministically match eligible automatic definitions one-to-one by distance, sample and ordinal ID. Retain matched IDs, names, selection and enabled/mute/solo state; use the newly frozen default IR and recomputed automatic source dependencies. Already-disabled automatic definitions remain eligible, retaining disabled state. New automatic definitions use shared creation defaults. Manual edits continue to set manualEdited provenance, including changes through every editor/diagnostic path.
+
+Compare durable definitions/dependency identities, excluding progress, transient generation counters and render phase. A nonempty viable replacement is changed when it creates/regenerates definitions or retires unmatched eligible automatic definitions. Lowering sensitivity must commit a reduced collection even when surviving definitions need no render. Empty/protected-only results and identical collections remain nonmutating. Remove superseded eligible unfrozen automatic definitions only in that same guarded commit. Bound capacity, matching edges, source scans and preparation; overflow fails the whole request without truncation. Preserve last-good render references until replacement audio is verified; no asset purge occurs.
+
+Implementation: v11 swell metadata stores the last committed automatic source PCM fingerprint as `generationSource`, independently of wet readiness. This allows repeated Generate while FFT work is still queued to return no-change. Supported older swells use a present verified render's dependency conservatively; absent evidence requires genuine generation. The field is strict empty-or-64-lowercase-hex metadata, never an instruction or a claim that wet audio is ready, and is excluded from audible export identity.
+
+Blindly calling current `reconcileTargets` once per run is rejected: it could publish a partial arrangement, retire on an empty result or alter outside-scope windows. Refactor the existing planner to prepare all runs in one candidate copy with protected-first matching and an explicit outcome.
+
+### Commit and mode entry share a guarded linearization point
+
+Source settlement ends in idle Learn and disarms successfully consumed Recapture as before. Keep numeric mode values and capture phase encoding. Analysis/generation state is worker-owned; do not add persisted workflow substates for UI copy. Add a bounded generation reservation/token to the workflow authority: Play, mode changes, restore/cancel and setting edits must either win before admission or invalidate preparation before publication. At the final short control-thread commit, recheck all pinned identities, reserve/validate the exact workflow token and atomically publish the complete session with accepted Perform entry. A failed CAS must not leave a published replacement or falsely entered Perform. Do not hold a blocking lock in processBlock or publish definitions then attempt an unchecked mode change.
+
+Wet work queues after successful definition publication, using existing stale-result fencing and immutable asset reuse. Perform may show Queued/Rendering; success never implies all wet is ready. Manual navigation remains governed by existing source/frozen-wet/export readiness, including while preview analysis is pending. It invalidates pending generation rather than acting as a wizard lock.
+
+A newly admitted Generate takes priority over previous automatic wet work: cooperatively cancel an in-flight unfrozen automatic render and process the generation before remaining queued jobs. Retain accepted definitions and last-good assets until the guarded replacement commits; if generation fails or is cancelled, reschedule interrupted accepted work. Protected renders may finish. Worker render/calibration/support publication still dirties persisted state but does not count as a newer musical command. Before planning on the same serial worker, refresh the request's expected session from the latest model only if its musical revision, selection and session authority remain unchanged. This retains completed protected/last-good renders without weakening real edit, settings, transport or restore fences.
+
+Auto-generate is an independent per-project preference. ON only admits a request after an accepted useful Stop with effective Automatic Swells enabled. Toggling ON, restoring, sensitivity/default changes and returning to Learn never trigger generation. OFF cancels a not-yet-committed Stop request even while it awaits analysis; allow this cancellation path through any UI lock. Duplicate Stop cannot enqueue duplicate generation. Empty/failed/cancelled/no-change outcomes stay Learn and preserve accepted swells; generation failure cannot roll back an already accepted source commit.
+
+### Persistence and compatibility
+
+Add a strict boolean autoGenerateOnStop in creative metadata v11 (reassess next free version if main advances). Fresh plugin initialization explicitly sets OFF; decoding supported older state with no field sets ON. A v11 missing/malformed field rejects restore transactionally. Preserve explicit OFF/ON, hidden automatic settings, all numeric provenance values, source manifest v2 and processor envelope v8. Version-1 swells stay manualEdited; unsupported malformed origins remain a strict decode error rather than becoming automatic. A valid persisted automatic origin is trusted; no heuristic reclassification.
+
+Persist only accepted definitions/source and preference, never candidate authority, Stop requests or prepared transactions. Restore rebuilds preview from accepted source and current settings but does not resume generation. Remove old recovery paths that would treat accepted source contexts as commands to create new definitions on reopen. Existing render recovery stays permitted under its current contracts.
+
+### UI reuse and approval
+
+Keep Learn's 304-pixel settings column and dominant dry timeline. Per owner native-review refinement, place Auto-generate on Stop immediately beneath Enable automatic swells, before the IR group. Generate Swells sits immediately below sensitivity (and any genuinely implemented conditional options). Compose existing ActionButton primary role, Switch, SliderControl/NumericInputControl, IR controls, helper typography and reserved NoticeBar. Place the contextual readiness helper directly below Generate. The manual hint follows last and reads: “Want to place swells yourself? Add manual swells in Perform.” Let it wrap to available width without forcing a break after the question. Both helpers retain the existing readable role while Generate is disabled. Automatic Swells OFF hides generation controls, preserves values and leaves dry capture/inspection usable.
+
+The manual hint also remains visible beneath the enable-switch group when Automatic Swells is OFF, including on editor reopen; only generation controls and their contextual helper are hidden. Readiness comes from one model snapshot with accessible idle/analysing/capturing/committing/generating/unavailable reasons. Marker count/status belongs to the existing Learn status area; actionable unsuccessful outcomes use NoticeBar. Button and all secondary command routes enforce the same model checks; refresh issues no edit. Candidate overlay uses named timing yellow with triangular heads/dashed stems, white inspection pin, solid yellow DAW cursor and distinct provisional/stale styling plus text. Coordinates remain sample-derived across origin, negative pre-roll, gaps, resize and scale; visible overlay work is bounded by display resolution.
+
+No new control family or token is planned. Candidate-marker visual treatment requires scoped owner native review before production rollout; if implementation needs a new token/variant, present rationale, consumers and regression evidence and obtain approval first, then update production standards revision, code and tests together. Launch one prepared native preview directly, preserve its window through review and include focus, keyboard, disabled reasons, marker distinctions and minimum-size helper wrapping. Open #46/#48 and waveform optimization may change shared seams; integrate accepted APIs without duplicating controls or adopting unapproved density.
+
+### Musician-focused Learn refinement
+
+Retain the approved fonts, semantic ink, comfortable spacing, 304-pixel settings column and shared control families. Cap the waveform band's height by its width (2:1 aspect) and available space; this is Learn layout arithmetic, not a new density profile or token. Paint each existing PCM min/max bucket across its actual time span, preserving unity amplitude and real gaps rather than normalizing or boosting audio. Keep musical ruler and stable dry extent behavior.
+
+Use neutral separator ink for ordinary event guides and the existing timing accent for a hovered or pinned event. Reuse source inspection as ephemeral event emphasis; it never selects committed swells, filters generation, seeks or creates persistent event state. Provisional/updating heads remain hollow. Keep overlay work bounded per visible pixel column.
+
+Use concise Detect events, Event sensitivity, Generate on Stop and Default IR labels; remove redundant switch descriptions and shorten remaining helpers. Keep Generate and the manual hint in the previously requested order, including the hint when detection is off. Show one musician-facing capture/duration/event caption and musical inspection only. Exact sample positions, coverage/silence classifications and source totals remain available in the existing Diagnostics window; no new panel or DSP control is added.
+
+This revised Learn composition and event-emphasis treatment are limited to the issue branch/native preview until the existing scoped owner review gate accepts them. Verify native minimum/larger sizes, accurate peak ratios, hover/pin/read-only behavior, diagnostics availability, OFF/reopen guidance and the existing first-Perform handoff.
+
+### Initial Perform selection and reveal
+
+Owner refinement (4 November 2026): the first successful Generate-to-Perform handoff should open an immediately useful editor. Publish an ephemeral success identity for either trigger path; the editor consumes the first eligible nonempty handoff through canonical `selectTargets` and the existing timeline/list/inspector/Overview binding paths. Choose the first committed swell using shared chronological arrival ordering with the stable-ID tie-breaker, including protected swells when they are earliest. Do not use creation order or wait for every wet render.
+
+Keep this policy in editor/navigation state, separate from capture/DSP and durable mode numbers. A valid restored selection and its existing navigation authority take precedence. A previously established nonempty Perform editing position also takes precedence on later Learn/Perform returns. Empty Perform visits do not consume eligibility, and failed/cancelled/empty/no-change generation emits no successful handoff. Restoring a project does not replay a generation handoff; retain existing viewport restoration mechanisms rather than introducing a competing saved navigation field. If automatic generation finishes with the editor closed, retain its ephemeral handoff until an editor can consume it, subject to restored/current-selection guards.
+
+Read mode and model from the same editor snapshot under the engine publication lock. Otherwise a commit between separate reads could pair pre-commit definitions with Perform and consume the new handoff as an already established editing position. Pin the editor-closed fixture's preparation so completion timing cannot accidentally turn that case into an open-editor visit.
+
+Reveal from available definition/source timing and accepted IR metadata, using an already verified render when present. Include the reverse lead-in and arrival. Keep the current span when it already gives meaningful visibility or can be panned to do so; expand only when needed for the target interval. Record the selection and navigation handoff immediately, including the existing fitted-selection guard, so a later raw-wave arrival cannot trigger another automatic fit. Refresh pending/ready status and waveform content without issuing selection/navigation intents. A newer user selection, pan/zoom or session epoch invalidates any outstanding presentation intent. No DAW seek, transport, audition, enablement or capture/DSP operation is part of this policy.
+
+## Risks / Trade-offs
+
+- [Cross-thread generation and capture race] → test deterministic held workers and CAS losses at each boundary; successful publication and mode entry must agree, with no callback locks/allocation/I/O.
+- [Legacy automatic work resumes on restore] → explicitly remove context-as-command recovery and test save/reopen during all jobs while retaining accepted definitions/render recovery.
+- [61-plus candidates make preview unusable] → measure dense realistic full-song fixtures and sparse multi-run capture, inspect usefulness at several sensitivities and record scan/overlay/refresh costs; avoid claiming an algorithm defect or inventing performance gains.
+- [Identity-preserving regeneration hides real changes or fabricates success] → compare canonical definitions and dependency fingerprints; test changed IR, changed source, same settings, protected collisions and removal-only outcomes.
+- [Source recapture invalidates older wet] → retain immutable last-good assets/references while reporting stale/incompatible dependencies honestly; never falsely call an old render current.
+- [Old binaries cannot read v11] → preserve earlier project/cache copies; no destructive asset migration or down-save claim.
+
+## Migration Plan
+
+Latest-main integration includes approved Perform #48 via main `423a9fd`.
+Preserve its optional navigation/audition metadata within v11, its compact
+layout and ordinary bounded navigation. Restore saved preferences before the
+first eligible reveal, publish the initial view through existing navigation
+bindings and latch the fit so later rendering cannot repeat it. Pending
+source/IR timing must remain navigable even for an earliest protected swell.
+After real Recapture, an explicit Perform Regenerate clears that queued work's
+Learn deferral/calibration fence; it does not make Learn Generate mutate protected
+definitions. Native migration, protected framing and real recapture checks cover
+these composition seams without weakening existing assertions.
+
+After proposal review and a new Apply request, implement codec/default tests, workflow reservation and candidate isolation before wiring mutation/UI. Validate each layer with focused tests, then native Debug and Release suites, UI standards lint and strict OpenSpec validation. Update living workflow, Learn and source-context guidance and dated validation evidence as implemented; canonical spec sync/archive remains a separate lifecycle operation.
+
+Obtain scoped native marker/control and initial editor-handoff acceptance, then perform one brief FL Studio smoke covering default-OFF capture/refinement, chronological initial selection/lead-in reveal, repeated Generate/protected work, opt-in Stop, mode return and save/reopen. Record exact host/build and untested Windows DPI/screen-reader coverage. Open one owner-review PR, leave unmerged. Rollback uses the previous binary and its separately retained pre-v11 project/cache snapshots; never delete shared immutable revisions.
