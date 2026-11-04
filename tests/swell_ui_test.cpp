@@ -2,6 +2,7 @@
 #include "WorkflowTestSupport.h"
 #include <Plugin/PluginEditor.h>
 #include <DSP/DefaultImpulse.h>
+#include <UI/LiveDiagnosticsText.h>
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
@@ -124,6 +125,19 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    {m3::EditorSnapshot diagnosticState;
+        REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
+        m3::LiveCallbackObservation callback;callback.block=17;callback.revision=42;callback.hasPublication=true;
+        callback.gate=m3::LiveGate::origin;callback.originsValid=true;callback.originDelta=1.125;
+        callback.observed={true,3730574,158.031,48000,122,4,4};
+        diagnosticState.liveLastRejection=callback;callback.block=18;callback.gate=m3::LiveGate::stopped;
+        diagnosticState.liveObservation=callback;
+        const auto text=m3::ui::liveDiagnosticsText(diagnosticState);
+        REQUIRE(text.contains("Current callback | block 18 | stopped (not playing admission)"));
+        REQUIRE(text.contains("Historical last rejection (not current) | block 17 | PPQ-zero origin mismatch"));
+        REQUIRE(text.contains("1.125000000000") && text.contains("3730574") && text.contains("Worker (separate observation)"));
+    }
+
     if(argc>1 && juce::String(argv[1])=="--test-export-paint"){
         TestDirectory root;m3::SwellEngine engine(root.file,[]{return PreviewContext{};});m3::ui::WorkspaceTheme theme;m3::ui::ExportWorkspace panel(engine);panel.setLookAndFeel(&theme);panel.setSize(1068,736);panel.setVisible(true);
         auto plan=std::make_shared<m3::SongExportPlan>();plan->timing={true,0,0,1000,120,4,4};plan->origin=0;plan->end=1000;plan->wet=.5f;plan->identity=juce::String::repeatedString("a",64);
@@ -946,6 +960,13 @@ int main(int argc,char* argv[]){return runTest([&]
     auto openDetails=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);openDetails->onClick();editor.refresh();
     REQUIRE(editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.diagnosticsPanel()));
     snapshotPanel(*editor.diagnosticsPanel(),"dedicated-diagnostics");
+    auto* liveEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticLiveAdmission"));REQUIRE(liveEvidence);
+    REQUIRE(liveEvidence->getText().contains(m3::ui::liveCallbackText(engine.snapshot().liveObservation,"Current callback")));
+    REQUIRE(liveEvidence->getText().contains("Current callback") && liveEvidence->getText().contains("stopped (not playing admission)"));
+    REQUIRE(liveEvidence->getFont().getHeight()==m3::ui::textStyle(m3::ui::TextRole::helper).height);
+    REQUIRE(liveEvidence->getParentComponent()->getLocalBounds().contains(liveEvidence->getBounds()));
+    snapshotPanel(*liveEvidence,"live-admission-evidence");
+
     juce::String beforeJson,afterJson,jsonError;REQUIRE(m3::encode(beforeSettings,beforeJson,jsonError) && m3::encode(engine.savedSession(),afterJson,jsonError));
     REQUIRE(beforeJson==afterJson && engine.snapshot().renderCount==beforeSettingsRenders && processor->getCaptureSnapshot().manifest.revision==beforeSettingsCapture);
     snapshotEditor(editor,"diagnostics");
@@ -957,8 +978,9 @@ int main(int argc,char* argv[]){return runTest([&]
     inspectorScroll->setViewPosition(0,0);diagnosticScroll->setViewPosition(0,0);
     auto detailsWindow=editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>();REQUIRE(detailsWindow);detailsWindow->closeButtonPressed();
     REQUIRE(!visibleOffscreen(editor.diagnosticsPanel()));
+    const auto hiddenEvidence=liveEvidence->getText();
     const auto hiddenText=dynamic_cast<juce::Label*>(named(editor,"previewStatus"))->getText();engine.diagnostic("Hidden diagnostics lifecycle fixture");editor.refresh();
-    REQUIRE(dynamic_cast<juce::Label*>(named(editor,"previewStatus"))->getText()==hiddenText);
+    REQUIRE(dynamic_cast<juce::Label*>(named(editor,"previewStatus"))->getText()==hiddenText && liveEvidence->getText()==hiddenEvidence);
     openDetails->onClick();REQUIRE(visibleOffscreen(editor.diagnosticsPanel()));snapshotPanel(*editor.diagnosticsPanel(),"diagnostics-reopened");detailsWindow->closeButtonPressed();
     diagnostics->onClick();editor.setSize(1400,900);editor.refresh();
     auto regeneration=dynamic_cast<juce::Slider*>(named(editor,"regenerationSensitivity"));auto freeze=dynamic_cast<juce::ToggleButton*>(named(editor,"freezeRender"));

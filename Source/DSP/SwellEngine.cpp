@@ -59,6 +59,8 @@ EditorSnapshot SwellEngine::snapshot() const
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=voice.position();s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
     s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
+    s.livePreparation=livePreparation;
+    s.liveObservation=live.observation();s.liveLastRejection=live.lastRejection();
     s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;s.liveAttenuationDb=liveAttenuationDb;
     s.gainPlanPeak=gainPlanPeak;s.gainPlanPreparationMs=gainPlanPreparationMs;s.gainPlanBuilds=gainPlanBuilds;s.gainPlanCacheHits=gainPlanCacheHits;
     s.liveReady=preparedLiveRevision>0 && preparedLiveRevision==liveRevision;

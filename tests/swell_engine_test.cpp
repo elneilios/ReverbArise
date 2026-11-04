@@ -38,6 +38,27 @@ int main() { return runTest([]
     waitFor([&]{auto s=engine.savedSession();return s.swells[0].irName=="ir.wav" && s.swells[1].irName=="ir.wav";});
     engine.generate(true); waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
     const auto initial=engine.snapshot(); REQUIRE(initial.renderCount==2 && initial.raw && initial.shaped);
+    // Preparation telemetry is worker-owned and does not imply playing admission.
+    {float l[16]{},r[16]{};TransportTime at{context.time,false};
+        engine.processTransportAudio(l,r,16,at);
+        waitFor([&]{const auto s=engine.snapshot();return s.liveReady && s.livePreparation.result=="Prepared window retained";});
+        const auto prepared=engine.snapshot().livePreparation;
+        REQUIRE(prepared.attempt>0 && prepared.preparedRevision==prepared.revision);
+        REQUIRE(prepared.lastAttemptResult=="Published complete window" && prepared.end>prepared.start);
+        REQUIRE(prepared.attemptedAtMs>0 && prepared.servicedAtMs>=prepared.attemptedAtMs);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=1;}
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Source/host mapping incompatible";});
+        const auto rejected=engine.snapshot().livePreparation;
+        REQUIRE(rejected.service>prepared.service && rejected.attempt==prepared.attempt);
+        REQUIRE(rejected.observed.ppq==1 && rejected.source.ppq==0);
+        REQUIRE(rejected.lastAttemptResult==prepared.lastAttemptResult);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=0;}
+        engine.setLivePlayback(false,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Live disabled";});
+        engine.setLivePlayback(true,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Prepared window retained";});
+    }
+
     REQUIRE(engine.edit(first,[&](auto& w,auto& text){return fullShape(w,initial.raw->start,initial.raw->end,text);}));
     waitFor([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.audition());
     float checkLeft[64]{},checkRight[64]{};engine.processAudio(checkLeft,checkRight,64,context.time);REQUIRE(engine.snapshot().playing);

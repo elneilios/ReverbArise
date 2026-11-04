@@ -44,6 +44,14 @@ struct ExportSnapshot
     bool previewRequested=false;
     uint64_t delivery=0;bool delivering=false,dragReady=false;juce::String deliveryPath,deliveryMessage;
 };
+struct LivePreparationObservation
+{
+    uint64_t service=0,attempt=0,revision=0,preparedRevision=0;
+    SongTime source{},observed{},latest{};
+    int64_t start=0,end=0,loopStart=0,loopEnd=0;
+    double servicedAtMs=0,attemptedAtMs=0;
+    juce::String result="Not serviced",lastAttemptResult="No attempt";
+};
 struct EditorSnapshot
 {
     ExportSnapshot songExport;
@@ -69,6 +77,8 @@ struct EditorSnapshot
     uint64_t analysisCount=0;
     size_t pendingIntervals=0;
     std::vector<juce::String> auditionMembers;
+    LivePreparationObservation livePreparation;
+    std::optional<LiveCallbackObservation> liveObservation,liveLastRejection;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
@@ -297,6 +307,7 @@ private:
     float gainPlanAttenuation=1,gainPlanPeak=0;
     double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
+    LivePreparationObservation livePreparation;
     uint64_t liveRevision=1,preparedLiveRevision=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";

@@ -2,6 +2,7 @@
 #include <Core/SwellSession.h>
 #include <Core/TransportTime.h>
 #include <DSP/ReverseConvolution.h>
+#include "LiveDiagnostics.h"
 #include <array>
 #include <atomic>
 
@@ -56,7 +57,12 @@ public:
     bool missing() const noexcept {return missed.load();}
     bool incompatible() const noexcept {return badMapping.load();}
     bool active() const noexcept {return liveActive.load();}
+    std::optional<LiveCallbackObservation> observation() const noexcept {return callbackObservation.read();}
+    std::optional<LiveCallbackObservation> lastRejection() const noexcept {return rejectionObservation.read();}
 private:
+    LiveObservationSlot<LiveCallbackObservation> callbackObservation,rejectionObservation;
+    uint64_t observedBlocks=0;
+    void observe(const LivePublication*,int,const TransportTime&,bool,bool,bool,bool,bool) noexcept;
     enum State{free,ready,activeSlot,retired};
     struct Slot{std::atomic<int> state{free};std::unique_ptr<LivePublication> data;};
     struct Voice

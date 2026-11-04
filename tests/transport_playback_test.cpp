@@ -12,6 +12,45 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
 int main(){return runTest([]{
+    // Telemetry owns values, not publication pointers; Stop preserves rejection.
+    {auto diagnostic=std::make_unique<TransportPlayback>();
+        REQUIRE(!diagnostic->observation() && !diagnostic->lastRejection());
+        auto publication=fixture();publication->revision=42;REQUIRE(diagnostic->publish(std::move(publication)));
+        float l[20]{},r[20]{};TransportTime at{{true,60,.12,1000,120,4,4},true};
+        const auto check=[&](LiveGate gate,bool allowed=true){
+            {AudioAllocationGuard guard;diagnostic->process(l,r,20,at,allowed);}
+            REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+            const auto d=diagnostic->observation();REQUIRE(d && d->gate==gate && d->revision==42);
+            REQUIRE(d->observed.sample==at.song.sample && d->observed.ppq==at.song.ppq);
+        };
+        check(LiveGate::missingCoverage); // Fixture members deliberately not admitted.
+        at.song.ppq=.1;check(LiveGate::origin);
+        const auto rejected=diagnostic->lastRejection();REQUIRE(rejected && rejected->originsValid);
+        REQUIRE(std::abs(rejected->originDelta-10)<1e-12 && rejected->validCount);
+        at.playing=false;check(LiveGate::stopped);
+        REQUIRE(diagnostic->lastRejection()->block==rejected->block && !diagnostic->incompatible());
+        at.playing=true;at.song= {true,60,.12,1000,121,4,4};check(LiveGate::tempo);
+        at.song.bpm=120;at.song.rate=999;check(LiveGate::rate);
+        at.song.rate=1000;at.song.numerator=3;check(LiveGate::meter);
+        at.song.numerator=4;at.song.valid=false;check(LiveGate::invalidTiming);
+        at.song.valid=true;check(LiveGate::workflow,false);
+        diagnostic->configure(false,LiveRouting::wetOnly,-6);check(LiveGate::disabled);
+        diagnostic->configure(true,LiveRouting::dryWet,0);
+        at.song.sample=INT64_MAX-3;check(LiveGate::invalidRange);
+        // Retirement cannot invalidate already copied diagnostics.
+        REQUIRE(diagnostic->publish(fixture()));at.song={true,0,0,1000,120,4,4};
+        diagnostic->process(l,r,20,at);diagnostic->collect();
+        REQUIRE(rejected->revision==42 && rejected->published.bpm==120);
+        std::atomic<bool> finished{false},coherent{true};
+        std::thread reader([&]{while(!finished.load())if(const auto d=diagnostic->observation()){
+            if(d->observed.valid && d->observed.bpm==120 && d->observed.sample<10000
+                && d->observed.ppq!=d->observed.sample/500.0)coherent=false;}});
+        for(int i=0;i<2000;++i){at.song.sample=i;at.song.ppq=i/500.0;
+            {AudioAllocationGuard guard;diagnostic->process(l,r,20,at);}
+            REQUIRE(watchedAllocations==0 && watchedDeallocations==0);}
+        finished=true;reader.join();REQUIRE(coherent.load());
+    }
+
     {juce::String error;TransportPlayback handover;handover.invalidate(0,1);handover.invalidate(1,1);REQUIRE(handover.publish(fixture()));
         float left[10]{},right[10]{};TransportTime time{{true,40,.08,1000,120,4,4},true};handover.process(left,right,10,time);
         auto replacement=fixture();auto changed=std::make_shared<WetRender>(*replacement->entries[0].audio);
