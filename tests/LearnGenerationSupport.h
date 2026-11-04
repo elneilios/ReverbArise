@@ -39,7 +39,13 @@ struct GenerationFixture
     void record(bool inspectProvisional=false,bool flush=true)
     {
         tick(0,false);
-        for(int block=0;block<72;++block){tick(block*4096,true);juce::Thread::sleep(2);}
+        for(int block=0;block<72;++block)
+        {
+            tick(block*4096,true);juce::Thread::sleep(2);
+            // This synthetic stream is faster than realtime. Keep its private
+            // writer bounded rather than depending on Debug disk scheduling.
+            if(block%16==15)REQUIRE(processor->flushCaptureForTesting());
+        }
         if(inspectProvisional)
         {
             await([&]{const auto view=engine().snapshot().learnGeneration;return view.displayed && view.displayed->identity.provisional && !view.displayed->positions.empty();});
