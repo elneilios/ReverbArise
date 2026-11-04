@@ -10,6 +10,27 @@ the DAW.
 
 ## Issue #38 preview and generation backend
 
+### Current musician-focused native review
+
+Learn retains the approved comfortable text/control roles. Detect events and
+Event sensitivity describe detection; Generate Swells and Generate on Stop
+describe creation. The selector is Default IR. Redundant switch descriptions are
+removed; the manual hint still follows the action helper and stays visible with
+detection OFF. No new panel, density profile or DSP setting is introduced.
+
+The Audio view uses a width-proportional waveform band, at most half its width
+subject to available height. Filled PCM min/max buckets cover their actual time
+span at unchanged unity amplitude; quiet audio is not normalized. Musical mapping,
+real gaps and stable dry extent remain intact. Neutral event guides yield to the
+waveform; hover/pin uses the existing timing accent. Hollow heads still indicate
+provisional/updating data. Emphasis never filters Generate or selects swells.
+
+One caption combines capture state, duration and event count. The canvas readout
+is musical time only. Exact samples, silence/coverage classifications, mapped
+totals and inspection details remain in existing Diagnostics. This revised
+composition/emphasis awaits native owner review; earlier checkpoint evidence
+does not by itself approve the new composition.
+
 Learn candidate snapshots are separate from saved swell definitions. Sensitivity
 edits update read-only background analysis across accepted mapped source, retaining
 previous marker positions marked updating. Progressive markers can use immutable
@@ -25,9 +46,9 @@ markers or protected assignments. Manual/edited/frozen and outside-scope work
 remain intact. Returning to Learn or restoring state never generates by itself.
 See the [source/context protocol](../development/learn-source-context-protocol.md)
 and [in-progress validation](../validation/2026-11-04-issue-38-generation-workflow.md).
-The Auto-generate switch reuses `Switch` immediately beneath Enable automatic
-swells, before the IR group. Generate Swells reuses the emphasized `ActionButton`
-directly below sensitivity. Its contextual marker count/readiness helper sits
+The Generate on Stop switch reuses `Switch` immediately beneath Detect events,
+before the Default IR group. Generate Swells reuses the emphasized `ActionButton`
+directly below sensitivity. Its contextual readiness helper sits
 directly below the button; the persistent manual-placement hint follows last,
 flowing naturally across the available width without a forced break after the
 question. Both remain readable when generation is disabled. The manual hint
@@ -36,8 +57,8 @@ OFF, including on editor reopen; generation controls and their contextual
 helper stay hidden. The accessible
 description also explains readiness. Invocations pin session, pass and
 displayed candidate identities. Automatic Swells OFF hides these controls while
-retaining the saved preference. Timing-yellow triangle heads and dashed stems
-show candidates; hollow heads identify provisional/updating positions. They are
+retaining the saved preference. Neutral heads/guides show events, with timing
+emphasis for hover/pin; hollow heads identify provisional/updating positions. They are
 distinct from the white inspection pin and solid DAW cursor. Scoped native owner
 review remains required before rollout.
 
@@ -87,7 +108,7 @@ The real factory/retained-import catalogue drives the Default IR dropdown and
 adjacent folder action. It displays the accepted choice while a pending import
 prepares, and explains a failed or superseded request. Successful imports remain
 available when unused and after reopening.
-The helper remains "Used by your next Generate." throughout selection,
+The helper remains "Used by Generate." throughout selection,
 preparation, success and failure; neither its text nor its geometry changes.
 Editor-owned presentation logic suppresses IR progress for the first 600 ms.
 Longer pending work uses the existing contextual message bar, without changing
@@ -110,7 +131,7 @@ display, persistence and checkpoint B remain separate unfinished tasks.
 The empty canvas contains a centred waveform glyph, prominent instruction and
 automatic/dry-only explanation. Primary capture instructions never occupy the
 left configuration column. Recording and acceptance preserve real dry peaks;
-concise phase-specific feedback lives below the timeline. Any accepted coverage,
+concise phase-specific feedback lives in the combined caption. Any accepted coverage,
 including silence or unavailable assets, suppresses the empty prompt.
 
 Checkpoint A now brings forward the worker progress path from task 6.1: a separate
@@ -127,9 +148,9 @@ claimed by native screenshots or component tests.
 
 ## Final timeline behavior (checkpoint B candidate)
 
-The approved controls, typography and header remain unchanged. The dry canvas
-adds readable Audio/Silence/Gap/Unavailable/Recording labels and a separate
-mapped/provisional/actual-extent summary. Exact-zero coverage alone is silence;
+The approved typography and header remain unchanged. The musician-facing canvas
+uses concise capture/event status; technical coverage labels and the separate
+mapped/provisional/actual-extent summary are in Diagnostics. Exact-zero coverage alone is silence;
 small audio peaks are never reclassified. Missing overview data is unavailable,
 not invented silence. Hover inspects the absolute sample beneath the pointer,
 using the current dry viewport; Y does not select a different channel or value.
@@ -142,9 +163,9 @@ The white dashed inspection line/dot and pale coverage wash are independent of
 the aqua keyboard-focus outline and yellow DAW transport/provisional indicators.
 Inspection remains available while recording or accepting capture. The existing
 readout shows bar/beat and elapsed song time only with reliable compatible host
-timing, plus exact sample and coverage classification. Otherwise it says
-Timing unavailable; full coverage ranges remain available in tooltip/accessibility
-text. No timing is inferred from an unavailable host position.
+timing. Otherwise it says Timing unavailable. Exact samples, coverage classification
+and full ranges remain available in Diagnostics. No timing is inferred from an
+unavailable host position.
 
 Inspection is UI-only: no seeking, editing, capture commits, generation or saved
 state changes. Its absolute sample survives host seeks and extent growth. Mode
@@ -158,7 +179,7 @@ and never shrinks for loops, backwards seeks, cancellation or shorter recapture
 while open. Re-entry recomputes the fit; Perform navigation, selected wet bounds
 and host seek position do not drive it. One-frame inferred-origin jitter is
 absorbed. Negative source stays visible with a Song start marker; unavailable or
-unreadable musical timing uses honest absolute sample labels.
+unreadable musical timing shows Time unavailable, with absolute samples in Diagnostics.
 
 The owner approved checkpoint B on 2026-11-03, including the focused retry of
 click/keyboard inspection. The owner also approved the refined persistent pin and timing readout in the

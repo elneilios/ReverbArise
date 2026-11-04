@@ -13,6 +13,7 @@ GitHub issue: [#38](https://github.com/elneilios/ReverbArise/issues/38). Real-so
 - Default Auto-generate on Stop OFF for fresh projects; persist explicit values and restore ON for older state lacking the field. Enter Perform only after a nonempty changed generation commits, without waiting for wet rendering.
 - Allow sensitivity refinement and current-default IR assignment on repeated Generate without recapture. Preserve accepted capture contexts as historical provenance, rather than allowing them to override explicit generation intent.
 - Cover realistic dense and sparse arrangements, cancellation/races, compatibility, native UI acceptance and one consolidated host smoke.
+- Refine Learn into a musician-focused preview: a shorter truthful waveform band, restrained event guides with hover/pin emphasis, concise detection/generation labels and Default IR naming, and consolidated capture/event status with exact technical inspection retained in existing Diagnostics.
 
 ## Capabilities
 

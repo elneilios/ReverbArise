@@ -64,7 +64,7 @@ Initial Perform selection/reveal SHALL use available definition/source timing wh
 - **THEN** the initial handoff uses available lead-in/arrival timing immediately, and delayed completion updates only matching content/status without stealing selection or moving the user's viewport
 
 ### Requirement: Learn offers one explicit Generate action
-Generate Swells SHALL be the primary Automatic Swells action directly below Marker Sensitivity and supported conditional parameters. It SHALL reuse ActionButton, retain its label across runs and expose accessible readiness/progress reasons. Auto-generate on Stop SHALL reuse Switch below Enable automatic swells, before IR controls. The contextual marker-count/readiness helper SHALL sit directly below Generate.
+Generate Swells SHALL be the primary Automatic Swells action directly below Marker Sensitivity and supported conditional parameters. It SHALL reuse ActionButton, retain its label across runs and expose accessible readiness/progress reasons. Auto-generate on Stop SHALL reuse Switch below Enable automatic swells, before IR controls. The contextual readiness helper SHALL sit directly below Generate.
 
 #### Scenario: Ready or disabled action
 - **WHEN** Learn is ready, capturing, settling, analysing, generating or missing usable source/IR
@@ -86,7 +86,18 @@ A subdued helper SHALL read “Want to place swells yourself? Add manual swells 
 - **THEN** the full helper remains legible beneath Generate, all settings remain reachable and NoticeBar does not move the workspace
 
 ### Requirement: Candidate markers have truthful visual identity
-The Learn dry timeline SHALL show sample-aligned candidate arrivals distinctly from committed swells, white inspection pin, solid yellow DAW cursor and provisional source. Timing-yellow candidate heads/dashed stems and status SHALL distinguish settled, provisional and updating results. Overlay refresh SHALL be read-only, bounded at display resolution and preserve actual coverage, gaps and unavailable data.
+The Learn timeline SHALL show sample-aligned events as restrained neutral guides, with stronger timing-accent emphasis for hovered or pinned events. Hollow heads SHALL identify provisional/updating data. Event emphasis SHALL reuse inspection without editing swells or filtering Generate. The white inspection pin and solid DAW cursor SHALL remain distinct. Refresh SHALL be read-only and bounded at display resolution.
+
+#### Scenario: Hover and pin an event
+- **WHEN** the musician hovers or pins near a preview event
+- **THEN** that event is emphasized without changing definitions, source, generation scope, transport or audition
+
+### Requirement: Learn presents a concise truthful waveform preview
+Learn SHALL use a shorter width-proportional waveform band with unchanged time mapping and unscaled PCM min/max representation. It SHALL distinguish Detect events from Generate Swells, label the future assignment Default IR and consolidate capture state, duration and event count. Exact samples, coverage and silence classifications SHALL remain in existing Diagnostics rather than primary status. The manual hint SHALL remain visible with detection off.
+
+#### Scenario: Inspect audio and diagnostics
+- **WHEN** Learn is resized or inspected during capture, settled preview or detection OFF
+- **THEN** waveform amplitude ratios, gaps and musical timing remain accurate, concise status stays readable and existing Diagnostics retains exact technical inspection
 
 #### Scenario: Inspect sparse and dense source
 - **WHEN** markers are viewed at full-song scale, resized, zoomed or software-scaled with silence, gaps, unavailable ranges and negative pre-roll

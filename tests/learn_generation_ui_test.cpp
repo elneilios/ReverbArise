@@ -61,11 +61,37 @@ static void candidateOverlay(PreverbAudioProcessorEditor& editor,GenerationFixtu
     const auto x=juce::roundToInt(bounds.getX()+(sample-view.first)/(view.second-view.first)*bounds.getWidth());
     const auto y=bounds.getY()+m3::ui::spacing::tight+2;
     const auto settled=workspace->createComponentSnapshot(workspace->getLocalBounds());
-    REQUIRE(settled.getPixelAt(x,y)==m3::ui::timing);
+    REQUIRE(settled.getPixelAt(x,y)==m3::ui::separator);
+    const auto event=[&](juce::ModifierKeys mods){const auto point=juce::Point<float>{static_cast<float>(x),static_cast<float>(y)};const auto time=juce::Time::getCurrentTime();
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,mods,0,0,0,0,0,workspace,workspace,time,point,time,1,false);};
+    workspace->mouseMove(event({}));
+    const auto hovered=workspace->createComponentSnapshot(workspace->getLocalBounds());REQUIRE(hovered.getPixelAt(x,y)==m3::ui::timing);
+    captureImage(editor,"issue38-event-hover");
+    workspace->mouseDown(event(juce::ModifierKeys::leftButtonModifier));workspace->mouseExit(event({}));
+    REQUIRE(workspace->hasPinnedInspection() && workspace->diagnosticDetails().contains("Sample"));
+    REQUIRE(!workspace->visibleInspectionText().contains("Sample") && !workspace->getDescription().contains("samples"));
+    const auto pinned=workspace->createComponentSnapshot(workspace->getLocalBounds()).getPixelAt(x,bounds.getY()+21);
+    REQUIRE(pinned.getRed()>pinned.getBlue()+64);
+    captureImage(editor,"issue38-event-pinned");
+    workspace->setVisible(false);workspace->setVisible(true);
     auto updating=snapshot;updating.learnGeneration.updating=true;
     workspace->display(fixture.processor->getCaptureSnapshot(),updating,fixture.processor->getSongTime(),fixture.processor->getWorkflowSnapshot(),false);
     const auto stale=workspace->createComponentSnapshot(workspace->getLocalBounds());
     REQUIRE(stale.getPixelAt(x,y)!=m3::ui::timing && workspace->timelineStatusText().contains("updating"));
+    const auto waveformPixels=[&](float amplitude)
+    {
+        auto shown=snapshot;shown.session.automaticProcessing=false;
+        auto signal=fixture.processor->getCaptureSnapshot();signal.manifest.ranges={{0,48000,CaptureCoverageKind::audio}};
+        signal.overview={{signal.manifest.ranges.front(),true,{{0,48000,-amplitude,amplitude}}}};
+        workspace->display(signal,shown,fixture.processor->getSongTime(),fixture.processor->getWorkflowSnapshot(),false);workspace->fitDrySource();
+        const auto lane=workspace->timelineBounds();const auto viewport=workspace->dryViewport();
+        const auto at=juce::roundToInt(lane.getX()+(24000-viewport.first)/(viewport.second-viewport.first)*lane.getWidth());
+        const auto raster=workspace->createComponentSnapshot(workspace->getLocalBounds());int pixels=0;
+        for(int row=lane.getY()+1;row<lane.getBottom()-1;++row)if(raster.getPixelAt(at,row)==m3::ui::text)++pixels;
+        return pixels;
+    };
+    const auto quiet=waveformPixels(.25f),loud=waveformPixels(.5f);
+    REQUIRE(quiet>0 && std::abs(loud-2*quiet)<=3); // Display is not normalized or secretly amplified per event.
     REQUIRE(fixture.engine().snapshot().renderCount==renderCount);
     juce::String a,b,error;REQUIRE(encode(before,a,error) && encode(fixture.engine().savedSession(),b,error) && a==b);
     editor.refresh();
@@ -119,8 +145,11 @@ int main(int argc,char** argv){return runTest([&]
                 const auto* reason=named(*editor,"learnGenerateReason");REQUIRE(reason);
                 REQUIRE(reason->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
                 REQUIRE(helper->getY()-reason->getBottom()==m3::ui::spacing::labelHelp);
-                REQUIRE(named(*editor,"learnAutoGenerateOnStop")->getY()-named(*editor,"learnAutomaticHelp")->getBottom()==m3::ui::spacing::related);
+                REQUIRE(named(*editor,"learnAutoGenerateOnStop")->getY()-named(*editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
                 REQUIRE(helper->getParentComponent()->getLocalBounds().contains(helper->getBounds()));
+                auto* learn=dynamic_cast<m3::ui::LearnWorkspace*>(named(*editor,"learnWorkspace"));REQUIRE(learn);
+                REQUIRE(learn->timelineBounds().getHeight()<=learn->timelineBounds().getWidth()/2);
+                REQUIRE(learn->timelineStatusText().contains("events") && !learn->timelineStatusText().contains("Mapped"));
                 for(float scale:{1.f,1.25f,1.5f,2.f})captureImage(*editor,"issue38-learn-"+juce::String(size.x)+"-"+juce::String(scale),scale);
             }
             editor->setSize(1100,850);editor->refresh();
