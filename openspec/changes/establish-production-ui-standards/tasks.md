@@ -1,13 +1,13 @@
 # Tasks
 
-Planning only: all implementation tasks remain unchecked. Dependencies are ordered
+Implementation progress follows the guarded Apply workflow. Dependencies are ordered
 below; see design.md for the measured baseline and scoped migration boundaries.
 Each extraction includes its own tests/docs before dependent work continues.
 
 ## 1. Establish the production authority
 
-- [ ] 1.1 Confirm #11/#35 approval and the integrated baseline; capture unchanged Learn/header native measurements and record the affected control/consumer inventory, approval references and untested host/DPI coverage in dated `docs/validation/` evidence. Verify against the existing approval records and real fixture at minimum/larger sizes; do not infer approval from closed issues alone.
-- [ ] 1.2 Update the existing style guide with production standards revision 1, role/value/unit/code/scope/evidence tables and clearly labelled historical/provisional material. Document comfortable Learn spacing, invariant roles and the compact-profile review contract without compact values. Verify every production entry against 1.1 and existing code, including distinct helper/header inks and line boxes; check links from `docs/README.md`.
+- [x] 1.1 Confirm #11/#35 approval and the integrated baseline; capture unchanged Learn/header native measurements and record the affected control/consumer inventory, approval references and untested host/DPI coverage in dated `docs/validation/` evidence. Verify against the existing approval records and real fixture at minimum/larger sizes; do not infer approval from closed issues alone.
+- [x] 1.2 Update the existing style guide with production standards revision 1, role/value/unit/code/scope/evidence tables and clearly labelled historical/provisional material. Document comfortable Learn spacing, invariant roles and the compact-profile review contract without compact values. Verify every production entry against 1.1 and existing code, including distinct helper/header inks and line boxes; check links from `docs/README.md`.
 
 ## 2. Consolidate affected presentation patterns
 
