@@ -9,8 +9,10 @@ remain subject to preview approval before production adoption. This record cover
 that checkpoint, not completed #46 implementation.
 
 Baseline: `f7caf5d` on `codex/46-perform-workspace-plan`, based on main `33cd54b`.
-Only the test executable/CMake registration, planning design and evidence change at this stage;
-the production plugin does not instantiate the preview or adopt its metrics.
+The initial checkpoint changed only the test executable/CMake registration,
+planning design and evidence. Revision 2 adds the sole owner-approved header seam
+described below; the production plugin does not instantiate the preview or adopt
+its metrics.
 
 ## Execution and ownership map
 
@@ -161,7 +163,8 @@ Build reports `f7caf5d (dirty)`; this PR's source diff identifies those tested c
 The responsive native window **Issue #46 - Perform layout checkpoint** was launched
 directly (PID 48812) and left open for owner review. Review-strip controls select
 scene and size outside the measured product canvas. The owner selected **Request
-layout changes** at this checkpoint; specific adjustments are awaiting clarification.
+layout changes** at this checkpoint and subsequently supplied four issues plus a
+flashing video; the revision-2 follow-up below records the response.
 Compact/layout approval remains open and no production metrics are adopted. No
 relink or duplicate review window is permitted while it is open.
 Learn/Export navigation is disabled with an isolated-review reason; the shared
@@ -171,6 +174,77 @@ the audition buttons retain model binding but this is not an auditory acceptance
 No actual Windows DPI or FL Studio acceptance is claimed. Software 100/125/150/200%
 rendering is a separate test scope. No speedup, DSP, persistent preference support,
 new grid snapping or production layout adoption is claimed by this checkpoint.
+
+## Revision 2 — live flashing, divider clearance and polling work
+
+The owner reported flashing, touching border lines, nonfunctional Snap/grid and
+UI lag, then supplied `20261104-1205-03.3459414.mp4`. Frames inspected locally show
+the Error/Rendering specimen alternating with real ready wet data and Learn/Export
+availability. The clip is not redistributed in this PR. The initial static image
+matrix did not cover this interleaved live event-loop behavior.
+
+The fixture had two competing 100 ms refresh owners: its own timer and the hidden
+production editor's timer. Only the fixture applies specimen phases and restricted
+review navigation; the editor's independent poll temporarily replaced them with
+real model state. The fixture also called its complete layout/font setup each poll.
+
+The owner explicitly approved **Allow review-only refresh seam** after the shared
+file exception was explained. `PluginEditor.h` adds only
+`stopAutomaticRefreshForReview()`; this fixture calls it and owns polling. Normal
+plugin construction retains automatic refresh. No timeline, audition, serializer,
+DSP or production layout implementation changed. Borrowed list/envelope callbacks
+complete through the fixture refresh so deliberate actions retain specimen state.
+
+Idle refresh no longer invokes `resized()` or repaints the whole composition;
+unchanged geometry/fonts stay in place, with existing component data refresh and
+repaint behavior retained. This removes redundant fixture work, not a waveform
+cache or a claim of measured whole-plugin speedup. Real interactive smoothness
+still requires the owner's follow-up on this concrete reported regression.
+
+Vertical rules now stop 12 logical pixels before the work area's horizontal rules.
+Audition content and the Overview component have 8-pixel vertical insets, keeping
+controls/viewport outlines clear of adjoining dividers. The overall column profile
+is unchanged; the 120-high Overview allocation now contains a 104-high component.
+Snap and grid are disabled with explanatory tooltips while they remain visual
+specimens; no placeholder presents itself as a working musical edit.
+
+Verification:
+
+- `--test-competing-refresh` intentionally leaves the hidden timer running and
+  **fails** on changing header availability, reproducing the video mechanism.
+- `--test-refresh` passes with the approved seam: three scenes, 90 event-loop
+  observations each, stable specimen/header/handle state and no idle layout passes.
+- The tests also caught an asynchronous initial review-dropdown selection that
+  could reset the tested scene. Both initial selections now use silent refresh;
+  the timed test asserts the requested scene remains selected.
+- Final Release wrapper build passed; logs:
+  `out/build-logs/Release/20261104-122457-b5385cb0/`.
+- Revised native matrix passed **60 geometry cases, 240 software-scale renders,
+  divider-gap pixel assertions and the live refresh checks**. Focus checks cover
+  enabled actions; disabled Snap/grid are explicitly verified unavailable.
+- Existing `preverb_swell_ui_test.exe` passed (exit 0), exercising the normal
+  editor/header, Learn, Perform, selection, bindings, gestures and recovery paths.
+  UI standards, strict OpenSpec and diff checks passed. Full CTest and host/DPI
+  acceptance remain unperformed at this checkpoint.
+
+Retained revision-2 evidence: [selected](2026-11-04-issue-46/revision-2/sparse-1100x850-100.png),
+[error](2026-11-04-issue-46/revision-2/error-1100x850-100.png),
+[empty](2026-11-04-issue-46/revision-2/empty-1100x850-100.png) and
+[measurements](2026-11-04-issue-46/revision-2/measurements.json).
+All software-scale images are in `out/perform-composition-revision-2/`.
+
+Updated executable SHA-256:
+`C8E42E641210396AF961DD56BD5EA36C1F499879A040F38F1D192B49F99A8B92`.
+Preview source SHA-256:
+`AF43D5771A053BB13FE131455949BBF937403EC7548760BAAEDC5C16788679DF`.
+Header source SHA-256:
+`790701162007AF1ADCCA2C914D6355983785DD72394EED9B10EC9E9FF8DB6959`.
+Build identity is `2e5a87e (dirty)` plus this PR's reviewed source diff.
+
+The original #46 window was closed after feedback and seam authorization, and the
+corrected responsive window was launched directly (PID 38696). Agent 1's Export
+preview was not touched. The new window is preserved for layout/flashing/feel
+review; approval and production adoption remain pending.
 
 ## Read-only decoder check for the later persistence stage
 
@@ -196,3 +270,8 @@ Its proposed stateless `TimelineZoomControls` boundary and deferred renderer
 extractions are in design decision 7. No shared production code or unmerged Export
 file was copied or edited. Interface agreement and actual integrated decoder tests
 remain pending.
+# Revision 3: divider continuity (2026-11-04)
+
+Owner comparison screenshots identified the remaining interrupted horizontal rules: the opaque timeline overlapped its parent's rule. The isolated fixture now insets timeline content and list/inspector headings, keeps vertical separators clear of horizontal rules, and removes the obsolete Perform auto-marker band. No production compact metrics have been adopted.
+
+Release build `out/build-logs/Release/20261104-123546-e3672efb` passed. Native fixture passed 60 geometry cases and 240 software renders, including composite-pixel checks across all horizontal rules, vertical endpoint gaps and live refresh stability. Captures and measurements are in `2026-11-04-issue-46/revision-3/`. This is fixture evidence, not host/DPI acceptance. Layout approval remains pending. A copied executable under `out/review-issue46-revision3/` preserves the review window independently of subsequent shared-control builds.

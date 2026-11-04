@@ -118,6 +118,16 @@ spawning duplicates; leave it open while they review. Screenshots remain useful
 supplementary evidence. If a review executable is open, preserve that process and
 defer relinking its binary until the owner has finished.
 
+A native harness borrowing the production editor's components must have one
+refresh owner. After construction, call `stopAutomaticRefreshForReview()` on that
+hidden editor and drive its public `refresh()` from the harness; normal plugin
+construction retains automatic polling. Apply specimen overrides before yielding
+to the event loop and retain callback ownership when rebinding borrowed controls.
+Keep layout/font setup in actual resize/layout changes rather than idle polling.
+Verify live timer/event-loop stability as well as static rasters; the
+[issue #46 follow-up](../validation/2026-11-04-issue-46-perform-composition.md)
+records the owner-approved review seam and a competing-timer regression test.
+
 - Add focused tests at the shared component boundary using actual wheel, drag,
   keyboard, text-entry and focus events where practical. Exercise limits,
   invalid/disabled states, cancellation and refresh; avoid tests that only call a

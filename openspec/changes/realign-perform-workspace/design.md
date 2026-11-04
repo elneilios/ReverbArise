@@ -27,7 +27,7 @@ Visual references: [#3 approved Perform viewer](https://github.com/elneilios/Rev
 
 ### 1. Isolate Perform composition and stage native approval
 
-Keep `WorkflowHeader`, NoticeBar and Learn composition intact. Introduce a Perform-scoped layout calculation/composite rather than altering shared dimensions used by Export. Keep one editor, its existing handle painting/hit geometry and separate Overview. Preserve all supported inspector fields via vertical scrolling, not reduced font heights. Existing marker preferences stay in their current domain; migrate affected switch/value presentation without adopting #38's future generation behavior.
+Keep `WorkflowHeader`, NoticeBar and Learn composition intact. Introduce a Perform-scoped layout calculation/composite rather than altering shared dimensions used by Export. Keep one editor, its existing handle painting/hit geometry and separate Overview. Preserve all supported inspector fields via vertical scrolling, not reduced font heights. The owner's divider reference review clarifies that the old Perform auto-marker tooling is to be removed: omit its band, preserve saved instance detection preferences and Learn's controls, and do not adopt #38's generation behavior.
 
 Candidate `performCompact` geometry below is **proposed logical-pixel arithmetic, not measured native evidence or approved tokens**. Begin with current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
 
@@ -35,18 +35,26 @@ Candidate `performCompact` geometry below is **proposed logical-pixel arithmetic
 | --- | --- | --- | --- |
 | Outer inset / header | existing 16 / 82 | existing 20 / 82 | Preserve shared baseline |
 | List / inspector / column gaps | 180 / 304 / 16 each | 210 / 320 / 16 each | Recover center width; inspector scrolls |
-| Globals / audition / Overview / info | 56 / 72 / 120 / 36 | same | Recover detail height without changing fonts |
+| Perform globals / audition / Overview / info | none / 72 / 120 / 36 | same | Omit obsolete marker tooling; retain the other bands |
+| Column content inset from horizontal rules | 12 top/bottom for list/inspector; 12 top for timeline | same | Preserve full-width rules after opaque child painting |
 | Section heading / related gap / group gap | 30 / 8 / 12 | same | Named Perform spacing only; approval required |
 | Toolbar footprint / internal control | 48 / 36 | same | One row with focus clearance |
 
 Derived budgets (outer content less header and bands):
 
-| Editor size | Three-column height | Central width before internal inset | Detail component after 48 toolbar + 26 readout |
+| Editor size | Three-column height | Central width before internal inset | Detail after toolbar/readout and 12 top inset |
 | --- | --- | --- | --- |
-| 1100x850 | 452 | 552 | 378 |
-| 1400x900 | 494 | 798 | 420 |
-| 1400x1000 | 594 | 798 | 520 |
-| 1600x1000 | 594 | 998 | 520 |
+| 1100x850 | 508 | 552 | 422 |
+| 1400x900 | 550 | 798 | 464 |
+| 1400x1000 | 650 | 798 | 564 |
+| 1600x1000 | 650 | 998 | 564 |
+
+The reference uses full-width horizontal separators, with vertical rules aligned
+to inset column content rather than joining the band rules. An opaque timeline
+placed on the header divider erased its middle in the first previews. Test the
+finished composite pixels across every horizontal rule, not just the parent paint
+or the gaps at vertical endpoints. Audition and Overview retain 8-pixel vertical
+insets. These are revised review candidates, not production-approved metrics.
 
 The native fixture must report actual dry/wet lane, ruler, scrollbar, toolbar, focus and inspector bounds and adjust these proposals before approval. A two-line 14-high helper must fit its proper line boxes. Test 1199/1200/1201 and adjacent header breakpoint behavior separately. Stop if the one-row toolbar or hit targets cannot fit; do not rescue it with smaller fonts or a second row.
 

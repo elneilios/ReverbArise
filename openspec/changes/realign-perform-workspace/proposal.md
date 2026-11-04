@@ -8,6 +8,7 @@ The working Perform editor still uses legacy composition and navigation while Le
 ## What Changes
 
 - Recompose the chronological Swells list, central dry/wet editor, Selected Swell inspector, audition band and single compact Overview using production Inter/semantic roles and shared controls.
+- Omit the obsolete Perform auto-marker/sensitivity band, as clarified in the owner's 4 November divider reference review. Preserve saved detection preferences and Learn's controls without implementing #38 generation behavior.
 - Reuse #4's merged identity-bound `SwellList` (PR #47), including its existing selection behavior; add no separate sort or bulk-edit model.
 - Propose a Perform-only compact spacing profile, with measured native dense/empty previews and explicit owner look/feel approval before production rollout. Preserve approved Learn/header geometry and fonts.
 - Replace Prev/Next and page-span navigation with one restrained row: Zoom minus, horizontal slider, Zoom plus, Fit, independent Snap toggle button and beat/bar grid selector. Holding Ctrl temporarily bypasses snap and shows the button off; releasing restores the remembered enabled state. Retain disclosed amplitude scaling separately from horizontal zoom.

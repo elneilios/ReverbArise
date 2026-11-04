@@ -26,6 +26,29 @@ The workspace SHALL adapt to mode: Learn shows capture settings and one full-son
 - **THEN** the chronological Swells list is left, real aligned dry/wet editor is central and Selected Swell inspector is right, with audition and one separate compact Overview below
 - **AND** shared header, Settings, reserved notices, production Inter/semantic roles and existing editing capabilities remain usable without changing Learn or Export composition
 
+### Requirement: Marker controls are prominent and instance scoped
+Marker sensitivity SHALL remain one saved instance value independent of selection. Learn SHALL expose a horizontal slider and typeable 0-100% value within enabled Automatic Swells settings. Perform SHALL omit the obsolete Auto markers and sensitivity tooling. Low means more selective marking. Saved-off policy SHALL remain effective and truthful; changing presentation SHALL NOT reset preferences.
+
+#### Scenario: Tune automatic markers from the main view
+- **WHEN** the user adjusts/types the idle Learn slider
+- **THEN** the canonical percentage updates coherently without resetting selected envelopes, IRs, blend or monitoring preferences
+- **AND** Learn changes retain their current future-pass meaning without introducing a generation workflow through this composition change
+
+#### Scenario: Disable marking without losing the workflow
+- **WHEN** Automatic Swells is off in Learn
+- **THEN** generation controls are hidden, dry capture remains available and automatic pass generation is disabled
+- **AND WHEN** the user enters Perform
+- **THEN** existing swells and manual editing remain usable without a marker-control band or changes to saved marking preferences
+
+#### Scenario: An explicit master policy prevents marking
+- **WHEN** legacy saved master/marker preferences disagree or automatic processing is disabled
+- **THEN** Learn does not falsely show effective automatic generation as enabled or silently enable a saved-off policy
+- **AND** an explicit user enable action has a documented consistent effect on the underlying marking/processing policy
+
+#### Scenario: Resize and restore marker controls
+- **WHEN** the editor is resized across supported sizes, Diagnostics is toggled or saved state reopens
+- **THEN** Learn's visible sensitivity control remains reachable and synchronized with saved state, Perform retains no obsolete marker band, and selection does not change the instance value
+
 ## ADDED Requirements
 
 ### Requirement: Perform compact composition requires native acceptance
@@ -40,6 +63,10 @@ Perform SHALL use owner-approved scoped compact spacing with invariant productio
 - **WHEN** many swells, long names/IRs, existing multiple selection and empty/loading/error states are shown at 1100x850, 1400x900, 1400x1000, 1600x1000 and width breakpoints at software 100/125/150/200%
 - **THEN** labels, exact fields, focus and actions do not overlap or clip; supported truncation provides full tooltip/accessibility detail and inspector scrolling preserves every supported edit
 - **AND** native owner acceptance, software scale, actual Windows DPI and FL Studio coverage are recorded separately
+
+#### Scenario: Composite divider continuity
+- **WHEN** the complete native Perform composition is painted with its actual child components
+- **THEN** horizontal rules remain continuous across the available width at the header, audition, Overview and information boundaries, with column content inset and vertical rules separated from those horizontal rules
 
 ### Requirement: Perform toolbar provides horizontal Zoom and contextual Fit
 Perform SHALL provide one inline row containing Zoom minus, horizontal zoom slider, Zoom plus, Fit, Snap toggle button and rhythmic-grid selector, replacing Prev/Next and page-span controls. Zoom SHALL change only horizontal view scale and synchronize the real dry/wet, ruler, handles and Overview viewport. Display-amplitude scaling SHALL remain separately disclosed.

@@ -31,11 +31,11 @@ struct Head final:juce::AudioPlayHead
 // All candidate metrics live in this test translation unit until owner approval.
 struct Layout
 {
-    juce::Rectangle<int> header,globals,work,list,detail,inspector,audition,overview,info,toolbar,readout;
+    juce::Rectangle<int> header,work,list,detail,inspector,audition,overview,info,toolbar,readout;
     explicit Layout(juce::Rectangle<int> bounds)
     {
         auto a=bounds.reduced(workspaceGeometry::outerInset(bounds.getWidth()));
-        header=a.removeFromTop(workspaceGeometry::headerHeight);globals=a.removeFromTop(56);
+        header=a.removeFromTop(workspaceGeometry::headerHeight);
         info=a.removeFromBottom(36);overview=a.removeFromBottom(120);audition=a.removeFromBottom(72);
         work=a;list=a.removeFromLeft(bounds.getWidth()<1200?180:210);a.removeFromLeft(16);
         inspector=a.removeFromRight(bounds.getWidth()<1200?304:320);a.removeFromRight(16);
@@ -46,7 +46,7 @@ struct Layout
 class Composition final:public juce::Component,private juce::Timer
 {
 public:
-    Composition()
+    explicit Composition(bool independentRefresh=true)
     {
         setLookAndFeel(&theme);
         processor=std::make_unique<PreverbAudioProcessor>(directory.file);
@@ -82,23 +82,31 @@ public:
         baseline=engine.savedSession();baseline.selected={firstId};baseline.primary=firstId;
         engine.restore(baseline);
         wait([&]{return engine.snapshot().raw!=nullptr;});
-        editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);editor->refresh();
+        editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);
+        if(independentRefresh)editor->stopAutomaticRefreshForReview();
+        editor->refresh();
         // Borrow the actual production components and their domain bindings.
         // The hidden owning editor stays alive; only this fixture reparents them.
         for(const auto* name:{"workflowHeader","workspaceNotice","swellList","swellTimeline","songOverview",
                 "inspectorViewport","audition","stopAudition","auditionBlend","resetAuditionTrim","hostInfo",
-                "autoMarkers","markerSensitivity","editorReadout"})
+                "editorReadout"})
         {
             auto* component=find(*editor,name);REQUIRE(component);
             borrowed.push_back({component,component->getParentComponent()});addAndMakeVisible(component);parts[name]=component;
         }
-        for(auto* label:{&swellsHeading,&countLabel,&inspectorHeading,&auditionHeading,&markerLabel,&emptyList,&emptyInspector,&emptyTimeline,&monitor})
+        auto& list=require<controls::SwellList>(*this,"swellList");
+        const auto selection=list.onSelection;
+        list.onSelection=[this,selection](auto ids,auto primary){if(selection)selection(std::move(ids),std::move(primary));refresh();};
+        const auto toggle=list.onToggleEnabled;
+        list.onToggleEnabled=[this,toggle](auto id){if(toggle)toggle(std::move(id));refresh();};
+        const auto envelope=timeline().onEnvelopeEdited;
+        timeline().onEnvelopeEdited=[this,envelope]{if(envelope)envelope();refresh();};
+        for(auto* label:{&swellsHeading,&countLabel,&inspectorHeading,&auditionHeading,&emptyList,&emptyInspector,&emptyTimeline,&monitor})
         {addAndMakeVisible(label);label->setInterceptsMouseClicks(false,false);}
         applyTextRole(swellsHeading,TextRole::sectionHeading);applyTextRole(inspectorHeading,TextRole::sectionHeading);
         swellsHeading.setText("Swells",juce::dontSendNotification);applyTextRole(countLabel,TextRole::helper,juce::Justification::centredRight);
-        applyTextRole(auditionHeading,TextRole::sectionHeading);applyTextRole(markerLabel,TextRole::controlLabel);
+        applyTextRole(auditionHeading,TextRole::sectionHeading);
         inspectorHeading.setText("Selected Swell",juce::dontSendNotification);auditionHeading.setText("Audition",juce::dontSendNotification);
-        markerLabel.setText("Marker sensitivity",juce::dontSendNotification);
         applyTextRole(monitor,TextRole::helper);
         for(auto* label:{&emptyList,&emptyInspector,&emptyTimeline})
             applyTextRole(*label,TextRole::helper,juce::Justification::centred);
@@ -112,9 +120,11 @@ public:
         zoom.onValueChange=[this]{const auto amount=zoom.getValue();timeline().zoom(std::pow(2.0,(lastZoom-amount)*4));lastZoom=amount;};
         snap.setClickingTogglesState(true);snap.setToggleState(true,juce::dontSendNotification);
         snap.setTooltip("Layout specimen only. Ctrl bypass and new grid snapping follow layout approval.");
+        snap.setEnabled(false);
         timeline().setSnap(false); // New musical snapping deliberately not implemented at this checkpoint.
         grid.addItemList({"1/16 beat","1/8 beat","1/4 beat","1 beat","1 bar","2 bars","4 bars"},1);
         grid.setSelectedId(3,juce::dontSendNotification);grid.setTooltip("Layout specimen only; no rhythmic-grid edit binding yet.");
+        grid.setEnabled(false);
         add.setTooltip("Add a real manual fixture swell at the current test playhead");
         add.onClick=[this]{processor->swellEngine().addTarget(processor->getSongTime().sample);refresh();};
         setSize(1100,850);setScene(0);startTimerHz(10);
@@ -150,6 +160,24 @@ public:
         if(row>=0){list.scrollToEnsureRowIsOnscreen(row);REQUIRE(list.isRowSelected(row));
             REQUIRE(list.getLocalBounds().contains(list.getRowPosition(row,true)));}
     }
+    void verifyLiveRefresh()
+    {
+        // Dispatch both timer and paint messages, unlike static snapshot checks.
+        for(const auto specimen:{5,4,0})
+        {
+            setScene(specimen);const auto passes=layoutPasses;
+            for(int i=0;i<90;++i)
+            {
+                juce::MessageManager::getInstance()->runDispatchLoopUntil(13);
+                REQUIRE(scene==specimen);
+                REQUIRE(layoutPasses==passes);
+                auto& header=require<WorkflowHeader>(*this,"workflowHeader");
+                REQUIRE(!header.modeSelector().segment(1)->isEnabled() && !header.modeSelector().segment(3)->isEnabled());
+                if(specimen==4 || specimen==5)REQUIRE(timeline().grabPoints().empty());
+                else REQUIRE(!timeline().grabPoints().empty());
+            }
+        }
+    }
     void refresh()
     {
         editor->refresh();const auto state=processor->swellEngine().snapshot();
@@ -180,34 +208,32 @@ public:
             require<m3::ui::controls::SwellList>(*this,"swellList").display(std::move(rows),shown.session.selected,shown.session.primary,shown.sessionEpoch);
         }
         else parts.at("inspectorViewport")->setEnabled(true);
-        resized();repaint();
+        // Bindings repaint changed data. Geometry belongs only to resized(), not
+        // the polling loop: reapplying every child font/bounds caused extra work.
     }
     void resized()override
     {
-        if(parts.empty())return;Layout l(getLocalBounds());
+        if(parts.empty())return;++layoutPasses;Layout l(getLocalBounds());
         parts.at("workflowHeader")->setBounds(l.header);
         const auto selector=l.header.getWidth()<1200?330:360;
         parts.at("workspaceNotice")->setBounds(l.header.getX(),l.header.getY()+46,l.header.getWidth()-36-12-selector-16,32);
-        parts.at("autoMarkers")->setBounds(l.globals.getX(),l.globals.getY()+10,154,36);
-        markerLabel.setBounds(l.globals.getX()+170,l.globals.getY()+16,142,24);
-        parts.at("markerSensitivity")->setBounds(l.globals.getX()+320,l.globals.getY()+10,174,36);
-        auto left=l.list;auto title=left.removeFromTop(36);title.removeFromRight(42);countLabel.setBounds(title.removeFromRight(44));swellsHeading.setBounds(title);add.setBounds(l.list.getRight()-36,l.list.getY()+2,34,34);
+        auto left=l.list.reduced(0,spacing::related);const auto titleY=left.getY();auto title=left.removeFromTop(36);title.removeFromRight(42);countLabel.setBounds(title.removeFromRight(44));swellsHeading.setBounds(title);add.setBounds(l.list.getRight()-36,titleY+2,34,34);
         parts.at("swellList")->setBounds(left.withTrimmedTop(8));emptyList.setBounds(left.reduced(6,30));
-        auto right=l.inspector;inspectorHeading.setBounds(right.removeFromTop(36));right.removeFromTop(8);
+        auto right=l.inspector.reduced(0,spacing::related);inspectorHeading.setBounds(right.removeFromTop(36));right.removeFromTop(8);
         parts.at("inspectorViewport")->setBounds(right);emptyInspector.setBounds(right);
         layoutInspector(right.getWidth());
-        timeline().setBounds(l.detail);parts.at("editorReadout")->setBounds(l.readout);emptyTimeline.setBounds(l.detail.reduced(16));
+        timeline().setBounds(l.detail.withTrimmedTop(spacing::related));parts.at("editorReadout")->setBounds(l.readout);emptyTimeline.setBounds(l.detail.reduced(16));
         auto row=l.toolbar.reduced(6,6);minus.setBounds(row.removeFromLeft(34));row.removeFromLeft(8);
         const auto sliderWidth=row.getWidth()-34-40-96-136-4*8;
         zoom.setBounds(row.removeFromLeft(sliderWidth));row.removeFromLeft(8);plus.setBounds(row.removeFromLeft(34));row.removeFromLeft(8);
         fit.setBounds(row.removeFromLeft(40));row.removeFromLeft(8);snap.setBounds(row.removeFromLeft(96));row.removeFromLeft(8);grid.setBounds(row);
-        auto audition=l.audition;auto line=audition.removeFromTop(42).reduced(0,4);
+        auto audition=l.audition.reduced(0,8);auto line=audition.removeFromTop(36);
         auditionHeading.setBounds(line.removeFromLeft(112));parts.at("audition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(8);
         parts.at("stopAudition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(24);
         parts.at("resetAuditionTrim")->setBounds(line.removeFromRight(138));line.removeFromRight(16);
         parts.at("auditionBlend")->setBounds(line);
         monitor.setBounds(audition.withTrimmedLeft(112));
-        parts.at("songOverview")->setBounds(l.overview);parts.at("hostInfo")->setBounds(l.info);
+        parts.at("songOverview")->setBounds(l.overview.reduced(0,8));parts.at("hostInfo")->setBounds(l.info);
     }
     void layoutInspector(int width)
     {
@@ -239,9 +265,10 @@ public:
     void paint(juce::Graphics& g)override
     {
         g.fillAll(background);Layout l(getLocalBounds());g.setColour(separator);
-        for(int y:{l.header.getBottom(),l.globals.getBottom(),l.work.getBottom(),l.audition.getBottom(),l.overview.getBottom()})
+        for(int y:{l.header.getBottom(),l.work.getBottom(),l.audition.getBottom(),l.overview.getBottom()})
             g.drawHorizontalLine(y,static_cast<float>(l.header.getX()),static_cast<float>(l.header.getRight()));
-        for(int x:{l.list.getRight()+8,l.inspector.getX()-8})g.drawVerticalLine(x,static_cast<float>(l.work.getY()),static_cast<float>(l.work.getBottom()));
+        for(int x:{l.list.getRight()+8,l.inspector.getX()-8})
+            g.drawVerticalLine(x,static_cast<float>(l.work.getY()+spacing::related),static_cast<float>(l.work.getBottom()-spacing::related));
     }
     juce::var measure()
     {
@@ -255,12 +282,20 @@ public:
         std::array<juce::Component*,6> controls{&minus,&zoom,&plus,&fit,&snap,&grid};
         for(size_t i=0;i<controls.size();++i){REQUIRE(controls[i]->getHeight()==36 && controls[i]->getWidth()>=34);
             const auto focus=controls[i]->getBounds().toFloat().expanded(controlGeometry::focusOutset+controlGeometry::focusStroke*.5f);
-            REQUIRE(l.toolbar.toFloat().contains(focus));REQUIRE(controls[i]->getWantsKeyboardFocus());
+            REQUIRE(l.toolbar.toFloat().contains(focus));
+            if(controls[i]->isEnabled())REQUIRE(controls[i]->getWantsKeyboardFocus());
             for(size_t j=0;j<i;++j)REQUIRE(!controls[i]->getBounds().intersects(controls[j]->getBounds()));}
         REQUIRE(timeline().sourceLane().getHeight()>=90 && timeline().wetLane().getHeight()>=90);
         REQUIRE(swellsHeading.getFont().getTypefacePtr()==interTypeface(InterFace::semibold));
-        REQUIRE(markerLabel.getFont().getTypefacePtr()==interTypeface(InterFace::medium));
-        REQUIRE(swellsHeading.getFont().getHeight()==21 && markerLabel.getFont().getHeight()==14);
+        REQUIRE(countLabel.getFont().getTypefacePtr()==interTypeface(InterFace::regular));
+        REQUIRE(swellsHeading.getFont().getHeight()==21 && countLabel.getFont().getHeight()==14);
+        REQUIRE(timeline().getY()>=l.header.getBottom()+spacing::related);
+        REQUIRE(parts.at("swellList")->getBottom()<=l.work.getBottom()-spacing::related);
+        REQUIRE(parts.at("inspectorViewport")->getBottom()<=l.work.getBottom()-spacing::related);
+        REQUIRE(!find(*this,"autoMarkers") && !find(*this,"markerSensitivity"));
+        REQUIRE(parts.at("songOverview")->getBottom()<=l.overview.getBottom()-8);
+        REQUIRE(parts.at("audition")->getY()>=l.audition.getY()+8);
+        REQUIRE(!snap.isEnabled() && !grid.isEnabled()); // Layout specimens cannot imply implemented edits.
         auto& header=require<WorkflowHeader>(*this,"workflowHeader");
         for(auto* c:header.getChildren())REQUIRE(header.getLocalBounds().contains(c->getBounds()));
         for(auto* c:find(*parts.at("inspectorViewport"),"arrivalSampleCell")->getChildren())
@@ -272,8 +307,8 @@ private:
     TestDirectory directory;WorkspaceTheme theme;Head head;
     std::unique_ptr<PreverbAudioProcessor> processor;std::unique_ptr<PreverbAudioProcessorEditor> editor;
     std::map<juce::String,juce::Component*> parts;std::vector<std::pair<juce::Component*,juce::Component*>> borrowed;
-    m3::Session baseline;juce::String firstId,secondId;int scene=0;double lastZoom=.5;
-    juce::Label swellsHeading,countLabel,inspectorHeading,auditionHeading,markerLabel,emptyList,emptyInspector,emptyTimeline,monitor;
+    m3::Session baseline;juce::String firstId,secondId;int scene=0;double lastZoom=.5;int layoutPasses=0;
+    juce::Label swellsHeading,countLabel,inspectorHeading,auditionHeading,emptyList,emptyInspector,emptyTimeline,monitor;
     juce::TextButton minus{"-"},plus{"+"},fit{"Fit"},snap{"Snap"},add{"+"};
     controls::SliderControl zoom;InvocationComboBox grid;
 };
@@ -282,12 +317,12 @@ class Review final:public juce::Component
 {
 public:
     Composition composition;
-    Review()
+    explicit Review(bool independentRefresh=true):composition(independentRefresh)
     {
         addAndMakeVisible(composition);addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);
         scenes.addItemList({"Sparse / selected","Empty","Dense / long labels","Existing multiple selection","Rendering display","Error display"},1);
-        scenes.setSelectedId(1);scenes.onChange=[this]{composition.setScene(scenes.getSelectedId()-1);};
-        sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);sizes.setSelectedId(1);
+        scenes.setSelectedId(1,juce::dontSendNotification);scenes.onChange=[this]{composition.setScene(scenes.getSelectedId()-1);};
+        sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);sizes.setSelectedId(1,juce::dontSendNotification);
         sizes.onChange=[this]{const std::array<juce::Point<int>,4> dimensions{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};
             const auto p=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];setSize(p.x,p.y+44);};
         note.setText("Layout checkpoint | real test audio | new Snap/grid not connected",juce::dontSendNotification);applyTextRole(note,TextRole::helper);
@@ -303,7 +338,10 @@ int main(int argc,char** argv)
     juce::ScopedJuceInitialiser_GUI gui;
     return runTest([&]
     {
-        using namespace preview46;auto content=std::make_unique<Review>();
+        using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
+        auto content=std::make_unique<Review>(command!="--test-competing-refresh");
+        if(command=="--test-refresh" || command=="--test-competing-refresh")
+        {content->composition.verifyLiveRefresh();std::cout<<"Live refresh state/idle-layout checks passed.\n";return;}
         if(argc>1 && juce::String(argv[1])=="--review")
         {
             class Window final:public juce::DocumentWindow
@@ -328,6 +366,19 @@ int main(int argc,char** argv)
                 {
                     const auto picture=composition.createComponentSnapshot(composition.getLocalBounds(),true,scale);REQUIRE(picture.isValid());
                     REQUIRE(picture.getWidth()==juce::roundToInt(size.x*scale));
+                    if(scale==1.f)
+                    {
+                        const Layout l(composition.getLocalBounds());
+                        // The complete rules must survive opaque child painting.
+                        for(const int y:{l.header.getBottom(),l.work.getBottom(),l.audition.getBottom(),l.overview.getBottom()})
+                            for(int x=l.header.getX();x<l.header.getRight();++x)REQUIRE(picture.getPixelAt(x,y)==separator);
+                        for(const int x:{l.list.getRight()+8,l.inspector.getX()-8})
+                        {
+                            REQUIRE(picture.getPixelAt(x,l.work.getY()+6)==background);
+                            REQUIRE(picture.getPixelAt(x,l.work.getBottom()-6)==background);
+                        }
+                        REQUIRE(picture.getPixelAt(l.overview.getCentreX(),l.overview.getBottom()-4)==background);
+                    }
                     if(output.isNotEmpty() && (size.x==1100 || (size.x==1600 && (scene==0 || scene==2))))
                     {
                         auto stream=directory.getChildFile(juce::String(scenes[scene])+"-"+juce::String(size.x)+"x"+juce::String(size.y)+"-"+juce::String(juce::roundToInt(scale*100))+".png").createOutputStream();
@@ -337,6 +388,7 @@ int main(int argc,char** argv)
             }
         }
         if(output.isNotEmpty())REQUIRE(directory.getChildFile("measurements.json").replaceWithText(juce::JSON::toString(juce::var(measurements))));
-        std::cout<<"Perform composition: 60 geometry/typeface/focus cases; 240 software-scale renders passed.\n";
+        composition.verifyLiveRefresh();
+        std::cout<<"Perform composition: 60 geometry/typeface/focus cases; 240 software-scale renders and live refresh checks passed.\n";
     });
 }

@@ -19,6 +19,9 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void refresh();
+    // Native review harnesses may own polling after borrowing these components.
+    // Normal plugin construction retains its existing automatic refresh.
+    void stopAutomaticRefreshForReview() {stopTimer();}
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
