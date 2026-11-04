@@ -68,7 +68,7 @@ add_library(preverb_dsp STATIC Source/DSP/ReverseConvolution.cpp Source/DSP/WavP
 target_include_directories(preverb_dsp PUBLIC Source)
 target_link_libraries(preverb_dsp PUBLIC juce::juce_dsp juce::juce_audio_formats PRIVATE WavPack::WavPack)
 
-add_library(preverb_session STATIC Source/Core/SwellSession.cpp Source/Core/ContentHash.cpp)
+add_library(preverb_session STATIC Source/Core/SwellSession.cpp Source/Core/ExportState.cpp Source/Core/ContentHash.cpp)
 target_include_directories(preverb_session PUBLIC Source)
 target_link_libraries(preverb_session PUBLIC juce::juce_core bcrypt)
 target_link_libraries(preverb_capture PUBLIC preverb_session)
@@ -90,11 +90,11 @@ juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMES
     resources/fonts/inter/Inter-Bold.ttf
     resources/fonts/inter/Inter-Italic.ttf
 )
-add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
+add_library(preverb_assets STATIC Source/DSP/ExportFiles.cpp Source/DSP/SongMix.cpp Source/DSP/ExportSource.cpp Source/DSP/SongExport.cpp Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
-add_library(preverb_preview STATIC Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/SwellMonitoring.cpp)
+add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/SwellMonitoring.cpp)
 target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
@@ -216,6 +216,15 @@ if(BUILD_TESTING)
     add_executable(preverb_ir_streaming_test tests/ir_streaming_test.cpp)
     target_link_libraries(preverb_ir_streaming_test PRIVATE preverb_preview psapi)
     add_test(NAME preverb_ir_streaming_test COMMAND preverb_ir_streaming_test "${CMAKE_BINARY_DIR}/ir-streaming-metrics-$<CONFIG>.json")
+    add_executable(preverb_export_voice_test tests/export_voice_test.cpp)
+    target_link_libraries(preverb_export_voice_test PRIVATE preverb_preview)
+    add_test(NAME preverb_export_voice_test COMMAND preverb_export_voice_test)
+    add_executable(preverb_song_export_engine_test tests/song_export_engine_test.cpp)
+    target_link_libraries(preverb_song_export_engine_test PRIVATE preverb_preview)
+    add_test(NAME preverb_song_export_engine_test COMMAND preverb_song_export_engine_test)
+    add_executable(preverb_song_export_test tests/song_export_test.cpp)
+    target_link_libraries(preverb_song_export_test PRIVATE preverb_assets)
+    add_test(NAME preverb_song_export_test COMMAND preverb_song_export_test)
     add_executable(preverb_audition_mix_test tests/audition_mix_test.cpp)
     target_link_libraries(preverb_audition_mix_test PRIVATE preverb_preview)
     add_test(NAME preverb_audition_mix_test COMMAND preverb_audition_mix_test)

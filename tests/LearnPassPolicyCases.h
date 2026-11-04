@@ -33,6 +33,9 @@ inline void learnPassPolicyCases()
         engine.setLearningAutomatic(automatic);
         REQUIRE(processor->setRecaptureExisting(replace));
         pass(true,.4f);
+        // Capture flush completes storage; the accepted-mode handoff publishes
+        // asynchronously. Still require the actual Live transition, not a sleep.
+        waitM3([&]{return processor->getWorkflowSnapshot().mode==workflow::Mode::live;});
         REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::live);
         if(automatic)waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>initial.swells.size() && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         else{

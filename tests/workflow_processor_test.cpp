@@ -3,6 +3,7 @@
 #include "AllocationGuard.h"
 #include <Plugin/PluginProcessor.h>
 #include <UI/WorkflowPresentation.h>
+#include <Core/MonitoringSafety.h>
 
 struct WorkflowHost:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -119,6 +120,28 @@ int main(){return runTest([]{
     p->flushHostStateChangesForTesting();REQUIRE(listener.changes==beforeNoop && !listener.wrongThread);
     e.setLivePlayback(true,m3::LiveRouting::wetOnly,0);
     REQUIRE(p->requestWorkflowMode(workflow::Mode::finalise));
+    REQUIRE(e.savedSession().exportState.initialized && e.savedSession().exportState.wet==.7f);
+    REQUIRE(e.setExportMix(0,e.assignmentEpoch()) && e.savedSession().wetBlend==.7f);
+    REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::finalise);
+    REQUIRE(!e.setExportMix(.8f,e.assignmentEpoch()+1));
+    REQUIRE(e.setExportMix(.65f,e.assignmentEpoch()));
+
+    {
+        const auto deadline=juce::Time::getMillisecondCounter()+10000;
+        while(e.snapshot().songExport.phase!=m3::ExportPhase::ready && juce::Time::getMillisecondCounter()<deadline)juce::Thread::sleep(2);
+        const auto prepared=e.snapshot().songExport.prepared;REQUIRE(prepared && prepared->metrics.audibleStart && prepared->metrics.audibleEnd);
+        const auto start=*prepared->metrics.audibleStart,total=*prepared->metrics.audibleEnd-start;const auto quantum=static_cast<int>(std::min(int64_t{16},total/2));REQUIRE(quantum>0);block.setSize(2,quantum);
+        juce::WavAudioFormat format;auto stream=e.assetDirectory().getChildFile(prepared->file.path).createInputStream();REQUIRE(stream);
+        std::unique_ptr<juce::AudioFormatReader> reader(format.createReaderFor(stream.release(),true));juce::AudioBuffer<float> expected(2,quantum*2);
+        REQUIRE(reader && reader->read(&expected,0,quantum*2,start-prepared->file.origin,true,true));
+        REQUIRE(e.playExport(e.assignmentEpoch()));
+        while(!e.snapshot().songExport.cursor && juce::Time::getMillisecondCounter()<deadline){process(12000,false,.25f);juce::Thread::sleep(2);}
+        REQUIRE(e.snapshot().songExport.cursor==start+quantum);
+        for(int c=0;c<2;++c)for(int n=0;n<quantum;++n)REQUIRE(std::abs(block.getSample(c,n)-(.25f+expected.getSample(c,n)*m3::monitorEdgeGain(n,static_cast<size_t>(total),1000,.005)))<1e-6);
+        process(32000,true,.25f);
+        for(int c=0;c<2;++c)for(int n=0;n<quantum;++n)REQUIRE(std::abs(block.getSample(c,n)-(.25f+expected.getSample(c,n+quantum)*m3::monitorEdgeGain(n+quantum,static_cast<size_t>(total),1000,.005)))<1e-6);
+        REQUIRE(p->getCaptureSnapshot().reference==replaced.reference);e.stop();process(0,false,.25f);block.setSize(2,64);
+    }
     REQUIRE(!e.edit(id,[](auto& w,auto&){w.shape.gainDb=6;return true;}));
     process(0,true,.25f);process(64,true,.25f); // Let the <=5 ms transition settle.
     for(int c=0;c<2;++c)for(int n=0;n<64;++n)REQUIRE(block.getSample(c,n)==.25f);
@@ -147,6 +170,7 @@ int main(){return runTest([]{
     auto restored=std::make_unique<PreverbAudioProcessor>(root.file);restored->prepareToPlay(1000,64);
     restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));REQUIRE(restored->flushCaptureForTesting());
     REQUIRE(restored->getWorkflowSnapshot().mode==workflow::Mode::finalise && !restored->getWorkflowSnapshot().recapture);
+    REQUIRE(restored->swellEngine().savedSession().exportState.wet==.65f && restored->swellEngine().savedSession().wetBlend==.7f);
     // Display labels never replace the established XML workflow identifiers.
     const auto durableFixture=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
     REQUIRE(durableFixture && durableFixture->getStringAttribute("workflowMode")=="Finalise");

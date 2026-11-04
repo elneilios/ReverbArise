@@ -2,6 +2,7 @@
 #include <Capture/CaptureManifest.h>
 #include <Core/SongTime.h>
 #include <Core/ManagedAsset.h>
+#include <Core/ExportState.h>
 #include <juce_core/juce_core.h>
 #include <optional>
 #include <vector>
@@ -91,11 +92,25 @@ struct Session
     AuditionMode auditionMode = AuditionMode::wetOnly;
     float wetBlend = 0.5f;
     double postRollSeconds = 2;
+    ExportState exportState;
     Asset defaultIR;
     juce::String defaultIRName = "Preverb Hall";
     std::vector<ImportedIR> importedIRs;
     std::vector<int64_t> suppressed;
 };
+inline bool initializeExport(Session& session,juce::String& error)
+{
+    if(session.exportState.initialized){error.clear();return true;}
+    const auto wet=session.auditionMode==AuditionMode::wetOnly?1.0f:session.wetBlend;
+    if(!std::isfinite(wet) || wet<0 || wet>1){error="Invalid initial Export mix";return false;}
+    session.exportState.initialized=true;session.exportState.wet=wet;error.clear();return true;
+}
+inline bool setExportMix(Session& session,float wet,juce::String& error)
+{
+    if(!std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export mix";return false;}
+    if(session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
+    session.exportState.initialized=true;session.exportState.wet=wet;error.clear();return true;
+}
 // Foundation eligibility uses already-verified readiness and timing metadata.
 // Full export preparation/asset verification remains the export workspace's job.
 inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexcept
