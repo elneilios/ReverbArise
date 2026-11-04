@@ -160,8 +160,10 @@ Build reports `f7caf5d (dirty)`; this PR's source diff identifies those tested c
 
 The responsive native window **Issue #46 - Perform layout checkpoint** was launched
 directly (PID 48812) and left open for owner review. Review-strip controls select
-scene and size outside the measured product canvas. Owner compact/layout approval
-is pending. No relink or duplicate review window is permitted while it is open.
+scene and size outside the measured product canvas. The owner selected **Request
+layout changes** at this checkpoint; specific adjustments are awaiting clarification.
+Compact/layout approval remains open and no production metrics are adopted. No
+relink or duplicate review window is permitted while it is open.
 Learn/Export navigation is disabled with an isolated-review reason; the shared
 header's production implementation is unchanged. No audio device is started, so
 the audition buttons retain model binding but this is not an auditory acceptance test.
