@@ -51,9 +51,8 @@ void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps)
     const bool fine=(juce::ModifierKeys::shiftModifier&valueModifierFlags)!=0;
     const auto direction=steps>0?1:-1;
     double displacement=steps*(fine?.1:1.);
-    if(index==levelValue)displacement*=.1;
-    else if(index==inCurveValue || index==outCurveValue)displacement*=.01;
-    else
+    if(index==inCurveValue || index==outCurveValue)displacement*=.01;
+    else if(index!=levelValue)
     {
         const auto kind=index==targetValue?m3::TimingAnchor::arrival:index==sourceStartValue?m3::TimingAnchor::sourceStart:index==sourceEndValue?m3::TimingAnchor::sourceEnd:
             index==placementValue?m3::TimingAnchor::move:index==preRollValue?m3::TimingAnchor::start:index==endOffsetValue?m3::TimingAnchor::end:index==fadeInValue?m3::TimingAnchor::fadeIn:m3::TimingAnchor::fadeOut;
@@ -199,7 +198,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 domainValue=static_cast<double>((static_cast<long double>(sample)-(musical?origin:0))/units);
                 if(index==sourceStartValue)maximum=static_cast<double>((static_cast<long double>(w->arrival)-(musical?origin:0))/units);
                 if(index==sourceEndValue)minimum=static_cast<double>((static_cast<long double>(w->arrival)+1-(musical?origin:0))/units);}
-            else if(index==levelValue){domainValue=w->shape.gainDb;minimum=-60;maximum=12;step=.1;unitsPerFraction=72;}
+            else if(index==levelValue){domainValue=w->shape.gainDb;minimum=-60;maximum=12;step=1;unitsPerFraction=72;}
             else if(index==inCurveValue || index==outCurveValue){domainValue=index==inCurveValue?w->shape.inTension:w->shape.outTension;minimum=-1;maximum=1;step=.01;unitsPerFraction=2;}
             else {domainValue=index==placementValue?w->placement:index==preRollValue?static_cast<double>(w->arrival)-a:index==endOffsetValue?static_cast<double>(b)-w->arrival:index==fadeInValue?w->shape.fadeIn:w->shape.fadeOut;domainValue/=units;
                 if(index==fadeInValue || index==fadeOutValue){minimum=0;maximum=static_cast<double>(b-a-1)/units;}}

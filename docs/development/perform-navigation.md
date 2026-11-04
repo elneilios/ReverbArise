@@ -79,7 +79,7 @@ Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
 | Pre-roll, End Offset | Seconds (s), signed | 0.001 s | 6 decimal places | Checked integer sample timing |
 | Move Wet | Milliseconds (ms), signed | 1 ms | 3 decimal places | Checked integer sample placement |
 | Fade In/Out | Milliseconds (ms), nonnegative | 1 ms | 3 decimal places | Checked integer sample duration |
-| Level | dB, -60 to +12 | 0.1 dB | 2 decimal places | Existing finite float gain |
+| Level | dB, -60 to +12 | 1 dB (Shift: 0.1 dB) | 2 decimal places | Existing finite float gain |
 | Curve In/Out | Unitless, -1 to +1 | 0.01 | 3 decimal places | Existing finite double tension |
 
 Formatting does not reduce accepted typed/saved precision. Decimal timing input
@@ -97,7 +97,9 @@ test/diagnostic seam is retained for large-coordinate regressions. All ordinary
 position controls present musical position; other timing controls present s/ms.
 Full captions/units survive in tooltips and accessible titles when narrow labels
 ellipsize. Rotary controls are Tab reachable, support arrows, and use the existing
-contained 2-pixel aqua focus policy. Accessibility exposes accepted musical/time/
+contained 2-pixel aqua corner brackets requested in the owner's knob review.
+The brackets have open sides and 20%-side-length legs (8 pixels on a 42-pixel
+dial), matching the supplied reference. Accessibility exposes accepted musical/time/
 dB/unitless values and domain ranges, not the raw 0–1 pointer accumulator.
 
 Inspector status and retained/requested IR helper lines use `EllipsisLabel` to

@@ -8,7 +8,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 ## Shared controls and ownership
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 3). Its Learn/header table
+numerical authority (production standards revision 4; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -95,6 +95,13 @@ layout and Snap-button acceptance remain valid. `EllipsisLabel` preserves a
 single line's approved font metrics for overflowing inspector status/IR text.
 See [value/unit policy and guards](perform-navigation.md) and
 [audit/remediation evidence](../validation/2026-11-04-issue-46-knob-audit.md).
+
+The owner requested the revision-4 KnobValue focus variant: four open corner
+brackets, using existing aqua and 2-pixel stroke, with legs at 20% of the contained
+focus box side. It changes only the dial focus painter; text fields and other
+library families retain their own focus treatment. Native approval of the prepared
+variant remains pending; do not interpret the request as whole-family acceptance.
+Level wheel/arrow steps are 1 dB normally and 0.1 dB with Shift after this review.
 
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns

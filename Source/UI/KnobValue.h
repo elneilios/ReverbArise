@@ -15,7 +15,15 @@ class KnobValue final:public juce::Component
         {
             auto& look=getLookAndFeel();const auto box=look.getSliderLayout(*this).sliderBounds;const auto angles=getRotaryParameters();
             look.drawRotarySlider(g,box.getX(),box.getY(),box.getWidth(),box.getHeight(),static_cast<float>(owner.canonicalFraction),angles.startAngleRadians,angles.endAngleRadians,*this);
-            if(hasKeyboardFocus(false)){g.setColour(aqua);g.drawRoundedRectangle(controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke),radius,controlGeometry::focusStroke);}
+            if(hasKeyboardFocus(false))
+            {
+                const auto bounds=controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);
+                const auto leg=std::min(bounds.getWidth(),bounds.getHeight())*.2f;juce::Path brackets;
+                for(const auto corner:std::array<juce::Point<float>,4>{{bounds.getTopLeft(),bounds.getTopRight(),bounds.getBottomLeft(),bounds.getBottomRight()}})
+                {const auto dx=corner.x==bounds.getX()?1.f:-1.f,dy=corner.y==bounds.getY()?1.f:-1.f;
+                    brackets.startNewSubPath(corner.x+dx*leg,corner.y);brackets.lineTo(corner);brackets.lineTo(corner.x,corner.y+dy*leg);}
+                g.setColour(aqua);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
+            }
         }
         void mouseDown(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);juce::Slider::mouseDown(e);}
         void mouseDrag(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);juce::Slider::mouseDrag(e);}

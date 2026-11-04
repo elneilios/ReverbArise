@@ -147,7 +147,7 @@ Effective Snap SHALL quantize horizontal target, source-bound and editable envel
 - **AND** Ctrl bypasses snapping, Shift retains fine drag and Ctrl+Shift combines both without key-only movement or modifier-induced jumps
 - **AND** unavailable timing or a domain without a valid grid point rejects snapped publication with a reason; accepted dial/value/canvas feedback agrees
 - **AND** typed values remain exact and unsnapped, curve and level knobs remain continuous, and stale session/selection/mode/source/timing intents cannot publish
-- **AND** unsnapped wheel/arrow increments are independent of zoom: timing 1 ms, level 0.1 dB, curves 0.01; Shift divides by ten with internal sample rounding, while snapped actions advance one grid point
+- **AND** unsnapped wheel/arrow increments are independent of zoom: timing 1 ms, level 1 dB, curves 0.01; Shift divides by ten with internal sample rounding, while snapped actions advance one grid point
 - **AND** user-facing labels expose musical position or time units, seconds display six decimals, milliseconds three, level two and curves three, without reducing valid typed/saved precision
 
 ### Requirement: Perform navigation preferences survive reopen safely

@@ -137,6 +137,14 @@ curves with three; formatting never truncates saved precision. Musical fractions
 retain the existing up-to-nine-digit parser/display authority. Add range/unit and
 zoom-independent step tests; a one-sample internal floor is not a user unit mode.
 
+At the focused knob checkpoint the owner revised Level wheel/arrow increments to
+1 dB normally and 0.1 dB with Shift. They requested four open corner brackets
+around the focused dial and supplied a visual reference. Retain the existing aqua
+and 2-pixel stroke; bracket legs are 20% of the inside-stroke box side, with no
+continuous edge. This is a scoped KnobValue focus variant, not a layout change or
+a replacement for other controls' focus language. Standards revision 4 records
+the requested variant; actual native look/feel acceptance remains task 4.4's gate.
+
 ### 5. Backward-compatible UI preferences, no audio authority changes
 
 Store optional validated Perform view span/first, Snap requested flag and stable division key in the existing session JSON as a UI preference object. Planning main used session version 9/envelope 8; the subsequent read-only Export audit found its unmerged session version 10/envelope 8. Integrate into the then-current agreed merged decoder without downgrading Export or incrementing versions merely for optional UI fields. Readers of that same schema ignore unknown properties; compatibility with older schema versions remains governed by their actual decoder, not a claim of universal backward readability. Old states default to Fit, On, quarter beat. Invalid optional UI values reset only those preferences; never discard valid musical data. Retain per-instance preferences across editor close/reopen, project save/reopen and mode return; reset navigation ownership on session replacement. Coalesce UI preference publication outside the audio callback and follow host dirty policy. Do not persist active gestures, playhead, pending workers or inspection cursors. No host parameters or durable asset changes. Coordinate the additive object with #6 before either writer changes serialization.
