@@ -708,6 +708,26 @@ void SwellEngine::analysisJob(const Analysis& job)
 }
 void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64_t session,bool restoreOrCheck)
 {
+    const auto renderEpoch=learnRenderCancellation.load();
+    bool pendingAtStart;
+    {const juce::ScopedLock guard(lock);pendingAtStart=learnRequest.has_value();}
+    const auto superseded=[&]{return requested.provenance==Provenance::automatic && !requested.frozen
+        && (pendingAtStart || renderEpoch!=learnRenderCancellation.load());};
+    struct Finish
+    {
+        SwellEngine& engine;const Swell& requested;uint64_t session,epoch;bool pending;
+        ~Finish()
+        {
+            engine.renderPublicationWaiting=false;
+            if(requested.provenance!=Provenance::automatic || requested.frozen || (!pending && epoch==engine.learnRenderCancellation.load()))return;
+            const juce::ScopedLock guard(engine.lock);auto* current=find(engine.model,requested.id);
+            if(session!=engine.sessionGeneration.load() || !current || current->inputGeneration!=requested.inputGeneration
+                || current->provenance!=Provenance::automatic || current->frozen)return;
+            if(current->phase==Phase::rendering || current->phase==Phase::checking)
+            {current->phase=Phase::checking;current->progress=0;current->status="Queued after Generate Swells";}
+        }
+    }finish{*this,requested,session,renderEpoch,pendingAtStart};
+    if(superseded())return;
     // Cooperative page servicing keeps accepted audio and its neighbours resident
     // during long resampling/FFT work. Reserve the complete in-flight workspace
     // while nested page preparation runs; it must not spend the FFT's memory.
@@ -720,7 +740,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         reservation=std::min(previewMemoryBudget,required+static_cast<uint64_t>(std::max(int64_t{0},requested.ir.frames))*requested.ir.channels*sizeof(float));
     double lastPageService=0;bool pagePressure=false;
     const auto cancel=[&]{
-        if(pagePressure || cancelled(requested.id,requested.inputGeneration,session))return true;
+        if(superseded() || pagePressure || cancelled(requested.id,requested.inputGeneration,session))return true;
         const auto now=juce::Time::getMillisecondCounterHiRes();
         if(!offlineActive.load() && now-lastPageService>=40){lastPageService=now;
             {const juce::ScopedLock guard(lock);activeJobBytes=reservation;}
@@ -729,7 +749,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             {const juce::ScopedLock guard(lock);activeJobBytes=0;
                 if(retainedIR.contains(requested.id) && liveStatus.containsIgnoreCase("budget")){
                     pagePressure=true;report(requested,session,Phase::error,"IR replacement budget unavailable; accepted audio retained. Retry stopped or with fewer overlapping swells.");}}}
-        return pagePressure || cancelled(requested.id,requested.inputGeneration,session);};
+        return superseded() || pagePressure || cancelled(requested.id,requested.inputGeneration,session);};
     const auto failure=[&](const juce::String& error){report(requested,session,Phase::error,error);};
     if(requested.frozen){
         const auto& asset=requested.render;
@@ -886,6 +906,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
                 calibrationSession.gainRevision==approvedGainRevision?approvedEnergyTargetDb:0.0f);
         else prepareSourcePeakCalibration(calibrationSession,requested,*raw,reference,referenceEnd,committed.content,calibration,calibrationNote);
     }
+    while(renderPublicationHold.load() && !cancel()){renderPublicationWaiting=true;wait(2);}renderPublicationWaiting=false;
     const auto finalContext=contextProvider();
     if(finalContext.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(latest.time,finalContext.time)
         || sourceDependency(finalContext.capture.manifest,requested.sourceStart,renderInputEnd(requested))!=sourceDependency(latest.capture.manifest,requested.sourceStart,renderInputEnd(requested)))
@@ -894,7 +915,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     const juce::ScopedLock guard(lock); if(cancel()) return;
     auto& w=*find(model,requested.id); ++monitoringGeneration;
     const auto support=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd);
-    if(w.render!=committed || w.calibration!=calibration || w.supportOffset!=support)persistentChangedLocked();
+    if(w.render!=committed || w.calibration!=calibration || w.supportOffset!=support)persistentChangedLocked(false);
     w.render=committed;w.calibration=calibration;w.supportOffset=support;w.phase=Phase::ready; w.progress=1; w.status=cached?"Ready (verified saved render)":"Ready (committed render)";
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);

@@ -214,6 +214,15 @@ Restore rebuilds preview and permitted committed-render recovery, never pending
 source-context generation. Retired job identities are pruned within the existing
 4096-swell bound, without deleting old immutable files or saved project assets.
 
+New Generate admission supersedes earlier unfrozen automatic wet work through a
+cooperative worker cancellation epoch. The serial worker services Generate before
+remaining renders. Interrupted accepted jobs are kept eligible for recovery if
+the replacement does not commit. Completed protected/last-good render metadata is
+rebased into the request before planning when musical revision, session and
+selection are unchanged. Render output still notifies persistence, but does not
+invalidate musical authority; real edits and workflow/dependency changes retain
+their original publication fences.
+
 Learn accepts completed-pass boundaries through successful source settlement,
 including on a fresh instance whose previous empty manifest is still schema 1.
 A provisional RT Stop cannot queue legacy reconciliation. Live loop boundaries

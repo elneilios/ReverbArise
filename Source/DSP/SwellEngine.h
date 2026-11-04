@@ -134,6 +134,8 @@ public:
     void holdLearnGenerationForTesting(bool hold)noexcept{learnGenerationHold=hold;notify();}
     bool learnGenerationWaitingForTesting()const noexcept{return learnGenerationWaiting.load();}
     void holdLearnRendersForTesting(bool hold)noexcept{learnRenderHold=hold;notify();}
+    void holdRenderPublicationForTesting(bool hold)noexcept{renderPublicationHold=hold;notify();}
+    bool renderPublicationWaitingForTesting()const noexcept{return renderPublicationWaiting.load();}
     void setIsolateSelected(bool);
     void setIsolateDry(bool);
     void setPostRoll(double seconds);
@@ -175,7 +177,8 @@ public:
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
     std::function<void()> persistentChange;
-    void persistentChangedLocked() {++modelRevision;if(persistentChange)persistentChange();}
+    // Derived render metadata is durable, but is not a newer musical command.
+    void persistentChangedLocked(bool musicalChange=true) {if(musicalChange)++modelRevision;if(persistentChange)persistentChange();}
     uint64_t modelRevision=0;
     struct LearnRequest
     {
@@ -204,7 +207,9 @@ private:
     bool performPositionEstablished=false,learnUpdating=true,learnGenerating=false,learnUsable=false,learnFailed=false;
     juce::String learnReason,learnNotice;
     std::atomic<uint64_t> learnAnalysisCancellation{0},learnGenerationCancellation{0};
+    std::atomic<uint64_t> learnRenderCancellation{0};
     std::atomic<bool> learnAnalysisHold{false},learnAnalysisWaiting{false},learnGenerationHold{false},learnGenerationWaiting{false},learnRenderHold{false};
+    std::atomic<bool> renderPublicationHold{false},renderPublicationWaiting{false};
     CandidateIdentity learnIdentity(const PreviewContext&,bool provisional=false,uint64_t pass=0)const;
     LearnGenerationView learnViewLocked()const;
     void invalidateLearnLocked();

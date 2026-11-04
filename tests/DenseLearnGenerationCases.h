@@ -62,11 +62,19 @@ inline void denseLearnGenerationCases()
             for(const auto& swell:engine.savedSession().swells)std::cerr<<swell.name<<" phase="<<static_cast<int>(swell.phase)<<" "<<swell.status<<'\n';
         }
         REQUIRE(fileCount()==files && engine.snapshot().renderCount==before.renderCount);
+        const bool reducing=sensitivity==.2f && lowCount;
+        if(reducing)
+        {
+            // Keep an earlier high-density job in flight at publication. Generate
+            // must interrupt it and commit without waiting for Ready or this gate.
+            engine.holdRenderPublicationForTesting(true);engine.holdLearnRendersForTesting(false);
+            await([&]{return engine.renderPublicationWaitingForTesting();});
+        }
         REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});
         const auto generated=engine.savedSession();REQUIRE(generated.swells.size()>=61 && generated.swells.size()<=count+1);
         if(generated.swells.size()!=before.session.swells.size())REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
         if(sensitivity==.2f && !lowCount)lowCount=generated.swells.size();
-        else if(sensitivity==.2f){REQUIRE(highCount>lowCount && generated.swells.size()==lowCount);}
+        else if(sensitivity==.2f){REQUIRE(highCount>lowCount && generated.swells.size()==lowCount && engine.snapshot().renderCount==before.renderCount);}
         if(sensitivity==.8f)highCount=generated.swells.size();
         REQUIRE(sameSavedSwell(*find(generated,manualId),protectedWork));
         std::set<juce::String> ids;for(const auto& swell:generated.swells)REQUIRE(ids.insert(swell.id).second);
@@ -78,5 +86,6 @@ inline void denseLearnGenerationCases()
         REQUIRE(engine.savedSession().swells.size()==retained.swells.size() && processor.getWorkflowSnapshot().mode==workflow::Mode::capture);
     }
     REQUIRE(engine.residentBytes()<=previewMemoryBudget);
+    engine.holdLearnRendersForTesting(true);engine.holdRenderPublicationForTesting(false);
     std::cout<<"Dense Learn total-ms="<<(juce::Time::getMillisecondCounterHiRes()-started)<<" mapped-seconds=64 extent-seconds=96\n";
 }

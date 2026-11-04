@@ -1,8 +1,49 @@
 #include "LearnGenerationSupport.h"
 #include "DenseLearnGenerationCases.h"
+static void renderCompletionDuringAdmission()
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
+    fixture.record();fixture.ready();
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    engine.holdRenderPublicationForTesting(true);REQUIRE(engine.addTarget(4800));
+    const auto manual=engine.savedSession().primary;
+    await([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();
+    REQUIRE(!find(engine.savedSession(),manual)->render.present());
+    REQUIRE(fixture.generate());engine.holdLearnRendersForTesting(true);
+    engine.holdRenderPublicationForTesting(false);
+    await([&]{return !engine.snapshot().learnGeneration.generating;});
+    const auto result=engine.snapshot();
+    if(processor.getWorkflowSnapshot().mode!=workflow::Mode::live)std::cerr<<"Render/admission outcome: "<<result.learnGeneration.notice<<'\n';
+    REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
+    const auto* kept=find(result.session,manual);
+    REQUIRE(kept && kept->provenance==Provenance::manualCreated && kept->render.present() && kept->phase==Phase::ready);
+}
+static void interruptedRenderRecoversAfterFailure()
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
+    fixture.record();fixture.ready();engine.holdLearnRendersForTesting(true);REQUIRE(fixture.generate());
+    await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();
+    engine.holdRenderPublicationForTesting(true);engine.holdLearnRendersForTesting(false);
+    await([&]{return engine.renderPublicationWaitingForTesting();});
+    engine.holdLearnRendersForTesting(true);const auto before=engine.savedSession();const auto rendered=engine.snapshot().renderCount;
+    const auto ir=engine.assetDirectory().getChildFile(before.defaultIR.path);juce::MemoryBlock acceptedIR;
+    REQUIRE(ir.loadFileAsData(acceptedIR) && ir.replaceWithText("Injected replacement IR failure"));
+    REQUIRE(fixture.generate());
+    await([&]{const auto view=engine.snapshot().learnGeneration;return !view.generating && view.failed;});
+    const auto failed=engine.savedSession();REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture);
+    REQUIRE(failed.swells.size()==before.swells.size() && engine.snapshot().renderCount==rendered);
+    for(const auto& w:before.swells)REQUIRE(sameSavedSwell(w,*find(failed,w.id)));
+    REQUIRE(ir.replaceWithData(acceptedIR.getData(),acceptedIR.getSize()));
+    engine.holdRenderPublicationForTesting(false);engine.holdLearnRendersForTesting(false);
+    await([&]{return engine.snapshot().renderCount>rendered && find(engine.savedSession(),before.swells.front().id)->phase==Phase::ready;});
+}
 int main(){return runTest([]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    renderCompletionDuringAdmission();
+    interruptedRenderRecoversAfterFailure();
     GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
     REQUIRE(!engine.savedSession().autoGenerateOnStop);fixture.record(true);
     auto settled=fixture.ready();REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture);

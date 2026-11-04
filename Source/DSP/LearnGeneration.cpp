@@ -62,7 +62,7 @@ bool SwellEngine::requestLearnLocked(const PreviewContext& context,uint64_t sess
     }
     actionError.clear();LearnRequest request;request.candidates=learnCandidates;request.expected=model;request.source=context.capture.manifest;
     request.flow=flow;request.revision=modelRevision;request.cancellation=learnGenerationCancellation.load();request.automatic=automatic;
-    learnRequest=std::move(request);learnNotice.clear();learnFailed=false;notify();return true;
+    learnRequest=std::move(request);++learnRenderCancellation;learnNotice.clear();learnFailed=false;notify();return true;
 }
 bool SwellEngine::generateLearn(uint64_t expectedSession,uint64_t expectedPass,uint64_t serial)
 {
@@ -178,6 +178,14 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
 void SwellEngine::performLearnGeneration(LearnRequest request)
 {
     struct Finish{SwellEngine& engine;~Finish(){const juce::ScopedLock guard(engine.lock);engine.learnGenerating=false;engine.learnGenerationWaiting=false;}}finish{*this};
+    {
+        const juce::ScopedLock guard(lock);
+        // This worker may have finished an earlier render after request admission.
+        // Keep its accepted assets/progress without accepting a newer musical edit.
+        if(request.candidates->identity.session==sessionGeneration.load() && request.revision==modelRevision
+            && model.selected==request.expected.selected && model.primary==request.expected.primary)
+            request.expected=model;
+    }
     const auto cancel=[&]
     {
         const auto flow=workflowState->snapshot();

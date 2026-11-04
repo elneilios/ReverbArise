@@ -176,3 +176,14 @@ A successful Generate SHALL atomically publish a nonempty viable automatic resul
 #### Scenario: Empty or protected-only plan
 - **WHEN** no viable eligible automatic result remains even though old automatic definitions could be retired
 - **THEN** every prior definition remains, Learn stays selected and a nonfatal outcome explains empty or protected-only status
+
+### Requirement: Regeneration supersedes pending automatic wet work
+An admitted Generate SHALL cooperatively cancel superseded unfrozen automatic render work and take priority over queued renders. Completed render metadata SHALL NOT be mistaken for a newer musical edit or overwritten by an older request snapshot. Protected work and last-good assets SHALL remain intact. A failed/cancelled replacement SHALL leave interrupted accepted work eligible to resume; actual edit/settings/source/transport/restore changes SHALL still cancel publication.
+
+#### Scenario: Reduce while high-density renders are pending
+- **WHEN** the user requests a nonempty lower-density generation while an earlier automatic render is in flight
+- **THEN** the earlier job yields without waiting for the collection to become Ready, the replacement commits, obsolete jobs cannot publish and surviving pending work remains honestly queued/rendering
+
+#### Scenario: Protected render finishes after admission
+- **WHEN** a protected render finishes after Generate admission but before replacement preparation starts
+- **THEN** its completed render and calibration remain in the replacement, the request proceeds if musical authority is unchanged, and a genuine newer edit still cancels the request
