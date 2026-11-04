@@ -467,3 +467,19 @@ swells are still Queued/Rendering**, without waiting for Ready. No repeat native
 visual review or repeat of passing host steps is requested. Host outcome and
 actual sample rate/buffer remain pending; the agent has not changed the installed
 plugin or DAW session.
+
+## Owner confirmation of the pending-render retry
+
+On 2026-11-04, in response to the focused retry with the updated Release bundle
+while high-sensitivity swells were still Queued/Rendering, the owner confirmed:
+**"yes it cancels pending swells now! Much better"**. Record the reported
+pending-render cancellation retry as **passed** for the final `a235fa9` handoff.
+This supplements the earlier report that regeneration succeeds once all swells
+are Ready and the explicit native visual approval.
+
+FL Studio version is 26.1.7.5653 from the prior direct process inspection. The
+owner did not provide sample rate or buffer size; both remain **unreported**.
+No additional host steps, physical DPI or screen-reader coverage are inferred
+from this confirmation. Task 6.3 stays open for its incomplete host environment
+record; the confirmed retry does not need to be repeated. No production changes
+or repeat native suites are needed for this evidence-only update.
