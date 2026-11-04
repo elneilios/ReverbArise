@@ -480,6 +480,8 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>8)
     {swells->diagnostic("Unsupported or malformed plugin state");return;}
     const auto version=state->getIntAttribute("stateVersion");m3::Session session;juce::String error;
+    // Envelopes predating creative metadata also retain the legacy Stop journey.
+    if(version<3)session.autoGenerateOnStop=true;
     auto savedMode=workflow::Mode::capture;
     if(version>=8)
     {

@@ -6,6 +6,32 @@ int main() { return runTest([]
 {
     Session s; CaptureManifest map; juce::String error;
     {
+        Session fresh,decoded;juce::String encoded;
+        REQUIRE(!fresh.autoGenerateOnStop);
+        for(bool automatic:{false,true})for(bool stop:{false,true})
+        {
+            fresh.automaticProcessing=automatic;fresh.autoGenerateOnStop=stop;
+            REQUIRE(encode(fresh,encoded,error) && decode(encoded,decoded,error));
+            REQUIRE(decoded.autoGenerateOnStop==stop && decoded.automaticProcessing==automatic);
+        }
+        for(int version=1;version<=10;++version)
+        {
+            auto legacy=juce::JSON::parse(encoded);legacy.getDynamicObject()->setProperty("version",version);
+            legacy.getDynamicObject()->removeProperty("autoGenerateOnStop");
+            REQUIRE(decode(juce::JSON::toString(legacy),decoded,error) && decoded.autoGenerateOnStop);
+        }
+        fresh.autoGenerateOnStop=false;REQUIRE(encode(fresh,encoded,error) && decode(encoded,decoded,error));
+        for(int mutation=0;mutation<4;++mutation)
+        {
+            auto bad=juce::JSON::parse(encoded);auto* object=bad.getDynamicObject();
+            if(mutation==0)object->removeProperty("autoGenerateOnStop");
+            if(mutation==1)object->setProperty("autoGenerateOnStop",1);
+            if(mutation==2)object->setProperty("autoGenerateOnStop","false");
+            if(mutation==3)object->setProperty("autoGenerateOnStop",juce::var{});
+            REQUIRE(!decode(juce::JSON::toString(bad),decoded,error) && !decoded.autoGenerateOnStop);
+        }
+    }
+    {
         SongTime timing{true,0,0,48000,120,4,4};
         REQUIRE(defaultSwellName(34*48000,timing)=="Swell Bar 18.1");
         REQUIRE(defaultSwellName(35*48000,timing)=="Swell Bar 18.3");
@@ -77,7 +103,7 @@ int main() { return runTest([]
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
-    reject(json.replace("\"version\": 10", "\"version\": 11"));
+    reject(json.replace("\"version\": 11", "\"version\": 12"));
     reject(json.replace(second,first));
     reject(json.replace("\"gain\": -3", "\"gain\": \"nan\""));
     reject(json.replace("\"sourceEnd\": \"40\"", "\"sourceEnd\": \"3\""));
@@ -178,7 +204,7 @@ int main() { return runTest([]
     calibrated.calibration.referenceEnd=100;calibrated.calibration.sourceIdentity="source";calibrated.calibration.irIdentity="ir";
     calibrated.calibration.renderIdentity="render";calibrated.calibration.revision=candidateGainRevision;
     REQUIRE(musical.gainPolicy==GainPolicy::musical && encode(musical,json,error));
-    REQUIRE(json.contains("\"version\": 10") && decode(json,restored,error));
+    REQUIRE(json.contains("\"version\": 11") && decode(json,restored,error));
     REQUIRE(restored.gainPolicy==GainPolicy::musical && restored.gainRevision==candidateGainRevision && restored.liveWetDb==4);
     REQUIRE(restored.swells[0].calibration==calibrated.calibration);
     for(int version=1;version<=7;++version){auto old=juce::JSON::parse(json);old.getDynamicObject()->setProperty("version",version);

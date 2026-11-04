@@ -8,6 +8,7 @@ GitHub issue: [#38](https://github.com/elneilios/ReverbArise/issues/38). Real-so
 
 - Separate asynchronous candidate analysis from committed definitions and wet rendering; show provisional, updating and settled markers on the existing Learn dry timeline.
 - Add Generate Swells and the persistent manual-placement helper beneath sensitivity, reusing shared controls and the approved two-column composition.
+- On the initial successful generation handoff, select the earliest committed swell and reveal its lead-in/arrival through existing editor selection/navigation, without waiting for wet renders. Preserve restored and later editing positions; empty visits and unsuccessful generation do not consume the handoff.
 - Use one guarded, atomic replacement transaction for explicit Generate and eligible Auto-generate on Stop; preserve manual/edited/frozen and outside-scope work, stable matched IDs, suppression and immutable assets.
 - Default Auto-generate on Stop OFF for fresh projects; persist explicit values and restore ON for older state lacking the field. Enter Perform only after a nonempty changed generation commits, without waiting for wet rendering.
 - Allow sensitivity refinement and current-default IR assignment on repeated Generate without recapture. Preserve accepted capture contexts as historical provenance, rather than allowing them to override explicit generation intent.
@@ -24,7 +25,7 @@ None; extend the existing ownership boundaries.
 - `workflow-modes`: replace unconditional useful Stop entry with optional guarded generation and success-only Perform entry.
 - `automatic-swell-processing`: candidate lifecycle, generation snapshot, full-coverage atomic reconciliation and current-default assignment.
 - `swell-session`: persisted Auto-generate preference, conservative provenance migration and transient-job exclusion.
-- `swell-workspace`: Learn candidate overlay, Generate/helper/preference bindings and accessible readiness.
+- `swell-workspace`: Learn candidate overlay, Generate/helper/preference bindings, accessible readiness and the initial chronological Perform selection/reveal.
 - `song-timeline-audio`: keep accepted capture provenance immutable while distinguishing the current explicit generation snapshot from arrival-pass defaults.
 
 ## Impact

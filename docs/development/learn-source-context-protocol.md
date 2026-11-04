@@ -23,6 +23,30 @@ and leaves PCM, source-range metadata and existing swell assignments unchanged.
 
 ## Durable envelope and bounds
 
+Issue #38 introduces creative metadata **v11** with a strictly typed
+`autoGenerateOnStop` boolean. Fresh `Session`/plugin instances initialise OFF;
+supported creative versions 1–10 and processor envelopes 1–2 without creative
+metadata restore ON. Explicit v11 OFF/ON survives save/reopen independently of
+Automatic Swells visibility. Missing or non-boolean v11 values reject the whole
+restore, preserving accepted state. The processor XML envelope remains v8,
+capture manifests remain schema 2 and numeric workflow/plugin identities remain
+unchanged. Older binaries cannot read v11: retain pre-v11 saved project/cache
+copies for rollback; no down-save or destructive asset migration is provided.
+The preference codec alone does not change the Stop transaction; #38's remaining
+implementation tasks track the revised generation behavior.
+
+Provenance values remain `automatic=0`, `manualCreated=1`, `manualEdited=2`.
+Version-1 creative state with no provenance decodes conservatively as
+manualEdited; invalid newer origin values reject the complete state. Manual
+creation/confirmed suggestions start manualCreated. Musical edits, name and
+activity changes through `editChecked`, IR assignment/import, Reset All and
+freeze/unfreeze retain or promote manual ownership. Changing a display-only IR
+label does not infer ownership. Disabled state never infers automatic origin:
+only an explicitly persisted automatic definition can remain eligible. Frozen
+definitions are protected regardless of their original provenance. Existing
+automatic-target tests cover protected identity/edits/IR/render retention; engine
+tests cover actual edit, assignment, reset and freeze entry points.
+
 - Capture manifest schema 2 extends the existing immutable manifest with a table
   of generation contexts and ordered, nonoverlapping absolute context spans.
   Audio ranges, PCM format, project/instance IDs and managed storage roots retain

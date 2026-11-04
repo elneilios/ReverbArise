@@ -41,6 +41,28 @@ Capture SHALL reject ordinary creative editing and manual audition, with the exp
 
 ## ADDED Requirements
 
+### Requirement: Initial generated Perform entry selects and reveals the earliest swell
+The first successful Generate-to-Perform handoff SHALL select the earliest committed swell by chronological arrival and reveal its lead-in and arrival through shared editor navigation. Explicit and automatic triggers SHALL behave identically. List, waveform/envelope, inspector and Overview SHALL agree. Current zoom SHALL be retained where practical. Empty visits and unsuccessful generation SHALL NOT consume initial-handoff eligibility.
+
+#### Scenario: Creation order differs from song order
+- **WHEN** initial explicit or automatic generation commits multiple swells stored in a different creation order
+- **THEN** the earliest arrival in the committed collection is selected, its editor/Selected Swell controls appear and its lead-in/arrival are meaningfully visible without transport, audition or enablement changes
+
+#### Scenario: Restored or established editing position
+- **WHEN** an existing project opens with valid restored selection/navigation, or the user later returns from Learn to an established nonempty Perform workspace
+- **THEN** that selection and viewport remain instead of jumping to the first swell or replaying a generation handoff
+
+#### Scenario: Empty visits and unsuccessful generation
+- **WHEN** Perform was previously empty or a Generate request is failed, cancelled, empty or unchanged
+- **THEN** the empty visit does not consume initial eligibility, unsuccessful requests preserve their existing Learn outcomes and no selection or viewport is changed by those outcomes
+
+### Requirement: Initial framing does not wait for or follow delayed renders
+Initial Perform selection/reveal SHALL use available definition/source timing while reporting pending rendering honestly. Definition commit SHALL remain sufficient for Perform entry. Later render completion SHALL update content without overriding a newer selection or user-adjusted viewport. The handoff SHALL affect editor selection/navigation only and preserve serialized modes and existing capture/DSP behavior.
+
+#### Scenario: Wet rendering is delayed
+- **WHEN** the initial selected swell is still queued/rendering and the user subsequently selects another swell or pans/zooms before its render arrives
+- **THEN** the initial handoff uses available lead-in/arrival timing immediately, and delayed completion updates only matching content/status without stealing selection or moving the user's viewport
+
 ### Requirement: Learn offers one explicit Generate action
 Generate Swells SHALL be the primary action in Automatic Swells directly below Marker Sensitivity and any supported conditional parameters. It SHALL reuse the shared button family, retain the same label on repeated runs and expose accessible progress/unavailable reasons from accepted model readiness. Auto-generate on Stop SHALL use the shared switch family without competing navigation or a new card.
 

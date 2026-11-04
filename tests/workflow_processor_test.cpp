@@ -39,6 +39,35 @@ int main(){return runTest([]{
     }
     juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
+    {
+        REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);
+        juce::MemoryBlock fresh;p->getStateInformation(fresh);
+        const auto xml=juce::AudioProcessor::getXmlFromBinary(fresh.getData(),static_cast<int>(fresh.getSize()));
+        REQUIRE(xml && xml->getIntAttribute("stateVersion")==8 && xml->getStringAttribute("workflowMode")=="Capture");
+        auto copy=std::make_unique<PreverbAudioProcessor>(root.file);
+        for(int variant=0;variant<6;++variant)
+        {
+            auto fixture=std::make_unique<juce::XmlElement>(*xml);
+            auto* child=fixture->getChildByName("SwellSession");auto json=juce::JSON::parse(child->getAllSubText());
+            auto* object=json.getDynamicObject();object->setProperty("automaticProcessing",false);
+            if(variant<2)object->setProperty("autoGenerateOnStop",variant==1);
+            if(variant==2){object->setProperty("version",10);object->removeProperty("autoGenerateOnStop");}
+            if(variant==3){fixture->setAttribute("stateVersion",2);fixture->deleteAllChildElements();}
+            else {if(variant==4)object->removeProperty("autoGenerateOnStop");
+                if(variant==5)object->setProperty("autoGenerateOnStop",1);
+                child->deleteAllChildElements();child->addTextElement(juce::JSON::toString(json));}
+            const auto prior=copy->swellEngine().savedSession();juce::MemoryBlock bytes;
+            juce::AudioProcessor::copyXmlToBinary(*fixture,bytes);
+            copy->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));REQUIRE(copy->flushCaptureForTesting());
+            const auto restored=copy->swellEngine().savedSession();
+            REQUIRE(restored.autoGenerateOnStop==(variant>=4?prior.autoGenerateOnStop:variant!=0));
+            REQUIRE(copy->getWorkflowSnapshot().mode==workflow::Mode::capture && !copy->getWorkflowSnapshot().recapture);
+            juce::MemoryBlock saved;copy->getStateInformation(saved);
+            const auto result=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
+            REQUIRE(result && result->getIntAttribute("stateVersion")==8);
+            REQUIRE(juce::JSON::parse(result->getChildByName("SwellSession")->getAllSubText())["autoGenerateOnStop"].isBool());
+        }
+    }
     WorkflowHost host;p->prepareToPlay(1000,64);p->setPlayHead(&host);juce::AudioBuffer<float> block(2,64);juce::MidiBuffer midi;
     const auto process=[&](int64_t at,bool playing,float value){host.position.setIsPlaying(playing);host.position.setTimeInSamples(at);
         host.position.setPpqPosition(at/500.0);host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});

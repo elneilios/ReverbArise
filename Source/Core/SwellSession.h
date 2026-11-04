@@ -79,6 +79,7 @@ struct Session
     float auditionDb = 0, sensitivity = 0.5f;
     double separationSeconds = 0.08;
     bool autoRegenerate = false;
+    bool autoGenerateOnStop = false;
     bool mappingEnabled = true, automaticProcessing = true, autoMarkersEnabled = true;
     bool isolateSelected = false, isolateDry = false;
     bool liveEnabled = true;
