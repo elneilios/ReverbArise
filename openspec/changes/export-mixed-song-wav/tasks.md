@@ -49,6 +49,8 @@
 - [x] 6.2 Obtain one grouped final FL Studio acceptance: preview versus saved 0/50/100% composition, real ready-WAV drag into Playlist at song origin with cancel/unsupported Save fallback, Export bypass and replacement-source muting guidance, and save/reopen of percentage/revision. Record actual host version/rate/buffer/DPI and untested parts without repeating automated edge cases absent concrete host issues.
 - [x] 6.3 Cross-check every #6 criterion against delta/model/sample/file/component/visual/host evidence; confirm #5/#8/#38 and concurrent header/performance plans remain separate, Learn Stop→Perform and captured provenance remain unchanged, run strict all-spec validation and diff checks, and leave any unresolved acceptance unchecked.
 
+- [x] 6.4 Address PR #50 publication retry review: inject transient timing unavailability specifically after the WAV is published, recover readiness without duplicate WAVs or accepting stale requests, preserve accepted files, and run focused Debug/Release engine checks with prior unaffected full-suite/host approval retained as authorized by the owner.
+
 ## 7. Internal preview positioning
 
 - [x] 7.1 Implement ephemeral ready-revision click/drag seek authority over the existing paged preview; test stopped parking, seeked PCM/ramp/cursor, playing/latest-intent handoff, Stop/mix/mode/restore cancellation and unchanged composition/file/state identities.

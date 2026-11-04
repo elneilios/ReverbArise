@@ -156,14 +156,14 @@ void SwellEngine::serviceExportPreview()
 void SwellEngine::prepareExport(const PreviewContext& context)
 {
     if(!workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise){
-        const juce::ScopedLock guard(lock);exportAttempt.clear();exportState={};detailWork.reset();detailSerial.fetch_add(1);return;
+        const juce::ScopedLock guard(lock);exportAttempt.clear();exportRetryFile.reset();exportState={};detailWork.reset();detailSerial.fetch_add(1);return;
     }
     // A coherent host-time read can temporarily be unavailable during callback
     // publication. Wait as inspect/prepareTransport do; do not turn that miss
     // into a new dependency key which cancels a verified current preview.
     if(!context.time.valid)return;
     std::shared_ptr<const PreparedExport> previous;std::shared_ptr<const SongMixDetail> previousDetail;
-    Session accepted;ExportRequest owner;uint64_t pass=0,revision=0,failedDelivery=0;juce::String notice,key,error,deliveryFailure;
+    Session accepted;ExportFile retryFile;ExportRequest owner;uint64_t pass=0,revision=0,failedDelivery=0;juce::String notice,key,error,deliveryFailure;
     const auto directory=instanceRoot(context.capture.manifest);
     {
         const juce::ScopedLock guard(lock);
@@ -175,6 +175,8 @@ void SwellEngine::prepareExport(const PreviewContext& context)
             +":"+context.capture.reference+":"+juce::String(context.captureGeneration)+":"+juce::String(static_cast<int>(mapped))+":"+juce::String(origin)
             +":"+juce::String(context.time.rate,12)+":"+juce::String(context.time.bpm,12)+":"+juce::String(context.time.numerator)+":"+juce::String(context.time.denominator);
         if(key==exportAttempt)return;
+        if(exportRetryFile && exportRetryFile->first!=key)exportRetryFile.reset();
+        if(exportRetryFile)retryFile=exportRetryFile->second;
         if(exportAttempt.isEmpty() && exportState.phase==ExportPhase::error && exportState.session==owner.session && exportState.pass==pass){failedDelivery=exportState.delivery;deliveryFailure=exportState.deliveryMessage;}
         previous=exportState.prepared?exportState.prepared:exportState.previous;previousDetail=exportState.detail;
         if(exportState.session!=owner.session || exportState.pass!=pass){previous.reset();previousDetail.reset();}
@@ -232,6 +234,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
     // is retained, and recovery publishes to a new unique path.
     for(auto it=accepted.exportState.history.rbegin();it!=accepted.exportState.history.rend();++it)
         if(it->composition==plan->identity && verifyExportFile(directory,*it,error,cancelled)){file=*it;break;}
+    if(file.path.isEmpty() && retryFile.composition==plan->identity && verifyExportFile(directory,retryFile,error,cancelled))file=retryFile;
     if(cancelled())return;
     if(file.path.isEmpty()){
         if(accepted.exportState.history.size()>=maximumExportRevisions){fail("Export revision history is full; earlier WAV files retained");return;}
@@ -239,10 +242,18 @@ void SwellEngine::prepareExport(const PreviewContext& context)
     }
     const auto latest=contextProvider();
     if(latest.capture.reference!=context.capture.reference || latest.capture.manifest.projectId!=owner.project.toStdString()
-        || latest.capture.manifest.instanceId!=owner.instance.toStdString() || !transportMappingMatches(context.time,latest.time))return;
+        || latest.capture.manifest.instanceId!=owner.instance.toStdString() || !transportMappingMatches(context.time,latest.time)){
+        const juce::ScopedLock guard(lock);
+        // Retry a missed publication check without accepting stale timing or
+        // writing another immutable WAV for this exact request. Keep it private
+        // until the existing ownership and compatibility checks all succeed.
+        if(!cancelled() && exportAttempt==key){exportRetryFile=std::make_pair(key,file);exportAttempt.clear();}
+        return;
+    }
     auto prepared=std::make_shared<PreparedExport>();prepared->plan=plan;prepared->metrics=mix.metrics();prepared->file=file;prepared->acceptedNotice=notice;
     {
         const juce::ScopedLock guard(lock);if(cancelled())return;
+        exportRetryFile.reset();
         const auto before=model.exportState;
         if(std::none_of(model.exportState.history.begin(),model.exportState.history.end(),[&](const auto& f){return f.path==file.path;}))model.exportState.history.push_back(file);
         model.exportState.completedPath=file.path;model.exportState.desiredIdentity=plan->identity;

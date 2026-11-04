@@ -233,3 +233,41 @@ above is retained as a known fixture limitation, not silently removed.
 
 OpenSpec is implemented and accepted, not synced/archived by this agent. The
 owner retains merge and archive authority. The native approval window is retained.
+
+## PR #50 review — transient final publication timing read
+
+The reported path was reachable: exportAttempt had been set before the final
+contextProvider compatibility read, so returning on that miss could suppress all
+same-key retries. The correction revokes only that unfinished attempt and keeps
+one private request-keyed ExportFile reference. A later valid pass re-verifies
+and reuses the immutable file; the full capture/timing/ownership checks still
+precede Ready/history publication. Changed keys, mode exit, restore and Clear
+release the private reference. Previous accepted files remain untouched; no PCM
+or worker wait loop is added.
+
+The deterministic engine regression makes contextProvider return unavailable
+timing only once a new final-name Swells WAV exists. Its first injected miss
+therefore occurs at the final publication checkpoint, not the early worker read.
+While timing remains unavailable it checks Preparing, prior file/history retained,
+no current playback and exactly one new WAV. Restoring timing must reach Ready
+with that same single file. A second case supersedes the deferred request and
+asserts its mix never enters accepted history. Existing seek/audio allocation,
+restore, file recovery and mode-exit cases also run in this focused executable.
+
+Actual validation (focused scope explicitly requested by owner):
+- Debug wrapper build `20261104-155610-dfc4812d`: pass, exit 0.
+- Debug preverb_song_export_engine_test: pass, exit 0;
+  log `out/issue6-publication-retry-debug.log`.
+- Release wrapper build `20261104-155811-56641249`: pass, exit 0.
+- Release preverb_song_export_engine_test: pass, exit 0;
+  log `out/issue6-publication-retry-release.log`.
+- Release preverb_song_export_test: pass, exit 0; file/sample/fault/working-set
+  regressions, log `out/issue6-publication-file-regression.log`.
+- Strict OpenSpec 19/19 and diff checks pass.
+
+These are direct native focused tests, not a new full CTest run. The previous
+46/46 full-suite results and accepted UI/FL Studio evidence are retained for
+unaffected behavior, as the owner requested. No further host testing or visual
+approval is needed for this engine-only correction. Source: `58d5872` plus the
+publication-retry review diff; build does not install the bundle automatically.
+Updated Release inner binary SHA-256: `EE136957767C9AE61950F8C9A037F43F7421F63929BD4452A6C5DBE67F5C6E28`; bundle path remains `out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`.

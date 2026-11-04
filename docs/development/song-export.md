@@ -191,12 +191,11 @@ Position is transient engine metadata, cleared with mix/session/mode changes;
 it does not dirty the project, change export/file identity, regenerate wet or
 seek the DAW. The callback still consumes only fixed pages. The worker reads the
 same immutable WAV from the selected sample, with no new audio engine. Pending
-last-good plots cannot seek. Wheel/Shift-wheel, Shift-drag and Fit remain viewport
-actions, independent of preview position. Shared #46 controls remain deferred.
+last-good plots cannot seek. Wheel/Shift-wheel, right-drag and Fit remain viewport
+actions, independent of preview position. Shared #46 controls are integrated.
 
 PR #49's shared Zoom/Fit row and musical ruler now provide the Export controls;
-the earlier deferral is fulfilled in implementation, with integrated approval
-pending. The adapter exposes accepted span limits and keeps complete-audible Fit.
+the earlier deferral is fulfilled, with native owner approval recorded. The adapter exposes accepted span limits and keeps complete-audible Fit.
 The row owns only intents; Export guards their session/pass/composition and maps
 the logarithmic scale without duplicating limit calculations. The ruler paints
 accepted absolute timing, never DAW seeking, Snap or an independent clock.
@@ -205,3 +204,12 @@ An unavailable coherent worker timing read waits, as existing transport
 preparation does; it must not create a spurious invalid revision and revoke Play.
 This does not substitute timing: callback validity/compatibility gates still
 apply, and valid but incompatible host mapping remains an error.
+
+If final worker publication cannot confirm the capture identity/timing, it does
+not expose Ready or advance the completed reference. One private, request-keyed
+ExportFile reference allows a later valid pass to independently verify/reuse the
+already published immutable WAV instead of writing a duplicate. Retries re-run
+composition/ownership checks; changed keys, restore/Clear or leaving Export discard
+the private reference. It contains bounded file metadata, no PCM, and is not saved
+or exposed for delivery before compatibility succeeds. Previous accepted files
+and last-good display remain intact. No waiting loop blocks the worker.

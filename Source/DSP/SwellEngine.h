@@ -250,6 +250,7 @@ private:
     uint64_t exportPreviewTicket=0;
     int64_t exportPreviewNext=0,exportPreviewStart=0;
     juce::String exportAttempt;
+    std::optional<std::pair<juce::String,ExportFile>> exportRetryFile;
     std::atomic<uint64_t> exportRequest{0};
     std::atomic<bool> exportHold{false},exportWaiting{false};
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};

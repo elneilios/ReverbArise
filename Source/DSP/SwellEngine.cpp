@@ -92,7 +92,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 {
     juce::String error; if(!validate(session,error)) { const juce::ScopedLock guard(lock); message=error; return; }
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
-    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();
+    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();exportRetryFile.reset();
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
@@ -111,7 +111,7 @@ void SwellEngine::clear()
     {diagnostic("Clear requires stopped idle Learn mode");return;}
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
     publishGenerationLocked(model,UINT64_MAX,true);
-    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();
+    exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();exportRetryFile.reset();
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();

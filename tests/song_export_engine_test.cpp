@@ -13,7 +13,14 @@ int main(){return runTest([]{
     for(int pass=0;pass<16;++pass){for(int n=0;n<5000;++n){source[n*2]=.04f+pass*.003f+(n%31)*.0001f;source[n*2+1]=.03f+pass*.002f+(n%17)*.0002f;}
         REQUIRE(capture.commit(pass*5000,1000,source.data(),5000));}const PreviewContext context{capture.snapshot(),{true,950,3.8,1000,240,4,4},0};
     workflow::State flow;std::atomic<unsigned> changes{0},missingTimeReads{0};std::atomic<bool> missingTime{false};
-    SwellEngine engine(root.file,[&]{auto next=context;if(missingTime.load()){next.time.valid=false;++missingTimeReads;}return next;},[&]{++changes;});engine.setAutomaticProcessing(false);
+    std::atomic<bool> publicationMissingTime{false};std::atomic<unsigned> publicationMisses{0};
+    juce::File publicationDirectory;int publicationFileCount=0;
+    SwellEngine engine(root.file,[&]{auto next=context;if(missingTime.load()){next.time.valid=false;++missingTimeReads;}
+        // A new final-name file exists only after publishSongExport completes.
+        // The first provider read after it appears is the final publication check.
+        if(publicationMissingTime.load() && publicationDirectory.findChildFiles(juce::File::findFiles,false,"Swells-*.wav").size()>publicationFileCount){
+            next.time.valid=false;++publicationMisses;}
+        return next;},[&]{++changes;});engine.setAutomaticProcessing(false);
     waitFor([&]{return engine.savedSession().defaultIR.present();});
     REQUIRE(engine.addTarget(1000));const auto id=engine.savedSession().primary;
     const auto ir=root.file.getChildFile("accepted.wav");writeTestWav(ir,1,1000,std::vector<float>(201,.001f));
@@ -155,6 +162,34 @@ int main(){return runTest([]{
         const auto recovered=engine.snapshot().songExport;
         REQUIRE(recovered.delivery==id && !recovered.dragReady && recovered.deliveryMessage.contains("missing"));
         REQUIRE(verifyExportFile(engine.assetDirectory(),recovered.prepared->file,error));
+    }
+    {
+        publicationDirectory=engine.assetDirectory().getChildFile("exports");
+        const auto countFiles=[&]{return publicationDirectory.findChildFiles(juce::File::findFiles,false,"Swells-*.wav").size();};
+        const auto before=engine.savedSession().exportState;const auto previous=engine.snapshot().songExport.prepared->file;
+        publicationFileCount=countFiles();publicationMissingTime=true;
+        REQUIRE(engine.setExportMix(.43f,engine.assignmentEpoch()));
+        waitFor([&]{return publicationMisses.load()>=3;});
+        const auto waiting=engine.snapshot().songExport;
+        REQUIRE(waiting.phase==ExportPhase::preparing && !waiting.prepared && waiting.previous->file==previous);
+        REQUIRE(engine.savedSession().exportState.history==before.history && engine.savedSession().exportState.completedPath==before.completedPath);
+        REQUIRE(countFiles()==publicationFileCount+1 && !engine.playExport(engine.assignmentEpoch()));
+        publicationMissingTime=false;
+        waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        const auto recovered=engine.snapshot().songExport.prepared->file;
+        REQUIRE(recovered.wet==.43f && countFiles()==publicationFileCount+1);
+        REQUIRE(engine.savedSession().exportState.history.size()==before.history.size()+1);
+        REQUIRE(verifyExportFile(engine.assetDirectory(),recovered,error) && verifyExportFile(engine.assetDirectory(),previous,error));
+        REQUIRE(!engine.snapshot().songExport.previewRequested);
+        // A pending retry cannot publish after a newer mix request supersedes it.
+        publicationFileCount=countFiles();publicationMisses=0;publicationMissingTime=true;
+        REQUIRE(engine.setExportMix(.44f,engine.assignmentEpoch()));
+        waitFor([&]{return publicationMisses.load()>=3;});
+        REQUIRE(engine.setExportMix(.45f,engine.assignmentEpoch()));publicationMissingTime=false;
+        waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        REQUIRE(engine.snapshot().songExport.prepared->file.wet==.45f && countFiles()==publicationFileCount+2);
+        const auto history=engine.savedSession().exportState.history;
+        REQUIRE(std::none_of(history.begin(),history.end(),[](const auto& file){return file.wet==.44f;}));
     }
     engine.holdExportForTesting(true);REQUIRE(engine.setExportMix(.15f,engine.assignmentEpoch()));
     waitFor([&]{return engine.exportWaitingForTesting();});const auto beforeExit=engine.savedSession().exportState;
