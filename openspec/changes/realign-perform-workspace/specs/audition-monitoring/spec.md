@@ -37,6 +37,16 @@ Looping, Preparing or Unavailable, with full reasons available without shrinking
 - **THEN** attenuation is disclosed, and unavailable dry is not padded or silently replaced by Wet only
 - **AND** saved legacy trim remains available in Settings for legacy monitoring, while live-level mode ignores it explicitly
 
+### Requirement: Audition strip uses one compact aligned row
+Following owner approval of actual native metrics, Perform SHALL put status to
+the right of Play/Stop/Wet only with equal gaps between those buttons and a slim
+strip derived from existing row/inset tokens. Overview SHALL use the same shared
+section-heading font role as the other section headings.
+
+#### Scenario: Slim row remains readable
+- **WHEN** the approved strip is displayed at supported sizes/scales, including empty/dense states
+- **THEN** controls and status share a row with equal action gaps, full contained bounds and continuous rules, helper overflow ellipsizes without shrinking, and Overview typography agrees with other section headings
+
 ## REMOVED Requirements
 
 ### Requirement: Audition blend has explicit endpoints

@@ -477,7 +477,8 @@ juce::Rectangle<float> SwellOverview::detailBounds()const
 void SwellOverview::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);
-    g.setColour(ui::text);g.setFont(ui::fontFor(*this,ui::headingSize,juce::Font::bold));g.drawText("Overview",0,0,getWidth(),24,juce::Justification::left);
+    ui::applyTextRole(g,ui::TextRole::sectionHeading);
+    g.drawText("Overview",getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight),juce::Justification::centredLeft);
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
     g.setColour(ui::outline);g.drawRoundedRectangle(lane,6,1);
     if(timeline.capture.manifest.ranges.empty())

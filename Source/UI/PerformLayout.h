@@ -15,13 +15,13 @@ inline constexpr int toolbarGap=8,snapWidth=96,gridWidth=136,bandInset=8;
 struct PerformLayout
 {
     juce::Rectangle<int> header,work,list,detail,inspector,audition,overview,info,toolbar,readout;
-    explicit PerformLayout(juce::Rectangle<int> bounds)
+    explicit PerformLayout(juce::Rectangle<int> bounds,int auditionBandHeight=performGeometry::auditionHeight)
     {
         using namespace performGeometry;
         auto area=bounds.reduced(workspaceGeometry::outerInset(bounds.getWidth()));
         header=area.removeFromTop(workspaceGeometry::headerHeight);
         info=area.removeFromBottom(infoHeight);overview=area.removeFromBottom(overviewHeight);
-        audition=area.removeFromBottom(auditionHeight);work=area;
+        audition=area.removeFromBottom(auditionBandHeight);work=area;
         list=area.removeFromLeft(bounds.getWidth()<1200?listWidth:wideListWidth);area.removeFromLeft(columnGap);
         inspector=area.removeFromRight(bounds.getWidth()<1200?inspectorWidth:wideInspectorWidth);area.removeFromRight(columnGap);
         toolbar=area.removeFromBottom(toolbarHeight);readout=area.removeFromBottom(readoutHeight);detail=area;

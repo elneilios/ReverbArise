@@ -314,3 +314,18 @@ Fit/seek/pan/file ownership; this replaces earlier unresolved-coordination statu
 3. Roll approved roles into Perform, implement viewport/grid gestures and optional UI preferences with meaningful regressions.
 4. Run final native/standards/host gates, record exact tested binary and open/update one implementation PR without merging or auto-closing issues.
 5. Rollback uses the prior binary; unknown UI preferences can be ignored while source, renders, musical definitions and external assets remain intact. No cleanup or rename is part of rollback.
+
+### Audition row revision requested after listening checkpoint
+
+The owner requests status to the right of the action buttons, equal Play-to-Stop
+and Stop-to-Wet only gaps, and a slimmer strip. Propose the existing 36-high row
+plus 8-pixel top/bottom insets: 52 pixels, reclaiming 20 for detail. Both button
+gaps are 8; status follows the toggle with existing related spacing and ellipsizes
+without font compression. Preview this height through a temporary instance-only
+native review seam; normal production retains 72/two-line layout until actual
+metric approval. Remove the temporary variant when adopting approved geometry.
+Overview currently uses a legacy Bold draw call instead of the shared section
+heading role. Align it to existing Inter SemiBold 21/30-box typography; no new
+font role, control family or density token is introduced. Test title ink against
+the actual Audition label font, row bounds/gaps, full rules and software scales.
+No audio, persistence or audition semantics change in this layout refinement.

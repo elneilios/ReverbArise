@@ -17,6 +17,10 @@ The working Perform editor still uses legacy composition and navigation while Le
 - Preserve source PCM, durable IDs/assets, workflow guards and existing audition authority. Handle pending/failed renders, sparse coverage and return from other modes without inventing ready audio.
 - Owner-requested final knob refinement: double-click reset and a right-click reset menu. Use model defaults for neutral/relative values and automatic wet start; Target/Source restore positions first loaded for that swell in the current editor. Explicit resets are unsnapped, guarded and limited to the chosen control's canonical operation; initial positions are ephemeral, not new project state.
 
+Owner-requested audition visual follow-up: one inline status/actions row, equal
+button gaps and proposed 52-pixel strip, gated by actual native metric approval;
+Overview reuses the established section-heading typography.
+
 ## Capabilities
 
 ### New Capabilities

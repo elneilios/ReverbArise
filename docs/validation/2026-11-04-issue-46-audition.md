@@ -1,5 +1,11 @@
 # Issue #46 — audition refinement, 4 November 2026
 
+Latest visual feedback is tracked in the
+[slim-strip native checkpoint](2026-11-04-issue-46-audition-strip.md): 52-pixel
+single-row proposal, equal action gaps and shared Overview heading typography.
+That metric is review-only until actual owner approval; the host bundle below
+remains unchanged. Audio/state results below remain applicable.
+
 The owner reported that the host editing looked/felt good, then requested finite
 audition looping, a Wet only toggle default Off, removal of the row Trim reset
 and a status review. Their balance clarification is the level of DAW transport

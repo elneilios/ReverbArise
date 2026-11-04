@@ -1,5 +1,10 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Latest: the owner requested a slimmer inline audition row and heading alignment.
+The [isolated 52-pixel native checkpoint](2026-11-04-issue-46-audition-strip.md)
+is open; production adoption awaits actual metric approval. OpenSpec is now
+**19/21 complete**, pending slim adoption (5.4) and final host acceptance (6.2).
+
 Current audition refinement is source `4e7aff9`, with **55/55 native Release
 CTests passed** in 152.64 s through the full wrapper. The owner approved layout,
 Snap, integrated editing, revised knob steps/focus and reset, and reported the

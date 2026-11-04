@@ -53,5 +53,11 @@ The refined row's actual native checkpoint is directly open for review; final
 host audition listening is pending. Existing layout, Snap and knob approvals
 remain valid.
 
+Subsequent owner feedback requests a single-row 52-pixel strip with status to
+the right and equal 8-pixel action gaps. That native metric proposal is review-only
+until approval; production retains 72 pixels meanwhile. Overview now uses the
+established Inter SemiBold section-heading role. See the
+[slim-strip checkpoint](../validation/2026-11-04-issue-46-audition-strip.md).
+
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).

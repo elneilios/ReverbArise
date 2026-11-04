@@ -275,7 +275,7 @@ void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
     if(learningLayout || exportLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
-    const m3::ui::PerformLayout perform(getLocalBounds());
+    const m3::ui::PerformLayout perform(getLocalBounds(),slimAuditionReview?m3::ui::performGeometry::toolbarControlHeight+2*m3::ui::performGeometry::bandInset:m3::ui::performGeometry::auditionHeight);
     for(const auto y:{perform.header.getBottom(),perform.work.getBottom(),perform.audition.getBottom(),perform.overview.getBottom()})
         g.drawHorizontalLine(y,static_cast<float>(perform.header.getX()),static_cast<float>(perform.header.getRight()));
     for(const auto x:{perform.list.getRight()+m3::ui::performGeometry::columnGap/2,perform.inspector.getX()-m3::ui::performGeometry::columnGap/2})
@@ -338,7 +338,7 @@ void PreverbAudioProcessorEditor::resized()
     noticeBar.setBounds(layout.notice);
     if(learningLayout || exportLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);
         learnWorkspace.setBounds(body);exportWorkspace.setBounds(body);return;}
-    const m3::ui::PerformLayout perform(getLocalBounds());
+    const m3::ui::PerformLayout perform(getLocalBounds(),slimAuditionReview?m3::ui::performGeometry::toolbarControlHeight+2*m3::ui::performGeometry::bandInset:m3::ui::performGeometry::auditionHeight);
     using namespace m3::ui;
     for(auto* component:std::initializer_list<juce::Component*>{&markerButton,&markerLabel,&markerKnob,&recaptureExisting,&headerStatus,&spanLabel}){component->setBounds({});component->setVisible(false);}
     regenerationLabel.setBounds({});regenerationKnob.setBounds({});
@@ -355,9 +355,10 @@ void PreverbAudioProcessorEditor::resized()
     editorReadout.setBounds(perform.readout);editorReadout.setName("editorReadout");
     timeline.setBounds(perform.detail.withTrimmedTop(performGeometry::columnInset));
     auto audition=perform.audition.reduced(0,performGeometry::bandInset);auto auditionRow=audition.removeFromTop(36);
-    auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(24);
+    auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(slimAuditionReview?performGeometry::toolbarGap:24);
     auditionWetOnly.setBounds(auditionRow.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
-    monitorStatus.setBounds(audition.withTrimmedLeft(112));
+    if(slimAuditionReview){auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);}
+    else monitorStatus.setBounds(audition.withTrimmedLeft(112));
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info);
     const auto width=inspectorWidth-16;inspectorContent.setSize(width,650);
     auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
