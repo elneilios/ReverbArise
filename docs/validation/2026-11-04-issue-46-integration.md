@@ -106,6 +106,9 @@ no audio device. Its separate review strip selects sparse/empty/dense scenes and
 four supported sizes. Launch: copied validated executable at
 `out/review-issue46-integrated-final/perform-integrated-review.exe --review-integrated`.
 Native layout/Snap family approvals are retained, not repeated.
+The owner explicitly approved this integrated native preview on 4 November 2026:
+“Approve integrated native preview; FL Studio smoke pending.” Task 6.2 remains
+open only for the final host smoke; native acceptance does not need repeating.
 One brief final FL Studio smoke remains: usual-scale editing with Ctrl, Shift
 and Ctrl+Shift; Zoom/Fit; mode return; project save/reopen. No repeat of accepted
 Export delivery/mix tests is requested. Actual Windows DPI, screen-reader and
