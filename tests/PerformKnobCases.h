@@ -55,7 +55,7 @@ void Composition::verifyKnobs()
     // Accessibility reports domain values and friendly names, never the dial fraction.
     panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);actual.grabKeyboardFocus();
     REQUIRE(actual.hasKeyboardFocus(false));auto* handler=actual.getAccessibilityHandler();REQUIRE(handler && handler->getTitle().contains("End Offset"));
-    auto* accessible=handler->getValueInterface();REQUIRE(accessible && accessible->getCurrentValueAsString()==cell("endOffset").valueField().getText());
+    auto* accessible=handler->getValueInterface();REQUIRE(accessible && accessible->getCurrentValueAsString()==m3::ui::preciseValue(accessible->getCurrentValue()));
     const auto position=at(A::end);REQUIRE(std::abs(accessible->getCurrentValue()-(position-current().arrival)/48000.)<1.e-8);
     panel->modifierKeysChanged(juce::ModifierKeys::ctrlModifier);accessible->setValue(.321);REQUIRE(at(A::end)==current().arrival+15408);
     const auto focus=actual.createComponentSnapshot(actual.getLocalBounds());REQUIRE(focus.getPixelAt(1,actual.getHeight()/2)!=aqua);
@@ -78,7 +78,7 @@ void Composition::verifyKnobs()
     actual.mouseWheelMove(event(start,juce::ModifierKeys::ctrlModifier|juce::ModifierKeys::shiftModifier),wheel);REQUIRE(at(A::end)==78005);
     load(original);panel->timelineComponent().setSnap(false);const auto beforeLevel=current().shape.gainDb;
     auto& level=cell("swellLevel").valueKnob();REQUIRE(level.keyPressed(juce::KeyPress(juce::KeyPress::rightKey,{},0)));
-    REQUIRE(std::abs(current().shape.gainDb-beforeLevel-1)<1.e-5 && cell("swellLevel").valueField().getText().endsWith(".00"));
+    REQUIRE(std::abs(current().shape.gainDb-beforeLevel-1)<1.e-5 && cell("swellLevel").valueField().getText()==m3::ui::compactValue(current().shape.gainDb,1));
     const auto lp=level.getLocalBounds().getCentre().toFloat();
     const auto levelWheel=[&](juce::ModifierKeys mods){const juce::Time time(++stamp);juce::MouseEvent input(juce::Desktop::getInstance().getMainMouseSource(),lp,mods,0,0,0,0,0,&level,&level,time,lp,time,0,false);level.mouseWheelMove(input,wheel);};
     levelWheel({});REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2)<1.e-5);
@@ -86,7 +86,7 @@ void Composition::verifyKnobs()
     REQUIRE(level.keyPressed(juce::KeyPress(juce::KeyPress::leftKey,juce::ModifierKeys::shiftModifier,0)));REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2)<1.e-5);
     auto& curve=cell("curveInTension").valueKnob();const auto beforeCurve=current().shape.inTension;
     REQUIRE(curve.keyPressed(juce::KeyPress(juce::KeyPress::rightKey,juce::ModifierKeys::shiftModifier,0)));REQUIRE(std::abs(current().shape.inTension-beforeCurve-.001)<1.e-8);
-    REQUIRE(cell("preRoll").valueField().getText().fromLastOccurrenceOf(".",false,false).length()==6);
+    REQUIRE(cell("preRoll").valueField().getText()==m3::ui::compactValue((current().arrival-at(A::start))/48000.,3));
     REQUIRE(cell("arrivalSample").getTitle().contains("bar.beat"));
     for(const auto* name:{"arrivalSample","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","wetPlacement","swellLevel","curveInTension","curveOutTension"})
         for(auto* child:cell(name).getChildren())if(auto* caption=dynamic_cast<juce::Label*>(child))
