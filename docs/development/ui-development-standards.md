@@ -86,6 +86,16 @@ the approved 14-Medium/24 caption and 28-high value roles. Long captions ellipsi
 with full tooltips; they do not shrink the font. Unaffected Settings/Diagnostics
 consumers retain the same shared lifecycle and domain-specific steps.
 
+The #46 knob audit corrections separate accepted dial painting from JUCE's raw
+pointer accumulator, add explicit rotary keyboard/focus and domain accessibility,
+and keep fixed wheel/arrow increments in the binding. They reuse existing focus
+ink/geometry and text roles; no new density/profile token is introduced. The
+changed knob interaction requires focused native family acceptance; prior compact
+layout and Snap-button acceptance remain valid. `EllipsisLabel` preserves a
+single line's approved font metrics for overflowing inspector status/IR text.
+See [value/unit policy and guards](perform-navigation.md) and
+[audit/remediation evidence](../validation/2026-11-04-issue-46-knob-audit.md).
+
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns
 accepted bounds, logarithmic range, Fit and stale-session guards. The independent

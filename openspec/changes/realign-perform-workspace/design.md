@@ -126,6 +126,17 @@ silently adopting unapproved new family styling or unrelated legacy migrations.
 Preserve prior layout/Snap-button acceptance; materially revised knob interaction
 requires a focused native checkpoint before wider rollout.
 
+The owner then approved fixed wheel/arrow increments independent of viewport:
+timing 1 ms, level 0.1 dB and curves 0.01; Shift divides by ten with timing rounded
+to at least one sample internally. With Snap On each wheel/arrow action advances
+one grid point. Following the owner's terminology correction, ordinary controls
+expose musical position (`bar.beat.fraction`) or seconds/milliseconds, not sample
+units. Keep sample coordinates internal/diagnostic and preserve exact state.
+Display seconds with six decimals, milliseconds with three, level with two and
+curves with three; formatting never truncates saved precision. Musical fractions
+retain the existing up-to-nine-digit parser/display authority. Add range/unit and
+zoom-independent step tests; a one-sample internal floor is not a user unit mode.
+
 ### 5. Backward-compatible UI preferences, no audio authority changes
 
 Store optional validated Perform view span/first, Snap requested flag and stable division key in the existing session JSON as a UI preference object. Planning main used session version 9/envelope 8; the subsequent read-only Export audit found its unmerged session version 10/envelope 8. Integrate into the then-current agreed merged decoder without downgrading Export or incrementing versions merely for optional UI fields. Readers of that same schema ignore unknown properties; compatibility with older schema versions remains governed by their actual decoder, not a claim of universal backward readability. Old states default to Fit, On, quarter beat. Invalid optional UI values reset only those preferences; never discard valid musical data. Retain per-instance preferences across editor close/reopen, project save/reopen and mode return; reset navigation ownership on session replacement. Coalesce UI preference publication outside the audio callback and follow host dirty policy. Do not persist active gestures, playhead, pending workers or inspection cursors. No host parameters or durable asset changes. Coordinate the additive object with #6 before either writer changes serialization.

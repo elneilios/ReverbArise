@@ -26,6 +26,14 @@ them. Ctrl displays Snap Off without changing its saved request. Exact numeric
 entries remain unsnapped. Unsupported fixed host timing is disclosed, with Ctrl
 or Snap Off available for valid sample edits. See [navigation and state contracts](../development/perform-navigation.md).
 
+The inspector timing knobs follow the same absolute-anchor grid policy as canvas
+handles. With Snap Off, wheel/arrows use fixed time increments independent of zoom;
+typed fields retain full valid precision. Position labels use musical units and
+duration/movement labels use s/ms. Samples remain internal/diagnostic. Overflowing
+status and IR helper lines ellipsize at their approved font proportions, with full
+tooltips. Knob focus and accessibility expose accepted domain values, including
+when a candidate is snapped or rejected.
+
 Shared controls contain presentation and intent callbacks only. Perform owns
 editable source/wet gestures and grid policy; Learn owns captured dry inspection;
 Export owns read-only mix preview, transport and files. No generalized waveform

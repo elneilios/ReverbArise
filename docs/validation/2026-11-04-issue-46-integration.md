@@ -1,5 +1,10 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
+Current delivery after the knob extension is source `a4e9262`: **53/53 Release
+tests passed**. See the [final knob/value/font evidence and current bundle hash](2026-11-04-issue-46-knob-audit.md#final-delivery-validation).
+The initial 52-test results and pre-knob bundle identity below remain historical
+evidence; the shared output bundle path now contains the final rebuilt binary.
+
 ## Baseline and approval
 
 Issue [#46](https://github.com/elneilios/ReverbArise/issues/46), PR
@@ -115,7 +120,7 @@ Export delivery/mix tests is requested. Actual Windows DPI, screen-reader and
 final host outcomes remain unverified until the owner reports them; software
 100/125/150/200% raster checks are not Windows DPI acceptance.
 
-Validated bundle (not installed automatically):
+Initial pre-knob validated bundle (historical hash; not installed automatically):
 `C:\Users\neila\.codex\worktrees\670e\k7ma-preverb\out\build\windows-msvc\preverb_plugin_artefacts\Release\VST3\ReverbArise.vst3`.
 Inner binary `Contents/x86_64-win/ReverbArise.vst3` SHA-256:
 `B654D882500A4E9EA380196CCE34E8927444F5D8ACCFECF84D53E14C9947F17E`.
@@ -131,5 +136,14 @@ The owner subsequently approved timing-knob drag/wheel snapping with Ctrl/Shift
 policy and unsnapped typed entry. OpenSpec task 4.4 records this pending addition;
 the plan is now 16/18 complete. The [knob audit](2026-11-04-issue-46-knob-audit.md)
 records standards/guard gaps and the owner's long-helper-text compression report.
-These are planning/audit updates only. The validated binary above predates the
-knob extension and helper-text correction; neither is claimed implemented.
+At that checkpoint these were planning/audit updates only. The initial validated
+binary above predates the knob extension and helper-text correction.
+
+The owner then explicitly requested Apply of these changes. Task 4.4's behavior
+and all audit corrections are now implemented and pass the final 53-test Release
+suite. Fixed wheel/arrow steps and display precision use the owner-approved
+policy; positions are musical and durations/movement are time-based. The old
+sample-unit toggle is hidden from ordinary Settings. The focused revised-knob
+native review is open; its approval and the final FL Studio smoke remain pending.
+See the linked current evidence for exact source, hashes, captures and failed-run
+recovery, rather than using the historical pre-knob hash above.

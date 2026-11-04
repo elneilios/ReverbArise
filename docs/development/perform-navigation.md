@@ -56,6 +56,56 @@ actual modifiers. Ctrl-wheel still zooms horizontally at the pointer. Exact
 inspector entries remain unsnapped; left/right handle nudges use the adjacent grid
 point, or one sample with Ctrl. Vertical tension remains continuous.
 
+Inspector timing-knob drags use the same absolute target/source/envelope anchor
+policy as the canvas, through `UI/TimingEdit.h`. The binding freezes session epoch,
+full selection, input/render identity and fixed host mapping; stale invocations
+are rejected inside the guarded edit transaction. Ctrl bypass and Shift fine drag
+rebase from accepted state. The dial paints accepted position while JUCE retains
+its separate raw pointer accumulator, so no-grid/rejected edits never display an
+unaccepted dial position. Exact typed entry remains independent of Snap.
+
+## Knob values, units and discrete steps
+
+The owner approved this value policy after the knob audit. A normal Windows wheel
+notch (JUCE delta 0.1) and an arrow press use the steps below, independent of zoom;
+unsnapped fractional wheel deltas remain proportional. Shift divides a step by
+ten, rounded internally to at least one sample for timing. With effective Snap On,
+timing wheel/arrows move to the adjacent grid point; Shift retains that grid.
+Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
+
+| Control | User-facing unit | Snap-Off wheel/arrow step | Display precision | Accepted storage |
+| --- | --- | --- | --- | --- |
+| Target, Source Start/End | `bar.beat.fraction` | 1 ms at the current fixed rate | Existing musical fraction, up to 9 digits, trailing zeroes trimmed | Checked absolute integer sample coordinate |
+| Pre-roll, End Offset | Seconds (s), signed | 0.001 s | 6 decimal places | Checked integer sample timing |
+| Move Wet | Milliseconds (ms), signed | 1 ms | 3 decimal places | Checked integer sample placement |
+| Fade In/Out | Milliseconds (ms), nonnegative | 1 ms | 3 decimal places | Checked integer sample duration |
+| Level | dB, -60 to +12 | 0.1 dB | 2 decimal places | Existing finite float gain |
+| Curve In/Out | Unitless, -1 to +1 | 0.01 | 3 decimal places | Existing finite double tension |
+
+Formatting does not reduce accepted typed/saved precision. Decimal timing input
+is rounded once to a representable sample; extra decimal places cannot create
+sub-sample timing. Musical entry retains the existing up-to-nine-digit fraction
+parser. Plain decimals reject malformed/non-finite/overflow/out-of-range values;
+source/envelope ordering and support rules remain canonical, including valid zero
+fades. Wheel steps can differ slightly from a nominal time increment at rates
+where that duration is not an integer number of samples. Pointer travel remains
+context-sensitive for useful continuous editing; discrete steps do not.
+
+Samples are internal coordinates and diagnostic precision, not the ordinary user
+unit mode. The old exact-sample toggle is hidden from Settings; its unsaved internal
+test/diagnostic seam is retained for large-coordinate regressions. All ordinary
+position controls present musical position; other timing controls present s/ms.
+Full captions/units survive in tooltips and accessible titles when narrow labels
+ellipsize. Rotary controls are Tab reachable, support arrows, and use the existing
+contained 2-pixel aqua focus policy. Accessibility exposes accepted musical/time/
+dB/unitless values and domain ranges, not the raw 0–1 pointer accumulator.
+
+Inspector status and retained/requested IR helper lines use `EllipsisLabel` to
+retain the approved Inter Regular 14 proportions. Overflow truncates with an
+ellipsis and full tooltip; it never condenses the font to fit a long name.
+
+## Fit lifecycle
+
 Fit includes selected dry source, requested envelope, placed raw tail and overlapping
 wet context. Pending renders use source/request metadata. Without selection it
 fits captured extent, including gaps; empty uses a finite neutral view. Initial
