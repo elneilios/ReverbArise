@@ -352,3 +352,22 @@ No repeat full backend suite is claimed for this UI refinement. The prior native
 **53/53** run at `a4e9262` remains evidence for unchanged audio/state/export paths.
 Actual Windows DPI, screen-reader and FL Studio coverage remain unverified.
 Task 4.5 awaits focused native reset acceptance; 6.2 awaits the final host smoke.
+
+Reset source revision: `a918f808514d12c902b19263cbc1b5c1158666eb`.
+`scripts/build.ps1 -Configuration Release` passed from that clean revision, logs
+`out/build-logs/Release/20261104-192615-48426eb1`; tests were not requested by this
+build-only invocation. The five native tests above ran separately on the same
+source. Final strict OpenSpec: **20/20**, zero failures.
+
+Current Release bundle (not automatically installed):
+`C:\Users\neila\.codex\worktrees\670e\k7ma-preverb\out\build\windows-msvc\preverb_plugin_artefacts\Release\VST3\ReverbArise.vst3`.
+Inner `Contents/x86_64-win/ReverbArise.vst3` SHA-256:
+`1A38813E7960935DD058C18C48F5ED60903B0C6C4B4467AEDB8DDB8A78AB6BD1`.
+
+Directly launched native reset preview: **Issue #46 - Integrated Perform review**,
+PID 44660 at launch, responding; `out/review-issue46-knob-reset/perform-knob-reset.exe
+--review-integrated`. Executable SHA-256:
+`CD4AE09F88F8AA2A5AD5A7D6974A6276FB1E98D30CF74F971A351C2AD3B248A8`.
+The prior approved preview was closed before replacement; the reset preview is
+preserved for the owner. Prior layout/Snap/knob steps/focus acceptance remains
+valid. OpenSpec is **17/19**: reset acceptance (4.5) and host smoke (6.2) pending.
