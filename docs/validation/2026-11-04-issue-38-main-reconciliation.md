@@ -1,68 +1,104 @@
 # Issue #38 — latest-main reconciliation
 
-## Scope and preservation
+## Final scope
 
-The owner requested merge preparation for PR #56 against latest `main`, preserving
-accepted work and fixing integration regressions without weakening tests. Merge
-commit `3ca116e` has parents `293875b` (#38) and `3912ace` (main). Main includes
-Export PR #50 and issue #53's transport fix through PR #57. PR #48 remains open;
-the owner explicitly selected **Latest main only**, so its unmerged Perform
-workspace is not imported or represented as tested in this combined build.
+The owner requested PR #56 against latest `main`, preserving approved Perform,
+Export and transport behavior. Main advanced during the first validation pass:
+PR #48 merged as `423a9fd`. The owner's **Latest main only** choice therefore
+includes #48 through main. Merge `6f41af9` integrates that head; final production
+integration fixes are in `56c5a5a`. No unmerged dependency branch was imported.
+Main already includes Export PR #50 and issue #53's fix through PR #57.
 
-The only textual conflict was in `tests/swell_engine_test.cpp`. Both the #38
-provenance/edit protection block and #53's `runLiveClockEngineCases()` invocation
-are retained. Production files merged automatically and were reviewed. The
-per-run live clock, TransportPlayback and SwellTransport files match main
-exactly. ExportVoice, ExportWorkspace and shared TimelineNavigation also match
-main. The existing #38 SongExport metadata exclusion for `generationSource`
-remains; it does not alter audible export composition or WAV identity inputs.
+The approved compact Perform layout, inspector, Snap/knob policies, looping
+listening controls, footer help and standards revision 5 are retained. ExportVoice,
+ExportWorkspace and shared TimelineNavigation match main exactly, as do the
+per-run live clock and transport playback files. Existing main-authored archives
+are retained; no #38 sync/archive, issue closure or PR merge is performed.
 
-No accepted control styling, callback admission policy or Export interaction was
-replaced. Existing owner-authored archives from main are retained; no #38 spec
-sync/archive, issue closure or PR merge is performed.
+## Conservative resolution and regression checks
 
-## Retained owner acceptance
+- The first merge (`3ca116e`, main `3912ace`) conflicted only in the engine test.
+  Both #38 provenance protection and #53 live-clock assertions were retained.
+- The #48 merge had six conflicted files. Codec resolution keeps strict v11
+  Auto-generate/fingerprint fields plus optional `performUi` and audition
+  preferences. A focused migration check verifies an accepted v10 UI/Export
+  session restores with legacy Stop ON while preserving navigation and music.
+- Engine snapshot resolution keeps coherent workflow/model publication and
+  main's `audioAllowed` audition observation. No clock or callback policy changes.
+- Editor/timeline resolution retains main's formatting, list count, bounds and
+  saved-navigation authority. Restore preferences before the initial reveal;
+  publish that reveal through existing navigation persistence and suppress later
+  fallback Fit. Pending source/IR timing keeps the lead-in navigable without
+  inventing a wet waveform. Checks include a pending protected manual swell,
+  saved initial view, both Generate triggers, empty visits and delayed renders.
+- The list fixture preserves the real Recapture arm, per-pass analysis advance,
+  exact counts, Ready, frozen protection, ordering and persistence assertions.
+  Its actual recapture exposed a production bug: explicit Perform Regenerate did
+  not clear Learn's dependency deferral. The corrected command clears deferral
+  and calibration protection only for work it explicitly queues. The test first
+  asserts the protected manual render is stale and retained, then uses the real
+  Perform action and verifies Ready with changed audio but unchanged identity,
+  name, IR, shape and provenance. Frozen neighbouring work remains identical.
 
-The owner confirmed the #38 host setup as **FL Studio 26.1.7.5653, 48000 Hz,
-512 samples**. Reuse the overall working workflow report and the successful
-low/high/low retry with pending automatic renders from the
-[canonical #38 evidence](2026-11-04-issue-38-generation-workflow.md). Native Learn
-and initial Perform selection/framing approval remains valid. Source `a235fa9`
-and its recorded Release hash identify that accepted #38 implementation.
+No assertion or timeout was relaxed. Native diagnostics were added to the failing
+wait. The existing #38 SongExport exclusion for nonaudible `generationSource`
+metadata remains; audible export composition and immutable WAV handling are unchanged.
 
-Main's independent [#53 host acceptance](2026-11-04-issue-53-live-diagnostics.md)
-and [#50 Export acceptance](2026-11-04-export-shared-timeline-integration.md) remain
-scoped to their recorded builds. Per the owner's instruction, these passing
-results are retained where behavior is unchanged; they are not labelled as a
-fresh FL Studio run of this integrated binary. No owner edge-case repetition is
-requested. Physical OS-DPI and screen-reader acceptance remain untested.
+## Retained host acceptance
 
-## Integrated validation
+The owner confirmed **FL Studio 26.1.7.5653, 48000 Hz, 512 samples** for the passing
+#38 tests. The overall working workflow report, Ready-state regeneration and
+successful low/high/low retry while automatic renders remained pending are in
+[the canonical #38 evidence](2026-11-04-issue-38-generation-workflow.md). The
+final accepted #38 implementation was `a235fa9` with its recorded Release hash.
+Native Learn and initial selection/framing approval remains valid.
 
-The existing warm Windows MSVC tree is reused with the build wrapper's lock.
-No passing pre-merge suite substitutes for these required gates.
+The approved [#48 presentation/host result](2026-11-04-issue-46-presentation-adoption.md),
+[#53 Song playback result](2026-11-04-issue-53-live-diagnostics.md) and
+[#50 Export result](2026-11-04-export-shared-timeline-integration.md) retain their
+recorded build scope. Per the owner's explicit instruction, passing evidence is
+reused where behavior is preserved; these results are not relabelled as a fresh
+host run of the combined binary. Task 6.3's missing environment record is complete.
+Physical OS-DPI and screen-reader acceptance remain unverified. Desktop inspection
+was stopped with Escape; the metadata came from the owner's reply. No installed
+bundle, audio settings or saved DAW project was changed by the agent.
 
-| Command | Build log ID | Result |
+## Validation history and final gates
+
+The existing warm Windows MSVC tree and wrapper lock are reused, without cache
+clearing. No pre-merge result substitutes for the final integrated gates.
+
+- Preliminary main `3912ace`: full Release `20261104-224210-adbb546d` passed
+  51/51 in 99.07 s; Debug `20261104-224455-e430abef` passed 51/51 in 369.07 s.
+- Focused codec/navigation build `20261104-225506-7bf2e74b` passed, followed by
+  passing session and initial-generation editor executables.
+- First full #48 integration Release `20261104-225947-5ea2ea7e`: 62/63 passed,
+  263.87 s. The stale protected recapture case above failed the unmodified Ready
+  wait. Diagnostic build `20261104-230450-9395f09c` reproduced its exact state.
+- Corrected focused build `20261104-230721-04aa76f8` and the full native UI
+  executable passed, retaining every original assertion and adding stronger ones.
+
+| Final command | Build log ID | Result |
 | --- | --- | --- |
-| `scripts/build.ps1 -Configuration Release -Test` | `20261104-224210-adbb546d` | 51/51 CTest, 99.07 s |
-| `scripts/build.ps1 -Configuration Debug -Test` | In progress | Pending |
-| `scripts/check-ui-standards.ps1` | Integrated tree | Passed: 43 files, 61 unchanged bounded occurrences |
-| `openspec validate --all --strict` | Integrated tree | 19/19 passed |
+| `scripts/build.ps1 -Configuration Release -Test` | `20261104-230901-9da8a408` | 63/63 CTest, 251.24 s |
+| `scripts/build.ps1 -Configuration Debug -Test` | `20261104-231323-d5f1b1e9` | 63/63 CTest, 541.56 s |
+| `scripts/check-ui-standards.ps1` | Integrated tree | Passed: 49 files, 61 unchanged bounded occurrences |
+| `openspec validate --all --strict` | Integrated tree | 20/20 passed |
 | `git diff --check` | Integrated tree | Passed |
 
-Release module SHA256:
-`4BDB522277933524A20077239CD0A452CACB4DF17EE6F4D95D4BCADC0856DEB3`.
+Final source is `56c5a5a`. Release module SHA256:
+`E947BB81B0C13629EED73AFECE5B53F875BF544E939CABA53195F9A4415CDEB6`.
 Bundle: `out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`.
-The wrapper identifies `3ca116e` with evidence/task-only dirty files; no production
-code changed after the gates started. Final Debug result and main-reference
-check follow once complete. No installed bundle or DAW project was overwritten.
 
-## Main advanced during validation
+The last upstream check found `939f656` (PR #61), changing only contribution /
+issue-reference guidance. Merge `f6a624d` includes it. `Source/`, tests, scripts
+and CMake are identical to the validated production integration; no full native
+suite is repeated for that documentation-only merge. Existing main-owned skill
+changes were imported unchanged, not customized by this task.
 
-The upstream check then found `423a9fd`, merging approved Perform PR #48 into
-main. The owner-selected **Latest main only** now includes #48 through main;
-no unmerged branch is imported. The `3912ace` integration above becomes
-preliminary evidence. Final merge preparation must reconcile #48's optional
-navigation/audition preferences, accepted production layout and bounded
-navigation with #38's first-generation handoff, then repeat both full gates on
-that latest-main integration. Its final results supersede the preliminary table.
+A final private native editor fixture passed again to capture the integrated
+[Learn](2026-11-04-issue-38-integrated-learn.png) and
+[pending initial Perform](2026-11-04-issue-38-integrated-perform.png) rasters.
+These are supporting automated evidence, not a new owner host/DPI approval.
+No production edits follow the final gates. Later evidence/task/PR-only edits do
+not require native repetition. The PR stays unmerged; owner review controls merge.

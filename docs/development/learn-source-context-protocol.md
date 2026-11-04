@@ -223,6 +223,12 @@ selection are unchanged. Render output still notifies persistence, but does not
 invalidate musical authority; real edits and workflow/dependency changes retain
 their original publication fences.
 
+After actual Recapture, a protected manually edited swell can remain stale while
+Learn Generate reports protected-only. The supported explicit Perform Regenerate
+action clears that work's deferred dependency/calibration guard before queuing
+its accepted definition against the new source. Frozen work is skipped and
+last-good render assets remain until a verified replacement commits.
+
 Learn accepts completed-pass boundaries through successful source settlement,
 including on a fresh instance whose previous empty manifest is still schema 1.
 A provisional RT Stop cannot queue legacy reconciliation. Live loop boundaries

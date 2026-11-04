@@ -192,3 +192,11 @@ Existing serialized mode values and navigation ownership remain unchanged.
 The editor reads mode and session from one engine snapshot under the publication
 lock, so a commit between separate reads cannot establish a Perform position
 from pre-commit definitions or consume the new handoff prematurely.
+
+With the approved Perform workspace, restore its optional `performUi` view/Snap
+preferences before applying a new eligible handoff. The reveal uses the same
+bounded navigation and persistence bindings, marks the initial fit complete and
+keeps pending source/IR lead-in timing inside the navigation bounds. A real user
+pan/zoom is persisted through that existing binding; a delayed render never
+replays the initial fit. The optional Perform/audition preferences remain intact
+when migrating an accepted v10 project to strict #38 v11 state.

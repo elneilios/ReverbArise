@@ -93,6 +93,17 @@ Reveal from available definition/source timing and accepted IR metadata, using a
 
 ## Migration Plan
 
+Latest-main integration includes approved Perform #48 via main `423a9fd`.
+Preserve its optional navigation/audition metadata within v11, its compact
+layout and ordinary bounded navigation. Restore saved preferences before the
+first eligible reveal, publish the initial view through existing navigation
+bindings and latch the fit so later rendering cannot repeat it. Pending
+source/IR timing must remain navigable even for an earliest protected swell.
+After real Recapture, an explicit Perform Regenerate clears that queued work's
+Learn deferral/calibration fence; it does not make Learn Generate mutate protected
+definitions. Native migration, protected framing and real recapture checks cover
+these composition seams without weakening existing assertions.
+
 After proposal review and a new Apply request, implement codec/default tests, workflow reservation and candidate isolation before wiring mutation/UI. Validate each layer with focused tests, then native Debug and Release suites, UI standards lint and strict OpenSpec validation. Update living workflow, Learn and source-context guidance and dated validation evidence as implemented; canonical spec sync/archive remains a separate lifecycle operation.
 
 Obtain scoped native marker/control and initial editor-handoff acceptance, then perform one brief FL Studio smoke covering default-OFF capture/refinement, chronological initial selection/lead-in reveal, repeated Generate/protected work, opt-in Stop, mode return and save/reopen. Record exact host/build and untested Windows DPI/screen-reader coverage. Open one owner-review PR, leave unmerged. Rollback uses the previous binary and its separately retained pre-v11 project/cache snapshots; never delete shared immutable revisions.
