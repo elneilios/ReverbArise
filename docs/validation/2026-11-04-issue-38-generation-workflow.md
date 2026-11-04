@@ -398,3 +398,72 @@ standards lint passed (42 files, 61 unchanged bounded occurrences), strict activ
 change validation passed and diff checks passed. No production code changed
 after these final builds started; later edits record evidence and task status.
 No additional host pass, OS-DPI or screen-reader acceptance is inferred.
+
+## Pending-render regeneration priority and false cancellation
+
+The owner then reported the exact newer-change cancellation when reducing a
+high-density run, confirmed that many wet renders were still pending, requested
+those old jobs be cancelled on regeneration, and confirmed the same reduction
+works once every swell is Ready. This identifies a distinct admission/publication
+race beyond the earlier reduction-only planner correction.
+
+The deterministic pre-fix native regression held a protected render immediately
+before publication, admitted Generate, then let the render complete. Build-only
+Release `20261104-221456-f9487270` passed; running
+`out/build/windows-msvc/Release/preverb_learn_generation_test.exe` exited 1 with
+the exact `Generation cancelled after a newer change` notice and failed the
+expected Perform transition. A completed render incremented the generic model
+revision after the request had captured an older expected session.
+
+Generate admission now increments a cooperative automatic-render cancellation
+epoch. The in-flight unfrozen automatic job yields, pending Generate runs before
+remaining queued renders, and retired jobs cannot publish. A job selected just
+before admission also yields before starting expensive work. Interrupted accepted
+jobs remain queued for recovery if generation fails/cancels. Protected jobs keep
+their accepted work; no saved source or immutable last-good asset is deleted.
+
+Render/calibration/support publication still calls the persistence notification,
+but no longer advances the musical-command revision. Before planning, the serial
+worker refreshes the request from its latest session only if session, musical
+revision and selection still match. This preserves protected/completed last-good
+render metadata rather than swapping an older request snapshot back over it.
+The worker and offline render paths share `workLock`; they cannot publish render
+results concurrently with generation preparation. Genuine edits, settings,
+selection, source, transport, mode and restore retain their original fences.
+The cancellation token and revision rules are ephemeral, with no codec/schema or
+real-time callback changes. Existing native visual acceptance remains applicable.
+
+Focused regressions cover protected render completion after admission, lower
+sensitivity Generate while an earlier automatic job is held in flight (without
+releasing that gate), no obsolete render publication, and injected replacement
+failure preserving the collection and allowing its interrupted render to resume.
+The dense fixture still returns 97 → 129 → 129 → 97 committed swells. An interim
+Release suite `20261104-221850-b6d5155e` passed 51/51 in 101.56 seconds; a subsequent
+narrow pre-start guard requires the final Debug/Release gates recorded below.
+
+Final source is `a235fa9`. The final Debug generation target passed in 82.87
+seconds, including the in-flight cancellation, protected-publication rebase and
+failed-replacement recovery checks; editor generation/navigation checks passed
+in 12.49 seconds. Read-only inspection of the running FL64 process identified
+FL Studio **26.1.7.5653**. Actual audio rate/buffer remain unreported; no installed
+module replacement or additional host pass was performed by the agent.
+
+Final warm Debug `20261104-222047-36ea24a0` passed **51/51** CTest in **312.88
+seconds** for source `a235fa9` (the wrapper began at `044a92e` with that source
+content uncommitted). Release is repeated after Debug to include the final
+pre-start guard; the earlier Release suite is interim evidence, not substituted
+for that final gate. UI standards remain 42 files/61 existing bounded occurrences;
+strict change validation and diff checks passed with the revised artifacts.
+
+Final warm Release `20261104-222735-30fbf712` passed **51/51** CTest in **100.00
+seconds**. Both final configurations include the pre-start guard and all race /
+recovery fixtures. The final Release bundle remains
+`out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3`;
+its module SHA256 is
+`BEDB88A3D8482E6FDBE0463141D7124B67D1E66013C0D9260470362BC37ED9D3`.
+Only evidence/task/PR updates follow these final gates. The owner should reload
+this bundle and retry low → high → low → Generate **while the high-density
+swells are still Queued/Rendering**, without waiting for Ready. No repeat native
+visual review or repeat of passing host steps is requested. Host outcome and
+actual sample rate/buffer remain pending; the agent has not changed the installed
+plugin or DAW session.
