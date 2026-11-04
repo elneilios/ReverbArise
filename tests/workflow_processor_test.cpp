@@ -69,8 +69,9 @@ int main(){return runTest([]{
         }
     }
     WorkflowHost host;p->prepareToPlay(1000,64);p->setPlayHead(&host);juce::AudioBuffer<float> block(2,64);juce::MidiBuffer midi;
+    double playingOrigin=0;
     const auto process=[&](int64_t at,bool playing,float value){host.position.setIsPlaying(playing);host.position.setTimeInSamples(at);
-        host.position.setPpqPosition(at/500.0);host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+        host.position.setPpqPosition((at-(playing?playingOrigin:0))/500.0);host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
         for(int c=0;c<2;++c)std::fill_n(block.getWritePointer(c),block.getNumSamples(),value);
         if(p->isNonRealtime())p->processBlock(block,midi);
         else {{AudioAllocationGuard guard;p->processBlock(block,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);}};
@@ -137,6 +138,26 @@ int main(){return runTest([]{
     e.generate();const auto compatibleDeadline=juce::Time::getMillisecondCounter()+10000;
     while(juce::Time::getMillisecondCounter()<compatibleDeadline && e.savedSession().swells[0].phase!=m3::Phase::ready)juce::Thread::sleep(5);
     REQUIRE(p->getWorkflowReadiness().readySwell);
+    {
+        process(0,false,0);const auto readyDeadline=juce::Time::getMillisecondCounter()+10000;
+        while((!e.snapshot().liveReady || !e.snapshot().auditionReady) && juce::Time::getMillisecondCounter()<readyDeadline)juce::Thread::sleep(2);
+        REQUIRE(e.snapshot().liveReady && e.snapshot().auditionReady);
+        REQUIRE(e.audition());process(0,false,0);juce::AudioBuffer<float> previewBefore(block);
+        e.stop();process(64,false,0);process(0,false,0);
+        juce::String beforeClock,afterClock,clockError;REQUIRE(m3::encode(e.savedSession(),beforeClock,clockError));
+        const auto sourceBefore=p->getCaptureSnapshot().reference;
+        playingOrigin=16;process(0,true,.125f);
+        REQUIRE(e.snapshot().liveActive && !e.snapshot().liveIncompatible && block.getMagnitude(0,64)>.125f);
+        REQUIRE(std::abs(e.snapshot().liveObservation->originDelta-16)<.00001);
+        REQUIRE(p->getCaptureSnapshot().reference==sourceBefore);
+        process(64,false,0);playingOrigin=0;
+        REQUIRE(e.audition());process(0,false,0);
+        for(int channel=0;channel<2;++channel)for(int n=0;n<64;++n)
+            REQUIRE(std::abs(block.getSample(channel,n)-previewBefore.getSample(channel,n))<1e-6f);
+        e.stop();process(64,false,0);
+        REQUIRE(m3::encode(e.savedSession(),afterClock,clockError) && beforeClock==afterClock);
+        REQUIRE(p->getCaptureSnapshot().reference==sourceBefore);
+    }
     p->flushHostStateChangesForTesting();const auto beforeSettings=listener.changes;
     REQUIRE(e.edit(id,[](auto& w,auto&){w.shape.gainDb=3;return true;}));
     e.setPostRoll(1);e.setIsolateDry(true);e.setIsolateSelected(true);e.setMonitoring(m3::AuditionMode::dryWet,.7f);
@@ -169,7 +190,7 @@ int main(){return runTest([]{
         while(!e.snapshot().songExport.cursor && juce::Time::getMillisecondCounter()<deadline){process(12000,false,.25f);juce::Thread::sleep(2);}
         REQUIRE(e.snapshot().songExport.cursor==start+quantum);
         for(int c=0;c<2;++c)for(int n=0;n<quantum;++n)REQUIRE(std::abs(block.getSample(c,n)-(.25f+expected.getSample(c,n)*m3::monitorEdgeGain(n,static_cast<size_t>(total),1000,.005)))<1e-6);
-        process(32000,true,.25f);
+        playingOrigin=16;process(32000,true,.25f);playingOrigin=0;
         for(int c=0;c<2;++c)for(int n=0;n<quantum;++n)REQUIRE(std::abs(block.getSample(c,n)-(.25f+expected.getSample(c,n+quantum)*m3::monitorEdgeGain(n+quantum,static_cast<size_t>(total),1000,.005)))<1e-6);
         REQUIRE(p->getCaptureSnapshot().reference==replaced.reference);e.stop();process(0,false,.25f);block.setSize(2,64);
     }

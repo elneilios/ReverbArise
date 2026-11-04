@@ -91,7 +91,8 @@ private:
     m3::ui::FlatViewport inspectorViewport,diagnosticsViewport;
     juce::Component inspectorContent;
     m3::ui::FlatSurface diagnosticsContent;
-    juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic;
+    void layoutLiveDiagnostics();
+    juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
     std::array<juce::Component,5> settingsPages;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;

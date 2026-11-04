@@ -46,6 +46,15 @@ struct ExportSnapshot
     bool previewRequested=false;
     uint64_t delivery=0;bool delivering=false,dragReady=false;juce::String deliveryPath,deliveryMessage;
 };
+struct LivePreparationObservation
+{
+    uint64_t service=0,attempt=0,revision=0,preparedRevision=0;
+    SongTime source{},observed{},latest{};
+    std::optional<LiveClockSnapshot> clock;
+    int64_t start=0,end=0,loopStart=0,loopEnd=0;
+    double servicedAtMs=0,attemptedAtMs=0;
+    juce::String result="Not serviced",lastAttemptResult="No attempt";
+};
 struct EditorSnapshot
 {
     workflow::Snapshot workflowState; // Captured under the same model publication lock.
@@ -74,6 +83,8 @@ struct EditorSnapshot
     uint64_t analysisCount=0;
     size_t pendingIntervals=0;
     std::vector<juce::String> auditionMembers;
+    LivePreparationObservation livePreparation;
+    std::optional<LiveCallbackObservation> liveObservation,liveLastRejection;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
@@ -156,6 +167,12 @@ public:
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
+    void resetTransportClock() noexcept {liveClock.reset();}
+    void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
+    bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
+    void failNextLivePublicationForTesting() noexcept {livePublicationFail.store(true);notify();}
+    uint64_t livePublicationFailuresForTesting() const noexcept {return livePublicationFailures.load();}
+    uint64_t liveClockRejectionsForTesting() const noexcept {return liveClockRejections.load();}
     bool hasExportableWet(const SongTime&)const;
     bool initializeExport();
     bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
@@ -242,7 +259,7 @@ private:
     bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession,const Asset& managed={},const juce::String& label={});
     bool queueDefaultIR(const juce::File&,const juce::String& presetId,const Asset&,const juce::String& label,uint64_t expectedSession,uint64_t expectedWorkflowPass);
     struct RetainedIR { Swell accepted;SongTime timing;juce::String revision,requestedName; };
-    bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&) const;
+    bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&,const LiveClockSnapshot* liveContext=nullptr) const;
     bool retainIRLocked(const Swell&,const PreviewContext&,const juce::String& requestedName);
     std::map<juce::String,RetainedIR> retainedIR;
     struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId;
@@ -316,6 +333,9 @@ private:
     std::atomic<double> expectedRate{0},expectedBpm{0};
     std::atomic<int> expectedNumerator{0},expectedDenominator{0};
     AuditionVoice voice;
+    std::atomic<bool> livePublicationHold{false},livePublicationWaiting{false},livePublicationFail{false};
+    std::atomic<uint64_t> livePublicationFailures{0},liveClockRejections{0};
+    LiveTransportClock liveClock;
     TransportPlayback live;
     std::atomic<bool> offlineActive{false};
     std::atomic<float> regeneration{.5f};
@@ -356,6 +376,7 @@ private:
     float gainPlanAttenuation=1,gainPlanPeak=0;
     double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
+    LivePreparationObservation livePreparation;
     uint64_t liveRevision=1,preparedLiveRevision=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";

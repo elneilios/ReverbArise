@@ -53,14 +53,14 @@ PreverbAudioProcessor::~PreverbAudioProcessor()
 
 void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 {
-    wasOffline=false;swells->endOffline();
+    wasOffline=false;swells->endOffline();swells->resetTransportClock();
     sampleRate.store(newSampleRate, std::memory_order_relaxed);
     captureWorker.setHostRate(newSampleRate);
 }
 
 void PreverbAudioProcessor::releaseResources()
 {
-    wasOffline=false;swells->endOffline();
+    wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
 bool PreverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const

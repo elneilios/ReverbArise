@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include <UI/MusicalPosition.h>
+#include <UI/LiveDiagnosticsText.h>
 #include <DSP/DefaultImpulse.h>
 #include <UI/InitialPerformView.h>
 
@@ -247,6 +248,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     resetMenu.onClick=[this]{const auto id=state.session.primary;processor.swellEngine().resetSwell(id,true);refresh();};
     freezeButton.setButtonText("Freeze");
     for(auto* label:{&captureDiagnostic,&playbackDiagnostic,&policyDiagnostic}){diagnosticsContent.addAndMakeVisible(label);label->setFont(juce::FontOptions(m3::ui::controlSize));label->setJustificationType(juce::Justification::topLeft);}
+    diagnosticsContent.addAndMakeVisible(liveDiagnostic);liveDiagnostic.setName("diagnosticLiveAdmission");
+    m3::ui::applyTextRole(liveDiagnostic,m3::ui::TextRole::helper,juce::Justification::topLeft);
     status.setName("diagnosticTiming");captureDiagnostic.setName("diagnosticCapture");playbackDiagnostic.setName("diagnosticPlayback");policyDiagnostic.setName("diagnosticPolicy");
     toneButton.setName("scheduledTone");
     initialiseSettings();
@@ -370,8 +373,17 @@ void PreverbAudioProcessorEditor::resized()
     for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
     row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
     helper.setBounds({});
-    layoutSettings();
+    layoutSettings();layoutLiveDiagnostics();
 
+}
+void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
+{
+    const auto inset=m3::ui::spacing::section;
+    juce::AttributedString text(liveDiagnostic.getText());text.setFont(liveDiagnostic.getFont());
+    juce::TextLayout measured;measured.createLayout(text,static_cast<float>(status.getWidth()));
+    const auto height=static_cast<int>(std::ceil(measured.getHeight()))+inset;
+    liveDiagnostic.setBounds(status.getX(),placementEditor.getBottom()+inset,status.getWidth(),height);
+    diagnosticsContent.setSize(diagnosticsContent.getWidth(),liveDiagnostic.getBottom()+inset);
 }
 void PreverbAudioProcessorEditor::refresh()
 {
@@ -545,6 +557,7 @@ void PreverbAudioProcessorEditor::refresh()
     if(diagnosticsOpen && (diagnosticsRefreshedAt<0 || now-diagnosticsRefreshedAt>=200))
     {
     diagnosticsRefreshedAt=now;
+    liveDiagnostic.setText(m3::ui::liveDiagnosticsText(state),juce::dontSendNotification);layoutLiveDiagnostics();
     juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(time.sample):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(time.ppq,3):"unavailable")
         <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
