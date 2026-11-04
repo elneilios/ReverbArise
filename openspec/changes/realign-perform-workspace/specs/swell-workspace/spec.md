@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Workspace reflects actual processing and selection
-The workspace SHALL adapt to mode: Learn shows capture settings and one full-song dry timeline; Perform shows the production three-column editor, audition and compact Overview; Export retains its currently supported guarded content until its dedicated workspace is delivered. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
+The workspace SHALL adapt to mode: Learn shows capture settings and one full-song dry timeline; Perform shows the production three-column editor, audition and compact Overview; Export shows its dedicated preview and mix/file controls. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
 
 #### Scenario: Select while background work completes
 - **WHEN** the user selects a swell in Perform while allowed analysis or another swell's rendering completes
@@ -11,7 +11,7 @@ The workspace SHALL adapt to mode: Learn shows capture settings and one full-son
 
 #### Scenario: Empty or unavailable selection
 - **WHEN** the session is empty or a result is waiting, stale or failed
-- **THEN** the active workspace explains its state and enables only valid mode/selection actions without false ready waveforms
+- **THEN** the active workspace explains its state and enables only valid mode/selection actions without false ready waveforms or current-WAV claims
 
 #### Scenario: Stable empty and loaded composition
 - **WHEN** the same editor size transitions through empty, mapped, selected and updating states within a mode

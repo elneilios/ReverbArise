@@ -462,3 +462,11 @@ Final bounded-domain authority-wrapper rebuild and all four pure tests passed in
 UI standards, strict OpenSpec and diff checks passed. Existing native editor and
 full composition results above remain applicable: these additional grid methods
 are not yet called from production gestures. No full-suite or host run is claimed.
+
+## Production integration after merged #50
+
+The later [integration report](2026-11-04-issue-46-integration.md) supersedes the
+pending production-binding/ownership status above. It records actual editor,
+gesture and state tests against the merged Export baseline, final build results
+and outstanding owner host acceptance. This report retains the original staged
+composition measurements and approvals.

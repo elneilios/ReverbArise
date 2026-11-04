@@ -66,7 +66,7 @@ a general accent variant. Copy, severity and real coverage supplement colour.
 
 Supported logical sizes are 1100x850 minimum/default, 1400x900, 1400x1000 and
 1600x1000. Learn remains a narrow settings column and one dominant dry canvas;
-Perform retains its current composition until separately redesigned. The notice
+Perform uses the approved scoped profile below. The notice
 row remains reserved without shifting controls. Preserve the wordmark SVG,
 canonical monochrome mode SVGs, square inner segment joins, outer rounded ends
 and focus/shared-edge painting. Do not add raised cards, shadows or new controls.
@@ -83,9 +83,9 @@ alone does not make an independent widget a shared library control.
 
 Comfortable means the approved Learn usage of the existing spacing/geometry
 roles. `compactInset` is an existing width-breakpoint name, **not** a compact
-density profile. Compact has no approved production values or runtime toggle.
-A future profile proposal may alter named spacing, row/group gaps and column
-allocation only after assessment with representative dense Perform content.
+density profile. The approved Perform compact profile below has no runtime toggle.
+Further profiles may alter named spacing, row/group gaps and column allocation
+only after assessment with representative dense content.
 Typography, semantic ink, legibility, focus and interaction language are
 invariants. Do not solve density by shrinking text. Review overflow, waveform
 room, hit targets and keyboard access at supported sizes before adopting values.
@@ -101,6 +101,7 @@ production standards revision; this revision does not change plugin/state versio
 | --- | --- | --- |
 | 1 | #11 and #35 approved native implementation, extracted in #37 | Learn comfortable and shared header; compact values await Perform review |
 | 2 | #4 standalone list look/feel approved 2026-11-04 | Swells list identity/scroll interaction policy; existing Perform row appearance retained, no new visual values or compact profile |
+| 3 | #46 revision-4 native compact composition and Snap family approved 2026-11-04 | Perform-only profile below; shared Zoom/Fit controls from merged #49, no Learn/header density changes |
 
 ### Chronological Swells list interaction
 
@@ -119,8 +120,8 @@ and [scoped approval/evidence](../validation/2026-11-04-issue-4-swell-list.md).
 
 The owner approved the actual revision-4 native composition on 4 November 2026.
 `PerformLayout.h::performGeometry` owns these scoped metrics; comfortable Learn
-and shared-header defaults remain unchanged. The fixture consumes the named
-profile; production editor migration is still pending shared-file coordination.
+and shared-header defaults remain unchanged. The fixture and production editor
+consume the named profile following merged Export PR #50.
 
 | Allocation | Below / at-or-above editor width 1200 |
 | --- | --- |
@@ -135,8 +136,8 @@ profile; production editor migration is still pending shared-file coordination.
 Horizontal rules remain continuous after child painting; vertical rules stop
 short of band boundaries. Obsolete Perform marker tooling is omitted. Typography,
 list row heights, semantics and inspector field capabilities retain their separate
-authorities. This composition approval does not approve new control variants or
-claim working Snap/grid; the latching action family has its own native checkpoint.
+authorities. The latching action family received its separate native approval;
+automated production binding and grid tests establish its integrated behavior.
 See [#46 evidence](../validation/2026-11-04-issue-46-perform-composition.md).
 
 ## Historical design intent and provisional suggestions

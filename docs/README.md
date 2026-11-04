@@ -12,7 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [Perform navigation foundations](development/perform-navigation.md) — approved scoped layout, standalone fixed-grid arithmetic and Snap control checkpoint; production binding status is explicit.
+- [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and remaining owner checks.
 
 - [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
 

@@ -8,7 +8,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 ## Shared controls and ownership
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 2). Its Learn/header table
+numerical authority (production standards revision 3). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -75,18 +75,23 @@ lists the integration baseline, component ownership and remaining legacy consume
 Issue #46's native revision-4 compact composition has owner approval. Its
 `PerformLayout::performGeometry` profile is scoped to Perform and tested by the
 native composition matrix; standards revision 3 records the accepted values.
-Production editor adoption awaits shared-file coordination. The new
+The production editor consumes this profile following #50's merge. The
 `LatchingActionButton` reuses ActionButton's unlatched drawing, invocation,
 keyboard and focus mechanism and adds accepted pressed-state ink. Its native
-look/feel checkpoint received owner approval on 4 November 2026; no new Snap
-behavior is integrated yet.
+look/feel checkpoint received owner approval on 4 November 2026. Perform owns
+requested/effective Snap, transient Ctrl bypass and its guarded grid gestures.
+`DeliberateSelector` owns the accepted no-wheel invocation policy shared by IR
+and grid selectors. `KnobValue` retains exact-entry/gesture ownership while using
+the approved 14-Medium/24 caption and 28-high value roles. Long captions ellipsize
+with full tooltips; they do not shrink the font. Unaffected Settings/Diagnostics
+consumers retain the same shared lifecycle and domain-specific steps.
 
 `Controls/TimelineZoomControls.h` composes the shared `ActionButton` and
 `InvocationSlider` mechanisms for horizontal Zoom/Fit intents. The workspace owns
 accepted bounds, logarithmic range, Fit and stale-session guards. The independent
 `MusicalTimelineRuler` painter reuses the existing timing/coordinate authorities.
 See [interface and review scope](shared-timeline-controls.md); this library slice
-does not migrate production screens or approve Perform compact metrics.
+contains no workspace-specific Fit, gesture, transport or serialization behavior.
 
 `Controls/SliderControl.h` is the reusable wheel-enabled slider/value family.
 It retains `InvocationSlider` ownership guards and JUCE range, interval,

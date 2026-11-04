@@ -29,7 +29,7 @@ Visual references: [#3 approved Perform viewer](https://github.com/elneilios/Rev
 
 Keep `WorkflowHeader`, NoticeBar and Learn composition intact. Introduce a Perform-scoped layout calculation/composite rather than altering shared dimensions used by Export. Keep one editor, its existing handle painting/hit geometry and separate Overview. Preserve all supported inspector fields via vertical scrolling, not reduced font heights. The owner's divider reference review clarifies that the old Perform auto-marker tooling is to be removed: omit its band, preserve saved instance detection preferences and Learn's controls, and do not adopt #38's generation behavior.
 
-The geometry below was measured in native revision 4 and explicitly approved by the owner on 4 November 2026. `PerformLayout.h::performGeometry` and standards revision 3 now record its scoped values; final production editor integration awaits #6's merge under the confirmed ownership contract. Retain current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
+The geometry below was measured in native revision 4 and explicitly approved by the owner on 4 November 2026. `PerformLayout.h::performGeometry` and standards revision 3 now record its scoped values; production editor integration follows #50's merged baseline `9b8e70f` under the confirmed ownership contract. Retain current 64-high list rows (three readable lines), shared 34-high controls, 36-high switch component, heading 30, labels 24, helper lines 20 and full focus padding. Do not shrink these roles.
 
 | Approved allocation | Below editor width 1200 | At/above 1200 | Rationale |
 | --- | --- | --- | --- |
@@ -54,13 +54,13 @@ to inset column content rather than joining the band rules. An opaque timeline
 placed on the header divider erased its middle in the first previews. Test the
 finished composite pixels across every horizontal rule, not just the parent paint
 or the gaps at vertical endpoints. Audition and Overview retain 8-pixel vertical
-insets. These scoped values have native approval; production adoption still awaits coordinated ownership.
+insets. These scoped values have native approval; production adopts them after the owner confirmed #50 merged.
 
 The native fixture must report actual dry/wet lane, ruler, scrollbar, toolbar, focus and inspector bounds and adjust these proposals before approval. A two-line 14-high helper must fit its proper line boxes. Test 1199/1200/1201 and adjacent header breakpoint behavior separately. Stop if the one-row toolbar or hit targets cannot fit; do not rescue it with smaller fonts or a second row.
 
-The owner-approved shared row from merged PR #49 supersedes the initial toolbar arithmetic. In the minimum native fixture, the row receives 292 pixels: minus/plus 34 each, Fit 74, three shared 12-pixel gaps and a 114-pixel slider. Snap 96 and grid 136 retain two external 8-pixel gaps inside the 540-pixel inset toolbar. Slider grows at larger sizes. This is measured fixture composition, still awaiting compact-layout approval; no production tokens are adopted.
+The owner-approved shared row from merged PR #49 supersedes the initial toolbar arithmetic. In the minimum native fixture, the row receives 292 pixels: minus/plus 34 each, Fit 74, three shared 12-pixel gaps and a 114-pixel slider. Snap 96 and grid 136 retain two external 8-pixel gaps inside the 540-pixel inset toolbar. Slider grows at larger sizes. This measured composition received compact-layout approval and is adopted by the production editor.
 
-After a new Apply request, build the isolated native fixture using real component/data paths with empty, sparse, many/long-name, loading/error, selected and existing multiple-selection states. Launch it directly and preserve the review window. Record measured values, screenshots and explicit look/feel decisions. Only then roll approved metrics into production and update code, standards revision and tests together. This planning phase cannot create native fixture code; arithmetic above does not satisfy that checkpoint.
+The authorized Apply phase built the isolated native fixture using real component/data paths with empty, sparse, many/long-name, loading/error, selected and existing multiple-selection states. Launch it directly and preserve the review window. Record measured values, screenshots and explicit look/feel decisions. Only then roll approved metrics into production and update code, standards revision and tests together. This planning phase cannot create native fixture code; arithmetic above does not satisfy that checkpoint.
 
 Alternative rejected: reusing legacy spacing as already approved, or globally shrinking Learn/header to solve Perform density.
 
@@ -111,7 +111,7 @@ Store optional validated Perform view span/first, Snap requested flag and stable
 
 #4 is merged and consumed directly; its active OpenSpec delta remains unarchived, so do not duplicate or rewrite chronological-list requirements. Current canonical specs still say eight-region Perform and lack the toolbar details; this change refines those through a delta. Existing multi-selection is retained without #9 mixed inspector or new bulk actions. Preserve current audition position/mix APIs; #5 owns arrangement playback.
 
-#6 local branch `feat/6-export-mixed-song-wav` was at `33f1871` with no divergence to inspect. This is not evidence of final APIs or authorization to edit another worktree. At Apply entry obtain owner-coordinated shared-file/timeline/preview/state ownership against its then-current revision. Until recorded, keep Perform fixture/composition isolated and stop shared refactors. #38 contract reviewed: accept source-ready Perform with pending wet, preserve manual/frozen IDs and return-to-Learn edits; do not change current Stop transition or Generate behavior. Reconcile canonical requirement wording with #6/#38 at final integration rather than reverting their approved behavior.
+The planning audit saw #6 at `33f1871` without final APIs. Agent 1 subsequently supplied an explicit handover; final integration follows owner-confirmed merged #50 at `9b8e70f`. No other worktree is modified. #38 contract reviewed: accept source-ready Perform with pending wet, preserve manual/frozen IDs and return-to-Learn edits; do not change current Stop transition or Generate behavior. The final delta preserves merged Export composition and current-WAV truth rather than reverting its requirements.
 
 Use focused pure viewport/grid tests, actual component gestures and processor/editor bindings, then Release wrapper full CTest and `scripts/check-ui-standards.ps1`. Cover source/render/IR identity, no navigation-triggered jobs, no audio callback lock/allocation/I/O, native geometry and embedded typefaces. Save dated evidence under `docs/validation/`, update implemented design/development guides and standards together; canonical sync/archive is a separately requested ordinary lifecycle step. Owner-approved native fixture precedes one brief FL Studio smoke on the exact Release bundle, with usual scale, pending-render transition, editing/zoom/snap and save/reopen. Software scales and actual Windows DPI/host results remain separately labelled.
 
@@ -154,22 +154,20 @@ bounds or automatically fit on data refresh. Fit remains Learn dry coverage,
 Perform selected source/pre-roll/arrival/tail, or Export audible mix extent.
 No workspace enum or collection of feature flags belongs in this component.
 
-Agent 1's unmerged `Controls/ActionButton.h` already provides the accepted generic
+Agent 1's accepted `Controls/ActionButton.h`, merged through #49/#50, provides the generic
 command family (focus, keyboard activation, invocation hook and named text roles).
-Once its revision/interface is coordinated, prefer that family for zoom/Fit rather
-than introducing a competing command button. The initial test-only composition
-uses existing main-branch buttons; final shared-family font/padding/bounds must be
-remeasured at its own checkpoint. Snap is a separate Perform-only latching action,
+The shared Zoom/Fit row consumes that family unchanged. Its native acceptance and
+measured font/padding/bounds are retained. Snap is a separate Perform-owned latching action,
 not a new Export flag or a reason to change the generic command family's semantics.
 
-Read-only inspection of Agent 1's unmerged `TimelineNavigation.h` found an existing
+Read-only inspection of Agent 1's `TimelineNavigation.h`, now merged through #50, found an existing
 `viewport()`, `setRange(audibleFirst,audibleLast,fileFirst,fileLast,rate,reset)`,
 `zoom(factor,anchor)`, `pan(fraction)`, `fit()` and `onChange` API. Export currently
 owns one view through that component, including its sample-rate-derived minimum
 span, read-only pan/wheel/key gestures and detail requests. A binding could feed
 the shared toolbar's intents into that API and report accepted zoom state back;
-Agent 1 must agree the exact accepted-state/min/max accessor needed to compute
-the slider fraction. Do not replace its ownership with a second view or silently
+Agent 1 added accepted-state/min/max accessors for the slider fraction in #50.
+Do not replace its ownership with a second view or silently
 impose Perform's minimum-span/gesture policy. Perform retains editable gestures
 and Ctrl snap bypass, with shared named conventions only where they agree.
 
@@ -189,14 +187,12 @@ navigation intents, with a workspace-owned Export Fit target. Export's current
 visual acceptance is retained; only the fuller musical ruler and shared zoom row
 are coordinated refinements. Preserve pointer zoom/pan, manual view across refresh,
 once-per-accepted-mix Fit, last-good pending display and current-revision delivery.
-Agent 1 retains Export/mix/voice/state ownership and is not building a competing
-toolbar or generalized viewer. Its merge/archive is held for this integration or
-an explicit owner-approved follow-up. Review the proposed toolbar's accepted-state
-adapter/accessors before shared-file adoption; the isolated fixture remains
-independent. Add component tests for
-silent display, bounds/focus/accessibility and intent callbacks, plus independent
-Perform/Export binding tests proving one viewport, distinct Fit policy and no host
-seeking, audio jobs or serialization side effects. Wider extraction is deferred
+Agent 1 retains Export/mix/voice/state ownership. Merged #49/#50 and owner
+acceptance resolved the original merge/archive hold and supplied the accepted
+adapter/accessors. The isolated fixture remains independent. Component tests cover
+silent display, bounds/focus/accessibility and intent callbacks; independent
+Perform/Export binding tests prove one viewport, distinct Fit policy and no host
+seeking, audio jobs or serialization side effects from navigation. Wider extraction is deferred
 where it would destabilize the workspaces. This proposal does not absorb #6, #38,
 waveform performance work or DSP.
 
@@ -205,7 +201,7 @@ waveform performance work or DSP.
 Current #6 ownership contract: [Agent 1's explicit handover](https://github.com/elneilios/ReverbArise/issues/46#issuecomment-6632200424)
 at Export baseline `13ec5bec36112540ec1eaa42d3e788413367d637` releases isolated
 SwellTimeline/SwellViewport and Snap/grid work with existing APIs preserved.
-Final PluginEditor and SwellSession integration waits until #6 merges; do not
+The owner confirmed #50 merged at `9b8e70f`, releasing final PluginEditor and SwellSession integration; do not
 absorb unmerged Export implementation. Preserve special Export visibility,
 creative schema-10 fields/migrations and processor envelope 8. Export retains
 Fit/seek/pan/file ownership; this replaces earlier unresolved-coordination status.
