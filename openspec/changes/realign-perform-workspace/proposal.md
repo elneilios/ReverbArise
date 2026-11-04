@@ -13,6 +13,7 @@ The working Perform editor still uses legacy composition and navigation while Le
 - Propose a Perform-only compact spacing profile, with measured native dense/empty previews and explicit owner look/feel approval before production rollout. Preserve approved Learn/header geometry and fonts.
 - Replace Prev/Next and page-span navigation with one restrained row: Zoom minus, horizontal slider, Zoom plus, Fit, independent Snap toggle button and beat/bar grid selector. Holding Ctrl temporarily bypasses snap and shows the button off; releasing restores the remembered enabled state. Retain disclosed amplitude scaling separately from horizontal zoom.
 - Extend the existing viewport and gesture paths for bounded zoom, contextual Fit and host-coordinate snapping of horizontal target/envelope timing. Preserve exact numeric entry and continuous vertical edits; fail honestly when reliable musical timing is unavailable.
+- Owner-approved follow-up: timing-knob drags and wheel changes follow the same Snap/grid using corresponding absolute timeline anchors. Ctrl bypasses, Shift retains fine drag and Ctrl+Shift combines both. Typed values remain exact and unsnapped; curve and level knobs remain continuous. Audit existing knob standards/guards before this binding change; wider family remediation requires its own scoped review.
 - Preserve source PCM, durable IDs/assets, workflow guards and existing audition authority. Handle pending/failed renders, sparse coverage and return from other modes without inventing ready audio.
 
 ## Capabilities

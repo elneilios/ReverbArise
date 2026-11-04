@@ -103,6 +103,29 @@ Compute wet endpoint/fade candidates from initial anchor plus pointer delta, sna
 
 Alternative rejected: quantizing pixel distances or local durations, which breaks absolute alignment, placement and fractional PPQ.
 
+#### Approved inspector knob extension
+
+The owner approved timing-knob drag/wheel Snap on 4 November 2026 after integrated
+native acceptance. Extend the existing inspector binding, leaving typed exact
+entry independent. Target and source knobs quantize absolute target/source bounds;
+Pre-roll and End Offset quantize wet start/end; Fade In/Out quantize their actual
+envelope transition anchors, preserving the zero-fade endpoint rules. Move Wet
+quantizes the same audible-start anchor as body translation and preserves internal
+durations. Convert accepted absolute samples back through canonical setters.
+Do not quantize the displayed duration in isolation.
+
+Reuse requested/effective Snap, fixed host mapping and bounded-grid authority.
+Ctrl bypass, Shift fine drag and Ctrl+Shift retain the canvas policy. Freeze
+gesture ownership/timing and rebase accepted deltas at modifier changes without
+key-only mutation. Show a reason for unavailable/no-grid candidates; dial, exact
+value and canvas must agree with accepted state even after rejection. Curves and
+level stay continuous. Keep domain/grid logic out of the reusable KnobValue.
+Audit existing knob focus, accessibility, invocation lifetime and accepted-value
+feedback against standards revision 3; record confirmed gaps separately, without
+silently adopting unapproved new family styling or unrelated legacy migrations.
+Preserve prior layout/Snap-button acceptance; materially revised knob interaction
+requires a focused native checkpoint before wider rollout.
+
 ### 5. Backward-compatible UI preferences, no audio authority changes
 
 Store optional validated Perform view span/first, Snap requested flag and stable division key in the existing session JSON as a UI preference object. Planning main used session version 9/envelope 8; the subsequent read-only Export audit found its unmerged session version 10/envelope 8. Integrate into the then-current agreed merged decoder without downgrading Export or incrementing versions merely for optional UI fields. Readers of that same schema ignore unknown properties; compatibility with older schema versions remains governed by their actual decoder, not a claim of universal backward readability. Old states default to Fit, On, quarter beat. Invalid optional UI values reset only those preferences; never discard valid musical data. Retain per-instance preferences across editor close/reopen, project save/reopen and mode return; reset navigation ownership on session replacement. Coalesce UI preference publication outside the audio callback and follow host dirty policy. Do not persist active gestures, playhead, pending workers or inspection cursors. No host parameters or durable asset changes. Coordinate the additive object with #6 before either writer changes serialization.

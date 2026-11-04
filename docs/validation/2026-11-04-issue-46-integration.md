@@ -124,3 +124,12 @@ Preview executable SHA-256:
 
 No Debug full build, waveform optimization, tempo-map support, new Learn
 generation, bulk editor or full-arrangement audition was performed in #46.
+
+## Approved follow-up after native acceptance
+
+The owner subsequently approved timing-knob drag/wheel snapping with Ctrl/Shift
+policy and unsnapped typed entry. OpenSpec task 4.4 records this pending addition;
+the plan is now 16/18 complete. The [knob audit](2026-11-04-issue-46-knob-audit.md)
+records standards/guard gaps and the owner's long-helper-text compression report.
+These are planning/audit updates only. The validated binary above predates the
+knob extension and helper-text correction; neither is claimed implemented.

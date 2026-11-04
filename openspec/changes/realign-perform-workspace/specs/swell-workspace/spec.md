@@ -141,6 +141,13 @@ Effective Snap SHALL quantize horizontal target, source-bound and editable envel
 - **WHEN** Ctrl bypass, Shift fine-drag, combined Ctrl+Shift, exact numeric input or keyboard alternatives are used with overlapping handles or zero fades
 - **THEN** the effective timing policy is consistent, hit anchors and accepted values agree, and no unrelated parameter, captured source or selected identity changes
 
+#### Scenario: Inspector timing knobs follow the grid
+- **WHEN** Target, Source Start/End, Move Wet, Pre-roll, End Offset or Fade In/Out is adjusted by knob drag or wheel with effective Snap On
+- **THEN** the corresponding absolute timeline anchor snaps through the same validated host grid and canonical bounds as the canvas, with Move Wet preserving internal spacing
+- **AND** Ctrl bypasses snapping, Shift retains fine drag and Ctrl+Shift combines both without key-only movement or modifier-induced jumps
+- **AND** unavailable timing or a domain without a valid grid point rejects snapped publication with a reason; accepted dial/value/canvas feedback agrees
+- **AND** typed values remain exact and unsnapped, curve and level knobs remain continuous, and stale session/selection/mode/source/timing intents cannot publish
+
 ### Requirement: Perform navigation preferences survive reopen safely
 Perform SHALL retain valid view, requested Snap state and grid across editor reopen, mode return and project save/reopen, independently per instance. Legacy or malformed optional navigation values SHALL fall back safely without discarding valid musical state. Held modifiers and active gestures SHALL remain ephemeral; restore SHALL not autoplay, recapture or regenerate audio.
 
