@@ -27,6 +27,9 @@ Open **one PR per coherent change**, targeting `main`. Include:
 - Test results and remaining manual validation or known limitations.
 - Screenshots only when useful for a UI change.
 
+This section is authoritative for PR issue references: use `Closes #N` in the PR body for each issue the PR fully resolves, so GitHub closes it automatically when the owner approves and merges the PR into `main`. Use `Refs #N` for partial work that should leave the issue open.
+
 Do not treat creating a PR as permission to merge it. **Leave the PR open for the owner to review and merge.** Address requested changes on the same branch and PR.
+Agents must not self-merge or independently close issues; GitHub's automatic closure on owner-approved merge is permitted by the convention above.
 
 If a task starts on `main`, move to a feature branch before making commits. For existing in-flight work, avoid disruptive branch switches or rebases without checking the current state first.
