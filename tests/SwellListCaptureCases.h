@@ -15,7 +15,10 @@ static void swellListCaptureCases(bool review=false)
     const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells)
     {
         const auto previousAnalysis=engine.snapshot().analysisCount;
-        REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));head.position.setIsPlaying(true);
+        // Re-requesting Learn clears its explicit recapture arm. Preserve an
+        // already prepared Learn pass, as the real UI does.
+        if(p->getWorkflowSnapshot().mode!=workflow::Mode::capture)REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
+        head.position.setIsPlaying(true);
         for(int repeat=0;repeat<loops;++repeat)for(int local=0;local<48000;local+=4096)
         {
             const auto count=std::min(4096,48000-local);buffer.setSize(2,count);buffer.clear();
