@@ -76,3 +76,12 @@ UI standards: 46 files / 61 bounded occurrences; unchanged debt inventory. Stric
 OpenSpec: 20/20 at the implementation boundary. `git diff --check` passes.
 Final host audition listening and Windows DPI coverage remain pending; earlier
 layout, Snap and knob approvals are retained.
+
+The full native Release wrapper at source `9060aab` passed **55/55**, **150.59 s**,
+logs `out/build-logs/Release/20261104-200224-fee7b670`. This run included all new
+binding, persistence and unavailable-source checks. During its review, the shorter
+replacement handoff was tightened further: outgoing and incoming buffers now use
+their own existing edge gain during crossfade, so restarting at a shorter window's
+start cannot mute the outgoing sample abruptly. An explicit first-sample continuity
+and allocation oracle accompanies that correction. A final wrapper run validates
+that exact follow-up source before delivery.

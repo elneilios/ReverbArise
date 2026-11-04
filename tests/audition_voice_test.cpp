@@ -27,7 +27,10 @@ int main() { return runTest([]
         for(int n=0;n<50;++n){AudioAllocationGuard guard;looping.process(l,r,7,1000);REQUIRE(watchedAllocations==0 && watchedDeallocations==0);}
         REQUIRE(looping.isPlaying() && looping.position()==57);looping.collect();REQUIRE(looping.pinnedCount()==1);
         auto shorter=std::make_shared<WetRender>(*audio);shorter->samples.resize(20);REQUIRE(looping.replace(shorter));
-        looping.process(l,r,7,1000);REQUIRE(looping.isPlaying() && looping.position()==7);
+        std::fill_n(l,7,0.f);std::fill_n(r,7,0.f);
+        {AudioAllocationGuard guard;looping.process(l,r,7,1000);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && std::abs(l[0]-.2f)<1e-6 && l[0]==r[0]); // Outgoing edge keeps its own gain during restart.
+        REQUIRE(looping.isPlaying() && looping.position()==7);
         looping.stop(true);looping.process(l,r,0,1000);looping.collect();REQUIRE(!looping.isPlaying() && looping.pinnedCount()==0);}
     {AuditionVoice edge;auto constant=std::make_shared<WetRender>();constant->rate=1000;constant->samples.assign(200,.25f);
         REQUIRE(edge.start(constant));float l[100]{},r[100]{};edge.process(l,r,100,1000);

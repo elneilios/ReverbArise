@@ -117,9 +117,9 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
         const auto oldWeight=transitionRemaining>0?static_cast<float>(transitionRemaining)/transitionLength:0.0f;
         for(int channel=0;channel<2;++channel)
         {
-            auto sample=active->samples[cursor*2+channel]*activeAttenuation*(1-oldWeight);
-            if(previous && previousCursor<previous->frames())sample+=previous->samples[previousCursor*2+channel]*previousAttenuation*oldWeight;
-            (channel==0?left:right)[frame]+=sample*smoothedLevel*stopGain*m3::monitorEdgeGain(cursor,active->frames(),rate,.005);
+            auto sample=active->samples[cursor*2+channel]*activeAttenuation*(1-oldWeight)*m3::monitorEdgeGain(cursor,active->frames(),rate,.005);
+            if(previous && previousCursor<previous->frames())sample+=previous->samples[previousCursor*2+channel]*previousAttenuation*oldWeight*m3::monitorEdgeGain(previousCursor,previous->frames(),rate,.005);
+            (channel==0?left:right)[frame]+=sample*smoothedLevel*stopGain;
         }
         if(previous)++previousCursor;
         if(transitionRemaining>0 && --transitionRemaining==0){previous=nullptr;previousId=0;}
