@@ -51,3 +51,12 @@ prefetch and anti-click ramps. Shift-drag retains panning until #46's shared
 controls arrive. Keep positioning ephemeral and separate from DAW seeking,
 export composition and WAV contents. Shared navigation/ruler integration remains
 deferred, with no competing toolbar or waveform infrastructure refactor.
+
+## Shared timeline integration — PR #49
+
+The owner requested completion now that #49 is merged. Replace Export's lone Fit
+button and local bar-label painting with the approved shared Zoom − / slider /
+Zoom + / Fit row and musical ruler. Reuse existing viewport limits, accepted
+timing and complete-audible Fit; retain click/drag preview positioning, pan,
+mix/readiness/file semantics and the approved composition. No generalized viewer
+refactor, Snap/grid or Perform redesign is included.

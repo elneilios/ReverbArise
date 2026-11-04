@@ -37,7 +37,7 @@
 - [x] 5.1 Use the two owner-supplied issue #6 mockups reviewed in chat on 2026-11-04 and inventory existing shared controls before integration; map their dedicated layout and 0/50/100% comparison onto current Inter/spacing tokens, obeying wet-only endpoint visibility and preserving the approved header/other workspaces. Reference retrieval is resolved; control inventory and implementation mapping remain to verify. Resolve any material visual conflict with the owner before implementation proceeds through that checkpoint.
 - [x] 5.2 Reuse approved SliderControl/NumericInputControl and extract missing command/drag-tile interaction families with domain-independent callbacks; test wheel/typed/stepper parity, keyboard/focus/disabled behavior, invocation ownership, font faces and clipping at minimum/larger sizes. Update shared-control guidance and directly launch a native family preview for owner checkpoint A before wider integration.
 - [x] 5.3 Refine the approved first-pass layout with a proportionate roughly 4:3 WAV tile, cohesive icon/text, compact colour-keyed layer legend and existing spacing; retain and verify the integrated the approximately 66/33 waveform-to-controls Export view with Play/Stop, exact mix, Drag WAV, Save WAV and Return to Perform; verify region geometry, keyboard order, no modal/summary/duplicate Overview and unchanged Learn/Perform/header snapshots at 1100x850 and supported larger sizes.
-- [x] 5.4 Refine complete audible fitting with unclamped visual margins, explicit audible Preview versus song-aligned WAV duration labels and full-tail fixtures; retain and verify drawing of cached actual dry/wet layers using one disclosed amplitude scale and composition gain plan, with ruler, coverage and distinct preview cursor; verify asymmetric rising pre-arrival wet, 0/50/100% visibility/scaling, real post-arrival tails, actual audible fit, all-zero state and original song-position labels using model/pixel/native fixtures.
+- [x] 5.4 Refine complete audible fitting with unclamped visual margins, explicit audible Preview versus song-aligned WAV duration labels and full-tail fixtures; retain and verify drawing of cached actual dry/wet layers using one shared amplitude scale and composition gain plan, with ruler, coverage and distinct preview cursor; verify asymmetric rising pre-arrival wet, 0/50/100% visibility/scaling, real post-arrival tails, actual audible fit, all-zero state and original song-position labels using model/pixel/native fixtures.
 - [x] 5.5 Retain and label a dimmed last-good waveform through pending/error with immediate requested percentage and atomic matching replacement; bind stable pending/ready/error/file states and persistent gap/bypass/layer/replacement guidance through existing shared notices; test that rapid mix changes cannot flash unreadable helpers, shift layout, enable stale actions or hide actionable failures, and that no fake WAV readiness is exposed.
 - [x] 5.6 Reopen checkpoint B for revised tile/legend/navigation/last-good/duration presentation; deliver native integrated reference-mix/pending/error/missing-dry snapshots and directly launch the preview for owner checkpoint B; obtain explicit composition/control-feel approval, retain unchanged component/header approvals, record supported-size/raster results separately from untested OS-DPI/host coverage and update `docs/design/export-workspace.md` plus documentation links.
 
@@ -47,32 +47,27 @@
 
 - [x] 6.1 Run final affected Debug/Release validation through `scripts/build.ps1 -Configuration Debug|Release -Test` after implementation settles; record actual native test results, callback allocation/lock/I/O guards, memory bounds, source/binary/schema/asset identities and remaining limitations in dated `docs/validation/` evidence. Repeat unchanged full suites only for new failures/inputs/behavior.
 - [x] 6.2 Obtain one grouped final FL Studio acceptance: preview versus saved 0/50/100% composition, real ready-WAV drag into Playlist at song origin with cancel/unsupported Save fallback, Export bypass and replacement-source muting guidance, and save/reopen of percentage/revision. Record actual host version/rate/buffer/DPI and untested parts without repeating automated edge cases absent concrete host issues.
-- [ ] 6.3 Cross-check every #6 criterion against delta/model/sample/file/component/visual/host evidence; confirm #5/#8/#38 and concurrent header/performance plans remain separate, Learn Stop→Perform and captured provenance remain unchanged, run strict all-spec validation and diff checks, and leave any unresolved acceptance unchecked.
+- [x] 6.3 Cross-check every #6 criterion against delta/model/sample/file/component/visual/host evidence; confirm #5/#8/#38 and concurrent header/performance plans remain separate, Learn Stop→Perform and captured provenance remain unchanged, run strict all-spec validation and diff checks, and leave any unresolved acceptance unchecked.
 
 ## 7. Internal preview positioning
 
 - [x] 7.1 Implement ephemeral ready-revision click/drag seek authority over the existing paged preview; test stopped parking, seeked PCM/ramp/cursor, playing/latest-intent handoff, Stop/mix/mode/restore cancellation and unchanged composition/file/state identities.
-- [ ] 7.2 Bind left-click/drag preview positioning with Shift-drag pan, unchanged wheel/Fit and immediate cursor feedback; test viewport mapping, right-click/pending rejection and native interaction feel, preserving prior visual/host passes and deferred #46 control integration.
+- [x] 7.2 Bind left-click/drag preview positioning with owner-approved right-drag pan, unchanged wheel/Fit and immediate cursor feedback; test viewport mapping, right-click no-seek/pending rejection and native interaction feel, preserving prior visual/host passes and deferred #46 control integration.
+
+## 8. Shared controls from merged PR #49
+
+- [x] 8.1 Integrate the approved shared ruler and Zoom − / slider / Zoom + / Fit row using exposed accepted navigation limits and stale-intent guards; test clamped logarithmic parity, complete-audible Fit, manual viewport preservation, pending/empty states, cursor/ruler alignment and unchanged audio/file/session identities.
+- [x] 8.2 Verify supported sizes/software scales and incoming main regressions, directly launch the integrated native preview for owner row/ruler approval, retain prior playhead/host passes and update integration handover and final validation evidence without merging or archiving.
 
 ## Workflow follow-up
 
-### Owner-approved deferred integration (2026-11-04)
+The owner approved the final shared ruler/zoom integration, Zoom-left percentage
+legend and right-drag pan on 2026-11-04. Prior native playhead and all three FL
+Studio acceptance groups remain retained. No further owner testing is requested.
+The shared controls preserve complete-audible Fit, ephemeral navigation,
+revision-bound readiness and song-aligned WAVs. #5, #8, #38 and Perform #46 remain
+separate; no competing waveform infrastructure was extracted.
 
-Current Export visual acceptance passes as presented. In coordination with Agent
-2 / issue #46, integrate the fuller absolute musical ruler and shared Zoom − /
-slider / Zoom + / Fit controls later; no Snap/grid or editing handles. Preserve
-Export's complete-audible Fit, existing gestures, mix/readiness and WAV alignment.
-Do not independently refactor waveform infrastructure. Interface requirements
-are recorded in `docs/design/export-workspace.md`. These refinements do not reopen
-the current visual checkpoint. Merge and archive remain held until integration
-is completed or explicitly separated by the owner into a follow-up issue.
-
-The owner subsequently passed all three FL Studio groups and authorized preview
-click/drag positioning now under section 7, with Shift-drag preserving pan.
-Shared #46 controls/ruler remain deferred for coordination. Preview seeking is
-separate from DAW seeking and audio edits; validate it without repeating prior
-host acceptance of unchanged export/delivery behavior.
-
-- This is the authorized planning phase only; stop after presenting the proposal. A subsequent Apply request is required before implementation.
-- Continue on the Issue #6 branch, maintain exact task-line/post-checkbox verification through vanilla OpenSpec Apply, and use one review PR for this coherent issue after implementation authorization.
-- Keep #11's already synced archive intact. Sync/archive this change only after implementation/acceptance and explicit authorization; do not auto-merge or close issues.
+Continue on the Issue #6 branch and deliver one review PR. OpenSpec sync/archive
+and final merge require owner authorization; do not auto-close the issue or
+modify #11's synced archive.

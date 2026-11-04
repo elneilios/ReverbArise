@@ -36,8 +36,12 @@ Export SHALL reuse the approved header above an approximately 66% full-height pr
 - **THEN** current readiness/reason is concise and accessible, Save/Drag availability follows that revision and the layout does not flash transient helper text or shift controls
 
 ### Requirement: Export waveform depicts the audible mix at absolute positions
-Export SHALL draw actual accepted dry/wet data with a shared disclosed amplitude scale and the composition gain plan. Dry SHALL use neutral white/grey and wet aqua; zero-weight layers SHALL be invisible. Actual wet pre-arrival rise, placement, crop and post-arrival tail SHALL be preserved. Ruler, preview cursor and coverage indications SHALL remain truthful and visually distinguishable.
+Export SHALL draw actual accepted dry/wet data with a shared amplitude scale and the composition gain plan. Dry SHALL use neutral white/grey and wet aqua; zero-weight layers SHALL be invisible. Actual wet pre-arrival rise, placement, crop and post-arrival tail SHALL be preserved. Ruler, preview cursor and coverage indications SHALL remain truthful and visually distinguishable.
 
+#### Scenario: Compact navigation and mix guidance
+- **WHEN** an accepted mix is displayed
+- **THEN** the compact colour legend shows each accepted layer percentage and is right-aligned on the shared zoom toolbar row beneath the viewer without a numerical scale caption
+- **AND** Ready dry-inclusive WAVs show mute-source guidance in the WAV tile rather than below the waveform
 #### Scenario: Compare 0 50 and 100 percent
 - **WHEN** the same asymmetric source/wet fixture is shown at 0%, 50% and 100% Wet
 - **THEN** dry alone, scaled dry plus rising wet, and wet alone respectively match the audible composition, including real tails and overlap
@@ -75,11 +79,23 @@ Pending/failed requests SHALL retain a dimmed, percentage-labelled previous wave
 ### Requirement: Export waveform positions internal preview only
 Unmodified left-click/drag SHALL position the ready internal preview using the
 same absolute mapping as waveform/ruler/cursor. Stopped clicks SHALL not autoplay;
-playing seeks SHALL resume after bounded preparation. Shift-drag SHALL retain
+playing seeks SHALL resume after bounded preparation. Right-drag SHALL provide
 panning, right-click SHALL not seek, and pending previous plots SHALL not seek.
 Position SHALL be ephemeral and SHALL not change DAW transport or export audio.
 
 #### Scenario: Positioning while zoomed or panned
 - **WHEN** a ready waveform is clicked or dragged after viewport navigation
 - **THEN** cursor/readout identify the mapped clamped sample and Play starts there without changing view, mix or WAV alignment
-- **AND** Shift-drag still pans without changing preview position
+- **AND** Right-drag pans without changing preview position
+
+### Requirement: Export consumes the shared timeline controls
+Export SHALL use the shared Zoom − / slider / Zoom + / Fit row and musical ruler.
+Its binding SHALL retain accepted navigation limits, logarithmic zoom, absolute
+sample/timing mapping and complete-audible Fit. Ordinary refresh SHALL preserve
+manual inspection and reflect the actual clamped view without issuing intents.
+Stale session/pass/composition callbacks SHALL not modify a replacement view.
+
+#### Scenario: Controls and pointer navigation agree
+- **WHEN** the user zooms using buttons, slider, wheel or keyboard and returns to Fit
+- **THEN** the row, ruler, waveform and preview cursor agree on one accepted viewport, all audible contributions fit, and WAV/mix/source/render state remains unchanged
+- **AND** previous-waveform navigation remains available while current preparation gates playback/delivery, without adding Snap or editing handles

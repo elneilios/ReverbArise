@@ -8,13 +8,17 @@ namespace m3::ui::controls
 class TimelineNavigation final:public juce::Component,public juce::SettableTooltipClient
 {
 public:
+    enum class PanGesture {leftOrShiftLeft,rightDrag};
     TimelineNavigation(){setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
         setTitle("Read-only waveform navigation");setTooltip("Wheel: zoom at pointer. Drag or Shift-wheel: pan. +/-: zoom. Arrows: pan. Home or double-click: Fit.");}
     std::function<void()> onChange;
     std::function<void(int64_t)> onPosition;
     void cancelGesture(){positioning=false;panning=false;}
+    void setPanGesture(PanGesture gesture){cancelGesture();panGesture=gesture;}
     void setPositioningEnabled(bool enabled){if(positioningEnabled && !enabled)cancelGesture();positioningEnabled=enabled;}
     const SwellViewport& viewport()const noexcept{return view;}
+    double minimumSpan()const noexcept{return std::min(minimum,limits.span());}
+    double maximumSpan()const noexcept{return limits.span();}
     void setRange(double audibleFirst,double audibleLast,double fileFirst,double fileLast,double rate,bool reset=true)
     {
         cancelGesture();
@@ -31,13 +35,14 @@ public:
     void zoom(double factor,double anchor=.5){view.zoom(factor,std::clamp(anchor,0.,1.));clamp();changed();}
     void pan(double fraction){view.shift(fraction);clamp();changed();}
     void mouseDown(const juce::MouseEvent& e)override{grabKeyboardFocus();down=view;
-        positioning=e.mods.isLeftButtonDown() && !e.mods.isShiftDown() && onPosition!=nullptr && positioningEnabled;
-        panning=e.mods.isLeftButtonDown() && (e.mods.isShiftDown() || onPosition==nullptr);
+        panning=isPanGesture(e.mods);
+        positioning=e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown() && !e.mods.isShiftDown() && !panning && onPosition!=nullptr && positioningEnabled;
         if(positioning && e.getNumberOfClicks()==1)position(e.position.x);}
     void mouseDrag(const juce::MouseEvent& e)override
-    {if(!e.mods.isLeftButtonDown() || getWidth()<=0)return;if(positioning){position(e.position.x);return;}
-        if(!panning)return;view=down;view.shift(-static_cast<double>(e.getDistanceFromDragStartX())/getWidth());clamp();changed();}
-    void mouseDoubleClick(const juce::MouseEvent&)override{fit();}
+    {if(getWidth()<=0)return;if(positioning){if(e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown())position(e.position.x);return;}
+        if(!panning || !isPanGesture(e.mods))return;view=down;view.shift(-static_cast<double>(e.getDistanceFromDragStartX())/getWidth());clamp();changed();}
+    void mouseUp(const juce::MouseEvent&)override{cancelGesture();}
+    void mouseDoubleClick(const juce::MouseEvent& e)override{if(e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown())fit();}
     void mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)override
     {if(e.mods.isShiftDown() || std::abs(wheel.deltaX)>std::abs(wheel.deltaY))pan(-2*(std::abs(wheel.deltaX)>std::abs(wheel.deltaY)?wheel.deltaX:wheel.deltaY));
         else zoom(std::pow(1.25,-wheel.deltaY*4),getWidth()>0?e.position.x/getWidth():.5);}
@@ -51,11 +56,14 @@ public:
     void focusGained(FocusChangeType)override{repaint();}void focusLost(FocusChangeType)override{repaint();}
     void paint(juce::Graphics& g)override{if(hasKeyboardFocus(false)){g.setColour(aqua);g.drawRoundedRectangle(controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke),radius,controlGeometry::focusStroke);}}
 private:
+    bool isPanGesture(juce::ModifierKeys keys)const{return panGesture==PanGesture::rightDrag?
+        keys.isRightButtonDown() && !keys.isLeftButtonDown():keys.isLeftButtonDown() && (keys.isShiftDown() || onPosition==nullptr);}
     void position(float x){if(positioningEnabled && onPosition && getWidth()>0)onPosition(view.sample(std::clamp(x,0.f,static_cast<float>(getWidth())),0,getWidth()));}
     void changed(){repaint();if(onChange)onChange();}
     void clamp(){const auto span=std::clamp(view.span(),std::min(minimum,limits.span()),limits.span());
         view.first=std::clamp(view.first,limits.first,std::max(limits.first,limits.last-span));view.last=view.first+span;}
     SwellViewport view,down,fitView,limits;double minimum=1;
     bool positioningEnabled=false,positioning=false,panning=false;
+    PanGesture panGesture=PanGesture::leftOrShiftLeft;
 };
 }

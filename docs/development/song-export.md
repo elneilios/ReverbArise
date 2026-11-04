@@ -68,7 +68,7 @@ is per-page, and no upward normalization occurs. Sparse zero spans are omitted
 from measurement scans while remaining in the declared file interval.
 
 Exact nonzero audible bounds and bounded dry/wet peak bins come from the final
-protected composition; there is no quiet-tail threshold. One disclosed reference
+protected composition; there is no quiet-tail threshold. One shared reference
 scale is used for both visual layers. Export does not consume Perform trim,
 isolation or live wet level. The existing serialized Swell worker owns preparation and publication; combined
 budget stress and final callback integration validation remain pending.
@@ -193,6 +193,13 @@ seek the DAW. The callback still consumes only fixed pages. The worker reads the
 same immutable WAV from the selected sample, with no new audio engine. Pending
 last-good plots cannot seek. Wheel/Shift-wheel, Shift-drag and Fit remain viewport
 actions, independent of preview position. Shared #46 controls remain deferred.
+
+PR #49's shared Zoom/Fit row and musical ruler now provide the Export controls;
+the earlier deferral is fulfilled in implementation, with integrated approval
+pending. The adapter exposes accepted span limits and keeps complete-audible Fit.
+The row owns only intents; Export guards their session/pass/composition and maps
+the logarithmic scale without duplicating limit calculations. The ruler paints
+accepted absolute timing, never DAW seeking, Snap or an independent clock.
 
 An unavailable coherent worker timing read waits, as existing transport
 preparation does; it must not create a spurious invalid revision and revoke Play.

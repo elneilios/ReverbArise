@@ -82,8 +82,8 @@ candidate, not a new universal geometry token. Aqua Wet swells and neutral Dry
 source keys identify the actual weighted layers; zero-contribution keys say off.
 
 Fit restores all audible contributions with margins. Wheel zoom anchors at the
-pointer, Shift-left-drag pans, horizontal/Shift-wheel pans, +/- zooms, arrows pan and
-Home/F or double-click restores Fit. The view remains read-only. New accepted
+pointer, Right-drag pans, horizontal/Shift-wheel pans, +/- zooms, arrows pan and
+Home/F or left-double-click restores Fit. The view remains read-only. New accepted
 mixes fit once; ordinary refresh does not reset inspection. The transport readout
 separates audible Preview duration from WAV duration at song origin.
 
@@ -97,37 +97,49 @@ Software raster evidence is not actual Windows DPI or FL Studio acceptance.
 
 ## Deferred integration handover to issue #46 / Agent 2
 
-This is approved current visual acceptance, not a failed or reopened checkpoint.
-The owner separately approved two coordinated refinements: a fuller musical
-timeline ruler above the waveform, and the shared Zoom − / slider / Zoom + / Fit
-controls from #46. The current sparse bar labels are not claimed to satisfy that
-future ruler. Export needs no Snap/grid or editing handles. Do not build a second
-toolbar or refactor this viewer before coordinating the shared interface.
+**Current status:** PR #49 is merged and its shared row/ruler are implemented in
+Export. The new integrated native checkpoint remains open. Original playhead
+feel is owner approved and its behavior is retained. The historical handover
+below is now being fulfilled; no new waveform infrastructure was extracted.
+Both Debug and Release integration suites pass 46/46; see the
+[integration evidence](../validation/2026-11-04-export-shared-timeline-integration.md)
+for source/binary identity, native images and approval limits.
 
-The integration should consume canonical absolute sample bounds and accepted
-`Transport` timing, with `SwellViewport` as the view transform. Export supplies
-its own Fit target: the complete accepted audible composition plus visual margins,
-independent of selection and song-origin file duration. Controls should emit
-navigation intents over that viewport, not own audio bounds or project state.
-Preserve pointer-anchored zoom, pan gestures, once-per-accepted-mix Fit, manual
-inspection during refresh, pending last-good presentation and exact current-file
-readiness. Reuse the timing validity rules: show no invented musical positions.
+Following owner placement feedback, a single row beneath the waveform holds
+`TimelineZoomControls` on the left and the compact Wet/Dry percentage legend on the right.
+The numerical shared-scale caption is omitted; both layers still use the same
+amplitude scale. Related spacing separates this row from Preview and provides
+additional bottom clearance. Only meaningful delivery/silent-mix feedback adds
+a status line beneath the row. Dry-inclusive mute-source guidance is part of
+the tile's Ready status, alongside percentage and song alignment. The compact
+single-line caption leaves related spacing before the ruler. The header notice
+retains Export playback safety guidance. The row retains its approved control geometry; the
+waveform keeps its width/ruler alignment and yields the footer's required height.
+The right column and header remain unchanged. The slider uses the existing adapter's accepted limits logarithmically;
+buttons, slider, wheel and keyboard reflect the same clamped viewport. Fit still
+shows the complete audible export. `paintMusicalTimelineRuler` uses the same
+absolute viewport and accepted timing, including denominator-aware beat ticks.
+Unknown timing is explicitly unavailable rather than fabricated. Pending
+last-good navigation remains usable; stale epoch/pass/composition callbacks are
+rejected. No Snap/grid, source editing, DSP or saved viewport state is added.
 
-`ExportWorkspace::viewport()` and `waveformBounds()` are existing test seams;
-`Controls/TimelineNavigation.h` currently adapts gestures over `SwellViewport`.
-The forthcoming shared navigation/ruler interface can replace that adapter once
-agreed, without changing `SongMix`, export ownership, WAV alignment or playback.
-Agent 2 is assessing composable waveform infrastructure; no extraction is part
-of this validation pass. Merge and OpenSpec archive remain on hold until this
-integration completes or the owner explicitly separates it into a follow-up issue.
-
+The owner approved the completed shared row/ruler integration and right-drag pan
+on 2026-11-04. Export uses canonical absolute sample bounds and accepted timing,
+with SwellViewport as the transform. Fit remains the complete audible composition
+plus margins, independent of Perform selection and WAV lead-in. Controls emit
+intents, with the workspace retaining audio bounds and ownership. Ruler timing
+is never fabricated. Ordinary refresh preserves manual inspection; current-file
+readiness remains revision-bound. No new waveform infrastructure was extracted.
+Agent 2's final Perform editor/serialization integration follows #6's merge,
+with the current interface and schema boundary recorded in the shared handover.
+Merge and OpenSpec sync/archive remain owner-controlled.
 After passing the FL Studio checks, the owner authorized click/drag preview
 positioning immediately, before the shared #46 controls. Left-click/drag positions
-the internal preview; Shift-drag preserves pan. Stopped seeks park without playing;
+the internal preview; Right-drag pans. Stopped seeks park without playing;
 playing seeks continue after bounded refill. The immediate parked marker and
 actual playing cursor share absolute mapping and existing preview ink; outgoing
 fade-out cursors cannot overwrite the new target. Right-click does not seek.
 Pending/failed previous plots are not seekable. No DAW seeking or audio editing
-is introduced. This revised interaction needs its native feel check; prior
+is introduced. The revised interaction has native owner approval; prior
 composition, file-delivery and FL Studio acceptance remain valid for unchanged
 behavior. Coordinate shared control integration with Agent 2 against this seam.

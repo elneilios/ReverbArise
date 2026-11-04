@@ -158,9 +158,32 @@ delayed starts. Stop parks the current position; completion returns to the chose
 start. Position is ephemeral and cleared with accepted-mix/session/mode resets.
 No stale/last-good waveform can seek while the requested mix is pending.
 
-Shift-left-drag and horizontal/Shift-wheel retain panning; wheel zoom and Fit
+Right-drag and horizontal/Shift-wheel provide panning; wheel zoom and Fit
 remain unchanged. Right-click does not seek. The cursor and time readout follow
 the requested position immediately, then the actual callback cursor, without
 showing the outgoing seek's fade-out cursor. No DAW seek, scrubbing engine,
 capture, render/file mutation or saved-state change is introduced. Integrate the
 future #46 controls later against this existing viewport/preview boundary.
+
+## Merged shared ruler/zoom integration
+
+Consume PR #49's `TimelineZoomControls` and `paintMusicalTimelineRuler` unchanged.
+Place the compact Wet/Dry legend and shared zoom row on one line directly beneath
+the waveform, toolbar pinned left and legend pinned right, without numerical scale
+text. Use related spacing above Preview and at the bottom, and a single-line
+caption with related spacing before the ruler. Dry-inclusive mute-source guidance
+belongs in the Ready WAV tile status alongside percentage and song alignment;
+only meaningful delivery/silent-mix feedback uses a footer status line. Retain
+header safety messaging. Keep the 66/33
+composition, right column and existing shared control dimensions. The navigation adapter exposes its accepted
+minimum/maximum span; Export maps those limits logarithmically to the slider and
+refreshes it from the post-clamp viewport. Retain the existing detail/repaint
+onChange callback and never Fit from ordinary refresh. Domain/session/pass and
+displayed-composition ownership reject stale queued zoom intents.
+
+Paint the ruler in the existing aligned ruler bounds using the accepted absolute
+viewport and SongTime. Beat tick density/labels and unavailable timing remain
+owned by the shared painter/canonical authorities; do not add another clock or
+grid. Export still owns complete-audible Fit and its original pointer gestures.
+Integrated native approval covers the shared row/ruler together; prior approved
+playhead behavior and FL Studio export acceptance remain retained.
