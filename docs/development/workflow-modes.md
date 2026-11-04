@@ -21,6 +21,10 @@ The descriptions are “Capture audio and discover musical moments”, “Shape 
 place reverse swells with precision” and “Preview your prepared swells”. See
 [Issue #35 integration evidence](../validation/2026-11-04-issue-35-header-integration.md)
 for owner approval and native/host/DPI coverage.
+The implemented header contract is synced into `openspec/specs/swell-workspace/`;
+its [archived change](../../openspec/changes/archive/2026-11-04-enhance-header-mode-navigation/proposal.md)
+and [archive checks](../validation/2026-11-04-issue-41-openspec-archive.md) preserve
+the planning history and validation limits.
 
 | Durable XML value / internal mode | Display label | Role |
 | --- | --- | --- |
