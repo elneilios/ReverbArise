@@ -7,7 +7,7 @@ list checkpoint from later production integration.
 
 Current automated outcome: **42/42 Release CTest passed** at clean commit
 `a2a014d` after the separately authorized frozen-tempo repair. Integrated owner
-approval and the single final FL Studio smoke test remain pending; Debug and
+approval is recorded; the single final FL Studio smoke test remains pending. Debug and
 physical Windows DPI/monitor-transition coverage were not run.
 
 ## Execution and review scope
@@ -174,8 +174,13 @@ the computer-use plugin. It uses a temporary synthetic project with actual
 captured source and restored selections, independent of the user's DAW projects.
 The standalone review window had already closed; no duplicate review was opened.
 Task 3.1 was guarded, checked and confirmed through refreshed Apply instructions:
-**7/8 complete**. Integrated composition approval and the single FL Studio smoke
-remain pending. The current build is not installed into FL Studio automatically.
+**7/8 complete**. The owner subsequently approved the integrated composition in
+chat on 4 November 2026. The single FL Studio smoke remains pending: the owner
+could not find the hidden worktree build path. The whole tested bundle was copied
+to `D:\Users\neila\Desktop\ReverbArise-Issue4-a2a014d\ReverbArise.vst3` and its
+parent folder opened in Explorer. All six bundle files were SHA-256 checked
+against the original; the binary hash matches the post-repair hash above. No
+existing bundle was overwritten. It is not installed into FL Studio automatically.
 
 Component event tests dispatch JUCE pointer/keyboard events in a native MSVC
 executable. Software-raster snapshots at multiple scales are not physical DPI
