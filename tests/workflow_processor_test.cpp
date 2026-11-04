@@ -108,6 +108,11 @@ int main(){return runTest([]{
     while(juce::Time::getMillisecondCounter()<compatibleDeadline && e.savedSession().swells[0].phase!=m3::Phase::ready)juce::Thread::sleep(5);
     REQUIRE(p->getWorkflowReadiness().readySwell);
     {
+        // This clock/preview identity oracle has only 64 captured dry samples.
+        // Pin Wet only explicitly; #46's default mixed audition correctly needs
+        // dry coverage for the whole listening window, independent of live readiness.
+        const auto initialMonitoring=e.savedSession();
+        REQUIRE(e.setAuditionWetOnly(true,e.assignmentEpoch()));
         process(0,false,0);const auto readyDeadline=juce::Time::getMillisecondCounter()+10000;
         while((!e.snapshot().liveReady || !e.snapshot().auditionReady) && juce::Time::getMillisecondCounter()<readyDeadline)juce::Thread::sleep(2);
         REQUIRE(e.snapshot().liveReady && e.snapshot().auditionReady);
@@ -126,6 +131,7 @@ int main(){return runTest([]{
         e.stop();process(64,false,0);
         REQUIRE(m3::encode(e.savedSession(),afterClock,clockError) && beforeClock==afterClock);
         REQUIRE(p->getCaptureSnapshot().reference==sourceBefore);
+        REQUIRE(e.setAuditionWetOnly(initialMonitoring.auditionMode==m3::AuditionMode::wetOnly,e.assignmentEpoch()));
     }
     p->flushHostStateChangesForTesting();const auto beforeSettings=listener.changes;
     REQUIRE(e.edit(id,[](auto& w,auto&){w.shape.gainDb=3;return true;}));
