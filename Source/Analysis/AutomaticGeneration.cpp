@@ -160,9 +160,11 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         }
         else if(old)*w=*old;
     }
-    if(plan.changed.empty())
-    {plan.outcome=GenerationOutcome::noChange;plan.message="No changes to generate. Existing swells were kept.";return plan;}
     for(const auto& old:accepted.swells)if(!find(working,old.id))plan.retired.push_back(old.id);
+    // A nonempty lower-density collection is a real arrangement change even
+    // when all surviving definitions and their renders are already current.
+    if(plan.changed.empty() && plan.retired.empty())
+    {plan.outcome=GenerationOutcome::noChange;plan.message="No changes to generate. Existing swells were kept.";return plan;}
     std::erase_if(working.selected,[&](const auto& id){return !find(working,id);});
     if(!find(working,working.primary))working.primary=working.selected.empty()?juce::String{}:working.selected.front();
     working.timing=time;
@@ -170,6 +172,7 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
     if(!validate(working,error) || !encode(working,saved,error))return fail(error);
     plan.replacement=std::move(working);plan.outcome=GenerationOutcome::generated;
     plan.message=juce::String(static_cast<int>(plan.changed.size()))+" automatic swells generated. Opening Perform...";
+    if(plan.changed.empty())plan.message=juce::String(static_cast<int>(plan.retired.size()))+" automatic swells removed. Opening Perform...";
     return plan;
 }
 }

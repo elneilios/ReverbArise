@@ -204,8 +204,8 @@ the existing detector tolerance; matched automatic IDs/activity remain stable.
 Manual/edited/frozen, unknown-origin and outside-scope definitions remain intact.
 An empty/protected-only/unchanged/failed/cancelled plan never retires old work.
 
-Only a changed viable automatic result can publish the full replacement and
-guarded Perform transition. Wet jobs queue afterward. Last-good immutable render
+A nonempty viable replacement with new/regenerated definitions or eligible retirements can publish the full replacement and
+guarded Perform transition. A low/high/low sensitivity loop can therefore remove extra unedited automatic swells while retaining unchanged survivors and their renders. Wet jobs queue afterward only for changed definitions. Last-good immutable render
 references remain; affected source-dependent work is deferred through Learn
 instead of being silently re-rendered by preview. Protected manual calibration
 also retains its saved reference through automatic collection replacement;

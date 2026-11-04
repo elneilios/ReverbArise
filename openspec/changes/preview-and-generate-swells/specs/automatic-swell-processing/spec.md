@@ -46,7 +46,7 @@ The system SHALL distinguish suggestions, accepted automatic targets and manuall
 
 #### Scenario: Changed unedited target
 - **WHEN** committed audio changes and an unedited automatic target is no longer supported by the detector
-- **THEN** that target remains committed during preview and is reconciled or retired only within a successful shared transaction producing at least one changed viable automatic result; obsolete jobs are cancelled and unrelated targets preserved
+- **THEN** that target remains committed during preview and is reconciled or retired only within a successful shared transaction producing a changed nonempty viable automatic collection; obsolete jobs are cancelled and unrelated targets preserved
 
 ### Requirement: Marker sensitivity controls event selectivity
 One canonical per-instance sensitivity SHALL govern automatic and diagnostic onset analysis, with lower values favouring stronger attacks and rejecting more small events in documented busy fixtures. It SHALL preserve saved sensitivity and use bounded coalesced background reanalysis when marking is enabled. It SHALL NOT depend solely on a longer blind separation or claim musical-key/chord recognition.
@@ -163,12 +163,16 @@ Generate SHALL prepare one replacement over the union of eligible committed mapp
 - **THEN** generation uses real eligible coverage, never invents source or retires definitions merely because they fall inside a bounding interval across gaps
 
 ### Requirement: Replacement success is nonempty and atomic
-A successful Generate SHALL atomically publish at least one new or genuinely regenerated automatic definition and any eligible retirements, then enter Perform under the same workflow authority. Retirement alone or unchanged definitions SHALL NOT count as success. No validation failure, cancellation or stale completion SHALL partially mutate definitions. Immutable last-good assets SHALL remain recoverable while wet renders prepare asynchronously.
+A successful Generate SHALL atomically publish a nonempty viable automatic result when definitions change or eligible unmatched automatic swells retire, then enter Perform under the same authority. Unchanged survivors SHALL retain their renders. Empty or identical collections SHALL NOT count as success. Validation failure, cancellation and stale completion SHALL NOT partially mutate definitions. Last-good assets SHALL remain recoverable.
 
 #### Scenario: Repeated Generate with and without change
 - **WHEN** a user generates again from identical dependencies, then repeats with a different valid IR or source dependency
 - **THEN** the identical run reports no changes and stays Learn; the changed run preserves matched IDs, replaces eligible definitions atomically and enters Perform without claiming ready wet audio
 
-#### Scenario: Empty or removal-only plan
-- **WHEN** no viable changed generated result exists even though old automatic definitions could be retired
-- **THEN** every prior definition remains, Learn stays selected and a nonfatal outcome explains empty, protected-only or no-change status
+#### Scenario: Reduce sensitivity after a denser generation
+- **WHEN** low, high and then low sensitivity are generated from the same source, leaving a nonempty viable set with unchanged surviving definitions
+- **THEN** the final Generate removes unmatched eligible automatic swells, preserves protected work and survivor identities/renders, and enters Perform; repeating that result reports no change
+
+#### Scenario: Empty or protected-only plan
+- **WHEN** no viable eligible automatic result remains even though old automatic definitions could be retired
+- **THEN** every prior definition remains, Learn stays selected and a nonfatal outcome explains empty or protected-only status

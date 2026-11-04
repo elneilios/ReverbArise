@@ -50,7 +50,8 @@ inline void denseLearnGenerationCases()
     const auto protectedWork=*find(engine.savedSession(),manualId);
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();engine.holdLearnRendersForTesting(true);
     const auto fileCount=[&]{return engine.assetDirectory().findChildFiles(juce::File::findFiles,true).size();};
-    for(float sensitivity:{.2f,.5f,.8f})
+    size_t lowCount=0,highCount=0;
+    for(float sensitivity:{.2f,.5f,.8f,.2f})
     {
         const auto before=engine.snapshot();const auto files=fileCount();const auto began=juce::Time::getMillisecondCounterHiRes();
         engine.setPreferences(0,sensitivity,.08,false,processor.getWorkflowSnapshot().pass);const auto preview=fixture.ready();
@@ -63,6 +64,10 @@ inline void denseLearnGenerationCases()
         REQUIRE(fileCount()==files && engine.snapshot().renderCount==before.renderCount);
         REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});
         const auto generated=engine.savedSession();REQUIRE(generated.swells.size()>=61 && generated.swells.size()<=count+1);
+        if(generated.swells.size()!=before.session.swells.size())REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
+        if(sensitivity==.2f && !lowCount)lowCount=generated.swells.size();
+        else if(sensitivity==.2f){REQUIRE(highCount>lowCount && generated.swells.size()==lowCount);}
+        if(sensitivity==.8f)highCount=generated.swells.size();
         REQUIRE(sameSavedSwell(*find(generated,manualId),protectedWork));
         std::set<juce::String> ids;for(const auto& swell:generated.swells)REQUIRE(ids.insert(swell.id).second);
         std::cout<<"Dense Learn sensitivity="<<sensitivity<<" candidates="<<count<<" swells="<<generated.swells.size()

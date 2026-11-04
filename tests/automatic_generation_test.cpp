@@ -26,8 +26,15 @@ int main(){return runTest([]
     const auto a=saved.swells[0].id,b=saved.swells[1].id;
     REQUIRE(saved.swells[0].generationSource==juce::String::repeatedString("a",64));
     REQUIRE(plan(saved,candidates).outcome==GenerationOutcome::noChange);
-    // Removing definitions alone never fabricates a successful generation.
-    REQUIRE(plan(saved,{{100,1}}).outcome==GenerationOutcome::noChange && saved.swells.size()==2);
+    // A nonempty subset is an arrangement change even when survivors need no render.
+    REQUIRE(select(saved,{a,b},a));
+    const auto reduced=plan(saved,{{100,1}});
+    REQUIRE(reduced.outcome==GenerationOutcome::generated && reduced.changed.empty());
+    REQUIRE(reduced.retired==std::vector<juce::String>{b} && reduced.replacement.swells.size()==1);
+    REQUIRE(sameSavedSwell(*find(reduced.replacement,a),*find(saved,a)));
+    REQUIRE(reduced.replacement.primary==a && reduced.replacement.selected==std::vector<juce::String>{a});
+    REQUIRE(plan(reduced.replacement,{{100,1}}).outcome==GenerationOutcome::noChange);
+    REQUIRE(saved.swells.size()==2);
     REQUIRE(plan(saved,{}).outcome==GenerationOutcome::empty && saved.swells.size()==2);
     REQUIRE(select(saved,{a,b},a));saved.swells[0].enabled=false;saved.swells[1].muted=true;
     saved.defaultIR=asset('b');saved.defaultIRName="B";
