@@ -188,6 +188,7 @@ development standards before adopting spacing values or rolling out revised
 families. Carry Windows/host coverage gaps honestly and do not request repetition
 of prior passing automated/owner checks without a concrete changed behaviour.
 
-The separate implementation PR links #37 and proposal #42. Neither proposal merge
+The separate [implementation PR #44](https://github.com/elneilios/ReverbArise/pull/44)
+links #37 and proposal #42. Neither proposal merge
 nor this completed task list authorises self-merge, automatic issue closure or
 OpenSpec archive. Owner merge/acceptance remains outstanding.
