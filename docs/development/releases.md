@@ -44,6 +44,29 @@ Windows build; inclusion is not a claim that every listed component is linked.
 The packager copies texts from the actual dependency checkout and fails if expected
 notices are absent. Owner review must still establish all applicable obligations.
 
+The payload also includes `README.txt`, `User-Guide.html` and
+`guide-provenance.json`. The guide is a static offline document: all four native
+production-editor screenshots are embedded PNG data URIs, with no scripts or
+external resources. Its source template is [alpha-guide.html](alpha-guide.html).
+After Release/CTest and built identity verification, the packager runs
+`Release/preverb_learn_generation_ui_test.exe --guide-only` under the build lock
+with a fresh `PREVERB_UI_M3_OUTPUT` staging folder. Real fixture capture,
+generation, render and Export readiness are asserted before snapshots are saved.
+Missing/invalid captures or mismatched provenance fail packaging. All delivered
+guide files participate in the existing payload inventory and ZIP verification.
+
+For #59, rehearse on the issue branch with a distinct label such as
+`-Candidate alpha.rehearsal.1`. After owner review/merge, package a clean identified
+main revision containing the required integrations with `-Candidate alpha`.
+If that output identity already exists, preserve it and use a recorded fresh
+`alpha.N`; never overwrite it. Extract into a new folder, verify hashes and view
+the HTML locally offline, checking every image. The final extracted binary needs
+its own consolidated FL Studio capture/generate/Perform/save-reopen smoke test.
+Earlier fixture or host runs do not establish that final acceptance. Record
+clean-machine and second-host coverage explicitly, including unverified coverage.
+See the [alpha preparation evidence](../validation/2026-11-04-issue-59-alpha.md)
+and [pending redistribution review](../validation/2026-11-04-issue-59-redistribution-review.md).
+
 Existing final directories are never overwritten, even on concurrent invocations.
 Use a new explicit candidate identity for another attempt. If a failed operation
 leaves `out/releases/.staging-*`, preserve it for diagnostics or deliberately relocate

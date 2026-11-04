@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'release-guide.ps1')
 function Get-ReleaseNoticePaths {
     # Notices from the pinned dependency checkout, including supported codecs.
     ,@('LICENSE.md', 'JUCE-LICENSE.md')
@@ -186,6 +187,10 @@ function Invoke-ReverbRelease {
         $staging = Join-Path $releases ('.staging-' + [guid]::NewGuid().ToString('N'))
         $payload = Join-Path $staging 'payload'
         $null = New-Item -ItemType Directory -Path $payload -Force
+        $captures = Join-Path $staging 'native-guide-evidence'
+        $null = New-Item -ItemType Directory -Path $captures
+        Invoke-ReleaseGuideCapture $binary $captures $sha
+        Write-ReleaseGuide $Root $captures $payload $sha $identity.releaseIdentity
         $inventory = @(Get-ReleaseInventory $bundle)
         Copy-Item -LiteralPath $bundle -Destination $payload -Recurse
         $copied = @(Get-ReleaseInventory (Join-Path $payload 'ReverbArise.vst3'))
@@ -213,8 +218,15 @@ Notices are in licenses/ and ReverbArise.vst3/Contents/Resources/.
 Unsigned build. Extract the complete ReverbArise.vst3 directory; do not copy only its binary.
 With the DAW closed, preserve any prior installation and copy the bundle to your user VST3
 folder (%LOCALAPPDATA%\Programs\Common\VST3), then rescan in FL Studio.
-Keep saved FL Studio projects and captured/cache assets; verify an existing project copy.
-See docs/development/releases.md in the source checkout for the manual acceptance checklist.
+Open User-Guide.html for the illustrated offline guide. Start at low monitoring volume.
+Route audio through ReverbArise, choose Learn, and play the DAW to capture; stop to inspect
+markers, then Generate Swells. In Perform select a ready swell, Audition, then Stop.
+Use Wet only to hear the effect alone. Export prepares an independent mix for Save WAV.
+Keep saved FL Studio projects and captured/cache assets; verify a project copy on reopen.
+Alpha limitations: unsigned Windows x64 VST3; other hosts and clean-machine compatibility
+are unverified unless the sender supplies exact acceptance evidence. No installer or signing.
+Report problems by replying to the private sender with this identity, DAW/version, steps,
+expected/actual result and screenshots. Never send private recordings without permission.
 "@ | Set-Content -LiteralPath (Join-Path $payload 'README.txt') -Encoding UTF8
         $files = @(Get-ReleaseInventory $payload)
         $artifact = "ReverbArise-$($identity.releaseIdentity)-win-x64.zip"

@@ -120,9 +120,31 @@ static void selected(PreverbAudioProcessorEditor& editor,SwellEngine& engine,con
     const auto& view=editor.timelineComponent().viewport();REQUIRE(view.first<=bounds.first && view.last>=bounds.second);
     auto* overview=dynamic_cast<SwellOverview*>(named(editor,"songOverview"));REQUIRE(overview && !overview->detailBounds().isEmpty());
 }
+static void alphaGuide()
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
+    PreverbAudioProcessorEditor editor(processor);editor.setSize(1400,1000);editor.setVisible(true);editor.refresh();
+    REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture && engine.savedSession().swells.empty());
+    REQUIRE(!named(editor,"learnGenerateSwells")->isEnabled());captureImage(editor,"alpha-empty-learn");
+    fixture.record();const auto markers=fixture.ready();editor.refresh();
+    REQUIRE(markers.learnGeneration.displayed && !markers.learnGeneration.displayed->positions.empty());
+    REQUIRE(named(editor,"learnGenerateSwells")->isEnabled());captureImage(editor,"alpha-captured-markers");
+    auto* generate=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"learnGenerateSwells"));REQUIRE(generate);
+    controlReview::pointerClick(*generate);
+    await([&]{const auto s=engine.snapshot();return processor.getWorkflowSnapshot().mode==workflow::Mode::live && !s.session.swells.empty()
+        && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& swell){return swell.phase==Phase::ready;});});
+    editor.refresh();selected(editor,engine,m3::ui::firstChronologicalSwell(engine.savedSession()));
+    await([&]{editor.refresh();return named(editor,"audition")->isEnabled();});
+    captureImage(editor,"alpha-ready-perform");
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::finalise));
+    await([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});editor.refresh();
+    REQUIRE(visible(named(editor,"exportWorkspace")) && named(editor,"exportSave")->isEnabled() && named(editor,"exportDrag")->isEnabled());
+    REQUIRE(engine.snapshot().songExport.prepared);captureImage(editor,"alpha-ready-export");
+}
 int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();return;}
     const bool review=argc>1 && juce::String(argv[1])=="--review";
     if(!review)controlBindings();
     if(!review)pendingProtectedFraming();

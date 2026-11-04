@@ -12,8 +12,10 @@ $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'scripts') -Force
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'cmake')
 Copy-Item -LiteralPath (Join-Path $repository 'scripts/verify-version.cmake') -Destination (Join-Path $fixture 'scripts')
 Copy-Item -LiteralPath (Join-Path $repository 'cmake/ProductVersion.cmake') -Destination (Join-Path $fixture 'cmake')
-foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
+foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1','release-guide.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
 Copy-Item -LiteralPath (Join-Path $repository 'CMakePresets.json') -Destination $fixture
+$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'docs/development') -Force
+Copy-Item -LiteralPath (Join-Path $repository 'docs/development/alpha-guide.html') -Destination (Join-Path $fixture 'docs/development')
 'project(Preverb VERSION 0.1.0 LANGUAGES C CXX)' | Set-Content (Join-Path $fixture 'CMakeLists.txt')
 '/out/' | Set-Content (Join-Path $fixture '.gitignore')
 'fixture' | Set-Content (Join-Path $fixture 'tracked.txt')
@@ -45,6 +47,18 @@ function Invoke-ReleaseNative([string] $Executable, [string[]] $Arguments) {
 function Assert-ReleaseBinary([string] $Path, [string] $Version) {
     # Dummy bytes deliberately bypass PE validation. Actual PE validation is native evidence only.
     if ($script:case -eq 'bad-pe') { throw 'fixture invalid PE' }
+}
+function Invoke-ReleaseGuideCapture([string] $Binary, [string] $Directory, [string] $Sha) {
+    if ($script:case -eq 'guide-readiness-failed') { throw 'fixture guide readiness failed' }
+    Add-Type -AssemblyName System.Drawing
+    foreach ($state in (Get-ReleaseGuideStates)) {
+        $image = New-Object Drawing.Bitmap(1400,1000)
+        try { $image.Save((Join-Path $Directory ($state + '.png')), [Drawing.Imaging.ImageFormat]::Png) } finally { $image.Dispose() }
+    }
+    $captureSha = if ($script:case -eq 'guide-stale') { '0000000000000000000000000000000000000000' } else { $Sha }
+    @{ gitSha=$captureSha; command='Release/preverb_learn_generation_ui_test.exe --guide-only'; executableSha256=('a'*64) } | ConvertTo-Json | Set-Content (Join-Path $Directory 'capture.json')
+    if ($script:case -eq 'guide-missing') { Remove-Item -LiteralPath (Join-Path $Directory 'alpha-ready-export.png') }
+    if ($script:case -eq 'guide-corrupt') { 'broken image' | Set-Content (Join-Path $Directory 'alpha-ready-export.png') }
 }
 function Invoke-ReleaseBuild([string] $Root) {
     $script:buildCalls++
@@ -111,12 +125,32 @@ foreach ($relative in @('Contents/x86_64-win/ReverbArise.vst3', 'Contents/Resour
     Fail-Case ('missing:' + $relative) 'missing|not exist|cannot find|failed'
 }
 $start = (Get-Location).Path
+foreach ($entry in @(@('guide-readiness-failed','readiness failed'),@('guide-stale','provenance mismatch'),@('guide-missing','not find|does not exist|cannot find'),@('guide-corrupt','Parameter is not valid|invalid|FromStream'))) {
+    Fail-Case $entry[0] $entry[1]
+}
 Invoke-ReverbRelease -Root $fixture -ReleaseTag v0.1.0
 Assert ((Get-Location).Path -eq $start) 'Caller location was not restored.'
 $stable = Join-Path $fixture 'out/releases/v0.1.0'
 $manifest = Get-Content (Join-Path $stable 'build-manifest.json') -Raw | ConvertFrom-Json
 Assert ($manifest.gitSha -ceq $sha -and $manifest.candidate -ceq '' -and $manifest.toolchain.compiler -ceq 'MSVC') 'Stable manifest mismatch.'
 Assert (@($manifest.files | Where-Object { $_.path -like '*extra-resource.txt' }).Count -eq 1) 'Whole bundle not preserved.'
+Assert (@($manifest.files | Where-Object { $_.path -ceq 'User-Guide.html' }).Count -eq 1) 'Guide not inventoried.'
+$guide = Get-Content (Join-Path $stable 'payload/User-Guide.html') -Raw -Encoding UTF8
+Assert ([regex]::Matches($guide, 'src="data:image/png;base64,').Count -eq 4 -and $guide.Contains($sha) -and $guide.Contains('v0.1.0') -and $guide -notmatch '{{|https?://|<script') 'Guide identity/media mismatch.'
+Assert ($guide.Contains([string][char]0x00d7) -and $guide -notmatch ([string][char]0x00c3)) 'Guide UTF-8 text was corrupted.'
+$provenance = Get-Content (Join-Path $stable 'payload/guide-provenance.json') -Raw | ConvertFrom-Json
+Assert ($provenance.gitSha -ceq $sha -and $provenance.images.Count -eq 4) 'Guide provenance missing.'
+Assert ((Get-Content (Join-Path $stable 'payload/README.txt') -Raw).Contains('play the DAW to capture')) 'Quick start missing.'
+$templatePath = Join-Path $fixture 'docs/development/alpha-guide.html'
+$templateBytes = [IO.File]::ReadAllBytes($templatePath)
+try {
+    foreach ($bad in @('<script>alert(1)</script>', '<img src="external.png">', '<style>body{background:url(remote.png)}</style>', '<iframe src="remote.html"></iframe>', '{{unresolved}}')) {
+        [IO.File]::WriteAllText($templatePath, [Text.Encoding]::UTF8.GetString($templateBytes) + $bad)
+        $caught = ''
+        try { Write-ReleaseGuide $fixture (Join-Path $stable 'native-guide-evidence') (Join-Path $fixture 'out') $sha 'v0.1.0' } catch { $caught = $_.Exception.Message }
+        Assert ($caught -match 'Guide contains|Guide resource|four embedded') "Unsafe guide accepted: $bad | $caught"
+    }
+} finally { [IO.File]::WriteAllBytes($templatePath,$templateBytes) }
 Assert (@($manifest.files | Where-Object { $_.path -like 'licenses/*' }).Count -eq 14) 'Dependency licenses missing.'
 $beforeHash = (Get-FileHash (Join-Path $stable $manifest.artifact)).Hash
 $beforeBuilds = $script:buildCalls

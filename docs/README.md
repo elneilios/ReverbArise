@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — build-matched offline guide, native screenshot provenance and final main/host gates; [redistribution review](validation/2026-11-04-issue-59-redistribution-review.md) remains pending explicit owner approval.
+
 - [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
 
 - [Perform live diagnostics](development/perform-live-diagnostics.md) — read-only callback admission, historical rejection and worker preparation evidence for transport silence.
