@@ -1,9 +1,13 @@
 # Issue #46 — Perform integration validation, 4 November 2026
 
 Owner acceptance: **Approve revised presentation**, 4 November 2026. The reviewed
-profile is being adopted in production; see [adoption validation](2026-11-04-issue-46-presentation-adoption.md)
+profile is adopted in production; see [adoption validation](2026-11-04-issue-46-presentation-adoption.md)
 for the new build and remaining host check. Earlier checkpoint measurements below
 retain their original scope.
+
+Current OpenSpec progress is **20/21**, with task 5.4 accepted/adopted and only
+6.2 final host acceptance pending. Final Release build passes; corrected focused
+native tests pass 10/10, with all 58 unique tests covered across full/focused runs.
 
 
 Latest owner steering routes all hover help to the normal-font bottom footer:
