@@ -58,8 +58,11 @@ valid coverage but alone does not enable Perform. User-approved compatibility:
 verified enabled/unmuted/solo-eligible frozen wet also qualifies for Perform at its
 compatible timing without dry source. Unfrozen work and captured-dry preview
 still need real source; this exception grants no replacement permission.
-Export entry requires useful captured source and additionally
-an enabled compatible ready swell. A successful useful Stop commit selects Perform before wet
+Export entry requires an enabled, unmuted, solo-eligible compatible ready wet
+render independently of dry availability; verified frozen-wet recovery therefore
+also supports Export. Dry alone does not unlock Export, and its selected mix or
+pending file preparation does not eject the mode. This is the implemented #6
+entry refinement; dedicated WAV delivery remains in progress. A successful useful Stop commit selects Perform before wet
 renders finish. Empty/failed passes remain Learn. Restored saved modes may
 remain selected while dependency readiness is unavailable; unavailable controls
 must explain the reason.

@@ -9,6 +9,7 @@
 #include <UI/WorkspaceNotice.h>
 #include <UI/Controls/InvocationSlider.h>
 #include <UI/LearnWorkspace.h>
+#include <UI/ExportWorkspace.h>
 #include <UI/Controls/SwellList.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
@@ -60,7 +61,8 @@ private:
     juce::String irOwner,irChoice,irCatalogue;
     PreverbAudioProcessor& processor;
     m3::ui::LearnWorkspace learnWorkspace;
-    bool learningLayout=false,hasPerformWorkspace=false;
+    m3::ui::ExportWorkspace exportWorkspace;
+    bool learningLayout=false,exportLayout=false,hasPerformWorkspace=false;
     std::map<juce::Component*,bool> performVisibility;
     std::optional<m3::SwellViewport> performViewport;
     m3::EditorSnapshot state;

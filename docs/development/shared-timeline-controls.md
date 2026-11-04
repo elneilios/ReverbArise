@@ -5,6 +5,12 @@ supports Agent 1's [Export handover](https://github.com/elneilios/ReverbArise/is
 The parent OpenSpec Apply remains `realign-perform-workspace` in [PR #48](https://github.com/elneilios/ReverbArise/pull/48).
 No Perform compact geometry, production workspace integration or state format is adopted here.
 
+Issue #6 now consumes this library in `ExportWorkspace` (integrated native
+approval recorded on 2026-11-04). Its binding exposes `TimelineNavigation::minimumSpan()` and
+`maximumSpan()`, refreshes the row from accepted post-clamp geometry and guards
+queued intents by session/pass/displayed composition. The shared files remain
+unchanged from PR #49. See the [Export reference](../design/export-workspace.md).
+
 ## Interface and ownership
 
 `Controls/TimelineZoomControls.h` composes Zoom −, horizontal slider, Zoom + and Fit.
@@ -63,7 +69,7 @@ timing message. Fixed accepted tempo/meter only; no tempo-map inference or Snap.
 ## Integration boundaries
 
 - Export retains its read-only waveform, click/drag preview positioning,
-  pointer-anchored zoom, Shift pan, keyboard navigation, current-file readiness,
+  pointer-anchored zoom, right-drag pan, keyboard navigation, current-file readiness,
   last-good pending view, and once-per-accepted-mix Fit. Fit covers the accepted
   audible mix plus margins, independent of WAV song-origin duration.
 - Perform retains editable dry/wet lanes, envelope gestures and future Snap/grid.
@@ -85,3 +91,9 @@ and unavailable timing. `--review` opens the same tested row with a tiny viewpor
 binding; it starts no audio device. This isolated family review does not approve
 Perform compact layout metrics or Export integration. Native visual/feel acceptance
 must precede wider rollout; retain Export's existing accepted composition.
+
+Export selects `TimelineNavigation::PanGesture::rightDrag`: right-drag pans without
+positioning preview, left-drag positions, and only left-double-click invokes Fit.
+The default left/Shift-left pan policy is unchanged for other consumers. Mouse-up
+and ownership/range changes cancel active gestures. Horizontal/Shift-wheel and
+keyboard navigation are unchanged. The gesture policy has no audio/model dependency.

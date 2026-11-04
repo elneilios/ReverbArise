@@ -18,10 +18,11 @@ juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gai
 
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p)
-    :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),timeline(p.swellEngine())
+    :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
 {
     setLookAndFeel(&workspaceTheme);
-    addChildComponent(learnWorkspace);
+    addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
+    exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
@@ -256,7 +257,7 @@ PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){destroying=true;stop
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
-    if(learningLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
+    if(learningLayout || exportLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
     for(const auto y:{layout.header.getBottom(),layout.globals.getBottom(),layout.workspace.getBottom(),layout.audition.getBottom(),layout.overview.getBottom()})
         g.drawHorizontalLine(y,static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));
     for(const auto x:{layout.swells.getRight()+10,layout.inspector.getX()-10})
@@ -317,7 +318,8 @@ void PreverbAudioProcessorEditor::resized()
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     workflowHeader.setBounds(layout.header);
     noticeBar.setBounds(layout.notice);
-    if(learningLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);learnWorkspace.setBounds(body);return;}
+    if(learningLayout || exportLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);
+        learnWorkspace.setBounds(body);exportWorkspace.setBounds(body);return;}
     auto globals=layout.globals.reduced(0,8);
     markerButton.setBounds(globals.removeFromLeft(160));globals.removeFromLeft(16);
     markerLabel.setBounds(globals.removeFromLeft(118));markerKnob.setBounds(globals.removeFromLeft(150));globals.removeFromLeft(24);
@@ -373,16 +375,20 @@ void PreverbAudioProcessorEditor::resized()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
-    const auto nextLearning=processor.getWorkflowSnapshot().mode==workflow::Mode::capture;const auto leavingLearn=learningLayout && !nextLearning;
-    const auto isShared=[this](juce::Component* c){return c==&workflowHeader || c==&noticeBar || c==&learnWorkspace
+    const auto mode=processor.getWorkflowSnapshot().mode;
+    const auto nextLearning=mode==workflow::Mode::capture,nextExport=mode==workflow::Mode::finalise;
+    if(exportLayout && !nextExport)exportWorkspace.resetView();
+    const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
+    const auto leavingLearn=wasSpecial && !nextSpecial;
+    const auto isShared=[this](juce::Component* c){return c==&workflowHeader || c==&noticeBar || c==&learnWorkspace || c==&exportWorkspace
         || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
-    if(nextLearning!=learningLayout)
+    if(nextLearning!=learningLayout || nextExport!=exportLayout)
     {
-        if(nextLearning){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
-        else {for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
-        learningLayout=nextLearning;resized();
+        if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
+        else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
+        learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
-    if(!learningLayout){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
     hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::musicalPosition(time.sample,time):juce::String("Position unavailable"))
         +"    |    "+(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
@@ -415,8 +421,8 @@ void PreverbAudioProcessorEditor::refresh()
     refreshValues(w,time);
     listLabel.setText("Swells ("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     const auto key=w?w->id:juce::String{};
-    if(!learningLayout && key!=fittedKey && state.raw){if(!leavingLearn)timeline.fitSelection();fittedKey=key;}
-    if(!learningLayout)
+    if(!learningLayout && !exportLayout && key!=fittedKey && state.raw){if(!leavingLearn)timeline.fitSelection();fittedKey=key;}
+    if(!learningLayout && !exportLayout)
     {
         std::vector<m3::ui::controls::SwellListRow> rows;rows.reserve(state.session.swells.size());
         for(const auto& swell:state.session.swells)
@@ -582,7 +588,9 @@ void PreverbAudioProcessorEditor::refresh()
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
-    if(learningLayout){learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());for(auto* c:getChildren())if(!isShared(c))c->setVisible(false);}
-    learnWorkspace.setVisible(learningLayout);
+    if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
+    if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
+    if(learningLayout || exportLayout)for(auto* c:getChildren())if(!isShared(c))c->setVisible(false);
+    learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);
     updating=false;
 }

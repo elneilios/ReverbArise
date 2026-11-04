@@ -325,6 +325,27 @@ Timeline/Overview remain specialized controls with their current geometry and
 model guards. Retained name-based theme branches outside the new Settings action
 are follow-up consumers, not a precedent for new controls.
 
+
+## Export control family (issue #6, approved 2026-11-04)
+
+`Controls/ActionButton.h` owns shared command-button keyboard activation,
+invocation hooks, semantic play/stop/save/return glyphs and in-bounds focus ink.
+`Controls/FileDragTile.h` owns a once-per-pointer-gesture external-file intent
+and click/Enter/Space Save fallback, with no path storage or filesystem I/O.
+Bindings own current-file verification and session/revision authority. The tile
+never claims the host accepted a drop. Disabled actions do not invoke bindings;
+keyboard activation remains usable after dragging. Native cases exercise these
+contracts before wider rollout. Existing Settings/Diagnostics and Perform text
+buttons are untouched consumers, not claimed migrated. The owner approved these families in native component checkpoint A on
+2026-11-04; the existing numeric stepper approval is preserved. Integrated
+Export workspace acceptance remains a separate checkpoint.
+
+The owner approved the integrated Export presentation and read-only navigation
+feel on 2026-11-04. `TimelineNavigation` is the current gesture adapter over
+`SwellViewport`; do not promote it into a competing toolbar. Issue #46 owns the
+shared Zoom − / slider / Zoom + / Fit family and musical ruler integration.
+Export retains its own complete-audible-composition Fit policy and does not adopt
+Perform's Snap/grid or editing handles. See the [Export handover](../design/export-workspace.md#deferred-integration-handover-to-issue-46--agent-2).
 ## Swells list family — issue #4
 
 `Controls/SwellList.h` is the processor-independent, virtualized Swells list
