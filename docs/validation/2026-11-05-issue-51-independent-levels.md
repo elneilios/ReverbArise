@@ -92,3 +92,27 @@ Owner confirmed FL closed again. The normal helper's Release plugin-only build p
 Owner reports: “FL smoke test passes — presets, export alignment and save/reopen all look good.” This accepts those installed-build behaviors; actual host/DPI settings were not separately specified. Two follow-ups remain before final delivery: unwanted spoken Export notices and uninterrupted Mix Character changes during preview. The prior acceptance is retained and must not be repeated as a blanket host checklist.
 
 Read-only investigation confirmed that shared NoticeBar explicitly calls `AccessibilityHandler::postAnnouncement`; bundled JUCE's Windows implementation invokes SAPI `Speak` when an accessibility client is active. No particular client or Narrator state was established. Export currently streams a completed WAV, and pair edits stop/revoke that preview; seamless moving-playhead gain changes require an approved plan revision, not just removing the Stop call. No implementation changes were made during this investigation.
+
+## Continuous-preview and quiet-notice follow-up
+
+Production follow-up: `4683f01`, following the approved section 6 plan. Main was merged at `703b2b2`; its Perform caution remains intact. Only the generated guide-review record conflicted and was regenerated after semantic review. Unrelated #71 planning remains untracked and untouched.
+
+The shared NoticeBar no longer calls `postAnnouncement`; visible severity and accessible title/description/help and normal value-change events remain. Export monitoring now streams verified dry and calibrated/shaped wet branches through fixed pages. A coherent accepted target pair uses a 5 ms monitoring-only ramp while retaining the transport ticket and absolute cursor. Gain edits revoke current-file delivery; pending/failed WAV work can continue independently of playback. Source availability changes, Stop, mode/restore/timing invalidation, zero levels, finite end, starvation or non-finite mixed samples stop safely. No new saved-state or WAV gain-law version is introduced.
+
+New coverage includes separate-branch/sample/range oracles, cancelled preparation, raw source/render hashes, 4096-frame handoffs with unaligned blocks, concurrent coherent targets, exact ramp samples, callback allocation/deallocation guards, finite-sum rejection and fixed-memory limits. The held-publication engine case advances 550 x 127 frames (69,850 frames), exceeding the entire 65,536-frame prefetch capacity, then injects a publication obstruction while asserting continued cursor advance and retained WAV integrity. UI fixtures cover current accepted target, pending measurement/file, warning/error/zero state, view retention and stale control invocations. Actual host acceptance of these follow-ups remains pending.
+
+Development runs, retained separately from final gates:
+
+- Debug build-only `20261105-213537-91fc42a4` and `20261105-214336-1c3e916e`: passed. Initial focused tests launched without normal Windows temporary-storage access failed capture setup/UI readiness; the escalated run passed workflow, voice, mixer and UI, and exposed the new summary reservation overcount in the engine test. Accounting was corrected before later runs.
+- Debug full `20261105-214705-79472379`: 69/71, 682.91 s. Export engine and UI passed; the newly extended mixer test crashed after adding a large stack-local reader (moved to heap), and the existing processor test timed out at `LiveResourceCases.h:34`. These are failures, not final acceptance or proof of a transient failure.
+- Debug `20261105-215925-83d21a5f`: build passed, test run explicitly superseded/stopped during early tests after the finite-sum safety guard was added. This is an incomplete run, not a full-suite pass. Only the owned CTest/test process was stopped; no DAW host was terminated.
+
+Final focused and Debug/Release results follow below when completed. All builds reuse the existing warm MSVC/JUCE tree; no cache clearing or cold-build speed claim is made.
+
+### Focused current-code result
+
+`4683f01` production source; warm Debug build-only `20261105-220642-c3dd1b63` passed. The focused native CTest expression `^preverb_(song_export|song_export_engine|export_voice|workflow_processor|swell_ui|processor)_test$` passed 6/6 in 114.74 s. Individual results: workflow 3.26 s, voice 3.03 s, engine 12.34 s, mixer 23.17 s, UI 19.03 s, processor 53.67 s. Copy of CTest's result log: `out/issue51-followup-focused-debug.log`.
+
+The stack-local mixer test crash is resolved by heap ownership. The processor resource assertion passed on current code without a deadline change; the earlier failure remains recorded, and this isolated result is not a replacement for the pending full-suite gates. Production Source/CMake is unchanged after `4683f01`; task/evidence edits do not change that claim. UI standards, strict change validation and explicit user-guide review/currency pass. Task 6.1–6.4 completion was guarded against the CLI task locations and each completion confirmed by a fresh Apply instruction query (16/20 complete).
+
+Debug `20261105-221405-c300dfb5` built successfully and passed through test 37 before being explicitly superseded/stopped for the replay-status correction (not a full pass). On retrying a ready preview, Play now clears a prior worker preview-failure message. Concurrent CTest jobs were observed in two other Codex worktrees; they were left untouched. This is a shared-machine timing condition, not evidence of the earlier timeout's cause. Only this checkout's CTest and its identified child were stopped.

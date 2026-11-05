@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed combined Perform warning and Export continuous-preview behavior, including finite-sum safety and visible preview failures; guide steps cover moving-playhead edits, pending WAV/previous waveform, stopped/zero behavior and existing limited host coverage.",
+  "summary": "Reviewed final continuous Export preview and quiet notices against merged main, including replay clearing prior preview failures, finite-sum safety, current-file delivery guards and moving-playhead guide instructions; no further musician-facing prose change needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -415,8 +415,8 @@
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 23857,
-      "sha256": "a1e77839a92d1a0743cd1973f907730f602f33ea337513eb5fb23ba8ad9dc695"
+      "bytes": 23901,
+      "sha256": "24b64b477d588de68855aa5dd0b57c38ee676aea7ad86105e723bfe13fab2870"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",

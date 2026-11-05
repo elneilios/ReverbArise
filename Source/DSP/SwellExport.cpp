@@ -97,6 +97,7 @@ bool SwellEngine::playExport(uint64_t expectedSession)
     if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise
         || exportState.pass!=workflowState->snapshot().pass || exportState.session!=sessionGeneration.load()
         || exportState.phase!=ExportPhase::ready || !exportState.prepared || !exportState.prepared->metrics.audibleStart)return false;
+    exportState.message="Export WAV ready";
     exportPreviewPin=exportState.prepared;exportPreviewSession=expectedSession;exportPreviewPass=exportState.pass;exportPreviewRevision=liveRevision;exportPreviewWetAvailable=true;
     setExpected(exportState.prepared->plan->timing);const auto ticket=exportVoice->requestStart();
     exportVoice->setLevels(ticket,model.exportState.dry,model.exportState.wet,*exportPreviewPin->metrics.audibleEnd);notify();return true;
