@@ -140,3 +140,27 @@ main from `codex/68-stable-transport-readout`, open and mergeable at verificatio
 Implementation source is committed as `331c424`; the final delivery commit changes
 only this record and task tracking. Refreshed vanilla Apply reports **7/7** and
 `all_done`. Native tests are not repeated for that documentation-only closeout.
+
+## Owner-requested post-merge archive
+
+PR #95 merged as `036e35e89c8fabb18c315f1783672780b7eefbd7`. The owner then
+requested a separate archive PR and notification to the #58 agent.
+
+Synced the read-only presentation scenario and two stable/readable transport
+requirements into canonical `swell-workspace`. All three resulting blocks match
+the delta; title, Purpose and unrelated content are preserved. No delta operation
+headers remain. Archived the spec-driven change to
+`openspec/changes/archive/2026-11-05-stabilize-perform-transport-readout/`;
+all five files, including metadata and 7/7 tasks, are unchanged by SHA256 checks.
+The selected change is absent from the active list; unrelated work is untouched.
+
+Validation: strict canonical `swell-workspace` passes; normal canonical specs
+17/17 and repository-wide 18/18 pass. Eight pre-existing description-length
+warnings remain in unrelated canonical specs. Guide prose remains accurate for
+the implemented footer; the explicit review record is refreshed only for this
+canonical sync. Guide currency and whitespace checks pass.
+
+This follow-up changes only specs, archive and documentation records. Source,
+tests, CMake and scripts are unchanged from merged main, so native build/CTest,
+installation and host testing were not repeated. The new PR remains open for
+owner review; no merge is performed here.
