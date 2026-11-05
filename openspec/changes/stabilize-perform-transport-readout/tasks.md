@@ -16,7 +16,7 @@ GitHub issue: #68. Planning only until a fresh user request authorizes Apply.
 ## 3. Integrated validation and review delivery
 
 - [x] 3.1 Run scripts/build.ps1 -Configuration Release -Test using the supported wrapper and preserve native MSVC/CTest results; validate the change strictly and run git diff --check. Record commands, revision, environment, size/scale coverage and explicit untested host/DPI limitations in dated docs/validation evidence; request only a brief final FL smoke if concrete unresolved host behavior remains.
-- [ ] 3.2 Commit the issue-scoped implementation on its branch and open or update the single review PR with the issue/change links, owner acceptance, verification and remaining limitations; verify the PR targets main, uses Closes #68 only for full delivery, and remains open for owner review.
+- [x] 3.2 Commit the issue-scoped implementation on its branch and open or update the single review PR with the issue/change links, owner acceptance, verification and remaining limitations; verify the PR targets main, uses Closes #68 only for full delivery, and remains open for owner review.
 
 ## Workflow follow-up
 

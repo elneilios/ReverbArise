@@ -134,3 +134,9 @@ Follow-on #58 owns its separately requested 900x600 combined review. This change
 retains the existing supported-size contract. Shared integration points are
 `Controls/TransportReadout.h`, `TransportPresentation.h`, `PluginEditor.h/.cpp`,
 the Perform tests and production standards revision 6.
+
+Delivery: [PR #95](https://github.com/elneilios/ReverbArise/pull/95), targeting
+main from `codex/68-stable-transport-readout`, open and mergeable at verification.
+Implementation source is committed as `331c424`; the final delivery commit changes
+only this record and task tracking. Refreshed vanilla Apply reports **7/7** and
+`all_done`. Native tests are not repeated for that documentation-only closeout.
