@@ -21,7 +21,7 @@ Production source diff is confined to `Source/UI/WorkspaceNotice.h`, a message-t
 - Branch `codex/1-perform-warning`, based on main `ae47594`; native build configured at planning commit **`9347563936fe6fc8dd7317af7a8352cb37a678ce` with the implementation diff present (dirty)**. Subsequent task/report edits do not change the executable.
 - Windows x64 `10.0.26300`, VS 2026/MSVC, Windows SDK `10.0.26100`, pinned JUCE **9.0.4**. Fresh checkout build tree with existing JUCE/WavPack source caches; no cache copying/clearing or global toolchain changes. This is not a fully warm build or a performance comparison.
 - Reviewed executable: `out/build/windows-msvc/Release/preverb_swell_ui_test.exe`, SHA256 **`B5CD8E13C47DDDE1753CBC811A2DB36EF1257842E679516844E4544C6E408EA9`**.
-- No plugin installation, FL/controller configuration, user project or asset modification. The native review window was opened at the owner's explicit request and left open for their use.
+- Initial UI validation made no plugin installation, FL/controller configuration, user project or asset modification. The later owner-requested installation is recorded below. The native review window was opened at the owner's explicit request and left open for their use.
 
 ## Validation
 
@@ -44,3 +44,14 @@ Recovery: an initial filter matched no tests and was corrected to the actual reg
 Evidence under ignored output: wrapper logs in `out/build-logs/Release/20261105-163152-fbf14bcd/`; focused build/test logs `out/perform-warning-ui-build-final.log` and `out/perform-warning-ui-test.log`; detailed CTest output in `out/build/windows-msvc/Testing/Temporary/LastTest.log`. Native PNGs are in `out/perform-warning-ui/`, including `ready-1100.png`, `ready-1400.png`, `ready-1600.png`, software-scale ready views and `perform-warning-review-1/2/3.png`. The actual minimum-size editor and shared-header warning preview were visually inspected. Preview entry point: `preverb_swell_ui_test.exe --review-perform-warning`; its dropdown changes only synthetic presentation snapshots, not the processor or saved content.
 
 **NOT RUN:** installed FL warning smoke test, physical Windows DPI/multiple-monitor review, new host transport/mute experiments, bounce/audio regression or full repository CTest. Existing native software-scale renders are not physical host/DPI checks. This read-only presentation change does not warrant repeating the completed issue #1 host experiments; untested installed-host coverage is explicit. No merge, issue closure or archive is performed.
+
+## Subsequent owner-requested test installation — 5 November 2026
+
+Installed clean revision **`3f62614`** using `scripts/install-test-vst3.ps1` with FL closed. Release plugin-only build **PASS**; CTest was **not rerun** for installation (the focused native UI result above still applies). Normal system-folder ACL denial was resolved with Windows UAC elevation; complete-bundle inventory/hash verification passed. No controller/project/asset changes or merge occurred.
+
+- Installed bundle: `C:/Program Files/Common Files/VST3/ReverbArise.vst3`.
+- Installed binary SHA256 independently rechecked: **`8F7F20BBC964F339EE86C32C0ADACFB3D4921D6C7D41967E148B94DE70D7DEF9`**.
+- Previous complete bundle retained: `out/vst3-install-backups/20261105-165428-a0a0a4caebdb496eabc0bd1833d34479/ReverbArise.vst3`.
+- Installer log: `out/perform-warning-install-elevated.log`; wrapper logs: `out/build-logs/Release/20261105-165421-0f2518a5/`.
+
+Reopen FL, rescan with Verify plugins and Rescan previously verified plugins if needed, and confirm the resolved system path. Installation does not establish FL warning acceptance; that host check remains **NOT RUN** here. This later documentation record does not change the installed revision.
