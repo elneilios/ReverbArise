@@ -14,6 +14,8 @@ This directory covers product identity, the existing implementation, development
 
 - [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
 
+- [Perform playback caution](validation/2026-11-05-perform-playback-warning.md) — persistent low-priority warning, native notice precedence/fit checks and scoped owner approval; playback/capture remain unchanged.
+
 - [Swell source-edge conditioning](development/swell-source-edges.md) — 1 ms wet-source tapers, explicit saved-render upgrades and capture preservation.
 
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
