@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the source-edge canonical spec sync and archive after merged PR 76. The guide already documents taper adoption, Regenerate all/selected, capture preservation and frozen behavior; no prose or screenshot change needed. Recorded canonical-spec hash updates only.",
+  "summary": "Reviewed Perform-only NoticeBar fallback, exact caution and accessible detail, notice precedence/restoration and unchanged Learn/Export/audio paths. Updated Perform instructions for saved-position playback independent of source audibility and accurate effect-bypass versus mixer-mute consequences; no automatic detection or defect-fixed claim.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -745,8 +745,8 @@
     },
     {
       "path": "Source/UI/WorkspaceNotice.h",
-      "bytes": 4315,
-      "sha256": "12663624fae7363bb001fe148f6a7f030103397657430d09b237cae2615bdb72"
+      "bytes": 4815,
+      "sha256": "a6ed333eeae750158c3c0759ed0dc94fef0df1b7cdfc22c7b1bd6062f271aedc"
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 15296,
-      "sha256": "059284c618a59c86488b4b2cbcd0084911725f3ece71638692d4c7f2add88566"
+      "bytes": 16101,
+      "sha256": "034549d50b311310e5c6cf47275164cb95d032bcde9ba211d7cb23bceacf2537"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
