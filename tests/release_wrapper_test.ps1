@@ -16,10 +16,13 @@ foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1
 Copy-Item -LiteralPath (Join-Path $repository 'CMakePresets.json') -Destination $fixture
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'docs/development') -Force
 Copy-Item -LiteralPath (Join-Path $repository 'docs/development/alpha-guide.html') -Destination (Join-Path $fixture 'docs/development')
+$logoRelative = 'resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png'
+$null = New-Item -ItemType Directory -Path (Split-Path (Join-Path $fixture $logoRelative)) -Force
+Copy-Item -LiteralPath (Join-Path $repository $logoRelative) -Destination (Join-Path $fixture $logoRelative)
 'project(Preverb VERSION 0.1.0 LANGUAGES C CXX)' | Set-Content (Join-Path $fixture 'CMakeLists.txt')
 '/out/' | Set-Content (Join-Path $fixture '.gitignore')
 'fixture' | Set-Content (Join-Path $fixture 'tracked.txt')
-$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'resources')
+$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force
 'fixture original Hall provenance' | Set-Content (Join-Path $fixture 'resources/README.md')
 $null = & $actualNative $tools.Git @('-C', $fixture, 'init', '--quiet')
 $null = & $actualNative $tools.Git @('-C', $fixture, 'config', 'user.name', 'Release Fixture')
@@ -136,10 +139,11 @@ Assert ($manifest.gitSha -ceq $sha -and $manifest.candidate -ceq '' -and $manife
 Assert (@($manifest.files | Where-Object { $_.path -like '*extra-resource.txt' }).Count -eq 1) 'Whole bundle not preserved.'
 Assert (@($manifest.files | Where-Object { $_.path -ceq 'User-Guide.html' }).Count -eq 1) 'Guide not inventoried.'
 $guide = Get-Content (Join-Path $stable 'payload/User-Guide.html') -Raw -Encoding UTF8
-Assert ([regex]::Matches($guide, 'src="data:image/png;base64,').Count -eq 4 -and $guide.Contains($sha) -and $guide.Contains('v0.1.0') -and $guide -notmatch '{{|https?://|<script') 'Guide identity/media mismatch.'
+Assert ([regex]::Matches($guide, 'src="data:image/png;base64,').Count -eq 5 -and $guide.Contains($sha) -and $guide.Contains('v0.1.0') -and $guide -notmatch '{{|https?://|<script') 'Guide identity/media mismatch.'
 Assert ($guide.Contains([string][char]0x00d7) -and $guide -notmatch ([string][char]0x00c3)) 'Guide UTF-8 text was corrupted.'
 $provenance = Get-Content (Join-Path $stable 'payload/guide-provenance.json') -Raw | ConvertFrom-Json
 Assert ($provenance.gitSha -ceq $sha -and $provenance.images.Count -eq 4) 'Guide provenance missing.'
+Assert ($provenance.logo.sha256 -ceq (Get-FileHash -LiteralPath (Join-Path $fixture $logoRelative) -Algorithm SHA256).Hash.ToLowerInvariant() -and $provenance.logo.width -eq 640 -and $guide -match '<main>\s*<img class="brand" src="data:image/png;base64,') 'Production logo is missing or not at the top.'
 Assert ((Get-Content (Join-Path $stable 'payload/README.txt') -Raw).Contains('play the DAW to capture')) 'Quick start missing.'
 $templatePath = Join-Path $fixture 'docs/development/alpha-guide.html'
 $templateBytes = [IO.File]::ReadAllBytes($templatePath)

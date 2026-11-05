@@ -46,7 +46,7 @@ notices are absent. Owner review must still establish all applicable obligations
 
 The payload also includes `README.txt`, `User-Guide.html` and
 `guide-provenance.json`. The guide is a static offline document: all four native
-production-editor screenshots are embedded PNG data URIs, with no scripts or
+production-editor screenshots and the existing production wordmark are embedded PNG data URIs, with no scripts or
 external resources. Its source template is [alpha-guide.html](alpha-guide.html).
 After Release/CTest and built identity verification, the packager runs
 `Release/preverb_learn_generation_ui_test.exe --guide-only` under the build lock

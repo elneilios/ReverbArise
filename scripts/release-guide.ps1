@@ -21,6 +21,17 @@ function Write-ReleaseGuide([string] $Root, [string] $Directory, [string] $Paylo
     $html = Get-Content -LiteralPath (Join-Path $Root 'docs/development/alpha-guide.html') -Raw -Encoding UTF8
     $html = $html.Replace('{{IDENTITY}}', [Net.WebUtility]::HtmlEncode($Identity)).Replace('{{SHA}}', $Sha)
     Add-Type -AssemblyName System.Drawing
+    $logoPath = 'resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png'
+    $logoBytes = [IO.File]::ReadAllBytes((Join-Path $Root $logoPath))
+    $logoStream = New-Object IO.MemoryStream(,$logoBytes)
+    $logoImage = $null
+    try {
+        $logoImage = [Drawing.Image]::FromStream($logoStream)
+        if ($logoImage.RawFormat.Guid -ne [Drawing.Imaging.ImageFormat]::Png.Guid -or $logoImage.Width -ne 640 -or $logoImage.Height -le 0) { throw 'Invalid guide logo PNG.' }
+        $logo = [ordered]@{ path = $logoPath; width = $logoImage.Width; height = $logoImage.Height; sha256 = (Get-FileHash -LiteralPath (Join-Path $Root $logoPath) -Algorithm SHA256).Hash.ToLowerInvariant() }
+    } finally { if ($logoImage) { $logoImage.Dispose() }; $logoStream.Dispose() }
+    if (-not $html.Contains('{{LOGO}}')) { throw 'Missing guide logo slot.' }
+    $html = $html.Replace('{{LOGO}}', 'data:image/png;base64,' + [Convert]::ToBase64String($logoBytes))
     $images = @()
     foreach ($state in (Get-ReleaseGuideStates)) {
         $path = Join-Path $Directory ($state + '.png')
@@ -41,7 +52,7 @@ function Write-ReleaseGuide([string] $Root, [string] $Directory, [string] $Paylo
         $value = $reference.Groups[3].Value
         if (($reference.Groups[1].Value -ieq 'src' -and $value -notmatch '^data:image/png;base64,[A-Za-z0-9+/=]+$') -or ($reference.Groups[1].Value -ieq 'href' -and $value -notmatch '^#[a-z0-9-]+$')) { throw 'Guide resource must be embedded or an internal anchor.' }
     }
-    if ([regex]::Matches($html, '<img\s').Count -ne 4) { throw 'Guide requires four embedded images.' }
+    if ([regex]::Matches($html, '<img\s').Count -ne 5 -or [regex]::Matches($html, '<img class="screenshot"\s').Count -ne 4 -or [regex]::Matches($html, '<img class="brand"\s').Count -ne 1) { throw 'Guide requires four embedded screenshots and one logo.' }
     $html | Set-Content -LiteralPath (Join-Path $Payload 'User-Guide.html') -Encoding UTF8
-    [ordered]@{ gitSha = $Sha; releaseIdentity = $Identity; capture = $receipt; images = $images } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $Payload 'guide-provenance.json') -Encoding UTF8
+    [ordered]@{ gitSha = $Sha; releaseIdentity = $Identity; capture = $receipt; logo = $logo; images = $images } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $Payload 'guide-provenance.json') -Encoding UTF8
 }
