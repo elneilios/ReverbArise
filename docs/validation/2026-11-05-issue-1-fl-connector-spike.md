@@ -2,6 +2,8 @@
 
 **Recommendation: do not roll out a connector yet.** FL's scripting API has an explicit mode query and a documented direct plugin-parameter write route. A connector could improve context reporting, but seamless activation, safe addressing, transient delivery and audio timing are not established. It cannot currently be offered as a reliable zero-leakage fix. Retain the explicit Perform scheduling fallback from the [initial investigation](2026-11-05-issue-1-pattern-playback-spike.md), pending a separately reviewed OpenSpec proposal.
 
+**Native continuation:** the [prepared native experiment and guided session](2026-11-05-issue-1-native-session.md) supersedes the hypothetical receiver/setup blocker below. This document preserves the earlier API-double evidence; it does not claim those results are native FL observations.
+
 ## Revision, environment and precise blocker
 
 Extension baseline: PR #74 commit `447ef0f81bb92f1c8c6838c2782388350c22d9b3`, on isolated branch `codex/1-pattern-playback-spike`, original production main `520a4669572b105848d00763a4dd3fc2550919ea`. Same Windows x64 / FL `26.1.7.5654` environment as the initial report; Python fixture runner `3.10.6`. No production source, canonical specs, installed plugin, script installation, controller assignment, project or asset was changed. Only disposable evidence files were added.
@@ -51,7 +53,7 @@ Deterministic model: 48 kHz, 256-frame blocks (5.333 ms); previously fresh Song 
 - Switch to Pattern at 1 ms during playback: callbacks at 5.333, 10.667 and 16 ms still admit Song; first Pattern-consuming block begins at 21.333 ms. **Three incorrect wet-admission callbacks.**
 - Switch to Pattern at -1 ms immediately before Play, after a stopped Song sample at -2 ms: callbacks at 0, 5.333, 10.667 and 16 ms admit Song. **Four incorrect callbacks, including the first Play block.**
 - At a 100 ms fixture expiry, a repeated packet does not renew validity. The interval before expiry can still leak; too short an expiry can mute valid Song when UI work stalls. Neither an appropriate threshold nor a finite host maximum delay was measured.
-- A fast 1,000-block offline loop with no script updates is rejected by the model's intentionally conservative offline rule. It is a counterexample to claiming that a realtime heartbeat automatically provides correct bounce behavior, not an audio bounce test.
+- A fast 1,000-block offline loop is rejected because the model unconditionally requires `not offline`. This demonstrates only the chosen mute policy. It does **not** demonstrate heartbeat expiry, missed script updates or a bounce defect; those require a native experiment without that unconditional gate.
 
 The model has instantaneous gating and no wet transition ramp. Production's existing <=5 ms transition can add residual audio after context reaches the callback. Total exposure depends on query age, scan time, host parameter queuing, callback boundary and ramp; there is no established upper bound. A correct mode sample and even a fresh heartbeat do not prove it remains correct at the next callback.
 

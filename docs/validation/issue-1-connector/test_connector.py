@@ -221,9 +221,10 @@ class ConnectorTest(unittest.TestCase):
         r.block(-2)  # Correct stopped Song sample; host changes to Pattern at -1 ms.
         wrong = [r.block(sample / 48)[1] for sample in (0, 256, 512, 768)]
         self.assertEqual(sum(wrong), 4)  # First block is not guaranteed to see mode change.
-        # Fast bounce with no script ticks has no renewed context, irrespective of samples.
+        # This only proves the model's unconditional offline mute policy; it says
+        # nothing about heartbeat expiry or actual host bounce behavior.
         self.assertTrue(all(not r.block(1, offline=True)[1] for _ in range(1000)))
-        print("SIMULATED pre-Play switch: 4 wet callbacks; offline model rejects all 1000 blocks")
+        print("SIMULATED pre-Play switch: 4 wet callbacks; chosen offline mute policy rejects 1000 blocks (not expiry evidence)")
 
 
 if __name__ == "__main__":
