@@ -16,7 +16,7 @@ public:
         header.onModeRequested=[this](auto mode){prepareHeader(mode);};
         header.addAndMakeVisible(headerNotice);
         headerNotice.setHeaderAppearance(true);
-        headerNotice.display({{"Recording - stop your DAW when finished","Source captured at the DAW song position.",NoticeTone::information}});
+        showNotice(1);
         for(size_t i=0;i<states.size();++i)
         {
             addAndMakeVisible(states[i]);auto values=iconChoices();
@@ -24,13 +24,16 @@ public:
             states[i].display(values,static_cast<int>(i)+1);
         }
         states[1].segment(1)->setState(juce::Button::buttonOver);
-        explanation.setText("Normal Perform stays clean. Important notices use this shared inline bar:",juce::dontSendNotification);addAndMakeVisible(explanation);
+        explanation.setText("Perform retains a playback caution. Current notices replace it until they clear:",juce::dontSendNotification);addAndMakeVisible(explanation);
         const std::array<NoticeMessage,3> examples{{
             {"Recording - stop your DAW when finished","Source is captured at the DAW song position.",NoticeTone::information},
             {"Recapture is armed - existing audio will be replaced","Turn Recapture off to keep existing source protected.",NoticeTone::warning},
             {"Unable to load the requested impulse response","The previous valid response remains available.",NoticeTone::error}
         }};
         for(size_t i=0;i<bars.size();++i){addAndMakeVisible(bars[i]);bars[i].setHeaderAppearance(true);bars[i].display(examples[i]);}
+        addAndMakeVisible(noticeChoice);noticeChoice.addItem("Header: Perform warning / restore",1);
+        noticeChoice.addItem("Header: temporary IR preparation",2);noticeChoice.addItem("Header: current error",3);
+        noticeChoice.setSelectedId(1,juce::dontSendNotification);noticeChoice.onChange=[this]{showNotice(noticeChoice.getSelectedId());};
         setSize(1100,510);
     }
     static std::vector<m3::ui::controls::SegmentChoice> iconChoices()
@@ -41,7 +44,17 @@ public:
     }
     void prepareHeader(workflow::Mode mode)
     {
+        currentMode=mode;
         header.display(m3::ui::presentWorkflow({mode},{true,true,true}));
+        showNotice(noticeChoice.getSelectedId());
+    }
+    void showNotice(int choice)
+    {
+        m3::EditorSnapshot editor;
+        std::optional<NoticeMessage> preparing;
+        if(choice==2)preparing=NoticeMessage{"Preparing IR: Whisper","The current IR is retained until preparation succeeds.",NoticeTone::information};
+        if(choice==3)editor.actionError="Unable to prepare the requested swell";
+        headerNotice.display(m3::ui::workspaceNotice({currentMode},{},editor,preparing));
     }
     void paint(juce::Graphics& g)override
     {
@@ -58,11 +71,12 @@ public:
         headerNotice.setBounds(0,46,column.getX()-16,32);
         for(size_t i=0;i<states.size();++i)states[i].setBounds(16,302+static_cast<int>(i)*58,330,36);
         for(size_t i=0;i<bars.size();++i)bars[i].setBounds(16,136+static_cast<int>(i)*48,getWidth()-32,NoticeBar::preferredHeight);
+        noticeChoice.setBounds(16,270,460,28);
     }
     m3::ui::WorkflowHeader header;std::array<NoticeBar,3> bars;
     NoticeBar headerNotice;m3::ui::controls::HeaderInformation& information=header.modeInformation();
     std::array<m3::ui::controls::SegmentedSelector,3> states;
-private:juce::Label explanation;
+private:juce::Label explanation;juce::ComboBox noticeChoice;workflow::Mode currentMode=workflow::Mode::live;
 };
 inline void cases()
 {
@@ -120,6 +134,11 @@ inline void cases()
         snapshotPanel(panel,"header-icons-"+juce::String(static_cast<int>(mode))+"-"+juce::String(width));
     }
     panel.setSize(1100,510);panel.prepareHeader(workflow::Mode::live);
+    for(const auto choice:{1,2,3,1})
+    {
+        panel.showNotice(choice);
+        snapshotPanel(panel,"perform-warning-review-"+juce::String(choice));
+    }
     bar.display({{"Recording - stop your DAW when finished","Source is captured at the DAW song position.",NoticeTone::information}});
     snapshotPanel(panel,"message-bar-controls");
     panel.setLookAndFeel(nullptr);panel.removeFromDesktop();

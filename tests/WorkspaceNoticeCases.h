@@ -24,7 +24,31 @@ inline void workspaceNoticeCases()
     }
     REQUIRE(!workspaceNotice(flow,capture,editor));
     flow.mode=workflow::Mode::live;editor.message="Ordinary ready/progress text";
-    REQUIRE(!workspaceNotice(flow,capture,editor));
+    const auto perform=workspaceNotice(flow,capture,editor);
+    REQUIRE(perform && perform->tone==NoticeTone::warning);
+    REQUIRE(perform->text=="Caution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.");
+    REQUIRE(perform->detail.contains("saved Song positions") && perform->detail.contains("Pattern playback") && perform->detail.contains("mute its mixer track"));
+    for(const auto enabled:{false,true})
+    {
+        editor.session.liveEnabled=enabled;
+        REQUIRE(workspaceNotice(flow,capture,editor)==perform); // Independent of playback enable, readiness and empty source.
+    }
+    {
+        const controls::NoticeMessage preparing{"Preparing IR: Monumental","Previous valid IR retained",NoticeTone::information};
+        REQUIRE(workspaceNotice(flow,capture,editor,preparing)==preparing);
+        REQUIRE(workspaceNotice(flow,capture,editor)==perform);
+        auto pending=editor;pending.actionError="Edit rejected";
+        REQUIRE(workspaceNotice(flow,capture,pending,preparing)->text==pending.actionError);
+        pending=editor;pending.defaultIRError="Cannot decode IR";
+        REQUIRE(workspaceNotice(flow,capture,pending)->tone==NoticeTone::error);
+        auto unavailable=capture;unavailable.unavailable=true;unavailable.status="Missing source";
+        REQUIRE(workspaceNotice(flow,unavailable,editor)->text=="Captured source is unavailable");
+        for(const auto status:{"Export incomplete: missing wet","Export warning: retained sound"})
+        {pending=editor;pending.liveStatus=status;REQUIRE(workspaceNotice(flow,capture,pending)->text==status);}
+        for(const auto phase:{workflow::Phase::recording,workflow::Phase::draining,workflow::Phase::validating,workflow::Phase::failed})
+        {auto busy=flow;busy.phase=phase;REQUIRE(workspaceNotice(busy,capture,editor)!=perform);}
+        REQUIRE(workspaceNotice(flow,capture,editor)==perform); // No timer, dismissal or mode transition needed to restore.
+    }
     flow.mode=workflow::Mode::finalise;
     REQUIRE(workspaceNotice(flow,capture,editor)->text.contains("DAW wet is bypassed"));
     flow.mode=workflow::Mode::capture;flow.recapture=true;
@@ -52,7 +76,7 @@ inline void workspaceNoticeCases()
         const auto retained=workspaceNotice(flow,failed,editor);
         REQUIRE(retained->text.contains("previous source retained") && retained->detail.contains("Previous source retained"));
         workflow::Snapshot retry;retry.mode=workflow::Mode::live;retry.pass=flow.pass+1;
-        REQUIRE(!workspaceNotice(retry,failed,{})); // Historical evidence is not a current error.
+        REQUIRE(workspaceNotice(retry,failed,{})==perform); // Historical evidence cannot replace current Perform guidance.
         for(const auto width:{1100,1400,1600})
         {
             controls::NoticeBar bar;bar.setSize(width-40,controls::NoticeBar::preferredHeight);
@@ -68,9 +92,9 @@ inline void workspaceNoticeCases()
     Swell swell;swell.id="failed-swell";swell.name="Swell Bar 2.1";swell.phase=Phase::error;swell.status="Cannot decode this IR";
     editor.session.swells.push_back(swell);editor.session.primary=swell.id;
     REQUIRE(workspaceNotice(flow,capture,editor)->detail==swell.status);
-    editor.session.swells[0].phase=Phase::ready;REQUIRE(!workspaceNotice(flow,capture,editor));
+    editor.session.swells[0].phase=Phase::ready;REQUIRE(workspaceNotice(flow,capture,editor)==perform);
     // One notice fits beneath the branding, clear of the mode description and divider.
-    for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,1000},juce::Point<int>{1600,1100}})
+    for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1400,1000},juce::Point<int>{1600,1000}})
     {
         const juce::Rectangle<int> bounds(0,0,size.x,size.y);WorkspaceLayout notice(bounds);
         REQUIRE(notice.notice.getHeight()==32 && notice.header.contains(notice.notice));
@@ -80,5 +104,24 @@ inline void workspaceNoticeCases()
         REQUIRE(notice.notice.getBottom()<notice.globals.getY());
         REQUIRE(notice.header.getBottom()==notice.globals.getY());
         REQUIRE(notice.globals.getBottom()==notice.workspace.getY());
+        WorkspaceTheme theme;controls::NoticeBar bar;bar.setLookAndFeel(&theme);bar.setHeaderAppearance(true);bar.setBounds(notice.notice);
+        bar.addToDesktop(0);
+        REQUIRE(bar.display(perform) && bar.isVisible());
+        REQUIRE(!bar.display(workspaceNotice(flow,capture,editor))); // Identical refresh does not re-announce.
+        const auto accessible=bar.getAccessibilityHandler();
+        REQUIRE(accessible && accessible->getTitle()=="Warning: "+perform->text && accessible->getDescription()==perform->detail);
+        REQUIRE(bar.getTooltip().contains(perform->text) && bar.getTooltip().contains(perform->detail));
+        const auto width=juce::GlyphArrangement::getStringWidth(fontFor(bar,bodySize),perform->text);
+        std::cout<<"Perform warning width "<<width<<" / "<<bar.getWidth()-46<<" at "<<size.x<<'x'<<size.y<<'\n';
+        REQUIRE(width<=bar.getWidth()-46);
+        const auto before=bar.getBounds();
+        const controls::NoticeMessage progress{"Preparing IR: Whisper","Current IR retained",NoticeTone::information};
+        REQUIRE(bar.display(workspaceNotice(flow,capture,editor,progress)));
+        REQUIRE(bar.currentMessage()==progress && bar.getBounds()==before);
+        REQUIRE(bar.display(workspaceNotice(flow,capture,editor)) && bar.currentMessage()==perform && bar.getBounds()==before);
+        bar.removeFromDesktop();bar.setLookAndFeel(nullptr);
     }
+    flow.mode=workflow::Mode::capture;REQUIRE(!workspaceNotice(flow,capture,editor));
+    flow.mode=workflow::Mode::finalise;REQUIRE(workspaceNotice(flow,capture,editor)->tone==NoticeTone::information);
+    flow.mode=workflow::Mode::live;REQUIRE(workspaceNotice(flow,capture,editor)==perform); // Mode return/editor recomputation.
 }

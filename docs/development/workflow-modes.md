@@ -44,6 +44,21 @@ capture, Recapture and live wet remain functional terms, not persisted mode rena
 
 ## Foundation behavior
 
+Perform retains a warning-level fallback in the existing reserved header notice
+row: **“Caution: In Perform, swells can remain audible during DAW playback, even
+if the source is silent or muted.”** Existing errors, actionable warnings and
+transient notices (including information-level debounced IR preparation) replace
+it; it returns when they clear. Learn and Export keep their existing notice
+policies. No timeout, dismissal preference or host-mode inference is added.
+
+The full help/accessibility detail explains saved Song positions, lead-ins and
+silence, Pattern playback and upstream Playlist/instrument mute. Explicit effect
+bypass or mixer mute can stop the swells; mixer mute affects the whole path and
+bypass can restore dry. The warning itself never changes playback enable,
+capture eligibility, dry routing, audition, source/render identity or saved state.
+Repeated identical refresh reuses NoticeBar's announcement suppression and
+does not move the workspace or take focus.
+
 | Mode/phase | Source | Host-scheduled wet | Creative editing / internal preview |
 | --- | --- | --- | --- |
 | Learn idle | Can begin additive capture on valid DAW Play | Off, dry passes | Off / off |

@@ -7,6 +7,13 @@ bottom hover-help footer (standards revision 5). The temporary preview-only swit
 is removed; native tests exercise the ordinary production editor. Earlier review
 chronology below is retained; the latest approval supersedes pending-adoption wording.
 
+The reserved header message row now retains a warning-level Perform playback
+caution when no higher-priority notice is active. It explains that swells can
+remain audible during DAW playback even if the source is silent or muted.
+Errors, actionable warnings and transient preparation messages temporarily
+replace it. This reuses the existing NoticeBar typography, warning icon/ink and
+geometry; it adds no control family, token, layout exception or audio policy.
+
 
 Perform uses the owner-approved revision-4 compact composition and production
 standards revision 3. `PerformLayout.h` owns its scoped geometry; Learn and the
