@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-05",
+  "sample_rate": 1000,
+  "evidence_kind": "synthetic activity policy fixture; no FL/JUCE/native callback execution",
+  "first_dry_note_ms": 4000,
+  "prepared_lead_in_ms": [
+    2000,
+    4000
+  ],
+  "identical_enabled_and_muted_input_prefix_frames": 4000,
+  "policies": [
+    {
+      "hold_ms": 0,
+      "legitimate_first_lead_in_admitted_fraction": 0.0,
+      "muted_first_lead_in_admitted_fraction": 0.0,
+      "legitimate_post_arrival_tail_admitted_fraction": 0.2
+    },
+    {
+      "hold_ms": 250,
+      "legitimate_first_lead_in_admitted_fraction": 0.0,
+      "muted_first_lead_in_admitted_fraction": 0.0,
+      "legitimate_post_arrival_tail_admitted_fraction": 0.7
+    },
+    {
+      "hold_ms": 5000,
+      "legitimate_first_lead_in_admitted_fraction": 0.0,
+      "muted_first_lead_in_admitted_fraction": 0.0,
+      "legitimate_post_arrival_tail_admitted_fraction": 1.0
+    }
+  ],
+  "startup_grace_ms": 5000,
+  "startup_grace_enabled_lead_in_fraction": 1,
+  "startup_grace_muted_leak_fraction": 1,
+  "startup_grace_late_first_note_lead_in_fraction": 0,
+  "sparse_second_lead_in_fraction_with_5000ms_hold": 0,
+  "muted_future_lead_in_fraction_with_11000ms_hold": 1,
+  "quiet_note_detected_at_minus80dBFS_threshold": false,
+  "nonzero_noise_keeps_exact_zero_detector_open": true,
+  "first_possible_expected_source_mismatch_ms": 4000,
+  "result": "PASS: counterexamples reproduced; no mute-identification claim"
+}

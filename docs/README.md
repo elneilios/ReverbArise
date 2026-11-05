@@ -12,7 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native script-to-VST3 delivery, paired-port activation, owner realtime acceptance and measured offline freshness failure; investigation only, with production changes requiring a separate OpenSpec proposal.
+- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native delivery, paired-port setup and measured offline freshness failure; connector work is parked. The [input-activity follow-up](validation/2026-11-05-issue-1-input-activity.md) tests silence/hold policies against reverse lead-ins. Production changes require a separate OpenSpec proposal.
 
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 
