@@ -1,0 +1,263 @@
+{
+  "numpy": "2.3.5",
+  "inputs": [
+    {
+      "path": "D:\\Users\\neila\\Image-Line\\FL Studio\\Projects\\Fractured Motion\\ReverbAriseBreakup.wav",
+      "bytes": 10936278,
+      "sha256": "8e6609272fb8e6263aa58c30f2bcaf647ee6afdb1a6dc3660445f1433bd5879a"
+    },
+    {
+      "path": "D:\\Users\\neila\\Image-Line\\FL Studio\\Projects\\Fractured Motion\\ReverbAriseBreakup_Dry.wav",
+      "bytes": 11032182,
+      "sha256": "1a45fd23709d17a5e0de25766b34276d49b7a1a95cfd4d5acae96afe0edbda7e"
+    },
+    {
+      "path": "C:\\Users\\neila\\AppData\\Local\\K7MA\\Preverb\\Projects\\e0b58807-34a6-4f2d-8875-d09940a821a2\\258e886e-e054-48d4-897c-a37aacf4f039\\exports\\Swells-100pct-wet-ec4aa6d029b8482fa56aa3d65f93d01f.wav",
+      "bytes": 41100776,
+      "sha256": "d557064ce88f308b8e57111c49163788615e7e4344c6eea734102d87791f2790"
+    },
+    {
+      "path": "D:\\Users\\neila\\Downloads\\IMreverbs\\Large Wide Echo Hall.wav",
+      "bytes": 706428,
+      "sha256": "1189c7079d065a999ae4d3f2041d18508b0263ddeb233fe600e395ecffd845d4"
+    }
+  ],
+  "independent": {
+    "ir_meta": {
+      "path": "irs/074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4-db5b6aa7.wav",
+      "checksum": "0c74bcfa22b9c1cd40f4e6d2b4ead612b3489537eabd7d69d2319822ee694671",
+      "content": "074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4",
+      "dependency": "",
+      "irContent": "",
+      "rate": 44100.0,
+      "bpm": 0.0,
+      "channels": 2,
+      "engine": 1,
+      "numerator": 4,
+      "denominator": 4,
+      "frames": "176596",
+      "start": "0",
+      "sourceStart": "0",
+      "sourceEnd": "176596"
+    },
+    "render_comparisons": [
+      {
+        "sourceStart": 3729072,
+        "relative_rms_error": 1.8256173760581286e-07,
+        "max_error": 2.936224214877825e-07,
+        "source_first": [
+          0.0,
+          0.0
+        ],
+        "source_last": [
+          -0.05390261858701706,
+          0.0045965383760631084
+        ]
+      },
+      {
+        "sourceStart": 3752880,
+        "relative_rms_error": 1.796451048433017e-07,
+        "max_error": 3.018050855896348e-07,
+        "source_first": [
+          0.042805224657058716,
+          0.10380971431732178
+        ],
+        "source_last": [
+          0.0773756131529808,
+          0.09418585151433945
+        ]
+      },
+      {
+        "sourceStart": 3777456,
+        "relative_rms_error": 1.81895462581516e-07,
+        "max_error": 2.6246352424763586e-07,
+        "source_first": [
+          -0.10830321162939072,
+          -0.01754167675971985
+        ],
+        "source_last": [
+          -0.10932039469480515,
+          -0.03669688105583191
+        ]
+      },
+      {
+        "sourceStart": 3793328,
+        "relative_rms_error": 1.831852818951039e-07,
+        "max_error": 2.5733357356116926e-07,
+        "source_first": [
+          -0.11548323929309845,
+          -0.040283601731061935
+        ],
+        "source_last": [
+          0.004628426395356655,
+          -0.009270652197301388
+        ]
+      }
+    ],
+    "dry_gain": 0.10217731007235743,
+    "dry_relative_error": 0.9929683294689151
+  },
+  "export_comparisons": {
+    "plugin_wet_to_daw_predry": {
+      "lag": 28,
+      "gain": 0.7614289339680114,
+      "relative_error": 1.8834564850087855e-05,
+      "rms_error": 4.666016079383389e-07
+    },
+    "fit_to_plugin_wet_predry": {
+      "lag": -28,
+      "gain": 1.313320200144624,
+      "relative_error": 6.831638991767932e-08,
+      "rms_error": 2.220468743338791e-09
+    },
+    "dry_to_daw_dry_gap": {
+      "lag": 1480,
+      "gain": -0.3612761054477123,
+      "relative_error": 0.9636631059520362,
+      "rms_error": 0.018987362295778232
+    },
+    "dry_to_daw_minus_wet": {
+      "lag": 668,
+      "gain": 0.3488096428979391,
+      "relative_error": 0.944993425342588,
+      "rms_error": 0.03413503654959134
+    },
+    "capture_to_dry": {
+      "lag": -345,
+      "gain": 0.19404773509107742,
+      "relative_error": 0.970718568865776,
+      "rms_error": 0.032936388984474
+    }
+  },
+  "tapers": [
+    {
+      "fade_ms": 0.5,
+      "wet_static_matching_db": 0.0005221732828320919,
+      "wet_8k_up_energy_change_db": -39.93077387868376,
+      "wet_difference_relative_rms": 0.033180100374957354,
+      "candidate_peak_dbfs": -6.730565333235862,
+      "clicks": [
+        {
+          "seconds": 7.355208333333,
+          "original_curvature": 0.0203779935836792,
+          "candidate_curvature": 0.003325536803575113,
+          "change_db": -15.745993252900561
+        },
+        {
+          "seconds": 7.869125,
+          "original_curvature": 0.03474712371826172,
+          "candidate_curvature": 0.002255812019261255,
+          "change_db": -23.7523190855307
+        },
+        {
+          "seconds": 8.199791666667,
+          "original_curvature": 0.0331728458404541,
+          "candidate_curvature": 0.0025931391370923595,
+          "change_db": -22.13913821293364
+        }
+      ]
+    },
+    {
+      "fade_ms": 1,
+      "wet_static_matching_db": 0.0005414607680768372,
+      "wet_8k_up_energy_change_db": -42.56691123238621,
+      "wet_difference_relative_rms": 0.05020756236234516,
+      "candidate_peak_dbfs": -6.730565333235862,
+      "clicks": [
+        {
+          "seconds": 7.355208333333,
+          "original_curvature": 0.0203779935836792,
+          "candidate_curvature": 0.003267611996799036,
+          "change_db": -15.898618785788623
+        },
+        {
+          "seconds": 7.869125,
+          "original_curvature": 0.03474712371826172,
+          "candidate_curvature": 0.0023550702656075784,
+          "change_db": -23.37829982724776
+        },
+        {
+          "seconds": 8.199791666667,
+          "original_curvature": 0.0331728458404541,
+          "candidate_curvature": 0.0026856137760184473,
+          "change_db": -21.83478348993175
+        }
+      ]
+    },
+    {
+      "fade_ms": 2,
+      "wet_static_matching_db": 0.0037299214925975376,
+      "wet_8k_up_energy_change_db": -42.79244751662459,
+      "wet_difference_relative_rms": 0.07109039182248061,
+      "candidate_peak_dbfs": -6.730565333235862,
+      "clicks": [
+        {
+          "seconds": 7.355208333333,
+          "original_curvature": 0.0203779935836792,
+          "candidate_curvature": 0.0032933008342241332,
+          "change_db": -15.830600339939382
+        },
+        {
+          "seconds": 7.869125,
+          "original_curvature": 0.03474712371826172,
+          "candidate_curvature": 0.0023454989503937096,
+          "change_db": -23.413672352878333
+        },
+        {
+          "seconds": 8.199791666667,
+          "original_curvature": 0.0331728458404541,
+          "candidate_curvature": 0.0025579176725775143,
+          "change_db": -22.25792336050826
+        }
+      ]
+    },
+    {
+      "fade_ms": 5,
+      "wet_static_matching_db": 0.03616187144445268,
+      "wet_8k_up_energy_change_db": -43.01229967150184,
+      "wet_difference_relative_rms": 0.1089360094034598,
+      "candidate_peak_dbfs": -6.730565333235862,
+      "clicks": [
+        {
+          "seconds": 7.355208333333,
+          "original_curvature": 0.0203779935836792,
+          "candidate_curvature": 0.003262754808654622,
+          "change_db": -15.911539655078338
+        },
+        {
+          "seconds": 7.869125,
+          "original_curvature": 0.03474712371826172,
+          "candidate_curvature": 0.0023960169699052125,
+          "change_db": -23.228579418830094
+        },
+        {
+          "seconds": 8.199791666667,
+          "original_curvature": 0.0331728458404541,
+          "candidate_curvature": 0.0024036534287910083,
+          "change_db": -22.79821762933459
+        }
+      ]
+    }
+  ],
+  "verified_ir": {
+    "source": "D:\\Users\\neila\\Downloads\\IMreverbs\\Large Wide Echo Hall.wav",
+    "sha256": "1189c7079d065a999ae4d3f2041d18508b0263ddeb233fe600e395ecffd845d4",
+    "format": {
+      "tag": 1,
+      "bits": 16,
+      "rate": 44100
+    },
+    "frames": 176596,
+    "matches_managed_ir_samples_exactly": true,
+    "peak": 0.995025634765625,
+    "flat_3_nonquiet": 40
+  },
+  "final_comparison": {
+    "full_first_group_relative_error": 7.114222260978286e-08,
+    "audio_excerpt_absolute_source_start": 3519344,
+    "audio_excerpt_seconds": 7,
+    "sample_rate": 48000,
+    "candidate": "1 ms raised-cosine source-edge conditioning before convolution; original source/IR files unchanged",
+    "dry_export_phase_null_valid": false
+  }
+}

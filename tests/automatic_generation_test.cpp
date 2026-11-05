@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include <Analysis/AutomaticGeneration.h>
+#include <Core/RenderDependency.h>
 using namespace m3;
 
 static Asset asset(char identity,bool render=false)
@@ -26,6 +27,16 @@ int main(){return runTest([]
     const auto a=saved.swells[0].id,b=saved.swells[1].id;
     REQUIRE(saved.swells[0].generationSource==juce::String::repeatedString("a",64));
     REQUIRE(plan(saved,candidates).outcome==GenerationOutcome::noChange);
+    // Older session metadata can lack generationSource after a wet-render upgrade.
+    auto upgraded=saved;
+    for(auto& w:upgraded.swells)
+    {
+        w.render=asset('a',true);w.render.dependency=juce::String(sourceEdgeRevision)+w.generationSource;
+        w.generationSource.clear();
+    }
+    REQUIRE(plan(upgraded,candidates).outcome==GenerationOutcome::noChange);
+    upgraded.swells[0].render.dependency="unknown-processing:"+saved.swells[0].generationSource;
+    REQUIRE(plan(upgraded,candidates).changed==std::vector<juce::String>{a});
     // A nonempty subset is an arrangement change even when survivors need no render.
     REQUIRE(select(saved,{a,b},a));
     const auto reduced=plan(saved,{{100,1}});

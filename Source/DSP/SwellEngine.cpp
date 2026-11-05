@@ -3,6 +3,7 @@
 #include <Core/ContentHash.h>
 #include "DefaultImpulse.h"
 #include "GainStaging.h"
+#include "SourceEdgeConditioning.h"
 #include <cmath>
 
 namespace m3
@@ -286,7 +287,8 @@ void SwellEngine::generate(bool all)
     for(auto& w:model.swells)
     {
         if(w.frozen || w.status=="Importing IR")continue;
-        if(all ? w.phase==Phase::ready : std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end()) continue;
+        if(all ? (w.phase==Phase::ready && w.render.dependency.startsWith(sourceEdgeRevision))
+               : std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end()) continue;
         deferredLearnDependencies.erase(w.id);protectedGenerationCalibration.erase(w.id);forceRefresh.insert(w.id);
         ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;
     }
@@ -837,7 +839,10 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     }
     if(!assets.verify(requested.ir,error)){if(!cancel())failure("Missing IR / invalid asset: "+error);return;}
     if(cancel()) return;
-    const auto matching=requested.render.present() && requested.render.dependency==dependency
+    const auto renderDependency=juce::String(sourceEdgeRevision)+dependency;
+    // Legacy assets retain their saved sound until an explicit regeneration.
+    const auto matching=requested.render.present()
+        && (requested.render.dependency==dependency || requested.render.dependency==renderDependency)
         && requested.render.irContent==requested.ir.content && requested.render.sourceStart==requested.sourceStart
         && requested.render.sourceEnd==renderInputEnd(requested) && requested.render.rate==context.time.rate
         && requested.render.bpm==context.time.bpm && requested.render.numerator==context.time.numerator
@@ -878,6 +883,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         SourceInterval source; const auto budget=available();
         if(budget<=64ULL*1024*1024 || !readSourceInterval(sourceStore,context.capture.manifest,requested.sourceStart,renderInputEnd(requested),
             (budget-64ULL*1024*1024)/(sizeof(float)*2),source,error,cancel)) { failure(error.isEmpty()?"256 MiB working budget exceeded":error); return; }
+        if(!conditionWetSourceEdges(source.samples,source.rate,error,cancel)) {if(!cancel())failure(error);return;}
         ImpulseResponse ir,prepared;
         auto remaining=available(source.samples.capacity()*sizeof(float));
         if(!assets.readIR(requested.ir,remaining,ir,error)) { failure(error); return; }
@@ -888,7 +894,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             [&](float p){report(requested,session,Phase::rendering,"Convolving",0.3f+p*0.5f);}))
         { if(!cancel()) failure(error); return; }
         if(cancel()) return;
-        if(!assets.writeRender(*raw,requested.ir,dependency,context.time,committed,error)) { failure(error); return; }
+        if(!assets.writeRender(*raw,requested.ir,renderDependency,context.time,committed,error)) { failure(error); return; }
     }
     {const juce::ScopedLock guard(lock);if(retainedIR.contains(requested.id)){
         int64_t a,b;if(!shapeBounds(requested,raw->start,raw->sourceEnd,a,b,error)){
