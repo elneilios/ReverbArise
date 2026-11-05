@@ -17,6 +17,25 @@ int main()
     try
     {
         using namespace m3;
+        {const SongTime source{true,3399344,144,48000,122,4,4};auto host=source;GridEvidence evidence;
+            CHECK(HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::available);
+            host.ppq=143.999322222222219;
+            CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::origin);
+            CHECK(evidence.accepted.ppq==144 && evidence.observed.ppq==host.ppq && evidence.captureRate==48000 && evidence.sampleAvailable);
+            for(int offset:{-31,-2,-1,0,1,2,16}){host=source;host.sample+=offset;
+                CHECK(HostGrid::make(source,host,48000,GridDivision::beat,&evidence).has_value()==(std::abs(offset)<=1));
+                CHECK(evidence.gate==(std::abs(offset)<=1?GridGate::available:GridGate::origin));}
+            host=source;CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence,false));CHECK(evidence.gate==GridGate::sampleUnavailable);
+            const auto rejected=[&](GridGate expected){CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==expected);};
+            host.valid=false;rejected(GridGate::invalidTiming);host=source;host.ppq=std::numeric_limits<double>::quiet_NaN();rejected(GridGate::invalidTiming);
+            host=source;host.rate=44100;rejected(GridGate::rate);host=source;host.bpm=123;rejected(GridGate::tempo);
+            host=source;host.denominator=8;rejected(GridGate::meter);
+            CHECK(!HostGrid::make(source,source,44100,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::captureRate);
+            CHECK(!HostGrid::make(source,source,48000,static_cast<GridDivision>(100),&evidence));CHECK(evidence.gate==GridGate::division);
+            CHECK(!HostGrid::make(source,source,std::numeric_limits<double>::quiet_NaN(),GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::captureRate);
+            const SongTime enormous{true,0,0,std::numeric_limits<double>::max()/100,60,1000000,1};
+            CHECK(!HostGrid::make(enormous,enormous,enormous.rate,GridDivision::fourBars,&evidence));CHECK(evidence.gate==GridGate::conversion);
+        }
         for(const auto meter:{std::pair{4,4},std::pair{3,4},std::pair{6,8}})
         {
             const SongTime accepted{true,1000,0,48000,120,meter.first,meter.second};
@@ -25,9 +44,12 @@ int main()
             for(size_t n=0;n<gridChoices.size();++n)
             {
                 const auto grid=HostGrid::make(accepted,accepted,48000,gridChoices[n].division);CHECK(grid);
+                GridEvidence evidence;const auto explained=HostGrid::make(accepted,accepted,48000,gridChoices[n].division,&evidence);
+                CHECK(explained && evidence.gate==GridGate::available);
                 for(int64_t sample=-200000;sample<=200000;sample+=137)
                 {
                     CHECK(grid->snap(sample)==oracle(sample,1000,intervals[n]));
+                    CHECK(explained->snap(sample)==grid->snap(sample));
                     CHECK(SwellViewport{}.snapToGrid(sample,accepted,accepted,48000,gridChoices[n].division)==oracle(sample,1000,intervals[n]));
                 }
                 CHECK(grid->snap(1000+intervals[n]/2)==1000+intervals[n]);

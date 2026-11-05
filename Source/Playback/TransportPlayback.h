@@ -59,7 +59,10 @@ public:
     bool active() const noexcept {return liveActive.load();}
     std::optional<LiveCallbackObservation> observation() const noexcept {return callbackObservation.read();}
     std::optional<LiveCallbackObservation> lastRejection() const noexcept {return rejectionObservation.read();}
+    std::optional<LiveCausalObservation> causalObservation() const noexcept {return causalPublication.read();}
 private:
+    LiveCausalHistory causalHistory;
+    LiveObservationSlot<LiveCausalObservation> causalPublication;
     LiveObservationSlot<LiveCallbackObservation> callbackObservation,rejectionObservation;
     uint64_t observedBlocks=0;
     void observe(const LivePublication*,int,const TransportTime&,bool,bool,bool,bool,bool,LiveGate,const LiveClockSnapshot*) noexcept;

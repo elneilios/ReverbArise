@@ -85,6 +85,7 @@ struct EditorSnapshot
     std::vector<juce::String> auditionMembers;
     LivePreparationObservation livePreparation;
     std::optional<LiveCallbackObservation> liveObservation,liveLastRejection;
+    std::optional<LiveCausalObservation> liveCausal;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;

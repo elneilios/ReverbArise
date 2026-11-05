@@ -45,6 +45,7 @@ public:
     void setGridDivision(GridDivision division);
     GridDivision selectedGrid()const noexcept{return gridDivision;}
     bool gridAvailable()const{return playheadAvailable && HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision).has_value();}
+    GridEvidence gridEvidence()const{GridEvidence result;HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision,&result,playheadAvailable);return result;}
     const juce::String& interactionStatus()const noexcept{return gestureStatus;}
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);

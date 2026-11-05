@@ -991,6 +991,38 @@ int main(int argc,char* argv[]){return runTest([&]
     auto* liveEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticLiveAdmission"));REQUIRE(liveEvidence);
     REQUIRE(liveEvidence->getText().contains(m3::ui::liveCallbackText(engine.snapshot().liveObservation,"Current callback")));
     REQUIRE(liveEvidence->getText().contains("Current callback") && liveEvidence->getText().contains("stopped (not playing admission)"));
+    REQUIRE(liveEvidence->getText().startsWith(m3::ui::gridDiagnosticsText(editor.timelineComponent().gridEvidence())));
+    REQUIRE(liveEvidence->getDescription()==liveEvidence->getText());
+    // UI grid provenance is independent of stopped callback readiness.
+    head.position.setTimeInSamples(16);head.position.setPpqPosition(0);buffer.clear();processor->processBlock(buffer,midi);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("accepted-grid origin mismatch");});
+    REQUIRE(!editor.timelineComponent().gridAvailable());
+    REQUIRE(editor.timelineComponent().gridEvidence().gate==m3::GridGate::origin);
+    editor.timelineComponent().setSnapBypassed(true);REQUIRE(!editor.timelineComponent().effectiveSnap());
+    editor.timelineComponent().setSnapBypassed(false);REQUIRE(editor.timelineComponent().effectiveSnap());
+    head.position.setTimeInSamples(0);buffer.clear();processor->processBlock(buffer,midi);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("admission): available");});
+    REQUIRE(editor.timelineComponent().gridAvailable());
+    {m3::GridEvidence missing;const auto text=m3::ui::gridDiagnosticsText(missing);
+        REQUIRE(text.contains("sample position unavailable") && text.contains("delta samples: unavailable"));
+        m3::EditorSnapshot injected; m3::LiveCallbackObservation d;
+        d.block=1;d.usesLiveClock=true;d.liveRun=1;d.liveSession=73;d.playing=true;d.gate=m3::LiveGate::admitted;d.clockGate=m3::LiveGate::admitted;
+        d.liveReference={true,3399344,143.999322222222219,48000,122,4,4};d.observed=d.liveReference;
+        d.hasPublication=d.originsValid=true;d.published={true,3399344,144,48000,122,4,4};
+        d.publishedOrigin=-.262295081746;d.observedOrigin=15.737704918254;d.originDelta=16;
+        m3::LiveCausalHistory history;history.observe(d);d.block=2;d.gate=d.clockGate=m3::LiveGate::origin;
+        d.observed={true,3795967,160.801390972220531,48000,122,4,4};d.observedOrigin=-.262295041699;d.originDelta=.000000040047;
+        injected.liveCausal=history.observe(d);
+        const auto liveText=m3::ui::liveDiagnosticsText(injected);
+        REQUIRE(liveText.contains("First timing rejection in retained run | block 2 | PPQ-zero origin mismatch"));
+        REQUIRE(liveText.contains("Preceding admitted callback at first rejection | block 1 | admitted"));
+        REQUIRE(liveText.contains("Run reference / observed / delta samples:") && liveText.contains("Run clock gate: PPQ-zero origin mismatch"));
+        REQUIRE(liveText.contains("0.000000040047"));bool signedRunDelta=false;
+        for(const auto& line:juce::StringArray::fromLines(liveText))if(line.startsWith("Run reference / observed / delta samples:"))
+            signedRunDelta=signedRunDelta || std::abs(line.fromLastOccurrenceOf(" / ",false,false).getDoubleValue()+16)<.00001;
+        REQUIRE(signedRunDelta);
+        REQUIRE(m3::ui::liveDiagnosticsText({}).contains("First timing rejection in retained run: unavailable"));
+    }
     REQUIRE(liveEvidence->getFont().getHeight()==m3::ui::textStyle(m3::ui::TextRole::helper).height);
     REQUIRE(liveEvidence->getParentComponent()->getLocalBounds().contains(liveEvidence->getBounds()));
     for(const auto& line:juce::StringArray::fromLines(liveEvidence->getText())){

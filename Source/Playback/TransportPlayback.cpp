@@ -61,8 +61,9 @@ void TransportPlayback::observe(const LivePublication* pub,int count,const Trans
 {
     LiveCallbackObservation d;d.block=++observedBlocks;d.observed=time.song;d.count=count;
     d.hasPublication=pub!=nullptr;d.playing=time.playing;d.workflowAllows=workflowAllows;
+    d.hostLooping=time.looping;d.hostLoopStart=time.loopStart;d.hostLoopEnd=time.loopEnd;
     d.enabled=on;d.wetOnly=wetOnly.load();d.wetGain=level.load();
-    if(clock){d.usesLiveClock=true;d.liveRun=clock->run;d.liveSession=clock->session;d.liveReset=clock->reset;d.liveReference=clock->reference;}
+    if(clock){d.usesLiveClock=true;d.liveRun=clock->run;d.liveSession=clock->session;d.liveReset=clock->reset;d.liveReference=clock->reference;d.clockGate=clock->gate;}
     d.validCount=validCount;d.running=running;d.missing=missing;
     if(pub){d.published=pub->mapping;d.revision=pub->revision;d.start=pub->start;d.end=pub->end;
         d.loopStart=pub->loopStart;d.loopEnd=pub->loopEnd;
@@ -72,6 +73,7 @@ void TransportPlayback::observe(const LivePublication* pub,int count,const Trans
         !pub?LiveGate::noPublication:!validCount?LiveGate::invalidRange:mappingGate;
     if(d.gate==LiveGate::admitted)d.gate=!running?LiveGate::reset:missing?LiveGate::missingCoverage:LiveGate::admitted;
     callbackObservation.publish(d);
+    if(clock)causalPublication.publish(causalHistory.observe(d));
     if(workflowAllows && on && time.playing && d.gate!=LiveGate::admitted)rejectionObservation.publish(d);
 }
 void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows,const LiveClockSnapshot* clock) noexcept

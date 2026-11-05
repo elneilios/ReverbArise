@@ -17,16 +17,38 @@ inline constexpr std::array<GridChoice,7> gridChoices{{
     {GridDivision::beat,"beat","1 beat"},{GridDivision::bar,"bar","1 bar"},
     {GridDivision::twoBars,"two-bars","2 bars"},{GridDivision::fourBars,"four-bars","4 bars"}}};
 
+enum class GridGate {available,sampleUnavailable,captureRate,invalidTiming,rate,tempo,meter,origin,division,conversion};
+struct GridEvidence
+{
+    SongTime accepted{},observed{};
+    double captureRate=0;
+    GridDivision division=GridDivision::quarterBeat;
+    bool sampleAvailable=false;
+    GridGate gate=GridGate::sampleUnavailable;
+};
+
 // Fixed accepted mapping only. The existing transport authority decides whether
 // a new host observation still describes the captured material's Song mapping.
 class HostGrid
 {
 public:
     static std::optional<HostGrid> make(const SongTime& accepted,const SongTime& now,
-                                      double captureRate,GridDivision division)noexcept
+                                      double captureRate,GridDivision division,
+                                      GridEvidence* evidence=nullptr,bool sampleAvailable=true)noexcept
     {
-        if(!std::isfinite(captureRate) || captureRate<=0 || std::abs(captureRate-accepted.rate)>.001
-            || !transportMappingMatches(accepted,now))return {};
+        if(evidence)*evidence={accepted,now,captureRate,division,sampleAvailable,GridGate::available};
+        const auto reject=[&](GridGate gate)->std::optional<HostGrid>{if(evidence)evidence->gate=gate;return {};};
+        if(!sampleAvailable)return reject(GridGate::sampleUnavailable);
+        if(!std::isfinite(captureRate) || captureRate<=0 || std::abs(captureRate-accepted.rate)>.001)
+            return reject(GridGate::captureRate);
+        if(!transportMappingMatches(accepted,now)){
+            long double a,b;
+            if(!songOrigin(accepted,a) || !songOrigin(now,b))return reject(GridGate::invalidTiming);
+            if(accepted.rate!=now.rate)return reject(GridGate::rate);
+            if(accepted.bpm!=now.bpm)return reject(GridGate::tempo);
+            if(accepted.numerator!=now.numerator || accepted.denominator!=now.denominator)return reject(GridGate::meter);
+            return reject(GridGate::origin);
+        }
         long double beats;
         switch(division)
         {
@@ -37,13 +59,13 @@ public:
             case GridDivision::bar:beats=accepted.numerator;break;
             case GridDivision::twoBars:beats=2.L*accepted.numerator;break;
             case GridDivision::fourBars:beats=4.L*accepted.numerator;break;
-            default:return {};
+            default:return reject(GridGate::division);
         }
         const auto step=beats*4/accepted.denominator;
         const auto samples=step*accepted.rate*60/accepted.bpm;
         long double origin;
         if(!std::isfinite(step) || step<=0 || !std::isfinite(samples) || samples<=0
-            || !songOrigin(accepted,origin))return {};
+            || !songOrigin(accepted,origin))return reject(GridGate::conversion);
         return HostGrid(accepted,step,samples,origin);
     }
     std::optional<int64_t> snap(int64_t candidate)const noexcept

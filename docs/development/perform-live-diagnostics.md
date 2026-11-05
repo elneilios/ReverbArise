@@ -8,6 +8,16 @@ when changing the plugin build.
 
 ## Reading observations
 
+The fixed-grid section is a **UI snapshot**, separate from callback/worker
+evidence. It reports the same decision used by timeline/inspector snapping:
+sample-position availability, capture rate, accepted and observed timing,
+division and the rejected prerequisite. Origin differences are observed minus
+accepted in samples. Invalid/missing timing leaves derived origins unavailable.
+The source grid can be unavailable while a separately validated playing run
+admits wet; grid availability alone cannot establish audible output. Stop can
+restore grid compatibility without proving the preceding Play was admitted.
+Snap On, Ctrl bypass, Snap Off and exact-entry policies are unchanged.
+
 Callback observations copy values from one processed block and its active
 publication. `block` identifies that callback; `revision` identifies the
 publication. Current and historical rejection observations are separate bounded
@@ -35,6 +45,23 @@ create a baseline or pretend that the host stopped; seeks, loops and output
 controls cannot erase a rejected mapping during continuous Play. Session/audio
 reset requires a new runtime observation. Source/render rate, tempo, meter and
 identity checks remain independent and mandatory.
+
+`Run reference / observed / delta samples` is the comparison used for the
+playing clock. It is distinct from the source/publication comparison. `Run
+clock gate` reports clock validation even if another gate (such as no publication
+or disabled output) explains the callback's final result. Callback host-loop
+bounds are labelled separately from the publication's preparation loop hints.
+
+The causal section retains one fixed-size bundle: run start, last admitted
+callback, first timing rejection and the admitted callback immediately preceding
+that first rejection. The predecessor is unavailable if none was admitted.
+Later failures, seeks, loops, publication changes and recovery do not overwrite
+the first rejection/predecessor. Current and latest historical rejection remain
+separate. A confirmed new run/session/audio-reset observation replaces the
+bundle; Stop retains the completed run for inspection. Labels identify retained
+run/session/reset and callback numbers rather than implying all rows are current.
+The bundle is ephemeral and is not saved in DAW projects. Bounded snapshot reads
+can return unavailable; this never means admission succeeded.
 
 A supported source-to-playing origin delta can therefore appear alongside
 `admitted`. A current `PPQ-zero origin mismatch` with a live run instead means

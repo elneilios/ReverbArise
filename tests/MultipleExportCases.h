@@ -66,6 +66,26 @@ inline void multipleExportCases()
             expected+=terms*.001*(i?.25:.125)*fade*std::min({1.0,age/2.0,(b-1-at)/2.0})*std::min(1.0,(age+1)/5.0);}
             REQUIRE(std::abs(samples[at]-expected)<1e-6);}}
     REQUIRE(serial0[440]>0 && serial1[440]>serial0[440] && serial1[3850]>0);
+    // #73: same accepted sample coordinates, real-time zero-input wet versus
+    // offline output. The first five samples are the independently defined join
+    // ramp; subsequent changing samples must agree, not just an energy flag.
+    for(int i=0;i<2;++i){auto& p=*processors[i];p.setNonRealtime(false);p.prepareToPlay(1000,64);
+        const auto savedBeforeLive=p.swellEngine().savedSession();
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        waitM3([&]{return p.swellEngine().snapshot().liveReady;});
+        position(i,440,true);
+        waitM3([&]{tick.clear();p.processBlock(tick,midi);const auto s=p.swellEngine().snapshot();return s.liveActive && !s.liveMissing && !s.liveIncompatible;});
+        // Confirmed Stop removes previous voices; wait through its bounded ramp.
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        position(i,440,true);std::vector<float> live;
+        for(int stride:{7,19,38}){juce::AudioBuffer<float> block(2,stride);block.clear();p.processBlock(block,midi);
+            for(int n=0;n<stride;++n)live.push_back(block.getSample(0,n));position(i,440+static_cast<int64_t>(live.size()),true);}
+        const auto& offline=i?serial1:serial0;REQUIRE(live.size()==64 && live[10]>0);
+        for(size_t n=0;n<live.size();++n){const auto ramp=std::min(1.0f,static_cast<float>(n+1)/5);
+            REQUIRE(std::abs(live[n]-offline[440+n]*ramp)<1e-6f);}
+        const auto savedAfterLive=p.swellEngine().savedSession();REQUIRE(savedBeforeLive.swells.size()==savedAfterLive.swells.size());
+        for(size_t n=0;n<savedBeforeLive.swells.size();++n)REQUIRE(m3::sameSavedSwell(savedBeforeLive.swells[n],savedAfterLive.swells[n]));
+    }
     REQUIRE(processors[0]->getCaptureSnapshot().reference==captured0 && processors[1]->getCaptureSnapshot().reference==captured1);
     // Musical exports snapshot each instance's calibrated accepted schedule;
     // irregular and independently interleaved callbacks remain deterministic.
