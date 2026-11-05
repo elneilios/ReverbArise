@@ -1302,6 +1302,12 @@ int main(int argc,char* argv[]){return runTest([&]
     }
     const auto source=timeline.sourceLane();const auto xEnd=static_cast<float>(timeline.viewport().pixel(24000,source.getX(),source.getWidth()));
     REQUIRE(timeline.beginDrag({xEnd,source.getBottom()-5}));timeline.dragTo({static_cast<float>(timeline.viewport().pixel(20000,source.getX(),source.getWidth())),source.getBottom()-5});
+    {const auto observedSourceEdit=engine.savedSession();
+        if(observedSourceEdit.swells[0].sourceEnd!=20000 || observedSourceEdit.swells[0].phase!=m3::Phase::stale || observedSourceEdit.swells[1].phase!=m3::Phase::ready)
+            std::cerr<<"Source-end edit evidence: end="<<observedSourceEdit.swells[0].sourceEnd
+                <<" phase="<<static_cast<int>(observedSourceEdit.swells[0].phase)<<" status="<<observedSourceEdit.swells[0].status
+                <<" neighbour phase="<<static_cast<int>(observedSourceEdit.swells[1].phase)<<" status="<<observedSourceEdit.swells[1].status
+                <<" autoRegenerate="<<observedSourceEdit.autoRegenerate<<" gesture="<<timeline.interactionStatus()<<"\n";}
     REQUIRE(engine.savedSession().swells[0].sourceEnd==20000 && engine.savedSession().swells[0].phase==m3::Phase::stale && engine.savedSession().swells[1].phase==m3::Phase::ready);
     editor.refresh();snapshotEditor(editor,"stale");
     auto field=dynamic_cast<juce::TextEditor*>(named(editor,"sourceSampleEnd"));REQUIRE(field);field->setText("24000",false);field->onReturnKey();

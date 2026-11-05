@@ -37,6 +37,24 @@ completed. The installer builds Release plugin-only after those gates and uses
 the supported system VST3 destination with a retained complete previous bundle.
 Installation alone does not establish new FL Studio playback acceptance.
 
+Combined implementation `4c39b06` was built with the existing warm MSVC/JUCE/
+WavPack trees, without clearing caches. Full native Release passed **71/71**
+in **227.11 s** (`out/build-logs/Release/20261105-220910-5eae01b4`).
+The first combined Debug run failed 5/71 under heavy competing compilation
+(CPU 97–100%, up to six `cl.exe` processes). Its log is
+`out/build-logs/Debug/20261105-221500-e38547f8`; this is a failed gate, not a pass.
+A quieter full Debug rerun passed **70/71** in **545.44 s**
+(`out/build-logs/Debug/20261105-223512-51725706`): streaming, composition preview,
+engine and processor recovered, but the source-handle assertion in `swell_ui_test`
+repeated. Failure-only logging was added to record the actual source end, phase,
+neighbour phase and interaction status, without changing production behavior or
+the assertion. With that instrumentation, two direct Debug runs, one focused
+CTest run (**29.99 s**) and five consecutive CTest repeats (**156.45 s**) passed.
+The original intermittent assertion has not been explained by a captured failing
+value; instrumentation is retained for the next failure. No tolerance, timeout,
+expected phase or production behavior was relaxed. Final full Debug validation
+is required below before installation.
+
 ## Exact capture procedure
 
 After installation, reopen FL Studio. In Options > Manage plugins enable
@@ -65,6 +83,12 @@ Retain five labelled text blocks (paste each somewhere before copying the next):
 5. **AFTER STOP** — stop once and immediately use Copy diagnostics again, before
    another Play or project reload. This preserves the completed run's first
    rejection and predecessor alongside the stopped grid.
+
+Use FL Studio's transport buttons for Play and Stop; Space while a plugin button
+has focus can activate that button. After copying DURING PLAY, click FL Studio's
+Stop button, then paste that clipboard text under DURING PLAY. Now copy and paste
+AFTER STOP. This avoids switching applications during the live run and preserves
+both snapshots. Paste every block before the next copy replaces the clipboard.
 
 Return those five blocks plus the expected swell/bar and two observations:
 **Was wet audible? Was the Snap warning present?** No screenshot, video, new
