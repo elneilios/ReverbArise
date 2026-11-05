@@ -23,6 +23,22 @@ Untouched scope: audio callback/DSP, capture/managed assets, render admission/sc
 
 ## Environment and initial build
 
+### Independent work during upstream integration
+
+The owner authorized continuing available tasks while waiting. Preference-store
+and fit-policy implementation plus a standalone JUCE-core test source are now
+prepared; [implementation guidance](../development/editor-presentation.md)
+describes their boundaries. They are not connected to the editor or user profile.
+The #73 agent still holds the quiet validation window, so no compile or native
+policy test is claimed yet and tasks 3.3/3.4 remain unchecked. The existing
+approved preview stays open; its executable is not the policy-test target.
+
+The #68 agent reports implementation PR #95 merged at
+`036e35e89c8fabb18c315f1783672780b7eefbd7`, with its accepted TransportReadout
+and production standards revision 6. This branch has not rebased or integrated
+that merge yet. The separate #68 archive/spec-sync PR #97 is documentation-only
+and remains subject to owner review; no merge status is inferred for it.
+
 ### Interim owner approval and integration handoff
 
 The owner reviewed the corrected native window and said, "interim layout
