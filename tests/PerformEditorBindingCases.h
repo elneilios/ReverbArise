@@ -30,10 +30,54 @@ void Composition::verifyEditorBindings()
     REQUIRE(require<LearnWorkspace>(*panel,"learnWorkspace").isVisible() && !zoom.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
+    // Real list row input, including a re-click that does not change selection.
+    auto& list=require<controls::SwellList>(*panel,"swellList");
+    auto& timeline=panel->timelineComponent();
+    const auto clickRow=[&](const juce::String& id,juce::ModifierKeys mods=juce::ModifierKeys{},int x=80)
+    {
+        const int row=list.rowFor(id);REQUIRE(row>=0);list.scrollToEnsureRowIsOnscreen(row);
+        const auto p=juce::Point<int>{x,list.getRowPosition(row,true).getCentreY()};
+        auto* component=list.getComponentAt(p);REQUIRE(component);
+        const auto local=component->getLocalPoint(&list,p).toFloat();const auto now=juce::Time::getCurrentTime();
+        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),local,mods,0,0,0,0,0,component,component,now,local,now,1,false);
+        component->mouseDown(event);component->mouseUp(event);
+    };
+    const auto reveals=[&](int64_t arrival)
+    {
+        const auto view=timeline.viewport();REQUIRE(view.first<arrival && view.last>arrival);
+        timeline.fitSelection();
+        REQUIRE(timeline.viewport().first==view.first && timeline.viewport().last==view.last);
+        const auto preferences=engine.savedSession().performUi;REQUIRE(preferences.hasView && preferences.first==view.first && preferences.last==view.last);
+        auto& overview=require<m3::SwellOverview>(*panel,"songOverview");
+        REQUIRE(overview.waveformBounds().contains(overview.detailBounds()));
+        REQUIRE(timeline.sourceLane().getX()==timeline.wetLane().getX() && timeline.sourceLane().getWidth()==timeline.wetLane().getWidth());
+        REQUIRE(timeline.musicalRulerBounds().getX()==juce::roundToInt(timeline.sourceLane().getX()));
+    };
+    const auto selectionJobs=engine.snapshot().renderCount;const auto transport=processor->getSongTime().sample;
+    timeline.setViewport({100000,140000});clickRow(firstId);reveals(48000);
+    REQUIRE(timeline.viewport().span()!=40000); // Selection automatically adopts Fit's zoom too.
+    auto revealed=timeline.viewport();clickRow(firstId);REQUIRE(timeline.viewport().first==revealed.first);
+    timeline.setViewport({100000,140000});clickRow(firstId);reveals(48000);
+    timeline.zoom(.5);clickRow(firstId);reveals(48000); // Same row after manual zoom.
+    clickRow(secondId);reveals(245760);
+    clickRow(firstId,juce::ModifierKeys::ctrlModifier);reveals(48000);REQUIRE(engine.savedSession().selected.size()==2);
+    clickRow(secondId,juce::ModifierKeys::shiftModifier);reveals(245760);REQUIRE(engine.savedSession().selected.size()==2);
+    // Checkbox enablement remains a separate action and does not request reveal.
+    timeline.setViewport({100000,140000});clickRow(secondId,{},12);
+    REQUIRE(timeline.viewport().first==100000);clickRow(secondId,{},12);
+    REQUIRE(engine.edit(firstId,[](auto& swell,auto&){swell.name="Renamed navigation target";return true;}));panel->refresh();
+    clickRow(firstId);reveals(48000);
+    revealed=timeline.viewport();panel->refresh();panel->refresh();REQUIRE(timeline.viewport().first==revealed.first);
+    const auto currentEpoch=engine.assignmentEpoch();
+    list.onReveal(secondId,currentEpoch-1);REQUIRE(timeline.viewport().first==revealed.first);
+    list.onReveal({},currentEpoch);REQUIRE(timeline.viewport().first==revealed.first);
+    REQUIRE(!engine.snapshot().playing && engine.snapshot().renderCount==selectionJobs && processor->getSongTime().sample==transport);
+    // Return to the same preferred view; subsequent save/reopen assertions below
+    // now cover the view published by a real row reveal.
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));panel->refresh();
     REQUIRE(require<ExportWorkspace>(*panel,"exportWorkspace").isVisible() && !zoom.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
-    REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
+    REQUIRE(panel->timelineComponent().viewport().first==revealed.first && panel->timelineComponent().viewport().last==revealed.last);
     snap.beforeInvocation();snap.triggerClick();juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(!panel->timelineComponent().requestedSnap() && !engine.savedSession().performUi.snap && !snap.getToggleState());
     panel->modifierKeysChanged(juce::ModifierKeys::ctrlModifier);panel->modifierKeysChanged({});

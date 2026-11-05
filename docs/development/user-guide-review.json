@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the exact float target assignment at the end of Export monitoring ramps; it enforces the already documented five millisecond transition and preserves arbitrary saved levels without changing user steps, state format, file law or controls. No prose change required.",
+  "summary": "Reviewed merged owner-approved #68 transport readout and #93 selection Fit with #51 quiet notices and continuous Export preview, including exact ramp endpoints. Combined guide preserves new Perform instructions and the independent Export controls, pending WAV and stopped/zero instructions. No pending #58 geometry or additional control variant is introduced.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 26148,
-      "sha256": "2eb47d5fa8c58e760de56c4ca39b3aaa89dee40a1c3b46d52ec98aa358e4c987"
+      "bytes": 26525,
+      "sha256": "b4479f53971b6cb6d61e5e7ce57161fea52a33c0fa11a2c67401be34e406ca28"
     },
     {
       "path": "CMakePresets.json",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79242,
-      "sha256": "415b4b13e35f04db7b90f998fcb714f2a46c10a96caee03bc7fedc2b20d6f031"
+      "bytes": 79108,
+      "sha256": "0c461f1234a1dbdff3d20bd40f78bf2e3832f032483a974cea3a14b68f3846c0"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9697,
-      "sha256": "dd8fd70415bdcc6ea5c5f96011b2c13d5447052daadd3b301ea7c35093f797d4"
+      "bytes": 9779,
+      "sha256": "fc51bcf56cccbb3ffd57c7b1bb631d92f3cd33e6b99f1ae46a89dbbe65d12ee4"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -625,8 +625,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 9202,
-      "sha256": "76640227438a8fdc65db396532e594eebfe73cab76c2fe8cc4f4a7886b7debe1"
+      "bytes": 9733,
+      "sha256": "1ab4065d3b0971f4b9fe5ae57349ca8a7b390ad9bdd3c2887a8eb9f7185b1c1f"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -647,6 +647,11 @@
       "path": "Source/UI/Controls/TimelineZoomControls.h",
       "bytes": 4007,
       "sha256": "7d6a4872110a3158602f8c52e0c71160c0e2388d816dd9461d0b19bd3a23c8e1"
+    },
+    {
+      "path": "Source/UI/Controls/TransportReadout.h",
+      "bytes": 4197,
+      "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
     },
     {
       "path": "Source/UI/EnvelopeHandles.h",
@@ -724,6 +729,11 @@
       "sha256": "e117de1766f33b23fc7a15875f49aa0570c8dc65d6809ee8c3c5b59c74e32101"
     },
     {
+      "path": "Source/UI/TransportPresentation.h",
+      "bytes": 1354,
+      "sha256": "53ba01bed0f6af6bebfc8e57854603c40bd740a2c5657ff68aabec39d6bc3af2"
+    },
+    {
       "path": "Source/UI/UiGeometry.h",
       "bytes": 1567,
       "sha256": "feac31ff1e9d0c6abe73ecabeb312eb886cd8569cc7fa5d50023a3813b9e847b"
@@ -780,8 +790,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 17366,
-      "sha256": "039ad6dca48dd1e1b6a30fd27fd22c27b89451de54e9da60818e933c2c85f386"
+      "bytes": 17515,
+      "sha256": "574d70c5309728deeec10f1e74efcb3e1bbfdf6398a460e8a615064d142371e0"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -875,8 +885,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 88269,
-      "sha256": "b7a66f7d56c33cce7b82bff4d86cafe66a08ee5d79ee15a5cdc42dcf0f0dafc0"
+      "bytes": 94209,
+      "sha256": "7ea462dcfca684072e7c9c55ac8a55cd6ca1030e5b9947e5505de747055e7c44"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

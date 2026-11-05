@@ -3,7 +3,12 @@
 Current: the owner approved the complete revised native presentation on 4 November 2026.
 Production now adopts the 52-pixel audition strip, grouped/full Source inspector,
 compact readouts with exact editing, shared ruler, aligned headings and normal-font
-bottom hover-help footer (standards revision 5). The temporary preview-only switch
+bottom hover-help footer (standards revision 5). Issue #68 adds the owner-approved
+stable Bar, Beat, BPM and meter readout (standards revision 6), using independent
+font-measured slots, right-aligned numbers and anchored separators above hover
+help. Values and availability updates do not move the group. Oversized values
+retain full accessible/help text. See the [readout policy](../development/transport-readout.md).
+The temporary preview-only switch
 is removed; native tests exercise the ordinary production editor. Earlier review
 chronology below is retained; the latest approval supersedes pending-adoption wording.
 

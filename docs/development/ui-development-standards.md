@@ -39,7 +39,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 5; scoped knob focus review below). Its Learn/header table
+numerical authority (production standards revision 6; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -102,6 +102,15 @@ lists the integration baseline, component ownership and remaining legacy consume
   changes. Verify resolved typeface names/styles and embedded resource coverage.
 
 ## Incremental migration
+
+`Controls/TransportReadout` owns the owner-approved #68 read-only Perform footer:
+independent value slots, separators, typography, bounded overflow and accessible
+help. Editor code binds existing diagnostics and musical timing without host
+actions or persistence changes. Preserve `hostInfo` as its component name. The
+native family approval covers spacing, readability and stability as values change;
+its [sizing policy](transport-readout.md) and component/editor tests travel together.
+The retired editor font setup reduces its existing font-construction debt count
+by one; the inventory is manually narrowed for that exact removal, not regenerated.
 
 Settings About reuses the existing tab container, sectionHeading/controlLabel/helper
 text roles, EllipsisLabel, ActionButton and comfortable geometry. It adds no style

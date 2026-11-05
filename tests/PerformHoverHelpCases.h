@@ -11,7 +11,7 @@ void Composition::verifyHoverHelp()
     const auto hover=[&](juce::Component& control){panel->mouseEnter(event(control,control.getLocalBounds().getCentre().toFloat()));};
     REQUIRE(help.getBottom()==panel->getHeight() && help.getHeight()==textStyle(TextRole::helper).lineHeight);
     REQUIRE(help.getFont().getHeight()==textStyle(TextRole::helper).height && !help.getBounds().intersects(panel->timelineComponent().getBounds()));
-    REQUIRE(require<juce::Label>(*panel,"hostInfo").getBottom()<=help.getY());
+    REQUIRE(require<juce::Component>(*panel,"hostInfo").getBottom()<=help.getY());
     struct Notifications final:juce::AudioProcessorListener
     {int changes=0;void audioProcessorParameterChanged(juce::AudioProcessor*,int,float)override{}
         void audioProcessorChanged(juce::AudioProcessor*,const ChangeDetails& detail)override{if(detail.nonParameterStateChanged)++changes;}} notifications;

@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.5 · **Production standards revision:** 5 · **Purpose:** Production UI authority and design reference. Revision 5 adopts the owner-approved Perform clarity presentation and bottom context help.
+**Version:** 1.6 · **Production standards revision:** 6 · **Purpose:** Production UI authority and design reference. Revision 6 adopts the owner-approved stable Perform transport readout.
 
 ## Validated production standards — Learn and shared header
 
@@ -26,6 +26,7 @@ font lookup, synthetic weights and implicit default fonts are not alternatives.
 | Mode navigation | 18 SemiBold, 36 control | Theme / `SegmentedSelector`; selected/inactive semantic ink |
 | Header description and notice body | 14 Regular, 32 information row | Theme / `HeaderInformation`, header `NoticeBar`; `#C7CDD4` |
 | Numeric control value / dropdown | 13 Regular, 28 value / 34 control | Theme / control geometry; primary |
+| Perform transport readout | 15 Regular, existing information band | `Controls/TransportReadout`; primary |
 
 There is no universal line-height multiplier. Preserve the actual text box and
 face as well as font height. General legacy `smallSize=12`, `captionSize=11` and
@@ -104,6 +105,20 @@ production standards revision; this revision does not change plugin/state versio
 | 3 | #46 revision-4 native compact composition and Snap family approved 2026-11-04 | Perform-only profile below; shared Zoom/Fit controls from merged #49, no Learn/header density changes |
 | 4 | #46 owner approved Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); actual native look/feel approved 2026-11-04. Other families and layout tokens unchanged |
 | 5 | #46 owner approved revised presentation on 2026-11-04 | Perform 52-pixel single-row audition strip, grouped inspector/full Source labels, compact values with exact editing, shared ruler and aligned headings; normal-font bottom context help across modes. Existing typography/control families reused; no popup tooltips |
+| 6 | #68 native readout look/feel approved 2026-11-05 | Perform-only stable Bar, Beat, BPM and meter slots; existing footer 15-pixel Inter Regular/primary ink and tight/related spacing retained. No highlight decoration or host behavior change |
+
+### Stable Perform transport information
+
+`Controls/TransportReadout` owns the four read-only slots, fixed separators and
+centred status group. Right-align numbers inside font-measured value reserves;
+never centre or resize the combined live string. Reserve signed six-digit bars,
+three-digit beats plus three decimals, four-digit BPM plus two decimals,
+three-digit meter parts and full unavailable text. This is a display budget,
+not a host-domain limit. Larger values ellipsize within their own slot and retain
+full accessible/context-help text. Reuse existing primary ink, 15-pixel Inter
+Regular and tight/related spacing; no automatic font compression. The owner
+approved this scoped family in its live native preview before editor integration.
+See [binding and sizing policy](../development/transport-readout.md).
 
 ### Chronological Swells list interaction
 

@@ -448,7 +448,8 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(!empty.isParentOf(named(empty,"previewStatus")));
         REQUIRE(empty.getLookAndFeel().findColour(juce::Label::textColourId)==m3::ui::text);
         REQUIRE(m3::ui::secondary.getRed()==237 && m3::ui::secondary.getGreen()==241 && m3::ui::secondary.getBlue()==245);
-        auto host=dynamic_cast<juce::Label*>(named(empty,"hostInfo"));REQUIRE(host && host->getText().contains("Position unavailable") && host->getText().contains("BPM unavailable") && host->getText().contains("Meter unavailable"));
+        auto host=dynamic_cast<m3::ui::controls::TransportReadout*>(named(empty,"hostInfo"));REQUIRE(host);
+        for(const auto& value:host->presentation().values)REQUIRE(value=="unavailable");
         const auto* mark=dynamic_cast<m3::ui::Wordmark*>(named(empty,"brandWordmark"));REQUIRE(mark && mark->loaded());
         const auto* theme=dynamic_cast<m3::ui::WorkspaceTheme*>(&empty.getLookAndFeel());
         REQUIRE(theme && theme->interAvailable() && theme->font(13).getTypefacePtr()->getName()=="Inter");
