@@ -22,7 +22,7 @@
 ## 4. Integration and review
 
 - [x] 4.1 Complete relevant focused capture, processor, persistence and callback-safety regressions plus the final native Release build/tests using `scripts/build.ps1 -Configuration Release -Test` (and focused Debug validation through the wrapper); verify all delta scenarios against evidence and distinguish fixtures, native MSVC/CTest and long-harness runs. Make any demonstrated narrow recovery correction only with its regression test; surface changes to admission/storage semantics for further review.
-- [ ] 4.2 Consolidate the implemented contract and reproducible harness commands in living technical guidance, link dated evidence from `docs/README.md`, and perform or explicitly report the remaining single brief FL Studio smoke check for capture/Stop/retry and retained source. Submit one issue-specific PR with accurate `Refs #54` versus `Closes #54` scope, known/unknown original cause and exact validation limits; leave owner review and merge outstanding.
+- [x] 4.2 Consolidate the implemented contract and reproducible harness commands in living technical guidance, link dated evidence from `docs/README.md`, and perform or explicitly report the remaining single brief FL Studio smoke check for capture/Stop/retry and retained source. Submit one issue-specific PR with accurate `Refs #54` versus `Closes #54` scope, known/unknown original cause and exact validation limits; leave owner review and merge outstanding.
 
 ## Workflow follow-up
 
