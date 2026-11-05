@@ -75,3 +75,14 @@ Source commit: `bd481756943be42f9579792fb647b74ff7281a1d` on `codex/51-independe
 - Final system install, integrated native/FL acceptance and PR delivery remain pending. Release validation is complete; it is not host acceptance.
 
 Final integrated native Export review is open from a copied Release test executable (process 13756), isolated from DAW/project assets. The [1100x850 native image](2026-11-05-issue-51-export-ready.png) was visually inspected: controls, values, actions and dominant waveform fit; accepted pair and peak warning are visible. Its deliberately hot legacy synthetic render reports +41.27 dBFS and the fixture preview clock is silent; this is warning/layout evidence, not listening material or an installed host result. The earlier generated musical comparison remains the listening reference. Actual host/DPI coverage remains pending.
+
+## Verified FL Studio test installation
+
+Owner confirmed FL closed again. The normal helper's Release plugin-only build passed (`20261105-210528-af58ab13`), then Windows denied the system install-lock path. The supported administrator/UAC retry completed with exit 0, without ACL changes or host termination.
+
+- Installed complete bundle: `C:\Program Files\Common Files\VST3\ReverbArise.vst3`.
+- Previous bundle retained: `C:\git\k7ma-preverb\out\vst3-install-backups\20261105-210619-32e54547f2b6441eb2bec6065fbbb55e\ReverbArise.vst3`.
+- Installed inner binary SHA256: `8DFA2878615C154D4716FC8881F46506ED7B897D71CCDE2BED5B100B7F76F459`.
+- Release source: `efdd2ec` (documentation-only follow-up to production `bd48175`; Source/CMake diff between those commits is empty). Build reports dirty state from the preserved unrelated #71 untracked proposal.
+- Final installer build: `out/build-logs/Release/20261105-210610-7f60d8d5`; administrator output `out/issue51-install-admin.log`. Plugin-only build passed; CTest was not repeated during installation. The preceding full Release retry passed 71/71 against identical production code.
+- [Draft PR #92](https://github.com/elneilios/ReverbArise/pull/92) remains open. Final FL preset/preview, Save/Playlist alignment and save/reopen acceptance is pending; installation alone is not host acceptance. Ask the owner to verify the system bundle path after a verified/rescan-previously-verified plugin scan.
