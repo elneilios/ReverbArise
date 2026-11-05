@@ -2,6 +2,8 @@
 
 **Conclusion:** no reliable Song/Pattern discriminator available to this VST3 effect was established. Standard JUCE/VST3 timing cannot prove mode. Recommend exposing the existing per-instance **Live playback** enable prominently in Perform as an explicit scheduling switch, with clear guidance to turn it off before Pattern playback. This is an operator-controlled fallback, not automatic detection or a guarantee against forgetting. Production behavior is unchanged; [#1](https://github.com/elneilios/ReverbArise/issues/1) remains open.
 
+**Requested extension:** the [optional FL connector spike](2026-11-05-issue-1-fl-connector-spike.md) tests a disposable direct-parameter script against API doubles, records observed MIDI setup friction, and separates correct mode samples from safe, timely delivery. Live connector timing is blocked by the lack of an isolated activated scripting input and a diagnostic receiver endpoint; no connector rollout is recommended yet. The original results below remain unchanged.
+
 ## Baseline, scope and reproduction
 
 - Fetched main: `520a4669572b105848d00763a4dd3fc2550919ea` (PR #72). Clean, isolated existing worktree `C:/Users/neila/.codex/worktrees/d976/k7ma-preverb`; investigation branch `codex/1-pattern-playback-spike`. No other worktree was changed.
