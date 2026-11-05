@@ -39,7 +39,7 @@ public:
     void focusLost(FocusChangeType)override{drag=Drag::none;fineDrag=false;snapBypassed=false;}
     void setGridDivision(GridDivision division);
     GridDivision selectedGrid()const noexcept{return gridDivision;}
-    bool gridAvailable()const{return playheadAvailable && HostGrid::make(data.session.timing,time,capture.manifest.sampleRate,gridDivision).has_value();}
+    bool gridAvailable()const{return playheadAvailable && HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision).has_value();}
     const juce::String& interactionStatus()const noexcept{return gestureStatus;}
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
@@ -55,6 +55,9 @@ public:
     std::function<void()> onViewportChanged;
 private:
     friend class SwellOverview;
+    // A dry-only session pins its fixed mapping when the first target is
+    // accepted. Bootstrap that insertion only; retain established-map guards.
+    const SongTime& gridTiming()const{return !data.session.timing.valid && data.session.swells.empty()?time:data.session.timing;}
     enum class Drag {none,overview,arrival,sourceStart,sourceEnd,audibleStart,audibleEnd,fadeIn,fadeOut,inTension,outTension,move};
     void scrollBarMoved(juce::ScrollBar*,double) override;
     void updateScroll();

@@ -200,3 +200,25 @@ keeps pending source/IR lead-in timing inside the navigation bounds. A real user
 pan/zoom is persisted through that existing binding; a delayed render never
 replays the initial fit. The optional Perform/audition preferences remain intact
 when migrating an accepted v10 project to strict #38 v11 state.
+
+### Explicit manual preparation in Perform
+
+Adding a manual target or accepting an arrival, source-interval or IR edit requests
+background preparation for that unfrozen target, including after dry-only Learn
+capture with Automatic Swells, Auto markers and legacy auto-refresh off. This
+does not enable automatic discovery, replace source or start Audition. A future
+Default IR change still affects future targets only; selected IR import completion
+prepares only its pinned target IDs after the existing session/edit checks.
+
+The request uses the existing forced dependency-check queue and edit debounce.
+It releases that target's deferred Learn dependency and records the current
+source revision so a newly edited interval is not mistaken for a subsequent
+dry-only source commit. Later capture changes retain the existing invalidation
+and explicit-generation policy. Complete coverage, verified IR, compatible timing,
+resource limits and immutable publication checks remain authoritative. Shape,
+gain and placement edits keep their existing minimum-work paths.
+
+Missing source or IR remains actionable and unavailable for current Audition;
+invalid imports retain accepted assets and report the failed request. See
+[issue #55 evidence](../validation/2026-11-04-issue-55-manual-preparation.md)
+for native regressions and the separately recorded host acceptance status.
