@@ -105,9 +105,10 @@ this review. No licensing review was approved by implementing or testing this sc
 2. Extract to a temporary directory. Preserve the complete `ReverbArise.vst3/`
    directory and its `Contents/`; do not extract only the inner `.vst3` binary.
 3. Close the DAW. Preserve the installed bundle for rollback. Copy the whole bundle
-   into your user VST3 folder, normally `%LOCALAPPDATA%\Programs\Common\VST3`, or the
-   machine folder `%COMMONPROGRAMFILES%\VST3` if deliberately using administrator
-   installation. Add the chosen folder to FL Studio's scan paths if necessary.
+   into the supported system folder `%PROGRAMFILES%\Common Files\VST3` with the
+   required Windows permission. FL Studio does not discover VST3 from custom user
+   search folders. For local testing use the repository's
+   [backed-up system installation helper](fl-studio-test-install.md).
 4. Rescan in FL Studio's Plugin Manager. Confirm ReverbArise appears once, loads,
    reports the intended numeric version and produces expected capture/render/playback.
 5. Open a **copy** of an existing saved FL Studio project. Verify plugin recognition,

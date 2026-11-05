@@ -216,8 +216,10 @@ Before external distribution the owner must review JUCE eligibility/terms, proje
 WavPack, Inter, VST3 SDK, bundled IRs and any other applicable third-party conditions.
 Notices are in licenses/ and ReverbArise.vst3/Contents/Resources/.
 Unsigned build. Extract the complete ReverbArise.vst3 directory; do not copy only its binary.
-With the DAW closed, preserve any prior installation and copy the bundle to your user VST3
-folder (%LOCALAPPDATA%\Programs\Common\VST3), then rescan in FL Studio.
+With the DAW closed, preserve any prior installation and copy the bundle to the supported
+system VST3 folder (%PROGRAMFILES%\Common Files\VST3); administrator permission may be needed.
+FL Studio does not discover VST3 from custom user search folders. In Plugin Manager enable
+Verify plugins and Rescan previously verified plugins, then run Find installed plugins.
 Open User-Guide.html for the illustrated offline guide. Start at low monitoring volume.
 Route audio through ReverbArise, choose Learn, and play the DAW to capture; stop to inspect
 markers, then Generate Swells. In Perform select a ready swell, Audition, then Stop.
