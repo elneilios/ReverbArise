@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed owner-directed issue #93 automatic contextual Fit on list selection and same-row reactivation after pan/zoom against production binding and updated OpenSpec delta; revised Perform instructions to explain complete-context pan and zoom. Initial generation, passive refresh and audio workflows remain unchanged.",
+  "summary": "Reviewed canonical issue #93 automatic list Fit sync and integration with approved main #68 transport readout; existing Perform guide accurately describes selection pan/zoom and retained workflows, so no prose change was needed. Refreshed currency for spec sync and integrated source.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 26148,
-      "sha256": "2eb47d5fa8c58e760de56c4ca39b3aaa89dee40a1c3b46d52ec98aa358e4c987"
+      "bytes": 26525,
+      "sha256": "b4479f53971b6cb6d61e5e7ce57161fea52a33c0fa11a2c67401be34e406ca28"
     },
     {
       "path": "CMakePresets.json",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79576,
-      "sha256": "168aceb4e16fb816f90d24a1125011338d9a52ab99417c661b4fc4c27ecfad6c"
+      "bytes": 79108,
+      "sha256": "0c461f1234a1dbdff3d20bd40f78bf2e3832f032483a974cea3a14b68f3846c0"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9697,
-      "sha256": "dd8fd70415bdcc6ea5c5f96011b2c13d5447052daadd3b301ea7c35093f797d4"
+      "bytes": 9779,
+      "sha256": "fc51bcf56cccbb3ffd57c7b1bb631d92f3cd33e6b99f1ae46a89dbbe65d12ee4"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -644,6 +644,11 @@
       "sha256": "7d6a4872110a3158602f8c52e0c71160c0e2388d816dd9461d0b19bd3a23c8e1"
     },
     {
+      "path": "Source/UI/Controls/TransportReadout.h",
+      "bytes": 4197,
+      "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
+    },
+    {
       "path": "Source/UI/EnvelopeHandles.h",
       "bytes": 3151,
       "sha256": "b86c18d77ccdf96b69a70aa11cb2b00c336e354d3fdec13702f61c9cc86c3aea"
@@ -717,6 +722,11 @@
       "path": "Source/UI/TimingEdit.h",
       "bytes": 3925,
       "sha256": "e117de1766f33b23fc7a15875f49aa0570c8dc65d6809ee8c3c5b59c74e32101"
+    },
+    {
+      "path": "Source/UI/TransportPresentation.h",
+      "bytes": 1354,
+      "sha256": "53ba01bed0f6af6bebfc8e57854603c40bd740a2c5657ff68aabec39d6bc3af2"
     },
     {
       "path": "Source/UI/UiGeometry.h",
@@ -870,8 +880,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 88269,
-      "sha256": "b7a66f7d56c33cce7b82bff4d86cafe66a08ee5d79ee15a5cdc42dcf0f0dafc0"
+      "bytes": 91065,
+      "sha256": "7d59b2ff5ef73cb52e6fc772cde61a8e56aa87ce25beaf525d0250ebf432a6c1"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

@@ -5,6 +5,7 @@
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
 #include <UI/Controls/EllipsisLabel.h>
+#include <UI/Controls/TransportReadout.h>
 #include <UI/Controls/IrSelector.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
@@ -46,7 +47,8 @@ private:
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;
-    juce::Label inspectorHeading,hostInfo,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
+    m3::ui::controls::TransportReadout hostInfo;
+    juce::Label inspectorHeading,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
     std::array<juce::Label,3> inspectorGroups;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}

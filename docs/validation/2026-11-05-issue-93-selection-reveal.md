@@ -43,3 +43,20 @@ The review executable is `preverb_perform_composition_preview --review-selection
 ## Delivery status
 
 All 9 revised OpenSpec tasks are complete. Implementation commit: e624038f087acfcd2cbce9b853772c13634bdbc7 (validation used the identical source diff at 84894ee dirty, as documented above). [PR #96](https://github.com/elneilios/ReverbArise/pull/96) is open, non-draft, targeting main from codex/93-reveal-selected-swell, with Closes #93 and the owner-approved requirement change documented. The full-run readiness limitation remains disclosed in the PR. #58 layout integration remains separate; this patch introduces no geometry change. Owner review/merge is required; no self-merge or archive was performed.
+
+## Owner-authorized archive and merge closeout — 5 November 2026
+
+The owner explicitly requested archive and merge, then selected sync before archive. All four artifacts and all 9 tasks were complete. Synced one added selection-Fit requirement and the complete modified toolbar/navigation requirement into canonical swell-workspace. Verified both blocks exactly against the delta, all unrelated requirements and original Title/Purpose unchanged, and no delta-operation headings in the main spec.
+
+Archived to openspec/changes/archive/2026-11-05-reveal-selected-swell/. All five artifact/metadata files retain their pre-move SHA256 contents. The change is absent from the active list; unrelated bound-waveform-paint-work and stabilize-perform-transport-readout changes were left active.
+
+Integrated main 036e35e (merged #68 transport readout) before sync. Source merged without conflicts; the docs index retains both feature references and guide currency was explicitly reviewed/refreshed for the integrated source and canonical spec. Existing guide prose remains accurate. The completed review fixture was closed normally before relinking; no new UI appearance or interaction variant was introduced.
+
+Integration validation at bcf6398 dirty, containing the main merge and archive/spec diff:
+
+- Warm scripts/build.ps1 -Configuration Debug: native configure/build PASS. Wrapper CTest was not requested; focused matching CTest was run separately after wrapper completion.
+- Seven native integration tests PASS (13.44 s): swell_list, transport_readout, perform_navigation, perform_binding, perform_fit, perform_readability, perform_hover_help. Logs: out/build-logs/Debug/20261105-225210-f317b1f7/ (build.log and integration-tests.log).
+- openspec validate --all: 19/19 PASS. Scoped strict swell-workspace and pre-archive change validation PASS. Eight pre-existing >500-character warnings in four unrelated specs remain; those files were verified unchanged from main.
+- UI standards PASS (53 files, 60 bounded occurrences), guide currency PASS, git diff --check PASS.
+
+The earlier full-suite readiness miss and four passing isolated runs remain recorded above; no full DSP suite was repeated for this UI-only main integration and documentation/spec archive. Host/DPI coverage remains unchanged. The prior delivery-status paragraph records the pre-archive publication state; this closeout supersedes its archive restriction. PR #96 carries the archived artifacts and sync for the owner's explicitly authorized merge; no separate issue-close operation or unrelated archive is performed.
