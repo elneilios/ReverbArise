@@ -1,5 +1,7 @@
 # Native FL connector session (local spike v1)
 
+**Session completed:** see [final findings](../2026-11-05-issue-1-connector-findings.md). Realtime checks worked; the measured offline tone was silent because context had already expired before bounce. The instructions below reproduce that experiment, not a production solution.
+
 Goal: establish **real script → VST3 audio-callback consumption**, then measure the gating result. This probe never loads ReverbArise sessions or assets. Budget about 5–8 minutes after scanning/activation. Stop after connection if anything is unclear; keep the logs rather than guessing parameter indexes.
 
 ## Prepared outputs
@@ -41,6 +43,6 @@ If query/write delays are huge (hundreds/thousands of milliseconds), keep the lo
 
 ## Removal / return to normal
 
-First restore the spare MIDI input's original controller type, Enable and port. Close FL. Run `./docs/validation/issue-1-connector/native/install-probe.ps1 -Remove` to move only the probe bundle into retained installs. The owned script folder and its evidence are left intact; retain that folder elsewhere or remove it **after detaching** the input. Never delete the parent Hardware folder. Do not use the probe in real projects. Production ReverbArise and all its assets remain untouched.
+First restore the spare MIDI input's original controller type, Enable and port, **and the matching output's original port/enable state** (both test ports were explicitly paired at 1 during this session). Close FL. Run `./docs/validation/issue-1-connector/native/install-probe.ps1 -Remove` to move only the probe bundle into retained installs. The owned script folder and its evidence are left intact; retain that folder elsewhere or remove it **after detaching** the input. Never delete the parent Hardware folder. Do not use the probe in real projects. Production ReverbArise and all its assets remain untouched.
 
 This is an Explore experiment. Host results will inform a separately reviewed OpenSpec proposal, not authorize production rollout.

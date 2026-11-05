@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native script-to-VST3 delivery, paired-port activation, owner realtime acceptance and measured offline freshness failure; investigation only, with production changes requiring a separate OpenSpec proposal.
+
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 
 - [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — delivered in merged PR #63; [closeout](validation/2026-11-05-issue-59-closeout.md#executed-merged-main-verification--2026-11-05) records completed post-merge verification, scoped owner sign-offs and the explicit additional-host-smoke waiver. [Redistribution review](validation/2026-11-04-issue-59-redistribution-review.md#subsequent-owner-sign-off--2026-11-05) records the one-friend private evaluation scope; public distribution remains undecided.

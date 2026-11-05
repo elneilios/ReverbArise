@@ -1,5 +1,7 @@
 # Issue #1: FL Studio Song/Pattern investigation — 5 November 2026
 
+**Completed native follow-up:** see the [final connector findings](2026-11-05-issue-1-connector-findings.md). An explicitly configured script successfully delivered Song/Pattern to the diagnostic VST3 in realtime; its freshness policy suppressed the measured offline tone. The original bounded investigation below is preserved as the pre-connector evidence baseline.
+
 **Conclusion:** no reliable Song/Pattern discriminator available to this VST3 effect was established. Standard JUCE/VST3 timing cannot prove mode. Recommend exposing the existing per-instance **Live playback** enable prominently in Perform as an explicit scheduling switch, with clear guidance to turn it off before Pattern playback. This is an operator-controlled fallback, not automatic detection or a guarantee against forgetting. Production behavior is unchanged; [#1](https://github.com/elneilios/ReverbArise/issues/1) remains open.
 
 **Requested extension:** the [optional FL connector spike](2026-11-05-issue-1-fl-connector-spike.md) tests a disposable direct-parameter script against API doubles, records observed MIDI setup friction, and separates correct mode samples from safe, timely delivery. Live connector timing is blocked by the lack of an isolated activated scripting input and a diagnostic receiver endpoint; no connector rollout is recommended yet. The original results below remain unchanged.

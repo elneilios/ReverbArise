@@ -1,6 +1,6 @@
 # Issue #1: native connector experiment — 5 November 2026
 
-Status: **actual FL script → VST3 callback delivery and automatic fresh Song updates are proven in this setup after linking the test output.** Song/Pattern transition and audio-gating acceptance remain pending. This extends PR #74's Explore spike, not production ReverbArise. The [short session guide](issue-1-connector/NATIVE-SESSION.md) starts with successful connection and then measures useful behavior; no universal zero-leakage claim is required to run it.
+Status: **host session completed; see the [final findings and recommendation](2026-11-05-issue-1-connector-findings.md).** Realtime mode reporting/gating and lifecycle checks worked; the offline WAV was silent because context was already stale at bounce entry. The chronology below preserves the native experiment's staged results and earlier pending items. This extends PR #74's Explore spike, not production ReverbArise.
 
 ## Native output and identity
 

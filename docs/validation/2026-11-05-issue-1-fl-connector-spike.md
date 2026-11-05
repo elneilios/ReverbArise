@@ -1,5 +1,7 @@
 # Issue #1 extension: optional FL connector — 5 November 2026
 
+**Completed follow-up:** the [final native findings](2026-11-05-issue-1-connector-findings.md) replace the hypothetical receiver/activation blocker below with actual host results. Realtime delivery/gating worked with a paired input/output; offline context was stale at bounce entry. Earlier model evidence is retained with its limits.
+
 **Recommendation: do not roll out a connector yet.** FL's scripting API has an explicit mode query and a documented direct plugin-parameter write route. A connector could improve context reporting, but seamless activation, safe addressing, transient delivery and audio timing are not established. It cannot currently be offered as a reliable zero-leakage fix. Retain the explicit Perform scheduling fallback from the [initial investigation](2026-11-05-issue-1-pattern-playback-spike.md), pending a separately reviewed OpenSpec proposal.
 
 **Native continuation:** the [prepared native experiment and guided session](2026-11-05-issue-1-native-session.md) supersedes the hypothetical receiver/setup blocker below. This document preserves the earlier API-double evidence; it does not claim those results are native FL observations.
