@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed delivered About Copy feedback and guide confirmation wording. Existing filled ActionButton supplies enabled/hover states, helper confirms clipboard completion and repeated activation remains enabled. Native paint fixture finishes Graphics before readback; keyboard fixture pumps the message loop for JUCE asynchronous triggerClick. These fixture corrections add no production behavior or prose change. Canonical workflow review remains applicable.",
+  "summary": "Reviewed integration of main PR69 GUI-only waveform caching: Perform summary/layer cache ownership and close-zoom fidelity preserve existing controls, layout, audio, persisted assets and musician workflows. Current guide makes no unsupported PCM-detail or performance claim; existing workflow screenshots/limitations remain applicable. No guide prose change is needed. Prior Copy confirmation and canonical workflow review retained.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 24880,
-      "sha256": "4d4b27e78668517f1f4888f2c27072514041e0cd7d1ed715ddb8d86c624523a2"
+      "bytes": 25880,
+      "sha256": "7ab15806df77dfe23dfe1ade7bbd32b3d59182816a8b07b1915e56caaf3312c1"
     },
     {
       "path": "CMakePresets.json",
@@ -685,13 +685,13 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 42434,
-      "sha256": "9bd4f7e56a8f1d8fdde1c1d4075c8750750051f4ed655dd6644bf2094e72a96d"
+      "bytes": 47866,
+      "sha256": "39d03ad8c322fc713ed88f79d7b71be21c95b2a5cc046f649ad17f3d75d19d3b"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 6388,
-      "sha256": "50946a580e70c569a3f15579e5aea9d7ab6a330c0af9c13ce9fb9b7507043303"
+      "bytes": 7452,
+      "sha256": "ab692c81e1a82a006a8dba71876766696fc7201582ff0c5a985f4a82086effac"
     },
     {
       "path": "Source/UI/SwellViewport.h",
@@ -707,6 +707,11 @@
       "path": "Source/UI/UiGeometry.h",
       "bytes": 1567,
       "sha256": "feac31ff1e9d0c6abe73ecabeb312eb886cd8569cc7fa5d50023a3813b9e847b"
+    },
+    {
+      "path": "Source/UI/WaveformDisplay.h",
+      "bytes": 5756,
+      "sha256": "95f60960d811fd14c268be4042fbd7259abeb808911693f09f893b5e11ecf8ad"
     },
     {
       "path": "Source/UI/WorkflowHeader.h",
