@@ -6,7 +6,9 @@ Local branch `codex/73-live-grid-clock-investigation`, planning commit `5390da5`
 based on main `84894ee`. [Issue #73](https://github.com/elneilios/ReverbArise/issues/73)
 tracks grid/live rejection separately from the existing offline repair.
 Implementation results below will identify their tested revision and dirty state.
-No new host observation, installation or accepted repair is claimed.
+The original investigation phase did not include new host observation,
+installation or an accepted repair. Subsequent authorized integration and owner
+capture are recorded in the final section below.
 
 Supplied owner observations use 48000 Hz, 122 BPM, 4/4:
 
@@ -285,3 +287,76 @@ workspace screenshots or controls. Explicit review was recorded with
 UI standards passed **51 files / 61 existing bounded occurrences**, with debt
 inventory unchanged. Strict OpenSpec and whitespace checks passed. Canonical
 specs were not synced; approved deltas govern the delivered diagnostic additions.
+
+## Subsequent owner capture: audible wet with unavailable Snap
+
+On 5 November 2026, after the [combined local test installation](2026-11-05-issue-73-combined-test-install.md),
+the owner supplied About, asset identity, BEFORE PLAY text and two full attached
+reports (DURING PLAY / AFTER STOP). About identifies clean
+`02a3a1739765c346251af956eaea91336cfb439d`, `v0.1.0-local`.
+The owner explicitly confirmed **"Wet audible; Snap warning visible"**.
+This is host evidence for working audible playback plus a grid availability
+failure; it is not a reproduced live timing rejection or sample-alignment test.
+
+The project/instance are `e0b58807-34a6-4f2d-8875-d09940a821a2` /
+`258e886e-e054-48d4-897c-a37aacf4f039`. Selected swell is
+`Swell Bar 40.2.967644444`, source `[3729072,3752679)`, full wet
+`[3536860,3752679)`, verified saved render and committed capture revision 2.
+Managed IR filename is
+`074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4-db5b6aa7.wav`;
+render filename is
+`a2d6e0640628567e2555adb89528096c8052a8d00ee566de3ac86f4f912c9d6e-123ef36e.wav`.
+These are supplied managed identities, not new filesystem/content verification.
+
+All tuples use 48000 Hz, 122 BPM, 4/4, valid timing and available sample position:
+
+| Observation | Sample / PPQ | Grid or run result |
+| --- | --- | --- |
+| BEFORE PLAY accepted/observed | 3399344 / 144.000000000000000 | Grid available; origin delta 0; callback 12153, run 0 |
+| Run 2 start, callback 15598 | 3683360 / 156.030555555560028 | Admitted; source-origin delta +15.999999894295 samples |
+| DURING PLAY, callback 18737 | 4205600 / 178.153222222234945 | Grid origin mismatch +15.999999699648 samples; live admitted, run delta -0.000000194646 samples |
+| Last admitted, callback 19322 | 4302787 / 182.270171527792058 | Run delta -0.000000230968 samples |
+| AFTER STOP, callback 19627 | 3399344 / 144.000000000000000 | Grid available; origin delta 0; stopped; run 2 history retained |
+
+Session/reset are 3/3 and publication revision is 14 throughout. Playing reports
+`running=1`, `missing=0`, Dry + Wet routing and linear wet gain 1. Host looping is
+reported with bounds `[3399360,5004606)` during the retained run; stopped reports
+looping off. The historical rejection, first timing rejection and its predecessor
+are all unavailable in both reports. No offline callbacks occurred.
+
+Independent rational replay of the pasted decimal tuples uses
+`origin = sample - PPQ * 1440000/61`: accepted origin is
+`-0.26229508196721313`; run-start origin `15.73770481245377`; during-Play origin
+`15.737704617691803`. It independently gives grid delta
+`+15.999999699659016` and run delta approximately `-1.94762e-7` samples.
+Small last-digit differences from the native text reflect representation and
+arithmetic; the approximately 16-sample versus sub-micro-sample distinction is
+unambiguous. The existing one-sample grid guard therefore explains this warning;
+tempo, meter, rate, missing sample position and live-run drift do not explain it.
+
+The after-Stop capture confirms that the run-start and last-admitted values
+survive Stop while the stopped grid becomes compatible again. It does not prove
+every intermediate callback was admitted, but no timing rejection was latched
+for retained run 2. This history retains only the current/latest run: run 1 is
+not supplied, and the transition to run 2 cannot be attributed to a manual
+restart, transient host Playing state or another cause from these reports.
+Run 2 starts inside the selected wet interval; the DURING PLAY snapshot itself
+is after that interval. Audibility is the owner's report, not a waveform or
+sample-position measurement. The older reported -16-sample live rejection
+therefore remains a separate unresolved sequence.
+
+Attachment provenance (original filenames are both `Pasted text.txt`):
+
+- DURING PLAY: attachment `5cf31428-c082-4aca-9eca-f7c62d591deb`, SHA256
+  `e26777c680bf37a82e6dbf8d1b93032430e064ef6da7aed5c2d385dc725ff29d`.
+- AFTER STOP: attachment `5d0d26a0-32cd-470a-aa64-665a6bad8bfa`, SHA256
+  `ea02f93f6f34a07ab16659fa70eed38661809ef73f479e211a1e4e67ccb58de7`.
+
+Minimal follow-up: plan a scoped grid repair for stable, validated playback-origin
+offsets while preserving saved sample positions and genuine within-run drift
+rejection. Do not globally widen the one-sample guard or infer a timing repair
+from audible wet. This capture needs no repeat; request a new DURING PLAY /
+AFTER STOP pair only if the distinct live silence/rejection recurs. No production
+behavior, proposal approval, canonical specs or task completion claims changed
+while recording this evidence. The change's explicit approval boundary still
+applies before any behavioral repair.
