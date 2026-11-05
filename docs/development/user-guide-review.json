@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Perform-only NoticeBar fallback, exact caution and accessible detail, notice precedence/restoration and unchanged Learn/Export/audio paths. Updated Perform instructions for saved-position playback independent of source audibility and accurate effect-bypass versus mixer-mute consequences; no automatic detection or defect-fixed claim.",
+  "summary": "Reviewed canonical swell-workspace sync for the delivered owner-approved Perform caution, notice precedence/restoration and accessibility detail. Existing guide prose matches the implemented warning and accurate effect/mixer mute consequences; no further prose or audio changes. Refresh currency solely for canonical spec sync.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -870,8 +870,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 85682,
-      "sha256": "4eb20f16dba409fe4331fc24dbe86be7a6b7a1695423653814ce841b6c3e069e"
+      "bytes": 88269,
+      "sha256": "b7a66f7d56c33cce7b82bff4d86cafe66a08ee5d79ee15a5cdc42dcf0f0dafc0"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

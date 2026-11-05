@@ -55,3 +55,13 @@ Installed clean revision **`3f62614`** using `scripts/install-test-vst3.ps1` wit
 - Installer log: `out/perform-warning-install-elevated.log`; wrapper logs: `out/build-logs/Release/20261105-165421-0f2518a5/`.
 
 Reopen FL, rescan with Verify plugins and Rescan previously verified plugins if needed, and confirm the resolved system path. Installation does not establish FL warning acceptance; that host check remains **NOT RUN** here. This later documentation record does not change the installed revision.
+
+## Owner-authorised archive closeout — 5 November 2026
+
+The owner approved archiving and merging the follow-up after implementation/native review and test installation. All **5/5** tasks and all artifacts were complete. Synced the modified inline-notice requirement and added Perform safety requirement into canonical `swell-workspace`, preserving its title, Purpose and every unrelated requirement. Verified both synced blocks exactly against the delta, with no delta-operation headers in the main spec.
+
+Archived to `openspec/changes/archive/2026-11-05-warn-perform-scheduled-playback/`; all five artifact/metadata files are unchanged by the move. The active change is absent from `openspec list`. This supersedes the earlier pre-archive status above. No unrelated completed change was archived.
+
+Validation: scoped strict spec/change checks passed; repository-wide normal validation **18/18 passed**; guide currency and `git diff --check` passed. Repository-wide strict validation reports **eight pre-existing >500-character warnings in four other specs** (`audition-monitoring`, `automatic-swell-processing`, `song-timeline-audio`, `workflow-modes`). Those four files were verified unchanged from main; they were not rewritten to satisfy this closeout. The guide currency record was explicitly refreshed for the canonical-spec sync with existing guide prose still accurate.
+
+This follow-up changes only documentation/specification/archive records. Native tests/build/installation were not repeated, and the installed revision remains `3f62614`. PR #81 carries the archive and retained-install record for the owner-authorised merge; issue #1 remains open because automatic mode/mute detection is not fixed.
