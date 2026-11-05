@@ -15,7 +15,7 @@
 
 - [x] 3.1 Prepare a concrete redistribution review inventory from pinned JUCE, project rights, WavPack, Inter, VST3 SDK, JUCE dependencies and IR provenance; verify all required notice files/materials and record unresolved obligations and owner decisions in dated evidence without treating preparation as approval.
 - [ ] 3.2 Run a clean committed branch rehearsal through scripts/release.ps1 with a distinct explicit alpha rehearsal candidate, plus UI standards and strict applicable OpenSpec checks; verify Release native regression and built product/identity results, ZIP/checksum/manifest inventory and extracted guide offline rendering with every embedded image visible. Record revision, tool versions, cache state, commands, results and omissions.
-- [ ] 3.3 Prepare the focused tooling/docs PR with Refs #59, change link, rehearsal evidence and remaining main/host/licensing gates; verify issue-scoped diff and leave it open for owner review without merging or closing the issue.
+- [x] 3.3 Prepare the focused tooling/docs PR with Refs #59, change link, rehearsal evidence and remaining main/host/licensing gates; verify issue-scoped diff and leave it open for owner review without merging or closing the issue.
 
 ## 4. Final clean-main alpha and acceptance
 
