@@ -197,7 +197,7 @@ Cancelled or obsolete capture work SHALL NOT publish into another restored sessi
 - **THEN** the pass cannot publish a partial replacement, previous map/rate remain unchanged and recovery status identifies the cause
 
 ### Requirement: Accepted source retains deterministic generation provenance
-Accepted source SHALL resolve the immutable generation context assigned to each admitted span. Ordinary additive capture SHALL preserve protected spans' provenance; Recapture SHALL replace only encountered provenance with its source. Saves/consumers SHALL observe one coherent accepted source/context record, including across loops, sparse seeks and instance copies.
+Accepted source SHALL resolve the immutable generation context assigned to each admitted span. Ordinary additive capture SHALL preserve protected spans' provenance; Recapture SHALL replace only encountered provenance with its source. Saves/consumers SHALL observe one coherent accepted source/context record, including across loops, sparse seeks and instance copies. Explicit or opted-in shared Generate SHALL freeze current accepted source/settings/default intent separately without rewriting this capture history.
 
 #### Scenario: Additive capture crosses old and new coverage
 - **WHEN** a pass with a different Default IR crosses old mapped audio/silence and an uncaptured interval
@@ -205,7 +205,7 @@ Accepted source SHALL resolve the immutable generation context assigned to each 
 
 #### Scenario: Different contexts meet at an attack boundary
 - **WHEN** onset confirmation or extraction spans two accepted contexts
-- **THEN** a new target consistently resolves the context owning its arrival rather than using the most recently edited default
+- **THEN** the arrival context remains its immutable capture provenance; a new shared Generate deliberately uses the request's current accepted Default IR instead of treating that historical context as an unrequested generation command
 
 #### Scenario: Audio identity is unchanged
 - **WHEN** identical PCM is encountered with unchanged context, or an explicit context-only update is accepted
@@ -213,7 +213,7 @@ Accepted source SHALL resolve the immutable generation context assigned to each 
 
 #### Scenario: Context metadata is unavailable
 - **WHEN** accepted source is readable but required generation provenance or its IR cannot be verified
-- **THEN** dry source stays preserved and generation reports the missing dependency rather than silently substituting current defaults
+- **THEN** dry source stays preserved; recovery of a saved assignment reports its missing dependency without substitution, while a new Generate must explicitly validate its own current source/default snapshot and cannot silently repair missing historical data
 
 ### Requirement: Progressive display cannot compromise realtime capture safety
 Progress collection/publication SHALL use bounded metadata and coalesced updates without full-song PCM duplication, callback allocation, locks, file access or waiting. Display pressure SHALL be handled explicitly without corrupting source admission or inventing coverage. Playback and mode transitions SHALL retain the established audio safety contract.
@@ -225,3 +225,44 @@ Progress collection/publication SHALL use bounded metadata and coalesced updates
 #### Scenario: Saving while progress is visible
 - **WHEN** a project is saved during a provisional display update
 - **THEN** it references only the coherent accepted source/context and cannot restore the provisional overlay as durable audio
+
+### Requirement: Failed capture retains actionable diagnostic evidence
+The system SHALL retain bounded first-failure evidence independently of provisional waveform data: reason, pass/epoch, accepted source identity/revision, attempted frame range, queued/dropped block counts and available host timing. Missing timing SHALL remain explicitly unavailable. Later symptoms SHALL NOT overwrite the original failure. Evidence SHALL survive settlement and retry until another failure or explicit session reset supersedes it.
+
+#### Scenario: Queue pressure after visible recording progress
+- **GIVEN** a pass has displayed provisional progress and staged multiple chunks
+- **WHEN** capture admission fails because its queue is full
+- **THEN** diagnostics retain the queue-full reason and failure-time context after the provisional waveform is discarded
+- **AND** previously accepted references, source/context and immutable history remain unchanged
+
+#### Scenario: Distinct failure reasons
+- **WHEN** invalid host timing, incompatible rate, unsupported block size, invalid samples, storage/validation failure or a recoverable worker exception rejects a pass
+- **THEN** evidence identifies that cause and its available context rather than substituting a generic queue failure
+- **AND** later drops or settlement errors do not replace the first recorded failure
+
+#### Scenario: Retry and session ownership
+- **WHEN** a failed pass is followed by a successful retry
+- **THEN** the earlier failure remains inspectable with its original pass identity and is not presented as a current failure
+- **AND WHEN** restore or explicit session reset supersedes that session
+- **THEN** stale completion cannot attach its evidence to the newly active session
+
+### Requirement: Failed provisional capture feedback identifies durable coverage
+After capture failure, user feedback SHALL identify that the in-progress pass was not accepted, distinguish discarded provisional progress from retained committed source, and provide a readable cause and retry guidance. If no source had been committed, feedback SHALL say so rather than imply retained audio. Display and diagnostics SHALL NOT grant access to rejected source as accepted audio.
+
+#### Scenario: First pass fails
+- **GIVEN** no accepted source exists and Learn displays provisional audio
+- **WHEN** that pass fails
+- **THEN** provisional audio disappears and feedback explains that no source from the pass was accepted and no earlier committed source exists
+
+#### Scenario: Failure with prior committed coverage
+- **GIVEN** earlier accepted source exists
+- **WHEN** an additive or Recapture pass fails
+- **THEN** its provisional overlay is discarded, earlier committed coverage remains visible and readable, and feedback identifies the retained source separately from the rejected pass
+
+### Requirement: Failure reporting preserves bounded realtime processing
+Capture failure observation SHALL use bounded metadata without callback allocation/deallocation, locks, waiting, file access or per-block logging. Formatting, storage inspection and publication SHALL occur outside realtime processing. Diagnostic capacity exhaustion SHALL NOT corrupt accepted source or publish an incomplete pass.
+
+#### Scenario: Repeated failures under delayed worker pressure
+- **WHEN** the capture worker is delayed and callbacks repeatedly encounter failure
+- **THEN** callback failure reporting remains bounded and nonblocking, dry passthrough continues and the first failure is retained coherently
+- **AND** stopping and retrying after the pressure is removed can accept a new complete pass without changing older immutable snapshots
