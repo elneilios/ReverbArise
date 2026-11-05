@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical sync of the merged, owner-approved #68 stable transport readout. Existing guide prose and illustrative screenshots remain accurate; no workflow, controls or runtime behavior changed. Refresh currency solely for canonical swell-workspace spec sync.",
+  "summary": "Reviewed canonical #93 auto-Fit and concurrently merged #68 archive/spec sync. Both approved behaviors remain accurately described by existing guide prose; preserved all main canonical requirements and refreshed review currency. No C++ or test source changed in the metadata-only reconciliation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -500,8 +500,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 78774,
-      "sha256": "49b76349f7397d344e5070bc0fe4f7a396dd9e0d6778ccb4320335462e090995"
+      "bytes": 79108,
+      "sha256": "0c461f1234a1dbdff3d20bd40f78bf2e3832f032483a974cea3a14b68f3846c0"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -620,8 +620,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 9202,
-      "sha256": "76640227438a8fdc65db396532e594eebfe73cab76c2fe8cc4f4a7886b7debe1"
+      "bytes": 9733,
+      "sha256": "1ab4065d3b0971f4b9fe5ae57349ca8a7b390ad9bdd3c2887a8eb9f7185b1c1f"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -785,8 +785,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16101,
-      "sha256": "034549d50b311310e5c6cf47275164cb95d032bcde9ba211d7cb23bceacf2537"
+      "bytes": 16250,
+      "sha256": "c6cc848165f38fbe4ef6e736347c242b668d70a4f8490d185439fcc89542e0cd"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -880,8 +880,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 91413,
-      "sha256": "047d740984db2b92959ec18f4d623b82b38414b9154bc44503945ee98e74e099"
+      "bytes": 94209,
+      "sha256": "7ea462dcfca684072e7c9c55ac8a55cd6ca1030e5b9947e5505de747055e7c44"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

@@ -394,7 +394,7 @@ private:juce::ComboBox scenes,sizes;juce::Label note;
 class IntegratedReview final:public juce::Component
 {
 public:
-    explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false):fixture(std::move(scope))
+    explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false,bool selectionReview=false):fixture(std::move(scope))
     {
         editor=fixture->composition.productionEditor();addAndMakeVisible(*editor);
         addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);
@@ -402,7 +402,8 @@ public:
         scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
         sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);sizes.setSelectedId(1,juce::dontSendNotification);
         sizes.onChange=[this]{const std::array<juce::Point<int>,4> dimensions{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];setSize(size.x,size.y+44);};
-        applyTextRole(note,TextRole::helper);note.setText(slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(1100,894);
+        applyTextRole(note,TextRole::helper);note.setText(selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(1100,894);
+        if(selectionReview){auto& zoom=require<controls::TimelineZoomControls>(*editor,"performZoom");zoom.beforeInvocation();zoom.onZoomFraction(.55);}
     }
     void resized()override
     {auto area=getLocalBounds();auto strip=area.removeFromTop(44).reduced(6);scenes.setBounds(strip.removeFromLeft(210));strip.removeFromLeft(8);sizes.setBounds(strip.removeFromLeft(146));strip.removeFromLeft(12);note.setBounds(strip);editor->setBounds(area);}
@@ -433,15 +434,15 @@ int main(int argc,char** argv)
         using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}
-        if(command=="--review-integrated" || command=="--review-audition-strip")
+        if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection")
         {
             class Window final:public juce::DocumentWindow
             {
-            public:explicit Window(std::unique_ptr<Review> scope,bool slim):DocumentWindow(slim?"Issue #46 - Audition strip layout checkpoint":"Issue #46 - Integrated Perform review",background,closeButton)
-                {setUsingNativeTitleBar(true);setContentOwned(new IntegratedReview(std::move(scope),slim),true);setResizable(true,false);setResizeLimits(1100,894,2000,1444);centreWithSize(1100,924);setVisible(true);}
+            public:explicit Window(std::unique_ptr<Review> scope,bool slim,bool selection):DocumentWindow(selection?"Issue #93 - Swell selection navigation":slim?"Issue #46 - Audition strip layout checkpoint":"Issue #46 - Integrated Perform review",background,closeButton)
+                {setUsingNativeTitleBar(true);setContentOwned(new IntegratedReview(std::move(scope),slim,selection),true);setResizable(true,false);setResizeLimits(1100,894,2000,1444);centreWithSize(1100,924);setVisible(true);}
                 void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
             };
-            Window window(std::move(content),command=="--review-audition-strip");juce::MessageManager::getInstance()->runDispatchLoop();return;
+            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection");juce::MessageManager::getInstance()->runDispatchLoop();return;
         }
         if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}
         if(command=="--test-gestures"){content->composition.verifyGestures();std::cout<<"Perform grid/translation/modifier/stale-owner/source checks passed.\n";return;}

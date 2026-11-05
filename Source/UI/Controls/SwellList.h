@@ -26,6 +26,7 @@ public:
     }
     ~SwellList()override{setModel(nullptr);}
     std::function<void(std::vector<juce::String>,juce::String)> onSelection;
+    std::function<void(juce::String,uint64_t)> onReveal;
     std::function<void(juce::String)> onToggleEnabled;
     std::function<void(SwellListRow,const juce::MouseEvent&)> onMenu;
 
@@ -117,7 +118,8 @@ private:
             const auto id=pressedIdentity;const auto token=pressedEpoch;
             const juce::Component::SafePointer<SwellList> safe(&owner);
             const juce::Component::SafePointer<juce::Component> source(e.eventComponent);
-            owner.selectRowsBasedOnModifierKeys(row,e.mods,up);
+            {const juce::ScopedValueSetter<bool> guard(owner.pointerSelection,true);
+                owner.selectRowsBasedOnModifierKeys(row,e.mods,up);}
             if(safe && source && safe->epoch==token)safe->listBoxItemClicked(safe->rowFor(id),e);
         }
     };
@@ -129,7 +131,7 @@ private:
     }
     std::vector<SwellListRow> rows;
     juce::String primary;
-    bool updating=false;
+    bool updating=false,pointerSelection=false;
     uint64_t epoch=0;
     int getNumRows()override{return static_cast<int>(rows.size());}
     juce::String getNameForRow(int row)override
@@ -140,14 +142,18 @@ private:
         std::vector<juce::String> ids;
         for(int i=0;i<getNumRows();++i)if(isRowSelected(i))ids.push_back(rows[static_cast<size_t>(i)].id);
         const auto* w=rowAt(row);primary=w && isRowSelected(row)?w->id:ids.empty()?juce::String{}:ids.front();
-        if(onSelection)onSelection(std::move(ids),primary);
+        const auto id=primary;const auto token=epoch;const bool reveal=!pointerSelection;
+        const juce::Component::SafePointer<SwellList> safe(this);
+        if(onSelection)onSelection(std::move(ids),id);
+        if(safe && reveal && safe->epoch==token && safe->primary==id && id.isNotEmpty() && safe->onReveal)safe->onReveal(id,token);
     }
     void listBoxItemClicked(int row,const juce::MouseEvent& event)override
     {
         const auto* found=rowAt(row);if(!found || updating)return;const auto w=*found;
         if(event.mods.isPopupMenu() || (event.eventComponent && event.x>=event.eventComponent->getWidth()-26))
         {if(onMenu)onMenu(w,event);return;}
-        if(event.x<28 && onToggleEnabled)onToggleEnabled(w.id);
+        if(event.x<28){if(onToggleEnabled)onToggleEnabled(w.id);return;}
+        if(primary.isNotEmpty() && onReveal)onReveal(primary,epoch);
     }
     void paintListBoxItem(int row,juce::Graphics& g,int width,int height,bool isSelected)override
     {
