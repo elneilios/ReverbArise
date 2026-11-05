@@ -1,4 +1,4 @@
-# Issue #68 transport readout checkpoint
+# Issue #68 transport readout validation
 
 ## Scope and execution map
 
@@ -66,7 +66,71 @@ Reviewed preview executable SHA256:
 `f3c3ca21f18d75a9335fef61e488fb3ef084c5c20e041c9c12255263222d9f6a`.
 Native interactive `--review` preview launched directly (PID 63704). It cycles
 synthetic playback values and offers limit/unavailable/overflow cases. Explicit
-owner look/feel acceptance remains **pending**; preserve the review window.
+owner look/feel acceptance was received on 5 November 2026: **“Approve look and feel”**,
+specifically for spacing, readability and stability as values change, and integration
+into Perform. This accepts the scoped footer extraction and fixed-slot presentation;
+it is not FL Studio or physical DPI acceptance. The review window was preserved
+through acceptance and can now close before relinking the executable.
 
 No production editor integration, plugin installation, FL Studio test, physical
 Windows DPI/multi-monitor review or owner acceptance is claimed at this checkpoint.
+
+## Approved production integration and final validation
+
+This section supersedes the checkpoint's pending-integration/acceptance statements.
+The approved control now replaces the production `hostInfo` Label. The editor
+submits existing transport snapshots without changing transport, processing,
+capture, saved state or identity mechanisms. The existing 15-pixel embedded Inter
+Regular, primary ink and spacing are retained; standards revision 6 documents the
+accepted extraction. The old editor font-construction inventory count is manually
+reduced from 12 to 11 for its one removed occurrence; no inventory regeneration.
+
+Commands and final results, at **`9cb9956` plus the integration diff (dirty)**:
+
+- `$env:CMAKE_BUILD_PARALLEL_LEVEL='4'; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1 -Configuration Release -Test`:
+  **PASS configure/build/test**, **72/72 CTest**, **207.82 s**. Final logs:
+  `out/build-logs/Release/20261105-223707-8db39305/`. This is native Windows/MSVC
+  Release build evidence; the registered CTest suite includes native executables
+  and command fixtures, not 72 separate in-host tests.
+- The preceding integrated run passed 71/72 in 203.09 s; its sole failure was
+  `preverb_perform_hover_help_test` casting `hostInfo` to the retired Label type.
+  Its bounds-only check now requests `juce::Component`. No production behavior
+  changed for that correction. Prior log: `20261105-221734-a7a89afd`.
+- Direct native `preverb_perform_composition_preview --test-readability` passed
+  before the final suite. Actual processor snapshots exercise bar 9/10 and
+  99/100 forward/back seeks, tempo/meter changes, missing timing, all supported
+  sizes, exact-position help and mode return. Encoded session, capture revision
+  and render count remain unchanged. The final suite includes this test and the
+  focused readout test; earlier focused results are not additional final coverage.
+- `scripts/check-ui-standards.ps1`: **53 files / 60 bounded occurrences**, PASS.
+- `openspec validate stabilize-perform-transport-readout --strict`: PASS;
+  repository-wide normal `openspec validate --all`: **19/19**. Eight existing
+  canonical description-length warnings remain; global strict passing is not claimed.
+- The maintain-user-guide review found no changed user steps or controls requiring
+  new prose/screenshots. Existing illustrative guide images and instructions remain
+  accurate. Explicit review/currency commands passed using PowerShell 7 and the
+  checkout's explicit `-Root`; supplying Root avoids the observed PowerShell 5.1
+  default-parameter resolution failure. Guide currency is not a native/host test.
+- `git diff --check`: PASS.
+
+First test compilation was cold in this worktree with reused dependency sources;
+the final correction rebuild reused the now-populated build tree. No performance
+comparison or speedup is claimed.
+
+`preverb_perform_composition_preview --capture-integrated out/issue-68-integrated`
+captured the real editor's selected/empty/dense and hover-help scenes. The
+minimum-size selected and hover-help captures were visually inspected: information
+is contained above context help and clear of Overview. Supporting image:
+
+![Production Perform at the 1100x850 minimum](2026-11-05-issue-68/perform-minimum.png)
+
+**NOT RUN:** fresh Debug, installed FL Studio smoke, physical Windows DPI or
+multi-monitor transitions. Software-scale and native fixture results do not certify
+those environments. No concrete unresolved host behavior requires another owner
+edge-case session for this GUI-only fix. No VST3 installation, user project/asset
+change, sync/archive, merge or independent issue closure was performed.
+
+Follow-on #58 owns its separately requested 900x600 combined review. This change
+retains the existing supported-size contract. Shared integration points are
+`Controls/TransportReadout.h`, `TransportPresentation.h`, `PluginEditor.h/.cpp`,
+the Perform tests and production standards revision 6.

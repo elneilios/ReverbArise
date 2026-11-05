@@ -64,8 +64,40 @@ void Composition::verifyReadability()
     const auto point=timeline.wetLane().getCentre();const auto now=juce::Time::getCurrentTime();
     timeline.mouseMove(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&timeline,&timeline,now,point,now,0,false));
     REQUIRE(timeline.getTooltip().contains("raw reference") && timeline.getTooltip().contains("Ctrl"));
-    auto& footer=require<juce::Label>(*panel,"hostInfo");REQUIRE(footer.getText().startsWith("Bar ") && footer.getText().contains("Beat "));
+    auto& footer=require<controls::TransportReadout>(*panel,"hostInfo");REQUIRE(footer.getTitle().startsWith("Bar ") && footer.getTitle().contains("Beat "));
     engine.restore(saved);wait([&]{return engine.snapshot().auditionReady;});panel->refresh();
     REQUIRE(engine.snapshot().renderCount==renders && processor->getCaptureSnapshot().manifest.revision==capture);
     const auto after=engine.savedSession();for(size_t n=0;n<saved.swells.size();++n)REQUIRE(after.swells[n].id==saved.swells[n].id && after.swells[n].ir==saved.swells[n].ir && after.swells[n].render==saved.swells[n].render && after.swells[n].shape==saved.swells[n].shape);
+
+    // Actual processor snapshots -> editor refresh, independent of the component's
+    // synthetic presentation tests. Consistent host PPQ keeps Song origin at zero.
+    const auto originalHead=head.position;
+    juce::String beforeReadout,error;REQUIRE(m3::encode(engine.savedSession(),beforeReadout,error));
+    const auto renderRevision=engine.snapshot().renderCount,captureRevision=processor->getCaptureSnapshot().manifest.revision;
+    juce::AudioBuffer<float> transportAudio(2,64);juce::MidiBuffer transportMidi;
+    for(const auto size:{juce::Point<int>{1100,850},{1400,900},{1400,1000},{1600,1000}})
+    {
+        panel->setSize(size.x,size.y);panel->refresh();const auto geometry=footer.geometry();const auto bounds=footer.getBounds();
+        for(const auto bar:{9,10,99,100,99,9})for(const auto bpm:{82.,123.45})for(const auto numerator:{4,6,12})
+        {
+            const auto ppq=static_cast<double>(bar-1)*numerator*4/8;
+            head.position.setBpm(bpm);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{numerator,8});
+            head.position.setTimeInSamples(static_cast<int64_t>(std::llround(ppq*48000*60/bpm)));head.position.setPpqPosition(ppq);
+            transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
+            REQUIRE(footer.geometry()==geometry && footer.getBounds()==bounds);
+            REQUIRE(footer.presentation().values[0]==juce::String(bar) && footer.presentation().values[1]=="1");
+            REQUIRE(footer.presentation().values[2]==m3::ui::compactValue(bpm,2) && footer.presentation().values[3]==juce::String(numerator)+" / 8");
+            REQUIRE(footer.getTooltip().contains("Exact: "+m3::musicalPosition(processor->getSongTime().sample,processor->getSongTime())));
+        }
+        head.position=juce::AudioPlayHead::PositionInfo{};transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
+        for(const auto& value:footer.presentation().values)REQUIRE(value=="unavailable");
+        REQUIRE(footer.geometry()==geometry && footer.getBounds()==bounds);
+        const auto help=find(*panel,"hoverHelp");REQUIRE(help && footer.getBottom()<=help->getY());
+    }
+    head.position=originalHead;transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
+    const auto returnGeometry=footer.geometry();
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();REQUIRE(!footer.isVisible());
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();REQUIRE(footer.isVisible() && footer.geometry()==returnGeometry);
+    juce::String afterReadout;REQUIRE(m3::encode(engine.savedSession(),afterReadout,error));REQUIRE(beforeReadout==afterReadout);
+    REQUIRE(engine.snapshot().renderCount==renderRevision && processor->getCaptureSnapshot().manifest.revision==captureRevision);
 }

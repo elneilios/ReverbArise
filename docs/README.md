@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Stable Perform transport readout](development/transport-readout.md) — fixed field/separator geometry, truthful formatting, bounded overflow and scoped native approval for issue #68.
+
 - [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
 
 - [Perform playback caution](validation/2026-11-05-perform-playback-warning.md) — persistent low-priority warning, native notice precedence/fit checks and scoped owner approval; playback/capture remain unchanged.

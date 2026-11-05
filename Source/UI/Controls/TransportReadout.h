@@ -4,8 +4,8 @@
 
 namespace m3::ui::controls
 {
-// Candidate extraction of the existing footer's 15-logical-pixel Inter Regular.
-// Native owner acceptance is required before this component's production rollout.
+// Owner-approved issue #68 extraction of the existing footer's 15-logical-pixel
+// Inter Regular. Slot geometry is independent of the current transport values.
 class TransportReadout final:public juce::Component,public juce::SettableTooltipClient
 {
 public:

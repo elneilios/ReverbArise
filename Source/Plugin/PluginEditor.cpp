@@ -216,11 +216,11 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(auto* control:std::array<juce::Component*,28>{&status,&detail,&generateButton,&allButton,&analyzeButton,&confirmButton,&candidateBox,&separationLabel,&separationSlider,&autoButton,&recaptureButton,&cancelButton,&recaptureStatus,&mappingButton,&toneButton,&toneStartLabel,&toneStartSlider,&toneEndLabel,&toneEndSlider,&clearButton,&assetInfoButton,&barStartLabel,&barEndLabel,&barStartEditor,&barEndEditor,&setBarsButton,&auditionLabel,&auditionSlider})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,4>{&automaticButton,&sampleUnitsButton,&defaultIRButton,&suppressionButton})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,10>{&removeButton,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel,&isolateButton,&isolateDryButton,&tailSlider,&tailLabel,&helper})diagnosticsContent.addAndMakeVisible(control);
-    for(auto* label:{&inspectorHeading,&hostInfo,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
+    for(auto* label:{&inspectorHeading,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::text);label->setInterceptsMouseClicks(false,false);}
     inspectorHeading.setText("Selected Swell",juce::dontSendNotification);inspectorHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
     auditionHeading.setText("Audition",juce::dontSendNotification);auditionHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
-    hostInfo.setName("hostInfo");hostInfo.setFont(juce::FontOptions(15));hostInfo.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(hostInfo);hostInfo.setInterceptsMouseClicks(false,false);
     listEmpty.setText("No swells yet\n\nUse Learn to capture source.\nIn Perform, add a swell with +.",juce::dontSendNotification);listEmpty.setJustificationType(juce::Justification::centred);listEmpty.setFont(juce::FontOptions(18));
     inspectorEmpty.setText("No swell selected\n\nSelect a swell to adjust\nits settings.",juce::dontSendNotification);inspectorEmpty.setJustificationType(juce::Justification::centred);inspectorEmpty.setFont(juce::FontOptions(18));
     listLabel.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
@@ -451,10 +451,8 @@ void PreverbAudioProcessorEditor::refresh()
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
     if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
-    hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::ui::footerPosition(time.sample,time):juce::String("Position unavailable"))
-        +"    |    "+(diagnostics.tempoAvailable?m3::ui::compactValue(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
-        +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
-    hostInfo.setTooltip("Bar and denominator-beat position; fractional beats are rounded for display. Exact: "+m3::musicalPosition(time.sample,time));
+    hostInfo.display(m3::ui::transportPresentation(time,diagnostics.samplePositionAvailable,
+        diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
     liveRoutingBox.setSelectedId(state.session.liveRouting==m3::LiveRouting::wetOnly?2:1,juce::dontSendNotification);
     gainPolicyBox.setSelectedId(state.session.gainPolicy==m3::GainPolicy::musical?(state.session.gainRevision==m3::approvedGainRevision?2:3):1,juce::dontSendNotification);
