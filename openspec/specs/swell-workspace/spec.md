@@ -6,7 +6,7 @@ Provide a usable single-screen workspace for inspecting captured audio and editi
 ## Requirements
 
 ### Requirement: Workspace reflects actual processing and selection
-The workspace SHALL adapt to mode: Learn shows capture settings and one full-song dry timeline; Perform retains its eight-region editor; Export shows its dedicated preview and mix/file controls. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
+The workspace SHALL adapt to mode: Learn shows capture settings and one full-song dry timeline; Perform shows the production three-column editor, audition and compact Overview; Export shows its dedicated preview and mix/file controls. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
 
 #### Scenario: Select while background work completes
 - **WHEN** the user selects a swell in Perform while allowed analysis or another swell's rendering completes
@@ -23,6 +23,11 @@ The workspace SHALL adapt to mode: Learn shows capture settings and one full-son
 #### Scenario: Return to Perform
 - **WHEN** a prepared user leaves Learn for Perform
 - **THEN** the working swell list, selected inspector, editor navigation, audition and compact Overview return without losing definitions, selection or edits
+
+#### Scenario: Dedicated production Perform
+- **WHEN** Perform is displayed at supported sizes
+- **THEN** the chronological Swells list is left, real aligned dry/wet editor is central and Selected Swell inspector is right, with audition and one separate compact Overview below
+- **AND** shared header, Settings, reserved notices, production Inter/semantic roles and existing editing capabilities remain usable without changing Learn or Export composition
 
 ### Requirement: Timeline navigation preserves exact edits
 The editor SHALL align dry, wet, arrivals and handles on one absolute Song scale with bar references, zoom, pan and snap. The overview SHALL distinguish audio, captured silence, unmapped and unavailable coverage and support viewport navigation. Navigation SHALL not edit render inputs. Display-only peak scaling SHALL remain disclosed.
@@ -101,8 +106,8 @@ The user SHALL be able to drag the wet endpoint before or beyond the fixed dry a
 Useful developer observations/actions SHALL remain accessible in a dedicated settings-opened Diagnostics window. Musical preferences and precise edits SHALL remain available in normal contextual UI. Automatic first use SHALL work with Diagnostics closed. Live Song playback and manual audition SHALL be clearly distinguished; no deferred-transport claim or unverified host-control action SHALL be shown.
 
 #### Scenario: Closed diagnostics
-- **WHEN** a user inserts the plugin, plays input, selects a prepared swell and edits it
-- **THEN** capture, target creation, rendering and editing work without opening Diagnostics or pressing a generation button
+- **WHEN** a user inserts the plugin, captures input, generates through Learn's explicit action or opted-in Generate on Stop, selects a prepared swell and edits it
+- **THEN** capture, candidate review, target creation, rendering and editing work without opening Diagnostics
 
 #### Scenario: Recovery and deferred transport
 - **WHEN** the user opens Diagnostics or asks how to hear prepared swells
@@ -122,7 +127,7 @@ Useful developer observations/actions SHALL remain accessible in a dedicated set
 - **THEN** each original item has a disposition with consumers and verification, duplicate sensitivity/status is consolidated, proven-unused bindings/helpers are removed, and tested tone/capture/scheduling capabilities and saved identities remain intact
 
 ### Requirement: Supported editor sizes remain usable
-The eight-region workspace SHALL remain readable at a 1100x850 logical minimum and opening default, and larger supported sizes, including 1400x900, 1400x1000 and 1600x1000. List scrolling and contextual windows SHALL not hide the main workflow. Supported Windows scales SHALL retain usable text/hit targets without overlap; numerical and keyboard alternatives SHALL remain available.
+The mode-appropriate workspace SHALL remain readable at a 1100x850 logical minimum and opening default, and larger supported sizes, including 1400x900, 1400x1000 and 1600x1000. List scrolling and contextual windows SHALL not hide the main workflow. Supported Windows scales SHALL retain usable text/hit targets without overlap; numerical and keyboard alternatives SHALL remain available.
 
 #### Scenario: Resize and inspect many swells
 - **WHEN** the editor is resized across supported sizes with hundreds of swells and Diagnostics open or closed
@@ -167,18 +172,18 @@ The full-width audition band SHALL provide Play/Stop and one continuous Dry-to-W
 - **THEN** scope and member count reflect the prepared audible group, the continuous mix value and live routing remain independent, and no render is regenerated solely for that toggle
 
 ### Requirement: Marker controls are prominent and instance scoped
-Marker sensitivity SHALL remain one saved instance value independent of selection. Learn SHALL expose a horizontal slider and typeable 0-100% value within enabled Automatic Swells settings; Perform SHALL retain its prominent rotary knob and Auto markers switch. Low means more selective marking. Saved-off policy SHALL remain effective and truthful; changing representation SHALL NOT reset other preferences.
+Marker sensitivity SHALL remain one saved instance value independent of selection. Learn SHALL expose a horizontal slider and typeable 0-100% value within enabled Automatic Swells settings. Perform SHALL omit the obsolete Auto markers and sensitivity tooling. Low means more selective marking. Saved-off policy SHALL remain effective and truthful; changing presentation SHALL NOT reset preferences.
 
 #### Scenario: Tune automatic markers from the main view
-- **WHEN** the user turns/types the Perform knob or adjusts/types the idle Learn slider
+- **WHEN** the user adjusts/types the idle Learn slider
 - **THEN** the canonical percentage updates coherently without resetting selected envelopes, IRs, blend or monitoring preferences
-- **AND** Learn changes configure a future pass while explicit permitted Perform reanalysis retains its existing meaning
+- **AND** idle Learn sensitivity changes refresh read-only candidates over accepted coverage without changing committed swells until an explicit or eligible Stop generation succeeds
 
 #### Scenario: Disable marking without losing the workflow
-- **WHEN** Auto markers is off in Perform
-- **THEN** marking is visibly Off, saved sensitivity remains editable, existing swells remain usable and permitted manual actions/render refresh remain independent
-- **AND WHEN** Automatic Swells is off in Learn
+- **WHEN** Automatic Swells is off in Learn
 - **THEN** generation controls are hidden, dry capture remains available and automatic pass generation is disabled
+- **AND WHEN** the user enters Perform
+- **THEN** existing swells and manual editing remain usable without a marker-control band or changes to saved marking preferences
 
 #### Scenario: An explicit master policy prevents marking
 - **WHEN** legacy saved master/marker preferences disagree or automatic processing is disabled
@@ -187,7 +192,7 @@ Marker sensitivity SHALL remain one saved instance value independent of selectio
 
 #### Scenario: Resize and restore marker controls
 - **WHEN** the editor is resized across supported sizes, Diagnostics is toggled or saved state reopens
-- **THEN** each mode's visible sensitivity control is reachable and synchronized with saved state, while selection changes do not change its value
+- **THEN** Learn's visible sensitivity control remains reachable and synchronized with saved state, Perform retains no obsolete marker band, and selection does not change the instance value
 
 ### Requirement: Visual system is flat and consistent
 The UI SHALL use one uniform #0F1418 background, the documented baseline aqua/text/separator tokens, neutral dry data and restrained yellow timing. Thin rules SHALL divide bands/columns; only the Overview waveform viewport SHALL have a major full rounded outline. Gradients, textures, glow, shadows, raised panels and speculative controls SHALL be absent.
@@ -318,7 +323,7 @@ The shared header SHALL show prominent Learn, Perform and Export segments with c
 - **AND** successful useful source acceptance selects Perform without waiting for queued wet rendering; empty/failed passes retain the foundation policy
 
 ### Requirement: Mode guards apply below disabled UI
-Capture SHALL reject creative editing and manual audition; Finalise SHALL reject creative editing while allowing only separately initiated supported preview. Live SHALL permit the current editor/audition capabilities under existing validity rules. Canvas, numeric fields, keyboard, Settings, Diagnostics and async chooser completions SHALL all obey the same mode authority.
+Capture SHALL reject ordinary creative editing and manual audition, with the explicit guarded Learn Generate transaction as its sole new definition-commit exception; Finalise SHALL reject creative editing while allowing only separately initiated supported preview. Live SHALL permit the current editor/audition capabilities under existing validity rules. Canvas, numeric fields, keyboard, Settings, Diagnostics and async chooser completions SHALL all obey the same mode authority.
 
 #### Scenario: Delayed file chooser changes mode
 - **WHEN** an IR chooser opened in Live completes after Finalise is entered
@@ -424,7 +429,7 @@ Learn SHALL show the existing branded header/mode navigation, narrow left captur
 - **THEN** its entire hover border remains visible at the shared edge without changing selection, square joins, rounded outer ends, keyboard focus or accessibility order
 
 ### Requirement: Learn exposes independent progressive capture controls
-Learn SHALL separate Source Capture/Recapture from Automatic Swells. Automatic Swells off SHALL hide IR, Character, DSP and sensitivity controls while retaining their values and explaining dry-only learning. On SHALL expose real supported generation settings. Unsupported Character algorithms/parameters SHALL be absent rather than selectable placeholders.
+Learn SHALL separate Source Capture/Recapture from Automatic Swells. Automatic Swells off SHALL hide IR, Character, DSP, sensitivity, Auto-generate on Stop and Generate controls while retaining their values and explaining dry-only learning. On SHALL expose real supported generation settings and explicit Generate, with a retained Auto-generate on Stop choice. Unsupported Character algorithms/parameters SHALL be absent rather than selectable placeholders.
 
 #### Scenario: Dry-only controls
 - **WHEN** Automatic Swells is switched off while Learn is idle
@@ -435,7 +440,7 @@ Learn SHALL separate Source Capture/Recapture from Automatic Swells. Automatic S
 - **THEN** no inactive/fictitious Character choices or parameter controls appear, and a bundled static IR is not presented as a Character algorithm
 
 ### Requirement: Learn generation controls are locked for a whole pass
-Automatic Swells, Default IR/file assignment and Marker Sensitivity SHALL be immutable from valid DAW Play through Stop drain/validation. Visible controls and every command/completion path SHALL enforce the same pass lock, with an explanation. After settlement, later edits SHALL affect future passes without modifying the accepted pass context.
+Automatic Swells, Default IR/file assignment and Marker Sensitivity SHALL be immutable from valid DAW Play through Stop drain/validation. Visible controls and every command/completion path SHALL enforce the same pass lock, with an explanation. After settlement, later detector edits SHALL asynchronously update candidates over accepted coverage without generating; current Default IR SHALL apply to the next explicit or eligible Stop generation snapshot without rewriting accepted pass context.
 
 #### Scenario: Active gesture or chooser crosses Play
 - **WHEN** a gesture, typed edit, preset action, chooser or import completes after the pass lock begins
@@ -443,7 +448,7 @@ Automatic Swells, Default IR/file assignment and Marker Sensitivity SHALL be imm
 
 #### Scenario: A later default is chosen while old generation is pending
 - **WHEN** a user changes an allowed future default after source acceptance while earlier wet work remains queued
-- **THEN** the new choice is shown for future learning and the earlier pass retains its snapshotted settings
+- **THEN** the new choice is shown, the earlier capture context remains unchanged, any pending Generate with the old default is cancelled and the next Generate uses the new accepted default
 
 ### Requirement: Learn Default IR choices use accepted managed identities
 The Learn Default IR selector SHALL offer all real bundled responses, its current custom assignment and Open from File using the supported importer. Pending intent SHALL be distinguished from the accepted default. Cancelled, failed or obsolete imports SHALL preserve the prior default; assignments to existing swells SHALL remain unchanged.
@@ -682,3 +687,238 @@ Routine refresh and background insertion/reordering SHALL preserve the visible l
 - **WHEN** identical snapshots, cosmetic-only changes or deletion of the visible anchor are refreshed
 - **THEN** unchanged rows retain their scroll position and a missing anchor falls back to the nearest surviving visible row or a clamped prior viewport position
 - **AND** empty lists and returning from Learn remain valid without stale row actions or out-of-range scrolling
+
+### Requirement: Perform compact composition requires native acceptance
+Perform SHALL use owner-approved scoped compact spacing with invariant production typography, semantic ink, focus and hit targets. Dense, sparse, empty, pending and failed states SHALL remain readable and bounded. New or materially revised control families SHALL receive native look/feel approval before wider rollout.
+
+#### Scenario: Review compact spacing
+- **WHEN** a compact Perform composition is proposed
+- **THEN** a directly launched native preview supplies actual row, panel, gap, lane and focus measurements for owner approval before production adoption
+- **AND** shared comfortable Learn/header consumers retain their accepted geometry
+
+#### Scenario: Long content and resizing
+- **WHEN** many swells, long names/IRs, existing multiple selection and empty/loading/error states are shown at 1100x850, 1400x900, 1400x1000, 1600x1000 and width breakpoints at software 100/125/150/200%
+- **THEN** labels, exact fields, focus and actions do not overlap or clip; supported truncation provides full tooltip/accessibility detail and inspector scrolling preserves every supported edit
+- **AND** native owner acceptance, software scale, actual Windows DPI and FL Studio coverage are recorded separately
+
+#### Scenario: Composite divider continuity
+- **WHEN** the complete native Perform composition is painted with its actual child components
+- **THEN** horizontal rules remain continuous across the available width at the header, audition, Overview and information boundaries, with column content inset and vertical rules separated from those horizontal rules
+
+### Requirement: Perform toolbar provides horizontal Zoom and contextual Fit
+Perform SHALL provide one inline row containing Zoom minus, horizontal zoom slider, Zoom plus, Fit, Snap toggle button and rhythmic-grid selector, replacing Prev/Next and page-span controls. Zoom SHALL change only horizontal view scale and synchronize the real dry/wet, ruler, handles and Overview viewport. Display-amplitude scaling SHALL remain separately disclosed.
+
+#### Scenario: Zoom extremes and anchors
+- **WHEN** buttons, slider or pointer-wheel navigation reach either zoom extreme
+- **THEN** the viewport remains finite and bounded, with stable pointer/selected-target/playhead context and all time layers aligned
+- **AND** source PCM, swell positions, selection, gains, render identities and job counts remain unchanged
+
+#### Scenario: Fit selected and unselected material
+- **WHEN** Fit is activated with a selected swell, including pending wet or overlap
+- **THEN** the view includes its actual source, requested pre-roll/arrival/end and available render-tail context without fabricated audio
+- **AND WHEN** no swell is selected
+- **THEN** Fit shows available captured extent with truthful sparse gaps, or a finite empty view
+
+#### Scenario: Initial entry and return
+- **WHEN** Perform first receives usable source without a saved view
+- **THEN** it Fits once without waiting for all wet renders
+- **AND WHEN** selection, background publication or mode return occurs after user navigation
+- **THEN** the user view is retained until explicit Fit or navigation, without host seeking or repeated auto-fit
+
+### Requirement: Snap preference and temporary bypass are independent
+Snap SHALL be a latching toggle button, not a checkbox. Its remembered On/Off preference SHALL be independent of the remembered rhythmic grid. Ctrl SHALL temporarily bypass snap and show the button off without changing either preference. Shift SHALL independently enable existing fine-drag; Ctrl+Shift SHALL combine both behaviors.
+
+#### Scenario: Hold and release Ctrl
+- **WHEN** Snap is remembered On and Ctrl is pressed with or without an active drag
+- **THEN** effective snapping and the toggle button's visible/accessibility pressed state become Off while held
+- **AND WHEN** Ctrl is released
+- **THEN** both return On without a saved-preference change, host dirty notification or key-only handle movement
+
+#### Scenario: Saved Off and combined modifiers
+- **WHEN** Snap is remembered Off and Ctrl is pressed/released
+- **THEN** it remains Off and the grid choice is retained
+- **AND WHEN** Ctrl+Shift is held during a timing drag
+- **THEN** movement is unsnapped and fine; Shift alone remains fine with the remembered snap policy, and Ctrl alone bypasses snap with normal drag precision
+
+#### Scenario: Modifier lifecycle and existing shortcuts
+- **WHEN** modifier keys change during a gesture, editor focus leaves/returns, or Ctrl-wheel zoom or existing list-selection shortcuts are used
+- **THEN** button state and effective snap reconcile with actual Ctrl state without a stuck bypass, another target's edit, an unintended saved toggle or broken existing shortcuts
+- **AND** key transitions alone do not move handles; subsequent pointer movement uses the effective policy without an artificial drag-baseline jump
+
+### Requirement: Rhythmic snapping uses trustworthy host coordinates
+Snap SHALL offer explicit 1/16 beat, 1/8 beat, 1/4 beat, 1 beat and 1/2/4 bar divisions. Beat units SHALL follow the reported meter denominator and bars its numerator. Quantization SHALL use validated absolute host PPQ origin with nearest-grid rounding and checked sample conversion, never display names, pixels or a fabricated tempo map.
+
+#### Scenario: Meter and fractional PPQ
+- **WHEN** trustworthy compatible timing reports 4/4, 3/4 or 6/8 with fractional PPQ or negative lead-in
+- **THEN** each division quantizes to its absolute host grid with deterministic half ties away from PPQ zero and at most integer-sample rounding error
+- **AND** unchanged-origin seeks/loops retain that mapping without changing captured positions
+
+#### Scenario: Missing or changed mapping
+- **WHEN** host timing is absent, non-finite, overflowing, capture-rate incompatible or no longer matches the accepted fixed tempo/meter/origin
+- **THEN** effective Snap On prevents horizontal snapped publication and explains unavailable timing rather than guessing
+- **AND** Snap Off or Ctrl bypass permits valid unsnapped sample edits while navigation and vertical editing remain usable
+
+#### Scenario: Timing changes during a drag
+- **WHEN** a drag's session, selection, mode or validated mapping changes
+- **THEN** further publication from that obsolete gesture is cancelled with prior accepted musical/source state preserved and an understandable reason
+
+### Requirement: Horizontal handle snapping preserves exact musical edits
+Effective Snap SHALL quantize horizontal target, source-bound and editable envelope-time gestures to one absolute grid. Vertical amplitude/tension SHALL remain continuous. Whole-wet translation SHALL preserve internal spacing. Exact numeric entry SHALL remain unsnapped. Every accepted edit SHALL preserve ordering, source PCM, unrelated identities and existing model guards.
+
+#### Scenario: Endpoints and fades with wet placement
+- **WHEN** an arrival, source boundary, wet start/end or fade boundary is dragged with nonzero placement and Snap On
+- **THEN** its absolute displayed timing lands on a valid grid point and agrees with the exact inspector value through canonical validation
+- **AND** a domain with no valid grid point rejects the edit instead of claiming an off-grid clamp is snapped
+
+#### Scenario: Vertical and translated edits
+- **WHEN** a tension/amplitude handle is moved vertically or the wet body is translated horizontally
+- **THEN** vertical values remain continuous, while translated snap anchors move the complete wet shape without quantizing its internal durations or moving dry PCM
+
+#### Scenario: Fine and exact alternatives
+- **WHEN** Ctrl bypass, Shift fine-drag, combined Ctrl+Shift, exact numeric input or keyboard alternatives are used with overlapping handles or zero fades
+- **THEN** the effective timing policy is consistent, hit anchors and accepted values agree, and no unrelated parameter, captured source or selected identity changes
+
+#### Scenario: Inspector timing knobs follow the grid
+- **WHEN** Target, Source Start/End, Move Wet, Pre-roll, End Offset or Fade In/Out is adjusted by knob drag or wheel with effective Snap On
+- **THEN** the corresponding absolute timeline anchor snaps through the same validated host grid and canonical bounds as the canvas, with Move Wet preserving internal spacing
+- **AND** Ctrl bypasses snapping, Shift retains fine drag and Ctrl+Shift combines both without key-only movement or modifier-induced jumps
+- **AND** unavailable timing or a domain without a valid grid point rejects snapped publication with a reason; accepted dial/value/canvas feedback agrees
+- **AND** typed values remain exact and unsnapped, curve and level knobs remain continuous, and stale session/selection/mode/source/timing intents cannot publish
+- **AND** unsnapped wheel/arrow increments are independent of zoom: timing 1 ms, level 1 dB, curves 0.01; Shift divides by ten with internal sample rounding, while snapped actions advance one grid point
+- **AND** user-facing labels expose musical position or time units, seconds display six decimals, milliseconds three, level two and curves three, without reducing valid typed/saved precision
+
+### Requirement: Knob reset is explicit and identity guarded
+Knobs SHALL support double-click reset and a right-click reset action using existing model defaults or automatic wet start. Target and Source Start/End SHALL restore positions first loaded for that swell in the current editor. Reset SHALL bypass Snap, preserve canonical validity and unrelated musical/source/IR identities, and SHALL NOT invoke whole-swell reset or persist transient initial positions.
+
+#### Scenario: Reset one knob
+- **WHEN** an enabled knob is double-clicked or its reset menu action is selected
+- **THEN** its guarded canonical default/initial operation runs, dial/text/canvas show accepted state and invalid bounds leave the prior state intact
+- **AND** resetting an already-default value does not schedule work or dirty state, and the right-click menu names default versus initial/automatic semantics truthfully
+
+#### Scenario: Reset menu becomes stale
+- **WHEN** selection, source, fixed timing, workflow/session or component lifetime changes before a queued reset is delivered
+- **THEN** the obsolete action cannot edit another swell/session or revive a destroyed component
+
+### Requirement: Perform navigation preferences survive reopen safely
+Perform SHALL retain valid view, requested Snap state and grid across editor reopen, mode return and project save/reopen, independently per instance. Legacy or malformed optional navigation values SHALL fall back safely without discarding valid musical state. Held modifiers and active gestures SHALL remain ephemeral; restore SHALL not autoplay, recapture or regenerate audio.
+
+#### Scenario: Reopen current and legacy state
+- **WHEN** a project with user zoom and Snap Off is reopened, or a legacy state lacks navigation preferences
+- **THEN** valid preferences return, while legacy uses contextual Fit, Snap On and quarter-beat grid without changing source/render/IR references, IDs or existing parameters
+
+#### Scenario: Save during temporary bypass
+- **WHEN** a project is saved while Ctrl temporarily masks remembered Snap On
+- **THEN** reopen retains the remembered On/grid preferences and has no stuck bypass or restored gesture
+
+#### Scenario: Invalid preferences and copied instances
+- **WHEN** optional view/grid values are malformed or an instance is copied/restored
+- **THEN** invalid UI fields alone default safely, valid musical content survives, and subsequent navigation does not change another instance
+
+### Requirement: Perform presentation supports precise musical inspection
+Perform SHALL retain its three columns while presenting a shared musical ruler
+aligned to both editable lanes, concise lane labels with explanatory bottom context help,
+full Source labels, grouped timing/envelope/level controls and a readable musical
+footer. Preview metrics SHALL receive native owner acceptance before rollout.
+Compact values SHALL NOT reduce stored precision or change exact typed editing.
+Overview and Audition headings SHALL share their role and text-box margin policy.
+
+#### Scenario: Inspect and edit at minimum size
+- **WHEN** Perform is shown at 1100x850 with selected/dense or empty data
+- **THEN** ruler/lanes/handles agree after zoom/pan, group labels and Source captions remain readable, and scrolling reaches every inspector field/reset without clipping
+- **AND** missing timing remains explicit and essential edit warnings remain visible
+
+#### Scenario: Compact readout preserves precision
+- **WHEN** a compact value receives focus and Return without a user change
+- **THEN** its full edit precision is exposed without mutating state, jobs or durable source/render identities
+- **AND** explicit typed values retain existing canonical validation and precision while musical display rounding carries across beat/bar boundaries correctly
+
+### Requirement: Hover context uses the plugin bottom footer
+All control and graph hover help SHALL appear in one full-width bottom row below
+the position readout, using normal helper typography, without popup tooltips or a
+graph overlay. Existing help metadata and control behavior SHALL be reused.
+
+#### Scenario: Hover any control or graph region
+- **WHEN** the pointer enters a control, nested value field, graph region or owned Settings/Diagnostics control
+- **THEN** the footer shows its help in normal-sized text without resizing or covering the work area, intercepting input, mutating state or scheduling audio work
+- **AND** leaving clears help, reading the footer retains it, dynamic control state updates its text and destroyed sources cannot leave unsafe callbacks
+
+#### Scenario: Change workspace or resize
+- **WHEN** Learn, Perform or Export is shown at a supported size
+- **THEN** the shared help footer remains visible at the plugin bottom and contained clear of workspace content and the position readout
+
+### Requirement: Initial generated Perform entry selects and reveals the earliest swell
+The first successful Generate-to-Perform handoff SHALL select the earliest committed swell by chronological arrival and reveal its lead-in and arrival through shared editor navigation. Explicit and automatic triggers SHALL behave identically. List, waveform/envelope, inspector and Overview SHALL agree. Current zoom SHALL be retained where practical. Empty visits and unsuccessful generation SHALL NOT consume initial-handoff eligibility.
+
+#### Scenario: Creation order differs from song order
+- **WHEN** initial explicit or automatic generation commits multiple swells stored in a different creation order
+- **THEN** the earliest arrival in the committed collection is selected, its editor/Selected Swell controls appear and its lead-in/arrival are meaningfully visible without transport, audition or enablement changes
+
+#### Scenario: Restored or established editing position
+- **WHEN** an existing project opens with valid restored selection/navigation, or the user later returns from Learn to an established nonempty Perform workspace
+- **THEN** that selection and viewport remain instead of jumping to the first swell or replaying a generation handoff
+
+#### Scenario: Empty visits and unsuccessful generation
+- **WHEN** Perform was previously empty or a Generate request is failed, cancelled, empty or unchanged
+- **THEN** the empty visit does not consume initial eligibility, unsuccessful requests preserve their existing Learn outcomes and no selection or viewport is changed by those outcomes
+
+### Requirement: Initial framing does not wait for or follow delayed renders
+Initial Perform selection/reveal SHALL use available definition/source timing while reporting pending rendering honestly. Definition commit SHALL remain sufficient for Perform entry. Later render completion SHALL update content without overriding a newer selection or user-adjusted viewport. The handoff SHALL affect editor selection/navigation only and preserve serialized modes and existing capture/DSP behavior.
+
+#### Scenario: Wet rendering is delayed
+- **WHEN** the initial selected swell is still queued/rendering and the user subsequently selects another swell or pans/zooms before its render arrives
+- **THEN** the initial handoff uses available lead-in/arrival timing immediately, and delayed completion updates only matching content/status without stealing selection or moving the user's viewport
+
+### Requirement: Learn offers one explicit Generate action
+Generate Swells SHALL be the primary Automatic Swells action directly below Marker Sensitivity and supported conditional parameters. It SHALL reuse ActionButton, retain its label across runs and expose accessible readiness/progress reasons. Auto-generate on Stop SHALL reuse Switch below Enable automatic swells, before IR controls. The contextual readiness helper SHALL sit directly below Generate.
+
+#### Scenario: Ready or disabled action
+- **WHEN** Learn is ready, capturing, settling, analysing, generating or missing usable source/IR
+- **THEN** Generate reflects canonical readiness, keyboard/pointer/secondary routes share the same guards and disabled reasons remain readable without a rejected click
+
+#### Scenario: Cancel a waiting automatic request
+- **WHEN** the user disables Auto-generate on Stop while its request awaits final analysis or preparation
+- **THEN** the not-yet-committed request is cancelled and no lock hides the cancellation path
+
+### Requirement: Manual placement guidance remains readable
+A subdued helper SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL follow Generate's contextual helper when Automatic Swells is ON and remain below the enable-switch group when OFF. It SHALL use existing Inter helper typography, wrap naturally without a forced break after the question and remain readable with Generate disabled at minimum/larger sizes.
+
+#### Scenario: Automatic Swells off and editor reopen
+- **WHEN** Automatic Swells is disabled in an open editor or before reopening it
+- **THEN** manual-placement guidance remains visible with valid layout while generation controls and their contextual helper stay hidden
+
+#### Scenario: Minimum-size busy workspace
+- **WHEN** Automatic Swells is ON at 1100x850 and generation is disabled or busy
+- **THEN** the full helper remains legible beneath Generate, all settings remain reachable and NoticeBar does not move the workspace
+
+### Requirement: Candidate markers have truthful visual identity
+The Learn timeline SHALL show sample-aligned events as restrained neutral guides, with stronger timing-accent emphasis for hovered or pinned events. Hollow heads SHALL identify provisional/updating data. Event emphasis SHALL reuse inspection without editing swells or filtering Generate. The white inspection pin and solid DAW cursor SHALL remain distinct. Refresh SHALL be read-only and bounded at display resolution.
+
+#### Scenario: Hover and pin an event
+- **WHEN** the musician hovers or pins near a preview event
+- **THEN** that event is emphasized without changing definitions, source, generation scope, transport or audition
+
+### Requirement: Learn presents a concise truthful waveform preview
+Learn SHALL use a shorter width-proportional waveform band with unchanged time mapping and unscaled PCM min/max representation. It SHALL distinguish Detect events from Generate Swells, label the future assignment Default IR and consolidate capture state, duration and event count. Exact samples, coverage and silence classifications SHALL remain in existing Diagnostics rather than primary status. The manual hint SHALL remain visible with detection off.
+
+#### Scenario: Inspect audio and diagnostics
+- **WHEN** Learn is resized or inspected during capture, settled preview or detection OFF
+- **THEN** waveform amplitude ratios, gaps and musical timing remain accurate, concise status stays readable and existing Diagnostics retains exact technical inspection
+
+#### Scenario: Inspect sparse and dense source
+- **WHEN** markers are viewed at full-song scale, resized, zoomed or software-scaled with silence, gaps, unavailable ranges and negative pre-roll
+- **THEN** marker coordinates remain absolute and truthful, cursor roles stay distinguishable and provisional/stale markers cannot imply settled generation readiness
+
+#### Scenario: Return from Perform
+- **WHEN** the user returns to Learn with accepted source and committed swells
+- **THEN** current candidate status appears without duplicate definitions, recapture, DSP work from inspection or implicit generation
+
+### Requirement: Generation outcomes use existing feedback and review gates
+Candidate counts and progress SHALL use restrained Learn status text; actionable empty/protected-only/no-change/failure outcomes SHALL use the reserved accessible NoticeBar without layout movement. Revised marker presentation and any new control variant SHALL receive scoped native owner review before rollout. UI standards, component/binding checks and actual host/DPI coverage SHALL be recorded separately.
+
+#### Scenario: Unsuccessful Generate
+- **WHEN** Generate cannot publish a changed viable result
+- **THEN** Learn remains selected, the preserved-work outcome is explained without claiming success and repeated refresh does not repeatedly announce the same notice
+
+#### Scenario: Native acceptance
+- **WHEN** the integrated controls and overlay are ready for owner review
+- **THEN** one prepared native preview is launched directly with keyboard, disabled, busy and dense-marker states; any required token exception is reviewed before rollout and untested host/DPI coverage remains explicit

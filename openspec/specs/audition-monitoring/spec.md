@@ -16,25 +16,6 @@ Dry + Wet SHALL align captured dry and positioned wet by absolute sample positio
 - **WHEN** required dry source cannot be verified or read
 - **THEN** Dry + Wet reports Dry source not captured for this span and cannot start, while independently verified committed wet remains available in explicitly labeled Wet Only mode
 
-### Requirement: Audition blend has explicit endpoints
-The audition band SHALL expose one continuous Dry-to-Wet slider and exact 0-100% entry. Below 100%, gains SHALL be dry=1-wet and wet=wet; 100% SHALL use genuine Wet Only eligibility/window semantics without requiring dry. Separate mode buttons SHALL be absent. Restore SHALL show 100% for saved Wet Only and the saved blend for mixed mode, without rewriting latent preferences or changing live routing.
-
-#### Scenario: Endpoints and reference blend
-- **WHEN** the continuous audition control is set to 0%, 50%, 65% and 100% Wet
-- **THEN** its prepared contribution is respectively dry only, the half-gain sum, 35% dry plus 65% wet, and wet only, subject to disclosed monitoring protection and trim
-
-#### Scenario: Mode round trip
-- **WHEN** a user sets 35% Wet, moves the control to 100% and then explicitly enters 35%
-- **THEN** 100% excludes recorded dry, the previous mixed preference remains recoverable in saved state while Wet Only is active, and the explicit 35% edit restores the mixed contribution
-
-#### Scenario: Restore existing monitoring state
-- **WHEN** an old session contains Wet Only plus latent 50% blend, or Dry + Wet at 65%
-- **THEN** the slider respectively shows 100% or 65%, opening/closing the editor does not rewrite either session, and playback does not start
-
-#### Scenario: Missing dry at the wet endpoint
-- **WHEN** verified committed wet is available but captured dry context is unavailable
-- **THEN** 100% remains eligible under the existing labeled wet-recovery rules, while a value requiring missing dry is unavailable with its reason and is not silently padded
-
 ### Requirement: Transition edits shape only the wet contribution
 Wet endpoint, fade-out, gap/overlap and tension edits SHALL affect wet audio only. They SHALL not apply a complementary dry fade-in, ducking, time shift or stretch to captured dry, or change normal live dry passthrough. Existing explicit monitoring blend, trim and disclosed contribution protection SHALL remain separate from transition shaping.
 
@@ -62,15 +43,15 @@ Dry + Wet SHALL provide a saved, typeable post-roll preference from zero to five
 - **THEN** the UI reports the missing context and needed range, retains the requested duration, and keeps independently verified Wet Only available without padding or silently shortening Dry + Wet
 
 ### Requirement: Monitoring protection and trim remain transparent
-The aggregate wet branch SHALL follow the saved gain policy: legacy -6 dBFS protection without upward normalization, or the shared musical calibration/protection contract. The prepared audition sum SHALL receive additional attenuation only when needed to stay within that policy's ceiling before trim. Neither guard SHALL alter saved renders. Saved -60 to 0 dB trim SHALL follow the sum and default to 0 dB when absent. Nonzero trim SHALL remain visible and resettable.
+The aggregate wet branch SHALL follow the saved gain policy: legacy -6 dBFS protection without upward normalization, or the shared musical calibration/protection contract. The prepared audition sum SHALL receive additional attenuation only when needed to stay within that policy's ceiling before trim. Neither guard SHALL alter saved renders. Legacy monitoring SHALL apply saved -60 to 0 dB trim after the sum, defaulting to 0 dB when absent, visible/resettable in Settings. Live-level monitoring SHALL retain but ignore stored legacy trim and use Live Wet gain before wet protection, unity captured dry in mixed mode and disclosed combined-sum protection.
 
 #### Scenario: Hot correlated blend
 - **WHEN** protected wet and captured dry combine above the audition ceiling
 - **THEN** only the manual audition contribution is attenuated to the saved policy's ceiling before trim, and Diagnostics identifies branch and blend attenuation separately
 
 #### Scenario: Existing low trim
-- **WHEN** a saved session contains -24 dB trim
-- **THEN** it restores unchanged with a visible trim indication and a reset-to-0 action, without auto-starting audition
+- **WHEN** a saved legacy session contains -24 dB trim
+- **THEN** it restores unchanged with a visible Settings trim value and a double-click reset-to-0 action, without auto-starting audition
 
 #### Scenario: Level rises below protection onset
 - **WHEN** musical swell Level increases by 6 dB during a unity-trim Wet Only comparison with sufficient headroom
@@ -115,10 +96,10 @@ Audition SHALL default to eligible wet swells intersecting the selected anchor's
 - **THEN** it contributes no wet; muting the anchor does not independently exclude eligible neighbours, and empty wet membership is reported explicitly
 
 ### Requirement: Group monitoring preserves dry and relative wet levels
-Overlapping wet SHALL retain each member's saved fixed or source-matched baseline, user gain/envelope and positioned offsets before shared aggregate protection. Captured dry SHALL be mixed once. Dry=1-wet and wet=wet blend, policy ceiling, combined-sum protection and saved trim SHALL remain separate from transition editing. No additional per-member normalization beyond the saved calibration or dry duplication SHALL occur.
+Overlapping wet SHALL retain each member's saved fixed or source-matched baseline, user gain/envelope and positioned offsets before shared aggregate protection. Captured dry SHALL be mixed once. Legacy Dry=1-wet and wet=wet blend SHALL remain compatible. Live-level monitoring SHALL use dry=1 and wet=Live Wet gain (or dry=0 for Wet only). Policy ceiling, combined-sum protection and legacy trim SHALL remain separate from transition editing. No additional per-member normalization beyond the saved calibration or dry duplication SHALL occur.
 
 #### Scenario: Correlated overlapping wet and one dry branch
-- **WHEN** two hot wet contributions overlap with captured dry at 0%, 50% and 100% Wet
+- **WHEN** two hot wet contributions overlap with captured dry at legacy 0%, 50% and 100% Wet, or live-level Dry + wet/Wet only
 - **THEN** a sample oracle matches the aligned wet sum and single dry branch with disclosed policy-specific aggregate/sum attenuation, raw assets and live dry remain unchanged, and relative member gains are preserved
 
 #### Scenario: Audition and export compare equal membership
@@ -154,7 +135,7 @@ Each wet audition contribution SHALL receive a disclosed 2 ms safety ramp at its
 - **THEN** the wet contribution reaches zero through its short safety ramp, dry continues without a transition-specific gain ramp, and saved raw/shape edits remain unchanged
 
 ### Requirement: Manual playback boundaries ramp safely
-Manual replay SHALL use disclosed 5 ms outer start/end ramps and smooth Stop, shortened for tiny buffers and reaching zero at boundary samples without changing interval length. Replacement SHALL preserve sequential cursor and smooth handoff. Live dry and stored PCM SHALL remain unchanged; unsafe invalidation MAY silence immediately. The callback SHALL remain allocation/lock/file-I/O free with retirement outside it.
+Manual replay SHALL use disclosed 5 ms outer start/end ramps and smooth Stop, shortened for tiny buffers and reaching zero at boundary samples without changing interval length. Loop wraps SHALL restart the same finite window without callback allocation or buffer republishing. Explicit Stop and existing invalidation/priority guards SHALL terminate looping. Replacement SHALL preserve sequential cursor and smooth handoff. Live dry and stored PCM SHALL remain unchanged; unsafe invalidation MAY silence immediately. The callback SHALL remain allocation/lock/file-I/O free with retirement outside it.
 
 #### Scenario: Natural completion and explicit stop
 - **WHEN** audition starts, reaches a nonzero final stored sample, or receives Stop and is replayed
@@ -164,14 +145,49 @@ Manual replay SHALL use disclosed 5 ms outer start/end ramps and smooth Stop, sh
 - **WHEN** an audition interval is shorter than the nominal ramps or an old zero-fade session reopens
 - **THEN** ramp arithmetic stays finite/bounded, saved edits retain their exact values, boundary protection is disclosed separately and playback never starts on restore
 
-### Requirement: Audition percentage and geometry agree
-The slider's thumb centre SHALL use the usable travel after thumb insets, with filled track and exact percentage representing the same value. Pointer and numeric entry SHALL agree at endpoints and intermediate values. This presentation SHALL change audition monitoring only, preserving existing gain protection, ramps and live output preferences.
+### Requirement: Perform audition loops its finite window
+Manual Perform audition SHALL repeat its prepared selected listening window until
+Stop or existing selection/session/dependency/timing/workflow/DAW-priority guards
+stop playback. Loops SHALL retain boundary ramps, sample alignment and bounded
+allocation/lock/I/O-free audio processing, without republishing or accumulating
+buffer ownership on each repeat. Restore SHALL NOT start playback. This SHALL NOT
+extend the window or implement whole-song arrangement audition.
 
-#### Scenario: Reference percentages
-- **WHEN** the control is set to 0%, 50%, 65% and 100% at supported sizes/scales
-- **THEN** its thumb centre occupies respectively 0, 0.5, 0.65 and 1 of usable travel, and typed and dragged values match within declared rounding tolerance
-- **AND** live routing, live wet level, raw asset identity and convolution count remain unchanged
+#### Scenario: Repeat and stop
+- **WHEN** manual audition crosses the prepared window end
+- **THEN** playback resumes at its start, including multiple wraps within one block and tiny buffers, with bounded position and unchanged stored audio
+- **AND WHEN** Stop or an incompatible dependency interrupts playback
+- **THEN** existing smooth-stop or immediate-invalidation behavior terminates it and releases buffers outside the callback
 
-#### Scenario: Preview and Song playback priority
-- **WHEN** audition is requested while enabled live Song playback has priority
-- **THEN** existing priority and inhibition rules apply, Play/Stop remain labeled preview actions and neither requests host transport changes
+### Requirement: Perform audition exposes a Wet only toggle
+Perform SHALL replace blend/row Trim reset with a latching button naming its
+selected mode: Dry + wet when Off, Wet only when On. New instances default Off
+with unity captured dry plus Live Wet gain; On excludes dry. Protection/ramps
+remain disclosed and Export/live routing independent. Status SHALL truthfully
+state Ready, Looping, Preparing or Unavailable, with full reasons available
+without shrinking text.
+
+#### Scenario: Toggle live-level listening
+- **WHEN** Wet only is toggled with an unchanged valid invocation
+- **THEN** accepted pressed state, prepared sound and status agree without autoplay, convolution, asset edits or Export mix changes
+- **AND** stale/disabled invocations cannot change a different session or workflow
+
+#### Scenario: Restore old and new preferences
+- **WHEN** legacy mode/blend/trim or new live-level monitoring preferences restore
+- **THEN** their saved behavior is retained without playback; legacy switches to live-level behavior only after explicit toggle
+- **AND** missing optional metadata defaults to legacy behavior, malformed metadata is handled transactionally and current round trips preserve mode/identity
+
+#### Scenario: Monitoring protection and unavailable source
+- **WHEN** live-level monitoring needs protection or requested captured dry is unavailable
+- **THEN** attenuation is disclosed, and unavailable dry is not padded or silently replaced by Wet only
+- **AND** saved legacy trim remains available in Settings for legacy monitoring, while live-level mode ignores it explicitly
+
+### Requirement: Audition strip uses one compact aligned row
+Following owner approval of actual native metrics, Perform SHALL put status to
+the right of Play/Stop/Wet only with equal gaps between those buttons and a slim
+strip derived from existing row/inset tokens. Overview SHALL use the same shared
+section-heading font role as the other section headings.
+
+#### Scenario: Slim row remains readable
+- **WHEN** the approved strip is displayed at supported sizes/scales, including empty/dense states
+- **THEN** controls and status share a row with equal action gaps, full contained bounds and continuous rules, helper overflow ellipsizes without shrinking, and Overview typography agrees with other section headings
