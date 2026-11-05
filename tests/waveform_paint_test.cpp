@@ -82,5 +82,92 @@ int main(){return runTest([]
         paint(timeline,scale);REQUIRE(timeline.waveformPaintMetrics().builds==before+1);
     }
     REQUIRE(engine.snapshot().renderCount==0 && engine.savedSession().swells.empty());
+    // Exercise the real capture publisher, not just manually revised fixtures.
+    // Same-sized peak arrays must invalidate after changed accepted PCM; unchanged
+    // publication/restore must retain both peak values and cached images.
+    CaptureSession publisher(root.file.getChildFile("capture-publisher"));
+    std::vector<float> input(1024*2,.25f);
+    REQUIRE(publisher.commit(0,48000,input.data(),1024));
+    capture=publisher.snapshot();state={};time.sample=0;time.ppq=0;
+    timeline.setViewport({0,1024});present();
+    const auto firstCapture=capture;
+    REQUIRE(capture.overview[0].peaks.size()==2 && capture.overview[0].peaks[0].maximum==.25f);
+    changed([&]
+    {
+        std::fill(input.begin(),input.end(),-.75f);
+        REQUIRE(publisher.commit(0,48000,input.data(),1024));capture=publisher.snapshot();
+        REQUIRE(capture.manifest.revision>firstCapture.manifest.revision && capture.reference!=firstCapture.reference);
+        REQUIRE(capture.overview[0].peaks.size()==firstCapture.overview[0].peaks.size());
+        REQUIRE(capture.overview[0].peaks[0].minimum==-.75f && capture.overview[0].peaks[0].maximum==-.75f);
+    });
+    const auto unchanged=[&](auto action)
+    {
+        const auto before=capture;
+        const auto dryBuilds=timeline.waveformPaintMetrics().builds,miniBuilds=overview.waveformPaintMetrics().builds;
+        action();capture=publisher.snapshot();present();
+        REQUIRE(capture.reference==before.reference && capture.manifest.revision==before.manifest.revision);
+        REQUIRE(capture.overview.size()==before.overview.size());
+        for(size_t r=0;r<capture.overview.size();++r)
+        {
+            REQUIRE(capture.overview[r].available==before.overview[r].available);
+            REQUIRE(capture.overview[r].peaks.size()==before.overview[r].peaks.size());
+            for(size_t p=0;p<capture.overview[r].peaks.size();++p)
+            {
+                const auto& a=capture.overview[r].peaks[p];const auto& b=before.overview[r].peaks[p];
+                REQUIRE(a.startSample==b.startSample && a.frameCount==b.frameCount && a.minimum==b.minimum && a.maximum==b.maximum);
+            }
+        }
+        REQUIRE(timeline.waveformPaintMetrics().builds==dryBuilds && overview.waveformPaintMetrics().builds==miniBuilds);
+    };
+    unchanged([&]{REQUIRE(publisher.commit(0,48000,input.data(),1024));});
+    const auto committed=capture;
+    unchanged([&]
+    {
+        REQUIRE(publisher.beginPass(67,1,true));std::fill(input.begin(),input.end(),.5f);
+        REQUIRE(publisher.stagePass(67,0,48000,input.data(),1024));
+        const auto prepared=publisher.preparePass(67,1);REQUIRE(prepared.success && prepared.changed);
+    });
+    changed([&]
+    {
+        REQUIRE(publisher.acceptPreparedPass(67,1));capture=publisher.snapshot();
+        REQUIRE(capture.manifest.revision==committed.manifest.revision+1 && capture.reference!=committed.reference);
+        REQUIRE(capture.overview[0].peaks.size()==committed.overview[0].peaks.size());
+        REQUIRE(capture.overview[0].peaks[0].maximum==.5f);
+    });
+    unchanged([&]
+    {
+        REQUIRE(publisher.beginPass(68,1,true));std::fill(input.begin(),input.end(),.875f);
+        REQUIRE(publisher.stagePass(68,0,48000,input.data(),1024));publisher.abortPass();
+    });
+    unchanged([&]{REQUIRE(publisher.restore(capture.manifest.projectId,capture.manifest.instanceId,capture.reference,capture.manifest.revision));});
+    const auto saved=capture;
+    const auto asset=root.file.getChildFile("capture-publisher").getChildFile(saved.manifest.projectId)
+        .getChildFile(saved.manifest.instanceId).getChildFile(saved.overview[0].range.assetPath);
+    juce::MemoryBlock audio;REQUIRE(asset.loadFileAsData(audio));REQUIRE(asset.deleteFile());
+    changed([&]
+    {
+        REQUIRE(!publisher.restore(saved.manifest.projectId,saved.manifest.instanceId,saved.reference,saved.manifest.revision));
+        capture=publisher.snapshot();
+        REQUIRE(capture.reference==saved.reference && capture.manifest.revision==saved.manifest.revision);
+        REQUIRE(capture.unavailable && !capture.overview[0].available && capture.overview[0].peaks.empty());
+    });
+    REQUIRE(asset.replaceWithData(audio.getData(),audio.getSize()));
+    changed([&]
+    {
+        REQUIRE(publisher.restore(saved.manifest.projectId,saved.manifest.instanceId,saved.reference,saved.manifest.revision));
+        capture=publisher.snapshot();REQUIRE(!capture.unavailable && capture.overview[0].available);
+        REQUIRE(capture.overview[0].peaks[0].maximum==saved.overview[0].peaks[0].maximum);
+    });
+    const auto populatedOverview=paint(overview);
+    const auto populatedBuilds=overview.waveformPaintMetrics().builds;
+    REQUIRE(publisher.clear(48000));capture=publisher.snapshot();present();
+    REQUIRE(capture.manifest.revision>saved.manifest.revision && capture.overview.empty());
+    // Empty Overview bypasses waveform drawing, rather than rebuilding a bitmap.
+    REQUIRE(overview.waveformPaintMetrics().builds==populatedBuilds);
+    const auto emptyOverview=paint(overview);
+    bool pixelsChanged=false;
+    for(int y=0;y<emptyOverview.getHeight();++y)for(int x=0;x<emptyOverview.getWidth();++x)
+        pixelsChanged=pixelsChanged || emptyOverview.getPixelAt(x,y)!=populatedOverview.getPixelAt(x,y);
+    REQUIRE(pixelsChanged);
     std::cout<<"Native waveform cache: hidden/visible work, cursor reuse, publication/selection/shape/gain/placement/availability, restore, theme, zoom/resize/software-scale and unchanged engine checks passed.\n";
 });}

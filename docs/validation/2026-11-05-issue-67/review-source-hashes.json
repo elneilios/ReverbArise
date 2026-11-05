@@ -1,0 +1,15 @@
+{
+  "baseRevision": "d6598bee563f9f42a494ea7c0d5ee2d8faeba668",
+  "releaseLog": "20261105-084643-b16acee8",
+  "files": {
+    "CMakeLists.txt": "a801b223c7218440a4dc8c0b43d76e2be15976d20a064573ae057077069740ab",
+    "Source/UI/SwellTimeline.cpp": "4aabd9f8d284449551dffb34ff94e285fc3023695a266b503f6fd712ee8b5006",
+    "Source/UI/SwellTimeline.h": "dfbb4fcb80d500a1a810e0c3d545294229d935e4ee607167663206d2b0ccb449",
+    "Source/UI/WaveformDisplay.h": "95f60960d811fd14c268be4042fbd7259abeb808911693f09f893b5e11ecf8ad",
+    "tests/waveform_display_test.cpp": "3476f809fdadec8a8298d8c9c96a5f40b3c4949c2a03734d2e11bc73621d1e2d",
+    "tests/waveform_paint_test.cpp": "bfb78a475a2ec8c9d13a409bcd8b7f64cc5a52a7022a0b45e849d620ebf8d08b",
+    "tests/waveform_paint_benchmark.cpp": "4068e1c0442338f8ca8be5270bb1e9c281ea79cd7c1358631fd31d96ee3b3183",
+    "tests/waveform_editor_benchmark.cpp": "1dc4a932c3f2c694ac423bc1d92503baf1864c273f2e2f116e6c9692fa6e1c32"
+  },
+  "releaseModuleSha256": "1cad4b9de3ef82aaccfa470f7d2f71cbe3dd87891cf10f36ab8cae64603c2c1a"
+}

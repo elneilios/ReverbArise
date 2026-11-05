@@ -20,7 +20,12 @@ detail is still clipped to currently available captured audio.
 
 At deep zoom, a coarse bucket must not become a solid rectangle spanning its
 whole duration. Detail lanes retain the existing narrow stroke at that peak's
-sample-derived position when it spans more than a pixel. Overview continues to
+sample-derived position when it spans more than a pixel. If its interval starts
+before the viewport but intersects it, one stroke at the left edge represents
+that clipped bucket's extrema. This is a summary marker, not the value of an
+individual sample at that edge. Half-open bucket ends still leave actual gaps
+empty; panning wholly inside captured coarse coverage never drops its only
+summary marker. Overview continues to
 summarize interval coverage and shaped wet extent. Neither path fabricates finer
 PCM between summary points; the existing approximately 2,048-peak wet/detail
 resolution remains a limit at extreme zoom. Viewport-driven PCM-detail generation
@@ -45,8 +50,17 @@ physical resolution. Temporary column storage is proportional to lane width.
 `SwellTimeline::setData` compares accepted metadata, not PCM or peak contents:
 
 - Capture reference, manifest revision, project/instance, rate, range identities,
-  range availability and peak-vector sizes. Producers must retain the established
-  contract that changed accepted peaks carry a new source/range identity/revision.
+  range availability and peak-vector sizes. The production publisher is
+  `CaptureSession::rebuildOverview`, forwarded unchanged by
+  `CaptureWorker::updateSnapshot`. Changed PCM in `commit` advances the manifest
+  revision/reference; a staged pass keeps the old accepted snapshot until
+  `acceptPreparedPass` publishes a new revision/reference. Abort and identical
+  recapture preserve accepted peaks and identity. Restore recomputes deterministic
+  512-frame extrema from immutable, checksum-verified assets; missing/invalid
+  assets change availability, including recovery with the same manifest identity.
+  Thus unchanged display metadata implies unchanged accepted peak contents.
+  This contract applies to production snapshots; callers constructing fixtures or
+  future publishers must advance a compared key when changing peak values.
 - Session epoch, primary identity, immutable shared raw/shaped/source-detail and
   summary pointers, plus each swell's identity, source/arrival, placement, shape,
   activity, phase, generations and render identity/bounds.
@@ -70,10 +84,14 @@ change does not migrate the snapshot model or add a worker.
 
 - `preverb_waveform_display_test`: independent pixel-interval oracle, extrema,
   impulses, gaps/silence, negative and int64-boundary placement, visible search,
-  and the narrow-stroke deep-zoom rule.
+  and the narrow-stroke deep-zoom rule, including a viewport wholly inside one
+  bucket, translated/fractional clipping, exact end boundaries and sparse gaps.
 - `preverb_waveform_paint_test`: real components with accepted snapshot fixtures;
   hidden-inline/visible work, cursor reuse, publication/selection/edit/availability
-  invalidation, restore, theme, pan/zoom, resize and software scale.
+  invalidation, restore, theme, pan/zoom, resize and software scale. Real
+  `CaptureSession` operations additionally verify same-count replacement,
+  identical recapture, staged/accepted/aborted publication, deterministic restore,
+  unavailable/recovered assets and clear against cache build/reuse observations.
 - Existing native processor/UI/persistence suites retain actual model bindings,
   source/render identities, gesture guards and callback safety coverage.
 - Optional `preverb_waveform_paint_benchmark` measures the 3/5/20-minute ×

@@ -12,6 +12,11 @@ namespace
 {
 bool sameCaptureDisplay(const CaptureSessionSnapshot& a,const CaptureSessionSnapshot& b)
 {
+    // CaptureSession is the production overview publisher: changed PCM advances
+    // the accepted manifest/reference (including prepared-pass acceptance).
+    // Restoring an unchanged immutable/checksummed asset reproduces its peaks;
+    // failed asset reads change availability. Do not scan every peak per refresh.
+    // waveform_paint_test exercises these producer paths through this cache.
     if(a.reference!=b.reference || a.manifest.revision!=b.manifest.revision || a.manifest.projectId!=b.manifest.projectId
         || a.manifest.instanceId!=b.manifest.instanceId || a.manifest.sampleRate!=b.manifest.sampleRate
         || a.unavailable!=b.unavailable || a.overview.size()!=b.overview.size() || a.manifest.ranges.size()!=b.manifest.ranges.size())return false;

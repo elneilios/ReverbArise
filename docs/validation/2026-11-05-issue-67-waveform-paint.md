@@ -173,8 +173,8 @@ tail. These are software results, not real-song or FL Studio throughput.
   validation has the eight existing description-length warnings recorded by the
   [housekeeping audit](2026-11-05-openspec-housekeeping-audit.md); this issue does
   not restructure those unrelated approved requirements.
-- `git diff --check` passes. [Validated source/module hashes](2026-11-05-issue-67/source-hashes.json)
-  identify the final production/test sources and Release module; bookkeeping
+- `git diff --check` passes. [Original source/module hashes](2026-11-05-issue-67/source-hashes.json)
+  identify the production/test sources and Release module before PR review; bookkeeping
   edits after the gate do not change those sources. Source hashes describe the
   validated working bytes before any Git line-ending normalization.
 - Debug, FL Studio, physical Windows DPI and screen-reader coverage are not
@@ -209,3 +209,60 @@ review and merge. Production/test/evidence commit `5c0eba2` contains the validat
 implementation; the follow-up is delivery tracking only. Refreshed vanilla Apply
 confirms **7/7 tasks complete / all_done**. The existing change remains active
 for the owner-controlled sync/archive lifecycle.
+
+## PR #69 review follow-up
+
+The owner identified a detail-lane boundary omission: an intersecting coarse
+bucket was discarded when its start preceded the viewport. The reducer now
+represents that clipped bucket with one narrow stroke at the viewport's left
+edge. The stroke denotes the bucket's extrema, not an individual edge sample;
+it does not stretch the bucket into a filled rectangle or bridge a real gap.
+Targeted reducer checks cover a viewport wholly inside a bucket, fractional
+panning, negative/positive placement, exact half-open ends and two buckets
+separated by a gap. The prior implementation fails the inside-bucket assertion
+because it emits no column.
+
+The second finding requested evidence for the capture cache's metadata invariant.
+`CaptureSession::rebuildOverview` is the production overview producer;
+`CaptureWorker::updateSnapshot` forwards its accepted snapshot. Direct changed-PCM
+commit advances the manifest revision/reference, as does prepared-pass acceptance.
+Staging, preparation and abort leave accepted data unchanged. Restore derives
+deterministic extrema from checksum-verified immutable assets; read failure and
+recovery change the compared availability keys even at the same manifest revision.
+No production capture/DSP change or per-refresh peak-value scan was needed.
+
+The native component test now drives these real publisher paths: a same-count
+peak replacement must change revision/reference and rebuild both consumers;
+identical recapture, staged preparation, abort and unchanged restore must preserve
+every peak field and reuse the caches. Asset loss/recovery must invalidate through
+availability. Clear must suppress the old Overview through its existing empty
+state without constructing a new bitmap. The initial clear test incorrectly
+required a bitmap rebuild; the failed assertion was corrected to verify bypass
+and changed rendered pixels. All preceding publisher-path assertions passed in
+that initial run.
+
+The earlier native owner approval and full timing distributions above describe
+the pre-review source. FL Studio Perform playback and physical DPI remain
+unverified; the single suggested host smoke is dry/wet visibility, selection and
+zoom/pan during ordinary playback. No installed bundle or user project has been
+changed by this follow-up.
+
+Final follow-up verification:
+
+- `scripts/build.ps1 -Configuration Release -Test`, warm existing MSVC tree,
+  four workers: **68/68 native CTest pass, 253.39 s**, wrapper log
+  `20261105-084643-b16acee8`. Production source was unchanged after this gate;
+  [review source/module hashes](2026-11-05-issue-67/review-source-hashes.json)
+  identify the tested bytes on base `d6598be`. Release module SHA256:
+  `1cad4b9de3ef82aaccfa470f7d2f71cbe3dd87891cf10f36ab8cae64603c2c1a`.
+- Initial sandbox configure `20261105-084141-fd9688cd` stopped on denied Windows
+  SDK registry access before build/test. The permitted elevated wrapper run
+  `20261105-084158-84b6fee6` built successfully and passed 67/68; its sole failure
+  was the test's incorrect clear/rebuild expectation described above. The final
+  gate includes that corrected test.
+- Strict OpenSpec change validation and UI standards pass (51 files / 61 unchanged
+  bounded occurrences); `git diff --check` passes. Refreshed vanilla Apply remains
+  **7/7 / all_done**. No planning checkbox or lifecycle change was needed.
+- The full performance matrix and editor timings were not repeated for this
+  boundary correction; their original source hashes/raw data remain above. No
+  fresh Debug, host, physical DPI or screen-reader acceptance is claimed.

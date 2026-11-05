@@ -55,5 +55,22 @@ int main(){return runTest([]
     const auto detail=waveformColumns(coarse,0,400,800,0,values,visited,true);
     REQUIRE(std::count_if(detail.begin(),detail.end(),[](const auto& c){return c.present;})==2);
     REQUIRE(detail[0].minimum==-1 && detail[0].maximum==1 && detail[400].maximum==.5f);
+    // Pan wholly inside one coarse bucket, including fractional viewport starts
+    // and translated negative lead-in. Keep exactly one clipped summary stroke;
+    // neither blank captured coverage nor fill the viewport with invented PCM.
+    for(const auto placement:{int64_t{-300},int64_t{0},int64_t{500}})
+    for(const auto offset:{25.0,25.25,99.5})
+    {
+        uint64_t clippedVisited=0;
+        const auto clipped=waveformColumns(coarse,placement+offset,placement+offset+.25,80,placement,values,clippedVisited,true);
+        REQUIRE(clippedVisited==1);
+        REQUIRE(std::count_if(clipped.begin(),clipped.end(),[](const auto& c){return c.present;})==1);
+        REQUIRE(clipped[0].present && clipped[0].minimum==-1 && clipped[0].maximum==1);
+    }
+    const auto boundary=waveformColumns(coarse,100,200,80,0,values,visited,true);
+    REQUIRE(std::none_of(boundary.begin(),boundary.end(),[](const auto& c){return c.present;}));
+    const auto crossing=waveformColumns(coarse,99.5,200.5,202,0,values,visited,true);
+    REQUIRE(crossing[0].present && crossing[201].present);
+    REQUIRE(std::count_if(crossing.begin(),crossing.end(),[](const auto& c){return c.present;})==2);
     std::cout<<"Pixel extrema, impulse/silence/gap, negative/overflow-safe placement and visible search reference checks passed.\n";
 });}

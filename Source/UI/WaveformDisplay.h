@@ -41,12 +41,13 @@ std::vector<WaveformColumn> waveformColumns(const std::vector<CapturePeak>& peak
         const auto values=extrema(*peak);
         if(!std::isfinite(values.first) || !std::isfinite(values.second))continue;
         // Deep zoom must not stretch a coarse summary into a solid rectangle.
-        // Retain the established sample-anchored narrow stroke when a bucket
-        // spans multiple pixels; no intermediate PCM is fabricated.
+        // Retain a narrow summary stroke when a bucket spans multiple pixels.
+        // A bucket clipped by the viewport's left edge is represented there,
+        // rather than disappearing until the next bucket starts. This denotes
+        // the intersecting bucket's extrema, not a sample at the clipped edge.
         if(detailStrokes && peak->frameCount/(end-begin)*width>1)
         {
-            if(position(*peak)<begin)continue;
-            const auto x=std::clamp(static_cast<int>((position(*peak)-begin)/(end-begin)*width),0,width-1);
+            const auto x=std::clamp(static_cast<int>((a-begin)/(end-begin)*width),0,width-1);
             auto& c=columns[static_cast<size_t>(x)];
             if(!c.present)c={values.first,values.second,true};
             else {c.minimum=std::min(c.minimum,values.first);c.maximum=std::max(c.maximum,values.second);}
