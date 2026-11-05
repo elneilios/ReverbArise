@@ -97,7 +97,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
         settingsPages[5].addAndMakeVisible(label);settingsPages[5].addAndMakeVisible(value);
     }
     copyBuildInformation.setName("copyBuildInformation");copyBuildInformation.setTooltip("Copy product version, build identifier, full Git commit and source status for a bug report");
-    copyBuildInformation.onClick=[]{juce::SystemClipboard::copyTextToClipboard(juce::String(m3::build::report()));};
+    copyBuildInformation.onClick=[this]{buildInformationWriter(juce::String(m3::build::report()));};
     settingsPages[5].addAndMakeVisible(copyBuildInformation);
     openDiagnosticsButton.setName("openDiagnostics");openDiagnosticsButton.onClick=[this]{setDiagnosticsOpen(true);};
     toneButton.setTooltip("Explicit scheduled 440 Hz test tone. Turn off here after testing.");

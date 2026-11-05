@@ -124,7 +124,10 @@ static void selected(PreverbAudioProcessorEditor& editor,SwellEngine& engine,con
 static void aboutBindings(bool review=false)
 {
     GenerationFixture fixture;auto& engine=fixture.engine();
-    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor);editor->setVisible(true);editor->refresh();
+    juce::String copiedInformation;
+    std::function<void(const juce::String&)> writer;
+    if(!review)writer=[&](const juce::String& information){copiedInformation=information;};
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor,std::move(writer));editor->setVisible(true);editor->refresh();
     const auto showAbout=[&]{auto* action=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));REQUIRE(action);action->onClick();
         auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==6);tabs->setCurrentTabIndex(5);};
     if(review)
@@ -148,8 +151,8 @@ static void aboutBindings(bool review=false)
         REQUIRE(value->getText()==expectedDisplay[i] && value->getTooltip()==expectedDisplay[i]);
         REQUIRE(value->getParentComponent()->getLocalBounds().contains(value->getBounds()) && value->getAccessibilityHandler());}
     auto* copy=dynamic_cast<m3::ui::controls::ActionButton*>(named(*panel,"copyBuildInformation"));REQUIRE(copy && copy->isEnabled() && copy->getAccessibilityHandler());
-    struct RestoreClipboard{juce::String previous=juce::SystemClipboard::getTextFromClipboard();~RestoreClipboard(){juce::SystemClipboard::copyTextToClipboard(previous);}} restoreClipboard;
-    controlReview::pointerClick(*copy);REQUIRE(juce::SystemClipboard::getTextFromClipboard()==juce::String(m3::build::report()));
+    controlReview::pointerClick(*copy);REQUIRE(copiedInformation==juce::String(m3::build::report()));
+    REQUIRE(copiedInformation.contains(metadata["gitSha"].toString()) && copiedInformation.contains(metadata["buildIdentifier"].toString()));
     REQUIRE(encode(engine.savedSession(),after,error) && before==after);
     REQUIRE(engine.snapshot().renderCount==renders && fixture.processor->getCaptureSnapshot().manifest.revision==capture);
     captureImage(*panel,"alpha-about-settings");

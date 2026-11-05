@@ -21,9 +21,10 @@ juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gai
 
 
 }
-PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p)
+PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p,std::function<void(const juce::String&)> writer)
     :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
 {
+    buildInformationWriter=writer?std::move(writer):[](const juce::String& text){juce::SystemClipboard::copyTextToClipboard(text);};
     setLookAndFeel(&workspaceTheme);addMouseListener(this,true);
     addAndMakeVisible(hoverHelp);hoverHelp.setName("hoverHelp");m3::ui::applyTextRole(hoverHelp,m3::ui::TextRole::helper);hoverHelp.setInterceptsMouseClicks(false,false);
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);

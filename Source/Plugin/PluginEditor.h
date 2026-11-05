@@ -19,7 +19,7 @@
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
 public:
-    explicit PreverbAudioProcessorEditor(PreverbAudioProcessor&);
+    explicit PreverbAudioProcessorEditor(PreverbAudioProcessor&,std::function<void(const juce::String&)> buildInformationWriter={});
     ~PreverbAudioProcessorEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -139,6 +139,7 @@ private:
     std::array<juce::Label,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
     m3::ui::controls::ActionButton copyBuildInformation{"Copy build information"};
+    std::function<void(const juce::String&)> buildInformationWriter;
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed delivered Learn capture/generation, manual Perform preparation, live DAW playback/rendering and optional Export against production bindings and canonical specs, retaining intentional active-change differences. Added Settings About / Copy build information guidance and generated numeric guide version; checked full metadata/clipboard behavior, approved logo and native workflow screenshots. Packaging only validates currency and embeds current native evidence.",
+  "summary": "Reviewed production bindings and canonical specs with approved active changes: Learn capture/generation, manual and live Perform/DAW rendering, optional Export, Settings About generated version/build/full SHA and Copy report. Guide instructions and numeric-version slot match delivered behavior. Re-reviewed clipboard writer isolation: production still copies via JUCE; native tests use a sink, with no user-facing prose change needed. Existing native screenshot/approved logo paths retained; packaging checks currency without authoring.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -485,13 +485,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79061,
-      "sha256": "c831e6d277bbd04387fc7a36e5769102a81d708ae1470f69c61e76e8096c7e65"
+      "bytes": 79242,
+      "sha256": "415b4b13e35f04db7b90f998fcb714f2a46c10a96caee03bc7fedc2b20d6f031"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9520,
-      "sha256": "f361841181d2ead0c42271afd36b93c4af95501bbd7be605b424af4125dc49d7"
+      "bytes": 9656,
+      "sha256": "13c7e53fb59b5787e799e76ed63dcf96b807fbe68be5e38e7c53cf0efcf643ef"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -510,8 +510,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 11349,
-      "sha256": "2d579e599ee2ec3321ad8c444998edfcba4288bad8a7138c67dc80b1fd989698"
+      "bytes": 11333,
+      "sha256": "aa92d9d67c713f45355f5d79aaead746da16898e71e7aa4a375751177174d8c0"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -935,8 +935,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 24062,
-      "sha256": "d5b13345bf58980f1fef67552f4565d1861aad5d27210e5035b531dc47cb3935"
+      "bytes": 24185,
+      "sha256": "edff69c838d492c9fcf7a8d8f195fdfd8e3724686e66390735ffe240a828b073"
     }
   ]
 }
