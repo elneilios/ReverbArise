@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed owner-approved #68 fixed-slot Perform transport presentation, unchanged host/DSP/state paths, independent unavailable values and full accessibility/context help. Existing guide workflow instructions and illustrative screenshots remain accurate; no new user action, control or prose update is needed.",
+  "summary": "Reviewed canonical sync of the merged, owner-approved #68 stable transport readout. Existing guide prose and illustrative screenshots remain accurate; no workflow, controls or runtime behavior changed. Refresh currency solely for canonical swell-workspace spec sync.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -880,8 +880,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 88269,
-      "sha256": "b7a66f7d56c33cce7b82bff4d86cafe66a08ee5d79ee15a5cdc42dcf0f0dafc0"
+      "bytes": 91413,
+      "sha256": "047d740984db2b92959ec18f4d623b82b38414b9154bc44503945ee98e74e099"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
