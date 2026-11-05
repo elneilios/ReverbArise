@@ -64,6 +64,7 @@ static void snapshotPanel(juce::Component& panel,const juce::String& tag)
     std::cerr<<"Native panel: "<<tag<<'\n';
     auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});
     if(folder.isEmpty() && tag=="live-admission-evidence")folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_LIVE_OUTPUT",{});
+    if(folder.isEmpty() && tag.startsWith("capture-failure"))folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_CAPTURE_OUTPUT",{});
     if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image surface(juce::Image::ARGB,panel.getWidth(),panel.getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(surface);panel.paintEntireComponent(canvas,true);
@@ -104,7 +105,9 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
     if(!learning && !exporting){if(const auto old=geometry.find(key);old!=geometry.end())REQUIRE(old->second==regions);else geometry.emplace(key,regions);}
     else {for(const auto* name:{"swellList","swellTimeline","inspectorViewport","songOverview","auditionWetOnly"})REQUIRE(!visibleOffscreen(named(editor,name)));
         REQUIRE(editor.getLocalBounds().contains(named(editor,exporting?"exportWorkspace":"learnWorkspace")->getBounds()));}
-    const auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});if(folder.isEmpty())return;
+    auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});
+    if(folder.isEmpty() && tag.startsWith("workflow-failed"))folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_CAPTURE_OUTPUT",{});
+    if(folder.isEmpty())return;
     juce::File directory(folder);REQUIRE(directory.createDirectory().wasOk());
     juce::Image image(juce::Image::ARGB,editor.getWidth(),editor.getHeight(),true,juce::SoftwareImageType{});juce::Graphics graphics(image);editor.paintEntireComponent(graphics,true);
     REQUIRE(image.getPixelAt(layout.header.getX()+4,layout.globals.getY())==m3::ui::separator);
@@ -850,6 +853,24 @@ int main(int argc,char* argv[]){return runTest([&]
         processor->holdCaptureWorkerForTesting(false);REQUIRE(processor->flushCaptureForTesting());
         REQUIRE(processor->getWorkflowSnapshot().phase==workflow::Phase::failed);editor.refresh();snapshotEditor(editor,"workflow-failed");
         largeWorkflowSnapshot("workflow-failed");
+        auto openFailureDetails=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openFailureDetails);
+        openFailureDetails->onClick();editor.refresh();
+        auto failureEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticCapture"));REQUIRE(failureEvidence);
+        REQUIRE(failureEvidence->getText().contains("Current failed pass") && failureEvidence->getText().contains("Capture queue filled"));
+        juce::AttributedString failureText(failureEvidence->getText());failureText.setFont(failureEvidence->getFont());
+        juce::TextLayout failureLayout;failureLayout.createLayout(failureText,static_cast<float>(failureEvidence->getWidth()));
+        REQUIRE(failureLayout.getHeight()<=failureEvidence->getHeight());
+        REQUIRE(failureEvidence->getParentComponent()->getLocalBounds().contains(failureEvidence->getBounds()));
+        auto failureViewport=dynamic_cast<juce::Viewport*>(editor.diagnosticsPanel());REQUIRE(failureViewport);
+        failureViewport->setViewPosition(0,failureViewport->getViewedComponent()->getHeight());
+        const auto failureScroll=failureViewport->getViewPosition();REQUIRE(failureScroll.y>0);
+        const auto refreshDeadline=juce::Time::getMillisecondCounter()+250;
+        waitUI([&]{return juce::Time::getMillisecondCounter()>=refreshDeadline;});editor.refresh();
+        REQUIRE(failureViewport->getViewPosition()==failureScroll);
+        failureViewport->setViewPosition(0,0);
+        snapshotPanel(*failureEvidence,"capture-failure-evidence");
+        snapshotPanel(*editor.diagnosticsPanel(),"capture-failure-diagnostics");
+        auto failureWindow=editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>();REQUIRE(failureWindow);failureWindow->closeButtonPressed();
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));editor.refresh();
         REQUIRE(!visibleOffscreen(learning) && editor.timelineComponent().getBounds()==performBounds);
         REQUIRE(editor.timelineComponent().viewport().first==performView.first && editor.timelineComponent().viewport().last==performView.last);

@@ -41,6 +41,29 @@ inline void workspaceNoticeCases()
     REQUIRE(workspaceNotice(flow,capture,editor)->detail==capture.status);
     flow.phase=workflow::Phase::failed;
     REQUIRE(workspaceNotice(flow,capture,editor)->text.startsWith("Capture failed"));
+    {
+        CaptureSessionSnapshot failed;failed.failure.event.reason=CaptureFailureReason::queueFull;failed.failure.event.pass=flow.pass;
+        const auto empty=workspaceNotice(flow,failed,editor);
+        REQUIRE(empty->text.contains("no source accepted") && empty->text.contains("retry"));
+        REQUIRE(empty->detail.contains("queue") && empty->detail.contains("No earlier source"));
+        auto stillRecording=flow;stillRecording.phase=workflow::Phase::recording;
+        REQUIRE(workspaceNotice(stillRecording,failed,editor)->tone==NoticeTone::error);
+        failed.manifest.ranges.push_back({0,64,CaptureCoverageKind::audio});failed.failure.hadCommittedSource=true;
+        const auto retained=workspaceNotice(flow,failed,editor);
+        REQUIRE(retained->text.contains("previous source retained") && retained->detail.contains("Previous source retained"));
+        workflow::Snapshot retry;retry.mode=workflow::Mode::live;retry.pass=flow.pass+1;
+        REQUIRE(!workspaceNotice(retry,failed,{})); // Historical evidence is not a current error.
+        for(const auto width:{1100,1400,1600})
+        {
+            controls::NoticeBar bar;bar.setSize(width-40,controls::NoticeBar::preferredHeight);
+            for(const auto message:{empty,retained})
+            {
+                REQUIRE(bar.display(message));juce::AttributedString line(message->text);line.setFont(fontFor(bar,bodySize));
+                juce::TextLayout layout;layout.createLayout(line,static_cast<float>(bar.getWidth()-46));
+                REQUIRE(layout.getNumLines()==1 && layout.getHeight()<=bar.getHeight());
+            }
+        }
+    }
     flow={workflow::Mode::live};capture={};editor={};
     Swell swell;swell.id="failed-swell";swell.name="Swell Bar 2.1";swell.phase=Phase::error;swell.status="Cannot decode this IR";
     editor.session.swells.push_back(swell);editor.session.primary=swell.id;
