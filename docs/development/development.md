@@ -22,12 +22,18 @@ Use the local wrapper from the repository root in PowerShell:
 ./scripts/build.ps1 -Configuration Debug -Test
 ./scripts/build.ps1 -Configuration Release
 ./scripts/build.ps1 -Configuration Release -Test
+./scripts/build.ps1 -Configuration Release -PluginOnly
 ```
 
 Debug is the default. `-Test` builds first, then runs the full matching CTest
 configuration; zero discovered tests is an error. Build-only success says testing
 was not requested. You can invoke the script by absolute path from any directory,
 including a checkout path containing spaces; the caller's location is restored.
+
+`-PluginOnly` builds `preverb_plugin_VST3` and its dependencies instead of the full
+solution. It cannot be combined with `-Test`, since tests need their executables
+built. The test installer uses plugin-only by default; its `-Test` option retains
+the full build and CTest path.
 
 The wrapper prefers a compatible CMake on PATH with adjacent CTest and otherwise
 discovers Visual Studio 2026's bundled tools. It requires Git and VS C++ tools;
@@ -113,6 +119,10 @@ manual acceptance. See the dated [Issue #19 evidence](../validation/2026-11-02-l
 for actual commands, results and outstanding checks.
 
 ## Local release packages
+
+For a one-command Release build directly into the system VST3 folder, see
+[FL Studio test installation](fl-studio-test-install.md). This local testing helper
+also preserves the previous bundle and supports optional Release CTest.
 
 See [local Windows releases](releases.md) for validated internal ZIPs, checksums,
 source manifests, extraction/FL Studio checks and the separate licensing/publication gate.
