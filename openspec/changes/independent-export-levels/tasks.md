@@ -25,7 +25,7 @@
 
 ## 5. Integration validation and review delivery
 
-- [ ] 5.1 Run scripts/check-ui-standards.ps1 and scripts/build.ps1 -Configuration Debug -Test followed by Release -Test using the wrapper lock and existing warm trees. Resolve failures and record revision, commands, environment, cached/cold status, focused versus full/native/fixture results and skipped coverage once in dated validation evidence.
+- [x] 5.1 Run scripts/check-ui-standards.ps1 and scripts/build.ps1 -Configuration Debug -Test followed by Release -Test using the wrapper lock and existing warm trees. Resolve failures and record revision, commands, environment, cached/cold status, focused versus full/native/fixture results and skipped coverage once in dated validation evidence.
 - [ ] 5.2 Launch integrated native Export preview for final owner acceptance of approved controls and real reference audio states at minimum/larger supported sizes. Consolidate FL Studio testing into one brief pass covering preview, wet-layer versus replacement routing, song-aligned Save/Playlist drag and new-state restore; record actual host/DPI coverage and remaining limitations without repeating passing automated edge cases.
 - [ ] 5.3 Review final scope and diff, commit only #51 work on its issue branch, and open/update one PR linking #51, this change, policy approval, migration notes, test evidence and outstanding limitations. Verify PR targets main and remains open for owner review; do not self-merge, close the issue or archive the change.
 

@@ -64,3 +64,14 @@ Production Export now binds the reviewed selector and both sliders to atomic ses
 - Both build runs reused the existing tree/caches. No cold/warm speedup comparison is claimed. Strict OpenSpec, UI standards (52 files / unchanged 61 bounded occurrences), guide review/currency and whitespace checks pass.
 - Save/drag remains current-revision-only. Engine tests retain original captures/render assets and prior verified WAV histories across edits, restore, cancellation, disk faults and stale completion; actual FL Playlist delivery remains the final owner smoke check.
 - Owner confirmed FL Studio closed for the pending Release/test installation. Release full CTest, system installation, final integrated native/FL acceptance and PR remain pending.
+
+## Release gate and pending installation
+
+Source commit: `bd481756943be42f9579792fb647b74ff7281a1d` on `codex/51-independent-export-levels`. The unrelated #71 planning directory remains untracked and untouched; build summaries report dirty state.
+
+- Initial Release wrapper (`20261105-195616-6c3edfcd`): build passed; **70/71 tests passed, 372.73 s**. `preverb_processor_test` timed out at `tests/LiveProcessorCases.h:69` waiting for explicit regeneration after recapture. No install occurred. The isolated unchanged test then passed in **16.06 s**; no timeout or production code was changed to obtain the pass.
+- Full unchanged Release retry through `install-test-vst3.ps1 -Test` (`20261105-202333-eed9570e`): warm build passed; **71/71 native CTest passed, 469.76 s**, including the previously timed-out processor test. This is a complete passing full suite, with the initial timeout retained as a validation limitation.
+- Installation was then blocked by the helper's second host-closed check: FL Studio had reopened during validation. The installed system bundle was not replaced and no host was stopped. Owner asked to save/close it again; next installation will reuse the passing Release source and tests with the normal plugin-only helper build.
+- Final system install, integrated native/FL acceptance and PR delivery remain pending. Release validation is complete; it is not host acceptance.
+
+Final integrated native Export review is open from a copied Release test executable (process 13756), isolated from DAW/project assets. The [1100x850 native image](2026-11-05-issue-51-export-ready.png) was visually inspected: controls, values, actions and dominant waveform fit; accepted pair and peak warning are visible. Its deliberately hot legacy synthetic render reports +41.27 dBFS and the fixture preview clock is silent; this is warning/layout evidence, not listening material or an installed host result. The earlier generated musical comparison remains the listening reference. Actual host/DPI coverage remains pending.
