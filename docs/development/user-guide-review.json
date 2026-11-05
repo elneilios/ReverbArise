@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed production bindings and canonical specs with approved active changes: Learn capture/generation, manual and live Perform/DAW rendering, optional Export, Settings About generated version/build/full SHA and Copy report. Guide instructions and numeric-version slot match delivered behavior. Re-reviewed clipboard writer isolation: production still copies via JUCE; native tests use a sink, with no user-facing prose change needed. Existing native screenshot/approved logo paths retained; packaging checks currency without authoring.",
+  "summary": "Reviewed PR66 canonical-spec housekeeping against the unchanged production code and existing guide: finite loop audition/Wet only/Live Wet, guarded Learn Generate and Stop policies, first Perform framing, manual swell preparation, capture diagnostics and persistence/navigation. The guide already describes these delivered workflows and retains honest host limits; no prose or screenshot change is required. Explicit authoring review following main integration, separate from packaging.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -785,13 +785,13 @@
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
-      "bytes": 16234,
-      "sha256": "0874e84388493ce91fa2e1708b7b6f0e0a5a96cff841b1298650369d1784297a"
+      "bytes": 17359,
+      "sha256": "2a00638a4f9211d48d554da0cddef902987bc0a9d4e8ebbc8409da11c9103bba"
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
-      "bytes": 21580,
-      "sha256": "028b825c40748da7d75a8aa7b0aa30e66331e395980e0261b1703cd0c56b9fec"
+      "bytes": 33045,
+      "sha256": "bfe99145a0d992c08e7816c5ff5287c5f73c841658f0776a392380873194d16a"
     },
     {
       "path": "openspec/specs/impulse-response-library/spec.md",
@@ -825,8 +825,8 @@
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
-      "bytes": 16981,
-      "sha256": "cb0cc473c56df5f3007accbf378f9c9aeee90518d24be324f117d4c16da251c6"
+      "bytes": 21014,
+      "sha256": "09308b5f59cbcce9c5006da25a341f1914b0229e8c3d7f89992335e237e435bd"
     },
     {
       "path": "openspec/specs/swell-editing/spec.md",
@@ -845,13 +845,13 @@
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
-      "bytes": 16997,
-      "sha256": "2fbe676d6506dcba8b31ad4bdb7c2c833d3ab38463ed9d37f499f98c34e69626"
+      "bytes": 19727,
+      "sha256": "afe7f8697982c762ce979983dbe32359ec00ec605bc6134347e1b94daa390097"
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 62963,
-      "sha256": "1bc2e46fb30f53720c1f3a0515314b2176e31c66540ad65c7996661fe1524c7c"
+      "bytes": 85682,
+      "sha256": "4eb20f16dba409fe4331fc24dbe86be7a6b7a1695423653814ce841b6c3e069e"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -865,8 +865,8 @@
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
-      "bytes": 11357,
-      "sha256": "f1de22dfb262768950e028d0ceab165aa383de1351bf6837b2b2a06d95e23ff3"
+      "bytes": 14179,
+      "sha256": "f779d63c0eb5108a97e50ceb5c62e4f6c5d86a4e1688452c65fc651f69f1b662"
     },
     {
       "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",

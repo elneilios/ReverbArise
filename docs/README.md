@@ -16,6 +16,8 @@ This directory covers product identity, the existing implementation, development
 
 - [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — build-matched offline guide, native screenshot provenance and final main/host gates; [redistribution review](validation/2026-11-04-issue-59-redistribution-review.md) remains pending explicit owner approval.
 
+- [OpenSpec housekeeping audit](validation/2026-11-05-openspec-housekeeping-audit.md) — four merged changes synced/archived, remaining active work and strict-validation length warnings.
+
 - [Manual Perform preparation](development/workflow-modes.md#explicit-manual-preparation-in-perform) — explicit render requests with automatic policies off and honest unavailable timing; [issue #55 evidence](validation/2026-11-04-issue-55-manual-preparation.md) records native results and owner FL Studio acceptance.
 
 - [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
