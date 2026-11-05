@@ -53,7 +53,40 @@ CTest run (**29.99 s**) and five consecutive CTest repeats (**156.45 s**) passed
 The original intermittent assertion has not been explained by a captured failing
 value; instrumentation is retained for the next failure. No tolerance, timeout,
 expected phase or production behavior was relaxed. Final full Debug validation
-is required below before installation.
+passed **71/71** in **538.16 s**, on clean source `02a3a17`
+(`out/build-logs/Debug/20261105-225030-3a48c846`). The source-handle test also
+passed in that full run. Production code is byte-for-byte unchanged from the
+combined Release gate at `4c39b06`; only test failure logging and this evidence
+were added. These are native MSVC/CTest results, not FL Studio acceptance.
+
+UI standards passed (51 files / 61 existing bounded occurrences), user-guide
+currency passed after the recorded semantic review, and both active changes
+passed strict OpenSpec validation. No shared timing tolerance, UI debt inventory
+or generated workflow file changed. Processor regressions verify zero host
+latency; no output-protection experiment was included.
+
+### Installed identity and retained previous bundle
+
+The supported installer rebuilt the Release VST3 target at clean source
+`02a3a1739765c346251af956eaea91336cfb439d`, identifier **v0.1.0-local**.
+The installer's plugin-only build did not rerun CTest; the full gates above
+preceded installation. The first normal attempt built successfully but Windows
+denied opening the system install lock, before replacement. The same script was
+rerun with Windows UAC elevation and returned **0**. Its Release wrapper log is
+`out/build-logs/Release/20261105-230105-a655847b`; transcript and verification are
+retained under ignored `out/issue-73/`.
+
+- Installed: `C:\Program Files\Common Files\VST3\ReverbArise.vst3`
+- Previous bundle: `out/vst3-install-backups/20261105-230112-d9cfe774d7eb42a6bff912bfa2372b9c/ReverbArise.vst3`
+- Installed x64 binary SHA256: `dc53c456aa3cb2f82f2ff2a962c59d9ee8fa6357808bd64eb81ea3f5c36e06af`
+- Independent inventory comparison: all **six installed files** match the built
+  Release bundle; all **six backup files** match the saved pre-install inventory.
+  FL Studio was closed; no host was stopped and no other installation was changed.
+
+The retained backup is inside this worktree's ignored `out` directory: preserve
+it before removing the worktree or its output. Installation does not resolve the
+live timing investigation or imply a new host/DPI acceptance result. No repeat
+of the previously accepted offline bounce is requested absent a fresh failure.
 
 ## Exact capture procedure
 

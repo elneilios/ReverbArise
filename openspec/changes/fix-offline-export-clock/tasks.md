@@ -8,7 +8,7 @@
 ## 2. Integration and local delivery
 
 - [x] 2.1 Run full native Debug and Release wrapper/CTest gates, UI standards and strict OpenSpec validation; record revision, warm sources/fresh build status, actual results and limitations in dated evidence. Inspect the diff for no output-protection or #71 implementation changes.
-- [ ] 2.2 Install this worktree's complete Release bundle through install-test-vst3 with the host closed; verify installed inventory, zero experimental latency and retained previous bundle, record installation evidence and provide one failed-bounce smoke check. Keep all commits local.
+- [x] 2.2 Install this worktree's complete Release bundle through install-test-vst3 with the host closed; verify installed inventory, zero experimental latency and retained previous bundle, record installation evidence and provide one failed-bounce smoke check. Keep all commits local.
 
 ## Workflow follow-up
 
