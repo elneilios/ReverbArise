@@ -1,0 +1,42 @@
+{
+  "gitSha": "7ea715ba08bef612d7389c19ccd90764d91bd02c",
+  "releaseIdentity": "v0.1.0-alpha.rehearsal.3",
+  "capture": {
+    "gitSha": "7ea715ba08bef612d7389c19ccd90764d91bd02c",
+    "command": "Release/preverb_learn_generation_ui_test.exe --guide-only",
+    "executableSha256": "2bdb62863b725bc3b4db069c1a3d6c2f6282ad4f96d4efd541eab9629777d781",
+    "fixture": "Deterministic captured audio; ordinary production editor; readiness assertions passed"
+  },
+  "logo": {
+    "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",
+    "width": 640,
+    "height": 110,
+    "sha256": "987a5bbbd6be7245c6e5c64b03481022103551126b69b9d0372f882ecf34550e"
+  },
+  "images": [
+    {
+      "state": "alpha-empty-learn",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "bff28ea36483581617006df28323ca748c0b0a02c944ee06832f5df9cf80a2eb"
+    },
+    {
+      "state": "alpha-captured-markers",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "fa70e83ec8584283058bf1d443421c57272f5bca0c5eb0f901764f6838638332"
+    },
+    {
+      "state": "alpha-ready-perform",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "53825110d14a4603f335509c8abe805c829bb446fdfa93e37c8250b5d22fcfbd"
+    },
+    {
+      "state": "alpha-ready-export",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "c697560f58fa12e92722db4d3c3a36cada29b3be664d31d6efb78f0e2de60272"
+    }
+  ]
+}

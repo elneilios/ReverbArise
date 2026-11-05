@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.0",
+  "releaseTag": "v0.1.0",
+  "candidate": "alpha.rehearsal.3",
+  "releaseIdentity": "v0.1.0-alpha.rehearsal.3",
+  "gitSha": "7ea715ba08bef612d7389c19ccd90764d91bd02c",
+  "worktreeClean": true,
+  "builtAtUtc": "2026-11-05T01:28:49.7180319Z",
+  "configuration": "Release",
+  "target": "windows-x64",
+  "toolchain": {
+    "generator": "Visual Studio 18 2026",
+    "compiler": "MSVC",
+    "compilerVersion": "19.51.36260.0",
+    "cmake": "cmake version 4.3.1-msvc1"
+  },
+  "artifact": "ReverbArise-v0.1.0-alpha.rehearsal.3-win-x64.zip",
+  "sha256": "3c7cde9de159d127c810f37302075e2779724d1388a7936e7e7abccee6775577",
+  "validation": "build.ps1 Release -Test; verify-version.cmake built checks; x64 PE/file version",
+  "redistribution": "internal-evaluation-only; separate owner licensing review required",
+  "files": [
+    {
+      "path": "guide-provenance.json",
+      "bytes": 1439,
+      "sha256": "ada8dec63db6fbca8ae6d95631257a74ebf575b06bd4b8857ab13af1d884de43"
+    },
+    {
+      "path": "licenses/FLAC-LICENSE.txt",
+      "bytes": 1673,
+      "sha256": "795fc94a10231b177b73d5f65bf07bc86c6313cef367e3e027c42b4736d5a1c1"
+    },
+    {
+      "path": "licenses/HarfBuzz-LICENSE.txt",
+      "bytes": 2013,
+      "sha256": "bd836c0ddca8ea0bab54a03cd32b6ff7256cbb3840fca2edc1249a4ed92c5b02"
+    },
+    {
+      "path": "licenses/JPEG-README.txt",
+      "bytes": 19085,
+      "sha256": "9558ec9e705f74c3e4c0bc0063effd9e1434ac33b6551602c5f1b8fbdb00fa49"
+    },
+    {
+      "path": "licenses/JUCE-LICENSE.md",
+      "bytes": 2771,
+      "sha256": "6a2be1b029793e470baeae77b43856326bff654c89c3ab387a641e68242aa847"
+    },
+    {
+      "path": "licenses/JUCE.spdx.json",
+      "bytes": 78461,
+      "sha256": "5518e3db7131555793eadebd856a4517bc25ab82d61214cfa987aa0db1529cbe"
+    },
+    {
+      "path": "licenses/libpng-LICENSE.txt",
+      "bytes": 5479,
+      "sha256": "452390433ba0f88aa3e2b122c647741b72a0c117cd6ed7a329b49785aecb5511"
+    },
+    {
+      "path": "licenses/Ogg-LICENSE.txt",
+      "bytes": 1498,
+      "sha256": "1300208dc709bce1f7b1bf5295acb4df8eca42a67a301ce4317c9b901560092a"
+    },
+    {
+      "path": "licenses/Opus-LICENSE.txt",
+      "bytes": 1989,
+      "sha256": "cbd8bd07329a234413710c02b19d22c0cf78fc451882593e817130779b5455e3"
+    },
+    {
+      "path": "licenses/Opusenc-LICENSE.txt",
+      "bytes": 1551,
+      "sha256": "e9022ab951be6db1b445ad264743395fb3bdbf866e885aad26138e8359229894"
+    },
+    {
+      "path": "licenses/Opusfile-LICENSE.txt",
+      "bytes": 1515,
+      "sha256": "54e125c8250361407b34322e0f328f6bdf7fd30cd4f2941a321e47b41f9c159d"
+    },
+    {
+      "path": "licenses/Original-Hall-provenance.md",
+      "bytes": 1632,
+      "sha256": "6b6d615b142200fb39d9fdffac543153ca014c190f061abd0902523c4ce9dbf3"
+    },
+    {
+      "path": "licenses/Vorbis-LICENSE.txt",
+      "bytes": 1498,
+      "sha256": "1300208dc709bce1f7b1bf5295acb4df8eca42a67a301ce4317c9b901560092a"
+    },
+    {
+      "path": "licenses/VST3-SDK-LICENSE.txt",
+      "bytes": 1280,
+      "sha256": "bcefe3f3928dbc395deed6100b2e7dc74672a88c10e67a7803689961e30316a9"
+    },
+    {
+      "path": "licenses/zlib-LICENSE.txt",
+      "bytes": 1024,
+      "sha256": "439c75ab12b340c5362b9d4b08ff05ec3a4d0eb7667a6fff49a9b16d8795c78e"
+    },
+    {
+      "path": "README.txt",
+      "bytes": 1808,
+      "sha256": "363d5d8e6543be25145f47047fdcae95f4b047f915d7b142b23987fcf6479ac0"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/Resources/Inter-OFL.txt",
+      "bytes": 4472,
+      "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/Resources/IR-LICENSE.md",
+      "bytes": 939,
+      "sha256": "1e262c8167a9162a4f14890ed930a388e878850f8800f8accba80fb8e127babe"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/Resources/IR-manifest.json",
+      "bytes": 16788,
+      "sha256": "7d78ef0fc2d6012922f50fbd7fb0dd22fdfb1abaa673aefe02e1061d78ae786a"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/Resources/moduleinfo.json",
+      "bytes": 1066,
+      "sha256": "3060d916fd6c406a201a2824b66e02556a9000b10c4b223370e8f03db9d6c8b1"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/Resources/WavPack-LICENSE.txt",
+      "bytes": 1586,
+      "sha256": "66182c49c182998173188b0431d4de653274c9f43d391a3ef2489c69952b1a6a"
+    },
+    {
+      "path": "ReverbArise.vst3/Contents/x86_64-win/ReverbArise.vst3",
+      "bytes": 18967040,
+      "sha256": "150e5fabcedcda49cd5dce9af25c48b53dc83fabe7566188cbec908120c3bd1f"
+    },
+    {
+      "path": "User-Guide.html",
+      "bytes": 555785,
+      "sha256": "fc459b4e568e92fa8f17720c7c66c2ef0a542fbe40df0ffc7f6409158bc0a642"
+    }
+  ]
+}
