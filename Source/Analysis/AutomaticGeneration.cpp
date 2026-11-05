@@ -1,4 +1,5 @@
 #include "AutomaticGeneration.h"
+#include <Core/RenderDependency.h>
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -149,7 +150,7 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         juce::String dependency;
         if(!fingerprint(w->sourceStart,renderInputEnd(*w),dependency,error))return fail(error);
         if(stop()){plan.outcome=GenerationOutcome::cancelled;return plan;}
-        const auto previous=old?(old->generationSource.isEmpty()?(old->render.present()?old->render.dependency:juce::String{}):old->generationSource):juce::String{};
+        const auto previous=old?(old->generationSource.isEmpty()?(old->render.present()?renderSourceDependency(old->render.dependency):juce::String{}):old->generationSource):juce::String{};
         const auto changed=!old || !sameDefinition(*old,*w) || dependency!=previous;
         w->generationSource=dependency;
         if(changed)

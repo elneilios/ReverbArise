@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed synced implemented canonical packaging and build-identity requirements against delivered guide/code: explicit currency gate, embedded native images/provenance, honest owner acceptance/private-sharing records, generated About identity/reset and copied visible confirmation. Guide already covers delivered musician workflows and Copy confirmation; archive/merge/main verification ordering is developer procedure only. Owner offline alpha.1 guide pass is recorded; no prose or screenshot change needed after semantic sync.",
+  "summary": "Reviewed the source-edge canonical spec sync and archive after merged PR 76. The guide already documents taper adoption, Regenerate all/selected, capture preservation and frozen behavior; no prose or screenshot change needed. Recorded canonical-spec hash updates only.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 25880,
-      "sha256": "7ab15806df77dfe23dfe1ade7bbd32b3d59182816a8b07b1915e56caaf3312c1"
+      "bytes": 26148,
+      "sha256": "2eb47d5fa8c58e760de56c4ca39b3aaa89dee40a1c3b46d52ec98aa358e4c987"
     },
     {
       "path": "CMakePresets.json",
@@ -20,8 +20,8 @@
     },
     {
       "path": "Source/Analysis/AutomaticGeneration.cpp",
-      "bytes": 10407,
-      "sha256": "0539e3e08d70181a48fc3fdf3fbe2eec5de056db7dee6ae44538daa256de2d6f"
+      "bytes": 10466,
+      "sha256": "670a197e3083e48abb62d57ef1231ac9fac0e114c7376ab037801efa141b93ef"
     },
     {
       "path": "Source/Analysis/AutomaticGeneration.h",
@@ -244,6 +244,11 @@
       "sha256": "bd63df184004cac1bee617efd4f0b03bc71d95e2dd2f892e9b8e90e389f68f9f"
     },
     {
+      "path": "Source/Core/RenderDependency.h",
+      "bytes": 454,
+      "sha256": "63d4f2f5971f80bee7cdd1605f465b80745d9282478306a05d7cb4e970942924"
+    },
+    {
       "path": "Source/Core/SongTime.h",
       "bytes": 2103,
       "sha256": "d8aa9ac292f38610a3ee8470710a56926c7e693dbe9f770a1a649c31d543e137"
@@ -379,6 +384,16 @@
       "sha256": "686cd7a943b425c48e053befb875fed7c5030806509ba0672f5410944df60a29"
     },
     {
+      "path": "Source/DSP/SourceEdgeConditioning.cpp",
+      "bytes": 1155,
+      "sha256": "4d1e73746aa44b53198c60421d2b2441c3d1b60dc144b538d21e653eee09868f"
+    },
+    {
+      "path": "Source/DSP/SourceEdgeConditioning.h",
+      "bytes": 417,
+      "sha256": "61d290ccf9bd2ed3d86ae2486582698bc7cb106edca723e8c49641d66333d953"
+    },
+    {
       "path": "Source/DSP/SwellAssetStore.cpp",
       "bytes": 8979,
       "sha256": "6f93547413868e4063b3d2fa4543cfd174e88e3ded5c32b9048bbaebff6c2ca1"
@@ -390,8 +405,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 80357,
-      "sha256": "48d527df8caac02446965dc4e57d75712753053123af821ae6b8866a19077622"
+      "bytes": 80800,
+      "sha256": "fd11b045c24b197c0a0a2e38555035c073fcbcdd07ac2f9cd2d79fcc7b3fdcba"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -760,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 14734,
-      "sha256": "5786ac7e207723881ef09ec5c0aec29ae8a3e92ec0720a964d1680e2a2892841"
+      "bytes": 15296,
+      "sha256": "059284c618a59c86488b4b2cbcd0084911725f3ece71638692d4c7f2add88566"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -820,8 +835,8 @@
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 19610,
-      "sha256": "f0ef285b5c096414922f224bb73306d7f2b167a89931aeed12057638ba5a3dd7"
+      "bytes": 20641,
+      "sha256": "32828a6c73642a59690f919a099e112abc9f434bdb5a017eb4fcaf43b2b79c1d"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
@@ -845,8 +860,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 5670,
-      "sha256": "ba3322ab20f76e5630e276c69802f80a80e968e58f634d6530ad68d3da843fe7"
+      "bytes": 6917,
+      "sha256": "400d6afd3fb154cf2d764e01af6fbbe0b0c284135b697b4792ef823531af6d50"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",

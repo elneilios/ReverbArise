@@ -6,6 +6,17 @@ Generate a complete, precisely positioned reverse-reverb result from a committed
 
 ## Requirements
 
+### Requirement: Wet generation conditions source cut edges
+New wet renders SHALL apply linked 1 ms raised-cosine ramps to a private source copy before convolution. Capture PCM, dry playback/reference samples, source coordinates and IR gain SHALL remain unchanged. Ramps SHALL shorten for small inputs without overlapping; inputs under four frames SHALL remain unchanged. This processing SHALL add no host latency or output limiting.
+
+#### Scenario: Nonzero source cuts through a transient
+- **WHEN** a stereo source with nonzero cut boundaries is generated
+- **THEN** both channels receive the same edge gains, first and last samples reach zero for inputs of at least four frames, and samples outside the ramps remain unchanged
+
+#### Scenario: Short or silent source
+- **WHEN** an input is shorter than two nominal ramps or contains silence
+- **THEN** generation remains finite, preserves its frame count and coordinates, shortens nonoverlapping ramps, and preserves silence
+
 ### Requirement: Impulse responses have defined preparation
 The system SHALL accept non-empty mono or stereo WAV and lossless WavPack PCM/float impulse responses, convert them to the source capture sample rate, and retain their leading silence and gain. Mono IRs SHALL apply independently to both source channels; stereo IRs SHALL apply left to left and right to right without crossfeed. Unsupported, unreadable, or non-finite inputs SHALL report an error.
 
@@ -73,7 +84,7 @@ The system SHALL render from one identified committed capture revision, preservi
 - **THEN** the running render remains internally consistent with its accepted revision
 
 ### Requirement: Reverse convolution retains exact length and alignment
-For a source of N frames starting at absolute sample P and a prepared IR of M frames, the system SHALL produce the full linear convolution of the source with the reversed IR, with N + M - 1 frames starting at P - (M - 1). It SHALL retain every output sample, including negative-time lead-in, without automatic trimming, normalization, limiting, or fading.
+For a source of N frames starting at absolute sample P and a prepared IR of M frames, the system SHALL produce the full linear convolution of the edge-conditioned wet source with the reversed IR, with N + M - 1 frames starting at P - (M - 1). It SHALL retain every output sample, including negative-time lead-in, without automatic output trimming, normalization, limiting, or fading.
 
 #### Scenario: Leading output before song start
 - **GIVEN** the source begins at song sample zero and the prepared IR has more than one frame
@@ -82,7 +93,7 @@ For a source of N frames starting at absolute sample P and a prepared IR of M fr
 
 #### Scenario: Full tail and numerical reference
 - **WHEN** asymmetric synthetic sources and IRs are rendered, including lengths that cross processing boundaries
-- **THEN** every result sample matches independent direct convolution within the documented numerical tolerance, with no missing final samples or unreported latency shift
+- **THEN** every result sample matches independent direct convolution of the conditioned source within the documented numerical tolerance, with no missing final samples or unreported latency shift
 
 ### Requirement: Generation is asynchronous and publishes complete results
 The plugin SHALL automatically prepare eligible swells and retain Load IR and diagnostic Generate recovery controls with honest loading, progress, ready, stale and error states. Source reading, IR preparation and convolution SHALL run outside the callback. Only a complete result for current dependencies SHALL become ready; superseded, failed or cancelled work SHALL not replace it.

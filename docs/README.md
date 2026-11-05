@@ -12,7 +12,9 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native delivery, paired-port setup and measured offline freshness failure; connector work is parked. The [input-activity follow-up](validation/2026-11-05-issue-1-input-activity.md) tests silence/hold policies against reverse lead-ins. The [JUCE API audit](validation/2026-11-05-issue-1-juce-disarm-audit.md) and [executed native host-signal spike](validation/2026-11-05-issue-1-host-signal-probe.md) found no reliable upstream-mute discriminator: owner FL tests retained tone under Playlist/instrument mute, while mixer/effect mute suppressed it. Production changes require a separate OpenSpec proposal.
+- [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
+
+- [Swell source-edge conditioning](development/swell-source-edges.md) — 1 ms wet-source tapers, explicit saved-render upgrades and capture preservation.
 
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 

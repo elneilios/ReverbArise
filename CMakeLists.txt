@@ -64,7 +64,7 @@ add_library(preverb_playback STATIC
 )
 target_include_directories(preverb_playback PUBLIC Source)
 
-add_library(preverb_dsp STATIC Source/DSP/ReverseConvolution.cpp Source/DSP/WavPackDecoder.cpp)
+add_library(preverb_dsp STATIC Source/DSP/ReverseConvolution.cpp Source/DSP/SourceEdgeConditioning.cpp Source/DSP/WavPackDecoder.cpp)
 target_include_directories(preverb_dsp PUBLIC Source)
 target_link_libraries(preverb_dsp PUBLIC juce::juce_dsp juce::juce_audio_formats PRIVATE WavPack::WavPack)
 
@@ -157,6 +157,9 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
+    target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
+    add_test(NAME preverb_source_edges_test COMMAND preverb_source_edges_test)
     add_executable(preverb_host_grid_test tests/host_grid_test.cpp)
     target_include_directories(preverb_host_grid_test PRIVATE Source)
     add_test(NAME preverb_host_grid_test COMMAND preverb_host_grid_test)
