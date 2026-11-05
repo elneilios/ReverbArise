@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed final issue 73 diagnostics and approved active specs: explicit grid reasons/input availability, separate run and source deltas, bounded first-rejection history and read-only presentation. Troubleshooting describes preserving assets and build identification. No admission, snapping, saved-state, audio, shared-control or workspace-screenshot behavior changed; host transition and DPI coverage remain unverified.",
+  "summary": "Reviewed final issue 73 bindings and active diagnostic specs. Timing troubleshooting has its own heading, explains separate grid/live evidence, preserves projects/assets and requests actual build identity. Missing inputs remain unavailable; strict timing, audio, saved state, controls and existing workspace screenshots remain unchanged. FL Studio transition and DPI coverage are not claimed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16692,
-      "sha256": "96d513c07d11381dc7f50b5a15416f913c75678d048ab21e6a03e2ddd6a4d544"
+      "bytes": 16729,
+      "sha256": "e277702eb92a14a9ab5619292cf5375b393221385ad627d098b7a7de1be3549d"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

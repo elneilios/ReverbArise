@@ -27,6 +27,28 @@ fingerprints for those host observations are unavailable here; do not infer them
 from names or a later installed build. No project/assets are modified to recover
 that information. Injected native fixtures use synthetic audio and own identities.
 
+Recoverable identities from the **later successful export/audio-analysis corpus**
+are retained in `a5b36d2:docs/validation/2026-11-05-swell-source-boundaries.json`:
+
+- Project `e0b58807-34a6-4f2d-8875-d09940a821a2`, instance
+  `258e886e-e054-48d4-897c-a37aacf4f039`.
+- Managed IR content
+  `074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4`;
+  supplied IR file SHA256
+  `1189c7079d065a999ae4d3f2041d18508b0263ddeb233fe600e395ecffd845d4`.
+- Direct wet export SHA256
+  `d557064ce88f308b8e57111c49163788615e7e4344c6eea734102d87791f2790`;
+  DAW processed bounce SHA256
+  `8e6609272fb8e6263aa58c30f2bcaf647ee6afdb1a6dc3660445f1433bd5879a`.
+
+That analysis matched four managed renders to source-window convolution, including
+the [3752880,3776487) window, without changing assets. These identities identify
+the later corpus, not the original Snap-only callback or a complete manifest of
+source/render fingerprints at that earlier instant. Its 28-sample comparison
+registration is not proof of absolute Song alignment or plugin latency and is
+not used as this investigation's live/offline sample oracle. Clipping/source-edge
+analysis and processing remain separate.
+
 ## Existing offline repair and integration status
 
 Local branch `codex/fix-offline-export-clock` retains implementation `1532f37`,
@@ -128,6 +150,13 @@ larger-size component checks run in that suite. This is native component evidenc
 not Windows DPI or FL Studio acceptance. Later format precision/state assertions
 and final source edits require the final wrapper gates recorded below.
 
+The final-source Release CTest UI case passed in **10.02 s** in run
+`20261105-203735-6a2951f5`, built from implementation `2e9bc9d`. It includes the
+explicit parsed negative-16 run delta alongside displayed near-zero publication
+delta, first/predecessor block identities, unavailable evidence, full accessible
+text and serialized-state invariance. The formatter's new shadowing warning was
+removed before this final-source build. No new style/control family was added.
+
 ## Causal interpretation and remaining host question
 
 The recorded +16-sample source-to-host difference explains why the accepted
@@ -198,3 +227,61 @@ Release and fresh Debug gates on the settled source are still required below.
 No speed comparison is claimed. The full CTest matrix includes native C++ tests
 and separately named PowerShell/CMake fixture/check gates; those fixture checks
 do not substitute for the native grid, transport, processor and UI regressions.
+Specifically, 65 registered checks invoke native C++ executables; six invoke
+PowerShell/CMake: UI standards check, UI lint fixtures, version-contract fixtures,
+build-information fixtures, guide-currency fixtures and built-version verification.
+All six passed in the final Release gate; unchanged build/installer mock scripts
+outside this registered matrix were not additionally rerun.
+
+Final `scripts/build.ps1 -Configuration Release -Test`: configure/build/test
+exited 0, **71/71 passed**, CTest **204.71 s**, from clean implementation
+`2e9bc9ded95d6142adc9228b72dcad3390b9879f` at configure time. Later task/evidence
+updates do not change that implementation. This was an incremental warm Release
+build; logs `out/build-logs/Release/20261105-203735-6a2951f5/`. Object timestamps
+confirmed final processor/UI/editor sources were rebuilt after their last edits.
+The native processor case passed in 11.70 s, transport in 0.03 s and UI in 10.02 s.
+Explicit saved-swell equality now passes alongside positioned nonzero audio,
+source identity, irregular partitions, existing restore/seek/loop and instance
+isolation checks. No failing test was waived or hidden with a tolerance change.
+
+Final `scripts/build.ps1 -Configuration Debug -Test`: configure/build/test
+exited 0, **71/71 passed**, CTest **506.60 s**, implementation `2e9bc9d` with
+documentation/task-only dirty state. Logs:
+`out/build-logs/Debug/20261105-204207-1e50fb7d/`. Dependency/configure caches were
+warm, while Debug binaries were freshly compiled. The same 65 native executable
+invocations and six separate script/check invocations passed. These timings are
+configuration/scope-specific measurements, not a speedup claim.
+
+Final source audit: `git diff 2e9bc9d -- Source tests CMakeLists.txt` is empty.
+Compared with planning baseline `5390da5`, the shared mapping helper, live clock,
+offline transport, convolution, saved-session implementation, OpenSpec config
+and generated skills remain unchanged. Production changes are the equivalent
+grid result/explanation path and bounded diagnostic observations/bindings. No
+host assets were cleared, recaptured, regenerated or migrated; no installation,
+push, PR, canonical-spec sync or archive was performed. All tracked investigation
+tasks are ready for local review; #73's actual host transition and any behavioral
+repair remain separate follow-up work.
+
+## Requirement evidence matrix
+
+All passes below are final-source native Release checks, not new host acceptance.
+
+| Delta scenario | Evidence |
+| --- | --- |
+| Stable source/playing origin offset | Transport replay admits resident wet using its own run; informational source delta remains distinct |
+| Recorded run origin changes | Exact supplied tuples reject with approximately -16 run delta; UI parses signed text despite near-zero publication delta |
+| Later symptoms cannot replace first cause | Repeated rejection, loop context, invalid timing and Stop preserve first/predecessor block IDs |
+| New run and unavailable predecessor | Stop/Play, reset/session transitions, no-publication failure and independent history verify identity/availability |
+| Inspect without changing project | UI serialized session/capture/render checks, processor saved-swell/source checks and allocation/retirement stress |
+| Playback offset disables accepted grid | Grid reason tests +16/-31/zero and unchanged one-sample guard; native editor moves to grid-origin rejection |
+| Stop restores grid compatibility | Editor returns to available grid with separate stopped callback evidence |
+| Other grid prerequisites | Integer-oracle grid tests cover absent/nonfinite input, capture/host rate, tempo/meter, division and overflow |
+| UI/callback provenance differs | Exact timeline evidence binding and explicit UI/independent-callback labels; no simultaneous-callback claim |
+| Read grid detail without editing | Native full accessible text, normal font, glyph width/scroll bounds and existing exact-entry/bypass/stale-gesture suites |
+
+`maintain-user-guide` semantic review added timing troubleshooting without changing
+workspace screenshots or controls. Explicit review was recorded with
+`scripts/review-user-guide.ps1`; `scripts/check-user-guide.ps1` passed read-only.
+UI standards passed **51 files / 61 existing bounded occurrences**, with debt
+inventory unchanged. Strict OpenSpec and whitespace checks passed. Canonical
+specs were not synced; approved deltas govern the delivered diagnostic additions.
