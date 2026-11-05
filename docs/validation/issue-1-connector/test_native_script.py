@@ -1,6 +1,5 @@
 """Script wiring checks supporting the real native receiver; not host delivery evidence."""
 import importlib
-import os
 from pathlib import Path
 import sys
 import unittest
@@ -14,9 +13,16 @@ class NativeScriptTest(unittest.TestCase):
         namespace = {"__name__": "fl_script_probe"}
         source = Path(script.__file__).read_text(encoding="utf-8")
         exec(compile(source, "<FL script>", "exec"), namespace)
-        expected = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
-                                "ReverbAriseContextProbe", "evidence")
-        self.assertEqual(namespace["EVIDENCE_DIRECTORY"], expected)
+        self.assertTrue(callable(namespace["OnInit"]))
+
+    def test_startup_does_not_need_filesystem(self):
+        module = importlib.reload(script)
+        with patch("builtins.open", side_effect=AssertionError("FL file access unavailable")), \
+             patch.object(module, "_discover"), patch.object(module, "_update"):
+            module.OnInit()
+            module._record("refresh", flags=256)
+            module.DumpEvidence()
+            self.assertEqual(module._rows, [])
 
     def test_refresh_mode_change_prompt_heartbeat_and_separate_discovery(self):
         module = importlib.reload(script)

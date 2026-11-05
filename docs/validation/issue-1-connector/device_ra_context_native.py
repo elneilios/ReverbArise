@@ -2,8 +2,6 @@
 """Disposable native spike. Assign explicitly to a test MIDI input; never production.
 No MIDI handlers are overridden. Script discovery does not activate a device.
 """
-import csv
-import os
 import sys
 import time
 
@@ -11,10 +9,8 @@ TARGET = "ReverbArise FL Context Probe"
 PARAMS = ("RA Probe Context v1", "RA Probe Audio Ack v1",
           "RA Probe Query Clock v1", "RA Probe Write Clock v1")
 MAX_WORD = 0xFFFFFF
-# FL executes scripts as strings and does not necessarily define __file__.
-# Use a process-independent owned location, not FL's working directory.
-EVIDENCE_DIRECTORY = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
-                                  "ReverbAriseContextProbe", "evidence")
+# FL's embedded runtime rejects mkdir on this host. No filesystem access here:
+# native receiver owns automatic CSV logging; script evidence stays in memory.
 _targets = []
 _sequence = 0
 _last_mode = None
@@ -24,11 +20,16 @@ _paused = False
 _sending = False
 _rows = []
 _dropped = 0
-_log_file = None
+_last_summary = -1.0
+_event_counts = {}
+_refresh_counts = {}
 
 
 def _record(event, flags=0, track=-1, slot=-1, seq=0, mode=-1, ack=-1, detail=""):
     global _dropped
+    _event_counts[event] = _event_counts.get(event, 0) + 1
+    if event == "refresh" and (flags in _refresh_counts or len(_refresh_counts) < 64):
+        _refresh_counts[flags] = _refresh_counts.get(flags, 0) + 1
     if len(_rows) < 4096:
         _rows.append((time.perf_counter(), event, flags, track, slot, seq, mode, ack, detail))
     else:
@@ -36,11 +37,21 @@ def _record(event, flags=0, track=-1, slot=-1, seq=0, mode=-1, ack=-1, detail=""
 
 
 def _flush():
+    global _last_summary
+    now = time.perf_counter()
+    if now - _last_summary >= 5:
+        print("RA stats", _event_counts, "refresh flags", _refresh_counts, "dropped rows", _dropped)
+        _last_summary = now
+
+
+def DumpEvidence():
+    """Print bounded in-memory evidence to Script Output, without file operations."""
     global _rows
-    if _log_file and _rows:
-        with open(_log_file, "a", newline="") as output:
-            csv.writer(output).writerows(_rows)
-        _rows = []
+    print("RA_EVIDENCE_BEGIN qpc,event,flags,track,slot,sequence,mode,ack,detail")
+    for row in _rows:
+        print("RA_EVENT", repr(row))
+    print("RA_EVIDENCE_END dropped", _dropped)
+    _rows = []
 
 
 def _identify(track, slot):
@@ -136,17 +147,16 @@ def _update(event, flags=0, force_unknown=False):
 
 
 def OnInit():
-    global _paused, _log_file, _last_mode, _last_send, _last_discovery
+    global _paused, _last_mode, _last_send, _last_discovery
     _paused, _last_mode, _last_send, _last_discovery = False, None, -1.0, -1.0
-    os.makedirs(EVIDENCE_DIRECTORY, exist_ok=True)
-    _log_file = os.path.join(EVIDENCE_DIRECTORY, "script-%d.csv" % time.time_ns())
-    with open(_log_file, "w", newline="") as output:
-        csv.writer(output).writerow(("qpc_seconds", "event", "flags", "track", "slot", "sequence", "mode", "ack_readback", "detail"))
     _discover()
     _update("init", force_unknown=True)
     _flush()
-    print("RA native probe init OK; log:", _log_file, "Python:", sys.version,
-          "clock:", time.get_clock_info("perf_counter"))
+    print("RA native probe init OK; script evidence: Script Output / memory; Python:", sys.version)
+    try:
+        print("RA clock:", time.get_clock_info("perf_counter"))
+    except Exception as error:
+        print("RA clock description unavailable:", str(error))
 
 
 def OnIdle():
@@ -183,3 +193,4 @@ def OnDeInit():
     _update("deinit", force_unknown=True)
     _record("shutdown", detail="dropped-script-rows=%d" % _dropped)
     _flush()
+    DumpEvidence()
