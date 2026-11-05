@@ -18,7 +18,7 @@ Owner review supersedes the original span-preserving plan: explicit list selecti
 - [x] 3.1 Run scripts/build.ps1 -Configuration Debug -Test, scripts/check-ui-standards.ps1 and strict OpenSpec validation; record exact revision/environment, native MSVC/CTest results, cached versus cold builds and separately scoped host/DPI coverage in dated validation evidence.
 - [x] 3.2 Launch the revised integrated native Perform preview directly, preserving any active review until the owner finishes; record explicit owner navigation-feel acceptance of automatic complete-region Fit before claiming approval, with separate approval required for any new material family/style exception before wider rollout.
 - [x] 3.3 Complete one brief manual native Perform smoke for automatic list Fit, re-click after pan/zoom and Fit equivalence after automated checks; record native and actual FL Studio outcomes separately without asking the owner to repeat passing automated edge cases.
-- [ ] 3.4 Commit the implementation on the issue branch and open or update one PR targeting main with Closes #93, the owner-approved change to the original issue requirement, OpenSpec link, reused controls, test evidence and remaining gaps; verify the PR stays open for owner review with no main push or self-merge.
+- [x] 3.4 Commit the implementation on the issue branch and open or update one PR targeting main with Closes #93, the owner-approved change to the original issue requirement, OpenSpec link, reused controls, test evidence and remaining gaps; verify the PR stays open for owner review with no main push or self-merge.
 
 ## Workflow follow-up
 
