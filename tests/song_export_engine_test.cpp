@@ -61,7 +61,7 @@ int main(){return runTest([]{
     engine.holdExportForTesting(true);auto editAt=*engine.snapshot().songExport.cursor;
     REQUIRE(engine.setExportLevels(1,.25f,engine.assignmentEpoch()));
     waitFor([&]{return engine.exportWaitingForTesting();});
-    for(int block=0;block<100;++block){if(block==25)REQUIRE(engine.setExportLevels(.65f,1,engine.assignmentEpoch()));
+    for(int block=0;block<550;++block){if(block==25)REQUIRE(engine.setExportLevels(.65f,1,engine.assignmentEpoch()));
         if(block==50)REQUIRE(engine.setExportLevels(1,.5f,engine.assignmentEpoch()));
         editBlock();editAt+=127;const auto snap=engine.snapshot().songExport;
         REQUIRE(snap.cursor==editAt && snap.previewRequested && !snap.prepared);
