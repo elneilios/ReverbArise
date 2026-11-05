@@ -80,7 +80,7 @@ Exact nonzero audible bounds and bounded dry/wet peak bins come from the final
 transparent composition; there is no quiet-tail threshold. One shared reference
 scale is used for both visual layers. Export does not consume Perform trim,
 isolation or live wet level. The existing serialized Swell worker owns preparation and publication; combined
-budget stress and final callback integration validation remain pending.
+budget and callback integration are covered by the native issue #51 regressions.
 
 Float32 stereo WAV writing streams from the same measured kernel. Verification
 checks finite decoded samples, rate/channels/length and cancellable SHA-256 before

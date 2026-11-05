@@ -113,7 +113,7 @@ Final focused and Debug/Release results follow below when completed. All builds 
 
 `4683f01` production source; warm Debug build-only `20261105-220642-c3dd1b63` passed. The focused native CTest expression `^preverb_(song_export|song_export_engine|export_voice|workflow_processor|swell_ui|processor)_test$` passed 6/6 in 114.74 s. Individual results: workflow 3.26 s, voice 3.03 s, engine 12.34 s, mixer 23.17 s, UI 19.03 s, processor 53.67 s. Copy of CTest's result log: `out/issue51-followup-focused-debug.log`.
 
-The stack-local mixer test crash is resolved by heap ownership. The processor resource assertion passed on current code without a deadline change; the earlier failure remains recorded, and this isolated result is not a replacement for the pending full-suite gates. Production Source/CMake is unchanged after `4683f01`; task/evidence edits do not change that claim. UI standards, strict change validation and explicit user-guide review/currency pass. Task 6.1–6.4 completion was guarded against the CLI task locations and each completion confirmed by a fresh Apply instruction query (16/20 complete).
+The stack-local mixer test crash is resolved by heap ownership. The processor resource assertion passed on current code without a deadline change; the earlier failure remains recorded, and this isolated result is not a replacement for the pending full-suite gates. At this focused run, production Source/CMake matched `4683f01`; subsequent replay-status, endpoint and accepted-main integration changes are recorded below. UI standards, strict change validation and explicit user-guide review/currency pass. Task 6.1–6.4 completion was guarded against the CLI task locations and each completion confirmed by a fresh Apply instruction query (16/20 complete).
 
 Debug `20261105-221405-c300dfb5` built successfully and passed through test 37 before being explicitly superseded/stopped for the replay-status correction (not a full pass). On retrying a ready preview, Play now clears a prior worker preview-failure message. Concurrent CTest jobs were observed in two other Codex worktrees; they were left untouched. This is a shared-machine timing condition, not evidence of the earlier timeout's cause. Only this checkout's CTest and its identified child were stopped.
 
@@ -142,3 +142,29 @@ Owner selected: keep the newly installed issue #73 diagnostics/offline-export bu
 
 
 Endpoint-refined `c7d80bd` passed full Debug 71/71 in 470.99 s (`20261105-230615-9515ed81`). The exact-target native regression passed for dry and wet, and guarded Apply refresh restored task 6.3 (16/20). During validation main advanced to `d984966` with owner-approved #68 transport readout and #93 selection Fit. A read-only merge check found only the generated guide-review conflict, with no DSP changes from those main updates. Integrating that accepted main before final native gates; pending #58 geometry remains excluded.
+
+
+Integrated main at `18e96aa`; guide review and UI standards passed (54 files, 60 bounded occurrences; accepted main manually removes one retired font debt entry, no inventory regeneration). Warm builds use `CMAKE_BUILD_PARALLEL_LEVEL=4`. Debug `20261105-231826-85f73910` built and completed 71/72 in 470.43 s. The sole failure was `PerformKnobResetCases.h:53`: native reset popup missing, enabled/showing true, gain correctly -7, dial 782 511 42 42, viewport 780 154 304 460. The unchanged `preverb_perform_knob_reset_test` immediately passed in isolation (5.01 s), log `out/issue51-popup-retry-debug.log`. No assertion/deadline or product code was changed to obtain the pass. Full Debug retry remains required; installation hold remains in force.
+
+
+Final integrated Debug retry `20261105-233033-4cf17ebe` passed 72/72 in 479.73 s at `18e96aa`, without product/test changes after the prior popup failure. Owner subsequently reported diagnostics finished and authorized proceeding with the #51 build; the installation hold is released. FL Studio was detected closed before the final Release wrapper started. The earlier diagnostics-installation hold remains historical evidence, not a current block.
+
+
+### Final integrated gates and native preview
+
+Final Release `20261105-233937-55bf3c07` passed 72/72 in 206.25 s at production `18e96aa`; Debug retry passed 72/72 in 479.73 s as recorded above. Both use the integrated owner-approved main and exact ramp endpoint. Guide currency, UI standards (54/60), strict change validation and diff checks passed afterward. No compiler/assertion/deadline change was used to mask prior failures.
+
+The copied Release native review is open (PID 66980, title ReverbArise control review), isolated from DAW projects and using a silent fixture clock. The [1100x850 follow-up image](2026-11-05-issue-51-followup-export-ready.png) was visually checked; controls, song-time readout, actions and waveform fit. The synthetic legacy fixture peak of +41.27 dBFS is layout/warning evidence, not listening/host acceptance. The window remains open for the owner. Guarded Apply completion/refresh confirmed 6.5 and 6.6 (18/20). Actual final FL speech/continuity acceptance remains pending; prior preset/alignment/save-reopen acceptance is retained.
+
+
+### Verified final FL test installation
+
+Owner released the diagnostics hold. The supported elevated installer completed with exit 0; warm plugin-only Release build `20261105-235025-14fb2cca` passed at `18e96aa`. CTest was not repeated during installation; the preceding final full Debug and Release both passed 72/72. No production source changed between those gates and installation.
+
+- Installed complete bundle: `C:\Program Files\Common Files\VST3\ReverbArise.vst3`. All six installed files match the fresh Release inventory.
+- Inner binary SHA256: `96665F819628C1708C1D075967C4B4B645A410D0105E9671A7549B448C69B800`.
+- Prior diagnostics bundle retained (six files): `C:\git\k7ma-preverb\out\vst3-install-backups\20261105-235035-c063e27796674b94884abca324a90c32\ReverbArise.vst3`.
+- Installer log/result: `out/issue51-followup-install-admin.log` and `.exit`. The helper limits build parallelism to four and disables persistent MSBuild worker reuse for this invocation; no cache or system ACL change.
+- Native review window remains open. Final targeted owner FL acceptance is requested for no forced speech and continuous preset/fader changes at the advancing playhead. Earlier preset values/listening, alignment and save/reopen acceptance is retained; no repeated blanket host checklist. Actual DPI and screen-reader coverage remains unspecified.
+
+A subsequent #73 quiet-window request arrived after installation; no #51 native wrappers remain active and no further heavy job is planned. Owner review windows are preserved.
