@@ -63,8 +63,9 @@ Missing/invalid captures or mismatched provenance fail packaging. All delivered
 guide files participate in the existing payload inventory and ZIP verification.
 
 For #59, rehearse on the issue branch with a distinct label such as
-`-Candidate alpha.rehearsal.1`. After owner review/merge, package a clean identified
-main revision containing the required integrations with `-Candidate alpha`.
+`-Candidate alpha.rehearsal.1`. For #59 the owner-approved order is to package a clean committed PR revision
+containing the required integrations with `-Candidate alpha`, sign off that exact
+candidate before merging, then verify clean merged main separately before archiving.
 If that output identity already exists, preserve it and use a recorded fresh
 `alpha.N`; never overwrite it. Extract into a new folder, verify hashes and view
 the HTML locally offline, checking every image. The final extracted binary needs

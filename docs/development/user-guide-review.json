@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed PR66 canonical-spec housekeeping against the unchanged production code and existing guide: finite loop audition/Wet only/Live Wet, guarded Learn Generate and Stop policies, first Perform framing, manual swell preparation, capture diagnostics and persistence/navigation. The guide already describes these delivered workflows and retains honest host limits; no prose or screenshot change is required. Explicit authoring review following main integration, separate from packaging.",
+  "summary": "Reviewed owner-approved acceptance ordering: clean PR candidate sign-off before merge, separate main verification afterward. Delivery code and musician-facing workflows are unchanged after PR66 canonical sync; existing Learn/Perform/optional Export and About instructions remain current. Only developer release-order guidance and active acceptance criteria changed; no guide prose or screenshot edit is needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -770,8 +770,8 @@
     },
     {
       "path": "docs/development/releases.md",
-      "bytes": 11275,
-      "sha256": "7c04287fbc31307378a80561ad57956ab841262399b3276c938ed375e8b46352"
+      "bytes": 11390,
+      "sha256": "0dc20003adb4341157cae351994ed2580a7db92b6a0b68355c5cc5c4ba5dc560"
     },
     {
       "path": "docs/development/user-guide-maintenance.md",

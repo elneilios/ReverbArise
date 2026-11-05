@@ -28,7 +28,11 @@ Guide screenshots SHALL come from the existing native UI evidence mechanism usin
 - **THEN** evidence records their source revision, fixture commands and state coverage and verifies their presentation against the packaged build
 
 ### Requirement: Private alpha acceptance record
-A private alpha acceptance record SHALL identify a clean main revision containing the required integrations, candidate identity, tools, native Release results, UI standards, product identity, OpenSpec checks, ZIP/inventory hashes and extracted offline-guide inspection. Final packaged-binary FL Studio capture, generation, Perform audition and save/reopen SHALL be recorded separately from prior host runs. Clean-machine and second-host coverage SHALL be explicit.
+A private alpha acceptance record SHALL identify the clean PR revision, candidate, tools, native Release/UI/product/OpenSpec results, ZIP/inventory hashes and offline-guide inspection. Exact-binary FL Studio capture, generation, Perform audition and save/reopen SHALL be distinguished from prior host runs. Clean-machine and second-host coverage SHALL be explicit.
+
+#### Scenario: Pre-merge sign-off and main verification
+- **WHEN** the owner signs off the clean PR candidate and authorizes its merge
+- **THEN** the resulting clean main revision is verified separately before archiving, without relabelling PR results as main results
 
 #### Scenario: Earlier integration evidence
 - **WHEN** earlier component or host tests exist but the final packaged binary has not been tested in FL Studio

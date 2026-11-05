@@ -17,14 +17,16 @@
 - [x] 3.2 Run a clean committed branch rehearsal through scripts/release.ps1 with a distinct explicit alpha rehearsal candidate, plus UI standards and strict applicable OpenSpec checks; verify Release native regression and built product/identity results, ZIP/checksum/manifest inventory and extracted guide offline rendering with every embedded image visible. Record revision, tool versions, cache state, commands, results and omissions.
 - [x] 3.3 Prepare the focused tooling/docs PR with Refs #59, change link, rehearsal evidence and remaining main/host/licensing gates; verify issue-scoped diff and leave it open for owner review without merging or closing the issue.
 
-## 4. Final clean-main alpha and acceptance
+## 4. Clean PR alpha acceptance and post-merge verification
 
-- [ ] 4.1 After owner-reviewed merge, select a clean identified main revision containing #48, #56 and the payload changes; regenerate same-source screenshots and run scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate alpha (or a recorded fresh alpha.N if identity is already used), UI standards, strict OpenSpec and applicable identity checks. Verify all native Release tests and retain exact source/tool/results evidence; do not mark complete on branch rehearsal results.
+- [ ] 4.1 Before merging, select a clean committed PR revision containing #48, #56 and the payload changes; regenerate same-source screenshots and run scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate alpha (or a recorded fresh alpha.N if identity is already used), UI standards, strict OpenSpec and applicable identity checks. Verify all native Release tests and retain exact source/tool/results evidence; record this as the owner-selected acceptance candidate, not an earlier rehearsal or a main build.
 - [ ] 4.2 Extract the final immutable ZIP into a fresh directory, verify SHA-256 against checksum/manifest and every inventoried payload file, inspect the full VST3/notices/README and render the standalone guide locally offline; verify all four authentic images are readable and match this packaged revision, and record paths, hashes and visual inspection results.
 - [ ] 4.3 Prepare and complete one consolidated FL Studio smoke test against the extracted final binary for scan/load, capture, generation, Perform audition/Stop and project-copy save/reopen without overwriting existing installations/projects/assets; record binary hash, host version, sample rate, buffer, observations and owner acceptance, with clean-machine and second-DAW coverage tested or explicitly unverified.
 - [ ] 4.4 Obtain explicit owner approval of the prepared redistribution review and any required additional material; verify the dated approval covers the intended private recipients/use and record the final alpha's sharing status. Keep the bundle internal while approval or final host acceptance is pending; perform no external sharing, tag push or publication.
 
-The following release-readiness work is completed before final acceptance tasks 4.1–4.4.
+- [ ] 4.5 After tasks 4.1–4.4 pass and the owner-authorized merge, verify the clean merged main revision contains the accepted implementation; run native Release validation, UI/OpenSpec and generated identity checks, record source/results and any differences from the signed-off PR candidate, and only then archive. Do not claim the earlier PR package is a main build.
+
+Owner-approved order (2026-11-05): sign off the clean PR candidate before merging, then verify main. The following release-readiness work is completed before final acceptance tasks 4.1–4.5.
 
 ## 5. Release-readiness extension
 
