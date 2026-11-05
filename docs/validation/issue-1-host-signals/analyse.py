@@ -9,25 +9,35 @@ import sys
 def analyse(path):
     stages = collections.defaultdict(lambda: {"events": collections.Counter(), "callbacks": 0,
         "input_peak_max": 0.0, "output_peak_max": 0.0, "max_callback_gap_ms": 0.0,
-        "input_enabled": set(), "output_enabled": set(), "playing": set(), "offline": set()})
+        "input_enabled": set(), "output_enabled": set(), "playing": set(), "offline": set(),
+        "sample_rates": set(), "audio_frames": 0, "qpc_start": None, "qpc_end": None,
+        "dropped_total_min_at_flush": None, "dropped_total_max_at_flush": 0})
     dropped = 0
-    previous = None
+    previous = {}
     with path.open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream):
-            stage = stages[int(row["marker"])]
+            marker = int(row["marker"])
+            stage = stages[marker]
             kind = row["event"]
             stage["events"][kind] += 1
-            dropped = max(dropped, int(row["dropped_total_at_flush"]))
+            loss = int(row["dropped_total_at_flush"])
+            dropped = max(dropped, loss)
+            stage["dropped_total_min_at_flush"] = loss if stage["dropped_total_min_at_flush"] is None else min(stage["dropped_total_min_at_flush"], loss)
+            stage["dropped_total_max_at_flush"] = max(stage["dropped_total_max_at_flush"], loss)
+            stamp = float(row["qpc_seconds"])
+            stage["qpc_start"] = stamp if stage["qpc_start"] is None else min(stage["qpc_start"], stamp)
+            stage["qpc_end"] = stamp if stage["qpc_end"] is None else max(stage["qpc_end"], stamp)
             if kind in ("audio", "bypass"):
                 stage["callbacks"] += 1
+                stage["audio_frames"] += int(row["frames"])
+                stage["sample_rates"].add(float(row["rate"]))
                 for key in ("input_enabled", "output_enabled", "playing", "offline"):
                     stage[key].add(int(row[key]))
                 stage["input_peak_max"] = max(stage["input_peak_max"], float(row["input_peak"]))
                 stage["output_peak_max"] = max(stage["output_peak_max"], float(row["output_peak"]))
-                stamp = float(row["qpc_seconds"])
-                if previous is not None:
-                    stage["max_callback_gap_ms"] = max(stage["max_callback_gap_ms"], (stamp - previous) * 1000)
-                previous = stamp
+                if marker in previous:
+                    stage["max_callback_gap_ms"] = max(stage["max_callback_gap_ms"], (stamp - previous[marker]) * 1000)
+                previous[marker] = stamp
     for stage in stages.values():
         for key, value in stage.items():
             if isinstance(value, set):
