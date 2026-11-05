@@ -62,7 +62,7 @@ inline LearnCoverageInfo learnCoverageAt(const CaptureSessionSnapshot& source,co
 }
 struct LearnInspectionReadout
 {
-    juce::String text,details;bool timingAvailable=false;
+    juce::String text,details,musical;bool timingAvailable=false;
 };
 inline LearnInspectionReadout learnInspectionReadout(int64_t sample,const LearnCoverageInfo& coverage,const SongTime& time,double captureRate)
 {
@@ -89,6 +89,7 @@ inline LearnInspectionReadout learnInspectionReadout(int64_t sample,const LearnC
         }
     }
     if(!result.timingAvailable)result.text="Timing unavailable";
+    result.musical=result.text;
     result.text+=" | Sample "+juce::String(sample)+" | "+(coverage.provisional?"Recording ":"")+coverage.kind;
     result.details=result.text+" | "+coverage.description();return result;
 }

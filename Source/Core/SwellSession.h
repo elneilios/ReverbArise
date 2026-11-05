@@ -70,6 +70,7 @@ struct Swell
     uint64_t inputGeneration = 0, shapeGeneration = 0;
     Provenance provenance = Provenance::manualCreated;
     int64_t detectorAnchor = 0;
+    juce::String generationSource; // Last explicit generation's PCM fingerprint, not a render claim.
 };
 struct Session
 {
@@ -81,6 +82,7 @@ struct Session
     float auditionDb = 0, sensitivity = 0.5f;
     double separationSeconds = 0.08;
     bool autoRegenerate = false;
+    bool autoGenerateOnStop = false;
     bool mappingEnabled = true, automaticProcessing = true, autoMarkersEnabled = true;
     bool isolateSelected = false, isolateDry = false;
     bool liveEnabled = true;
@@ -130,7 +132,8 @@ inline bool sameSavedSwell(const Swell& a,const Swell& b)
         && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape
         && a.calibration==b.calibration && a.placement==b.placement && a.supportOffset==b.supportOffset
         && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
-        && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor;
+        && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor
+        && a.generationSource==b.generationSource;
 }
 bool checkedAdd(int64_t a, int64_t b, int64_t& result) noexcept;
 bool checkedSubtract(int64_t a, int64_t b, int64_t& result) noexcept;

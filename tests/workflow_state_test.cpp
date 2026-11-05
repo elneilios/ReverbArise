@@ -1,4 +1,5 @@
 #include "TestSupport.h"
+#include "AllocationGuard.h"
 #include <Core/WorkflowState.h>
 #include <Core/SwellSession.h>
 #include <UI/WorkflowPresentation.h>
@@ -60,7 +61,8 @@ int main(){return runTest([]{
     for(auto target:{Mode::capture,Mode::live,Mode::finalise})REQUIRE(!state.requestMode(target,{true,true,true}));
     REQUIRE(!state.arm(false) && !state.begin(true));REQUIRE(state.stop(token));REQUIRE(!state.stop(token));
     REQUIRE(state.validating(token));REQUIRE(!state.requestMode(Mode::live,{true,true,true}));
-    REQUIRE(state.complete(token,true,true,true));REQUIRE(state.snapshot().mode==Mode::live && !state.snapshot().recapture);
+    REQUIRE(state.complete(token,true,true,true));REQUIRE(state.snapshot().mode==Mode::capture && !state.snapshot().recapture);
+    REQUIRE(state.requestMode(Mode::live,{true,true,true}));
     REQUIRE(!state.complete(token,true,true,true));REQUIRE(state.requestMode(Mode::finalise,{true,true,true}));
     REQUIRE(!state.begin(true));REQUIRE(!capabilities(state.snapshot(),{true,true,true}).scheduledWet);
     // Restored saved mode can remain selected while readiness is unavailable.
@@ -79,4 +81,48 @@ int main(){return runTest([]{
     REQUIRE(!state.complete(token,true,true,true));REQUIRE(state.snapshot().mode==Mode::capture);
     State neighbour;state.arm(true);token=state.begin(true);state.cancel();
     REQUIRE(!state.complete(token,true,true,true));REQUIRE(!state.snapshot().recapture && neighbour.snapshot().mode==Mode::capture);
+    // Reservation is the definition/mode linearization point. Losing admission
+    // never invokes the publisher, including a settings-slot or pass change.
+    state.reset();auto generation=state.snapshot();bool published=false;
+    REQUIRE(state.publishConfiguration(1,generation.pass));
+    REQUIRE(!state.publishGenerated(generation,[&]()noexcept{published=true;}) && !published);
+    generation=state.snapshot();const auto recording=state.begin(true);
+    REQUIRE(recording && !state.publishGenerated(generation,[&]()noexcept{published=true;}) && !published);
+    state.cancel();generation=state.snapshot();
+    bool locked=false,playRejected=false,navigationRejected=false,settingsRejected=false;
+    REQUIRE(state.publishGenerated(generation,[&]()noexcept
+    {
+        locked=state.snapshot().generationCommit && state.snapshot().locked();
+        {AudioAllocationGuard guard;playRejected=!state.begin(true);}
+        navigationRejected=!state.requestMode(Mode::finalise,{true,true,true});
+        settingsRejected=!state.publishConfiguration(1,generation.pass);
+        published=true;
+    }));
+    REQUIRE(published && locked && playRejected && navigationRejected && settingsRejected);
+    REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && state.snapshot().mode==Mode::live && !state.snapshot().generationCommit);
+    REQUIRE(!state.publishGenerated(generation,[]()noexcept{}));
+    state.reset();token=state.begin(true);REQUIRE(state.stop(token));REQUIRE(state.complete(token,false,false,false));
+    REQUIRE(state.snapshot().phase==Phase::failed);
+    generation=state.snapshot();REQUIRE(state.publishGenerated(generation,[]()noexcept{}));
+    REQUIRE(state.snapshot().mode==Mode::live && state.snapshot().phase==Phase::idle);
+    for(int iteration=0;iteration<200;++iteration)
+    {
+        state.reset();generation=state.snapshot();std::atomic<bool> start{false},committed{false};uint64_t admitted=0;bool generated=false;
+        std::thread audio([&]{while(!start.load())std::this_thread::yield();admitted=state.begin(true);});
+        std::thread worker([&]{while(!start.load())std::this_thread::yield();generated=state.publishGenerated(generation,[&]()noexcept{committed=true;});});
+        start=true;audio.join();worker.join();
+        REQUIRE(generated!=(admitted!=0) && committed.load()==generated);
+        REQUIRE(state.snapshot().mode==(generated?Mode::live:Mode::capture));
+        REQUIRE(state.snapshot().phase==(generated?Phase::idle:Phase::recording));
+    }
+    state.reset();generation=state.snapshot();std::atomic<bool> entered{false},release{false},resetStarted{false},resetDone{false};
+    bool generated=false;
+    std::thread worker([&]{generated=state.publishGenerated(generation,[&]()noexcept
+        {entered=true;while(!release.load())std::this_thread::yield();});});
+    const auto deadline=juce::Time::getMillisecondCounter()+5000;
+    while(!entered.load() && juce::Time::getMillisecondCounter()<deadline)std::this_thread::yield();
+    std::thread restore([&]{resetStarted=true;state.reset(Mode::finalise);resetDone=true;});
+    while(!resetStarted.load())std::this_thread::yield();
+    const auto held=entered.load() && !resetDone.load();release=true;worker.join();restore.join();
+    REQUIRE(held && generated && resetDone && state.snapshot().mode==Mode::finalise && !state.snapshot().generationCommit);
 });}

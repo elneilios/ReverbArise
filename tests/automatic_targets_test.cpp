@@ -68,8 +68,10 @@ int main(){return runTest([]
         const auto first=session.swells[0].id,second=session.swells[1].id;
         session.swells[0].render=a.ir;session.swells[0].render.path="renders/"+a.ir.content+".wav";
         session.swells[0].frozen=true;session.swells[0].shape.gainDb=-7;
+        const auto protectedSwell=session.swells[0];
         REQUIRE(reconcileTargets(session,{{23910,1},{60000,1}},0,96000,t,error,{},&map));
         REQUIRE(find(session,first)->arrival==23900 && find(session,first)->shape.gainDb==-7 && find(session,first)->ir==a.ir);
+        REQUIRE(sameSavedSwell(*find(session,first),protectedSwell));
         REQUIRE(reconcileTargets(session,{},0,24000,t,error,{},&map) && find(session,first));
         REQUIRE(suppressAndErase(session,second,error));
         REQUIRE(reconcileTargets(session,{{60000,1}},24000,96000,t,error,{},&map) && session.swells.size()==1);
@@ -96,8 +98,10 @@ int main(){return runTest([]
     REQUIRE(s.swells.size()==2 && s.swells[0].id==first && s.primary==first && s.swells[0].arrival==1010);
     auto& edited=s.swells[0];edited.provenance=Provenance::manualEdited;
     edited.arrival=edited.sourceStart=7000;edited.sourceEnd=8000;edited.name="Protected";
+    const auto protectedEdit=edited;
     REQUIRE(reconcileTargets(s,{{1020,1},{30000,1}},0,48000,time,error));
     REQUIRE(s.swells.size()==2 && s.swells[0].arrival==7000 && s.swells[0].name=="Protected");
+    REQUIRE(sameSavedSwell(*find(s,first),protectedEdit));
     REQUIRE(suppressAndErase(s,first,error) && s.suppressed.size()==1);
     REQUIRE(reconcileTargets(s,{{1030,1},{30000,1}},0,48000,time,error));
     REQUIRE(s.swells.size()==1 && s.swells[0].id==second);

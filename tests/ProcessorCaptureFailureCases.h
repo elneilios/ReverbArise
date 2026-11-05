@@ -52,7 +52,7 @@ inline void processorCaptureFailureCases()
         // Restore preserves source and retires diagnostics from the prior epoch.
         if(kind==7 && prior){processor->setStateInformation(savedBefore.getData(),static_cast<int>(savedBefore.getSize()));REQUIRE(processor->flushCaptureForTesting());}
         host.at(20000,true);process();host.at(20064,false);process();
-        REQUIRE(processor->flushCaptureForTesting() && processor->getWorkflowSnapshot().mode==workflow::Mode::live);
+        REQUIRE(processor->flushCaptureForTesting() && processor->getWorkflowSnapshot().result==workflow::Result::accepted);
         if(kind==7 && prior)REQUIRE(!processor->getCaptureSnapshot().failure);
         else REQUIRE(processor->getCaptureSnapshot().failure.event.pass==failedPass);
         if(prior)

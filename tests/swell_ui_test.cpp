@@ -411,7 +411,7 @@ int main(int argc,char* argv[]){return runTest([&]
         snapshotEditor(capturing,"learn-recording-real");
         captureProcessor.holdCaptureValidationForTesting(true);head.position.setIsPlaying(false);input.clear();captureProcessor.processBlock(input,events);
         waitUI([&]{return captureProcessor.getWorkflowSnapshot().phase==workflow::Phase::validating;});capturing.refresh();
-        REQUIRE(!learn->showsEmptyPrompt() && learn->timelineStatusText().startsWith("Accepting") && !captureProcessor.getCaptureProgress().ranges.empty());
+        REQUIRE(!learn->showsEmptyPrompt() && learn->timelineStatusText().startsWith("Finishing capture") && !captureProcessor.getCaptureProgress().ranges.empty());
         REQUIRE(learn->hasPinnedInspection() && learn->inspectedSample()==recordingPin);
         pointerTo(capturing,probe.translated(5,0),juce::ModifierKeys::leftButtonModifier,true);
         REQUIRE(learn->hasPinnedInspection() && learn->inspectedSample()!=recordingPin);
@@ -420,7 +420,7 @@ int main(int argc,char* argv[]){return runTest([&]
         snapshotEditor(capturing,"learn-accepting-real");
         captureProcessor.holdCaptureValidationForTesting(false);REQUIRE(captureProcessor.flushCaptureForTesting());
         REQUIRE(captureProcessor.requestWorkflowMode(workflow::Mode::capture));capturing.refresh();
-        REQUIRE(!learn->showsEmptyPrompt() && learn->timelineStatusText()=="Captured source ready." && captureProcessor.getCaptureProgress().ranges.empty());
+        REQUIRE(!learn->showsEmptyPrompt() && learn->timelineStatusText().startsWith("Captured |") && captureProcessor.getCaptureProgress().ranges.empty());
         REQUIRE(!learn->hasPinnedInspection() && !learn->inspectedSample());
         snapshotEditor(capturing,"learn-accepted-real");
         capturing.removeFromDesktop();
@@ -683,14 +683,17 @@ int main(int argc,char* argv[]){return runTest([&]
             mixed.overview={{mixed.manifest.ranges[0],true,{}},{mixed.manifest.ranges[1],true,{}},{mixed.manifest.ranges[2],false,{}}};
             for(int n=0;n<188;++n)mixed.overview[0].peaks.push_back({n*512,512,static_cast<float>(-.7*std::exp(-n/40.)),static_cast<float>(.7*std::exp(-n/40.))});
             const SongTime time{true,0,0,48000,120,4,4};const auto flow=processor->getWorkflowSnapshot();
-            learning->fitDrySource();learning->display(mixed,engine.snapshot(),time,flow,true);
+            auto sourceOnly=engine.snapshot();sourceOnly.learnGeneration.displayed.reset();
+            learning->fitDrySource();learning->display(mixed,sourceOnly,time,flow,true);
             REQUIRE(learning->coverageAt(100).kind=="Audio" && learning->coverageAt(150000).kind=="Silence");
             REQUIRE(learning->coverageAt(250000).kind=="Gap (uncaptured)" && learning->coverageAt(350000).kind=="Unavailable");
             REQUIRE(learning->coverageTotalsText().contains("Mapped 6.0 s") && learning->coverageTotalsText().contains("Extent 8.0 s"));
             juce::Image pixels(juce::Image::ARGB,learning->getWidth(),learning->getHeight(),true,juce::SoftwareImageType{});juce::Graphics canvas(pixels);learning->paintEntireComponent(canvas,true);
             const auto bounds=learning->timelineBounds();const auto view=learning->dryViewport();
             const auto pixel=[&](int64_t sample){return pixels.getPixelAt(bounds.getX()+juce::roundToInt((sample-view.first)/(view.second-view.first)*bounds.getWidth()),bounds.getCentreY()+30);};
-            REQUIRE(pixel(150000).getAlpha()>0 && pixel(250000).getAlpha()==0 && pixel(350000).getRed()>pixel(350000).getGreen());
+            REQUIRE(pixel(150000).getAlpha()==0 && pixel(250000).getAlpha()==0 && pixel(350000).getRed()>pixel(350000).getGreen());
+            const auto zeroX=bounds.getX()+juce::roundToInt((150000-view.first)/(view.second-view.first)*bounds.getWidth());
+            REQUIRE(pixels.getPixelAt(zeroX,bounds.getCentreY()).getAlpha()>0); // Genuine zero signal stays a flat line, not a shaded category.
             snapshotEditor(editor,"learn-mixed-coverage");
             // Use a native peer and hit-tested mouse dispatch, not a direct
             // keyPressed call: the owner found click/key routing broken in UAT.
@@ -711,9 +714,9 @@ int main(int argc,char* argv[]){return runTest([&]
             pointerTo(editor,point);pointerTo(editor,point,juce::ModifierKeys::leftButtonModifier,true);
             if(!learning->hasKeyboardFocus(false))std::cerr<<"Learn native focus: "<<(juce::Component::getCurrentlyFocusedComponent()?juce::Component::getCurrentlyFocusedComponent()->getName():"none")<<"\n";
             REQUIRE(learning->hasKeyboardFocus(false) && learning->hasPinnedInspection());
-            REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::homeKey)) && learning->getDescription().contains("Audio | samples"));
+            REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::homeKey)) && learning->diagnosticDetails().contains("Audio | samples"));
             learning->display(mixed,engine.snapshot(),time,flow,true);REQUIRE(learning->hasKeyboardFocus(false));
-            REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::rightKey)) && learning->getDescription().contains("Silence | samples"));
+            REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::rightKey)) && learning->diagnosticDetails().contains("Silence | samples"));
             const auto pinned=learning->getDescription();const auto pinSample=learning->inspectedSample();
             pointerTo(editor,point.translated(50,0));
             REQUIRE(learning->getDescription()==pinned); // Hover cannot erase keyboard inspection.
@@ -776,7 +779,11 @@ int main(int argc,char* argv[]){return runTest([&]
         sensitivity->onDragStart();sensitivity->setValue(37.5,juce::sendNotificationSync);if(sensitivity->onDragEnd)sensitivity->onDragEnd();editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f);
         const auto irLabelBounds=named(editor,"learnIRLabel")->getBounds(),irStatusBounds=named(editor,"learnIRStatus")->getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
         REQUIRE(defaultIR->getY()-irLabelBounds.getBottom()==m3::ui::spacing::tight);
-        REQUIRE(irStatusBounds.getY()-defaultIR->getBottom()==m3::ui::spacing::labelHelp && sensitivityLabelBounds.getY()-irStatusBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(irStatusBounds.getY()-defaultIR->getBottom()==m3::ui::spacing::labelHelp);
+        const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds(),autoStopHelpBounds=named(editor,"learnAutoGenerateHelp")->getBounds();
+        REQUIRE(autoStopBounds.getY()-named(editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
+        REQUIRE(irLabelBounds.getY()-autoStopBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(sensitivityLabelBounds.getY()-irStatusBounds.getBottom()==m3::ui::spacing::group);
         REQUIRE(sensitivity->getY()-sensitivityLabelBounds.getBottom()==m3::ui::spacing::tight);
         REQUIRE(sensitivity->getPositionOfValue(0)>=5 && sensitivity->getPositionOfValue(100)+5<=sensitivity->getWidth()-m3::ui::controlGeometry::valueWidth);
         juce::Label* percentage=nullptr;for(auto* child:sensitivity->getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))percentage=label;
@@ -803,17 +810,17 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto savedDefault=engine.savedSession().defaultIR;const auto assigned=engine.savedSession().swells.front().ir;
         engine.holdDefaultImportsForTesting(true);defaultIR->setSelectedId(6,juce::sendNotificationSync);
         waitUI([&]{return engine.defaultImportWaitingForTesting();});editor.refresh();
-        auto irStatus=dynamic_cast<juce::Label*>(named(editor,"learnIRStatus"));REQUIRE(irStatus && irStatus->getText()=="Used for your next learning pass." && defaultIR->getText()==baseline.defaultIRName);
+        auto irStatus=dynamic_cast<juce::Label*>(named(editor,"learnIRStatus"));REQUIRE(irStatus && irStatus->getText()=="Used by Generate." && defaultIR->getText()==baseline.defaultIRName);
         auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice && !notice->currentMessage());
         juce::Thread::sleep(650);editor.refresh();REQUIRE(notice->currentMessage() && notice->currentMessage()->text=="Preparing IR: Whisper");
-        REQUIRE(irStatus->getText()=="Used for your next learning pass.");snapshotEditor(editor,"learn-ir-preparing");
+        REQUIRE(irStatus->getText()=="Used by Generate.");snapshotEditor(editor,"learn-ir-preparing");
         REQUIRE(sensitivity->getBounds()==stableSensitivity && irStatus->getBounds()==stableIRFeedback);
         engine.holdDefaultImportsForTesting(false);waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
         REQUIRE(engine.savedSession().defaultIRName=="Whisper" && engine.savedSession().swells.front().ir==assigned);
-        REQUIRE(irStatus->getText()=="Used for your next learning pass." && sensitivity->getBounds()==stableSensitivity && !notice->currentMessage());
+        REQUIRE(irStatus->getText()=="Used by Generate." && sensitivity->getBounds()==stableSensitivity && !notice->currentMessage());
         snapshotEditor(editor,"learn-default-picker");largeWorkflowSnapshot("learn-default-picker");
         REQUIRE(engine.assignDefaultIR(root.file.getChildFile("invalid-default.wav")));waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
-        REQUIRE(irStatus->getText()=="Used for your next learning pass." && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
+        REQUIRE(irStatus->getText()=="Used by Generate." && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
         REQUIRE(notice->currentMessage() && notice->currentMessage()->tone==m3::ui::controls::NoticeTone::error && notice->currentMessage()->text.contains("retry"));
         const auto irError=notice->currentMessage();juce::Thread::sleep(50);editor.refresh();REQUIRE(notice->currentMessage()==irError);snapshotEditor(editor,"learn-ir-error");
         REQUIRE(sensitivity->getBounds()==stableSensitivity && irStatus->getBounds()==stableIRFeedback);

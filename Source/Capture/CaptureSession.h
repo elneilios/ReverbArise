@@ -27,6 +27,11 @@ struct CaptureSessionSnapshot
     std::vector<CaptureOverviewRange> overview;
     CaptureFailureRecord failure;
 };
+struct ProvisionalCaptureSnapshot
+{
+    CaptureManifest manifest;
+    uint64_t pass=0,epoch=0,sequence=0;
+};
 
 // Worker-thread only. PCM is read one bounded chunk at a time, never retained for the full song.
 class CaptureSession
@@ -54,6 +59,8 @@ public:
     const juce::String& passFailure() const noexcept {return passError;}
     CaptureFailureReason passFailureReason() const noexcept {return passReason;}
     double passWriteMilliseconds() const noexcept {return staged?staged->maxWriteMilliseconds:0;}
+    std::optional<CaptureManifest> stagedManifest() const
+    {return staged && passError.isEmpty()?std::optional<CaptureManifest>{staged->state.manifest}:std::nullopt;}
     const CaptureSessionSnapshot& snapshot() const noexcept { return state; }
     bool readSample(int64_t position, float& left, float& right) const;
     uint64_t audioReadCount() const { return store().audioReadCount(); }

@@ -44,7 +44,7 @@ static void failedQueuePass(bool prior)
         REQUIRE(restored.snapshot().manifest.contextSpans==before.manifest.contextSpans);
     }
     const auto retry=start();send(retry,30000);REQUIRE(flow.stop(retry) && worker.flush());
-    REQUIRE(flow.snapshot().mode==workflow::Mode::live && worker.snapshot().reference!=before.reference);
+    REQUIRE(flow.snapshot().result==workflow::Result::accepted && worker.snapshot().reference!=before.reference);
     std::cout<<"queue rollback prior="<<prior<<" retained="<<hashes.size()<<" staged-files="<<root.file.findChildFiles(juce::File::findFiles,true).size()<<'\n';
     worker.stopThread(-1);
 }

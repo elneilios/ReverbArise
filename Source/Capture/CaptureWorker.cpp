@@ -120,6 +120,16 @@ CaptureProgress CaptureWorker::progressSnapshot() const
         || publishedProgress.epoch!=generation.load() || passFailed(flow.pass))return {};
     return publishedProgress;
 }
+std::optional<ProvisionalCaptureSnapshot> CaptureWorker::provisionalSnapshot() const
+{
+    const juce::ScopedLock commandGuard(commandLock);
+    const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    const juce::ScopedLock guard(snapshotLock);
+    if(loading.load() || clearRequested.load() || !flow.locked() || !publishedProvisional
+        || publishedProvisional->pass!=flow.pass || publishedProvisional->epoch!=generation.load()
+        || passFailed(flow.pass))return {};
+    return publishedProvisional;
+}
 
 void CaptureWorker::publishProgress()
 {
@@ -304,6 +314,7 @@ void CaptureWorker::settleWorkflowPass()
     CaptureSession::PassResult result;uint64_t committedGeneration=0;
     std::function<void(int64_t,int64_t,uint64_t,bool)> handler;
     std::function<void()> acceptedHandler;
+    bool usefulMaterial=false;std::function<void(uint64_t,uint64_t,bool)> settled;
     {
         const juce::ScopedLock guard(commandLock);
         state=workflowState->snapshot();if(state.phase!=workflow::Phase::draining || loading.load() || restoreRequested.load() || clearRequested.load())return;
@@ -343,9 +354,16 @@ void CaptureWorker::settleWorkflowPass()
     if(result.success && handler)for(const auto [a,b]:result.changedIntervals)handler(a,b,committedGeneration,result.replaced);
     {
         const juce::ScopedLock guard(commandLock);
+        usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
+        if(generation.load()==committedGeneration && result.success)settled=settlementHandler;
+    }
+    // Pin optional generation intent while the pass is still locked. Engine
+    // metadata/locks never enter the source publication fence or audio callback.
+    if(settled)settled(state.pass,committedGeneration,usefulMaterial);
+    {
+        const juce::ScopedLock guard(commandLock);
         // Explicit replacement may deliberately remove a note. Other accepted
         // useful source still qualifies; ordinary mapped-only/empty passes do not.
-        const auto usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
         if(generation.load()==committedGeneration && workflowState->complete(state.pass,result.success,usefulMaterial,result.replaced)
             && result.success && (result.changed || usefulMaterial))acceptedHandler=acceptedStateHandler;
     }
@@ -406,6 +424,11 @@ void CaptureWorker::flushPending()
             ++workingMetrics.stages;workingMetrics.maxStageMs=std::max(workingMetrics.maxStageMs,juce::Time::getMillisecondCounterHiRes()-began);
             workingMetrics.maxWriteMs=std::max(workingMetrics.maxWriteMs,session.passWriteMilliseconds());
             if(!staged)recordWorkerFailure(session.passFailureReason(),session.passFailure(),pendingStart,static_cast<int>(frames));
+            if(staged && !passFailed(activePass))if(auto manifest=session.stagedManifest())
+            {
+                const juce::ScopedLock guard(snapshotLock);
+                publishedProvisional=ProvisionalCaptureSnapshot{std::move(*manifest),activePass,activeEpoch,++provisionalSequence};
+            }
         }
         pending.clear();return;
     }

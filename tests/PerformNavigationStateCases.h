@@ -8,6 +8,11 @@ static void performNavigationStateCases(const m3::Session& source)
     const auto musical=[&](const Session& state){REQUIRE(state.primary==source.primary && state.selected==source.selected && state.swells.size()==source.swells.size());
         for(size_t n=0;n<state.swells.size();++n){const auto& a=state.swells[n];const auto& b=source.swells[n];REQUIRE(a.id==b.id && a.render==b.render && a.ir==b.ir && a.shape==b.shape && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.arrival==b.arrival);}};
     musical(decoded);
+    auto approved=juce::JSON::parse(json);approved.getDynamicObject()->setProperty("version",10);
+    approved.getDynamicObject()->removeProperty("autoGenerateOnStop");
+    REQUIRE(decode(juce::JSON::toString(approved),decoded,error) && decoded.autoGenerateOnStop);
+    REQUIRE(decoded.performUi==expected.performUi && decoded.auditionFollowsLive==expected.auditionFollowsLive && decoded.exportState==expected.exportState);
+    musical(decoded);
     for(int malformed=0;malformed<6;++malformed)
     {
         auto object=juce::JSON::parse(json);auto preferences=object["performUi"];

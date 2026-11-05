@@ -3,7 +3,9 @@
 Issue #11 implementation starts from merged source `dc003a7` / main `653f13a`.
 The following protocol is pinned before code changes; implementation and tests
 record which parts are delivered. Context-codec and atomic pass publication are
-implemented, including source-owned deferred work and dry-only policy consumers.
+implemented. Issue #38 now treats accepted pass contexts as immutable capture
+history: read-only Learn candidates and a shared explicit/opted-in Generate
+transaction replace source-owned deferred creation commands.
 Final integration/host acceptance and checkpoint B remain tracked separately.
 
 Task 4.1 now implements the schema-2 codec, bounds and pure legacy-baseline
@@ -22,6 +24,35 @@ Migration marks unknown historical settings legacy, coalesces equal neighbours
 and leaves PCM, source-range metadata and existing swell assignments unchanged.
 
 ## Durable envelope and bounds
+
+Issue #38 introduces creative metadata **v11** with a strictly typed
+`autoGenerateOnStop` boolean. Fresh `Session`/plugin instances initialise OFF;
+supported creative versions 1–10 and processor envelopes 1–2 without creative
+metadata restore ON. Explicit v11 OFF/ON survives save/reopen independently of
+Automatic Swells visibility. Missing or non-boolean v11 values reject the whole
+restore, preserving accepted state. The processor XML envelope remains v8,
+capture manifests remain schema 2 and numeric workflow/plugin identities remain
+unchanged. Older binaries cannot read v11: retain pre-v11 saved project/cache
+copies for rollback; no down-save or destructive asset migration is provided.
+Creative v11 also saves each swell's optional `generationSource` PCM fingerprint.
+This records the last committed automatic definition's source dependency even
+before wet rendering finishes; it never claims a render is Ready. Older versions
+have no such field. A matching retained render dependency can establish their
+prior generation identity; otherwise an eligible explicit generation records it.
+The new string is empty or a strict 64-character lowercase hash. Candidate
+snapshots, pending Stop intents and prepared transactions are never serialized.
+
+Provenance values remain `automatic=0`, `manualCreated=1`, `manualEdited=2`.
+Version-1 creative state with no provenance decodes conservatively as
+manualEdited; invalid newer origin values reject the complete state. Manual
+creation/confirmed suggestions start manualCreated. Musical edits, name and
+activity changes through `editChecked`, IR assignment/import, Reset All and
+freeze/unfreeze retain or promote manual ownership. Changing a display-only IR
+label does not infer ownership. Disabled state never infers automatic origin:
+only an explicitly persisted automatic definition can remain eligible. Frozen
+definitions are protected regardless of their original provenance. Existing
+automatic-target tests cover protected identity/edits/IR/render retention; engine
+tests cover actual edit, assignment, reset and freeze entry points.
 
 - Capture manifest schema 2 extends the existing immutable manifest with a table
   of generation contexts and ordered, nonoverlapping absolute context spans.
@@ -144,15 +175,65 @@ The plugin does not delete the old immutable records or perform root relocation,
 portable packaging or orphan cleanup. Preserve those files when investigating a
 failure; removing the cache is not a recovery procedure.
 
-## Deferred consumer and display
+## Candidate preview and generation
 
-`SwellEngine` recovers bounded pending On spans from accepted source provenance,
-with separate admission from explicit Perform reanalysis. Each worker cell clips
-its reconciliation body to one owning span, but analysis history/extraction may
-cross boundaries. Settings/IR ownership uses the arrival context. Old matched
-assignments are preserved; absent accepted context/IR is an error, not permission
-to use a later default. Publication checks source/session and context ownership.
-Retired target request identities are pruned within the 4096-swell bound.
+Learn reuses `suggestOnsets` through `scanLearnCandidates` over the actual mapped
+run union, with source/session/coverage/settings/policy/timing/completed-boundary
+identities. Current Learn sensitivity applies to the full accepted arrangement,
+including earlier dry-only passes. It does not rewrite pass history. Default IR
+is not a detector dependency. Settled snapshots are reused while identities match;
+edits coalesce and retain the previous markers marked updating during refresh.
+Missing mapped assets reject a settled result rather than publishing a smaller
+set that could authorize retirement.
+
+For progressive preview the capture worker publishes only immutable staged chunk
+manifests, fenced by pass/epoch. No pending PCM or provisional manifest enters the
+accepted source/save path. Candidate detection reads those chunks off callback,
+withholds the unsafe trailing analysis window and labels the result provisional.
+Stop needs a matching final accepted snapshot. Abort/failure discards provisional
+authority and restores the previous settled display when one exists.
+
+Explicit Generate and eligible Auto-generate on Stop call one request API. The
+Stop intent is pinned while validation still owns the pass, and is cancelled by
+settings/default/source/workflow changes or OFF. ON, restore and mode entry never
+generate. Admission freezes the currently displayed final candidates, current
+accepted Default IR, source, settings, model and workflow identities. The worker
+verifies IR content and every mapped source run, then prepares one replacement
+without mutating committed definitions. Protected collisions take priority using
+the existing detector tolerance; matched automatic IDs/activity remain stable.
+Manual/edited/frozen, unknown-origin and outside-scope definitions remain intact.
+An empty/protected-only/unchanged/failed/cancelled plan never retires old work.
+
+A nonempty viable replacement with new/regenerated definitions or eligible retirements can publish the full replacement and
+guarded Perform transition. A low/high/low sensitivity loop can therefore remove extra unedited automatic swells while retaining unchanged survivors and their renders. Wet jobs queue afterward only for changed definitions. Last-good immutable render
+references remain; affected source-dependent work is deferred through Learn
+instead of being silently re-rendered by preview. Protected manual calibration
+also retains its saved reference through automatic collection replacement;
+explicit later source/IR/arrangement edits retain their normal editing policy.
+Restore rebuilds preview and permitted committed-render recovery, never pending
+source-context generation. Retired job identities are pruned within the existing
+4096-swell bound, without deleting old immutable files or saved project assets.
+
+New Generate admission supersedes earlier unfrozen automatic wet work through a
+cooperative worker cancellation epoch. The serial worker services Generate before
+remaining renders. Interrupted accepted jobs are kept eligible for recovery if
+the replacement does not commit. Completed protected/last-good render metadata is
+rebased into the request before planning when musical revision, session and
+selection are unchanged. Render output still notifies persistence, but does not
+invalidate musical authority; real edits and workflow/dependency changes retain
+their original publication fences.
+
+After actual Recapture, a protected manually edited swell can remain stale while
+Learn Generate reports protected-only. The supported explicit Perform Regenerate
+action clears that work's deferred dependency/calibration guard before queuing
+its accepted definition against the new source. Frozen work is skipped and
+last-good render assets remain until a verified replacement commits.
+
+Learn accepts completed-pass boundaries through successful source settlement,
+including on a fresh instance whose previous empty manifest is still schema 1.
+A provisional RT Stop cannot queue legacy reconciliation. Live loop boundaries
+and explicitly requested Perform updates retain their existing window policy;
+Learn return/restore does not turn capture history into a generation command.
 
 The Learn timeline reads accepted overview peaks and separate pass/epoch-fenced
 progress. Mapped duration is the source union, provisional duration counts only

@@ -7,6 +7,8 @@
 #include <Playback/ExportVoice.h>
 #include <Analysis/OnsetAnalysis.h>
 #include <Analysis/AutomaticTargets.h>
+#include <Analysis/AutomaticGeneration.h>
+#include <Analysis/LearnCandidates.h>
 #include <Core/TransportTime.h>
 #include <Core/WorkflowState.h>
 #include <Playback/TransportPlayback.h>
@@ -55,6 +57,9 @@ struct LivePreparationObservation
 };
 struct EditorSnapshot
 {
+    workflow::Snapshot workflowState; // Captured under the same model publication lock.
+    LearnGenerationView learnGeneration;
+    uint64_t initialPerformHandoff=0;
     ExportSnapshot songExport;
     Session session;
     uint64_t sessionEpoch=0; // Coherent UI ownership token; never persisted.
@@ -129,6 +134,20 @@ public:
     void setAutomaticProcessing(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
     void setAutoMarkers(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
     void setLearningAutomatic(bool,uint64_t expectedWorkflowPass=UINT64_MAX);
+    void useProvisionalSource(std::function<std::optional<ProvisionalCandidateSource>()>);
+    void captureSettled(uint64_t pass,uint64_t captureGeneration,bool useful);
+    bool setAutoGenerateOnStop(bool,uint64_t expectedSession=0,uint64_t expectedPass=UINT64_MAX);
+    bool generateLearn(uint64_t expectedSession,uint64_t expectedPass,uint64_t candidateSerial);
+    bool claimInitialPerform(uint64_t expectedSession,uint64_t handoff);
+    bool selectInitialPerform(uint64_t expectedSession,uint64_t handoff,const juce::String& id);
+    void establishPerformPosition(uint64_t expectedSession);
+    void holdLearnAnalysisForTesting(bool hold)noexcept{learnAnalysisHold=hold;notify();}
+    bool learnAnalysisWaitingForTesting()const noexcept{return learnAnalysisWaiting.load();}
+    void holdLearnGenerationForTesting(bool hold)noexcept{learnGenerationHold=hold;notify();}
+    bool learnGenerationWaitingForTesting()const noexcept{return learnGenerationWaiting.load();}
+    void holdLearnRendersForTesting(bool hold)noexcept{learnRenderHold=hold;notify();}
+    void holdRenderPublicationForTesting(bool hold)noexcept{renderPublicationHold=hold;notify();}
+    bool renderPublicationWaitingForTesting()const noexcept{return renderPublicationWaiting.load();}
     void setIsolateSelected(bool);
     void setIsolateDry(bool);
     void setPostRoll(double seconds);
@@ -177,7 +196,46 @@ public:
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
     std::function<void()> persistentChange;
-    void persistentChangedLocked() {if(persistentChange)persistentChange();}
+    // Derived render metadata is durable, but is not a newer musical command.
+    void persistentChangedLocked(bool musicalChange=true) {if(musicalChange)++modelRevision;if(persistentChange)persistentChange();}
+    uint64_t modelRevision=0;
+    struct LearnRequest
+    {
+        std::shared_ptr<const LearnCandidateSnapshot> candidates;
+        Session expected;
+        CaptureManifest source;
+        workflow::Snapshot flow;
+        uint64_t revision=0,cancellation=0;
+        bool automatic=false;
+    };
+    struct StopIntent
+    {
+        CandidateIdentity source;
+        uint64_t pass=0,configuration=0,revision=0;
+        Asset ir;
+    };
+    std::function<std::optional<ProvisionalCandidateSource>()> provisionalSource;
+    std::shared_ptr<const LearnCandidateSnapshot> learnCandidates;
+    std::shared_ptr<const LearnCandidateSnapshot> settledLearnCandidates;
+    std::optional<CandidateIdentity> learnAttempt;
+    std::optional<LearnRequest> learnRequest;
+    std::optional<StopIntent> stopIntent;
+    std::set<juce::String> deferredLearnDependencies;
+    std::set<juce::String> protectedGenerationCalibration;
+    uint64_t learnCandidateSerial=0,successfulGeneration=0,initialPerformOffer=0;
+    bool performPositionEstablished=false,learnUpdating=true,learnGenerating=false,learnUsable=false,learnFailed=false;
+    juce::String learnReason,learnNotice;
+    std::atomic<uint64_t> learnAnalysisCancellation{0},learnGenerationCancellation{0};
+    std::atomic<uint64_t> learnRenderCancellation{0};
+    std::atomic<bool> learnAnalysisHold{false},learnAnalysisWaiting{false},learnGenerationHold{false},learnGenerationWaiting{false},learnRenderHold{false};
+    std::atomic<bool> renderPublicationHold{false},renderPublicationWaiting{false};
+    CandidateIdentity learnIdentity(const PreviewContext&,bool provisional=false,uint64_t pass=0)const;
+    LearnGenerationView learnViewLocked()const;
+    void invalidateLearnLocked();
+    void cancelLearnGenerationLocked();
+    bool requestLearnLocked(const PreviewContext&,uint64_t session,uint64_t pass,uint64_t serial,bool automatic);
+    bool learnGenerationStep(const PreviewContext&);
+    void performLearnGeneration(LearnRequest);
     bool permitCreative();
     workflow::State* workflowState=nullptr;
     std::array<GenerationConfiguration,2> generationConfigurations;
@@ -218,7 +276,7 @@ private:
     void inspect(const PreviewContext&);
     void prepareDefault(const PreviewContext&);
     bool automaticJob();
-    void collectCompletedPass(const PreviewContext&);
+    void collectCompletedPass(const PreviewContext&,bool acceptedCapture=false);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
     void dispatchAutomatic(const PreviewContext&);
     void dirtyLocked(int64_t,int64_t,bool acceptedPass=false);
@@ -310,6 +368,7 @@ private:
     int64_t previousTransportEnd=0,currentPassStart=0;
     CompletedPasses completedPasses;
     bool automaticBoundsDirty=true;
+    bool performWindowsRequested=false;
     bool recoverPassBounds=false;
     std::map<juce::String,size_t> liveSlots;
     std::array<uint64_t,maximumSwells> liveGenerations{};

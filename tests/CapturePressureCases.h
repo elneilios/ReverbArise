@@ -67,12 +67,12 @@ inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bo
         REQUIRE(snapshot.failure && snapshot.failure.event.reason==CaptureFailureReason::queueFull);
         if(fault)REQUIRE(snapshot.failure.event.start>=int64_t(61)*rate); // No earlier unexpected pressure is hidden by the injected fault.
         const auto retry=flow.begin(true);REQUIRE(queue->tryPush(0,rate,left.data(),right.data(),frames,worker.captureGeneration(),retry));
-        REQUIRE(flow.stop(retry) && worker.flush(30000) && flow.snapshot().mode==workflow::Mode::live);
+        REQUIRE(flow.stop(retry) && worker.flush(30000) && flow.snapshot().result==workflow::Result::accepted);
         REQUIRE(worker.snapshot().failure.event.pass==pass);
     }
     else
     {
-        REQUIRE(!dropped && flow.snapshot().mode==workflow::Mode::live && !snapshot.manifest.ranges.empty());
+        REQUIRE(!dropped && flow.snapshot().result==workflow::Result::accepted && !snapshot.manifest.ranges.empty());
         for(const auto& range:snapshot.manifest.ranges)REQUIRE(range.frameCount<=uint64_t(rate)*5 && range.frameCount<=1920000);
         CaptureSession restored(root.file);REQUIRE(restored.restore(snapshot.manifest.projectId,snapshot.manifest.instanceId,snapshot.reference,snapshot.manifest.revision));
         float l=0,r=0;REQUIRE(restored.readSample(0,l,r) && l==.125f && r==-.25f);

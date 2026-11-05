@@ -12,7 +12,7 @@ static void swellListCaptureCases(bool review=false)
     const auto listFor=[](PreverbAudioProcessorEditor& e)
     {auto* list=dynamic_cast<m3::ui::controls::SwellList*>(named(e,"swellList"));REQUIRE(list);return list;};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
-    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells)
+    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells,bool regenerateProtected=false)
     {
         const auto previousAnalysis=engine.snapshot().analysisCount;
         // Re-requesting Learn clears its explicit recapture arm. Preserve an
@@ -26,11 +26,21 @@ static void swellListCaptureCases(bool review=false)
                 {const auto value=static_cast<float>(amplitude*std::exp(-at/1800.)*std::sin(at*.17));buffer.setSample(0,n,value);buffer.setSample(1,n,value*.7f);}}
             head.position.setTimeInSamples(start+local);head.position.setPpqPosition((start+local)/24000.0);p->processBlock(buffer,midi);
         }
-        finishCaptureFixture(*p,head.position);
+        finishCaptureFixture(*p,head.position,true);
+        if(regenerateProtected)
+        {
+            REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);
+            const auto stale=engine.savedSession();REQUIRE(std::any_of(stale.swells.begin(),stale.swells.end(),[](const auto& w)
+                {return w.provenance==m3::Provenance::manualEdited && w.phase==m3::Phase::stale && w.render.present();}));
+            engine.generate(true); // The supported explicit Perform action, not Learn replacement.
+        }
         // The previous pass can already be ready before the engine observes the
         // newly committed source. Wait for this pass, not that old idle snapshot.
-        waitUI([&]{const auto s=engine.snapshot();return s.analysisCount>previousAnalysis && s.session.swells.size()==expectedSwells && !s.analyzing && s.pendingIntervals==0
-            && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
+        try{waitUI([&]{const auto s=engine.snapshot();return s.analysisCount>previousAnalysis && s.session.swells.size()==expectedSwells && !s.analyzing && s.pendingIntervals==0
+            && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});}
+        catch(...){const auto s=engine.snapshot();std::cerr<<"List capture start="<<start<<" analysis="<<s.analysisCount<<" previous="<<previousAnalysis
+            <<" swells="<<s.session.swells.size()<<" expected="<<expectedSwells<<" analyzing="<<s.analyzing<<" pending="<<s.pendingIntervals
+            <<" generation="<<s.learnGeneration.notice<<'\n';for(const auto& w:s.session.swells)std::cerr<<w.name<<" phase="<<static_cast<int>(w.phase)<<" "<<w.status<<'\n';throw;}
         editor->refresh();
     };
     pass(192000,1,.3f,1);REQUIRE(engine.savedSession().swells.size()==1);const auto late=engine.savedSession().swells.front().id;
@@ -43,7 +53,12 @@ static void swellListCaptureCases(bool review=false)
     REQUIRE(m3::sameSavedSwell(protectedLate,*m3::find(engine.savedSession(),late)));
     const auto capture=p->getCaptureSnapshot();REQUIRE(capture.manifest.ranges.size()>=2);
     REQUIRE(std::none_of(capture.manifest.ranges.begin(),capture.manifest.ranges.end(),[](const auto& r){return r.startSample>48000 && r.startSample<192000;}));
-    armCaptureFixture(*p);pass(0,1,.2f,2);editor->refresh();
+    const auto beforeRecapture=*m3::find(engine.savedSession(),early);
+    armCaptureFixture(*p);pass(0,1,.2f,2,true);editor->refresh();
+    const auto refreshed=*m3::find(engine.savedSession(),early);
+    REQUIRE(refreshed.id==beforeRecapture.id && refreshed.name==beforeRecapture.name && refreshed.ir==beforeRecapture.ir
+        && refreshed.shape==beforeRecapture.shape && refreshed.provenance==m3::Provenance::manualEdited);
+    REQUIRE(refreshed.render.content!=beforeRecapture.render.content && refreshed.phase==m3::Phase::ready);
     REQUIRE(list->rowAt(0)->id==early && list->rowAt(1)->id==late);
     REQUIRE(m3::sameSavedSwell(protectedLate,*m3::find(engine.savedSession(),late)));
 

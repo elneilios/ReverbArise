@@ -26,7 +26,7 @@ struct CaptureFailureFixture
     {REQUIRE(queue->tryPush(at,rate,audio.data(),audio.data(),frames,worker.captureGeneration(),pass));REQUIRE(worker.flush());}
     void stop(){REQUIRE(flow.stop(pass));REQUIRE(worker.flush());}
     void retry()
-    {begin();send(90000);stop();REQUIRE(flow.snapshot().mode==workflow::Mode::live);}
+    {begin();send(90000);stop();REQUIRE(flow.snapshot().result==workflow::Result::accepted);}
 };
 
 inline void workerFailureCases()

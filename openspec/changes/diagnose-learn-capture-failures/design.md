@@ -12,6 +12,13 @@ Existing `capture_transaction_test` covers invalid samples/rate/ranges, staged c
 
 ## Goals / Non-Goals
 
+Integration note (5 November): final validation merges approved main `1f47acf`
+(#38). Keep its provisional generation snapshot and settlement callback, compact
+Learn/event presentation, and accepted-source Stop policy. Failure fences invalidate
+both provisional waveform and generation snapshots. Harness success checks use
+`Result::accepted`; they do not require the old automatic Perform transition.
+No #38 behavior is redesigned by this change.
+
 **Goals:** Make recurrence diagnosable; deterministically reproduce relevant failure paths and the waveform symptom; prove accepted source/history and retry safety with isolated disposable assets.
 
 **Non-Goals:** Recover or silently accept a prefix of a rejected pass; add checkpointing, persistence formats, queue resizing or a new thread architecture; recreate the owner's song; claim the injected cause was the real incident. Do not require the owner to reproduce the intermittent problem.
