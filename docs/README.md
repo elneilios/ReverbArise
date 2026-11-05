@@ -14,7 +14,7 @@ This directory covers product identity, the existing implementation, development
 
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 
-- [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — build-matched offline guide, native screenshot provenance and final main/host gates; [redistribution review](validation/2026-11-04-issue-59-redistribution-review.md) remains pending explicit owner approval.
+- [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — delivered in merged PR #63; [closeout](validation/2026-11-05-issue-59-closeout.md#executed-merged-main-verification--2026-11-05) records completed post-merge verification, scoped owner sign-offs and the explicit additional-host-smoke waiver. [Redistribution review](validation/2026-11-04-issue-59-redistribution-review.md#subsequent-owner-sign-off--2026-11-05) records the one-friend private evaluation scope; public distribution remains undecided.
 
 - [Perform waveform display](development/waveform-display.md) — GUI-only summaries, layer ownership, invalidation and close-zoom fidelity; [issue #67 evidence](validation/2026-11-05-issue-67-waveform-paint.md) separates component timing, full editor refresh and owner/host coverage.
 
@@ -32,7 +32,7 @@ This directory covers product identity, the existing implementation, development
 
 - [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
 
-- [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — source/thread inventory, disposable native benchmarks, resource limits and follow-up recommendations.
+- [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — delivered source/thread audit and original measurements; waveform optimisation subsequently shipped in #67 / PR #69. Host/resource follow-up remains tracked by #25.
 
 - [Local Windows releases](development/releases.md) — validated ZIPs, immutable outputs, manual publication and redistribution gate.
 
@@ -42,11 +42,11 @@ This directory covers product identity, the existing implementation, development
 - [UI development standards](development/ui-development-standards.md) — shared controls, incremental consolidation, interaction tests and visual checkpoints for UI work.
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
-- [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implementation progress is tracked in the active OpenSpec change.
+- [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implemented by merged #56 and synced/archived through #66.
 - [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
 - [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
-- [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — issue #6 implementation contracts and reviewed control mapping (implementation in progress).
+- [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels remain planned in #51.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
 
 ## Documentation policy
