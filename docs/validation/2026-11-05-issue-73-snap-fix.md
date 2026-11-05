@@ -56,6 +56,23 @@ runs remain in ignored `out/issue-73/snap-focused-release*.log` and
 
 ## Final gates and installation
 
+First full Release on clean implementation `eed71ff` passed **70/71** in
+**210.74 s** (`out/build-logs/Release/20261105-234952-59424d16`), failing the
+retained-IR assertion in `ir_handover_test`. Its fixture restored the engine then
+continued an offset playing context without another callback; restore correctly
+retires the old run. The old automatic grid-anchor overwrite had masked the
+missing current authority. The fixture now explicitly verifies the retired clock
+is unavailable and supplies a real callback before continuing its playback/IR
+scenario. Every retained-IR/audio assertion and timeout is preserved; no audio
+admission code or drift guard was changed to pass the test. Three consecutive
+focused native Release handover runs passed after this lifecycle correction.
+
+Focused final core/UI/transport/processor Release passed **4/4** in **23.19 s**
+(`out/issue-73/snap-focused-release-4.log`), including shifted-context render
+restore and the captured-anchor overwrite regression. The source was proposal
+`949ba4d` plus dirty implementation before its `eed71ff` commit. These focused
+results supplement, rather than replace, the final full gates below.
+
 Pending final native Debug/Release wrapper gates and verified system installation.
 The completed results below will identify source revision, dirty state, logs,
 installed identity/hash and retained prior bundle. Canonical specs are not synced;
