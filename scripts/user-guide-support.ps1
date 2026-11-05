@@ -14,7 +14,7 @@ function Get-UserGuideInputs([string] $Root) {
     }
     foreach ($relative in @('CMakeLists.txt','CMakePresets.json','docs/development/alpha-guide.html',
         'docs/development/releases.md','docs/development/product-version.md','docs/development/fl-studio-test-install.md','docs/development/user-guide-maintenance.md',
-        'scripts/build.ps1','scripts/build-support.ps1','scripts/release.ps1','scripts/release-support.ps1','scripts/release-guide.ps1','scripts/verify-version.cmake',
+        'scripts/build.ps1','scripts/build-support.ps1','scripts/release.ps1','scripts/release-support.ps1','scripts/release-guide.ps1','scripts/release-notes.ps1','scripts/verify-version.cmake',
         'scripts/install-test-vst3.ps1','scripts/test-install-support.ps1','scripts/check-user-guide.ps1','scripts/review-user-guide.ps1','scripts/user-guide-support.ps1',
         'tests/learn_generation_ui_test.cpp','tests/LearnGenerationSupport.h','resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png',
         '.agents/skills/maintain-user-guide/SKILL.md')) {

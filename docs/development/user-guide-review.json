@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical #93 auto-Fit and concurrently merged #68 archive/spec sync. Both approved behaviors remain accurately described by existing guide prose; preserved all main canonical requirements and refreshed review currency. No C++ or test source changed in the metadata-only reconciliation.",
+  "summary": "Reviewed release-specific notes preparation, validation, escaped offline HTML, ZIP inclusion and README pointer. Plugin controls, audio, installation and guide workflow are unchanged; existing user-guide prose and images remain accurate. Release notes are a separate candidate-specific document.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -800,8 +800,8 @@
     },
     {
       "path": "docs/development/releases.md",
-      "bytes": 11482,
-      "sha256": "be53e68cfa550e642fee6d5fdd29bb0d63a5dc81e419094a4bd64b1474eb73b6"
+      "bytes": 14024,
+      "sha256": "0ebe6cec28f8bb51f3efa318604b9619c9e2049999476b09ae0109bb6bd5280e"
     },
     {
       "path": "docs/development/user-guide-maintenance.md",
@@ -929,9 +929,14 @@
       "sha256": "38353839f1c013b246a167ddb87ed0be500de6459108a6ea5f1cae6a57ad472f"
     },
     {
+      "path": "scripts/release-notes.ps1",
+      "bytes": 3697,
+      "sha256": "42db469919792931bb8cda9662f2af403b5b1d360f9f23561d1b0a005284dec4"
+    },
+    {
       "path": "scripts/release-support.ps1",
-      "bytes": 20710,
-      "sha256": "dba4822c003e847f8594e3f18f7f3c952c2b4d227119e32a1060332b1dec8236"
+      "bytes": 20960,
+      "sha256": "cfbb540e1b99a791e098ed608182a1e54eb495f1290a0777592aa12f7dba8fb4"
     },
     {
       "path": "scripts/release.ps1",
@@ -950,8 +955,8 @@
     },
     {
       "path": "scripts/user-guide-support.ps1",
-      "bytes": 4239,
-      "sha256": "3c1ab058fe9d506a7f7a1807f0918dc368d16f120a310250217bd6a57cd73d69"
+      "bytes": 4267,
+      "sha256": "0ea6894ef5c936bc2c75d85e4a6240dbe3f01334e7e83450ea8dcd2b8d64878e"
     },
     {
       "path": "scripts/verify-version.cmake",

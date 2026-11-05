@@ -51,7 +51,9 @@ Windows build; inclusion is not a claim that every listed component is linked.
 The packager copies texts from the actual dependency checkout and fails if expected
 notices are absent. Owner review must still establish all applicable obligations.
 
-The payload also includes `README.txt`, `User-Guide.html` and
+Use the [build-release skill](../../.agents/skills/build-release/SKILL.md) to prepare notes and the guide before packaging.
+
+The payload also includes `README.txt`, `Release-Notes.html`, `User-Guide.html` and
 `guide-provenance.json`. The guide is a static offline document: all four native
 production-editor screenshots and the existing production wordmark are embedded PNG data URIs, with no scripts or
 external resources. Its source template is [alpha-guide.html](alpha-guide.html).
@@ -84,6 +86,42 @@ The wrapper's build lock is reacquired during verification/copying; another wrap
 owning that tree causes release validation to fail. Do not edit source, run raw
 build tools or alter output files while releasing.
 
+## Release-specific notes
+
+Before packaging, author and commit `docs/development/release-notes/<releaseIdentity>.json`.
+The filename and `releaseIdentity` must match the complete candidate identity, for example
+`v0.1.0-alpha.2`. Compare against the previous build actually shared with the recipient,
+using its manifest's full source SHA; do not assume a rehearsal or the latest tag is that build.
+Include only changes delivered in the chosen source, with concise musician-facing fixes,
+known limitations and actionable upgrade steps. Review again after integration changes.
+
+Example schema (illustrative; replace the baseline and prose with verified release facts):
+
+```json
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-alpha.2",
+  "previousRelease": "v0.1.0-alpha.1",
+  "previousGitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "changes": ["Describe a delivered feature in musician-facing language."],
+  "fixes": ["Describe a verified fix and its practical effect."],
+  "upgradeSteps": [],
+  "knownLimitations": ["Describe remaining limitations and actual host coverage."]
+}
+```
+
+Use null for both previous fields only for a genuinely first release. All four sections
+are arrays of nonempty plain-text strings; empty arrays omit inapplicable sections.
+At least one change or fix is required. The packager fails missing/malformed or mismatched
+notes before the native build. It HTML-escapes prose and writes a self-contained
+`Release-Notes.html` with the exact candidate, packaged source SHA and comparison baseline.
+The notes enter the ordinary ZIP inventory/checksums; packaging never rewrites their
+tracked JSON source or fetches GitHub history. It does not establish the factual accuracy
+of the prose or whether the recorded baseline was actually shared: the skill's review does.
+Open the extracted HTML offline with the user guide before accepting the package.
+GitHub publication currently retains its existing short source/licensing description;
+this change concerns the notes inside the ZIP.
+
 ## Redistribution gate
 
 A generated ZIP is **internal evaluation only**. No license review or distribution
@@ -112,6 +150,7 @@ this review. No licensing review was approved by implementing or testing this sc
    `build-manifest.json`. Inspect the recorded commit and explicit candidate label.
 2. Extract to a temporary directory. Preserve the complete `ReverbArise.vst3/`
    directory and its `Contents/`; do not extract only the inner `.vst3` binary.
+   Open `Release-Notes.html` and check the candidate, source, baseline and upgrade advice.
 3. Close the DAW. Preserve the installed bundle for rollback. Copy the whole bundle
    into the supported system folder `%PROGRAMFILES%\Common Files\VST3` with the
    required Windows permission. FL Studio does not discover VST3 from custom user
@@ -174,6 +213,11 @@ are not edited and assets are not clobbered. If upload fails, inspect GitHub's s
 manually before retrying; gh may have created a release with partial uploads.
 
 ## Verification scope
+
+Run `tests/release_notes_test.ps1` in Windows PowerShell 5.1 and PowerShell 7 for
+focused schema, identity, escaping, offline HTML and source-preservation checks.
+The release-wrapper fixture also checks early rejection of missing notes and their
+inclusion in stable/candidate inventories.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/release_wrapper_test.ps1
