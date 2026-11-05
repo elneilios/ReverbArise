@@ -53,6 +53,38 @@ int main(){return runTest([]{
         REQUIRE(std::abs(heard[static_cast<size_t>(at)*2+c]-decoded.getSample(c,static_cast<int>(at))*monitorEdgeGain(static_cast<size_t>(at),static_cast<size_t>(countFrames),1000,.005))<1e-6);
     REQUIRE(!engine.snapshot().songExport.cursor);reader.reset();
     };auditionOracle(ready);
+    // Gain-only edits retain the exact cursor while publication is deliberately held.
+    REQUIRE(engine.playExport(engine.assignmentEpoch()));std::array<float,127> editLeft{},editRight{};
+    const auto editBlock=[&]{editLeft.fill(0);editRight.fill(0);{AudioAllocationGuard guard;engine.processAudio(editLeft.data(),editRight.data(),127,context.time);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0);};
+    waitFor([&]{editBlock();return engine.snapshot().songExport.cursor.has_value();});
+    engine.holdExportForTesting(true);auto editAt=*engine.snapshot().songExport.cursor;
+    REQUIRE(engine.setExportLevels(1,.25f,engine.assignmentEpoch()));
+    waitFor([&]{return engine.exportWaitingForTesting();});
+    for(int block=0;block<100;++block){if(block==25)REQUIRE(engine.setExportLevels(.65f,1,engine.assignmentEpoch()));
+        if(block==50)REQUIRE(engine.setExportLevels(1,.5f,engine.assignmentEpoch()));
+        editBlock();editAt+=127;const auto snap=engine.snapshot().songExport;
+        REQUIRE(snap.cursor==editAt && snap.previewRequested && !snap.prepared);
+        REQUIRE(!engine.deliverExport(engine.assignmentEpoch(),ready->file,{},false,true));juce::Thread::sleep(1);}
+    REQUIRE(engine.snapshot().songExport.previewLevels && engine.snapshot().songExport.previewLevels->dry==1 && engine.snapshot().songExport.previewLevels->wet==.5f);
+    REQUIRE(verifyExportFile(engine.assetDirectory(),ready->file,error));
+    waitFor([&]{return engine.exportWaitingForTesting();});
+    const auto exports=engine.assetDirectory().getChildFile("exports"),retained=engine.assetDirectory().getChildFile("exports-retained-test");
+    REQUIRE(exports.moveFileTo(retained) && exports.replaceWithText("injected publication obstruction"));
+    engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::error;});
+    for(int block=0;block<20;++block){editBlock();editAt+=127;REQUIRE(engine.snapshot().songExport.cursor==editAt);juce::Thread::sleep(1);}
+    REQUIRE(!engine.snapshot().songExport.prepared && !engine.deliverExport(engine.assignmentEpoch(),ready->file,{},false,true));
+    REQUIRE(exports.deleteFile() && retained.moveFileTo(exports));REQUIRE(verifyExportFile(engine.assetDirectory(),ready->file,error));
+    REQUIRE(engine.setExportLevels(0,0,engine.assignmentEpoch()));editBlock();editBlock();
+    REQUIRE(!engine.snapshot().songExport.previewRequested && !engine.snapshot().songExport.cursor);
+    REQUIRE(engine.setExportMix(.65f,engine.assignmentEpoch()));engine.holdExportForTesting(false);
+    waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+    REQUIRE(!engine.snapshot().songExport.previewRequested);ready=engine.snapshot().songExport.prepared;
+    REQUIRE(engine.playExport(engine.assignmentEpoch()));waitFor([&]{editBlock();return engine.snapshot().songExport.cursor.has_value();});
+    auto incompatible=context.time;incompatible.bpm+=1;engine.processAudio(editLeft.data(),editRight.data(),127,incompatible);
+    REQUIRE(!engine.snapshot().songExport.cursor && !engine.snapshot().songExport.previewRequested);editBlock();REQUIRE(!engine.snapshot().songExport.previewRequested);
+
+
     const auto baselineExport=engine.savedSession().exportState;const auto baselineRenders=engine.snapshot().renderCount;
     const auto seek=[&](int64_t sample){return engine.seekExport(sample,engine.assignmentEpoch(),flow.snapshot().pass,ready->plan->identity);};
     REQUIRE(seek(INT64_MIN) && engine.snapshot().songExport.previewPosition==ready->metrics.audibleStart);
@@ -137,7 +169,7 @@ int main(){return runTest([]{
         waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});auditionOracle(engine.snapshot().songExport.prepared);}
     REQUIRE(engine.playExport(engine.assignmentEpoch()));waitFor([&]{std::array<float,16> l{},r{};engine.processAudio(l.data(),r.data(),16,context.time);return engine.snapshot().songExport.cursor.has_value();});
     engine.holdExportForTesting(true);REQUIRE(engine.setExportMix(.67f,engine.assignmentEpoch()));waitFor([&]{return engine.exportWaitingForTesting();});
-    REQUIRE(engine.residentBytes()<=previewMemoryBudget);engine.stop();engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+    REQUIRE(engine.residentBytes()<=previewMemoryBudget);const auto stoppedAt=engine.snapshot().songExport.cursor;engine.stop();REQUIRE(engine.snapshot().songExport.previewPosition==stoppedAt);engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
     std::array<float,32> stoppedL{},stoppedR{};engine.processAudio(stoppedL.data(),stoppedR.data(),32,context.time);
     stoppedL.fill(0);stoppedR.fill(0);engine.processAudio(stoppedL.data(),stoppedR.data(),32,context.time);
     REQUIRE(!engine.snapshot().songExport.cursor && std::all_of(stoppedL.begin(),stoppedL.end(),[](float x){return x==0;}));
@@ -167,6 +199,8 @@ int main(){return runTest([]{
         publicationDirectory=engine.assetDirectory().getChildFile("exports");
         const auto countFiles=[&]{return publicationDirectory.findChildFiles(juce::File::findFiles,false,"Swells-*.wav").size();};
         const auto before=engine.savedSession().exportState;const auto previous=engine.snapshot().songExport.prepared->file;
+        REQUIRE(engine.playExport(engine.assignmentEpoch()));
+        waitFor([&]{editBlock();return engine.snapshot().songExport.cursor.has_value();});
         publicationFileCount=countFiles();publicationMissingTime=true;
         REQUIRE(engine.setExportMix(.43f,engine.assignmentEpoch()));
         waitFor([&]{return publicationMisses.load()>=3;});
@@ -174,6 +208,10 @@ int main(){return runTest([]{
         REQUIRE(waiting.phase==ExportPhase::preparing && !waiting.prepared && waiting.previous->file==previous);
         REQUIRE(engine.savedSession().exportState.history==before.history && engine.savedSession().exportState.completedPath==before.completedPath);
         REQUIRE(countFiles()==publicationFileCount+1 && !engine.playExport(engine.assignmentEpoch()));
+        auto at=*engine.snapshot().songExport.cursor;
+        for(int block=0;block<20;++block){editBlock();at+=127;REQUIRE(engine.snapshot().songExport.cursor==at);juce::Thread::sleep(1);}
+        engine.stop();editBlock();editBlock();REQUIRE(!engine.snapshot().songExport.previewRequested);
+
         publicationMissingTime=false;
         waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
         const auto recovered=engine.snapshot().songExport.prepared->file;
@@ -208,6 +246,14 @@ int main(){return runTest([]{
         const auto restoredPair=engine.savedSession();engine.restore(restoredPair);
         waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
         REQUIRE(engine.snapshot().songExport.prepared->file==additive->file);
+        REQUIRE(engine.playExport(engine.assignmentEpoch()));waitFor([&]{editBlock();return engine.snapshot().songExport.cursor.has_value();});
+        engine.holdExportForTesting(true);REQUIRE(engine.setExportLevels(.7f,.3f,engine.assignmentEpoch()));waitFor([&]{return engine.exportWaitingForTesting();});
+        engine.restore(restoredPair);engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        editBlock();REQUIRE(!engine.snapshot().songExport.previewRequested && !engine.snapshot().songExport.cursor);
+        REQUIRE(engine.playExport(engine.assignmentEpoch()));waitFor([&]{editBlock();return engine.snapshot().songExport.cursor.has_value();});
+        REQUIRE(flow.requestMode(workflow::Mode::live,{true,true,true}));editBlock();REQUIRE(!engine.snapshot().songExport.previewRequested && !engine.snapshot().songExport.cursor);
+        REQUIRE(flow.requestMode(workflow::Mode::finalise,{true,true,true}));waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        REQUIRE(!engine.snapshot().songExport.previewRequested);
         const auto beforeSilence=engine.savedSession().exportState;
         REQUIRE(engine.setExportLevels(0,0,engine.assignmentEpoch()));
         waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::idle;});

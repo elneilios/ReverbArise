@@ -592,8 +592,8 @@ int main(int argc,char* argv[]){return runTest([&]
         // audio device or the owner's DAW. Product audio still uses processBlock.
         class PreviewClock final:private juce::Timer{
         public:explicit PreviewClock(m3::SwellEngine& owner):owner(owner){startTimerHz(50);}
-        private:void timerCallback()override{const auto s=owner.snapshot().songExport;if(s.prepared){
-            std::array<float,960> l{},r{};owner.processAudio(l.data(),r.data(),960,s.prepared->plan->timing);}}
+        private:void timerCallback()override{const auto s=owner.snapshot().songExport;const auto pin=s.prepared?s.prepared:s.previous;if(pin){
+            std::array<float,960> l{},r{};owner.processAudio(l.data(),r.data(),960,pin->plan->timing);}}
             m3::SwellEngine& owner;
         } clock(engine);
         snapshotEditor(editor,"export-ready");controlReview::run(std::make_unique<PreverbAudioProcessorEditor>(*processor));return;}
@@ -660,6 +660,18 @@ int main(int argc,char* argv[]){return runTest([&]
         {
             auto fixture=engine.snapshot();fixture.songExport.phase=m3::ExportPhase::preparing;fixture.songExport.previous=fixture.songExport.prepared;fixture.songExport.prepared.reset();fixture.session.exportState.wet=.35f;exportView->display(fixture);
             REQUIRE(!named(editor,"exportSave")->isEnabled() && !named(editor,"exportDrag")->isEnabled());snapshotEditor(editor,"export-pending");
+            auto* nav=dynamic_cast<m3::ui::controls::TimelineNavigation*>(named(editor,"exportNavigation"));REQUIRE(nav);
+            nav->zoom(.4,.5);nav->pan(.1);const auto before=exportView->viewport();
+            fixture.songExport.cursor=fixture.songExport.previous->plan->origin+127;
+            fixture.songExport.previewRequested=true;fixture.songExport.previewLevels=m3::ExportVoice::AcceptedLevels{1,.35f,2};
+            exportView->display(fixture);REQUIRE(named(editor,"exportStop")->isEnabled());
+            REQUIRE(exportView->notice()->text.contains("Preview continues") && exportView->notice()->detail.contains("pending"));
+            REQUIRE(exportView->viewport().first==before.first && exportView->viewport().last==before.last);
+            auto measured=std::make_shared<m3::PreparedExport>(*fixture.songExport.previous);
+            auto currentPlan=std::make_shared<m3::SongExportPlan>(*measured->plan);currentPlan->dry=1;currentPlan->wet=.35f;currentPlan->identity="preview-measured";
+            measured->plan=currentPlan;measured->metrics.peak=2;fixture.songExport.preview=measured;exportView->display(fixture);
+            REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning);
+            REQUIRE(exportView->viewport().first==before.first && !named(editor,"exportSave")->isEnabled());
             fixture.songExport.phase=m3::ExportPhase::error;fixture.songExport.message="Required wet asset unavailable";exportView->display(fixture);
             auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice);notice->display(exportView->notice());
             REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::error);snapshotEditor(editor,"export-unavailable");

@@ -48,7 +48,7 @@ This directory covers product identity, the existing implementation, development
 - [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
 - [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
-- [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels remain planned in #51.
+- [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels and continuous gain preview are implemented by #51.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
 
 ## Documentation policy

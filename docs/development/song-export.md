@@ -141,21 +141,21 @@ nonempty interval but cannot be auditioned as an audible region.
 
 ## Preview/file equivalence
 
-Export preview decodes the current verified float32 WAV into a sixteen-page
-4096-frame stereo ring. The callback never decodes, reads files, owns reference
+Export preview streams the verified dry/wet branches into a sixteen-page
+4096-frame ring with two stereo arrays per slot. The callback never decodes, reads files, owns reference
 counts, frees pages or waits for the worker. Only explicit Play intent can arm
 prefetched pages. Stop revokes delayed arms; exhausted pages stop preview and
 report starvation rather than advancing over missing audio. Mode exit and
-restore revoke continuation. A mix change stops/rebuffers explicitly; completion
-does not resume playback automatically.
+restore revoke continuation. Gain-only edits preserve the active ticket/cursor;
+file completion does not start a stopped preview.
 
 The cursor is an absolute song sample. By default preview starts at the exact nonzero
 mixed bound, while the WAV retains its full song-origin interval, lead-in and
 declared tails. Interior PCM equals the decoded WAV; only the existing 5 ms
-manual preview start/end/Stop ramps differ. The 2 ms wet member-boundary ramps
+manual preview start/end/Stop and gain-transition ramps differ. The 2 ms wet member-boundary ramps
 are already part of the shared composition and file. No page boundary applies
-another ramp. Wet aggregate and weighted-sum attenuation are fixed for the whole
-revision and use the saved policy; no live wet level or Perform trim is baked in.
+another ramp. Wet aggregate and weighted-sum attenuation remain unity; no live
+wet level or Perform trim is baked in.
 
 Engine callback oracles cover 0%, 50%, 65% and 100% and compare all preview frames
 to decoded WAV plus the declared monitor ramps. The reusable metadata/mixer and
@@ -219,10 +219,9 @@ supersede prior work; Stop revokes delayed starts. Old-ticket cursors are hidden
 while a new target is preparing. Stop parks its current cursor; natural completion
 returns the display to the chosen start. Right-click never seeks.
 
-Position is transient engine metadata, cleared with mix/session/mode changes;
+Position is transient engine metadata, cleared with session/mode changes;
 it does not dirty the project, change export/file identity, regenerate wet or
-seek the DAW. The callback still consumes only fixed pages. The worker reads the
-same immutable WAV from the selected sample, with no new audio engine. Pending
+seek the DAW. The callback still consumes only fixed pages. The worker streams verified dry and wet branches from the selected sample through the existing SongMix kernel. Pending
 last-good plots cannot seek. Wheel/Shift-wheel, right-drag and Fit remain viewport
 actions, independent of preview position. Shared #46 controls are integrated.
 
@@ -245,3 +244,38 @@ composition/ownership checks; changed keys, restore/Clear or leaving Export disc
 the private reference. It contains bounded file metadata, no PCM, and is not saved
 or exposed for delivery before compatibility succeeds. Previous accepted files
 and last-good display remain intact. No waiting loop blocks the worker.
+
+
+## Continuous gain monitoring (issue #51 follow-up)
+
+Play pins the session, Export pass, captured-source reference, timing and render
+revision independently of the requested WAV generation. The worker prepares the
+existing SongMix reader at unit dry/wet levels and reads two stereo branches.
+Wet samples retain accepted calibration, envelopes and true-boundary conditioning.
+A dry-only pin can omit unavailable wet dependencies; requesting that missing
+branch stops preview until a valid composition is ready. Dependency changes,
+mode exit, restore, Stop, 0/0, finite completion or starvation revoke playback.
+A stopped gain edit never starts playback.
+
+ExportVoice retains 16 fixed 4096-frame pages, each holding dry stereo and wet
+stereo float arrays (1 MiB of sample capacity). Worker reader/chunk memory and
+summary bins participate in the existing shared 256 MiB budget; no whole-song
+buffer is introduced. Slot states publish both branches together. The callback
+only consumes pages, performs bounded atomic snapshots and mixes samples; it
+does not read files, acquire a lock, allocate or schedule work.
+
+A serialized control writer publishes a coherent dry/wet pair, ticket and end
+bound. The callback accepts a revision at a block boundary and linearly reaches
+the latest pair over 5 ms. A further edit starts from the attained gains. The
+transport ticket and absolute cursor remain unchanged during gain edits. This
+monitoring transition and the existing start/stop/end ramps are excluded from
+WAV samples; steady gains equal the delivered additive kernel. A newly measured
+end behind the advancing cursor stops playback rather than rewinding.
+
+Measurement, verification and WAV writing service the preview between bounded
+pages. Gain edits invalidate Save/Drag immediately; only a verified current file
+restores them. A measured summary can become visible before publication. Until
+then, retained plots are labelled previous and current peak measurement is
+pending. The callback-accepted pair and song cursor remain separate from file
+readiness. Playing gain edits preserve viewport context. Publication failure
+retains the valid preview and historical files but cannot authorize stale delivery.

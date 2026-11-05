@@ -86,3 +86,9 @@ Owner confirmed FL closed again. The normal helper's Release plugin-only build p
 - Release source: `efdd2ec` (documentation-only follow-up to production `bd48175`; Source/CMake diff between those commits is empty). Build reports dirty state from the preserved unrelated #71 untracked proposal.
 - Final installer build: `out/build-logs/Release/20261105-210610-7f60d8d5`; administrator output `out/issue51-install-admin.log`. Plugin-only build passed; CTest was not repeated during installation. The preceding full Release retry passed 71/71 against identical production code.
 - [Draft PR #92](https://github.com/elneilios/ReverbArise/pull/92) remains open. Final FL preset/preview, Save/Playlist alignment and save/reopen acceptance is pending; installation alone is not host acceptance. Ask the owner to verify the system bundle path after a verified/rescan-previously-verified plugin scan.
+
+## Owner FL result and requested refinements
+
+Owner reports: “FL smoke test passes — presets, export alignment and save/reopen all look good.” This accepts those installed-build behaviors; actual host/DPI settings were not separately specified. Two follow-ups remain before final delivery: unwanted spoken Export notices and uninterrupted Mix Character changes during preview. The prior acceptance is retained and must not be repeated as a blanket host checklist.
+
+Read-only investigation confirmed that shared NoticeBar explicitly calls `AccessibilityHandler::postAnnouncement`; bundled JUCE's Windows implementation invokes SAPI `Speak` when an accessibility client is active. No particular client or Narrator state was established. Export currently streams a completed WAV, and pair edits stop/revoke that preview; seamless moving-playhead gain changes require an approved plan revision, not just removing the Stop call. No implementation changes were made during this investigation.

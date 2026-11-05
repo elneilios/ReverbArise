@@ -16,7 +16,7 @@ Export SHALL snapshot accepted source/timing, eligible wet versions, shapes/plac
 - **THEN** current mixdown readiness is blocked with an identity/reason rather than presenting an incomplete wet layer as complete
 
 ### Requirement: Mix endpoints use a shared disclosed gain plan
-Export SHALL sum independently scaled dry and accepted wet, each level in [0,1] with 1 meaning unity. Saved per-swell calibration, Level, shape and edge treatment SHALL remain shared by preview and WAV. Export SHALL NOT apply aggregate wet attenuation, combined attenuation, normalization or limiting. It SHALL preserve finite above-unity Float32 samples and disclose measured peak/overload. Monitoring boundary ramps SHALL remain separately disclosed.
+Export SHALL sum independently scaled dry and accepted wet, each level in [0,1] with 1 meaning unity. Saved per-swell calibration, Level, shape and edge treatment SHALL remain shared by preview and WAV. Export SHALL NOT apply aggregate wet attenuation, combined attenuation, normalization or limiting. It SHALL preserve finite above-unity Float32 samples and disclose measured peak/overload. Monitoring boundary and live gain-transition ramps SHALL remain separately disclosed and excluded from file samples.
 
 #### Scenario: Endpoint and blend oracle
 - **WHEN** the same snapshot is prepared at Dry/Wet 0/100, 100/0, 100/100, 35/65 and 0/0
@@ -40,24 +40,25 @@ Dry-inclusive compositions SHALL substitute zero samples for uncaptured or unava
 - **THEN** no dry is read or mixed and the dry-substitution warning no longer describes that wet-only composition as incomplete
 
 ### Requirement: Explicit preview matches the prepared export
-Export Play SHALL use the prepared composition from the parked preview position, or first audible sample by default. It SHALL continue through the audible end. Stop SHALL affect only internal preview. The absolute cursor SHALL remain independent of DAW transport. An all-zero mix SHALL not invent an audible start. Monitoring-only boundary ramps SHALL remain disclosed separately from file samples.
+Export Play SHALL use verified accepted layers from the parked preview position, or first audible sample by default. It SHALL continue through the audible end without relying on completed-WAV availability. Stop SHALL affect only internal preview. The absolute cursor SHALL remain independent of DAW transport. An all-zero mix SHALL not invent an audible start. Monitoring-only boundary and gain-transition ramps SHALL remain disclosed separately from file samples.
 
 #### Scenario: Ephemeral preview seeking
 - **WHEN** a current ready mix is clicked or dragged at an absolute waveform position
 - **THEN** the preview position clamps to its audible range; stopped preview remains stopped and playing preview continues from that position after bounded prefetch with anti-click ramps
 - **AND** latest seek intent supersedes older work, Stop revokes pending starts, and composition/file identity, source/render assets and persisted state remain unchanged
 - **AND** pending/failed mixes, stale session/pass intents and mode exit cannot seek or autoplay a previous revision
+- **AND** pending WAV preparation alone does not stop an already-running preview whose verified layer dependencies remain valid
 
 #### Scenario: Preview versus decoded WAV
 - **WHEN** a prepared independent-level mix is previewed and its WAV decoded
-- **THEN** corresponding interior samples, gain, overlap and timing agree within documented float tolerance, with only disclosed preview start/stop ramps excluded from exact comparison
+- **THEN** corresponding steady-gain interior samples, gain, overlap and timing agree within documented float tolerance, excluding only disclosed boundary and live gain-transition ramps from exact comparison
 
 #### Scenario: Bypass and live input
 - **WHEN** DAW playback runs while Export preview is idle or explicitly playing
 - **THEN** normal DAW output retains dry passthrough with no capture or scheduled wet; explicit preview remains a separate contribution and never records its own output or starts/seeks the DAW
 
 ### Requirement: Latest mix intent owns readiness
-Mix/source/session changes SHALL invalidate current mixdown readiness without deleting older completed files. Async completions SHALL verify originating instance/session, immutable dependencies and request generation before publication. Only the current ready revision SHALL enable Save/Drag; callbacks, mode changes and preview completion SHALL NOT start export or playback automatically.
+Mix/source/session changes SHALL invalidate current mixdown readiness without deleting older completed files. Async completions SHALL verify originating instance/session, immutable dependencies and request generation before publication. Only the current ready revision SHALL enable Save/Drag; callbacks, mode changes and preview completion SHALL NOT start export or playback automatically. Gain-only edits SHALL preserve already-running preview when its verified dependencies remain valid.
 
 #### Scenario: Rapid mix and session changes
 - **WHEN** different Dry/Wet pair requests finish out of order, or a different project restores during preparation
@@ -87,6 +88,41 @@ Export SHALL explain that DAW scheduled wet is bypassed and advise staying in Ex
 
 
 ## ADDED Requirements
+
+### Requirement: Playing mix edits preserve the advancing playhead
+While Export preview is playing, preset or level changes SHALL take effect with a bounded click-free monitoring gain transition at the advancing absolute playhead, without stopping, rewinding, reconvolving or waiting for WAV publication. A level edit from stopped SHALL NOT start preview. Playback SHALL remain finite and SHALL stop safely on invalid dependencies, mode/project changes, 0/0 or unrecoverable starvation.
+
+#### Scenario: Change preset during playback
+- **WHEN** the user changes Mix Character while verified Export preview is playing
+- **THEN** the cursor advances without a preparation gap or reset and the sound transitions to the selected pair at the current timeline position
+- **AND** captured source, accepted wet renders and previously published WAVs remain unchanged
+
+#### Scenario: Rapid level edits with delayed file publication
+- **WHEN** several fader or preset edits occur while WAV preparation is delayed
+- **THEN** preview keeps advancing, the latest pair wins and older work cannot reinstate an earlier pair or cursor
+- **AND** Save/Drag stay disabled until a verified file matches the latest pair and dependencies
+
+#### Scenario: Stop revokes an in-flight mix change
+- **WHEN** Stop, mode exit or project restore occurs during a playing gain edit
+- **THEN** pending work cannot restart preview, carry its cursor into another session or publish another session's file
+
+#### Scenario: Zero pair and finite end
+- **WHEN** a playing edit reaches 0/0 or playback reaches its finite accepted end
+- **THEN** preview stops without rewinding or looping
+- **AND** changing back from 0/0 to a nonzero pair does not start playback until Play is explicitly invoked
+- **AND** newly established audible bounds behind the current cursor cause a stop rather than a jump to a new audible start
+
+### Requirement: Preview presentation distinguishes file readiness
+The accepted preview target pair, waveform/legend and advancing cursor SHALL describe the verified audible preview independently of WAV readiness. Retained summaries and pending peak measurements SHALL be identified honestly. A pending or failed WAV SHALL NOT be offered as current, and file preparation alone SHALL NOT interrupt valid active preview.
+
+#### Scenario: Preview pair accepted before the file is ready
+- **WHEN** the playing preview accepts a new pair while its WAV or waveform detail is still preparing
+- **THEN** controls and status identify the new target, a retained summary is labelled previous and current Save/Drag remain unavailable
+- **AND** transition smoothing is disclosed as monitoring-only; the eventual WAV uses the stable target pair without the transition ramp
+
+#### Scenario: Storage cannot sustain preview
+- **WHEN** verified layer data cannot be supplied within the bounded preview buffering
+- **THEN** preview stops with an honest starvation/error state without blocking the audio callback or claiming seamless output
 
 ### Requirement: Mix Character selects only a pair of levels
 Export SHALL offer an accessible Mix Character selector and independently editable Dry and Wet percentages. A preset SHALL set only the pair atomically; direct edits SHALL retain the other level. Names SHALL derive from exact canonical pairs, with Custom for unmatched pairs. Preset values SHALL require owner listening and native interaction approval before final rollout.

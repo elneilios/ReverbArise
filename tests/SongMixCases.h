@@ -16,7 +16,7 @@ inline void songMixCases()
     Swell swell;swell.arrival=swell.sourceStart=100;swell.sourceEnd=200;swell.shape.endOffset=100;swell.phase=Phase::ready;
     REQUIRE(assets.writeRender(raw,{},"fixture",session.timing,swell.render,error));session.swells={swell};
     auto neighbour=swell;neighbour.id=juce::Uuid().toDashedString();neighbour.placement=20;session.swells.push_back(neighbour);
-    const auto original=fileHash(directory.file.getChildFile(swell.render.path));
+    const auto original=fileHash(directory.file.getChildFile(swell.render.path)),originalSource=fileHash(directory.file.getChildFile(range.assetPath));
     {
         const auto readPair=[&](float dryLevel,float wetLevel){
             std::shared_ptr<const SongExportPlan> plan;REQUIRE(prepareSongExportPlan(session,source,"independent",session.timing,dryLevel,wetLevel,plan,error));
@@ -27,6 +27,20 @@ inline void songMixCases()
             return samples;
         };
         const auto dryLayer=readPair(1,0),wetLayer=readPair(0,1);
+        std::shared_ptr<const SongExportPlan> layersPlan;
+        REQUIRE(prepareSongExportPlan(session,source,"layers",session.timing,1,1,layersPlan,error));
+        auto layers=std::make_unique<SongMix>(directory.file);std::array<float,26> d{},w{};
+        REQUIRE(!layers->readLayers(0,d,w,error));
+        REQUIRE(!layers->prepare(layersPlan,previewMemoryBudget,error,[]{return true;}));
+        REQUIRE(!layers->readLayers(0,d,w,error));
+        REQUIRE(layers->prepare(layersPlan,previewMemoryBudget,error));
+        for(int at=0;at<287;at+=13){REQUIRE(layers->readLayers(at,d,w,error));
+            for(int n=0;n<26;++n){REQUIRE(std::abs(d[n]-dryLayer[at*2+n])<1e-6f);REQUIRE(std::abs(w[n]-wetLayer[at*2+n])<1e-6f);}}
+        REQUIRE(!layers->readLayers(-1,d,w,error) && !layers->readLayers(299,d,w,error));
+        REQUIRE(!layers->readLayers(0,d,{w.data(),24},error));
+        REQUIRE(layers->workingBytes()<2*1024*1024 && fileHash(directory.file.getChildFile(swell.render.path))==original);
+        REQUIRE(fileHash(directory.file.getChildFile(range.assetPath))==originalSource);
+
         for(const auto pair:std::array<std::pair<float,float>,4>{{{1,1},{.35f,.65f},{1,.25f},{0,0}}}){
             const auto sum=readPair(pair.first,pair.second);
             for(size_t n=0;n<sum.size();++n)REQUIRE(std::abs(sum[n]-(dryLayer[n]*pair.first+wetLayer[n]*pair.second))<2e-6f);

@@ -10,7 +10,7 @@ uint64_t SongMix::workingBytes()const noexcept
     +(measured.dryPeaks.capacity()+measured.wetPeaks.capacity())*sizeof(CapturePeak);}
 bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t available,juce::String& error,const RenderCancellation& cancel)
 {
-    ready=false;current.reset();readers.clear();occupied.clear();measured={};
+    ready=false;layersReady=false;current.reset();readers.clear();occupied.clear();measured={};
     const auto reserve=fixedPages+maximumPeaks*2*sizeof(CapturePeak)+(input?input->members.size():0)*readerAllowance;
     if(!input || available<reserve){error="Export reader working budget exceeded";return false;}
     if(!dry.prepare(input,available-reserve,error,cancel))return false;
@@ -36,7 +36,7 @@ bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t avail
     std::sort(occupied.begin(),occupied.end());std::vector<std::pair<int64_t,int64_t>> merged;
     for(const auto& range:occupied){if(range.second<=range.first)continue;
         if(!merged.empty() && range.first<=merged.back().second)merged.back().second=std::max(merged.back().second,range.second);else merged.push_back(range);}
-    occupied=std::move(merged);error.clear();return true;
+    occupied=std::move(merged);layersReady=true;error.clear();return true;
 }
 bool SongMix::branches(int64_t at,std::span<float> source,std::span<float> wet,juce::String& error)
 {

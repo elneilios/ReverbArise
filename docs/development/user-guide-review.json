@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed integrated independent Export levels/presets, accepted-pair canvas and legend, cancellation display, immediate zero-pair readiness and combined overload/missing-dry warning details. Existing guide accurately covers unity addition, Float32 clipping risk, disabled zero state, migration and immutable delivery; final FL smoke pending.",
+  "summary": "Reviewed issue 51 continuous Export preview against production control bindings, SongMix layer streaming, callback target/ramp and file readiness guards; documented moving-playhead preset/fader edits, pending WAV/waveform behavior and stopped/zero behavior. Preserved prior FL acceptance and limited host/accessibility coverage.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -375,13 +375,13 @@
     },
     {
       "path": "Source/DSP/SongMix.cpp",
-      "bytes": 9966,
-      "sha256": "829962da4984c98bca65f37a4c70690ccddb85874189ead2891bc09bf3acee91"
+      "bytes": 10001,
+      "sha256": "58548c18b5566ad1faa66d29aa712fa4f5bdffc4e96b9385386f7123dae5f4d2"
     },
     {
       "path": "Source/DSP/SongMix.h",
-      "bytes": 2038,
-      "sha256": "686cd7a943b425c48e053befb875fed7c5030806509ba0672f5410944df60a29"
+      "bytes": 2342,
+      "sha256": "c27e3b967222d68cbad805be2439a27a7ee70a7d95c7d42e5cfb8a50969cecfd"
     },
     {
       "path": "Source/DSP/SourceEdgeConditioning.cpp",
@@ -405,18 +405,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 81053,
-      "sha256": "5b6b05fe793cfe62312f3823601fc009fd6a5a2c0bce51eed8e1112c71fb026d"
+      "bytes": 81645,
+      "sha256": "8e41f268be7838ea8e9e32aa0aaf48960589835a5e99aa09c5e4b3f402eba7b5"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22132,
-      "sha256": "1aeeafa35085a1ab11d552d3d4404af737491883a7ac5935816d291d81edf92d"
+      "bytes": 22400,
+      "sha256": "2a8b0a2e10c20d1a66127e6eb32e3c86fbe58b887c15372e2f0637a0ac56deae"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 20351,
-      "sha256": "563dcaec56f0a4bf728f34530706a94e64c2df0e3ebb56a20ac45d9bfa757df9"
+      "bytes": 23496,
+      "sha256": "6d9a91f071b6d39dc214579c9a4ee31b5a4e3044d755a5ce3ec364d768c58495"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -460,13 +460,13 @@
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
-      "bytes": 5368,
-      "sha256": "72ee3ad44aa58295055536d3a587a5e4b2d2f9a2f0552049ff8cffb275473a50"
+      "bytes": 8503,
+      "sha256": "a074caf722c8989873185494db298d70c3f47197eec5f61029fa3b8089078dbf"
     },
     {
       "path": "Source/Playback/ExportVoice.h",
-      "bytes": 1903,
-      "sha256": "50f5a96e2608853692c2838ab67e99a0d63038dd2e93de70fc7f74a55e88852b"
+      "bytes": 2842,
+      "sha256": "5c53f1fb6b55d3ae553efc2cd52099ba7d77443faaae9a8edb767c6912c49f8f"
     },
     {
       "path": "Source/Playback/LiveDiagnostics.h",
@@ -605,8 +605,8 @@
     },
     {
       "path": "Source/UI/Controls/NoticeBar.h",
-      "bytes": 3009,
-      "sha256": "9b56060f927f4a4f78b077cc164c137c4d30550542d25a4cb851c9e6be284db8"
+      "bytes": 2763,
+      "sha256": "a31c3b4ea4cc92a29172ef098d4fdd40de9caa50651e2014e3a8ce4f374cde29"
     },
     {
       "path": "Source/UI/Controls/NumericInputControl.h",
@@ -655,8 +655,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 20543,
-      "sha256": "4a0277a4bf3d5d922a173e1181498f3314de32fc1132458b63ad9f368dfc79e0"
+      "bytes": 21675,
+      "sha256": "d18ecd41acc67cf37c847a6f8b7403783d1095be44ea4c5faa1593fd2d205dee"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -780,8 +780,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16223,
-      "sha256": "0eeb664a4ec1b6553888481805d1f1c189ce6e6903d73ecbb6e4befb2c9733e3"
+      "bytes": 16561,
+      "sha256": "6e27e794809587cc7f6e631e2c4ebba6bda05946532391313888a7b3dd1b32e3"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

@@ -19,6 +19,13 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Shared NoticeBar updates visible severity, accessible title/description/help and
+standard accessibility change events without explicitly synthesizing speech.
+Do not call postAnnouncement for notice refreshes: on Windows JUCE can invoke
+SAPI whenever an accessibility client (including automation) is active. Keep
+assistive access and OS accessibility settings intact. This interaction-policy
+correction is owner-approved in the issue #51 follow-up; it adds no visual variant.
+
 Issue #51's `Controls/ExportLevelsControl.h` review candidate composes the existing
 `DeliberateSelector`, `SliderControl` and `NumericInputControl` policies. It emits
 one pair edit for a preset, preserves the untouched level for fader edits, derives

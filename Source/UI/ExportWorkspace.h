@@ -57,6 +57,8 @@ public:
         if(state.session!=editor.songExport.session){displayed.reset();identity.clear();rangeIdentity.clear();}
         state=editor.songExport;
         displayed=state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?nullptr:state.prepared?state.prepared:state.previous;
+        if(state.cursor && state.previewLevels)for(const auto& candidate:{state.previous,state.prepared,state.preview})
+            if(candidate && candidate->plan->dry==state.previewLevels->dry && candidate->plan->wet==state.previewLevels->wet)displayed=candidate;
         if(lastDelivery!=state.delivery){lastDelivery=state.delivery;localMessage.clear();}
         mix.display({editor.session.exportState.dry,editor.session.exportState.wet});
         const auto ready=state.phase==ExportPhase::ready && state.prepared!=nullptr;
@@ -67,7 +69,7 @@ public:
         navigation.setEnabled(displayed!=nullptr);
         navigation.setPositioningEnabled(ready);
         if(displayed && (rangeIdentity!=displayed->plan->identity || (ready && identity!=displayed->plan->identity))){
-            const auto reset=ready || rangeIdentity.isEmpty();rangeIdentity=displayed->plan->identity;localMessage.clear();const auto& p=*displayed->plan;const auto& m=displayed->metrics;
+            const auto reset=(!state.cursor && ready) || rangeIdentity.isEmpty();rangeIdentity=displayed->plan->identity;localMessage.clear();const auto& p=*displayed->plan;const auto& m=displayed->metrics;
             navigation.setRange(static_cast<double>(m.audibleStart.value_or(p.origin)),static_cast<double>(m.audibleEnd.value_or(p.end)),static_cast<double>(p.origin),static_cast<double>(p.end),p.timing.rate,reset);
         }
         if(ready)identity=state.prepared->plan->identity;
@@ -88,16 +90,18 @@ public:
     {
         using controls::NoticeMessage;using controls::NoticeTone;
         if(state.phase==ExportPhase::error)return NoticeMessage{"Export unavailable: "+state.message,state.message,NoticeTone::error};
-        if(state.prepared && state.prepared->metrics.peak>1){
-            const auto peak=juce::String(juce::Decibels::gainToDecibels(state.prepared->metrics.peak),2)+" dBFS";
+        if(state.cursor && state.phase==ExportPhase::preparing && (!displayed || !state.previewLevels || displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet))return NoticeMessage{"Preview continues | Current WAV preparing","The preview follows the accepted levels with a 5 ms monitoring-only gain transition. Current peak measurement/WAV publication is pending; Save and Drag are unavailable.",NoticeTone::information};
+        const auto measured=state.phase==ExportPhase::ready?state.prepared:state.preview;
+        if(measured && measured->metrics.peak>1){
+            const auto peak=juce::String(juce::Decibels::gainToDecibels(measured->metrics.peak),2)+" dBFS";
             juce::String detail="Float32 WAV preserves above-unity samples; no automatic attenuation. Preview uses the same gains with monitoring boundary ramps.\n";
-            for(const auto& range:state.prepared->plan->warnings)detail+=juce::String(range.start)+" to "+juce::String(range.end)+(range.kind==ExportCoverage::gap?": uncaptured dry exported as silence\n":": unavailable dry exported as silence\n");
-            return NoticeMessage{"Export peak "+peak+": downstream clipping possible"+(state.prepared->plan->warnings.empty()?juce::String{}:juce::String(" | Missing dry exported as silence")),detail,NoticeTone::warning};
+            for(const auto& range:measured->plan->warnings)detail+=juce::String(range.start)+" to "+juce::String(range.end)+(range.kind==ExportCoverage::gap?": uncaptured dry exported as silence\n":": unavailable dry exported as silence\n");
+            return NoticeMessage{"Export peak "+peak+": downstream clipping possible"+(measured->plan->warnings.empty()?juce::String{}:juce::String(" | Missing dry exported as silence")),detail,NoticeTone::warning};
         }
-        if(state.prepared && !state.prepared->plan->warnings.empty()){
+        if(measured && !measured->plan->warnings.empty()){
             juce::String detail="Uncaptured or unavailable dry contributes silence; source coverage is unchanged.\n";
-            for(const auto& w:state.prepared->plan->warnings)detail+=juce::String(w.start)+" to "+juce::String(w.end)+(w.kind==ExportCoverage::gap?": uncaptured\n":": unavailable\n");
-            return NoticeMessage{"Missing dry: "+juce::String(state.prepared->plan->warnings.size())+" ranges exported as silence",detail,NoticeTone::warning};
+            for(const auto& w:measured->plan->warnings)detail+=juce::String(w.start)+" to "+juce::String(w.end)+(w.kind==ExportCoverage::gap?": uncaptured\n":": unavailable\n");
+            return NoticeMessage{"Missing dry: "+juce::String(measured->plan->warnings.size())+" ranges exported as silence",detail,NoticeTone::warning};
         }
         return NoticeMessage{"DAW wet is bypassed in Export", "Use Preview for this mix. Stay in Export while playing the delivered WAV to avoid doubling swells.",NoticeTone::information};
     }
@@ -132,7 +136,8 @@ public:
         applyTextRole(g,TextRole::sectionHeading);g.drawText("Export Preview",heading,juce::Justification::left);g.drawText("Export Levels",mixHeading,juce::Justification::left);
         const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
         applyTextRole(g,TextRole::helper);
-        const auto captionText=previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
+        const auto captionText=state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
+            :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
             :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Right-drag: pan. Wheel: zoom.");
         g.drawFittedText(captionText,caption,juce::Justification::topLeft,2);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
@@ -170,7 +175,7 @@ public:
         legendEntry(dryKey,text,"Dry "+juce::String(p.dry*100,1)+"%",p.dry>0);
         applyTextRole(g,TextRole::helper);
         const auto current=state.cursor.value_or(state.previewPosition.value_or(m.audibleStart.value_or(p.origin)));
-        g.drawText("Preview (audible)  "+seconds((current-m.audibleStart.value_or(p.origin))/p.timing.rate)+" / "+seconds((m.audibleEnd.value_or(p.origin)-m.audibleStart.value_or(p.origin))/p.timing.rate)+" | WAV "+seconds(displayed->file.frames/p.timing.rate),timeArea,juce::Justification::centredLeft);
+        g.drawText("Preview (song)  "+seconds((current-p.origin)/p.timing.rate)+" / "+seconds((p.end-p.origin)/p.timing.rate)+" | WAV "+seconds((p.end-p.origin)/p.timing.rate),timeArea,juce::Justification::centredLeft);
         g.drawFittedText(statusText(),statusArea,juce::Justification::topLeft,2);
     }
     void resetView(){navigation.cancelGesture();zoomInvocation.reset();state={};displayed.reset();identity.clear();rangeIdentity.clear();updateZoom();}
