@@ -2,8 +2,8 @@
 
 ## 1. Authentic production evidence
 
-- [ ] 1.1 Extend existing native UI evidence fixtures for empty Learn, captured markers, ready generated Perform with selected swell, and ready Export; verify actual production bindings/readiness with bounded assertions and successful PNG capture through the existing mechanism, documenting exact commands and fixture scope in dated validation evidence.
-- [ ] 1.2 Produce screenshot provenance with source SHA, commands, dimensions and hashes; verify missing images, failed readiness and mismatched source cannot be accepted for guide assembly, and document how the release pipeline consumes same-source ignored outputs.
+- [x] 1.1 Extend existing native UI evidence fixtures for empty Learn, captured markers, ready generated Perform with selected swell, and ready Export; verify actual production bindings/readiness with bounded assertions and successful PNG capture through the existing mechanism, documenting exact commands and fixture scope in dated validation evidence.
+- [x] 1.2 Produce screenshot provenance with source SHA, commands, dimensions and hashes; verify missing images, failed readiness and mismatched source cannot be accepted for guide assembly, and document how the release pipeline consumes same-source ignored outputs.
 
 ## 2. Recipient documentation and payload integration
 
