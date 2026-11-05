@@ -2,6 +2,8 @@
 
 Status: **host session completed; see the [final findings and recommendation](2026-11-05-issue-1-connector-findings.md).** Realtime mode reporting/gating and lifecycle checks worked; the offline WAV was silent because context was already stale at bounce entry. The chronology below preserves the native experiment's staged results and earlier pending items. This extends PR #74's Explore spike, not production ReverbArise.
 
+**Product UX gate added after the session:** borrowing hardware endpoints and manual MIDI setup are not acceptable shipping behavior. Production consideration is conditional on an owned, automatically activated integration with no controller interference or MIDI-settings workflow. The final report distinguishes documented automatic script matching from the still-unproved enabling/pairing journey; technical delivery alone does not meet this gate.
+
 ## Native output and identity
 
 The separate CMake project under [native/](issue-1-connector/native/) builds **ReverbArise FL Context Probe** 0.0.1, with manufacturer `RASp`, plugin code `RCp1`, bundle ID `org.reverbarise.spike.contextprobe.v1`, processor CID `ABCDEF019182FAEB5241537052437031` and controller CID `ABCDEF011234ABCD5241537052437031`. These differ from production's identities. It does not link production capture, session, asset or render code.

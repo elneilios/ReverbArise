@@ -2,6 +2,8 @@
 
 **Session completed:** see [final findings](../2026-11-05-issue-1-connector-findings.md). Realtime checks worked; the measured offline tone was silent because context had already expired before bounce. The instructions below reproduce that experiment, not a production solution.
 
+**Not a customer setup flow:** the owner requires seamless activation through owned endpoints, without borrowing controllers or manual MIDI-options work. This spike's hardware assignments are experiment-only; the onboarding feasibility gate in the final findings must pass before any production connector proposal.
+
 Goal: establish **real script → VST3 audio-callback consumption**, then measure the gating result. This probe never loads ReverbArise sessions or assets. Budget about 5–8 minutes after scanning/activation. Stop after connection if anything is unclear; keep the logs rather than guessing parameter indexes.
 
 ## Prepared outputs
