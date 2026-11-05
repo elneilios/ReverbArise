@@ -28,3 +28,19 @@ The owner explicitly requests all pre-merge sign-offs, then archive, then merge.
 4. Record actual source, commands/results and limitations in this closeout evidence through a small branch/PR if main has already merged. Keep alpha.1 and all installed/backup/project assets unchanged. No release, tag, upload or binary sharing.
 
 Actual post-merge execution: **pending at this pre-merge archive point**; append results after it runs.
+
+## Executed merged-main verification — 2026-11-05
+
+Merged as **`3caa5cfc05b5379c3f797fb64c66ad597d97788a`**. Accepted PR head `a891d1d` is an ancestor; Source/tests/CMake/cmake/scripts have no differences from that accepted head. Production/test/build code is unchanged from the full 70/70 combined implementation validation.
+
+- Clean main-revision branch `codex/59-main-verification`; `scripts/build.ps1 -Configuration Release` passes, logs `out/build-logs/Release/20261105-104436-d1e3573b/`.
+- Native focused CTest **6/6**, **7.10 s**: product version, deterministic build metadata, guide currency, Learn/About Copy, waveform display and waveform paint.
+- Generated JSON/compiled identity reports **0.1.0**, **v0.1.0-local**, empty candidate, full merged-main SHA above and unmodified source; normal wrapper explicitly clears candidate metadata.
+- UI standards **51 files / 61 bounded occurrences**, normal OpenSpec **18/18**, changed canonical specs strict **2/2**, guide currency and clean-worktree checks pass. Eight pre-existing main description-length warnings remain documented; repository-wide strict passing is not claimed.
+- Archived tasks **19/19**. Local machine-readable receipt `out/issue-59-main-verification.json`. No duplicate full-suite claim on main; full 70/70 result retains pre-merge source scope.
+- Main verification does not repackage, install, publish, tag or transmit a binary. Alpha.1 remains its independently identified PR-source package. Current installed-module difference and owner smoke-test waiver retain their documented scope.
+
+The post-merge closeout follow-up is now executed; earlier pending statements in pre-merge evidence are historical. Owner requested closure after the recorded guide/private-recipient sign-offs and smoke-test waiver. Public distribution remains undecided/unapproved.
+
+
+Housekeeping transcription: the executed verification above is retained from the merged PR #63 closeout report. This documentation update did not rerun native or host checks. Earlier pending statements are preserved as the dated pre-merge history.
