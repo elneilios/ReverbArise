@@ -393,11 +393,11 @@ New or materially revised header control families SHALL receive explicit owner a
 - **THEN** FL Studio UAT is consolidated into one brief final control-feel, mode-journey and save/reopen smoke test; detailed edge cases rely on automation, with extra host checks requested only for failures or specific unresolved host behavior
 
 ### Requirement: Important notices use a conditional inline message bar
-Important notices SHALL use a nonmodal reserved row beneath the branding, with readable severity and accessible detail. One message SHALL NOT shift the workspace, cover controls or steal focus. The global-settings divider SHALL remain visible. Routine idle/ready information SHALL be absent; relevant notices SHALL remain until resolution. Identical refresh SHALL NOT repeat announcements.
+Important notices SHALL use a nonmodal reserved row beneath the branding, with readable severity and accessible detail. One message SHALL NOT shift the workspace, cover controls or steal focus. The global-settings divider SHALL remain visible. Routine idle/ready information SHALL be absent; relevant notices SHALL remain until resolution. Perform SHALL retain its safety fallback when no other notice is active. Identical refresh SHALL NOT repeat announcements.
 
 #### Scenario: Clean idle workspace
-- **WHEN** Perform is idle with no relevant error, or Learn is idle with Recapture off and no relevant error
-- **THEN** no message bar or meaningless source-protection line is shown, and the normal compact layout is retained
+- **WHEN** Perform is idle with no other notice, or Learn is idle with Recapture off and no relevant error
+- **THEN** Perform shows its safety warning while Learn retains its clean message-free state, and the normal compact layout is retained in both
 
 #### Scenario: Recording and failure
 - **WHEN** recording, source validation, Recapture arming or a relevant failure requires attention
@@ -405,8 +405,31 @@ Important notices SHALL use a nonmodal reserved row beneath the branding, with r
 - **AND** the divider above global settings stays visible below the reserved row in both notice and clean states
 
 #### Scenario: Notice resolves
-- **WHEN** the underlying notice condition clears
-- **THEN** the bar hides without changing layout without changing parameters, moving audio or interrupting an active control edit
+- **WHEN** the underlying higher-priority notice condition clears
+- **THEN** Perform restores its safety fallback while other modes follow their existing notice policy, without changing layout or parameters, moving audio or interrupting an active control edit
+
+### Requirement: Perform explains independent prepared playback
+Perform SHALL show a persistent warning-level fallback explaining that prepared swells can remain audible during DAW playback independently of source audibility. Other current actionable, error and transient progress notices SHALL take precedence, regardless of severity. The fallback SHALL resume when they clear and provide accessible/help detail about saved Song timing, Pattern playback and explicit output controls, without implying detected host state.
+
+#### Scenario: Remain in Perform
+- **WHEN** Perform is selected with no higher-priority notice, including while stopped, playing, empty or with live playback disabled
+- **THEN** the reserved message bar shows “Caution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.” at warning severity without a timeout or dismiss preference
+- **AND** its full help/accessibility detail explains that saved Song-positioned swells can precede notes and continue through silence, Pattern playback or upstream Playlist/instrument mute may not stop them, and effect bypass or mixer mute can stop the swells
+
+#### Scenario: Temporary message takes precedence
+- **WHEN** a current error, actionable warning or transient preparation notice becomes applicable in Perform
+- **THEN** that notice replaces the fallback according to existing notice priority, including information-level IR preparation after its existing debounce
+- **AND WHEN** the higher-priority notice clears
+- **THEN** the warning returns without a mode switch, focus change, control interruption or layout movement
+
+#### Scenario: Switch modes or reopen
+- **WHEN** the user enters Learn or Export, returns to Perform, or reopens the editor in Perform
+- **THEN** Learn and Export retain their existing notices, and Perform recomputes its current warning/override without persisting a new preference
+
+#### Scenario: Refresh and inspect safely
+- **WHEN** the warning is repeatedly refreshed, resized or inspected with accessibility or context help
+- **THEN** its warning semantics and full explanatory detail remain available without repeated identical announcements, clipped controls or additional layout space
+- **AND** rendering, capture eligibility, Learn Pattern capture, dry routing, live/audition enable, source/render identities and saved state remain unchanged by presentation
 
 ### Requirement: Learn provides the approved two-column capture composition
 Learn SHALL show the existing branded header/mode navigation, narrow left capture settings and one large right dry timeline. The Swells list, selected-swell inspector, audition band and duplicate Overview SHALL be hidden. Layout SHALL follow approved mockups and the flat visual system at the existing opening/minimum size and supported larger sizes.
