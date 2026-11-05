@@ -12,7 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native delivery, paired-port setup and measured offline freshness failure; connector work is parked. The [input-activity follow-up](validation/2026-11-05-issue-1-input-activity.md) tests silence/hold policies against reverse lead-ins. The [JUCE API audit](validation/2026-11-05-issue-1-juce-disarm-audit.md) traces bypass, lifecycle, bus, transport and extension candidates for wet disarming. Production changes require a separate OpenSpec proposal.
+- [FL Song/Pattern connector investigation](validation/2026-11-05-issue-1-connector-findings.md) — native delivery, paired-port setup and measured offline freshness failure; connector work is parked. The [input-activity follow-up](validation/2026-11-05-issue-1-input-activity.md) tests silence/hold policies against reverse lead-ins. The [JUCE API audit](validation/2026-11-05-issue-1-juce-disarm-audit.md) traces bypass, lifecycle, bus, transport and extension candidates for wet disarming; a [separate native host-signal probe](validation/2026-11-05-issue-1-host-signal-probe.md) is ready for owner FL checks. Production changes require a separate OpenSpec proposal.
 
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 
