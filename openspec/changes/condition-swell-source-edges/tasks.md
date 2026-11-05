@@ -18,5 +18,5 @@ are verified; see docs/validation/2026-11-05-source-edge-fix.md.
 
 ## Workflow follow-up
 
-- Owner listens once in the original FL Studio project after explicit regeneration; keep host acceptance separate from automated results.
-- Keep this branch local; archive only after review and acceptance.
+- Owner supplied a new export and reported "it's a lot better!" in the original FL Studio case; keep this listening improvement distinct from automated proof and complete artifact elimination.
+- Owner subsequently requested a PR. Publish the source-edge-only branch for review, retaining the original local host-test branch and excluding the separate export-clock fix. Archive only after review and acceptance.

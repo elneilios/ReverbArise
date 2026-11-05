@@ -1,9 +1,12 @@
 # Source-edge fix validation — 5 November 2026
 
-Local branch `codex/fix-swell-source-edges`, implementation `1571171`, based on
-the accepted export-clock branch at `a5b36d2`. No push or PR. This retains the
-fixed-tempo export repair and contains no experimental output protection or
-issue #71 tempo-map changes. See [implementation guidance](../development/swell-source-edges.md)
+Initial local host-test branch `codex/fix-swell-source-edges`, implementation
+`1571171`, was based on the accepted export-clock branch at `a5b36d2`. It remained
+local through installation and listening. The subsequent PR branch
+`codex/pr-swell-source-edges` applies only the source-edge changes to current main
+`520a466`; it excludes the separate export-clock repair, output-protection
+experiment and issue #71 tempo-map changes. The installed/host-tested bundle below
+still contains the accepted export-clock repair. See [implementation guidance](../development/swell-source-edges.md)
 and [original investigation](2026-11-05-swell-source-boundaries.md).
 
 ## Implementation and regressions
@@ -53,6 +56,29 @@ these are incremental runs, not cold-build performance measurements.
 These are native MSVC/CTest results. No PowerShell mock fixtures were substituted.
 Installer scripts and UI code are unchanged. Full native coverage includes
 existing UI/persistence tests; this is not FL Studio listening acceptance.
+
+## Source-only PR integration on current main
+
+Prepared `codex/pr-swell-source-edges` from main `520a466`, retaining the original
+host-test branch. Source-edge code applies unchanged; only the documentation
+index needed a merge adjustment. This PR contains no changes to SwellTransport,
+the offline clock, plugin diagnostics/copy button or the output-protection spike.
+
+- `scripts/build.ps1 -Configuration Release -Test`: **71/71 passed**, 230.22 s
+  CTest, configure/build/test exit 0. Logs:
+  `out/build-logs/Release/20261105-142532-c6e33bf8/` at `564beb6 (dirty)`.
+  Uncommitted changes during this gate were documentation/review evidence only.
+- Current main's user-guide maintenance workflow was applied: source-edge
+  adoption instructions added, review explicitly recorded, read-only currency
+  check passed. No UI or screenshot change.
+- OpenSpec strict validation and `git diff --check` passed.
+- Debug was not repeated on this main-based branch; the identical source-edge
+  DSP/engine implementation passed 69/69 Debug tests on the installed local
+  branch, as recorded above. This PR does not claim a new host installation or
+  listening pass of its main-based binary.
+
+The owner's listening report supports this focused fix. Broader source profiles,
+IR authoring and sound-design improvements remain separate in issue #75.
 
 ## Supplied four-source comparison
 
@@ -113,9 +139,15 @@ Reopen FL Studio. In Options > Manage plugins, enable Verify plugins and Rescan
 previously verified plugins, run Find installed plugins and confirm the resolved
 ReverbArise path is the system bundle above. Installation is not host acceptance.
 
-One final owner listening check remains: reopen the saved project, use
-**Regenerate All** once (unfreeze only swells intended to change), then listen
-to the first four overlapping swells and confirm DAW export. Existing capture
-is sufficient; do not recapture. Until explicit regeneration, existing verified
-wet renders deliberately preserve the old sound. Host listening and new-build
-FL export acceptance are pending; automated export-clock regressions passed.
+After installation the owner supplied a new DAW export and reported **"it's a lot
+better!"** for the original overlapping-swells case, then requested a PR for main.
+This records a substantial listening improvement; it does not assert that every
+artifact is eliminated or that the new WAV received a fresh numerical analysis.
+The installed build includes the separate accepted export-clock repair. The
+source-only PR build is independently regression-tested and was not reinstalled
+over the owner's accepted listening build.
+
+Existing capture remains sufficient. Use **Regenerate all** once to adopt the
+processing for older unfrozen swells; current ready renders and frozen swells are
+skipped. Without explicit regeneration older verified wet deliberately retains
+its original sound.

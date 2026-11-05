@@ -24,4 +24,4 @@ None.
 
 ## Impact
 
-Worker-side DSP preparation, SwellEngine render dependency matching and explicit generation, focused native tests and living DSP guidance. No callback, UI, capture codec, asset codec, host latency, limiter or tempo-map changes. The local branch retains the accepted export-clock fix and remains separate from issue #71 and the output-protection experiment.
+Worker-side DSP preparation, SwellEngine render dependency matching and explicit generation, focused native tests and living DSP guidance. No callback, UI, capture codec, asset codec, host latency, limiter or tempo-map changes. Initial host testing used a local branch with the accepted export-clock fix. At the owner's subsequent request, the PR isolates the source-edge change on current main, excluding that export fix, issue #71 and the output-protection experiment.

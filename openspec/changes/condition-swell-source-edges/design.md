@@ -26,4 +26,4 @@ Keep conditioning at the wet-generation boundary, with no callback work or chang
 
 ## Migration Plan
 
-Local branch based on the accepted export-clock fix. Run focused tests then full native Debug/Release wrappers. Install the complete Release VST3 using the supported helper with prior bundle retained. Preserve original projects/assets; rollback may use the prior bundle and original saved project. No publication or schema bump.
+Initial local host testing used a branch based on the accepted export-clock fix, with full native Debug/Release gates and an installed complete Release bundle retaining its predecessor. The owner subsequently reported a substantial improvement and requested a PR. Prepare the source-edge-only PR from current main, preserving the original tested branch/bundle and excluding export-clock/output-protection/tempo-map changes. Revalidate integration and review the user guide. Preserve original projects/assets; rollback may use the prior bundle and original saved project. No schema bump or automatic merge.
