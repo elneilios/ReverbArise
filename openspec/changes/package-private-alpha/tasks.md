@@ -32,7 +32,7 @@ The following release-readiness work is completed before final acceptance tasks 
 - [x] 5.2 Generate deterministic version/candidate/build/SHA metadata and wire explicit resettable release inputs through the existing wrapper/packager; verify generated/compiled identity consistency, invalid inputs, candidate reset, repeat generation and stale metadata rejection with focused fixtures.
 - [x] 5.3 Add Settings About and Copy build information using approved shared controls/text roles/spacing; verify full clipboard content, metadata display, bounds/accessibility and unchanged session/capture/render state with native component tests; prepare and directly launch the existing native preview mechanism for review.
 - [x] 5.4 Review delivered behavior/canonical specs with maintain-user-guide, update the HTML with About/copy instructions and record currency; verify self-contained guide assembly and authentic current About evidence without packaging-time authoring.
-- [ ] 5.5 Run relevant wrapper/identity/currency/UI/native regression and internal packaging checks, preserve exact source/artifact evidence and update PR #63; verify PR remains open/unmerged and no publication or external sharing occurs.
+- [x] 5.5 Run relevant wrapper/identity/currency/UI/native regression and internal packaging checks, preserve exact source/artifact evidence and update PR #63; verify PR remains open/unmerged and no publication or external sharing occurs.
 
 ## Workflow follow-up
 
