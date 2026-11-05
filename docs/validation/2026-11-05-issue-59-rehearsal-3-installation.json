@@ -1,0 +1,13 @@
+{
+  "candidate": "v0.1.0-alpha.rehearsal.3",
+  "packageSource": "7ea715ba08bef612d7389c19ccd90764d91bd02c",
+  "installedPath": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3",
+  "moduleSha256": "150e5fabcedcda49cd5dce9af25c48b53dc83fabe7566188cbec908120c3bd1f",
+  "allInstalledFilesMatchPackage": true,
+  "backupPath": "C:\\Users\\neila\\.codex\\worktrees\\c7de\\k7ma-preverb\\out\\vst3-install-backups\\20261105-013120-c0325961adae4d7f94d67eeab70c143a\\ReverbArise.vst3",
+  "backupMatchesPriorInstallation": true,
+  "userCopyUnchanged": true,
+  "installedAtUtc": "2026-11-05T01:31:50.5359846Z",
+  "installerExitCode": 0,
+  "hostAcceptance": "not performed"
+}
