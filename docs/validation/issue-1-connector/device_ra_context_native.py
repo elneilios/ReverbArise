@@ -59,16 +59,30 @@ def _identify(track, slot):
     if not plugins.isValid(track, slot) or plugins.getPluginName(track, slot, 0) != TARGET:
         return None
     count = plugins.getParamCount(track, slot)
-    if not 4 <= count <= 512:
+    if not 4 <= count <= 8192:
         _record("schema-error", track=track, slot=slot, detail="parameter count %s" % count)
+        print("RA probe schema count:", count, "at mixer track", track, "slot", slot,
+              "(expected at least four named probe parameters; no write attempted)")
         return None
-    names = [plugins.getParamName(i, track, slot) for i in range(count)]
-    if any(names.count(name) != 1 for name in PARAMS):
-        _record("schema-error", track=track, slot=slot, detail=str(names))
-        print("RA probe parameter names differ:", names)
+    found = {}
+    sample = []
+    for i in range(count):
+        name = plugins.getParamName(i, track, slot)
+        if len(sample) < 12:
+            sample.append(name)
+        if name in PARAMS:
+            if name in found:
+                _record("schema-error", track=track, slot=slot, detail="duplicate " + name)
+                return None
+            found[name] = i
+        if len(found) == len(PARAMS):
+            break
+    if len(found) != len(PARAMS):
+        _record("schema-error", track=track, slot=slot, detail=str(sample))
+        print("RA probe named parameters missing; count", count, "first names", sample, "found", found)
         return None
     # Wrapper bypass/program parameters may be present; never assume numeric indexes.
-    return tuple(names.index(name) for name in PARAMS)
+    return tuple(found[name] for name in PARAMS)
 
 
 def _matches(track, slot, indices):
@@ -82,18 +96,21 @@ def _discover():
     global _targets, _last_discovery
     import mixer
     found = []
+    cached = {(track, slot): indices for track, slot, indices in _targets}
     count = mixer.trackCount()
     if not 0 <= count <= 512:
         raise RuntimeError("Unexpected mixer size")
     for track in range(count):
         for slot in range(10):
             try:
-                indices = _identify(track, slot)
+                indices = cached.get((track, slot))
+                if indices is None or not _matches(track, slot, indices):
+                    indices = _identify(track, slot)
                 if indices is not None:
                     found.append((track, slot, indices))
             except Exception as error:
                 _record("discover-error", track=track, slot=slot, detail=str(error))
-    if found != _targets:
+    if found != _targets or _last_discovery < 0:
         print("RA probe targets:", found, "(zero means not discovered; check exact name/parameters)")
     _targets, _last_discovery = found, time.perf_counter()
     _record("discover", detail=str(found))
@@ -151,6 +168,7 @@ def OnInit():
     _paused, _last_mode, _last_send, _last_discovery = False, None, -1.0, -1.0
     _discover()
     _update("init", force_unknown=True)
+    _update("init-mode")  # Deliver the freshly queried real mode immediately too.
     _flush()
     print("RA native probe init OK; script evidence: Script Output / memory; Python:", sys.version)
     try:

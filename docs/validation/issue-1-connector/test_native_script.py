@@ -73,6 +73,18 @@ class NativeScriptTest(unittest.TestCase):
             self.assertEqual(module._identify(0, 0), (1, 2, 3, 4))
             self.assertTrue(module._matches(0, 0, (1, 2, 3, 4)))
 
+    def test_actual_fl_wrapper_count_4240_stops_after_named_parameters(self):
+        module = importlib.reload(script)
+        reads = []
+        names = [*module.PARAMS, *(["Wrapper parameter"] * 4236)]
+        plugins = SimpleNamespace(isValid=lambda t, s: True,
+            getPluginName=lambda t, s, user: module.TARGET,
+            getParamCount=lambda t, s: len(names),
+            getParamName=lambda i, t, s: reads.append(i) or names[i])
+        with patch.dict(sys.modules, {"plugins": plugins}):
+            self.assertEqual(module._identify(0, 0), (0, 1, 2, 3))
+            self.assertEqual(reads, [0, 1, 2, 3])
+
 
 if __name__ == "__main__":
     unittest.main()
