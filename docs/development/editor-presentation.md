@@ -28,6 +28,12 @@ in-memory value and pending patch for a later retry. Editor-close integration
 must explicitly flush outside the audio callback. Another editor's save cannot
 change an already-open editor; a subsequent opening loads the latest record.
 
+Readers and writers both acquire a non-waiting transaction lock; contention is
+reported as `busy`, not as a missing profile. An initial busy read may be retried
+until the first successful read or explicit user intent. This is initial restore
+only, not live synchronization between editors. Explicit size/scale intent wins
+over a delayed initial read, including explicitly selecting the default values.
+
 Storage merges only changed fields against the latest disk record while holding
 a non-waiting named interprocess lock. A busy writer causes a deferred retry.
 Write a complete same-directory scratch file, flush/close it, then publish with
@@ -35,6 +41,10 @@ one native atomic replacement. Never truncate or remove the old target first.
 An injected publisher permits failure checks before replacement. No filesystem
 operations belong in the audio callback; disk work remains synchronous at this
 boundary and must be invoked by the GUI/lifecycle owner with coalescing.
+
+The per-storage thread gate also excludes overlapping calls within the same
+process. On Windows, readers must join the transaction because native file
+replacement can briefly make an uncoordinated pathname lookup unavailable.
 
 ## Screen-fit boundary
 
@@ -53,11 +63,23 @@ to a larger display should resolve the original desired value again.
 
 ## Integration and verification still required
 
+`UI/EditorPresentationState.h` connects the per-editor desired preference to the
+fit policy without depending on components or musical state. It supplies fitting
+size/scale availability, explicit choice handling, physical-content-to-logical
+manual resize conversion, initial-read retry and temporary display recovery.
+Display changes resolve effective geometry without persistence. The component
+owner must apply the effective state to its scaled content root and call
+coalesced persistence on the GUI/lifecycle path; those real editor bindings are
+still pending.
+
 The standalone `preverb_presentation_policy_test` source covers field recovery,
 coalescing, failed saves, explicit close/reopen, independent editor sessions,
 atomic-publication faults, unsupported/oversized storage, concurrent processes,
-work-area/chrome edges and temporary screen recovery. Native execution is queued
-until #73 releases its quiet validation window; written tests are not a pass.
+work-area/chrome edges and temporary screen recovery. Native Debug and Release
+fixture checks now pass, including repeated Release concurrency runs; exact
+results, the initial reader race and its correction are in the linked validation
+record. These are standalone policy checks, not full plugin or physical DPI
+acceptance.
 
 After policy verification, connect the content-root transform, shared Settings
 controls, explicit size/scale actions and lifecycle persistence. Preserve active

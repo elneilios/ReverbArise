@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include <UI/PresentationFit.h>
+#include <UI/EditorPresentationState.h>
 #include <climits>
 
 using namespace m3::ui;
@@ -8,13 +9,14 @@ namespace
 class MemoryStorage final:public PresentationStorage
 {
 public:
-    LoadedPresentation load()override{return {value,PresentationReadStatus::valid};}
+    LoadedPresentation load()override
+    {return busy?LoadedPresentation{{},PresentationReadStatus::busy,juce::Result::fail("Injected contention")}:LoadedPresentation{value,PresentationReadStatus::valid};}
     juce::Result save(PresentationPatch patch)override
     {
         ++attempts;if(fail)return juce::Result::fail("Injected unavailable storage");
         REQUIRE(patch.valid());patch.apply(value);++writes;return juce::Result::ok();
     }
-    PresentationPreferences value;int attempts=0,writes=0;bool fail=false;
+    PresentationPreferences value;int attempts=0,writes=0;bool fail=false,busy=false;
 };
 void codecAndCoalescing()
 {
@@ -61,6 +63,16 @@ void filesAndFaults()
         REQUIRE(storage.save({1400,{},{}}).wasOk());REQUIRE(storage.load().value.width==1400);
         REQUIRE(pinnedOld.readEntireStreamAsString()==original);
     }
+    const auto beforeBusy=path.loadFileAsString();
+    FilePresentationStorage contended(path,[&](const auto& scratch,const auto& destination)
+    {
+        const auto exe=juce::File::getSpecialLocation(juce::File::currentExecutableFile).getFullPathName();
+        juce::ChildProcess reader;REQUIRE(reader.start(juce::StringArray{exe,"--check-busy",destination.getFullPathName()}));
+        const auto finished=reader.waitForProcessToFinish(5000);if(!finished)reader.kill();
+        REQUIRE(finished && reader.getExitCode()==0);REQUIRE(destination.loadFileAsString()==beforeBusy);
+        return scratch.replaceFileIn(destination);
+    });
+    REQUIRE(contended.save({1450,{},{}}).wasOk());REQUIRE(storage.load().value.width==1450);
     REQUIRE(path.replaceWithText(R"({"version":99,"contentWidth":1400})"));const auto future=path.loadFileAsString();
     REQUIRE(storage.save({1000,{},{}}).failed());REQUIRE(path.loadFileAsString()==future);
     REQUIRE(path.replaceWithText(R"({"version":1,"contentWidth":"bad","contentHeight":900,"scalePercent":125})"));
@@ -112,6 +124,41 @@ void writeField(const juce::File& path,bool width)
         REQUIRE(saved);
     }
 }
+void editorState()
+{
+    MemoryStorage storage;storage.value={1600,1000,125};const auto retained=storage.value;
+    const PresentationFitContext large{{2400,1500},{16,80}},small{{1000,750},{16,80}};
+    EditorPresentationState a(storage,large),b(storage,large);
+    REQUIRE(a.effective().effective==retained && !a.effective().recovered);
+    REQUIRE(a.displayChanged(small));REQUIRE(a.effective().effective==(PresentationPreferences{984,670,100}));
+    REQUIRE(a.desired()==retained && !a.hasPendingSave());REQUIRE(!a.canSelectScale(125) && !a.canSelectScale(75));
+    REQUIRE(a.canSelectSize(900,600) && !a.canSelectSize(1100,850));
+    REQUIRE(a.persistIfDue(1000,true) && storage.writes==0);REQUIRE(storage.value==retained);
+    REQUIRE(b.effective().effective==retained);REQUIRE(a.displayChanged(large));REQUIRE(a.effective().effective==retained);
+    REQUIRE(a.selectSize(900,600,2000));REQUIRE(a.effective().effective==(PresentationPreferences{900,600,125}));
+    REQUIRE(a.manualResize({1375,1000},2100));REQUIRE(a.desired()==(PresentationPreferences{1100,800,125}));
+    REQUIRE(!a.manualResize({INT_MAX,INT_MAX},2100) && !a.manualResize({-1,600},2100));
+    REQUIRE(!a.manualResize({899,600},2100));REQUIRE(a.persistIfDue(2100,true));
+    REQUIRE(b.desired()==retained && b.effective().effective==retained);
+    REQUIRE(b.persistIfDue(3000,true) && storage.writes==1); // Unedited closing editor cannot overwrite another.
+    EditorPresentationState reopened(storage,large);REQUIRE(reopened.desired()==a.desired());
+    REQUIRE(reopened.selectScale(100,3000));REQUIRE(reopened.effective().effective==(PresentationPreferences{1100,800,100}));
+    REQUIRE(!reopened.selectScale(90,3000));REQUIRE(reopened.persistIfDue(3750));
+    REQUIRE(reopened.displayChanged({{800,500},{16,80}}));REQUIRE(!reopened.effective().supported);
+    REQUIRE(!reopened.canSelectSize(900,600) && !reopened.canSelectScale(100));
+    REQUIRE(!reopened.hasPendingSave());REQUIRE(reopened.displayChanged(large));
+    REQUIRE(reopened.effective().effective==(PresentationPreferences{1100,800,100}));
+    storage.busy=true;EditorPresentationState deferred(storage,large),edited(storage,large),explicitDefault(storage,large);
+    REQUIRE(deferred.initialRead().status==PresentationReadStatus::busy);REQUIRE(!deferred.retryInitialRead());
+    REQUIRE(edited.selectScale(100,4000));REQUIRE(explicitDefault.selectSize(900,600,4000));
+    storage.busy=false;REQUIRE(deferred.retryInitialRead());REQUIRE(deferred.desired()==storage.value);
+    REQUIRE(!deferred.retryInitialRead()); // Initial restore only, not live cross-editor synchronization.
+    REQUIRE(edited.persistIfDue(4000,true) && !edited.retryInitialRead());
+    REQUIRE(edited.desired()==(PresentationPreferences{}));REQUIRE(storage.value.width==1100 && storage.value.height==800);
+    REQUIRE(explicitDefault.persistIfDue(4000,true));REQUIRE(storage.value==PresentationPreferences{});
+    REQUIRE(deferred.desired()==(PresentationPreferences{1100,800,100}));
+    REQUIRE(deferred.persistIfDue(5000,true) && storage.value==PresentationPreferences{});
+}
 void concurrentProcesses()
 {
     TestDirectory directory;const auto path=directory.file.getChildFile("preferences.json");FilePresentationStorage storage(path);
@@ -127,7 +174,14 @@ void concurrentProcesses()
     REQUIRE(height.start(juce::StringArray{exe,"--write-height",path.getFullPathName()}));
     const auto deadline=juce::Time::getMillisecondCounterHiRes()+20000;
     while((width.isRunning() || height.isRunning()) && juce::Time::getMillisecondCounterHiRes()<deadline)
-    {REQUIRE(storage.load().status==PresentationReadStatus::valid);juce::Thread::sleep(1);}
+    {
+        const auto observed=storage.load();
+        const auto safe=observed.status==PresentationReadStatus::valid || observed.status==PresentationReadStatus::busy;
+        if(!safe)
+            std::cerr<<"Concurrent preference read status "<<static_cast<int>(observed.status)<<": "<<observed.error.getErrorMessage()
+                <<"; fixture exists="<<path.existsAsFile()<<"; bytes="<<path.getSize()<<"; current="<<path.loadFileAsString()<<'\n';
+        REQUIRE(safe);juce::Thread::sleep(1);
+    }
     const auto timedOut=width.isRunning() || height.isRunning();
     if(timedOut){width.kill();height.kill();}
     REQUIRE(!timedOut);REQUIRE(width.getExitCode()==0 && height.getExitCode()==0);
@@ -138,10 +192,16 @@ int main(int argc,char** argv)
 {
     return runTest([&]
     {
+        if(argc==3 && juce::String(argv[1])=="--check-busy")
+        {
+            FilePresentationStorage storage{juce::File(argv[2])};
+            REQUIRE(storage.load().status==PresentationReadStatus::busy);
+            REQUIRE(storage.save({1200,{},{}}).failed());return;
+        }
         if(argc==3 && (juce::String(argv[1])=="--write-width" || juce::String(argv[1])=="--write-height"))
         {writeField(juce::File(argv[2]),juce::String(argv[1])=="--write-width");return;}
         REQUIRE(argc==1);
-        codecAndCoalescing();filesAndFaults();fitRecovery();concurrentProcesses();
+        codecAndCoalescing();filesAndFaults();fitRecovery();editorState();concurrentProcesses();
         std::cout<<"Presentation codec/coalescing/atomic faults/process isolation/fit recovery checks passed.\n";
     });
 }

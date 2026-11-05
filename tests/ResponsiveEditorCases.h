@@ -6,6 +6,18 @@ void Composition::verifyResponsive(const juce::File& output)
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
     auto panel=productionEditor();panel->stopAutomaticRefreshForReview();panel->enableResponsiveReview();
+    auto& settings=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
+    auto& swellSettings=*settings.getTabContentComponent(2);
+    const auto checkSettingsRoutes=[&]
+    {
+        REQUIRE(require<juce::ComboBox>(swellSettings,"fadeInCurve").isVisible());
+        REQUIRE(require<juce::ComboBox>(swellSettings,"fadeOutCurve").isVisible());
+        int actions=0;
+        for(auto* child:swellSettings.getChildren())if(auto* button=dynamic_cast<juce::Button*>(child))
+            if(button->getButtonText()=="Mute" || button->getButtonText()=="Full response")
+            {REQUIRE(button->isVisible());++actions;}
+        REQUIRE(actions==2);
+    };
     const auto original=engine.savedSession();const auto sourceRevision=processor->getCaptureSnapshot().manifest.revision;
     const auto checkVisible=[&](const char* name)
     {
@@ -22,6 +34,7 @@ void Composition::verifyResponsive(const juce::File& output)
     for(auto size:{juce::Point<int>{900,600},{955,700},{956,700},{957,700},{1000,700},{1100,850},{1400,900},{1400,1000},{1600,1000}})
     {
         panel->setSize(size.x,size.y);panel->refresh();
+        checkSettingsRoutes();
         const ResponsiveWorkspaceLayout layout(panel->getLocalBounds());
         checkVisible("resetWetShape");checkVisible("resetSwellMenu");
         auto& notice=require<controls::NoticeBar>(*panel,"workspaceNotice");
@@ -36,6 +49,7 @@ void Composition::verifyResponsive(const juce::File& output)
         for(int section=1;section<=3;++section)
         {
             tabs.onRequest(section);panel->refresh();
+            checkSettingsRoutes();
             checkVisible("resetWetShape");
             for(const auto& cellName:std::vector<juce::String>{"arrivalSampleCell","sourceSampleStartCell","sourceSampleEndCell","preRollCell","endOffsetCell","fadeInMsCell","fadeOutMsCell","swellLevelCell","curveInTensionCell","curveOutTensionCell","wetPlacementCell"})
             {
@@ -56,9 +70,32 @@ void Composition::verifyResponsive(const juce::File& output)
                 REQUIRE(image.getPixelAt(layout.header.getCentreX(),y)==separator);
         }
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();
+        checkSettingsRoutes();
         auto& learnTabs=require<controls::SegmentedSelector>(*panel,"learnSections");
-        for(int section=1;section<=2;++section){learnTabs.onRequest(section);panel->refresh();checkVisible("learnSections");capture("learn-"+juce::String(section)+"-"+juce::String(size.x)+"x"+juce::String(size.y));}
+        for(int section=1;section<=2;++section)
+        {
+            learnTabs.onRequest(section);panel->refresh();checkVisible("learnSections");
+            capture("learn-"+juce::String(section)+"-"+juce::String(size.x)+"x"+juce::String(size.y));
+            // View-only dense state: exercise the real Learn components without
+            // enabling generation in the processor or scheduling audio work.
+            auto enabledView=engine.snapshot();enabledView.session.automaticProcessing=true;enabledView.session.autoMarkersEnabled=true;
+            auto& learn=require<LearnWorkspace>(*panel,"learnWorkspace");
+            learn.display(processor->getCaptureSnapshot(),enabledView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
+            for(const auto* name:{"learnGenerateSwells","learnGenerateReason","learnManualSwellsHelp"})checkVisible(name);
+            if(section==1){checkVisible("learnAutoGenerateOnStop");checkVisible("learnMarkerSensitivity");}
+            else{checkVisible("learnDefaultIR");checkVisible("learnImportIR");}
+            const auto& generate=require<juce::Component>(learn,"learnGenerateSwells");
+            const auto& reason=require<juce::Component>(learn,"learnGenerateReason");
+            const auto& manual=require<juce::Component>(learn,"learnManualSwellsHelp");
+            REQUIRE(generate.getBottom()<=reason.getY() && reason.getBottom()<=manual.getY());
+            for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","learnImportIR"})
+            {
+                auto& control=require<juce::Component>(learn,name);
+                if(control.isVisible())REQUIRE(control.getBottom()+responsiveGeometry::contentPadding<=generate.getY());
+            }
+        }
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));panel->refresh();
+        checkSettingsRoutes();
         for(const auto* name:{"exportPlay","exportStop","exportMix","exportSave","exportReturn","exportDrag"})checkVisible(name);
         capture("export-"+juce::String(size.x)+"x"+juce::String(size.y));
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();

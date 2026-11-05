@@ -29,15 +29,93 @@ The owner authorized continuing available tasks while waiting. Preference-store
 and fit-policy implementation plus a standalone JUCE-core test source are now
 prepared; [implementation guidance](../development/editor-presentation.md)
 describes their boundaries. They are not connected to the editor or user profile.
-The #73 agent still holds the quiet validation window, so no compile or native
-policy test is claimed yet and tasks 3.3/3.4 remain unchecked. The existing
+The #73 agent initially held the quiet validation window. It has now explicitly
+released independent builds/tests after its own final Debug 71/71 pass. The
+policy verification below followed that release. Tasks 3.3/3.4 remain unchecked
+until their real editor bindings and acceptance are complete. The existing
 approved preview stays open; its executable is not the policy-test target.
 
 The #68 agent reports implementation PR #95 merged at
 `036e35e89c8fabb18c315f1783672780b7eefbd7`, with its accepted TransportReadout
-and production standards revision 6. This branch has not rebased or integrated
-that merge yet. The separate #68 archive/spec-sync PR #97 is documentation-only
-and remains subject to owner review; no merge status is inferred for it.
+and production standards revision 6. The #68 agent subsequently confirmed its
+archive/spec-sync PR #97 also merged. The #93 agent confirms implementation and
+archive PR #96 merged at `d984966a9ecc0caae8e4359d6afc03af4f3799a3`, including
+explicit-selection/re-click Fit behavior. Neither upstream change has been
+rebased into this branch yet. #51 remains in progress; the owner is retaining
+#73's diagnostic installation until captures are finished. #58 does not replace
+that installation or absorb #73's unmerged local work.
+
+### Native independent policy verification after quiet-window release
+
+- Source parent: `a4c615f`, with the reader-coordination fix, per-editor state
+  controller and extended tests in the working diff. This work changes no
+  current plugin controls or user-profile files; the fixture uses temporary
+  storage and its own child processes.
+- Used the cached `windows-msvc` tree and supported tool resolution/build lock.
+  Explicit configure and targeted `preverb_presentation_policy_test` builds
+  passed in Release and Debug. These are native MSVC fixture builds, separate
+  from the still-required final full `scripts/build.ps1 -Configuration Release -Test` gate.
+- Initial Release fixture failed twice in the simultaneous-process case: a
+  reader classified the temporarily unavailable pathname as `missing`. Retained
+  diagnostics reported status 0, no file and zero bytes during replacement.
+  The preceding codec/coalescing, file-fault and fit groups had completed.
+- Corrected the store so reads participate in the same non-waiting transaction
+  protocol as writes, with an explicit `busy` result and per-instance thread
+  exclusion. Missing/corrupt records during the concurrent-save case are still
+  test failures; busy is now separately represented and deterministically
+  exercised from another process while a publisher holds the transaction.
+- Added initial busy-read recovery that stops after a successful restore or
+  explicit user action. Tests prove an explicit default choice wins over late
+  restore, another open editor does not jump, and closing an unedited editor
+  cannot overwrite a newer record.
+- Final native Release fixture passed 1/1 in 0.37 s; Debug passed 1/1 in 0.45 s.
+  Final Release `--repeat until-fail:20` passed all 20 consecutive runs in 6.65 s.
+  Each run exercises concurrent processes, controlled publication failure,
+  unsupported/oversized/unwritable records, complete old-file handle retention,
+  independent editor state, coalescing/close flush, screen/chrome edges, disabled
+  non-fitting choices and desired-versus-effective display recovery.
+- Logs: `out/presentation-policy-configure.log`,
+  `out/presentation-policy-release-build.log`,
+  `out/presentation-policy-debug-build.log`,
+  `out/presentation-policy-release-ctest.log`,
+  `out/presentation-policy-debug-ctest.log`, and
+  `out/presentation-policy-repeat.log`. Earlier failures are preserved above;
+  passing reruns do not erase them.
+- UI standards pass with 55 files and the unchanged 61-occurrence inventory.
+  Actual editor size/scale Settings, transformed input, auxiliary-window fit,
+  musical-state/dirty invariance under those bindings and physical host/DPI
+  acceptance remain pending. The standalone fixture is not evidence for them.
+
+### Real-editor access-route correction and checkpoint
+
+The independent review found `refreshResponsiveSections()` hiding Settings-owned
+Mute, Full response and curve-preset controls. Extended the actual editor
+fixture first: it failed on hidden `fadeInCurve` (0.54 s), proving the regression
+against the current implementation. Removed that inspector-owned visibility
+operation; Settings retains control ownership and its existing route/bindings.
+
+The expanded Release `preverb_responsive_editor_test` then passed 1/1 in 10.14 s
+across all nine recorded sizes. It checks Settings routes after every inspector
+section and mode transition, plus the real Learn components under a view-only
+Automatic-enabled snapshot: Generate/readiness/manual guidance stay pinned in
+both tabs; sensitivity/Stop or default IR/import controls fit above them with
+clearance. The dense view does not change processor policies or schedule audio
+generation. Source/render/IR identity checks still pass. Logs:
+`out/compact-settings-build.log`, `out/compact-settings-before.log` and
+`out/compact-settings-after.log`.
+
+Task 1.3's native composition harness checkpoint is complete: actual reused
+controls/bindings, all current access routes, full Source labels, fixed Reset,
+useful waveform/Overview geometry, the sole live editor refresh owner and the
+previously approved stable native event loop. Exhaustive compact interaction,
+long/error state and production-integration checks remain in their separate
+open tasks. Task 1.4 retains the owner's interim layout approval; final combined
+native acceptance remains task 4.3.
+
+Computer Use found no #58 interim review window when relinking was prepared;
+no window was closed or replaced in this pass. The headless fixture was rebuilt
+and run without touching FL Studio, other agents' windows or system VST3 files.
+The next owner preview remains the combined 900x600 integration review.
 
 ### Interim owner approval and integration handoff
 

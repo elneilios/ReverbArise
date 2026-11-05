@@ -2,6 +2,7 @@
 #include <juce_core/juce_core.h>
 #include <functional>
 #include <limits>
+#include <mutex>
 #include <optional>
 
 namespace m3::ui
@@ -16,7 +17,7 @@ struct PresentationPreferences
     static bool validScale(int value)noexcept{return value==100 || value==125;}
     bool operator==(const PresentationPreferences&)const=default;
 };
-enum class PresentationReadStatus {missing,valid,recovered,unsupportedVersion,failed};
+enum class PresentationReadStatus {missing,valid,recovered,unsupportedVersion,failed,busy};
 struct LoadedPresentation
 {
     PresentationPreferences value;
@@ -90,13 +91,10 @@ public:
     }
     LoadedPresentation load()override
     {
-        if(!file.exists())return {};
-        juce::FileInputStream input(file);
-        if(input.failedToOpen())return {{},PresentationReadStatus::failed,input.getStatus()};
-        juce::MemoryBlock bytes;input.readIntoMemoryBlock(bytes,maximumBytes+1);
-        if(bytes.getSize()>maximumBytes)return {{},PresentationReadStatus::failed,juce::Result::fail("Presentation preference record is too large")};
-        if(input.getStatus().failed())return {{},PresentationReadStatus::failed,input.getStatus()};
-        return decodePresentation(juce::String::fromUTF8(static_cast<const char*>(bytes.getData()),static_cast<int>(bytes.getSize())));
+        const std::unique_lock guard(threadGate,std::try_to_lock);
+        if(!guard.owns_lock() || !lock.enter(0))
+            return {{},PresentationReadStatus::busy,juce::Result::fail("Presentation preferences are busy")};
+        Unlock unlock{lock};return loadLocked();
     }
     juce::Result save(PresentationPatch patch)override
     {
@@ -104,9 +102,9 @@ public:
         if(patch.empty())return juce::Result::ok();
         // Do not wait for another editor/process. The controller retains and
         // retries the pending patch after its coalescing interval.
-        if(!lock.enter(0))return juce::Result::fail("Presentation preferences are busy");
-        struct Unlock{juce::InterProcessLock& value;~Unlock(){value.exit();}} unlock{lock};
-        auto latest=load();
+        const std::unique_lock guard(threadGate,std::try_to_lock);
+        if(!guard.owns_lock() || !lock.enter(0))return juce::Result::fail("Presentation preferences are busy");
+        Unlock unlock{lock};auto latest=loadLocked();
         if(latest.status==PresentationReadStatus::failed)return latest.error;
         if(latest.status==PresentationReadStatus::unsupportedVersion)
             return juce::Result::fail("Presentation preference version is not supported");
@@ -126,8 +124,22 @@ public:
         return juce::Result::ok();
     }
 private:
+    struct Unlock{juce::InterProcessLock& value;~Unlock(){value.exit();}};
+    LoadedPresentation loadLocked()
+    {
+        // Windows replacement can briefly make the name unavailable to an
+        // uncoordinated reader. Readers participate in the same transaction:
+        // contention is explicit, never mistaken for a missing/corrupt profile.
+        if(!file.exists())return {};
+        juce::FileInputStream input(file);
+        if(input.failedToOpen())return {{},PresentationReadStatus::failed,input.getStatus()};
+        juce::MemoryBlock bytes;input.readIntoMemoryBlock(bytes,maximumBytes+1);
+        if(bytes.getSize()>maximumBytes)return {{},PresentationReadStatus::failed,juce::Result::fail("Presentation preference record is too large")};
+        if(input.getStatus().failed())return {{},PresentationReadStatus::failed,input.getStatus()};
+        return decodePresentation(juce::String::fromUTF8(static_cast<const char*>(bytes.getData()),static_cast<int>(bytes.getSize())));
+    }
     static constexpr size_t maximumBytes=16384;
-    juce::File file;Publish publisher;juce::InterProcessLock lock;
+    juce::File file;Publish publisher;juce::InterProcessLock lock;std::mutex threadGate;
 };
 
 // One controller per open editor. An editor loads once and never observes another
@@ -138,20 +150,29 @@ public:
     explicit PresentationPreferenceSession(PresentationStorage& destination):storage(destination),initial(storage.load()),desired(initial.value){}
     const PresentationPreferences& preferences()const noexcept{return desired;}
     const LoadedPresentation& initialRead()const noexcept{return initial;}
+    bool retryInitialRead()
+    {
+        if(initial.status!=PresentationReadStatus::busy || userIntent)return false;
+        auto next=storage.load();if(next.status==PresentationReadStatus::busy)return false;
+        initial=std::move(next);desired=initial.value;return true;
+    }
     bool hasPendingSave()const noexcept{return !pending.empty();}
     const juce::Result& lastSave()const noexcept{return lastResult;}
     bool setSize(int width,int height,double now)
     {
         if(!PresentationPreferences::validWidth(width) || !PresentationPreferences::validHeight(height))return false;
-        bool changed=false;
-        if(width!=desired.width){desired.width=width;pending.width=width;changed=true;}
-        if(height!=desired.height){desired.height=height;pending.height=height;changed=true;}
+        const bool unresolved=initial.status==PresentationReadStatus::busy;
+        userIntent=true;bool changed=false;
+        if(width!=desired.width || unresolved){desired.width=width;pending.width=width;changed=true;}
+        if(height!=desired.height || unresolved){desired.height=height;pending.height=height;changed=true;}
         if(changed)saveAfter=now+coalescingMilliseconds;return true;
     }
     bool setScale(int percent,double now)
     {
         if(!PresentationPreferences::validScale(percent))return false;
-        if(percent!=desired.scalePercent){desired.scalePercent=percent;pending.scalePercent=percent;saveAfter=now+coalescingMilliseconds;}
+        userIntent=true;
+        if(percent!=desired.scalePercent || initial.status==PresentationReadStatus::busy)
+        {desired.scalePercent=percent;pending.scalePercent=percent;saveAfter=now+coalescingMilliseconds;}
         return true;
     }
     bool saveIfDue(double now,bool force=false)
@@ -164,7 +185,7 @@ public:
 private:
     static constexpr double coalescingMilliseconds=750;
     PresentationStorage& storage;LoadedPresentation initial;PresentationPreferences desired;
-    PresentationPatch pending;double saveAfter=0;juce::Result lastResult=juce::Result::ok();
+    PresentationPatch pending;double saveAfter=0;bool userIntent=false;juce::Result lastResult=juce::Result::ok();
     JUCE_DECLARE_NON_COPYABLE(PresentationPreferenceSession)
 };
 }

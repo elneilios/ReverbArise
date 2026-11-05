@@ -456,7 +456,8 @@ void PreverbAudioProcessorEditor::refreshResponsiveSections()
         valueControls[i].setVisible(selected && section==inspectorSection);
     }
     for(auto* child:std::initializer_list<juce::Component*>{&irBox,&irStatus,&loadIRButton})child->setVisible(selected && inspectorSection==3);
-    for(auto* child:std::initializer_list<juce::Component*>{&muteButton,&fullButton,&inCurveBox,&outCurveBox})child->setVisible(false);
+    // Mute/full response/curve presets are owned by Settings, not this inspector.
+    // Section refresh must not hide their existing access route.
     const bool editable=inspectorContent.isEnabled();
     for(auto* child:std::initializer_list<juce::Component*>{&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})child->setEnabled(child->isEnabled() && selected && editable);
     repaint();
