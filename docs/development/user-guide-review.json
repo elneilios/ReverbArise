@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed integration of main PR69 GUI-only waveform caching: Perform summary/layer cache ownership and close-zoom fidelity preserve existing controls, layout, audio, persisted assets and musician workflows. Current guide makes no unsupported PCM-detail or performance claim; existing workflow screenshots/limitations remain applicable. No guide prose change is needed. Prior Copy confirmation and canonical workflow review retained.",
+  "summary": "Reviewed synced implemented canonical packaging and build-identity requirements against delivered guide/code: explicit currency gate, embedded native images/provenance, honest owner acceptance/private-sharing records, generated About identity/reset and copied visible confirmation. Guide already covers delivered musician workflows and Copy confirmation; archive/merge/main verification ordering is developer procedure only. Owner offline alpha.1 guide pass is recorded; no prose or screenshot change needed after semantic sync.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/releases.md",
-      "bytes": 11390,
-      "sha256": "0dc20003adb4341157cae351994ed2580a7db92b6a0b68355c5cc5c4ba5dc560"
+      "bytes": 11482,
+      "sha256": "be53e68cfa550e642fee6d5fdd29bb0d63a5dc81e419094a4bd64b1474eb73b6"
     },
     {
       "path": "docs/development/user-guide-maintenance.md",
@@ -805,8 +805,8 @@
     },
     {
       "path": "openspec/specs/local-release-packaging/spec.md",
-      "bytes": 3557,
-      "sha256": "d2c29dd6d5806ecc26ab29eda0c2a3d8ab51d0a994b565817d867bfedd600999"
+      "bytes": 7489,
+      "sha256": "8cd60ba22c2e294df0c514f042dd7aa9954a63c0822f1dab3bd094a5bf837186"
     },
     {
       "path": "openspec/specs/local-windows-validation/spec.md",
@@ -815,8 +815,8 @@
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
-      "bytes": 2892,
-      "sha256": "139bed1e705c2d235298d6b7113527cb5c2a7ad1897b5c2b8f288a6719fab576"
+      "bytes": 4505,
+      "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",

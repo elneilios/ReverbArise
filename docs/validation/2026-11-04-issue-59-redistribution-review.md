@@ -26,3 +26,11 @@ Owner direction received **2026-11-05**: plan to use the free tier for now. Reco
 - Explicit owner approval, date and scope. **Current decision: pending.**
 
 No public release, tag push, upload, private transmission or self-merge is authorised by this packet. Local copying to a recipient also requires the review approval.
+
+## Subsequent owner sign-off — 2026-11-05
+
+In direct response to the prepared-review sign-off question covering Starter eligibility/licensing, project distribution rights, bundled notices/materials and exact alpha.1 private-evaluation approval, the owner stated: **“Starter is correct - currently I am the only user. I intend to share alpha builds with a friend. At a later date I will decide if I am distributing this plugin to the public but haven't decided that yet”.**
+
+Record this owner confirmation for **JUCE Starter**, one current framework user and **one friend for private DAW evaluation** of alpha.1, source `b26eef73fefb878c22f0bd0128c0fc3353e8d438`, ZIP SHA-256 `5e9483ad0f5af806a3de720365148eda6606727a3d3ea3249bc89f689b5e4374`, module SHA-256 `fc69341777d91b6f5d13a6999a1077e8b88de2a6a071082beb04919652a3d3a1`. The owner separately accepted their earlier ZIP-installed FL Studio trial and waived another run; exact host version/rate/buffer and a new alpha.1 run are not asserted. Offline alpha.1 guide inspection received explicit **pass**.
+
+This records the owner's decision in the stated private scope, not an independent legal audit or an entitlement-document inspection. No confidential evidence was requested or retained. **Public distribution remains undecided and unapproved.** New revisions, broader recipients/use or public distribution need their own decision; this does not grant a general project licence or authorize a release/tag/upload. No binary is transmitted by this sign-off record. Earlier pending statements above describe the state before this subsequent decision.

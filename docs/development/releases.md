@@ -65,11 +65,11 @@ guide files participate in the existing payload inventory and ZIP verification.
 For #59, rehearse on the issue branch with a distinct label such as
 `-Candidate alpha.rehearsal.1`. For #59 the owner-approved order is to package a clean committed PR revision
 containing the required integrations with `-Candidate alpha`, sign off that exact
-candidate before merging, then verify clean merged main separately before archiving.
+candidate, archive the signed-off change and merge, then verify clean merged main separately.
 If that output identity already exists, preserve it and use a recorded fresh
 `alpha.N`; never overwrite it. Extract into a new folder, verify hashes and view
 the HTML locally offline, checking every image. The final extracted binary needs
-its own consolidated FL Studio capture/generate/Perform/save-reopen smoke test.
+its own consolidated FL Studio capture/generate/Perform/save-reopen smoke test, or an explicit owner waiver with the earlier trial and untested coverage recorded.
 Earlier fixture or host runs do not establish that final acceptance. Record
 clean-machine and second-host coverage explicitly, including unverified coverage.
 See the [alpha preparation evidence](../validation/2026-11-04-issue-59-alpha.md)

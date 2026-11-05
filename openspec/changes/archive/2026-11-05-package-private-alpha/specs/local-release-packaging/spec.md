@@ -32,7 +32,7 @@ A private alpha acceptance record SHALL identify the clean PR revision, candidat
 
 #### Scenario: Pre-merge sign-off and main verification
 - **WHEN** the owner signs off the clean PR candidate and authorizes its merge
-- **THEN** the resulting clean main revision is verified separately before archiving, without relabelling PR results as main results
+- **THEN** the resulting clean main revision is verified separately after merge, without relabelling PR results as main results
 
 #### Scenario: Earlier integration evidence
 - **WHEN** earlier component or host tests exist but the final packaged binary has not been tested in FL Studio
