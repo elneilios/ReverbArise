@@ -93,10 +93,25 @@ Binary SHA-256: `50C1A55B33C5AEC45F23FDC626330CFC8C8EDE83CCE4AF21E49B5B057480EB7
 The release helper verified the x64 PE version and complete six-file bundle;
 the prepared inventory is recorded in the adjacent JSON.
 
-Installation is **deferred at the owner's request**: another spike is using
-FL Studio. Do not replace its loaded bundle. The installation task remains open.
-When available, use `scripts/install-test-vst3.ps1` via the test-install skill,
-retain the previous complete system bundle and verify installed/source inventories.
+Installed on 5 November 2026 after the owner saved and closed FL Studio using
+`scripts/install-test-vst3.ps1` via the test-install skill. The initial normal
+attempt built successfully but Windows denied access to the system install lock;
+it did not replace the bundle. The elevated retry completed with exit 0.
+
+- Installed: `C:/Program Files/Common Files/VST3/ReverbArise.vst3`.
+- Previous complete bundle retained:
+  `out/vst3-install-backups/20261105-141058-1d36de86920d4dc7ad9c4396e9c0661d/ReverbArise.vst3`.
+- Release configure/build passed at `42da906` with unchanged DSP implementation
+  `1571171`; logs `out/build-logs/Release/20261105-141052-b15b7f7b/`.
+- Full six-file installed/source inventories match; binary SHA-256 remains the
+  tested value above. Backup inventory is also retained in the JSON.
+- All 16 capture/manifest files match the immediate pre-install hash snapshot.
+- CTest was not rerun during installation: the same source had already passed
+  69/69 native Debug and 69/69 Release tests. No source code changed afterward.
+
+Reopen FL Studio. In Options > Manage plugins, enable Verify plugins and Rescan
+previously verified plugins, run Find installed plugins and confirm the resolved
+ReverbArise path is the system bundle above. Installation is not host acceptance.
 
 One final owner listening check remains: reopen the saved project, use
 **Regenerate All** once (unfreeze only swells intended to change), then listen

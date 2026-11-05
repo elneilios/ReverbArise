@@ -3,26 +3,26 @@
     {
       "source_start": 3729072,
       "frames": 215819,
-      "relative_rms_error": 1.8575438352645498E-07,
-      "maximum_error": 3.090347264755877E-07
+      "relative_rms_error": 1.8575438352645498e-07,
+      "maximum_error": 3.090347264755877e-07
     },
     {
       "source_start": 3752880,
       "frames": 215819,
-      "relative_rms_error": 1.7189318694127156E-07,
-      "maximum_error": 2.7354256859624115E-07
+      "relative_rms_error": 1.7189318694127156e-07,
+      "maximum_error": 2.7354256859624115e-07
     },
     {
       "source_start": 3777456,
       "frames": 208084,
-      "relative_rms_error": 1.8096011648197381E-07,
-      "maximum_error": 2.539457091277342E-07
+      "relative_rms_error": 1.8096011648197381e-07,
+      "maximum_error": 2.539457091277342e-07
     },
     {
       "source_start": 3793328,
       "frames": 215819,
-      "relative_rms_error": 1.8548690846860577E-07,
-      "maximum_error": 2.688231179881484E-07
+      "relative_rms_error": 1.8548690846860577e-07,
+      "maximum_error": 2.688231179881484e-07
     }
   ],
   "static_matching_db": 0.0005418299020126616,
@@ -51,7 +51,81 @@
   "implementation_commit": "1571171",
   "branch": "codex/fix-swell-source-edges",
   "release_binary_sha256": "50C1A55B33C5AEC45F23FDC626330CFC8C8EDE83CCE4AF21E49B5B057480EB7E",
-  "installation": "Deferred by owner: another spike is using FL Studio",
+  "installation": {
+    "installed": "C:/Program Files/Common Files/VST3/ReverbArise.vst3",
+    "backup": "C:\\Users\\neila\\.codex\\worktrees\\offline-export-clock\\k7ma-preverb\\out\\vst3-install-backups\\20261105-141058-1d36de86920d4dc7ad9c4396e9c0661d\\ReverbArise.vst3",
+    "source_revision": "42da906",
+    "implementation": "1571171",
+    "installer_exit": 0,
+    "release_logs": "out/build-logs/Release/20261105-141052-b15b7f7b",
+    "ctest_rerun_during_install": false,
+    "installed_inventory": [
+      {
+        "path": "Contents/Resources/Inter-OFL.txt",
+        "bytes": 4472,
+        "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+      },
+      {
+        "path": "Contents/Resources/IR-LICENSE.md",
+        "bytes": 939,
+        "sha256": "1e262c8167a9162a4f14890ed930a388e878850f8800f8accba80fb8e127babe"
+      },
+      {
+        "path": "Contents/Resources/IR-manifest.json",
+        "bytes": 16788,
+        "sha256": "7d78ef0fc2d6012922f50fbd7fb0dd22fdfb1abaa673aefe02e1061d78ae786a"
+      },
+      {
+        "path": "Contents/Resources/moduleinfo.json",
+        "bytes": 1066,
+        "sha256": "3060d916fd6c406a201a2824b66e02556a9000b10c4b223370e8f03db9d6c8b1"
+      },
+      {
+        "path": "Contents/Resources/WavPack-LICENSE.txt",
+        "bytes": 1586,
+        "sha256": "66182c49c182998173188b0431d4de653274c9f43d391a3ef2489c69952b1a6a"
+      },
+      {
+        "path": "Contents/x86_64-win/ReverbArise.vst3",
+        "bytes": 18987520,
+        "sha256": "50c1a55b33c5aec45f23fdc626330cfc8c8ede83cce4af21e49b5b057480eb7e"
+      }
+    ],
+    "backup_inventory": [
+      {
+        "path": "Contents/Resources/Inter-OFL.txt",
+        "bytes": 4472,
+        "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+      },
+      {
+        "path": "Contents/Resources/IR-LICENSE.md",
+        "bytes": 939,
+        "sha256": "1e262c8167a9162a4f14890ed930a388e878850f8800f8accba80fb8e127babe"
+      },
+      {
+        "path": "Contents/Resources/IR-manifest.json",
+        "bytes": 16788,
+        "sha256": "7d78ef0fc2d6012922f50fbd7fb0dd22fdfb1abaa673aefe02e1061d78ae786a"
+      },
+      {
+        "path": "Contents/Resources/moduleinfo.json",
+        "bytes": 1066,
+        "sha256": "3060d916fd6c406a201a2824b66e02556a9000b10c4b223370e8f03db9d6c8b1"
+      },
+      {
+        "path": "Contents/Resources/WavPack-LICENSE.txt",
+        "bytes": 1586,
+        "sha256": "66182c49c182998173188b0431d4de653274c9f43d391a3ef2489c69952b1a6a"
+      },
+      {
+        "path": "Contents/x86_64-win/ReverbArise.vst3",
+        "bytes": 18984960,
+        "sha256": "0a96fccd07633cbae7d00fb9a445e762a97c59f59ab6c3a2e7783f00b1605bd3"
+      }
+    ],
+    "capture_files_unchanged": true,
+    "capture_files": 16
+  },
   "prepared_bundle_inventory": [
     {
       "path": "Contents/Resources/Inter-OFL.txt",
