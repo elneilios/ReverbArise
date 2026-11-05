@@ -82,6 +82,9 @@ public:
         const auto duration=[&](long double frames){return rate>0?juce::String(static_cast<double>(frames/rate),1)+" s":juce::String(static_cast<double>(frames),0)+" samples";};
         totalsText="Mapped "+duration(learnMappedFrames(capture.manifest))+" | Recording "+duration(learnProvisionalFrames(progress))+" | Extent "+duration(learnExtentFrames(capture,progress,clock));
         statusText=phase==workflow::Phase::recording?"Recording source | Stop your DAW to accept capture.":phase==workflow::Phase::draining?"Finishing capture | Settings remain locked.":phase==workflow::Phase::validating?"Accepting captured source | Settings remain locked.":phase==workflow::Phase::failed?"Capture was not accepted | Previous source retained.":flow.result==workflow::Result::cancelled?"Capture cancelled | Previous source retained.":source.unavailable?"Some captured source is unavailable.":hasSource()?"Captured source ready.":"Ready to capture source from your DAW.";
+        if(capture.failure && capture.failure.event.pass==flow.pass && (flow.locked() || phase==workflow::Phase::failed))
+            statusText=juce::String(captureFailureReasonText(capture.failure.event.reason))+" | Stop and retry capture.";
+        else if(phase==workflow::Phase::failed && capture.manifest.ranges.empty())statusText="Capture was not accepted | No earlier committed source.";
         if(progress.limited)statusText+=" Live preview limit reached; source capture continues.";
         updateAccessibleDescription();
         refreshing=false;resized();repaint();

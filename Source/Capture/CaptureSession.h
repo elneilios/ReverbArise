@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CaptureAssetStore.h"
+#include "CaptureFailureRecord.h"
 #include <optional>
 
 struct CapturePeak
@@ -24,6 +25,7 @@ struct CaptureSessionSnapshot
     juce::String status = "Ready (empty)";
     bool unavailable = false;
     std::vector<CaptureOverviewRange> overview;
+    CaptureFailureRecord failure;
 };
 
 // Worker-thread only. PCM is read one bounded chunk at a time, never retained for the full song.
@@ -50,6 +52,8 @@ public:
     void abortPass();
     bool passActive() const noexcept {return staged!=nullptr;}
     const juce::String& passFailure() const noexcept {return passError;}
+    CaptureFailureReason passFailureReason() const noexcept {return passReason;}
+    double passWriteMilliseconds() const noexcept {return staged?staged->maxWriteMilliseconds:0;}
     const CaptureSessionSnapshot& snapshot() const noexcept { return state; }
     bool readSample(int64_t position, float& left, float& right) const;
     uint64_t audioReadCount() const { return store().audioReadCount(); }
@@ -69,6 +73,8 @@ private:
     bool lastCommitAudioChanged=false,passAnyChanged=false;
     std::optional<CaptureGenerationContext> passContext;
     juce::String passError;
+    CaptureFailureReason passReason=CaptureFailureReason::none;
+    double maxWriteMilliseconds=0;
     std::vector<std::pair<int64_t,int64_t>> passChanges;
     std::vector<std::pair<int64_t,int64_t>> passContextChanges;
     std::unique_ptr<CaptureSessionSnapshot> prepared;

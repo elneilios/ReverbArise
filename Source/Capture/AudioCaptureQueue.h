@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include "CaptureFailure.h"
+#include <algorithm>
 
 inline constexpr int maxCaptureBlockFrames = 8192;
 
@@ -14,6 +16,8 @@ struct AudioCaptureBlock
     uint32_t frameCount = 0;
     uint64_t generation = 0;
     uint64_t recaptureToken = 0;
+    uint64_t queueOrdinal = 0;
+    CaptureHostTiming timing;
     std::array<float, maxCaptureBlockFrames * 2> interleavedSamples{};
 };
 
@@ -22,7 +26,7 @@ class SpscAudioCaptureQueue
 {
 public:
     bool tryPush(int64_t startSample, double sampleRate, const float* left, const float* right,
-                 int frameCount, uint64_t generation = 0, uint64_t recaptureToken = 0) noexcept
+                 int frameCount, uint64_t generation = 0, uint64_t recaptureToken = 0, CaptureHostTiming timing = {}) noexcept
     {
         if (frameCount <= 0 || frameCount > maxCaptureBlockFrames
             || startSample > std::numeric_limits<int64_t>::max() - frameCount)
@@ -39,6 +43,8 @@ public:
         block.frameCount = static_cast<uint32_t>(frameCount);
         block.generation = generation;
         block.recaptureToken = recaptureToken;
+        block.queueOrdinal = write+1;
+        block.timing = timing;
 
         for (int frame = 0; frame < frameCount; ++frame)
         {
@@ -50,6 +56,14 @@ public:
         return true;
     }
 
+    // Producer/consumer observation only; a third-party sample is approximate.
+    uint32_t depth() const noexcept
+    {
+        const auto r=readIndex.load(std::memory_order_acquire),w=writeIndex.load(std::memory_order_acquire);
+        return static_cast<uint32_t>(std::min<uint64_t>(w-r,Capacity));
+    }
+    static constexpr uint32_t capacity=static_cast<uint32_t>(Capacity);
+    uint64_t totalQueued() const noexcept {return writeIndex.load(std::memory_order_acquire);}
     bool tryPop(AudioCaptureBlock& destination) noexcept
     {
         const auto read = readIndex.load(std::memory_order_relaxed);

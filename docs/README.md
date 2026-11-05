@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
+
 - [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
 
 - [Perform live diagnostics](development/perform-live-diagnostics.md) — read-only callback admission, historical rejection and worker preparation evidence for transport silence.

@@ -2,6 +2,7 @@
 #include <UI/PerformText.h>
 #include <UI/MusicalPosition.h>
 #include <UI/LiveDiagnosticsText.h>
+#include <UI/CaptureFailureText.h>
 #include <DSP/DefaultImpulse.h>
 
 namespace
@@ -391,21 +392,27 @@ void PreverbAudioProcessorEditor::resized()
     row=inspector.removeFromTop(34);auto resetLeft=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
     resetButton.setBounds(resetLeft);resetMenu.setBounds(row);
     inspectorContent.setSize(width,row.getBottom()+spacing::tight);
-    // Read-only precision/asset observations; musician edits live in the inspector.
-    for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
-    diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);
-    status.setBounds(diagnostic.removeFromTop(72));captureDiagnostic.setBounds(diagnostic.removeFromTop(72));detail.setBounds(diagnostic.removeFromTop(140));
-    playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
-    row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
-    for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
-    row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
-    helper.setBounds({});
     layoutSettings();layoutLiveDiagnostics();
 
 }
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
     const auto inset=m3::ui::spacing::section;
+    // Read-only precision/asset observations; musician edits live in the inspector.
+    for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
+    diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);
+    status.setBounds(diagnostic.removeFromTop(72));
+    juce::AttributedString captureText(captureDiagnostic.getText());captureText.setFont(captureDiagnostic.getFont());
+    juce::TextLayout captureLayout;captureLayout.createLayout(captureText,static_cast<float>(diagnostic.getWidth()));
+    const auto captureHeight=std::max(status.getHeight(),static_cast<int>(std::ceil(captureLayout.getHeight()))+m3::ui::spacing::related);
+    diagnostic.setHeight(diagnostic.getHeight()+captureHeight-status.getHeight());
+    captureDiagnostic.setBounds(diagnostic.removeFromTop(captureHeight));
+    detail.setBounds(diagnostic.removeFromTop(140));
+    playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
+    auto row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
+    for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
+    row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
+    helper.setBounds({});
     juce::AttributedString text(liveDiagnostic.getText());text.setFont(liveDiagnostic.getFont());
     juce::TextLayout measured;measured.createLayout(text,static_cast<float>(status.getWidth()));
     const auto height=static_cast<int>(std::ceil(measured.getHeight()))+inset;
@@ -578,7 +585,12 @@ void PreverbAudioProcessorEditor::refresh()
         <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
     juce::String captured="Capture / assets\n";captured<<capture.status<<" | revision "<<juce::String(static_cast<juce::int64>(capture.manifest.revision))<<" | dropped "<<juce::String(static_cast<juce::int64>(processor.getDroppedCaptureBlockCount()))<<" | discontinuities "<<juce::String(static_cast<juce::int64>(processor.getTimelineDiscontinuityCount()));
+    if(capture.failure)captured<<"\n"<<m3::ui::captureFailureText(capture.failure,capture.failure.event.pass==processor.getWorkflowSnapshot().pass
+        && (processor.getWorkflowSnapshot().locked() || processor.getWorkflowSnapshot().phase==workflow::Phase::failed));
     captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);
+    if(const auto omitted=processor.getOmittedCaptureFailureCount())
+    {captured<<"\nDiagnostic capacity: "<<juce::String(static_cast<juce::int64>(omitted))<<" failure events omitted";captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);}
+    layoutLiveDiagnostics();
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
     policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
         +"\nLive requested "+juce::String(state.session.liveWetDb,1)+" dB | protection "+(state.liveReady?juce::String(state.liveAttenuationDb,1)+" dB":"pending preparation")+protection

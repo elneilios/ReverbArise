@@ -34,8 +34,9 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
     using controls::NoticeMessage;using controls::NoticeTone;
     if(flow.mode==workflow::Mode::capture && flow.admissionFailed)
         return NoticeMessage{"Capture could not start - stop and play again","Settings changed during admission; no partial pass was accepted.",NoticeTone::warning};
-    if(flow.phase==workflow::Phase::failed)
-        return NoticeMessage{"Capture failed - previous source retained",capture.status,NoticeTone::error};
+    if(flow.phase==workflow::Phase::failed || (capture.failure && capture.failure.event.pass==flow.pass && flow.locked()))
+        return NoticeMessage{capture.manifest.ranges.empty()?"Capture failed - no source accepted. Stop and retry.":"Capture failed - previous source retained. Stop and retry.",
+            capture.failure && capture.failure.event.pass==flow.pass?captureFailureFeedback(capture.failure):capture.status,NoticeTone::error};
     if(capture.unavailable)
         return NoticeMessage{"Captured source is unavailable",capture.status,NoticeTone::error};
     if(editor.actionError.isNotEmpty())return NoticeMessage{editor.actionError,{},NoticeTone::error};

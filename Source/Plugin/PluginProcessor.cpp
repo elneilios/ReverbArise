@@ -92,22 +92,42 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         previousWorkflowMode=workflow.mode;
     }
     workflow=workflowState.snapshot();
+    const CaptureHostTiming captureTiming{diagnostics.positionAvailable,diagnostics.samplePositionAvailable,
+        diagnostics.ppqPositionAvailable,diagnostics.tempoAvailable,diagnostics.meterAvailable,diagnostics.isPlaying,
+        diagnostics.isLooping,diagnostics.samplePosition,diagnostics.loopStart,diagnostics.loopEnd,
+        diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,diagnostics.numerator,diagnostics.denominator};
+    if(!offline && workflow.phase==workflow::Phase::recording && observedCapturePass!=workflow.pass)
+    {capturePassTime=transport.song;observedCapturePass=workflow.pass;capturePassDiagnosticBaseline=captureTiming;passQueuedBlocks=passDroppedBlocks=0;}
+    const auto rejectCapture=[&](CaptureFailureReason reason)
+    {
+        droppedCaptureBlockCount.fetch_add(1,std::memory_order_relaxed);++passDroppedBlocks;
+        CaptureFailureEvent event;event.reason=reason;event.pass=workflow.pass;event.epoch=captureGeneration;
+        event.start=diagnostics.samplePosition;event.frames=buffer.getNumSamples();event.queued=passQueuedBlocks;event.dropped=passDroppedBlocks;
+        event.timing=captureTiming;event.baseline=capturePassDiagnosticBaseline;captureWorker.failPass(event);
+    };
+    if(!offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
+        rejectCapture(CaptureFailureReason::timingUnavailable);
     if (!offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
         && diagnostics.isPlaying)
     {
-        if(observedCapturePass!=workflow.pass){capturePassTime=transport.song;observedCapturePass=workflow.pass;}
         const bool compatiblePass=transportMappingMatches(capturePassTime,transport.song);
         const auto channelCount = buffer.getNumChannels();
         const auto count=buffer.getNumSamples();
-        const auto wasQueued = count==0 || (channelCount >= 2
-            && transport.song.valid && compatiblePass && captureWorker.canMap()
-            && captureQueue.tryPush(samplePosition.load(std::memory_order_relaxed),
-                                    sampleRate.load(std::memory_order_relaxed),
-                                    buffer.getReadPointer(0),
-                                    buffer.getReadPointer(1),
-                                    count, captureGeneration, workflow.pass));
-        if (! wasQueued)
-        {droppedCaptureBlockCount.fetch_add(1, std::memory_order_relaxed);captureWorker.failPass(workflow.pass);}
+        CaptureFailureReason reason=CaptureFailureReason::none;
+        if(count<0 || count>maxCaptureBlockFrames)reason=CaptureFailureReason::blockSize;
+        else if(channelCount<2)reason=CaptureFailureReason::channels;
+        else if(!transport.song.valid || !std::isfinite(transport.song.ppq) || !std::isfinite(transport.song.bpm)
+            || transport.song.bpm<=0 || transport.song.numerator<=0 || transport.song.denominator<=0)reason=CaptureFailureReason::timingUnavailable;
+        else if(!std::isfinite(transport.song.rate) || transport.song.rate<=0 || std::abs(capturePassTime.rate-transport.song.rate)>.001)reason=CaptureFailureReason::sampleRate;
+        else if(diagnostics.samplePosition>INT64_MAX-count)reason=CaptureFailureReason::range;
+        else if(!compatiblePass)reason=CaptureFailureReason::timingChanged;
+        else if(!captureWorker.canMap())reason=CaptureFailureReason::mappingUnavailable;
+        if(count!=0)
+        {
+            if(reason!=CaptureFailureReason::none)rejectCapture(reason);
+            else if(captureQueue.tryPush(diagnostics.samplePosition,transport.song.rate,buffer.getReadPointer(0),buffer.getReadPointer(1),count,captureGeneration,workflow.pass,captureTiming))++passQueuedBlocks;
+            else rejectCapture(CaptureFailureReason::queueFull);
+        }
     }
 
     auto tonePeak = 0.0f;

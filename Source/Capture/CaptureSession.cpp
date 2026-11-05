@@ -66,7 +66,10 @@ bool CaptureSession::makeRange(CaptureManifestRange& range, const float* samples
         return true;
     range.assetPath = "segments/" + juce::Uuid().toDashedString().toStdString() + ".wav";
     juce::String error;
-    if (store().writeAudioChunk(range, rate, samples, error))
+    const auto began=juce::Time::getMillisecondCounterHiRes();
+    const auto written=store().writeAudioChunk(range, rate, samples, error);
+    maxWriteMilliseconds=std::max(maxWriteMilliseconds,juce::Time::getMillisecondCounterHiRes()-began);
+    if (written)
         return true;
     state.status = "Uncommitted: " + error;
     return false;
@@ -206,6 +209,7 @@ bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace,const 
     staged=std::make_unique<CaptureSession>(root);staged->state=state;staged->provisional=true;
     passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
     replaceMapped=replace;passUseful=false;passReplaced=false;passAnyChanged=false;passError.clear();passChanges.clear();passContextChanges.clear();
+    passReason=CaptureFailureReason::none;
     passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
 }
 
@@ -215,9 +219,9 @@ bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const fl
     if(!samples || !frames || frames>1920000 || !std::isfinite(rate) || rate<=0
         || frames>rate*5 || start>INT64_MAX-frames
         || !std::all_of(samples,samples+static_cast<size_t>(frames)*2,[](float x){return std::isfinite(x);}))
-    {passError="Invalid or non-finite capture data";return false;}
+    {passReason=CaptureFailureReason::invalidData;passError="Invalid or non-finite capture data";return false;}
     if(!state.manifest.ranges.empty() && std::abs(state.manifest.sampleRate-rate)>.001)
-    {passError="Capture sample rate is incompatible";return false;}
+    {passReason=CaptureFailureReason::sampleRate;passError="Capture sample rate is incompatible";return false;}
     const auto end=start+frames;
     std::vector<std::pair<int64_t,int64_t>> intervals;
     if(replaceMapped)intervals.emplace_back(start,end);
@@ -243,7 +247,7 @@ bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const fl
         const auto revision=staged->state.manifest.revision;
         const auto previousContexts=staged->state.manifest.contextSpans;
         if(!staged->commit(a,rate,input,count,0,passContext?&*passContext:nullptr))
-        {passError=staged->state.status;return false;}
+        {passReason=CaptureFailureReason::assetWrite;passError=staged->state.status;return false;}
         if(staged->state.manifest.revision!=revision)passAnyChanged=true;
         if(staged->lastCommitAudioChanged)passChanges.emplace_back(a,b);
         if(staged->state.manifest.contextSpans!=previousContexts)passContextChanges.emplace_back(a,b);
@@ -265,7 +269,7 @@ CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t e
             auto candidate=staged->state.manifest;candidate.revision=baseRevision+1;
             for(auto& range:candidate.ranges)if(range.revision>baseRevision)range.revision=candidate.revision;
             juce::String reference;
-            if(!store().publishSnapshot(candidate,reference,result.error))result.changed=false;
+            if(!store().publishSnapshot(candidate,reference,result.error,&passReason))result.changed=false;
             else {prepared=std::make_unique<CaptureSessionSnapshot>(staged->state);prepared->manifest=std::move(candidate);prepared->reference=reference;prepared->status="Ready (committed)";}
         }
         if(result.error.isEmpty())

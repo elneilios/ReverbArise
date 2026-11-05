@@ -4,6 +4,7 @@
 #include <Plugin/PluginProcessor.h>
 #include <UI/WorkflowPresentation.h>
 #include <Core/MonitoringSafety.h>
+#include "ProcessorCaptureFailureCases.h"
 
 struct WorkflowHost:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -37,7 +38,7 @@ int main(){return runTest([]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     WorkflowHost host;p->prepareToPlay(1000,64);p->setPlayHead(&host);juce::AudioBuffer<float> block(2,64);juce::MidiBuffer midi;
     double playingOrigin=0;
