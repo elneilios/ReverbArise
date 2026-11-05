@@ -94,3 +94,9 @@ existing control family, geometry, interaction and visual tokens are unchanged.
 Explicit manual insertion and input/IR edits request background preparation even
 with automatic policies off; readiness and Audition still require verified audio.
 See [manual preparation policy](../development/workflow-modes.md#explicit-manual-preparation-in-perform).
+
+An empty dry-only session can create its first target by double-clicking the dry
+lane with Snap on. Until that first accepted target pins session timing, the grid
+uses current valid host timing at the captured sample rate. Established timing
+and missing host-position guards still apply; creating a target with '+' first
+is unnecessary. This is a binding correction in the existing timeline control.

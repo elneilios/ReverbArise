@@ -27,6 +27,15 @@ See proposal.md for motivation and the automatic-swell-processing delta for acce
 - Exact owner IR/source are unavailable → verify supported imported .wv fixtures and record the difference between code findings, deterministic reproduction and owner host observations.
 - Concurrent #38/#53 work may overlap → operate only in this issue worktree and reconcile latest main before implementation without modifying other worktrees.
 
+Owner host feedback identified a first-insertion binding defect: Snap required
+session timing before the first target could initialize it. For an empty session
+with no saved mapping only, timeline grid availability and double-click insertion
+use current valid fixed host timing through the existing HostGrid validator.
+The first accepted engine insertion pins the durable mapping normally. Existing
+session mappings are never replaced by this fallback; rate/position guards and
+later-target edit rules remain intact. The actual editor gesture is covered by
+the processor/component regression.
+
 ## Migration Plan
 
 No persisted format or identity migration. Deliver an issue branch and separate PR for owner merge. Roll back the scoped scheduling/binding change without deleting source or immutable assets. Record native wrapper results separately from fixture checks and untested host/DPI coverage in dated docs/validation evidence.

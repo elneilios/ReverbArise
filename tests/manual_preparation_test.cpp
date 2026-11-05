@@ -164,9 +164,41 @@ static void manualFailures()
     REQUIRE(!engine.addTarget(4800));REQUIRE(engine.savedSession().swells.empty());
 }
 
+static void firstTimelineInsertion()
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
+    engine.setLearningAutomatic(false);engine.setAutoMarkers(false);engine.setPreferences(0,.5f,.1,false);
+    fixture.record();REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    engine.setMonitoring(AuditionMode::wetOnly,1);
+    REQUIRE(engine.savedSession().swells.empty() && !engine.savedSession().timing.valid);
+    PreverbAudioProcessorEditor editor(processor);editor.stopAutomaticRefreshForReview();editor.setSize(1100,850);editor.refresh();
+    auto& timeline=editor.timelineComponent();timeline.setViewport({0,96000});timeline.setSnap(true);
+    timeline.setGridDivision(GridDivision::quarterBeat);
+    const auto lane=timeline.sourceLane();
+    const auto doubleClick=[&](int64_t sample)
+    {
+        const auto view=timeline.viewport();const auto point=juce::Point<float>{static_cast<float>(view.pixel(sample,lane.getX(),lane.getWidth())),lane.getCentreY()};
+        const auto now=juce::Time::getCurrentTime();
+        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),point,juce::ModifierKeys::leftButtonModifier,0,0,0,0,0,&timeline,&timeline,now,point,now,2,false);
+        timeline.mouseDoubleClick(event);editor.refresh();
+    };
+    doubleClick(12345);
+    REQUIRE(engine.savedSession().swells.size()==1);
+    const auto first=engine.savedSession().primary;REQUIRE(find(engine.savedSession(),first)->arrival==12000);
+    await([&]{return engine.snapshot().auditionReady;});
+    // The same gesture also works after the first target has pinned timing.
+    editor.refresh();doubleClick(48345);REQUIRE(engine.savedSession().swells.size()==2);
+    REQUIRE(find(engine.savedSession(),engine.savedSession().primary)->arrival==48000);
+    // Existing timing mismatch and missing-position guards must still reject Snap.
+    const auto capture=processor.getCaptureSnapshot();auto state=engine.snapshot();auto time=processor.getSongTime();
+    time.bpm+=1;timeline.setData(capture,state,time);doubleClick(72345);REQUIRE(engine.savedSession().swells.size()==2);
+    timeline.setData(capture,state,processor.getSongTime(),false);doubleClick(72345);REQUIRE(engine.savedSession().swells.size()==2);
+}
+
 int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTest([&]
 {
+    if(argc>1 && juce::String(argv[1])=="--first-insertion"){firstTimelineInsertion();return;}
     const auto creationOnly=argc>1 && juce::String(argv[1])=="--creation-only";
     manualCreation("wav",creationOnly);manualCreation("wv",creationOnly);
-    if(!creationOnly)manualFailures();
+    if(!creationOnly){manualFailures();firstTimelineInsertion();}
 });}

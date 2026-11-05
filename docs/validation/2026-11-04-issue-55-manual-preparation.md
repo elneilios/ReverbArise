@@ -68,7 +68,25 @@ No fixture-only build result is substituted for these native results.
 
 ## Owner acceptance and limitations
 
-Pending: one brief FL Studio manual-only workflow check using the candidate.
+Owner follow-up, 5 November: '+' insertion generated a swell as expected, but
+double-click insertion failed until a first swell had been added with '+'.
+The new `--first-insertion` native reproducer failed at the expected one-target
+assertion against `db0c84e` (baseline build log
+`out/build-logs/Release/20261105-001838-c4f57c32`). Snap required session timing
+that was only pinned by the first accepted target. The timeline now bootstraps
+the grid from valid current host timing only for an empty session with no saved
+mapping, retaining capture-rate, existing-map and host-position validation.
+The regression exercises first/subsequent snapped double-clicks and those guards.
+The corrected native `--first-insertion` test passed, exit 0 (1.22 s).
+Updated `scripts/build.ps1 -Configuration Release -Test` passed configure/build
+and **64/64 native CTest tests**, exit 0, 270.58 s test time, including the full
+manual preparation/first-insertion test (5.36 s). Logs:
+`out/build-logs/Release/20261105-002004-f65a4739`, identified as `db0c84e (dirty)`
+plus this follow-up patch. UI standards, strict OpenSpec validation and whitespace
+checks also passed. This was an incremental warm build; no speedup claim is made.
+
+Pending: a focused FL Studio recheck of the first double-click using the updated
+candidate; prior '+' generation is owner-confirmed and need not be repeated.
 Verify dry capture with automation off, manual insertion, Ready/wet waveform,
 sensible timing and audible Perform Audition. Automated native/component results
 are separate from host acceptance. No additional host/DPI coverage is claimed.
@@ -76,12 +94,19 @@ The exact `large_hall.wv` file was not supplied; synthetic supported WavPack inp
 tests the same import/decode/managed-assignment pipeline. #53 transport playback
 remains a separate issue.
 
-Prepared review bundle:
+Initial review bundle (superseded by the first-insertion correction):
 `out/review/issue-55-20261105/ReverbArise.vst3` (not installed over any existing
 plugin). Its `Contents/x86_64-win/ReverbArise.vst3` matches the built binary:
 SHA-256 `7F974125ECFE57BB91289FFC285D70BA10AF71C28159C3ECF9CFC6423C99DEDA`.
 The owner check should explicitly select Wet Only for wet-audio verification;
 Dry + Wet continues to require the existing captured dry-preview coverage.
+
+Updated review bundle:
+`out/review/issue-55-first-double-click-20261105/ReverbArise.vst3`.
+Its copied native binary matches the updated build:
+SHA-256 `80BA38B17043ED2565B14648BA0C899738A867C3BE0197521185BE78A463B564`.
+Only the failed first-double-click path needs a focused host recheck; '+'
+generation already has owner confirmation. Keep the PR draft until that result.
 
 No new control family, style token or geometry is introduced. The inspector
 change corrects unavailable data in existing disabled controls, retaining their

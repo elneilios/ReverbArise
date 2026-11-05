@@ -11,6 +11,8 @@
 - [x] 2.1 Fix no-render selected timing bindings and any misleading manual preparation status using existing KnobValue/notice roles; component/binding tests must cover late-song short capture, stale/unprepared bounds, selection/session changes, truthful audition enablement and valid prepared pre-roll/end offset. Update relevant living UI guidance, run scripts/check-ui-standards.ps1, and obtain owner preview approval before rollout if any control look/interaction changes; introduce no unreviewed family/token/variant.
 - [x] 2.2 Record the reproduced timing fallback cause and imported .wv/manual-only results in dated validation evidence, distinguishing deterministic native observations from the unavailable exact owner media/screenshot and any separate timing issue; verify the report against the regression outputs.
 
+- [x] 2.3 Restore snapped double-click creation of the first manual target after dry-only capture without requiring a prior '+' insertion; verify the actual timeline gesture, snapped arrival, eventual readiness, subsequent insertion and retained timing/position guards in the native processor/component regression, and document the scoped timing bootstrap.
+
 ## 3. Integration and owner review
 
 - [x] 3.1 Run scripts/build.ps1 -Configuration Release -Test in this worktree using its existing wrapper/cache and build lock, plus affected native processor/UI suites and UI standards checks; record revision, environment, commands, actual results and skipped host/DPI coverage separately from fixture-only checks.

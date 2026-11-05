@@ -14,6 +14,11 @@ Accepted manual creation and render-affecting edits in Perform SHALL request bac
 - **THEN** only the affected eligible swell prepares against its latest accepted dependencies, preserves its identity and rejects obsolete completions
 - **AND** shape-only, gain and placement changes retain their existing minimum-work behavior
 
+#### Scenario: First snapped timeline insertion
+- **WHEN** dry-only capture is accepted, no swell has yet pinned session timing, and the user double-clicks covered dry audio in Perform with Snap enabled
+- **THEN** valid current fixed host timing and matching capture rate permit creation at the snapped arrival without a prior '+' insertion
+- **AND** missing host position, invalid timing or incompatible established timing still blocks snapped insertion
+
 #### Scenario: Capture alone remains dry-only
 - **WHEN** dry-only Learn capture commits or Perform is entered without an explicit manual request
 - **THEN** those events do not authorize automatic discovery or disabled-pass convolution, and saved automatic preferences remain off
