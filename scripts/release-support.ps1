@@ -221,7 +221,8 @@ folder (%LOCALAPPDATA%\Programs\Common\VST3), then rescan in FL Studio.
 Open User-Guide.html for the illustrated offline guide. Start at low monitoring volume.
 Route audio through ReverbArise, choose Learn, and play the DAW to capture; stop to inspect
 markers, then Generate Swells. In Perform select a ready swell, Audition, then Stop.
-Use Wet only to hear the effect alone. Export prepares an independent mix for Save WAV.
+Use Wet only to hear the effect alone. Stay in Perform for DAW playback and normal DAW
+render/bounce. Export is optional: it prepares a separate independent mix for Save WAV.
 Keep saved FL Studio projects and captured/cache assets; verify a project copy on reopen.
 Alpha limitations: unsigned Windows x64 VST3; other hosts and clean-machine compatibility
 are unverified unless the sender supplies exact acceptance evidence. No installer or signing.
