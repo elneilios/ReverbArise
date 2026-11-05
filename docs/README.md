@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Swells-list selection reveal](development/perform-navigation.md#fit-lifecycle) — explicit list navigation applies contextual Fit automatically, following the owner's native-review decision; [issue #93 evidence](validation/2026-11-05-issue-93-selection-reveal.md) records native verification and separate owner/host coverage.
+
 - [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
 
 - [Perform playback caution](validation/2026-11-05-perform-playback-warning.md) — persistent low-priority warning, native notice precedence/fit checks and scoped owner approval; playback/capture remain unchanged.

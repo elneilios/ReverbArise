@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical swell-workspace sync for the delivered owner-approved Perform caution, notice precedence/restoration and accessibility detail. Existing guide prose matches the implemented warning and accurate effect/mixer mute consequences; no further prose or audio changes. Refresh currency solely for canonical spec sync.",
+  "summary": "Reviewed owner-directed issue #93 automatic contextual Fit on list selection and same-row reactivation after pan/zoom against production binding and updated OpenSpec delta; revised Perform instructions to explain complete-context pan and zoom. Initial generation, passive refresh and audio workflows remain unchanged.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -500,8 +500,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79242,
-      "sha256": "415b4b13e35f04db7b90f998fcb714f2a46c10a96caee03bc7fedc2b20d6f031"
+      "bytes": 79576,
+      "sha256": "168aceb4e16fb816f90d24a1125011338d9a52ab99417c661b4fc4c27ecfad6c"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -620,8 +620,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 9202,
-      "sha256": "76640227438a8fdc65db396532e594eebfe73cab76c2fe8cc4f4a7886b7debe1"
+      "bytes": 9733,
+      "sha256": "1ab4065d3b0971f4b9fe5ae57349ca8a7b390ad9bdd3c2887a8eb9f7185b1c1f"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16101,
-      "sha256": "034549d50b311310e5c6cf47275164cb95d032bcde9ba211d7cb23bceacf2537"
+      "bytes": 16250,
+      "sha256": "c6cc848165f38fbe4ef6e736347c242b668d70a4f8490d185439fcc89542e0cd"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

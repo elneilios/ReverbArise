@@ -64,6 +64,13 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     list.getProperties().set("contextHelp","Select a swell to edit. Use its checkbox to enable or disable it, and its three-dot menu for more actions.");
     list.onSelection=[this](auto ids,auto primary)
     {if(updating || destroying)return;processor.swellEngine().selectTargets(ids,primary,state.sessionEpoch);refresh();};
+    list.onReveal=[this](auto id,uint64_t epoch)
+    {
+        if(updating || destroying || id.isEmpty() || learningLayout || exportLayout || !list.isVisible())return;
+        refresh();
+        if(state.sessionEpoch==epoch && state.session.primary==id && !learningLayout && !exportLayout)
+            timeline.fitSelection();
+    };
     list.onToggleEnabled=[this](auto id)
     {if(updating || destroying)return;processor.swellEngine().edit(id,[](auto& w,auto&){w.enabled=!w.enabled;return true;},state.sessionEpoch);refresh();};
     list.onMenu=[this](auto row,const auto& event){if(!updating && !destroying)showSwellMenu(row,event);};
