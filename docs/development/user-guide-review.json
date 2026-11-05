@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical issue #93 automatic list Fit sync and integration with approved main #68 transport readout; existing Perform guide accurately describes selection pan/zoom and retained workflows, so no prose change was needed. Refreshed currency for spec sync and integrated source.",
+  "summary": "Reviewed canonical #93 auto-Fit and concurrently merged #68 archive/spec sync. Both approved behaviors remain accurately described by existing guide prose; preserved all main canonical requirements and refreshed review currency. No C++ or test source changed in the metadata-only reconciliation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -880,8 +880,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 91065,
-      "sha256": "7d59b2ff5ef73cb52e6fc772cde61a8e56aa87ce25beaf525d0250ebf432a6c1"
+      "bytes": 94209,
+      "sha256": "7ea462dcfca684072e7c9c55ac8a55cd6ca1030e5b9947e5505de747055e7c44"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
