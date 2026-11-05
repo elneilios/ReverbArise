@@ -1,8 +1,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    # USERPROFILE keeps the real user's install path stable when an agent's
-    # sandbox redirects LOCALAPPDATA into a disposable package directory.
-    [string] $Destination = (Join-Path $env:USERPROFILE 'AppData/Local/Programs/Common/VST3'),
+    # FL Studio scans VST3 only in supported system locations.
+    [string] $Destination = (Join-Path $env:ProgramFiles 'Common Files/VST3'),
     [switch] $Test
 )
 $ErrorActionPreference = 'Stop'

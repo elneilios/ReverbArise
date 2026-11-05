@@ -54,3 +54,29 @@ No prior user-folder bundle existed, so no backup was needed. The system-folder
 copy was untouched. The code identity was `91d0f5f` with script/docs edits; native
 plugin sources were unchanged. This warm targeted run is not a comparable cold
 build benchmark. FL Studio scan/load and manual acceptance remain untested.
+
+## FL Studio discovery correction and system installation
+
+The owner could not discover the user-folder bundle even after adding that folder
+and scanning. Image-Line's current Windows plugin documentation explicitly limits
+VST3 scanning to supported system locations; custom search folders are for VST1/2.
+The user-folder guidance above was therefore insufficient for FL Studio and is
+superseded by the system-folder default in the installer, skill and living docs.
+The owner explicitly approved switching the default and confirmed FL Studio closed.
+
+The first system install passed native Release configure/build but failed to open
+the destination lock because Windows ACLs denied access. Sandbox escalation alone
+was insufficient. No installed bundle was modified by that failed attempt.
+A hidden PowerShell launcher using Start-Process -Verb RunAs then passed native
+Release configure/build and system-folder installation. Full native CTest was not
+requested. Build logs: out/build-logs/Release/20261105-010313-e455acd0; captured
+launcher output: out/elevated-test-install.log. Caches were reused without clearing.
+
+Installed path: C:\Program Files\Common Files\VST3\ReverbArise.vst3.
+Independent post-install SHA256 matched the earlier binary:
+C5F07FA956775A3DE7BD33C7990AE2CE543C19EF6724045F33A2A4F8D18C858E.
+The elevated installer reported no pre-existing destination bundle and produced no
+backup. The user-folder copy remains untouched. WhatIf resolves the system path;
+skill validation and git diff --check pass. No native sources changed. The owner
+was instructed to verify/rescan previously verified plugins. FL Studio discovery,
+loading and audio acceptance remain pending owner confirmation.

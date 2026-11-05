@@ -120,7 +120,7 @@ for actual commands, results and outstanding checks.
 
 ## Local release packages
 
-For a one-command Release build directly into the user VST3 folder, see
+For a one-command Release build directly into the system VST3 folder, see
 [FL Studio test installation](fl-studio-test-install.md). This local testing helper
 also preserves the previous bundle and supports optional Release CTest.
 

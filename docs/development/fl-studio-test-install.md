@@ -9,16 +9,18 @@ Close FL Studio, then run from the repository root:
 By default this incrementally builds only the **Release VST3 target** through the
 existing build wrapper, excluding unrelated test/preview executables, and installs
 the complete `ReverbArise.vst3` bundle into
-`%USERPROFILE%\AppData\Local\Programs\Common\VST3`. This is the ordinary user VST3
-folder; the profile-based spelling avoids redirected `LOCALAPPDATA` in agent
-sandboxes. An agent needs filesystem authorization for this real user folder;
-request the normal sandbox escalation when required. Never report a sandbox copy
-as a host installation.
+`%ProgramFiles%\Common Files\VST3` (normally `C:\Program Files\Common Files\VST3`).
+FL Studio scans VST3 only in its supported system locations, even when a user
+folder is added as a custom VST search path. See
+[Image-Line's plugin locations](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_externalplugins.htm#vstfolders).
+An agent needs filesystem authorization for this system folder; request normal
+sandbox escalation when required. Windows ACL elevation may also be required.
+Never report a sandbox copy as a host installation.
 
 ```powershell
 ./scripts/install-test-vst3.ps1 -Test      # Full Release CTest before installation
 ./scripts/install-test-vst3.ps1 -WhatIf    # Show target; no build or install
-./scripts/install-test-vst3.ps1 -Destination 'D:\Audio\VST3'
+./scripts/install-test-vst3.ps1 -Destination 'C:\Program Files\VST3'
 ```
 
 `-Destination` names the containing VST3 folder, not the bundle itself. Without
@@ -42,11 +44,12 @@ on the same volume; a cross-volume move fails before replacement. Loaded files o
 permission failures are reported without killing any host. Close other DAWs using
 this plugin too, and keep hosts closed throughout installation.
 
-Reopen FL Studio. In **Options > Manage plugins**, ensure the user VST3 folder is
-searched and run **Find installed plugins** when needed. Check the resolved plugin
-path: an existing copy in `C:\Program Files\Common Files\VST3` is left untouched and
-may otherwise be selected instead. The script reports the installed path and binary
-hash. A successful install does not establish FL Studio acceptance.
+Reopen FL Studio. In **Options > Manage plugins**, enable **Verify plugins** and
+**Rescan previously verified plugins**, then run **Find installed plugins**.
+Search for `ReverbArise` and check the resolved path matches the installed system
+bundle. The earlier user-folder copy is left untouched and is not an FL Studio
+VST3 discovery location. The script reports the installed path and binary hash.
+A successful install does not establish FL Studio acceptance.
 
 To restore a retained backup, close the host, move the current installed bundle
 aside, and move the printed backup bundle back to the same target. Preserve any
