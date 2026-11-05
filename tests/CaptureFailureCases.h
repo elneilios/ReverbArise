@@ -154,7 +154,7 @@ inline void captureDiagnosticCapacityCase()
 
 inline void lateWorkerFailureCase()
 {
-    CaptureFailureFixture f(true);const auto before=f.worker.snapshot();std::atomic<bool> pinned{false},release{false};
+    std::atomic<bool> pinned{false},release{false};CaptureFailureFixture f(true);const auto before=f.worker.snapshot();
     f.worker.setPassContextProvider([&](uint64_t)->std::optional<CaptureGenerationContext>
     {
         pinned=true;const auto until=juce::Time::getMillisecondCounter()+10000;

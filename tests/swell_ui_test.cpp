@@ -861,6 +861,13 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::TextLayout failureLayout;failureLayout.createLayout(failureText,static_cast<float>(failureEvidence->getWidth()));
         REQUIRE(failureLayout.getHeight()<=failureEvidence->getHeight());
         REQUIRE(failureEvidence->getParentComponent()->getLocalBounds().contains(failureEvidence->getBounds()));
+        auto failureViewport=dynamic_cast<juce::Viewport*>(editor.diagnosticsPanel());REQUIRE(failureViewport);
+        failureViewport->setViewPosition(0,failureViewport->getViewedComponent()->getHeight());
+        const auto failureScroll=failureViewport->getViewPosition();REQUIRE(failureScroll.y>0);
+        const auto refreshDeadline=juce::Time::getMillisecondCounter()+250;
+        waitUI([&]{return juce::Time::getMillisecondCounter()>=refreshDeadline;});editor.refresh();
+        REQUIRE(failureViewport->getViewPosition()==failureScroll);
+        failureViewport->setViewPosition(0,0);
         snapshotPanel(*failureEvidence,"capture-failure-evidence");
         snapshotPanel(*editor.diagnosticsPanel(),"capture-failure-diagnostics");
         auto failureWindow=editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>();REQUIRE(failureWindow);failureWindow->closeButtonPressed();

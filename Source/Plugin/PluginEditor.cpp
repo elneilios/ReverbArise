@@ -393,15 +393,16 @@ void PreverbAudioProcessorEditor::resized()
     row=inspector.removeFromTop(34);auto resetLeft=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
     resetButton.setBounds(resetLeft);resetMenu.setBounds(row);
     inspectorContent.setSize(width,row.getBottom()+spacing::tight);
+    // Precision observations are owned by Diagnostics; layout refreshes below
+    // must not repeatedly reparent controls or shrink its scroll surface.
+    for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     layoutSettings();layoutLiveDiagnostics();
 
 }
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
     const auto inset=m3::ui::spacing::section;
-    // Read-only precision/asset observations; musician edits live in the inspector.
-    for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
-    diagnosticsContent.setSize(960,850);auto diagnostic=diagnosticsContent.getLocalBounds().reduced(20);
+    const juce::Rectangle<int> panelBounds(0,0,960,850);auto diagnostic=panelBounds.reduced(20);
     status.setBounds(diagnostic.removeFromTop(72));
     juce::AttributedString captureText(captureDiagnostic.getText());captureText.setFont(captureDiagnostic.getFont());
     juce::TextLayout captureLayout;captureLayout.createLayout(captureText,static_cast<float>(diagnostic.getWidth()));
@@ -418,7 +419,7 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
     juce::TextLayout measured;measured.createLayout(text,static_cast<float>(status.getWidth()));
     const auto height=static_cast<int>(std::ceil(measured.getHeight()))+inset;
     liveDiagnostic.setBounds(status.getX(),placementEditor.getBottom()+inset,status.getWidth(),height);
-    diagnosticsContent.setSize(diagnosticsContent.getWidth(),liveDiagnostic.getBottom()+inset);
+    diagnosticsContent.setSize(panelBounds.getWidth(),liveDiagnostic.getBottom()+inset);
 }
 void PreverbAudioProcessorEditor::refresh()
 {

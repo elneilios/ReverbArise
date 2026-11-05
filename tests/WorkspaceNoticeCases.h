@@ -46,6 +46,8 @@ inline void workspaceNoticeCases()
         const auto empty=workspaceNotice(flow,failed,editor);
         REQUIRE(empty->text.contains("no source accepted") && empty->text.contains("retry"));
         REQUIRE(empty->detail.contains("queue") && empty->detail.contains("No earlier source"));
+        auto stillRecording=flow;stillRecording.phase=workflow::Phase::recording;
+        REQUIRE(workspaceNotice(stillRecording,failed,editor)->tone==NoticeTone::error);
         failed.manifest.ranges.push_back({0,64,CaptureCoverageKind::audio});failed.failure.hadCommittedSource=true;
         const auto retained=workspaceNotice(flow,failed,editor);
         REQUIRE(retained->text.contains("previous source retained") && retained->detail.contains("Previous source retained"));

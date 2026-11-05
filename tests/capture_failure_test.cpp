@@ -24,11 +24,13 @@ static void failedQueuePass(bool prior)
     for(auto file:root.file.findChildFiles(juce::File::findFiles,true)){juce::MemoryBlock bytes;REQUIRE(file.loadFileAsData(bytes));hashes.emplace(file.getFullPathName(),std::move(bytes));}
     const auto pass=start();send(pass,10000);send(pass,15000);
     awaitCapture([&]{return !worker.progressSnapshot().ranges.empty();});
+    REQUIRE(worker.provisionalSnapshot());
     REQUIRE(worker.snapshot().reference==before.reference);
     worker.holdWorkerForTesting(true);awaitCapture([&]{return worker.workerHeldForTesting();});
     unsigned queued=0;while(queue->tryPush(20000+queued*64,1000,audio.data(),audio.data(),64,worker.captureGeneration(),pass))++queued;
     REQUIRE(queued==32);worker.failPass(pass);
     REQUIRE(worker.progressSnapshot().ranges.empty());
+    REQUIRE(!worker.provisionalSnapshot());
     worker.holdWorkerForTesting(false);
     awaitCapture([&]{return bool(worker.snapshot().failure);});
     REQUIRE(flow.snapshot().phase==workflow::Phase::recording && worker.snapshot().status.contains("retry"));
