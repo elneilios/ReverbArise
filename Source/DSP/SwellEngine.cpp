@@ -429,13 +429,15 @@ bool SwellEngine::setPerformNavigation(PerformNavigationState preferences,uint64
     return true;
 }
 bool SwellEngine::setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass)
+{return setExportLevels(1-wet,wet,expectedSession,expectedPass);}
+bool SwellEngine::setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass)
 {
     const juce::ScopedLock guard(lock);
     if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return false;
     const auto before=model.exportState;
-    if(!m3::setExportMix(model,wet,message))return false;
-    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();exportVoice->stop();exportState={ExportPhase::preparing,"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
+    if(!m3::setExportLevels(model,dry,wet,message))return false;
+    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();exportVoice->stop();exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
 }
 bool SwellEngine::audition()
 {

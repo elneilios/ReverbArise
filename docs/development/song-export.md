@@ -26,11 +26,21 @@ the dedicated workspace are tracked separately.
 
 ## Saved Export preferences
 
+Issue #51 state groundwork adds Export metadata version 2 with independent `dry`
+and `wet` levels and per-file gain-law provenance. Unversioned legacy Export
+metadata is validated before migration: its preference resets to 0% Dry / 100%
+Wet, desired/current references clear, and all immutable history descriptors,
+paths and checksums survive as gain-law 1. New descriptors default to gain-law 2.
+The composition identity revision is `song-export-v2-independent-levels` and
+includes both levels. This prevents matching an older crossfade identity.
+The outer creative-state and VST3 identities remain unchanged. The worker uses
+the independent pair; production uses the owner-reviewed preset selector and independent sliders.
+
 Creative JSON v10 adds Export initialization/percentage, desired identity,
 last completed path and up to 256 immutable file descriptors. Envelope v8 and
 capture schema 1/2 remain unchanged. Supported v1–v9 states migrate to an
-uninitialized Export preference. First use copies the effective audition blend
-(Wet Only is 100%); subsequent edits/re-entry preserve its independent value.
+uninitialized Export preference. First use defaults to Dry 0% / Wet 100%;
+subsequent edits/re-entry preserve the independent pair.
 Missing, malformed, unsafe or excess reference metadata is rejected before
 session replacement. Earlier binaries do not read v10; retain earlier FLP/cache
 copies for binary rollback. No exported audio is embedded or deleted.
@@ -62,13 +72,12 @@ asset fails the operation instead of changing an in-progress file into silence.
 and uses 4096-frame decode/mix pages. The same kernel serves measurement and WAV
 writing; arbitrary output partitions do not change member order or per-sample
 arithmetic. Wet envelopes, accepted calibration and 2 ms true-boundary safety
-ramps use the existing shaping helpers. The wet aggregate guard is measured over
-the composition, then the weighted dry/wet sum guard is measured once. Neither
-is per-page, and no upward normalization occurs. Sparse zero spans are omitted
+ramps use the existing shaping helpers. The weighted sum is measured without
+aggregate attenuation or limiting. Sparse zero spans are omitted
 from measurement scans while remaining in the declared file interval.
 
 Exact nonzero audible bounds and bounded dry/wet peak bins come from the final
-protected composition; there is no quiet-tail threshold. One shared reference
+transparent composition; there is no quiet-tail threshold. One shared reference
 scale is used for both visual layers. Export does not consume Perform trim,
 isolation or live wet level. The existing serialized Swell worker owns preparation and publication; combined
 budget stress and final callback integration validation remain pending.
@@ -82,6 +91,29 @@ off the realtime callback; no whole-song sample buffer is constructed.
 
 
 ## Request ownership and recovery
+
+Issue #51 adds an atomic `setExportLevels(dry, wet, session, pass)` request. Both
+finite levels are validated before either changes, and one changed pair causes
+one request-generation increment. Unchanged pairs do not dirty state. Composition
+identity includes both levels; new WAV descriptors and names retain both levels
+and the v2 gain-law provenance. Old-law history cannot satisfy a new identity.
+Production binds the reviewed independent controls. The old crossfade setter
+remains a test/backward-call adapter; it is not a production control.
+
+At 0/0 the engine reports an explicit Silent idle state, stops preview, clears
+current prepared/detail authority and disables preview/seek/delivery. Historical
+files remain referenced and verified. A nonzero pair with cancelling audio can
+still produce a truthful silent file; zero pair intent deliberately offers none.
+Dry reads/warnings depend on Dry>0, and wet preparation depends on Wet>0.
+
+The v2 worker sum is `dry * capturedDry + wet * acceptedWet`. Per-swell
+calibration, Level, shape and boundary edge treatment remain in accepted wet;
+aggregate wet and combined attenuation are removed. Measured peaks may exceed
+unity and Float32 WAV samples retain those values. Display normalization is
+separate and uses the weighted contributions on one shared scale. Preview
+start/stop/seek ramps remain monitoring-only. The 2e-6 sample oracle compares
+independent layers and their composite, including unity, intermediate and zero
+pairs; previous antiphase, sparse, overlap and file-partition checks remain.
 
 `SwellEngine::prepareExport` snapshots accepted members on the existing worker.
 Pending IR replacements resolve to the independently verified retained version;

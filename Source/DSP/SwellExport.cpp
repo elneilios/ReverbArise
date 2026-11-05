@@ -175,6 +175,10 @@ void SwellEngine::prepareExport(const PreviewContext& context)
             +":"+context.capture.reference+":"+juce::String(context.captureGeneration)+":"+juce::String(static_cast<int>(mapped))+":"+juce::String(origin)
             +":"+juce::String(context.time.rate,12)+":"+juce::String(context.time.bpm,12)+":"+juce::String(context.time.numerator)+":"+juce::String(context.time.denominator);
         if(key==exportAttempt)return;
+        if(model.exportState.dry==0 && model.exportState.wet==0){
+            exportAttempt=key;exportVoice->stop();exportRetryFile.reset();detailWork.reset();detailSerial.fetch_add(1);
+            exportState={ExportPhase::idle,"Silent: Dry 0% / Wet 0%",{}};exportState.session=owner.session;exportState.pass=pass;return;
+        }
         if(exportRetryFile && exportRetryFile->first!=key)exportRetryFile.reset();
         if(exportRetryFile)retryFile=exportRetryFile->second;
         if(exportAttempt.isEmpty() && exportState.phase==ExportPhase::error && exportState.session==owner.session && exportState.pass==pass){failedDelivery=exportState.delivery;deliveryFailure=exportState.deliveryMessage;}
@@ -184,7 +188,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         juce::StringArray retained;
         const bool solo=std::any_of(accepted.swells.begin(),accepted.swells.end(),[](const auto& w){return w.solo;});
         for(auto& w:accepted.swells){
-            if(!w.enabled || w.muted || (solo && !w.solo))continue;
+            if(accepted.exportState.wet==0 || !w.enabled || w.muted || (solo && !w.solo))continue;
             if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end() && retainedCompatible(kept->second,w,context)
                 && (w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content))){
                 const auto enabled=w.enabled,muted=w.muted,isSolo=w.solo;w=kept->second.accepted;
@@ -205,7 +209,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         if(!cancelled()){exportState={ExportPhase::error,reason,{}};exportState.session=owner.session;exportState.pass=pass;exportState.previous=previous;exportState.detail=previousDetail;exportState.delivery=failedDelivery;exportState.deliveryMessage=deliveryFailure;}};
     if(error.isNotEmpty()){fail(error);return;}
     std::shared_ptr<const SongExportPlan> plan;
-    if(!prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,accepted.exportState.wet,plan,error)){
+    if(!prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,accepted.exportState.dry,accepted.exportState.wet,plan,error)){
         fail(error);return;
     }
     // The same worker owns transport, render and composition preparation. Reserve

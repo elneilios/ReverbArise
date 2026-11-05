@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the source-edge canonical spec sync and archive after merged PR 76. The guide already documents taper adoption, Regenerate all/selected, capture preservation and frozen behavior; no prose or screenshot change needed. Recorded canonical-spec hash updates only.",
+  "summary": "Reviewed integrated independent Export levels/presets, accepted-pair canvas and legend, cancellation display, immediate zero-pair readiness and combined overload/missing-dry warning details. Existing guide accurately covers unity addition, Float32 clipping risk, disabled zero state, migration and immutable delivery; final FL smoke pending.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -205,13 +205,13 @@
     },
     {
       "path": "Source/Core/ExportState.cpp",
-      "bytes": 4360,
-      "sha256": "a2e9e9d4ff2d92d093d91d98c27709c3a77712e9c01dfb8a635be0014a4d7077"
+      "bytes": 5159,
+      "sha256": "fd8a9cfa33079dfa69340bbcaca926ec377ed215c929c470337837e0ff0bd88d"
     },
     {
       "path": "Source/Core/ExportState.h",
-      "bytes": 716,
-      "sha256": "46d9a96f87cba21a3964791c6d9e788b363d75615e01f12b7f66121254cd98bd"
+      "bytes": 769,
+      "sha256": "842d747e26bb252d4033aa556649b6ba47d50161fee7af4f766d562fc0d72759"
     },
     {
       "path": "Source/Core/HostGrid.h",
@@ -260,8 +260,8 @@
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 8693,
-      "sha256": "760c445cbb6b92991911ebad443ed072d19005e3a8ad3654a7b297c4ed3ae103"
+      "bytes": 8923,
+      "sha256": "13f092253ed2018e1525d10f0bc0d0dcf79a33e1677ba3dabae8291dcb590842"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -305,8 +305,8 @@
     },
     {
       "path": "Source/DSP/ExportFiles.cpp",
-      "bytes": 10126,
-      "sha256": "0f1c49b47c7b1a92a5f23b47f3290fea40805786ebb6aa99bfad10ffcbf782da"
+      "bytes": 10286,
+      "sha256": "9043cff30adc75e6bd700d4b17d857845087490e5403bdb77d20b0d49ad5a44d"
     },
     {
       "path": "Source/DSP/ExportFiles.h",
@@ -316,7 +316,7 @@
     {
       "path": "Source/DSP/ExportSource.cpp",
       "bytes": 3703,
-      "sha256": "71fc77e9789984e27e07687abe2a77cbce5c9e7d73a916e65d063df3791251df"
+      "sha256": "ee0c359df51015459da84722b83a585bcd441baf891d36d093378d500edab835"
     },
     {
       "path": "Source/DSP/ExportSource.h",
@@ -365,18 +365,18 @@
     },
     {
       "path": "Source/DSP/SongExport.cpp",
-      "bytes": 4904,
-      "sha256": "1ba3fec9bdc4bd1c14b050a5bed6b4aaedcba771e228c630c2ffa77a85553c71"
+      "bytes": 5348,
+      "sha256": "6e99f2ac762c1382e081dac24752e5e607f922027c909e75648d2f0fa6556e5f"
     },
     {
       "path": "Source/DSP/SongExport.h",
-      "bytes": 1540,
-      "sha256": "a6dc1cab94c123024f14b9259a52b19c30f7ba5ad869c6a3bf295327308e501d"
+      "bytes": 1830,
+      "sha256": "3d2e110546fbd42c08a1c9aad81d61d39703c377307da7df64ca21da50498ea7"
     },
     {
       "path": "Source/DSP/SongMix.cpp",
-      "bytes": 10236,
-      "sha256": "1cae0dc05b3fad08df79b0d44b77323bb6b2b25b1fe49f6db67b8b2bf939fa1a"
+      "bytes": 9966,
+      "sha256": "829962da4984c98bca65f37a4c70690ccddb85874189ead2891bc09bf3acee91"
     },
     {
       "path": "Source/DSP/SongMix.h",
@@ -405,18 +405,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 80800,
-      "sha256": "fd11b045c24b197c0a0a2e38555035c073fcbcdd07ac2f9cd2d79fcc7b3fdcba"
+      "bytes": 81053,
+      "sha256": "5b6b05fe793cfe62312f3823601fc009fd6a5a2c0bce51eed8e1112c71fb026d"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22027,
-      "sha256": "fca7d17b366954adb714e1fad2684a3d24b16243c7cad19c5650f820ab8d3f69"
+      "bytes": 22132,
+      "sha256": "1aeeafa35085a1ab11d552d3d4404af737491883a7ac5935816d291d81edf92d"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 19962,
-      "sha256": "ab3f04400d7afb92741e0cdedf414a55b81c56f39ddf1525045d1b49aa140717"
+      "bytes": 20351,
+      "sha256": "563dcaec56f0a4bf728f34530706a94e64c2df0e3ebb56a20ac45d9bfa757df9"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -549,6 +549,11 @@
       "sha256": "63aacc09b13b36a836d16a8368d301f489b72e72ecd2e74a51398cadca352bec"
     },
     {
+      "path": "Source/UI/Controls/ExportLevelsControl.h",
+      "bytes": 3934,
+      "sha256": "18416617d3561775bdfbba30c66afa192981f2cabe8dec8994e7b567300aaac2"
+    },
+    {
       "path": "Source/UI/Controls/ExternalFileDrag.h",
       "bytes": 736,
       "sha256": "ed5c1e663a6a7d43692ab4177afc29d93d4eb4bea76d4e154a94a368535e5528"
@@ -650,8 +655,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 19543,
-      "sha256": "3f8de20ab61b2572c3270e80012e18f7fe1fe9e42477902128a8976185655ea2"
+      "bytes": 20543,
+      "sha256": "4a0277a4bf3d5d922a173e1181498f3314de32fc1132458b63ad9f368dfc79e0"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -775,8 +780,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 15296,
-      "sha256": "059284c618a59c86488b4b2cbcd0084911725f3ece71638692d4c7f2add88566"
+      "bytes": 16223,
+      "sha256": "0eeb664a4ec1b6553888481805d1f1c189ce6e6903d73ecbb6e4befb2c9733e3"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

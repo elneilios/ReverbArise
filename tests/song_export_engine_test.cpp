@@ -191,6 +191,31 @@ int main(){return runTest([]{
         const auto history=engine.savedSession().exportState.history;
         REQUIRE(std::none_of(history.begin(),history.end(),[](const auto& file){return file.wet==.44f;}));
     }
+    {
+        const auto baseline=engine.savedSession();
+        engine.holdExportForTesting(true);
+        REQUIRE(engine.setExportLevels(1,1,engine.assignmentEpoch()));
+        waitFor([&]{return engine.exportWaitingForTesting();});
+        const auto pending=engine.savedSession();REQUIRE(pending.exportState.dry==1 && pending.exportState.wet==1);
+        REQUIRE(pending.exportState.history==baseline.exportState.history);
+        REQUIRE(engine.setExportLevels(1,1,engine.assignmentEpoch()) && engine.savedSession().exportState==pending.exportState);
+        REQUIRE(!engine.setExportLevels(.25f,.75f,engine.assignmentEpoch()+1));
+        engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        const auto additive=engine.snapshot().songExport.prepared;
+        REQUIRE(additive->plan->dry==1 && additive->plan->wet==1 && additive->file.dry==1 && additive->file.wet==1 && additive->file.gainLaw==2);
+        REQUIRE(additive->file.path.contains("v2-100.000pct-dry-100pct-wet"));
+        auditionOracle(additive);
+        const auto restoredPair=engine.savedSession();engine.restore(restoredPair);
+        waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
+        REQUIRE(engine.snapshot().songExport.prepared->file==additive->file);
+        const auto beforeSilence=engine.savedSession().exportState;
+        REQUIRE(engine.setExportLevels(0,0,engine.assignmentEpoch()));
+        waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::idle;});
+        REQUIRE(engine.snapshot().songExport.message.startsWith("Silent:") && !engine.snapshot().songExport.prepared);
+        REQUIRE(!engine.playExport(engine.assignmentEpoch()));
+        REQUIRE(engine.deliverExport(engine.assignmentEpoch(),additive->file,{},false,true)==0);
+        REQUIRE(engine.savedSession().exportState.history==beforeSilence.history && verifyExportFile(engine.assetDirectory(),additive->file,error));
+    }
     engine.holdExportForTesting(true);REQUIRE(engine.setExportMix(.15f,engine.assignmentEpoch()));
     waitFor([&]{return engine.exportWaitingForTesting();});const auto beforeExit=engine.savedSession().exportState;
     REQUIRE(flow.requestMode(workflow::Mode::live,{true,true,true}));engine.holdExportForTesting(false);

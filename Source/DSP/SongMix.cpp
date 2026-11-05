@@ -31,7 +31,7 @@ bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t avail
         }
         readers.push_back(std::move(reader));
     }
-    if(current->wet<1)for(const auto& r:current->source.ranges)if(r.kind==CaptureCoverageKind::audio)
+    if(current->dry>0)for(const auto& r:current->source.ranges)if(r.kind==CaptureCoverageKind::audio)
         occupied.emplace_back(std::max(r.startSample,current->origin),std::min(r.startSample+static_cast<int64_t>(r.frameCount),current->end));
     std::sort(occupied.begin(),occupied.end());std::vector<std::pair<int64_t,int64_t>> merged;
     for(const auto& range:occupied){if(range.second<=range.first)continue;
@@ -69,20 +69,18 @@ bool SongMix::scan(const std::function<bool(int64_t,int)>& visit,juce::String& e
 bool SongMix::measure(juce::String& error,const RenderCancellation& cancel)
 {
     ready=false;measured={};if(!current){error="No Export composition";return false;}
-    const auto ceiling=juce::Decibels::decibelsToGain(current->gainPolicy==GainPolicy::musical?candidateWetCeilingDb:-6.f);
     if(!scan([&](int64_t,int frames){for(int n=0;n<frames*2;++n){measured.wetPeak=std::max(measured.wetPeak,std::abs(wetPage[n]));measured.dryPeak=std::max(measured.dryPeak,std::abs(dryPage[n]));}return true;},error,cancel))return false;
-    if(measured.wetPeak>ceiling)measured.wetGain=ceiling/measured.wetPeak;
     float combinedPeak=0;
-    const auto value=[&](int n){return dryPage[n]*(1-current->wet)+wetPage[n]*measured.wetGain*current->wet;};
+    const auto value=[&](int n){return dryPage[n]*current->dry+wetPage[n]*current->wet;};
     if(!scan([&](int64_t,int frames){for(int n=0;n<frames*2;++n){const auto v=value(n);if(!std::isfinite(v)){error="Non-finite Export mix";return false;}combinedPeak=std::max(combinedPeak,std::abs(v));}return true;},error,cancel))return false;
-    if(combinedPeak>ceiling)measured.sumGain=ceiling/combinedPeak;measured.peak=combinedPeak*measured.sumGain;
-    measured.displayGain=1/std::max({1.f,measured.dryPeak,measured.wetPeak*measured.wetGain});
+    measured.peak=combinedPeak;
+    measured.displayGain=1/std::max({1.f,measured.dryPeak*current->dry,measured.wetPeak*current->wet});
     const auto frames=current->end-current->origin;const auto bin=std::max(int64_t{1},(frames+static_cast<int64_t>(maximumPeaks)-1)/static_cast<int64_t>(maximumPeaks));
     for(auto at=current->origin;at<current->end;){const auto count=static_cast<uint32_t>(std::min(bin,current->end-at));
         measured.dryPeaks.push_back({at,count,0,0});measured.wetPeaks.push_back({at,count,0,0});at+=count;}
     if(!scan([&](int64_t at,int count){for(int n=0;n<count;++n){bool audible=false;const auto index=static_cast<size_t>((at+n-current->origin)/bin);
         auto& d=measured.dryPeaks[index];auto& w=measured.wetPeaks[index];for(int c=0;c<2;++c){const auto k=n*2+c;
-            const auto dv=dryPage[k]*(1-current->wet)*measured.sumGain,wv=wetPage[k]*measured.wetGain*current->wet*measured.sumGain;
+            const auto dv=dryPage[k]*current->dry*measured.sumGain,wv=wetPage[k]*measured.wetGain*current->wet*measured.sumGain;
             d.minimum=std::min(d.minimum,dv);d.maximum=std::max(d.maximum,dv);w.minimum=std::min(w.minimum,wv);w.maximum=std::max(w.maximum,wv);
             audible=audible || value(k)*measured.sumGain!=0;}
         if(audible){if(!measured.audibleStart)measured.audibleStart=at+n;measured.audibleEnd=at+n+1;}}return true;},error,cancel))return false;
@@ -92,14 +90,14 @@ bool SongMix::read(int64_t at,std::span<float> output,juce::String& error)
 {
     if(!ready || output.empty() || output.size()%2 || output.size()/2>exportPageFrames){error="Export mix is not ready or page invalid";return false;}
     if(!branches(at,{dryPage.data(),output.size()},{wetPage.data(),output.size()},error))return false;
-    for(size_t n=0;n<output.size();++n)output[n]=(dryPage[n]*(1-current->wet)+wetPage[n]*measured.wetGain*current->wet)*measured.sumGain;
+    for(size_t n=0;n<output.size();++n)output[n]=(dryPage[n]*current->dry+wetPage[n]*measured.wetGain*current->wet)*measured.sumGain;
     return true;
 }
 bool SongMix::adoptMeasurements(const SongMixMetrics& m,const juce::String& identity,juce::String& error)
 {
     if(!current || current->identity!=identity || !std::isfinite(m.wetGain) || !std::isfinite(m.sumGain)
         || !std::isfinite(m.displayGain) || m.wetGain<=0 || m.wetGain>1 || m.sumGain<=0 || m.sumGain>1
-        || m.displayGain<=0 || m.displayGain>1){error="Waveform measurements do not match accepted composition";return false;}
+        || m.displayGain<=0 || m.displayGain>1 || m.wetGain!=1 || m.sumGain!=1){error="Waveform measurements do not match accepted composition";return false;}
     measured.wetGain=m.wetGain;measured.sumGain=m.sumGain;measured.displayGain=m.displayGain;
     measured.audibleStart=m.audibleStart;measured.audibleEnd=m.audibleEnd;ready=true;return true;
 }
@@ -114,7 +112,7 @@ bool SongMix::summarize(int64_t first,int64_t end,size_t bins,SongMixDetail& out
         const auto frames=static_cast<int>(std::min(int64_t{exportPageFrames},std::min(end,span.second)-at));
         if(!branches(at,{dryPage.data(),static_cast<size_t>(frames)*2},{wetPage.data(),static_cast<size_t>(frames)*2},error))return false;
         for(int n=0;n<frames;++n){const auto index=static_cast<size_t>((at+n-first)/bin);auto& d=result.dry[index];auto& w=result.wet[index];
-            for(int c=0;c<2;++c){const auto i=n*2+c;const auto dv=dryPage[i]*(1-current->wet)*measured.sumGain,wv=wetPage[i]*measured.wetGain*current->wet*measured.sumGain;
+            for(int c=0;c<2;++c){const auto i=n*2+c;const auto dv=dryPage[i]*current->dry*measured.sumGain,wv=wetPage[i]*measured.wetGain*current->wet*measured.sumGain;
                 d.minimum=std::min(d.minimum,dv);d.maximum=std::max(d.maximum,dv);w.minimum=std::min(w.minimum,wv);w.maximum=std::max(w.maximum,wv);}}
         at+=frames;
     }

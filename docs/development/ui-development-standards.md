@@ -19,6 +19,18 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Issue #51's `Controls/ExportLevelsControl.h` review candidate composes the existing
+`DeliberateSelector`, `SliderControl` and `NumericInputControl` policies. It emits
+one pair edit for a preset, preserves the untouched level for fader edits, derives
+Custom from the exact canonical pair and refreshes without notifications. Its
+binding owns session/pass validation and accepted-state rejection/reconciliation.
+The owner approved minimum and larger native appearance/interaction and accepted
+the generated preset comparison for integration on 2026-11-05, reserving final
+listening acceptance for FL Studio. Production Export now consumes this composition
+with session/pass-pinned pair edits. No new styling token or variant is introduced.
+The dedicated native
+fixture is `--review-export-levels` on `preverb_swell_ui_test`.
+
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
 numerical authority (production standards revision 5; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code

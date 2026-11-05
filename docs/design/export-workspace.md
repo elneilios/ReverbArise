@@ -1,5 +1,15 @@
 # Export workspace implementation reference
 
+Issue #51 replaces the right-column crossfade with the owner-reviewed Mix Character
+selector and two shared editable Dry/Wet rows. Each level ranges from 0–100%;
+100% is unity for that branch. Presets modify only the pair; unmatched pairs show
+Custom. The white dry/aqua wet waveform, legend, retained-preview caption, status
+and immutable filenames describe the accepted independent pair. The original left
+waveform/ruler, Zoom/Fit, transport and right delivery actions retain their layout.
+At 0/0 the canvas reports Silent and preview/seek/Save/drag are disabled. Overload
+uses the existing warning role; Float32 samples are not attenuated automatically.
+Earlier single-crossfade descriptions below record the #6 reference baseline.
+
 Issue #6 is implemented and its current native presentation is owner approved.
 This document records the references, control ownership and deferred integration.
 Final Release/FL Studio acceptance remains distinct from native visual approval.

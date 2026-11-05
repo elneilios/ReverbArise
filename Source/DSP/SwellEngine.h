@@ -178,6 +178,7 @@ public:
     bool hasExportableWet(const SongTime&)const;
     bool initializeExport();
     bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
+    bool setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool playExport(uint64_t expectedSession);
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);

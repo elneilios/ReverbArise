@@ -106,16 +106,18 @@ struct Session
 inline bool initializeExport(Session& session,juce::String& error)
 {
     if(session.exportState.initialized){error.clear();return true;}
-    const auto wet=session.auditionMode==AuditionMode::wetOnly?1.0f:session.wetBlend;
-    if(!std::isfinite(wet) || wet<0 || wet>1){error="Invalid initial Export mix";return false;}
-    session.exportState.initialized=true;session.exportState.wet=wet;error.clear();return true;
+    session.exportState.initialized=true;session.exportState.dry=0;session.exportState.wet=1;error.clear();return true;
 }
-inline bool setExportMix(Session& session,float wet,juce::String& error)
+inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error)
 {
-    if(!std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export mix";return false;}
-    if(session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
-    session.exportState.initialized=true;session.exportState.wet=wet;error.clear();return true;
+    if(!std::isfinite(dry) || dry<0 || dry>1 || !std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export levels";return false;}
+    if(session.exportState.dry!=dry || session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
+    session.exportState.initialized=true;session.exportState.dry=dry;session.exportState.wet=wet;error.clear();return true;
 }
+// Transitional binding for the existing crossfade UI until the reviewed pair
+// control is integrated. This never adds a second processing stage.
+inline bool setExportMix(Session& session,float wet,juce::String& error)
+{return setExportLevels(session,1-wet,wet,error);}
 // Foundation eligibility uses already-verified readiness and timing metadata.
 // Full export preparation/asset verification remains the export workspace's job.
 inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexcept

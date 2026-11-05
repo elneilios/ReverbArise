@@ -25,7 +25,7 @@ juce::String songExportIdentity(const SongExportPlan& plan)
     put(metadata,"source",source);put(metadata,"sourceReference",plan.sourceReference);
     put(metadata,"origin",juce::String(plan.origin));put(metadata,"end",juce::String(plan.end));
     put(metadata,"rate",plan.timing.rate);put(metadata,"bpm",plan.timing.bpm);put(metadata,"numerator",plan.timing.numerator);put(metadata,"denominator",plan.timing.denominator);
-    put(metadata,"wet",plan.wet);put(metadata,"gainPolicy",static_cast<int>(plan.gainPolicy));put(metadata,"gainRevision",plan.gainRevision);
+    put(metadata,"wet",plan.wet);put(metadata,"dry",plan.dry);put(metadata,"gainPolicy",static_cast<int>(plan.gainPolicy));put(metadata,"gainRevision",plan.gainRevision);
     juce::Array<juce::var> warnings;
     for(const auto& warning:plan.warnings){auto v=object();put(v,"start",juce::String(warning.start));put(v,"end",juce::String(warning.end));put(v,"kind",static_cast<int>(warning.kind));warnings.add(v);}
     put(metadata,"warnings",warnings);
@@ -33,25 +33,28 @@ juce::String songExportIdentity(const SongExportPlan& plan)
 }
 bool prepareSongExportPlan(const Session& session,const CaptureManifest& source,const juce::String& reference,
                            const SongTime& time,float wet,std::shared_ptr<const SongExportPlan>& output,juce::String& error)
+{return prepareSongExportPlan(session,source,reference,time,1-wet,wet,output,error);}
+bool prepareSongExportPlan(const Session& session,const CaptureManifest& source,const juce::String& reference,
+                           const SongTime& time,float dry,float wet,std::shared_ptr<const SongExportPlan>& output,juce::String& error)
 {
     long double origin;
-    if(!std::isfinite(wet) || wet<0 || wet>1 || !songOrigin(time,origin)
+    if(!std::isfinite(dry) || dry<0 || dry>1 || !std::isfinite(wet) || wet<0 || wet>1 || !songOrigin(time,origin)
         || !transportMappingMatches(session.timing,time)) {error="Export needs a valid mix and compatible song timing";return false;}
     if(!validate(session,error) || !isValidCaptureManifest(source,error))return false;
     if(!source.ranges.empty() && source.sampleRate!=time.rate){error="Export source sample rate is incompatible";return false;}
     auto plan=std::make_shared<SongExportPlan>();plan->source=source;plan->sourceReference=reference;plan->timing=time;
-    plan->wet=wet;plan->gainPolicy=session.gainPolicy;plan->gainRevision=session.gainRevision;
+    plan->dry=dry;plan->wet=wet;plan->gainPolicy=session.gainPolicy;plan->gainRevision=session.gainRevision;
     if(!resolvePpqSample(time,0,plan->origin)){error="Export origin overflows";return false;}plan->end=plan->origin;
     const bool solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     for(const auto& w:session.swells)
     {
         if(!w.enabled || w.muted || (solo && !w.solo))continue;
-        if(!hasCompatibleReadyRender(w,time)){error="Export unavailable: "+w.name+" ("+w.id+") has no compatible accepted render";return false;}
+        if(!hasCompatibleReadyRender(w,time)){if(wet==0)continue;error="Export unavailable: "+w.name+" ("+w.id+") has no compatible accepted render";return false;}
         int64_t a,b;
         if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error)) {error="Export bounds invalid: "+w.id+" | "+error;return false;}
         plan->members.push_back({w,a,b});plan->end=std::max(plan->end,b);
     }
-    if(plan->members.empty()){error="Export needs an enabled accepted wet render";return false;}
+    if(plan->members.empty() && wet>0){error="Export needs an enabled accepted wet render";return false;}
     std::sort(plan->members.begin(),plan->members.end(),[](const auto& a,const auto& b){return a.accepted.id<b.accepted.id;});
     for(const auto& r:source.ranges){int64_t end;
         if(r.frameCount>INT64_MAX || !checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end)){error="Export source extent overflows";return false;}
