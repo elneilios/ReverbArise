@@ -40,7 +40,7 @@ int main(){return runTest([]
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(engine.snapshot().retainedIRName=="accepted.wav" && find(engine.savedSession(),b)->render==find(original,b)->render);
     // A bounce intentionally uses the accepted version despite the requested error.
-    time=position(950,false);std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);engine.processOfflineAudio(l,r,80,time);
+    time=position(950,true);time.playing=false;std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);engine.processOfflineAudio(l,r,80,time);
     for(int i=5;i<80;++i)REQUIRE(std::abs(l[i]-sample(*find(original,a),rawA,950+i)-sample(*find(original,b),rawB,950+i))<1e-6);
     REQUIRE(engine.snapshot().offlineStatus.contains("accepted IRs") && !engine.snapshot().offlineStatus.contains("incomplete"));engine.endOffline();
     const auto next=root.file.getChildFile("next.wav");writeTestWav(next,1,1000,std::vector<float>(201,.002f));

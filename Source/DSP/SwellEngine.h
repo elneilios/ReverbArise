@@ -345,6 +345,7 @@ private:
     std::atomic<float> regeneration{.5f};
     std::unique_ptr<TransportPlayback> offlinePlayer;
     Session offlineSession;
+    LiveClockSnapshot offlineClock;
     juce::File offlineRoot;
     std::vector<LiveEntry> offlineEntries;
     std::vector<Swell> offlineMembers;

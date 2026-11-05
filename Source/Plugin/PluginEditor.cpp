@@ -210,6 +210,15 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     placementLabel.setText("Move wet (ms)",juce::dontSendNotification);placementEditor.setName("legacy_wetPlacement");placementEditor.setReadOnly(true);
     diagnosticsContent.addAndMakeVisible(timingButton);timingButton.setName("advancedTiming");
     timingButton.onClick=[this]{advancedTiming=!advancedTiming;resized();};
+    diagnosticsContent.addAndMakeVisible(copyDiagnosticsButton);copyDiagnosticsButton.setName("copyDiagnostics");
+    copyDiagnosticsButton.setTooltip("Copy the complete diagnostic text, precise host/source timing and retained offline export error to paste into a support message.");
+    copyDiagnosticsButton.onClick=[this]{
+        diagnosticsRefreshedAt=-1;refresh();
+        juce::SystemClipboard::copyTextToClipboard("ReverbArise diagnostics\n\n"+status.getText()+"\n\n"+captureDiagnostic.getText()
+            +"\n\n"+detail.getText()+"\n\n"+playbackDiagnostic.getText()+"\n\n"+policyDiagnostic.getText()
+            +"\n\nSnap\nEffective snap: "+juce::String(timeline.effectiveSnap()?"On":"Off")
+            +" | Fixed grid available: "+juce::String(timeline.gridAvailable()?"Yes":"No")+"\n\n"+liveDiagnostic.getText());
+    };
     // The swell name is renamed from the list row menu, not the Selected panel.
     for(int i=arrival;i<fieldCount;++i){inspectorContent.addAndMakeVisible(fieldLabels[i]);inspectorContent.addAndMakeVisible(fields[i]);}
     fields[name].setVisible(false);fieldLabels[name].setVisible(false);
@@ -413,6 +422,7 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
     detail.setBounds(diagnostic.removeFromTop(140));
     playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
     auto row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
+    copyDiagnosticsButton.setBounds(row.removeFromLeft(200).reduced(1));
     for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
     row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
     helper.setBounds({});

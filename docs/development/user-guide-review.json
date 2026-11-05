@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed final issue 73 bindings and active diagnostic specs. Timing troubleshooting has its own heading, explains separate grid/live evidence, preserves projects/assets and requests actual build identity. Missing inputs remain unavailable; strict timing, audio, saved state, controls and existing workspace screenshots remain unchanged. FL Studio transition and DPI coverage are not claimed.",
+  "summary": "Reviewed owner-authorized local integration of offline clock fix 1532f37 with issue 73 diagnostics. Guide now explains Copy diagnostics during Play and after Stop, whole-report retention and independent fixed-tempo offline validation. Reused existing ActionButton and diagnostic roles; no workspace screenshot change, state migration, timing tolerance relaxation or new host acceptance is claimed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -410,8 +410,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22080,
-      "sha256": "41fd478c08ebee0131f2e99ae952bcb5ccc800d4b2eeb283aedea9ed973393ad"
+      "bytes": 22116,
+      "sha256": "bcfbcb1ad44264d376cd5e35975b35ad999241aeb7c97411660ab8e353129627"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -435,8 +435,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 36590,
-      "sha256": "0111732bbd6075fb2dab5e18fdc24c85400bf85dcdf0a88b6ec35f38627ce4a6"
+      "bytes": 38068,
+      "sha256": "0074f0bd5839f990d74637fe829208c20b6dc8c3ba7d39bd4104ef36c0b2534f"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79490,
-      "sha256": "df2916797d06722dcc8ee7321bdbe7123e9bc37231d5cafc516da23d905bb4bf"
+      "bytes": 80398,
+      "sha256": "2071a6f8cb6ac0a29e08a279e3677bba0b41079b3df7167773675f65553848f2"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9697,
-      "sha256": "dd8fd70415bdcc6ea5c5f96011b2c13d5447052daadd3b301ea7c35093f797d4"
+      "bytes": 9813,
+      "sha256": "48ddb08870d4bcf5ee0c0fe4f8417e11aa13d840602f8dab290e73573c09b094"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16729,
-      "sha256": "e277702eb92a14a9ab5619292cf5375b393221385ad627d098b7a7de1be3549d"
+      "bytes": 17085,
+      "sha256": "145b278ddfb1614a0a2bd9fa8b9cca1fbe139c4a5a9a03a8e80d4c407b0ac7e3"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

@@ -1030,6 +1030,18 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(glyphs.getBoundingBox(0,-1,true).getWidth()<liveEvidence->getWidth());
     }
     snapshotPanel(*liveEvidence,"live-admission-evidence");
+    auto* copy=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"copyDiagnostics"));REQUIRE(copy);
+    REQUIRE(copy->getTitle()=="Copy diagnostics" && copy->isEnabled());
+    REQUIRE(copy->getParentComponent()->getLocalBounds().contains(copy->getBounds()));
+    const auto previousClipboard=juce::SystemClipboard::getTextFromClipboard();
+    REQUIRE(copy->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    const auto copied=juce::SystemClipboard::getTextFromClipboard();juce::SystemClipboard::copyTextToClipboard(previousClipboard);
+    for(const auto* section:{"ReverbArise diagnostics","Timing","Capture / assets","Selection / render","Playback / export",
+        "Offline blocks:","Processing / gain","Fixed grid available:","Current callback","Worker source:",
+        "Fixed grid (UI snapshot", "Run start callback", "Preceding admitted callback at first rejection",
+        "First timing rejection in retained run", "Run reference / observed / delta samples:"})REQUIRE(copied.contains(section));
+    REQUIRE(!copied.contains("Experimental output protection"));
 
     juce::String beforeJson,afterJson,jsonError;REQUIRE(m3::encode(beforeSettings,beforeJson,jsonError) && m3::encode(engine.savedSession(),afterJson,jsonError));
     REQUIRE(beforeJson==afterJson && engine.snapshot().renderCount==beforeSettingsRenders && processor->getCaptureSnapshot().manifest.revision==beforeSettingsCapture);

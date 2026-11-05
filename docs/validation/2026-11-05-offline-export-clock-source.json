@@ -1,0 +1,38 @@
+{
+  "base": "2d1c849",
+  "branch": "codex/fix-offline-export-clock",
+  "files": [
+    {
+      "path": "Source/DSP/SwellEngine.h",
+      "sha256": "4e71c9ba4b53ea58922a7b7c64aafa807b3a2dac47b0ac28997d4d36e4efe1bf"
+    },
+    {
+      "path": "Source/DSP/SwellTransport.cpp",
+      "sha256": "d069b4b90f74b8509045a50dbadf606878245309f5534701c560d5860aff4fff"
+    },
+    {
+      "path": "Source/Plugin/PluginEditor.h",
+      "sha256": "eca23c5d81da9247063e2d9a89844ff06a860995d3ba4ab2b95ce75e25dfd332"
+    },
+    {
+      "path": "Source/Plugin/PluginEditor.cpp",
+      "sha256": "cfa045867044370b27e984f85f1f47d96595feb3ec974ab5035d546c4c772b80"
+    },
+    {
+      "path": "tests/MultipleExportCases.h",
+      "sha256": "b77bc69d52bfc61cf1f5f6ea42343ed3d20e70966eeed1eb45d1e91d53e05486"
+    },
+    {
+      "path": "tests/ir_handover_test.cpp",
+      "sha256": "6df38ffc893b3df825d68d2e59af24660bdd1371ee8685325ebd5b0f4965b762"
+    },
+    {
+      "path": "tests/swell_ui_test.cpp",
+      "sha256": "2397baecb7076d627352fc53228311710c4c60709c39cbd243824de2a54c617f"
+    },
+    {
+      "path": "tests/transport_playback_test.cpp",
+      "sha256": "30af4c4b3e676a215ebee903cc65655805af9b4a77a57fa739dafd9cd154cddc"
+    }
+  ]
+}

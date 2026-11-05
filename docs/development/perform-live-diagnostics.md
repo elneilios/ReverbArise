@@ -18,6 +18,12 @@ admits wet; grid availability alone cannot establish audible output. Stop can
 restore grid compatibility without proving the preceding Play was admitted.
 Snap On, Ctrl bypass, Snap Off and exact-entry policies are unchanged.
 
+Use **Copy diagnostics** in this window to share all readouts, including text
+outside the visible viewport. Host offline errors retain prepared, export-run
+reference and failing host timing separately. See the
+[fixed-tempo export clock](offline-export-clock.md) for its admission contract;
+a later parked callback cannot explain an earlier offline rejection.
+
 Callback observations copy values from one processed block and its active
 publication. `block` identifies that callback; `revision` identifies the
 publication. Current and historical rejection observations are separate bounded

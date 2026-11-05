@@ -79,6 +79,22 @@ int main(int argc,char* argv[]){return runTest([&]{
             REQUIRE(liveL[n]==offlineL[n] && liveR[n]==offlineR[n]);}
         REQUIRE(liveL[50]>0 && liveR[50]<0);
     }
+    // Exact failing offline tuple from the owner's 2026-11-05 diagnostic.
+    {const SongTime prepared{true,3399344,144,48000,122,4,4};
+        const SongTime host{true,3399344,143.999322222222219,48000,122,4,4};
+        REQUIRE(!transportMappingMatches(prepared,host)); // Global guard remains strict.
+        LiveClockSnapshot clock;clock.reference=clock.observed=host;clock.playing=true;clock.gate=LiveGate::admitted;
+        REQUIRE(clock.accepts(prepared,host)==LiveGate::admitted);
+        auto pub=std::make_unique<LivePublication>();pub->mapping=prepared;pub->start=host.sample;pub->end=host.sample+600;
+        auto audio=std::make_shared<WetRender>();audio->start=host.sample;audio->rate=48000;audio->samples.resize(1200,.07f);
+        pub->entries.push_back({0,1,host.sample,host.sample+600,.07f,audio});juce::String error;REQUIRE(prepareLiveSegments(*pub,error));
+        TransportPlayback player;player.invalidate(0,1);REQUIRE(player.publish(std::move(pub)));
+        float l[300]{},r[300]{};TransportTime time{host,true};player.process(l,r,300,time,true,&clock);
+        REQUIRE(!player.incompatible() && std::abs(l[299]-.07f)<1e-6f);
+        time.song.sample+=300;time.song.ppq+=300*122./(60*48000);time.song.ppq-=2*122./(60*48000);
+        player.process(l,r,300,time,true,&clock);REQUIRE(player.incompatible());
+        REQUIRE(clock.accepts(prepared,time.song)==LiveGate::origin);
+    }
     // Owner recording 2026-11-04: the ready stopped mapping differs from
     // every playing observation by 16 samples. PCM here is synthetic; timing
     // and publication identity are replayed from the host diagnostic evidence.

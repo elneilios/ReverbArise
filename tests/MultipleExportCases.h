@@ -51,8 +51,8 @@ inline void multipleExportCases()
     waitM3([&]{return m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->phase==m3::Phase::ready;});
     REQUIRE(m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->sourceEnd==4000);
     const auto captured0=processors[0]->getCaptureSnapshot().reference,captured1=processors[1]->getCaptureSnapshot().reference;
-    const auto bounce=[&](int i,int stride){auto& p=*processors[i];p.prepareToPlay(1000,stride);p.setNonRealtime(true);juce::MidiBuffer messages;std::vector<float> output(4000);juce::AudioBuffer<float> b(2,stride);
-        for(int at=0;at<4000;at+=stride){const auto n=std::min(stride,4000-at);position(i,at,false);b.setSize(2,n);b.clear();p.processBlock(b,messages);
+    const auto bounce=[&](int i,int stride,double origin=0,bool playing=false){auto& p=*processors[i];p.prepareToPlay(1000,stride);p.setNonRealtime(true);juce::MidiBuffer messages;std::vector<float> output(4000);juce::AudioBuffer<float> b(2,stride);
+        for(int at=0;at<4000;at+=stride){const auto n=std::min(stride,4000-at);position(i,at,playing);heads[i].position.setPpqPosition((at-origin)/500.);b.setSize(2,n);b.clear();p.processBlock(b,messages);
             REQUIRE(!p.swellEngine().snapshot().liveStatus.startsWith("Export incomplete"));std::copy_n(b.getReadPointer(0),n,output.data()+at);}return output;};
     const auto serial0=bounce(0,17),serial1=bounce(1,1023);
     auto future0=std::async(std::launch::async,[&]{return bounce(0,8192);});auto future1=std::async(std::launch::async,[&]{return bounce(1,31);});
@@ -86,6 +86,16 @@ inline void multipleExportCases()
         const auto savedAfterLive=p.swellEngine().savedSession();REQUIRE(savedBeforeLive.swells.size()==savedAfterLive.swells.size());
         for(size_t n=0;n<savedBeforeLive.swells.size();++n)REQUIRE(m3::sameSavedSwell(savedBeforeLive.swells[n],savedAfterLive.swells[n]));
     }
+
+    REQUIRE(processors[0]->getLatencySamples()==0 && processors[1]->getLatencySamples()==0);
+    const auto accepted0=processors[0]->swellEngine().savedSession(),accepted1=processors[1]->swellEngine().savedSession();
+    REQUIRE(bounce(0,37,16)==serial0 && bounce(1,509,-31)==serial1);
+    REQUIRE(bounce(0,513,16,true)==serial0);
+    auto offset0=std::async(std::launch::async,[&]{return bounce(0,8192,16);});
+    auto offset1=std::async(std::launch::async,[&]{return bounce(1,31,-31);});
+    REQUIRE(offset0.get()==serial0 && offset1.get()==serial1);
+    for(int i=0;i<2;++i){const auto after=processors[i]->swellEngine().savedSession();const auto& before=i?accepted1:accepted0;
+        for(size_t n=0;n<before.swells.size();++n)REQUIRE(m3::sameSavedSwell(before.swells[n],after.swells[n]));}
     REQUIRE(processors[0]->getCaptureSnapshot().reference==captured0 && processors[1]->getCaptureSnapshot().reference==captured1);
     // Musical exports snapshot each instance's calibrated accepted schedule;
     // irregular and independently interleaved callbacks remain deterministic.
@@ -111,6 +121,10 @@ inline void multipleExportCases()
         for(int n=0;n<64;++n)REQUIRE(tail.getSample(0,n)==(routing==m3::LiveRouting::wetOnly?0.0f:.4f));
     }
     // A mapping change while future/current wet remains required is still fatal.
+    processors[0]->prepareToPlay(1000,64);position(0,440,false);heads[0].position.setPpqPosition((440.-16)/500.);
+    tick.clear();processors[0]->processBlock(tick,midi);REQUIRE(tick.getMagnitude(0,64)>0);
+    position(0,504,false);heads[0].position.setPpqPosition((504.-19)/500.);tick.clear();processors[0]->processBlock(tick,midi);
+    REQUIRE(processors[0]->swellEngine().snapshot().offlineStatus.contains("run origin delta=3.000000000 samples"));
     processors[0]->prepareToPlay(1000,64);position(0,440,false);tick.clear();processors[0]->processBlock(tick,midi);
     position(0,504,false);heads[0].position.setPpqPosition(0);tick.clear();processors[0]->processBlock(tick,midi);
     REQUIRE(processors[0]->swellEngine().snapshot().liveStatus.startsWith("Export incomplete"));
