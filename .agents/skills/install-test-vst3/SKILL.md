@@ -9,8 +9,8 @@ changing destinations or diagnosing installation failures.
 
 - Default destination is `%USERPROFILE%\AppData\Local\Programs\Common\VST3`.
   Preserve that real user path when sandbox `LOCALAPPDATA` is redirected.
-- Run the script, adding `-Test` when Release CTest is required or has not yet
-  validated the changes. It always builds Release through the supported wrapper;
+- Run the script, using the default plugin-only build for ordinary host testing.
+  Add `-Test` only for explicitly requested or required full Release CTest; it builds all test executables and can be slow in a fresh worktree. The default always builds Release through the supported wrapper;
   do not substitute manual copy commands or stale binaries from another checkout.
 - Use normal filesystem escalation for the user VST3 destination when outside the
   sandbox. The user's request to install authorizes that operation; do not ask them

@@ -103,7 +103,7 @@ function Get-BuildRevision([string] $Git, [string] $Root) {
 
 function Invoke-ReverbBuild {
     [CmdletBinding()]
-    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test)
+    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly)
     $ErrorActionPreference = 'Stop'
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
     $preset = 'windows-msvc-' + $Configuration.ToLowerInvariant()
@@ -112,6 +112,7 @@ function Invoke-ReverbBuild {
     $revision = 'unavailable'; $logDirectory = 'unavailable'; $lock = $null; $code = 1; $stage = 'Preflight'
     Push-Location -LiteralPath $Root
     try {
+        if ($PluginOnly -and $Test) { throw '-PluginOnly cannot be combined with -Test; tests require the full build.' }
         $tools = Resolve-BuildTools
         $revision = Get-BuildRevision $tools.Git $Root
         # Resolve binaryDir from the unchanged configure preset rather than using a global lock.
@@ -125,6 +126,7 @@ function Invoke-ReverbBuild {
         $null = [IO.Directory]::CreateDirectory($logDirectory)
         $stages.Preflight = 'pass'
         Write-Host "Tools: $($tools.CMake); $($tools.CTest)"
+        if ($PluginOnly) { Write-Host 'Build target: preverb_plugin_VST3 (plugin only; CTest not requested)' }
         foreach ($stage in @('Configure', 'Build', 'Test')) {
             if ($stage -eq 'Test' -and -not $Test) { continue }
             $executable = $tools.CMake
@@ -133,6 +135,7 @@ function Invoke-ReverbBuild {
                 'Build' { @('--build', '--preset', $preset) }
                 'Test' { @('--preset', $preset, '--no-tests=error') }
             }
+            if ($stage -eq 'Build' -and $PluginOnly) { $arguments += @('--target', 'preverb_plugin_VST3') }
             if ($stage -eq 'Test') { $executable = $tools.CTest }
             $log = Join-Path $logDirectory ($stage.ToLowerInvariant() + '.log')
             Write-Host "$stage $Configuration... ($log)"

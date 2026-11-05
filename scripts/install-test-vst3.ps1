@@ -15,7 +15,7 @@ try {
     if (-not $PSCmdlet.ShouldProcess((Join-Path $destinationPath 'ReverbArise.vst3'), 'Build Release and install for local FL Studio testing')) { exit 0 }
     Assert-TestHostClosed
     # Build through the supported wrapper; a failed build/test never installs stale output.
-    $code = Invoke-ReverbBuild -Root $root -Configuration Release -Test:$Test
+    $code = Invoke-ReverbBuild -Root $root -Configuration Release -Test:$Test -PluginOnly:(-not $Test)
     if ($code -ne 0) { exit $code }
     $presets = Get-Content -LiteralPath (Join-Path $root 'CMakePresets.json') -Raw | ConvertFrom-Json
     $preset = @($presets.configurePresets | Where-Object { $_.name -eq 'windows-msvc' })[0]

@@ -6,7 +6,8 @@ Close FL Studio, then run from the repository root:
 ./scripts/install-test-vst3.ps1
 ```
 
-This incrementally builds **Release** through the existing build wrapper and installs
+By default this incrementally builds only the **Release VST3 target** through the
+existing build wrapper, excluding unrelated test/preview executables, and installs
 the complete `ReverbArise.vst3` bundle into
 `%USERPROFILE%\AppData\Local\Programs\Common\VST3`. This is the ordinary user VST3
 folder; the profile-based spelling avoids redirected `LOCALAPPDATA` in agent
@@ -21,7 +22,10 @@ as a host installation.
 ```
 
 `-Destination` names the containing VST3 folder, not the bundle itself. Without
-`-Test`, CTest is not run. A build/test failure stops before installation; there is
+`-Test`, CTest is not run. `-Test` opts into the full solution build and Release
+CTest; a fresh worktree may take substantially longer because its test executables
+also compile JUCE. Use the default for ordinary host-test delivery and request
+`-Test` when full automated validation is needed. A build/test failure stops before installation; there is
 no skip-build option that could silently deliver stale output. Dirty worktrees are
 allowed for local testing. This is independent of tagged release packaging and
 does not publish or redistribute anything.
