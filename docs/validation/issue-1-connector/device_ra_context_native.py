@@ -11,7 +11,10 @@ TARGET = "ReverbArise FL Context Probe"
 PARAMS = ("RA Probe Context v1", "RA Probe Audio Ack v1",
           "RA Probe Query Clock v1", "RA Probe Write Clock v1")
 MAX_WORD = 0xFFFFFF
-EVIDENCE_DIRECTORY = os.path.join(os.path.dirname(__file__), "evidence")
+# FL executes scripts as strings and does not necessarily define __file__.
+# Use a process-independent owned location, not FL's working directory.
+EVIDENCE_DIRECTORY = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+                                  "ReverbAriseContextProbe", "evidence")
 _targets = []
 _sequence = 0
 _last_mode = None

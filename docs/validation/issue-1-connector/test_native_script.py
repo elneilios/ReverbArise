@@ -1,5 +1,7 @@
 """Script wiring checks supporting the real native receiver; not host delivery evidence."""
 import importlib
+import os
+from pathlib import Path
 import sys
 import unittest
 from types import SimpleNamespace
@@ -8,6 +10,14 @@ import device_ra_context_native as script
 
 
 class NativeScriptTest(unittest.TestCase):
+    def test_fl_exec_environment_without_file_global(self):
+        namespace = {"__name__": "fl_script_probe"}
+        source = Path(script.__file__).read_text(encoding="utf-8")
+        exec(compile(source, "<FL script>", "exec"), namespace)
+        expected = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+                                "ReverbAriseContextProbe", "evidence")
+        self.assertEqual(namespace["EVIDENCE_DIRECTORY"], expected)
+
     def test_refresh_mode_change_prompt_heartbeat_and_separate_discovery(self):
         module = importlib.reload(script)
         now = [10.0]

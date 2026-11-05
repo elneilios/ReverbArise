@@ -33,7 +33,7 @@ If query/write delays are huge (hundreds/thousands of milliseconds), keep the lo
 ## Evidence is automatic
 
 - Each receiver writes `receiver-<transient UUID>.csv` under this worktree's `out/issue-1-native/evidence`, even with its editor closed, using a message-thread timer. Check the editor for log failures and dropped rows. Do not move this worktree before testing; the receiver evidence directory is compiled into this local build.
-- The script writes `script-*.csv` under its installed Hardware folder's `evidence` subfolder. It records idle/refresh/full-refresh flags, mode samples, write sequences, QPC timestamps and errors. No project or capture data is logged.
+- The script writes `script-*.csv` under `%LOCALAPPDATA%/ReverbAriseContextProbe/evidence`. FL executes the script without `__file__`, so this owned log location does not depend on the script path or working directory. It records idle/refresh/full-refresh flags, mode samples, write sequences, QPC timestamps and errors. No project or capture data is logged.
 - After testing, run `./docs/validation/issue-1-connector/native/collect-evidence.ps1`. It collects only these owned diagnostic folders, summarizes received timings/event flags and makes a local ZIP. Tell the investigating chat that the session is done; it can read those files directly. A screen recording is optional if you want exact mouse-click-to-sound timing; the CSV does not independently timestamp the host UI's mode change.
 - Native-test CSV files start `native-test-` and are excluded from host summaries. The callback logs include per-block generated-signal peak and host sample position, but are not a recording of the actual DAW output. The exported WAV supplies output evidence.
 

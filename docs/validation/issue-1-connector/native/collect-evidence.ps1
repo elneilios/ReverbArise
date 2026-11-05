@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$ScriptEvidence='D:/Users/neila/Image-Line/FL Studio/Settings/Hardware/ReverbAriseNativeContextProbe/evidence')
+param([string]$ScriptEvidence=(Join-Path $env:LOCALAPPDATA 'ReverbAriseContextProbe/evidence'))
 $ErrorActionPreference='Stop'
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../..'))
 $root=Join-Path $repo 'out/issue-1-native'
