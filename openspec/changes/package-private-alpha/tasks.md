@@ -19,7 +19,7 @@
 
 ## 4. Clean PR alpha acceptance and post-merge verification
 
-- [x] 4.1 Before merging, select a clean committed PR revision containing #48, #56 and the payload changes; regenerate same-source screenshots and run scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate alpha (or a recorded fresh alpha.N if identity is already used), UI standards, strict OpenSpec and applicable identity checks. Verify all native Release tests and retain exact source/tool/results evidence; record this as the owner-selected acceptance candidate, not an earlier rehearsal or a main build.
+- [ ] 4.1 Before merging, select a clean committed PR revision containing #48, #56 and the payload changes; regenerate same-source screenshots and run scripts/release.ps1 -ReleaseTag v0.1.0 -Candidate alpha (or a recorded fresh alpha.N if identity is already used), UI standards, strict OpenSpec and applicable identity checks. Verify all native Release tests and retain exact source/tool/results evidence; record this as the owner-selected acceptance candidate, not an earlier rehearsal or a main build.
 - [ ] 4.2 Extract the final immutable ZIP into a fresh directory, verify SHA-256 against checksum/manifest and every inventoried payload file, inspect the full VST3/notices/README and render the standalone guide locally offline; verify all four authentic images are readable and match this packaged revision, and record paths, hashes and visual inspection results.
 - [ ] 4.3 Prepare and complete one consolidated FL Studio smoke test against the extracted final binary for scan/load, capture, generation, Perform audition/Stop and project-copy save/reopen without overwriting existing installations/projects/assets; record binary hash, host version, sample rate, buffer, observations and owner acceptance, with clean-machine and second-DAW coverage tested or explicitly unverified.
 - [ ] 4.4 Obtain explicit owner approval of the prepared redistribution review and any required additional material; verify the dated approval covers the intended private recipients/use and record the final alpha's sharing status. Keep the bundle internal while approval or final host acceptance is pending; perform no external sharing, tag push or publication.
@@ -35,6 +35,8 @@ Owner-approved order (2026-11-05): sign off the clean PR candidate before mergin
 - [x] 5.3 Add Settings About and Copy build information using approved shared controls/text roles/spacing; verify full clipboard content, metadata display, bounds/accessibility and unchanged session/capture/render state with native component tests; prepare and directly launch the existing native preview mechanism for review.
 - [x] 5.4 Review delivered behavior/canonical specs with maintain-user-guide, update the HTML with About/copy instructions and record currency; verify self-contained guide assembly and authentic current About evidence without packaging-time authoring.
 - [x] 5.5 Run relevant wrapper/identity/currency/UI/native regression and internal packaging checks, preserve exact source/artifact evidence and update PR #63; verify PR remains open/unmerged and no publication or external sharing occurs.
+
+- [ ] 5.6 Address final-host Copy feedback: reuse the existing filled ActionButton style and show visible accessible clipboard confirmation; verify normal/hover/pressed/disabled paint, repeat pointer/keyboard copy and unchanged project/audio state. Repackage and install the corrected candidate, then retain owner host sign-off as pending.
 
 ## Workflow follow-up
 

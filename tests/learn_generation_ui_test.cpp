@@ -151,7 +151,20 @@ static void aboutBindings(bool review=false)
         REQUIRE(value->getText()==expectedDisplay[i] && value->getTooltip()==expectedDisplay[i]);
         REQUIRE(value->getParentComponent()->getLocalBounds().contains(value->getBounds()) && value->getAccessibilityHandler());}
     auto* copy=dynamic_cast<m3::ui::controls::ActionButton*>(named(*panel,"copyBuildInformation"));REQUIRE(copy && copy->isEnabled() && copy->getAccessibilityHandler());
+    auto* status=dynamic_cast<juce::Label*>(named(*panel,"buildInformationCopyStatus"));REQUIRE(status && visible(status));
+    REQUIRE(!status->getText().contains("copied to clipboard"));
+    const auto fill=[&](bool over,bool down){juce::Image image(juce::Image::ARGB,copy->getWidth(),copy->getHeight(),true);
+        {juce::Graphics graphics(image);copy->paintButton(graphics,over,down);}return image.getPixelAt(8,8);};
+    const auto normal=fill(false,false),hover=fill(true,false),pressed=fill(true,true);
+    REQUIRE(normal==m3::ui::aqua && hover==m3::ui::hover && pressed==m3::ui::hover && normal!=hover);
+    copy->setEnabled(false);REQUIRE(fill(false,false)!=normal);copy->setEnabled(true);
     controlReview::pointerClick(*copy);REQUIRE(copiedInformation==juce::String(m3::build::report()));
+    REQUIRE(status->getText().contains("Build information copied to clipboard."));
+    REQUIRE(status->getDescription()==status->getText() && copy->isEnabled());
+    REQUIRE(status->getParentComponent()->getLocalBounds().contains(status->getBounds()));
+    copiedInformation.clear();copy->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+    await([&]{juce::MessageManager::getInstance()->runDispatchLoopUntil(10);return copiedInformation==juce::String(m3::build::report());});
+    REQUIRE(status->getText().contains("copied to clipboard") && copy->isEnabled());
     REQUIRE(copiedInformation.contains(metadata["gitSha"].toString()) && copiedInformation.contains(metadata["buildIdentifier"].toString()));
     REQUIRE(encode(engine.savedSession(),after,error) && before==after);
     REQUIRE(engine.snapshot().renderCount==renders && fixture.processor->getCaptureSnapshot().manifest.revision==capture);

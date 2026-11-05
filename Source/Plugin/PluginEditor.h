@@ -138,7 +138,7 @@ private:
     juce::Label aboutHeading;
     std::array<juce::Label,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
-    m3::ui::controls::ActionButton copyBuildInformation{"Copy build information"};
+    m3::ui::controls::ActionButton copyBuildInformation{"Copy build information",m3::ui::controls::CommandIcon::none,true};
     std::function<void(const juce::String&)> buildInformationWriter;
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;

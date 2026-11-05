@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed owner-approved acceptance ordering: clean PR candidate sign-off before merge, separate main verification afterward. Delivery code and musician-facing workflows are unchanged after PR66 canonical sync; existing Learn/Perform/optional Export and About instructions remain current. Only developer release-order guidance and active acceptance criteria changed; no guide prose or screenshot edit is needed.",
+  "summary": "Reviewed delivered About Copy feedback and guide confirmation wording. Existing filled ActionButton supplies enabled/hover states, helper confirms clipboard completion and repeated activation remains enabled. Native paint fixture finishes Graphics before readback; keyboard fixture pumps the message loop for JUCE asynchronous triggerClick. These fixture corrections add no production behavior or prose change. Canonical workflow review remains applicable.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -490,8 +490,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9656,
-      "sha256": "13c7e53fb59b5787e799e76ed63dcf96b807fbe68be5e38e7c53cf0efcf643ef"
+      "bytes": 9697,
+      "sha256": "dd8fd70415bdcc6ea5c5f96011b2c13d5447052daadd3b301ea7c35093f797d4"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -510,8 +510,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 11333,
-      "sha256": "aa92d9d67c713f45355f5d79aaead746da16898e71e7aa4a375751177174d8c0"
+      "bytes": 11786,
+      "sha256": "e5744fb813978165658ebf463feb5c7214cd5dcbc8cb3b3625396eb186656c83"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -755,8 +755,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 14646,
-      "sha256": "b563c51dc7e794b0074b030ce85b8e51ca164bb334d92a3b7c02ba3d341149a8"
+      "bytes": 14734,
+      "sha256": "5786ac7e207723881ef09ec5c0aec29ae8a3e92ec0720a964d1680e2a2892841"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -935,8 +935,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 24185,
-      "sha256": "edff69c838d492c9fcf7a8d8f195fdfd8e3724686e66390735ffe240a828b073"
+      "bytes": 25454,
+      "sha256": "90dcba23452dcf3ea391e1673b2502ac9c141fda7c20ccc171d28196854a1329"
     }
   ]
 }

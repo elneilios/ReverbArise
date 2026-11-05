@@ -90,6 +90,8 @@ token or control-family variant and leaves the five existing pages in place.
 Build values come from generated metadata; the copy action runs on the UI thread
 without session edits, capture or rendering. Native tests verify full copied
 identity, accessibility/bounds and session/capture/render invariance.
+Copy uses the existing filled ActionButton variant for clear enabled/hover feedback;
+the existing helper role confirms clipboard completion without disabling the action.
 
 Issue #46's native revision-4 compact composition has owner approval. Its
 `PerformLayout::performGeometry` profile is scoped to Perform and tested by the
