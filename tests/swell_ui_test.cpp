@@ -131,6 +131,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--review-perform-warning"){noticeReview::run();return;}
     {m3::EditorSnapshot diagnosticState;
         REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
         m3::LiveCallbackObservation callback;callback.block=17;callback.revision=42;callback.hasPublication=true;

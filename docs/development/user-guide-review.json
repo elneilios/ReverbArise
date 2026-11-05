@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed issue 51 continuous Export preview against production control bindings, SongMix layer streaming, callback target/ramp and file readiness guards; documented moving-playhead preset/fader edits, pending WAV/waveform behavior and stopped/zero behavior. Preserved prior FL acceptance and limited host/accessibility coverage.",
+  "summary": "Reviewed merged main Perform caution guidance and issue 51 production Export bindings, verified layer streaming, gain transitions, dependency/Stop ownership and file readiness; documented uninterrupted moving-playhead edits, pending waveform/WAV and zero/stopped behavior while preserving Perform warning and limited host coverage.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -380,8 +380,8 @@
     },
     {
       "path": "Source/DSP/SongMix.h",
-      "bytes": 2342,
-      "sha256": "c27e3b967222d68cbad805be2439a27a7ee70a7d95c7d42e5cfb8a50969cecfd"
+      "bytes": 2432,
+      "sha256": "05bd3aca6f89c5f97dae870dca69e234cdb466f74664ad25c6960be3e51118cc"
     },
     {
       "path": "Source/DSP/SourceEdgeConditioning.cpp",
@@ -405,8 +405,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 81645,
-      "sha256": "8e41f268be7838ea8e9e32aa0aaf48960589835a5e99aa09c5e4b3f402eba7b5"
+      "bytes": 81667,
+      "sha256": "ce8593bcafddd2c07ab8a11ac3efa870b6571787b6f3fee00c31a8bcd8cc4173"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -415,8 +415,8 @@
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 23496,
-      "sha256": "6d9a91f071b6d39dc214579c9a4ee31b5a4e3044d755a5ce3ec364d768c58495"
+      "bytes": 23857,
+      "sha256": "a1e77839a92d1a0743cd1973f907730f602f33ea337513eb5fb23ba8ad9dc695"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -460,8 +460,8 @@
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
-      "bytes": 8503,
-      "sha256": "a074caf722c8989873185494db298d70c3f47197eec5f61029fa3b8089078dbf"
+      "bytes": 8822,
+      "sha256": "fa62939e60ae9d95f2328f705f7b7a9c6b0bb072269e02beaf5dcb285a90b0c6"
     },
     {
       "path": "Source/Playback/ExportVoice.h",
@@ -750,8 +750,8 @@
     },
     {
       "path": "Source/UI/WorkspaceNotice.h",
-      "bytes": 4315,
-      "sha256": "12663624fae7363bb001fe148f6a7f030103397657430d09b237cae2615bdb72"
+      "bytes": 4815,
+      "sha256": "a6ed333eeae750158c3c0759ed0dc94fef0df1b7cdfc22c7b1bd6062f271aedc"
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
@@ -780,8 +780,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 16561,
-      "sha256": "6e27e794809587cc7f6e631e2c4ebba6bda05946532391313888a7b3dd1b32e3"
+      "bytes": 17366,
+      "sha256": "039ad6dca48dd1e1b6a30fd27fd22c27b89451de54e9da60818e933c2c85f386"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -875,8 +875,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 85682,
-      "sha256": "4eb20f16dba409fe4331fc24dbe86be7a6b7a1695423653814ce841b6c3e069e"
+      "bytes": 88269,
+      "sha256": "b7a66f7d56c33cce7b82bff4d86cafe66a08ee5d79ee15a5cdc42dcf0f0dafc0"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

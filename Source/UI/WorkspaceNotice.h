@@ -61,6 +61,10 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
         return NoticeMessage{"Recapture is armed - existing audio will be replaced","Turn Recapture off to protect existing source.",NoticeTone::warning};
     if(flow.mode==workflow::Mode::finalise)
         return NoticeMessage{"DAW wet is bypassed - use Audition to preview","Export delivery controls are not available in this workspace yet.",NoticeTone::information};
-    return irPreparation;
+    if(irPreparation)return irPreparation;
+    if(flow.mode==workflow::Mode::live)
+        return NoticeMessage{"Caution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",
+            "Perform plays prepared swells at saved Song positions, including before notes and through silence. Pattern playback or muting a Playlist track or Channel Rack instrument may not stop them. Bypass the effect or mute its mixer track to stop these swells.",NoticeTone::warning};
+    return {};
 }
 }
