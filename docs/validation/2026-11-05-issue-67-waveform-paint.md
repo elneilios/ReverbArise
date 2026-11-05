@@ -203,3 +203,9 @@ preview's constant input, summary stretching and superseded harness linkage
 attempt are not presented as accepted visual evidence. The owner accepted the
 corrected native appearance/zooming. No actual FL Studio or physical-DPI result
 is claimed, and no issue closure, OpenSpec sync/archive or self-merge is performed.
+
+Delivery: [PR #69](https://github.com/elneilios/ReverbArise/pull/69), open for owner
+review and merge. Production/test/evidence commit `5c0eba2` contains the validated
+implementation; the follow-up is delivery tracking only. Refreshed vanilla Apply
+confirms **7/7 tasks complete / all_done**. The existing change remains active
+for the owner-controlled sync/archive lifecycle.

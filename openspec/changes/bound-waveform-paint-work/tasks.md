@@ -16,4 +16,4 @@ Implementation for GitHub issue #67; progress and evidence are tracked below.
 ## 3. Integration and owner review
 
 - [x] 3.1 Run the repository Release wrapper/tests and the matched 3/5/20-minute, 10/100/200-swell matrix; verify the design's p95 targets, unchanged audio/state identities and full editor-refresh responsiveness, explicitly reporting any failed target.
-- [ ] 3.2 Launch a prepared native preview for the owner if appearance or interaction needs review; record remaining host/DPI gaps, consolidate FL Studio smoke checks, and submit a separate PR with evidence and rollback scope for owner review.
+- [x] 3.2 Launch a prepared native preview for the owner if appearance or interaction needs review; record remaining host/DPI gaps, consolidate FL Studio smoke checks, and submit a separate PR with evidence and rollback scope for owner review.
