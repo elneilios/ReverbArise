@@ -9,7 +9,7 @@
 
 - [x] 2.1 Verify existing NoticeBar/accessibility and editor binding/geometry coverage includes the persistent warning and replacement/restoration at real header message widths across 1100x850, 1400x900, 1400x1000 and 1600x1000. Use the repository Windows build wrapper for native validation, run `scripts/check-ui-standards.ps1`, and confirm the diff introduces no audio/processor/serialization changes. Record native results separately from fixtures; do not change standards/debt inventories to bypass failures.
 - [x] 2.2 Prepare a native integrated message preview and obtain scoped owner copy/layout acceptance, including the warning, a temporary overriding notice and restored warning. Reuse approved typography/colours/geometry without new control variants. Respect the owner's preference to perform computer actions; record actual host/DPI checks and any unavailable coverage, without repeating transport experiments or installing a plugin unless requested.
-- [ ] 2.3 Record dated validation and update this separate review PR with `Refs #1`, checked task evidence, remaining limits and no defect-fixed claim. Verify OpenSpec change validation and `git diff --check`; keep issue #1 and PR #74 open and do not merge, Apply unrelated work or archive without the appropriate owner request.
+- [x] 2.3 Record dated validation and update this separate review PR with `Refs #1`, checked task evidence, remaining limits and no defect-fixed claim. Verify OpenSpec change validation and `git diff --check`; keep issue #1 and PR #74 open and do not merge, Apply unrelated work or archive without the appropriate owner request.
 
 ## Workflow follow-up
 
