@@ -279,6 +279,7 @@ private:
     void collectCompletedPass(const PreviewContext&,bool acceptedCapture=false);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
     void dispatchAutomatic(const PreviewContext&);
+    void requestManualPreparationLocked(const Swell&,const PreviewContext&);
     void dirtyLocked(int64_t,int64_t,bool acceptedPass=false);
     void acceptedSourceLocked(const CaptureManifest&);
     void importJob(const Import&);

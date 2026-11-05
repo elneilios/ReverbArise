@@ -14,6 +14,8 @@ This directory covers product identity, the existing implementation, development
 
 - [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — build-matched offline guide, native screenshot provenance and final main/host gates; [redistribution review](validation/2026-11-04-issue-59-redistribution-review.md) remains pending explicit owner approval.
 
+- [Manual Perform preparation](development/workflow-modes.md#explicit-manual-preparation-in-perform) — explicit render requests with automatic policies off and honest unavailable timing; [issue #55 evidence](validation/2026-11-04-issue-55-manual-preparation.md) records native results and owner FL Studio acceptance.
+
 - [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
 
 - [Perform live diagnostics](development/perform-live-diagnostics.md) — read-only callback admission, historical rejection and worker preparation evidence for transport silence.
@@ -35,6 +37,7 @@ This directory covers product identity, the existing implementation, development
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
 - [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implementation progress is tracked in the active OpenSpec change.
+- [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
 - [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
 - [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — issue #6 implementation contracts and reviewed control mapping (implementation in progress).

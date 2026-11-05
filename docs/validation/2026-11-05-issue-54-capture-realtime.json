@@ -1,0 +1,42 @@
+{
+  "revision": "9e1dc22",
+  "environment": "Windows x64; Ryzen 5 7600X, 12 logical processors; native Release; concurrent native validation/build activity",
+  "command": "preverb_capture_failure_test.exe --realtime",
+  "result": "capture outcome and rollback/retry invariants passed; see dropped counts for capture failures",
+  "cases": [
+    {
+      "seconds": 180.0,
+      "rate": 48000.0,
+      "frames": 512.0,
+      "realtime": 1.0,
+      "fault": 0.0,
+      "patterns": 0.0,
+      "queued": 16875.0,
+      "dropped": 0.0,
+      "high": 5.0,
+      "preview-limited": 0.0,
+      "stages": 36.0,
+      "stage-max-ms": 19.6753,
+      "write-verify-max-ms": 15.6577,
+      "validation-max-ms": 127.525,
+      "wall-s": 180.145
+    },
+    {
+      "seconds": 180.0,
+      "rate": 48000.0,
+      "frames": 512.0,
+      "realtime": 1.0,
+      "fault": 1.0,
+      "patterns": 0.0,
+      "queued": 5751.0,
+      "dropped": 1.0,
+      "high": 32.0,
+      "preview-limited": 0.0,
+      "stages": 12.0,
+      "stage-max-ms": 63.6344,
+      "write-verify-max-ms": 60.3412,
+      "validation-max-ms": 0.0,
+      "wall-s": 61.3516
+    }
+  ]
+}

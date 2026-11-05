@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CaptureAssetStore.h"
+#include "CaptureFailureRecord.h"
 #include <optional>
 
 struct CapturePeak
@@ -24,6 +25,7 @@ struct CaptureSessionSnapshot
     juce::String status = "Ready (empty)";
     bool unavailable = false;
     std::vector<CaptureOverviewRange> overview;
+    CaptureFailureRecord failure;
 };
 struct ProvisionalCaptureSnapshot
 {
@@ -55,6 +57,8 @@ public:
     void abortPass();
     bool passActive() const noexcept {return staged!=nullptr;}
     const juce::String& passFailure() const noexcept {return passError;}
+    CaptureFailureReason passFailureReason() const noexcept {return passReason;}
+    double passWriteMilliseconds() const noexcept {return staged?staged->maxWriteMilliseconds:0;}
     std::optional<CaptureManifest> stagedManifest() const
     {return staged && passError.isEmpty()?std::optional<CaptureManifest>{staged->state.manifest}:std::nullopt;}
     const CaptureSessionSnapshot& snapshot() const noexcept { return state; }
@@ -76,6 +80,8 @@ private:
     bool lastCommitAudioChanged=false,passAnyChanged=false;
     std::optional<CaptureGenerationContext> passContext;
     juce::String passError;
+    CaptureFailureReason passReason=CaptureFailureReason::none;
+    double maxWriteMilliseconds=0;
     std::vector<std::pair<int64_t,int64_t>> passChanges;
     std::vector<std::pair<int64_t,int64_t>> passContextChanges;
     std::unique_ptr<CaptureSessionSnapshot> prepared;

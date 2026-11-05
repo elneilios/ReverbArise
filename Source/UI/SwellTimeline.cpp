@@ -473,7 +473,7 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}
     const auto candidate=view.sample(e.position.x,source.getX(),source.getWidth());
     if(effectiveSnap())
-    {const auto at=playheadAvailable?view.snapToGrid(candidate,data.session.timing,time,capture.manifest.sampleRate,gridDivision):std::optional<int64_t>{};
+    {const auto at=playheadAvailable?view.snapToGrid(candidate,gridTiming(),time,capture.manifest.sampleRate,gridDivision):std::optional<int64_t>{};
         if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at);}
     else engine.addTarget(candidate);
 }

@@ -107,6 +107,9 @@ public:
         if(automaticOn && generationView.displayed)statusText+=" | "+juce::String(static_cast<int>(generationView.displayed->positions.size()))+" events"
             +(generationView.updating?" (updating)":generationView.displayed->identity.provisional?" (preview)":"");
         if(progress.limited)statusText+=" | Preview limited";
+        if(capture.failure && capture.failure.event.pass==flow.pass && (flow.locked() || phase==workflow::Phase::failed))
+            statusText=juce::String(captureFailureReasonText(capture.failure.event.reason))+" | Stop and retry capture.";
+        else if(phase==workflow::Phase::failed && capture.manifest.ranges.empty())statusText="Capture not accepted | No earlier committed source.";
         updateAccessibleDescription();
         refreshing=false;resized();repaint();
     }

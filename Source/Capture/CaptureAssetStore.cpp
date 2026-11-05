@@ -199,11 +199,13 @@ bool CaptureAssetStore::loadManifest(CaptureManifest& manifest, juce::String& er
 }
 
 bool CaptureAssetStore::publishSnapshot(const CaptureManifest& manifest, juce::String& reference,
-                                        juce::String& error) const
+                                        juce::String& error,CaptureFailureReason* reason) const
 {
+    if(reason)*reason=CaptureFailureReason::assetValidation;
     juce::String json;
     if (! serializeCaptureManifest(manifest, json, error) || ! validateAssets(manifest, error))
         return false;
+    if(reason)*reason=CaptureFailureReason::publication;
     const auto name = "manifests/" + juce::Uuid().toDashedString() + ".json";
     const auto destination = cacheRoot.getChildFile(name);
     if (ensureManagedDirectory(destination.getParentDirectory()).failed())

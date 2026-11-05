@@ -141,7 +141,7 @@ bool SwellEngine::addTarget(int64_t arrival)
     protectedGenerationCalibration.clear();
     ++monitoringGeneration;auto& w=model.swells.back();w.detectorAnchor=arrival;w.ir=model.defaultIR;w.irName=model.defaultIRName;
     w.phase=Phase::stale;w.status=w.ir.present()?"Target added":"Waiting for default IR";
-    if(model.automaticProcessing || model.autoRegenerate)forceRefresh.insert(w.id);
+    requestManualPreparationLocked(w,context);
     nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
     stopLocked(); message="Target added";persistentChangedLocked();return true;
 }
@@ -220,6 +220,7 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
 bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset,uint64_t expectedSession)
 {
     if(!permitCreative())return false;
+    const auto context=contextProvider();
     const juce::ScopedLock guard(lock);
     if(expectedSession && expectedSession!=sessionGeneration.load())return false;
     auto w=find(model,id); if(!w) return false;
@@ -238,7 +239,7 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     candidate.inputGeneration=w->inputGeneration+(input?1:0);
     candidate.shapeGeneration=w->shapeGeneration+(shape?1:0);
     if(input)
-    { candidate.inputGeneration=w->inputGeneration+1; candidate.phase=Phase::stale; candidate.status="Inputs changed; regenerate";candidate.calibration={};runtime[id].cachedWetOnly=false; }
+    { candidate.inputGeneration=w->inputGeneration+1; candidate.phase=Phase::stale; candidate.status="Inputs changed; preparing";candidate.calibration={};runtime[id].cachedWetOnly=false; }
     if(shape)
     {
         candidate.shapeGeneration=w->shapeGeneration+1;
@@ -252,7 +253,7 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
         if(soloFilterChanged)invalidateLiveLocked();else invalidateLiveLocked(id);}
     if(support){candidate.phase=Phase::checking;candidate.status="Preparing extended wet support";forceRefresh.insert(id);}
     if(allowReset && input){candidate.phase=Phase::checking;candidate.status="Checking Reset all dependencies";forceRefresh.insert(id);}
-    if(input){protectedGenerationCalibration.clear();deferredLearnDependencies.erase(id);if(model.automaticProcessing || model.autoRegenerate)forceRefresh.insert(id);
+    if(input){protectedGenerationCalibration.clear();requestManualPreparationLocked(candidate,context);
         nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;}
     if(!sameSavedSwell(*w,candidate))persistentChangedLocked();
     ++monitoringGeneration;*w=std::move(candidate);notify(); return true;
@@ -698,8 +699,8 @@ void SwellEngine::importJob(const Import& job)
                 && kept->second.accepted.ir.content==asset.content && w.render==kept->second.accepted.render;
             if(w.ir!=asset || w.irName!=label)persistentChangedLocked();
             w.ir=asset;w.irName=label;w.phase=identical?Phase::ready:Phase::stale;
-            w.status=identical?"Ready (identical IR content)":"IR: "+label+"; regenerate";if(identical)++liveRevision;
-            else if(model.automaticProcessing || model.autoRegenerate)forceRefresh.insert(w.id);}
+            w.status=identical?"Ready (identical IR content)":"IR: "+label+"; preparing";if(identical)++liveRevision;
+            else requestManualPreparationLocked(w,context);}
         else { w.phase=Phase::error; w.status=error; }
     }
     message=ok ? "Managed IR imported: "+label : error;
