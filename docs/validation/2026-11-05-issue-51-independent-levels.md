@@ -121,3 +121,18 @@ Debug `20261105-221405-c300dfb5` built successfully and passed through test 37 b
 Debug `20261105-221819-f4a8a530` built production `08e4262`; the full run was stopped after test 46 because it already required retry and other checkouts were simultaneously running CTest/MSVC jobs. Known failures before stopping: generation UI `learn_generation_ui_test.cpp:40` (`autoGenerateOnStop` after a 30 ms dispatch); IR streaming `ir_streaming_test.cpp:45` (missing live page at sample 767744 after 1419.59 ms, Preparing live window / Reading source); Perform composition preview segmentation fault after 112.30 s. Export voice, engine, mixer and UI passed in that run (3.62 s, 44.53 s, 34.64 s, 62.56 s respectively). This is an incomplete failing run, not a full pass. Shared load/desktop contention is observed; causation is not established. Test assertions/deadlines and other worktrees were left untouched. Final checks will be retried in a quieter window.
 
 Coordination: issue #58 compact layout will follow accepted/merged #51 changes. This branch does not adopt its pending geometry; the existing approved Export layout is preserved. PR #92 remains draft and unmerged pending native gates and the targeted FL follow-up.
+
+
+With compiler load cleared (other native jobs still existed), unchanged Debug generation-UI and IR-streaming tests passed 2/2 in 33.47 s (13.88 s and 19.57 s), against the same production source `08e4262`. No assertions, deadlines, controls or playback code changed. Log: `out/issue51-retry-load-sensitive-debug.log`. This recovery does not establish the earlier failures' cause or substitute for the fresh full run.
+
+
+### Final Debug gate
+
+`scripts/build.ps1 -Configuration Debug -Test` passed 71/71 in 531.27 s: `out/build-logs/Debug/20261105-224151-d6fa07f8`. Build reports `5d3ce97` dirty from evidence/unrelated #71 state; production Source/CMake matches `08e4262`. This full retry includes the previously failing generation UI, IR streaming, Perform composition preview and processor resource assertions, without deadline/assertion changes. The earlier failing/incomplete runs remain recorded above. This is warm native MSVC/CTest validation, not an FL Studio or complete DPI/accessibility matrix result.
+
+
+### Release gate and exact ramp endpoint refinement
+
+Release wrapper `20261105-225200-c25505fc` passed 71/71 in 197.55 s, production Source/CMake `08e4262`, build metadata `5d3ce97` dirty. This already-active wrapper was allowed to finish under the #73 quiet-window coordination request; no subsequent native workload will start until its explicit release. No owner review windows were closed.
+
+A bounded float32 arithmetic check then found that residual interpolation from 0.001 to the valid saved float target 1e-20 can finish at zero through cancellation. The callback now explicitly assigns both requested targets when the 5 ms transition completes. This preserves the steady-gain WAV parity requirement rather than quantizing small saved levels. A native regression checks both branches using finite 1e20 input and a 1e-20 target, requiring exact post-ramp output, continued cursor and zero callback allocations. Task 6.3 was reopened with guarded CLI location/progress confirmation (15/20) until the new test passes. The above full-suite passes remain scoped to the preceding code; the endpoint refinement requires fresh verification.

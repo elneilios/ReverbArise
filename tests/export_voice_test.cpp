@@ -65,6 +65,17 @@ int main(){return runTest([]{
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && layers->invalidAudio() && !layers->position());
         REQUIRE(std::all_of(a.begin(),a.end(),[](float v){return std::isfinite(v);}) && std::all_of(b.begin(),b.end(),[](float v){return std::isfinite(v);}));
     }
+    // Finish at the exact saved float target, including values much smaller than
+    // the previous level. Residual subtraction alone can round a nonzero target to zero.
+    for(bool wetBranch:{false,true}){
+        auto layers=std::make_unique<m3::ExportVoice>();std::array<float,200> hot;hot.fill(1e20f);
+        const auto ticket=layers->requestStart();layers->setLevels(ticket,wetBranch?0.f:.001f,wetBranch?.001f:0.f,100);
+        REQUIRE(layers->pushLayers(ticket,0,0,100,1000,hot,hot));layers->arm(ticket);std::array<float,64> a{},b{};
+        layers->process(a.data(),b.data(),37,1000,true);layers->setLevels(ticket,wetBranch?0.f:1e-20f,wetBranch?1e-20f:0.f,100);
+        a.fill(0);b.fill(0);{AudioAllocationGuard guard;layers->process(a.data(),b.data(),13,1000,true);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && layers->position()==50 && !layers->invalidAudio());
+        for(int n=4;n<13;++n)REQUIRE(a[n]==hot[0]*1e-20f && b[n]==hot[0]*1e-20f);
+    }
     auto voice=std::make_unique<m3::ExportVoice>();constexpr int frames=10000;std::vector<float> pcm(frames*2);
     for(int n=0;n<frames;++n){pcm[n*2]=static_cast<float>((n%23)*.01);pcm[n*2+1]=-.1f;}
     const auto ticket=voice->requestStart();

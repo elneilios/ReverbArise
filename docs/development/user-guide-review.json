@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed final continuous Export preview and quiet notices against merged main, including replay clearing prior preview failures, finite-sum safety, current-file delivery guards and moving-playhead guide instructions; no further musician-facing prose change needed.",
+  "summary": "Reviewed the exact float target assignment at the end of Export monitoring ramps; it enforces the already documented five millisecond transition and preserves arbitrary saved levels without changing user steps, state format, file law or controls. No prose change required.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -460,8 +460,8 @@
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
-      "bytes": 8993,
-      "sha256": "b31aeae946f66965c94b8d7f9add95c61b074e89f7bdc64cddf0fd4e867a1a56"
+      "bytes": 9052,
+      "sha256": "b7198915c4f331f45f365569f7872f95bc30c5645344d4d4cda4c45465aa18a7"
     },
     {
       "path": "Source/Playback/ExportVoice.h",

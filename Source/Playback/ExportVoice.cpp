@@ -116,7 +116,8 @@ void ExportVoice::process(float* left,float* right,int frames,double rate,bool a
         const auto at=p.at+static_cast<int64_t>(cursor);
         const auto end=p.layered?std::clamp(playingEnd,p.start,p.end):p.end;
         if(at>=end){finished.store(playingTicket);release();break;}
-        if(gainRemaining){dryLevel+=(dryTarget-dryLevel)/gainRemaining;wetLevel+=(wetTarget-wetLevel)/gainRemaining;--gainRemaining;}
+        if(gainRemaining){dryLevel+=(dryTarget-dryLevel)/gainRemaining;wetLevel+=(wetTarget-wetLevel)/gainRemaining;
+            if(--gainRemaining==0){dryLevel=dryTarget;wetLevel=wetTarget;}}
         const auto gain=monitorEdgeGain(static_cast<size_t>(at-p.start),static_cast<size_t>(end-p.start),rate,.005)
             *(stopRemaining?static_cast<float>(stopRemaining-1)/std::max(1,stopLength-1):1.f);
         const auto l=(p.layered?p.samples[cursor*2]*dryLevel+p.wetSamples[cursor*2]*wetLevel:p.samples[cursor*2])*gain;
