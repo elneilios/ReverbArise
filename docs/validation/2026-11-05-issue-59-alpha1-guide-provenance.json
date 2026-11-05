@@ -1,0 +1,42 @@
+{
+  "gitSha": "b26eef73fefb878c22f0bd0128c0fc3353e8d438",
+  "releaseIdentity": "v0.1.0-alpha.1",
+  "capture": {
+    "gitSha": "b26eef73fefb878c22f0bd0128c0fc3353e8d438",
+    "command": "Release/preverb_learn_generation_ui_test.exe --guide-only",
+    "executableSha256": "f4fd3811b5f4ff328cff3454aaa098128c5ba16bf3d8d68aad61f0e41fc81a8e",
+    "fixture": "Deterministic captured audio; ordinary production editor; readiness assertions passed"
+  },
+  "logo": {
+    "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",
+    "width": 640,
+    "height": 110,
+    "sha256": "987a5bbbd6be7245c6e5c64b03481022103551126b69b9d0372f882ecf34550e"
+  },
+  "images": [
+    {
+      "state": "alpha-empty-learn",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "bff28ea36483581617006df28323ca748c0b0a02c944ee06832f5df9cf80a2eb"
+    },
+    {
+      "state": "alpha-captured-markers",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "fa70e83ec8584283058bf1d443421c57272f5bca0c5eb0f901764f6838638332"
+    },
+    {
+      "state": "alpha-ready-perform",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "29ff62bedaed10ae173dc8c6e3fe469e02fccbf7c595f5ea138994c6fbf54c4d"
+    },
+    {
+      "state": "alpha-ready-export",
+      "width": 1400,
+      "height": 1000,
+      "sha256": "c697560f58fa12e92722db4d3c3a36cada29b3be664d31d6efb78f0e2de60272"
+    }
+  ]
+}
