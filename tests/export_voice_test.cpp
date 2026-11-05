@@ -4,6 +4,7 @@
 #include <Core/MonitoringSafety.h>
 #include <vector>
 #include <thread>
+#include <limits>
 int main(){return runTest([]{
     {
         auto layers=std::make_unique<m3::ExportVoice>();std::array<float,200> dry{},wet{};
@@ -55,6 +56,14 @@ int main(){return runTest([]{
             for(int n=0;n<count;++n)if(at+n>=5 && at+n<end-5)REQUIRE(a[n]>=.19999f && a[n]<=.40001f);
             at+=count;if(at<end)REQUIRE(layers->position()==at);}
         writer.join();
+    }
+    {
+        auto layers=std::make_unique<m3::ExportVoice>();std::array<float,200> hot;hot.fill(std::numeric_limits<float>::max());
+        const auto ticket=layers->requestStart();layers->setLevels(ticket,1,1,100);
+        REQUIRE(layers->pushLayers(ticket,0,0,100,1000,hot,hot));layers->arm(ticket);std::array<float,37> a{},b{};
+        {AudioAllocationGuard guard;layers->process(a.data(),b.data(),37,1000,true);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && layers->invalidAudio() && !layers->position());
+        REQUIRE(std::all_of(a.begin(),a.end(),[](float v){return std::isfinite(v);}) && std::all_of(b.begin(),b.end(),[](float v){return std::isfinite(v);}));
     }
     auto voice=std::make_unique<m3::ExportVoice>();constexpr int frames=10000;std::vector<float> pcm(frames*2);
     for(int n=0;n<frames;++n){pcm[n*2]=static_cast<float>((n%23)*.01);pcm[n*2+1]=-.1f;}

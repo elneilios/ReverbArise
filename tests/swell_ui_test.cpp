@@ -659,6 +659,8 @@ int main(int argc,char* argv[]){return runTest([&]
             REQUIRE(exportView->getLocalBounds().contains(levels->getBounds()));
         }
         {
+            auto stoppedFixture=engine.snapshot();stoppedFixture.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";
+            exportView->display(stoppedFixture);REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning && named(editor,"exportSave")->isEnabled());
             auto fixture=engine.snapshot();fixture.songExport.phase=m3::ExportPhase::preparing;fixture.songExport.previous=fixture.songExport.prepared;fixture.songExport.prepared.reset();fixture.session.exportState.wet=.35f;exportView->display(fixture);
             REQUIRE(!named(editor,"exportSave")->isEnabled() && !named(editor,"exportDrag")->isEnabled());snapshotEditor(editor,"export-pending");
             auto* nav=dynamic_cast<m3::ui::controls::TimelineNavigation*>(named(editor,"exportNavigation"));REQUIRE(nav);

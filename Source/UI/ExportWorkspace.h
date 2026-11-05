@@ -90,6 +90,7 @@ public:
     {
         using controls::NoticeMessage;using controls::NoticeTone;
         if(state.phase==ExportPhase::error)return NoticeMessage{"Export unavailable: "+state.message,state.message,NoticeTone::error};
+        if(state.message.startsWith("Preview stopped:"))return NoticeMessage{state.message,"Playback stopped safely. WAV readiness and retained files are unchanged; resolve the reported preview dependency before pressing Play again.",NoticeTone::warning};
         if(state.cursor && state.phase==ExportPhase::preparing && (!displayed || !state.previewLevels || displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet))return NoticeMessage{"Preview continues | Current WAV preparing","The preview follows the accepted levels with a 5 ms monitoring-only gain transition. Current peak measurement/WAV publication is pending; Save and Drag are unavailable.",NoticeTone::information};
         const auto measured=state.phase==ExportPhase::ready?state.prepared:state.preview;
         if(measured && measured->metrics.peak>1){

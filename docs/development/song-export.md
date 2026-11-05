@@ -255,6 +255,9 @@ Wet samples retain accepted calibration, envelopes and true-boundary conditionin
 A dry-only pin can omit unavailable wet dependencies; requesting that missing
 branch stops preview until a valid composition is ready. Dependency changes,
 mode exit, restore, Stop, 0/0, finite completion or starvation revoke playback.
+A bounded callback finite check stops before emitting an invalid branch sum;
+this does not attenuate above-unity finite samples. Preview failure notices remain
+visible independently of WAV readiness.
 A stopped gain edit never starts playback.
 
 ExportVoice retains 16 fixed 4096-frame pages, each holding dry stereo and wet

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed merged main Perform caution guidance and issue 51 production Export bindings, verified layer streaming, gain transitions, dependency/Stop ownership and file readiness; documented uninterrupted moving-playhead edits, pending waveform/WAV and zero/stopped behavior while preserving Perform warning and limited host coverage.",
+  "summary": "Reviewed combined Perform warning and Export continuous-preview behavior, including finite-sum safety and visible preview failures; guide steps cover moving-playhead edits, pending WAV/previous waveform, stopped/zero behavior and existing limited host coverage.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -405,8 +405,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 81667,
-      "sha256": "ce8593bcafddd2c07ab8a11ac3efa870b6571787b6f3fee00c31a8bcd8cc4173"
+      "bytes": 81785,
+      "sha256": "26712e41cd1daa1c3477cf8d741b1f1ee7569fdc57af646c870d213b2571607f"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -460,13 +460,13 @@
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
-      "bytes": 8822,
-      "sha256": "fa62939e60ae9d95f2328f705f7b7a9c6b0bb072269e02beaf5dcb285a90b0c6"
+      "bytes": 8993,
+      "sha256": "b31aeae946f66965c94b8d7f9add95c61b074e89f7bdc64cddf0fd4e867a1a56"
     },
     {
       "path": "Source/Playback/ExportVoice.h",
-      "bytes": 2842,
-      "sha256": "5c53f1fb6b55d3ae553efc2cd52099ba7d77443faaae9a8edb767c6912c49f8f"
+      "bytes": 2956,
+      "sha256": "9f8e917b3ae149e6d122994215036cb679157da216f56d40bc62c25321f93344"
     },
     {
       "path": "Source/Playback/LiveDiagnostics.h",
@@ -655,8 +655,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 21675,
-      "sha256": "d18ecd41acc67cf37c847a6f8b7403783d1095be44ea4c5faa1593fd2d205dee"
+      "bytes": 21931,
+      "sha256": "b6e6d6fd0d3e7386d0a41bcf857a4fa8852a9560dd847fed8f1daf5a7163eb29"
     },
     {
       "path": "Source/UI/InitialPerformView.h",

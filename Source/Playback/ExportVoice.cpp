@@ -27,7 +27,7 @@ ExportVoice::AcceptedLevels ExportVoice::acceptedLevels()const noexcept
 uint64_t ExportVoice::requestStart()noexcept
 {
     auto old=intent.load();uint64_t next;
-    do{next=(old+2)|1;}while(!intent.compare_exchange_weak(old,next));underrun=false;return next;
+    do{next=(old+2)|1;}while(!intent.compare_exchange_weak(old,next));underrun=false;invalidSamples=false;return next;
 }
 void ExportVoice::stop(bool now)noexcept
 {
@@ -119,8 +119,10 @@ void ExportVoice::process(float* left,float* right,int frames,double rate,bool a
         if(gainRemaining){dryLevel+=(dryTarget-dryLevel)/gainRemaining;wetLevel+=(wetTarget-wetLevel)/gainRemaining;--gainRemaining;}
         const auto gain=monitorEdgeGain(static_cast<size_t>(at-p.start),static_cast<size_t>(end-p.start),rate,.005)
             *(stopRemaining?static_cast<float>(stopRemaining-1)/std::max(1,stopLength-1):1.f);
-        left[n]+=static_cast<float>((p.layered?p.samples[cursor*2]*dryLevel+p.wetSamples[cursor*2]*wetLevel:p.samples[cursor*2])*gain);
-        right[n]+=static_cast<float>((p.layered?p.samples[cursor*2+1]*dryLevel+p.wetSamples[cursor*2+1]*wetLevel:p.samples[cursor*2+1])*gain);++cursor;
+        const auto l=(p.layered?p.samples[cursor*2]*dryLevel+p.wetSamples[cursor*2]*wetLevel:p.samples[cursor*2])*gain;
+        const auto r=(p.layered?p.samples[cursor*2+1]*dryLevel+p.wetSamples[cursor*2+1]*wetLevel:p.samples[cursor*2+1])*gain;
+        if(!std::isfinite(l) || !std::isfinite(r)){if(intent.load()==playingTicket)invalidSamples=true;finished.store(playingTicket);release();break;}
+        left[n]+=l;right[n]+=r;++cursor;
         if((stopRemaining && --stopRemaining==0) || at+1==end){finished.store(playingTicket);release();break;}
         if(cursor==p.frames){release();active=take(playingTicket,at+1);
             if(active<0){if(intent.load()==playingTicket)underrun=true;finished.store(playingTicket);break;}}

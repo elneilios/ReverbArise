@@ -28,6 +28,7 @@ public:
     void process(float*,float*,int,double rate,bool allowed)noexcept;
     std::optional<int64_t> position()const noexcept;
     bool starved()const noexcept{return underrun.load();}
+    bool invalidAudio()const noexcept{return invalidSamples.load();}
     uint64_t workingBytes()const noexcept{return sizeof(*this);}
 private:
     enum : unsigned {free,writing,ready,reading};
@@ -44,6 +45,7 @@ private:
     std::array<Page,pageCount> pages;
     std::atomic<uint64_t> intent{0},armed{0},finished{0},immediate{0};
     std::atomic<bool> underrun{false},positionActive{false};
+    std::atomic<bool> invalidSamples{false};
     std::atomic<int64_t> positionSample{0};std::atomic<uint64_t> positionSequence{0};
     std::atomic<uint64_t> positionIntent{0};
     uint64_t producerTicket=0;

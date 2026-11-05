@@ -58,7 +58,8 @@ EditorSnapshot SwellEngine::snapshot() const
         if(exportState.session!=sessionGeneration.load() || exportState.pass!=pass)s.songExport={ExportPhase::preparing,"Preparing export mix",{}};
         s.songExport.session=sessionGeneration.load();s.songExport.pass=pass;s.songExport.cursor=exportVoice->position();s.songExport.previewRequested=exportVoice->requested(exportVoice->request());
         if(s.songExport.previewRequested){const auto levels=exportVoice->acceptedLevels();if(levels.revision)s.songExport.previewLevels=levels;}
-        if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";}
+        if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";
+        if(exportVoice->invalidAudio())s.songExport.message="Preview stopped: non-finite mixed audio; WAV unchanged";}
     s.sessionEpoch=sessionGeneration.load();
     s.learnGeneration=learnViewLocked();s.initialPerformHandoff=initialPerformOffer;
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=audioAllowed.load()?voice.position():std::nullopt;s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
