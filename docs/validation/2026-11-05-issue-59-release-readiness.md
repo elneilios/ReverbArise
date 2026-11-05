@@ -1,0 +1,26 @@
+# Alpha release-readiness extension for PR #63
+
+## Scope and risk
+
+Owner requested a concise guide-maintenance skill/currency gate, generated Settings About build identity/copy action, guide instructions and tests. Existing `package-private-alpha` Apply change is extended with tasks 5.1–5.5; original final-main/host/licensing tasks remain pending. No generated OpenSpec tooling/config changes, DSP/state migration, new UI tokens/families, installer system or publication.
+
+Guide maintenance is low-risk authoring plus a medium-risk read-only release gate. Build identity/argument plumbing and stale-metadata rejection are medium-risk infrastructure. About uses existing shared control/text mechanisms with native component/binding checks. Final integration reuses the supported Release wrapper, existing CTest and existing native screenshot mechanism. No callback I/O or runtime Git query.
+
+## Implementation decisions
+
+- `maintain-user-guide` reviews affected delivered code, canonical specs and approved active changes; it is integrated into deliver-issue. Guide source stays static/offline. The explicit review command records normalized UTF-8/LF text hashes and exact PNG hashes without a self-referential commit/clock. Packaging checks currency before building and never invokes an agent or writes tracked documentation.
+- CMake generates one matching header/JSON identity from product version, explicit tag/candidate and the actual source root's full Git SHA/status. Ordinary build/install defaults reset release labels; explicit alpha build/install arguments preserve the intended label. No timestamps, random IDs or workspace paths enter identity. Packaging checks generated metadata; native UI checks compare compiled/displayed values to JSON. No unrelated parent Git identity is borrowed for exported source.
+- About is a sixth page in the existing Settings container. It uses section/control/helper text roles, EllipsisLabel and unchanged ActionButton, without moving the original pages. Copy reports product version, build identifier, full SHA and source status; no project/audio data. Guide documents Settings → About and Copy build information. Numeric guide version is filled from release identity, not a handwritten value.
+
+## Focused evidence
+
+- Warm Release configure/build passes, logs `out/build-logs/Release/20261105-014511-c6424f8a/`; initial development identity is local/modified and is not represented as a released alpha.
+- Focused native checks pass **4/4**: compiled product version, deterministic build-information contract, guide currency and Learn/UI About bindings. The first fresh CTest shell lacked Get-FileHash in the new currency fixture; the fixture now uses managed SHA-256 rather than depending on shell module autoload. Re-run **4/4**, 5.19 s. This is separate from final full regression.
+- Currency fixtures cover missing/stale/added/deleted production input, canonical spec, guide, zero-byte source, CRLF/LF stability and no mutation by checks. Build identity fixtures cover source SHA, version/candidate, local reset, dirty source, repeat generation, invalid inputs and unavailable-root identity. Packaging fixtures cover missing review before any build, unchanged review during packaging and stale About identity rejection.
+- Native `--guide-only` evidence captures the actual About page alongside the existing workflow images; the development capture is visually inspected at the unchanged 640×570 Settings size. Full commit/source-status text fits and the copy action's accessibility/focus uses the approved family. No browser/DAW/physical DPI acceptance is implied.
+
+Final source, complete suite/fixture counts, immutable internal artifact and directly launched native preview are recorded below when complete. Previously installed alpha is not modified by this work. PR remains open/unmerged; no tag, publication or external binary sharing.
+
+Final focused script runs: release orchestration **61 checks each** in Windows PowerShell 5.1/PowerShell 7 (candidate, SHA and dirty metadata rejected independently); build wrapper **74 assertions each**; installer fixtures pass in both shells. These simulate orchestration/build failures and are distinct from native results. Currency fixtures pass in both shells, including exact zero-byte/LF/CRLF input handling. Skill validation passes. CMake identity fixtures pass after the source-root guard addition.
+
+The guide was reviewed through maintain-user-guide against delivered code, canonical specs and approved active changes. Settings About/copy instructions and generated guide version were added; earlier Learn/capture, manual/automatic generation, Perform live/DAW rendering and optional Export instructions remain grounded in working bindings. The deliberate review record passes `check-user-guide.ps1`; matching hashes are currency evidence, not an automated substitute for semantic review. Final Release packaging will verify the record without changing it.

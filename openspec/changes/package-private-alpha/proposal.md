@@ -11,6 +11,8 @@ GitHub issue: #59. Perform #48 and Learn generation #56 are now merged, making a
 - Prepare a clean-main `v0.1.0-alpha` Windows x64 candidate through `scripts/release.ps1`, preserving numeric version 0.1.0 and all host/storage identities.
 - Record exact-source Release regression, standards, identity, OpenSpec, archive/offline rendering and final packaged-binary host evidence. Record clean-machine/second-host coverage honestly.
 - Prepare the third-party redistribution review for explicit owner approval before any external sharing. Distribution remains private/manual; no tags or public release.
+- Add a concise guide-maintenance skill integrated with issue delivery, and a read-only release gate rejecting stale guide review inputs without rewriting content.
+- Add Settings About with generated version, candidate/build identifier and full Git SHA, plus Copy build information. Metadata uses CMake version, explicit release inputs and Git, with no clock-derived identifier.
 
 ## Capabilities
 
@@ -21,7 +23,8 @@ None.
 ### Modified Capabilities
 
 - `local-release-packaging`: require a recipient-ready offline illustrated guide tied to the packaged source and authentic native evidence, with private-alpha acceptance and redistribution records.
+- `product-release-identity`: expose authoritative build information in Settings and copied reports, and verify its release candidate/source identity before packaging.
 
 ## Impact
 
-Affected areas are `scripts/release-support.ps1` and release fixtures, existing native UI evidence tests, guide source/assets under `docs/`, release guidance and dated validation evidence. No DSP, production control family, style token, installer, signing, state migration or new screenshot system is proposed. Final clean-main packaging follows owner-reviewed merge of any payload/tooling changes; earlier branch bundles are internal rehearsals. Existing canonical specs remain unchanged until the normal sync/archive workflow.
+Affected areas include release/build metadata, Settings About, guide maintenance and validation. Existing shared ActionButton, text roles, spacing and native screenshot mechanisms are reused. No DSP, new control family/style token, installer, signing, state migration or screenshot system is proposed. Final clean-main packaging follows owner-reviewed merge; earlier branch bundles are internal rehearsals. Canonical specs remain unchanged until the normal sync/archive workflow.

@@ -52,7 +52,7 @@ Assert-TestBundleMatch $source $target
 # The entrypoint must propagate failed build/CTest without touching a destination.
 $fake = Join-Path $fixture 'failed checkout/scripts'
 $null = New-Item -ItemType Directory -Path $fake -Force
-Copy-Item -LiteralPath (Join-Path $root 'scripts/install-test-vst3.ps1'), (Join-Path $root 'scripts/release-support.ps1'), (Join-Path $root 'scripts/release-guide.ps1'), (Join-Path $root 'scripts/test-install-support.ps1') -Destination $fake
+Copy-Item -LiteralPath (Join-Path $root 'scripts/install-test-vst3.ps1'), (Join-Path $root 'scripts/release-support.ps1'), (Join-Path $root 'scripts/release-guide.ps1'), (Join-Path $root 'scripts/user-guide-support.ps1'), (Join-Path $root 'scripts/test-install-support.ps1') -Destination $fake
 Set-Content -LiteralPath (Join-Path $fake 'build-support.ps1') -Value 'function Invoke-ReverbBuild { param($Root, $Configuration, [switch] $Test) if ($Configuration -ne "Release" -or -not $Test) { throw "Expected Release CTest" }; return 29 }'
 Add-Content -LiteralPath (Join-Path $fake 'test-install-support.ps1') -Value 'function Assert-TestHostClosed { }'
 $untouched = Join-Path $fixture 'must not install'

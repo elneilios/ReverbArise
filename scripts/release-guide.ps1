@@ -19,6 +19,8 @@ function Write-ReleaseGuide([string] $Root, [string] $Directory, [string] $Paylo
     $receipt = Get-Content -LiteralPath (Join-Path $Directory 'capture.json') -Raw | ConvertFrom-Json
     if ($receipt.gitSha -cne $Sha -or $receipt.command -cne 'Release/preverb_learn_generation_ui_test.exe --guide-only' -or $receipt.executableSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Guide capture provenance mismatch.' }
     $html = Get-Content -LiteralPath (Join-Path $Root 'docs/development/alpha-guide.html') -Raw -Encoding UTF8
+    if ($Identity -notmatch '^v(?<version>[0-9]+\.[0-9]+\.[0-9]+)(?:-|$)') { throw 'Invalid guide product identity.' }
+    $html = $html.Replace('{{VERSION}}',$matches['version'])
     $html = $html.Replace('{{IDENTITY}}', [Net.WebUtility]::HtmlEncode($Identity)).Replace('{{SHA}}', $Sha)
     Add-Type -AssemblyName System.Drawing
     $logoPath = 'resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png'

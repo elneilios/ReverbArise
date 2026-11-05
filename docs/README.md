@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
+
 - [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — build-matched offline guide, native screenshot provenance and final main/host gates; [redistribution review](validation/2026-11-04-issue-59-redistribution-review.md) remains pending explicit owner approval.
 
 - [Manual Perform preparation](development/workflow-modes.md#explicit-manual-preparation-in-perform) — explicit render requests with automatic policies off and honest unavailable timing; [issue #55 evidence](validation/2026-11-04-issue-55-manual-preparation.md) records native results and owner FL Studio acceptance.

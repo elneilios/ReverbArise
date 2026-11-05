@@ -131,10 +131,14 @@ private:
     m3::ui::FlatSurface diagnosticsContent;
     void layoutLiveDiagnostics();
     juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
-    std::array<juce::Component,5> settingsPages;
+    std::array<juce::Component,6> settingsPages;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
-    std::array<juce::Label,5> settingsHelp;
+    std::array<juce::Label,6> settingsHelp;
+    juce::Label aboutHeading;
+    std::array<juce::Label,3> buildInformationLabels;
+    std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
+    m3::ui::controls::ActionButton copyBuildInformation{"Copy build information"};
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;

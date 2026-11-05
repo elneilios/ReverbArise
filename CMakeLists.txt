@@ -113,6 +113,13 @@ juce_add_plugin(preverb_plugin
 )
 
 # Derived metadata, never an independent handwritten version authority.
+set(PREVERB_RELEASE_TAG "" CACHE STRING "Explicit packaging tag; empty for ordinary builds")
+set(PREVERB_RELEASE_CANDIDATE "" CACHE STRING "Explicit packaging candidate; empty for ordinary builds")
+include(cmake/BuildInformation.cmake)
+get_target_property(preverb_product_name preverb_plugin JUCE_PRODUCT_NAME)
+reverbarise_build_information("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" "${PROJECT_VERSION}" "${preverb_product_name}")
+set_source_files_properties(Source/Plugin/PluginSettings.cpp tests/learn_generation_ui_test.cpp
+    PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/generated")
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
 "{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
 
@@ -173,6 +180,7 @@ if(BUILD_TESTING)
         -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/ui_standards_lint_test.ps1")
     math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
     add_executable(preverb_product_version_test tests/product_version_test.cpp)
+    target_include_directories(preverb_product_version_test PRIVATE Source "${CMAKE_BINARY_DIR}/generated")
     target_compile_definitions(preverb_product_version_test PRIVATE
         $<TARGET_PROPERTY:preverb_plugin,COMPILE_DEFINITIONS>
         EXPECTED_PRODUCT_VERSION="${PROJECT_VERSION}"
@@ -180,6 +188,10 @@ if(BUILD_TESTING)
     add_test(NAME preverb_product_version_test COMMAND preverb_product_version_test)
     add_test(NAME preverb_version_contract_test COMMAND ${CMAKE_COMMAND}
         "-DTEST_ROOT=${CMAKE_BINARY_DIR}/version-contract-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/product_version_test.cmake")
+    add_test(NAME preverb_build_information_test COMMAND ${CMAKE_COMMAND}
+        "-DTEST_ROOT=${CMAKE_BINARY_DIR}/build-information-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/build_information_test.cmake")
+    add_test(NAME preverb_user_guide_currency_test COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/user_guide_currency_test.ps1")
     add_test(NAME preverb_built_version_test COMMAND ${CMAKE_COMMAND}
         "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DBINARY_DIR=${CMAKE_BINARY_DIR}" "-DCONFIGURATION=$<CONFIG>"
         -P "${CMAKE_SOURCE_DIR}/scripts/verify-version.cmake")
@@ -224,6 +236,7 @@ if(BUILD_TESTING)
     target_link_libraries(preverb_learn_generation_test PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_learn_generation_test COMMAND preverb_learn_generation_test)
     add_executable(preverb_learn_generation_ui_test tests/learn_generation_ui_test.cpp)
+    target_compile_definitions(preverb_learn_generation_ui_test PRIVATE PREVERB_BUILD_INFO_FILE="${CMAKE_BINARY_DIR}/build-information.json")
     target_compile_definitions(preverb_learn_generation_ui_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_learn_generation_ui_test PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_learn_generation_ui_test COMMAND preverb_learn_generation_ui_test)

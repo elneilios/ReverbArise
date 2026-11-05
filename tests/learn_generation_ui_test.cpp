@@ -2,6 +2,7 @@
 #include "ControlLibraryCases.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/InitialPerformView.h>
+#include <Core/BuildInformation.h>
 
 static juce::Component* named(juce::Component& root,const juce::String& name)
 {
@@ -120,6 +121,39 @@ static void selected(PreverbAudioProcessorEditor& editor,SwellEngine& engine,con
     const auto& view=editor.timelineComponent().viewport();REQUIRE(view.first<=bounds.first && view.last>=bounds.second);
     auto* overview=dynamic_cast<SwellOverview*>(named(editor,"songOverview"));REQUIRE(overview && !overview->detailBounds().isEmpty());
 }
+static void aboutBindings(bool review=false)
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor);editor->setVisible(true);editor->refresh();
+    const auto showAbout=[&]{auto* action=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));REQUIRE(action);action->onClick();
+        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==6);tabs->setCurrentTabIndex(5);};
+    if(review)
+    {
+        juce::Timer::callAfterDelay(200,[safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(editor.get())]{if(!safe)return;
+            auto* action=dynamic_cast<juce::Button*>(named(*safe,"diagnostics"));REQUIRE(action);action->onClick();
+            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(5);});
+        controlReview::run(std::move(editor));return;
+    }
+    juce::String before,after,error;REQUIRE(encode(engine.savedSession(),before,error));
+    const auto renders=engine.snapshot().renderCount;const auto capture=fixture.processor->getCaptureSnapshot().manifest.revision;
+    showAbout();auto* panel=editor->settingsPanel();
+    const auto metadata=juce::JSON::parse(juce::File(PREVERB_BUILD_INFO_FILE).loadFileAsString());REQUIRE(metadata.isObject());
+    REQUIRE(metadata["version"].toString()==juce::String(m3::build::version.data()));
+    REQUIRE(metadata["buildIdentifier"].toString()==juce::String(m3::build::identifier.data()));
+    REQUIRE(metadata["gitSha"].toString()==juce::String(m3::build::gitSha.data()));
+    REQUIRE(static_cast<bool>(metadata["worktreeDirty"])==m3::build::worktreeDirty);
+    const juce::StringArray expectedDisplay{metadata["version"].toString(),metadata["buildIdentifier"].toString(),
+        metadata["gitSha"].toString()+(static_cast<bool>(metadata["worktreeDirty"])?" (modified)":"")};
+    for(int i=0;i<3;++i){auto* value=dynamic_cast<juce::Label*>(named(*panel,"aboutBuildValue"+juce::String(i)));REQUIRE(value && visible(value));
+        REQUIRE(value->getText()==expectedDisplay[i] && value->getTooltip()==expectedDisplay[i]);
+        REQUIRE(value->getParentComponent()->getLocalBounds().contains(value->getBounds()) && value->getAccessibilityHandler());}
+    auto* copy=dynamic_cast<m3::ui::controls::ActionButton*>(named(*panel,"copyBuildInformation"));REQUIRE(copy && copy->isEnabled() && copy->getAccessibilityHandler());
+    struct RestoreClipboard{juce::String previous=juce::SystemClipboard::getTextFromClipboard();~RestoreClipboard(){juce::SystemClipboard::copyTextToClipboard(previous);}} restoreClipboard;
+    controlReview::pointerClick(*copy);REQUIRE(juce::SystemClipboard::getTextFromClipboard()==juce::String(m3::build::report()));
+    REQUIRE(encode(engine.savedSession(),after,error) && before==after);
+    REQUIRE(engine.snapshot().renderCount==renders && fixture.processor->getCaptureSnapshot().manifest.revision==capture);
+    captureImage(*panel,"alpha-about-settings");
+}
 static void alphaGuide()
 {
     GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
@@ -144,8 +178,10 @@ static void alphaGuide()
 int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
-    if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();return;}
+    if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();aboutBindings();return;}
+    if(argc>1 && juce::String(argv[1])=="--review-about"){aboutBindings(true);return;}
     const bool review=argc>1 && juce::String(argv[1])=="--review";
+    if(!review)aboutBindings();
     if(!review)controlBindings();
     if(!review)pendingProtectedFraming();
     for(bool automatic:{false,true})

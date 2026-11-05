@@ -1,4 +1,5 @@
 . (Join-Path $PSScriptRoot 'release-guide.ps1')
+. (Join-Path $PSScriptRoot 'user-guide-support.ps1')
 function Get-ReleaseNoticePaths {
     # Notices from the pinned dependency checkout, including supported codecs.
     ,@('LICENSE.md', 'JUCE-LICENSE.md')
@@ -120,10 +121,17 @@ function Assert-ReleaseArchive([string] $ZipPath, $Files) {
     } finally { $zip.Dispose() }
 }
 
-function Invoke-ReleaseBuild([string] $Root) {
+function Invoke-ReleaseBuild([string] $Root, [string] $ReleaseTag, [string] $Candidate) {
     $shell = (Get-Process -Id $PID).Path
-    & $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'scripts/build.ps1') -Configuration Release -Test
+    $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $Root 'scripts/build.ps1'),'-Configuration','Release','-Test','-ReleaseTag',$ReleaseTag)
+    if ($Candidate) { $arguments += @('-Candidate',$Candidate) }
+    & $shell @arguments
     if ($LASTEXITCODE -ne 0) { throw "Release build/CTest failed ($LASTEXITCODE); no package produced." }
+}
+
+function Assert-ReleaseBuildInformation([string] $Binary, $Identity, [string] $Sha) {
+    $information = Get-Content -LiteralPath (Join-Path $Binary 'build-information.json') -Raw | ConvertFrom-Json
+    if ($information.version -cne $Identity.version -or $information.releaseTag -cne $Identity.expectedTag -or $information.candidate -cne $Identity.candidate -or $information.buildIdentifier -cne $Identity.releaseIdentity -or $information.gitSha -cne $Sha -or $information.worktreeDirty -ne $false) { throw 'Built About identity mismatch; configure/rebuild the intended release source and candidate.' }
 }
 
 function Invoke-ReleasePublication([string] $Root, [string] $Directory, $Identity, [string] $Sha, [string] $Git, [switch] $RedistributionReviewed, [string] $LicenseReview, [string] $ConfirmPublish) {
@@ -166,6 +174,7 @@ function Invoke-ReverbRelease {
         $sha = Get-ReleaseSource $tools.Git $Root
         $identity = Get-ReleaseIdentity $tools.CMake $Root $ReleaseTag $Candidate
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha
+        Assert-UserGuideCurrent $Root
         $releases = Join-Path $Root 'out/releases'
         $destination = Join-Path $releases $identity.releaseIdentity
         if ($Publish) {
@@ -173,7 +182,7 @@ function Invoke-ReverbRelease {
             return
         }
         if (Test-Path -LiteralPath $destination) { throw "Release output already exists: $destination. Preserve it; use a new explicit candidate or deliberately relocate it while idle." }
-        Invoke-ReleaseBuild $Root
+        Invoke-ReleaseBuild $Root $ReleaseTag $Candidate
         $presets = Get-Content -LiteralPath (Join-Path $Root 'CMakePresets.json') -Raw | ConvertFrom-Json
         $preset = @($presets.configurePresets | Where-Object { $_.name -eq 'windows-msvc' })[0]
         $binary = [IO.Path]::GetFullPath($preset.binaryDir.Replace('${sourceDir}', $Root).Replace('${presetName}', 'windows-msvc'))
@@ -182,6 +191,7 @@ function Invoke-ReverbRelease {
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha
         $built = Get-ReleaseIdentity $tools.CMake $Root $ReleaseTag $Candidate $binary
         if (-not $built.builtVerified -or -not $built.tagVerified) { throw 'Built product identity was not verified.' }
+        Assert-ReleaseBuildInformation $binary $identity $sha
         $bundle = Get-ReleaseBundle $binary $identity.version
         $toolchain = Get-ReleaseToolchain $tools.CMake $binary
         $staging = Join-Path $releases ('.staging-' + [guid]::NewGuid().ToString('N'))
@@ -255,6 +265,7 @@ expected/actual result and screenshots. Never send private recordings without pe
             toolchain = $toolchain; artifact = $artifact; sha256 = $hash
             validation = 'build.ps1 Release -Test; verify-version.cmake built checks; x64 PE/file version'
             redistribution = 'internal-evaluation-only; separate owner licensing review required'; files = $files
+            buildInformation = (Get-Content -LiteralPath (Join-Path $binary 'build-information.json') -Raw | ConvertFrom-Json)
         }
         $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $staging 'build-manifest.json') -Encoding UTF8
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha

@@ -21,6 +21,7 @@ Never report a sandbox copy as a host installation.
 ./scripts/install-test-vst3.ps1 -Test      # Full Release CTest before installation
 ./scripts/install-test-vst3.ps1 -WhatIf    # Show target; no build or install
 ./scripts/install-test-vst3.ps1 -Destination 'C:\Program Files\VST3'
+./scripts/install-test-vst3.ps1 -ReleaseTag v0.1.0 -Candidate alpha.rehearsal.4
 ```
 
 `-Destination` names the containing VST3 folder, not the bundle itself. Without

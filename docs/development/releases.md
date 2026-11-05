@@ -5,6 +5,13 @@ Windows PowerShell 5.1 and PowerShell 7 are supported. No extra PowerShell modul
 installer, signing service or hosted runner is required. Keep the release checkout
 idle throughout validation. Commit all intended source changes first.
 
+Before packaging, use [maintain-user-guide](../../.agents/skills/maintain-user-guide/SKILL.md)
+and the [currency workflow](user-guide-maintenance.md). `scripts/check-user-guide.ps1`
+must pass for the committed review. Packaging checks this read-only before
+building and never invokes a skill or rewrites guide content/review records.
+The generated Settings About identity must match the requested release version,
+candidate and clean source SHA; stale/local metadata fails packaging.
+
 ## Internal local package
 
 ```powershell

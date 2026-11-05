@@ -24,6 +24,16 @@
 - [ ] 4.3 Prepare and complete one consolidated FL Studio smoke test against the extracted final binary for scan/load, capture, generation, Perform audition/Stop and project-copy save/reopen without overwriting existing installations/projects/assets; record binary hash, host version, sample rate, buffer, observations and owner acceptance, with clean-machine and second-DAW coverage tested or explicitly unverified.
 - [ ] 4.4 Obtain explicit owner approval of the prepared redistribution review and any required additional material; verify the dated approval covers the intended private recipients/use and record the final alpha's sharing status. Keep the bundle internal while approval or final host acceptance is pending; perform no external sharing, tag push or publication.
 
+The following release-readiness work is completed before final acceptance tasks 4.1–4.4.
+
+## 5. Release-readiness extension
+
+- [x] 5.1 Add concise maintain-user-guide skill, deliver-issue integration and explicit review-record/check commands; verify stale/missing/added/deleted code/spec/guide inputs fail and read-only checks preserve files, and document the maintenance workflow.
+- [x] 5.2 Generate deterministic version/candidate/build/SHA metadata and wire explicit resettable release inputs through the existing wrapper/packager; verify generated/compiled identity consistency, invalid inputs, candidate reset, repeat generation and stale metadata rejection with focused fixtures.
+- [ ] 5.3 Add Settings About and Copy build information using approved shared controls/text roles/spacing; verify full clipboard content, metadata display, bounds/accessibility and unchanged session/capture/render state with native component tests; prepare and directly launch the existing native preview mechanism for review.
+- [x] 5.4 Review delivered behavior/canonical specs with maintain-user-guide, update the HTML with About/copy instructions and record currency; verify self-contained guide assembly and authentic current About evidence without packaging-time authoring.
+- [ ] 5.5 Run relevant wrapper/identity/currency/UI/native regression and internal packaging checks, preserve exact source/artifact evidence and update PR #63; verify PR remains open/unmerged and no publication or external sharing occurs.
+
 ## Workflow follow-up
 
 - Keep one issue PR and update its evidence/status as final acceptance becomes available. Use Closes #59 only when it fully resolves the issue under CONTRIBUTING.md; otherwise retain Refs #59.

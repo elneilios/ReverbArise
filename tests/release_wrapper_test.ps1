@@ -12,7 +12,7 @@ $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'scripts') -Force
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'cmake')
 Copy-Item -LiteralPath (Join-Path $repository 'scripts/verify-version.cmake') -Destination (Join-Path $fixture 'scripts')
 Copy-Item -LiteralPath (Join-Path $repository 'cmake/ProductVersion.cmake') -Destination (Join-Path $fixture 'cmake')
-foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1','release-guide.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
+foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1','release-guide.ps1','user-guide-support.ps1','check-user-guide.ps1','review-user-guide.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
 Copy-Item -LiteralPath (Join-Path $repository 'CMakePresets.json') -Destination $fixture
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'docs/development') -Force
 Copy-Item -LiteralPath (Join-Path $repository 'docs/development/alpha-guide.html') -Destination (Join-Path $fixture 'docs/development')
@@ -24,6 +24,11 @@ Copy-Item -LiteralPath (Join-Path $repository $logoRelative) -Destination (Join-
 'fixture' | Set-Content (Join-Path $fixture 'tracked.txt')
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'resources') -Force
 'fixture original Hall provenance' | Set-Content (Join-Path $fixture 'resources/README.md')
+$null=New-Item -ItemType Directory -Path (Join-Path $fixture 'Source')
+$null=New-Item -ItemType Directory -Path (Join-Path $fixture 'openspec/specs/fixture') -Force
+'fixture production code' | Set-Content (Join-Path $fixture 'Source/fixture.cpp')
+'fixture canonical specification' | Set-Content (Join-Path $fixture 'openspec/specs/fixture/spec.md')
+& (Join-Path $repository 'scripts/review-user-guide.ps1') -Root $fixture -Summary 'Simulated release fixture only'
 $null = & $actualNative $tools.Git @('-C', $fixture, 'init', '--quiet')
 $null = & $actualNative $tools.Git @('-C', $fixture, 'config', 'user.name', 'Release Fixture')
 $null = & $actualNative $tools.Git @('-C', $fixture, 'config', 'user.email', 'fixture@example.invalid')
@@ -63,7 +68,7 @@ function Invoke-ReleaseGuideCapture([string] $Binary, [string] $Directory, [stri
     if ($script:case -eq 'guide-missing') { Remove-Item -LiteralPath (Join-Path $Directory 'alpha-ready-export.png') }
     if ($script:case -eq 'guide-corrupt') { 'broken image' | Set-Content (Join-Path $Directory 'alpha-ready-export.png') }
 }
-function Invoke-ReleaseBuild([string] $Root) {
+function Invoke-ReleaseBuild([string] $Root, [string] $ReleaseTag, [string] $Candidate) {
     $script:buildCalls++
     if ($script:case -in @('build-fail', 'ctest-fail')) { throw "fixture $script:case" }
     $null = New-Item -ItemType Directory -Path $resources -Force
@@ -72,6 +77,15 @@ function Invoke-ReleaseBuild([string] $Root) {
     foreach ($name in @('WavPack-LICENSE.txt', 'Inter-OFL.txt', 'IR-LICENSE.md', 'IR-manifest.json', 'extra-resource.txt')) { 'fixture notice' | Set-Content (Join-Path $resources $name) }
     '{"Name":"ReverbArise","Version":"0.1.0","Classes":[{"CID":"ABCDEF019182FAEB4B374D6150727631","Category":"Audio Module Class","Name":"ReverbArise","Vendor":"K7MA","Version":"0.1.0"},{"CID":"ABCDEF011234ABCD4B374D6150727631","Category":"Component Controller Class","Name":"ReverbArise","Vendor":"K7MA","Version":"0.1.0"}]}' | Set-Content (Join-Path $resources 'moduleinfo.json')
     '{"version":"0.1.0","manufacturerCode":"K7Ma","pluginCode":"Prv1","bundleId":"com.k7ma.preverb","productName":"ReverbArise"}' | Set-Content (Join-Path $binary 'product-identity.json')
+    $buildIdentifier=$ReleaseTag;if($Candidate){$buildIdentifier+='-'+$Candidate}
+    @{productName='ReverbArise';version='0.1.0';candidate=$Candidate;releaseTag=$ReleaseTag;buildIdentifier=$buildIdentifier;gitSha=$sha;worktreeDirty=$false} | ConvertTo-Json | Set-Content (Join-Path $binary 'build-information.json')
+    if($script:case -in @('stale-build-info','stale-build-sha','dirty-build-info')) {
+        $metadata=Get-Content (Join-Path $binary 'build-information.json') -Raw | ConvertFrom-Json
+        if($script:case -eq 'stale-build-info'){$metadata.candidate='old'}
+        if($script:case -eq 'stale-build-sha'){$metadata.gitSha='0000000000000000000000000000000000000000'}
+        if($script:case -eq 'dirty-build-info'){$metadata.worktreeDirty=$true}
+        $metadata | ConvertTo-Json | Set-Content (Join-Path $binary 'build-information.json')
+    }
     "CMAKE_HOME_DIRECTORY:INTERNAL=$($Root.Replace('\','/'))`nCMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026`nCMAKE_GENERATOR_PLATFORM:INTERNAL=x64" | Set-Content (Join-Path $binary 'CMakeCache.txt')
     $compiler = Join-Path $binary 'CMakeFiles/fixture/CMakeCXXCompiler.cmake'
     $null = New-Item -ItemType Directory -Path (Split-Path $compiler) -Force
@@ -118,8 +132,8 @@ $null = & $actualNative $tools.Git @('-C', $fixture, 'commit', '--allow-empty', 
 Fail-Case 'wrong-tag' 'not HEAD'
 $null = & $actualNative $tools.Git @('-C', $fixture, 'tag', '-d', 'v0.1.0')
 $sha = Get-ReleaseSource $tools.Git $fixture
-foreach ($name in @('build-fail', 'ctest-fail', 'bad-pe', 'missing-juce-notice', 'empty-notice', 'bad-metadata', 'busy', 'dirty-after-build', 'head-after-build')) {
-    $pattern = switch ($name) { 'busy' { 'busy or inaccessible' }; 'dirty-after-build' { 'clean worktree' }; 'head-after-build' { 'HEAD changed' }; 'empty-notice' { 'empty required' }; 'bad-metadata' { 'version mismatch' }; 'missing-juce-notice' { 'not exist|cannot find' }; default { 'fixture' } }
+foreach ($name in @('build-fail', 'ctest-fail', 'bad-pe', 'missing-juce-notice', 'empty-notice', 'bad-metadata', 'busy', 'dirty-after-build', 'head-after-build', 'stale-build-info', 'stale-build-sha', 'dirty-build-info')) {
+    $pattern = switch ($name) { {$_ -in @('stale-build-info','stale-build-sha','dirty-build-info')} { 'Built About identity mismatch' }; 'busy' { 'busy or inaccessible' }; 'dirty-after-build' { 'clean worktree' }; 'head-after-build' { 'HEAD changed' }; 'empty-notice' { 'empty required' }; 'bad-metadata' { 'version mismatch' }; 'missing-juce-notice' { 'not exist|cannot find' }; default { 'fixture' } }
     Fail-Case $name $pattern
     if ($name -eq 'dirty-after-build') { $null = & $actualNative $tools.Git @('-C', $fixture, 'restore', 'tracked.txt') }
 }
@@ -128,6 +142,19 @@ foreach ($relative in @('Contents/x86_64-win/ReverbArise.vst3', 'Contents/Resour
     Fail-Case ('missing:' + $relative) 'missing|not exist|cannot find|failed'
 }
 $start = (Get-Location).Path
+$reviewFile=Join-Path $fixture 'docs/development/user-guide-review.json'
+$savedReview=[IO.File]::ReadAllText($reviewFile)
+Remove-Item -LiteralPath $reviewFile
+$null=& $actualNative $tools.Git @('-C',$fixture,'add','docs/development/user-guide-review.json')
+$null=& $actualNative $tools.Git @('-C',$fixture,'commit','-qm','fixture missing guide review')
+$sha=Get-ReleaseSource $tools.Git $fixture
+$beforeGateBuilds=$script:buildCalls
+Fail-Case 'missing-guide-review' 'Guide review missing'
+Assert ($script:buildCalls -eq $beforeGateBuilds) 'Stale guide gate ran a build.'
+[IO.File]::WriteAllText($reviewFile,$savedReview)
+$null=& $actualNative $tools.Git @('-C',$fixture,'add','docs/development/user-guide-review.json')
+$null=& $actualNative $tools.Git @('-C',$fixture,'commit','-qm','fixture restored guide review')
+$sha=Get-ReleaseSource $tools.Git $fixture
 foreach ($entry in @(@('guide-readiness-failed','readiness failed'),@('guide-stale','provenance mismatch'),@('guide-missing','not find|does not exist|cannot find'),@('guide-corrupt','Parameter is not valid|invalid|FromStream'))) {
     Fail-Case $entry[0] $entry[1]
 }
@@ -143,6 +170,8 @@ Assert ([regex]::Matches($guide, 'src="data:image/png;base64,').Count -eq 5 -and
 Assert ($guide.Contains([string][char]0x00d7) -and $guide -notmatch ([string][char]0x00c3)) 'Guide UTF-8 text was corrupted.'
 $provenance = Get-Content (Join-Path $stable 'payload/guide-provenance.json') -Raw | ConvertFrom-Json
 Assert ($provenance.gitSha -ceq $sha -and $provenance.images.Count -eq 4) 'Guide provenance missing.'
+Assert ([IO.File]::ReadAllText($reviewFile) -ceq $savedReview) 'Packaging rewrote guide review.'
+Assert ($manifest.buildInformation.gitSha -ceq $sha -and $manifest.buildInformation.buildIdentifier -ceq 'v0.1.0') 'Packaged About information mismatch.'
 Assert ($provenance.logo.sha256 -ceq (Get-FileHash -LiteralPath (Join-Path $fixture $logoRelative) -Algorithm SHA256).Hash.ToLowerInvariant() -and $provenance.logo.width -eq 640 -and $guide -match '<main>\s*<img class="brand" src="data:image/png;base64,') 'Production logo is missing or not at the top.'
 Assert ((Get-Content (Join-Path $stable 'payload/README.txt') -Raw).Contains('play the DAW to capture')) 'Quick start missing.'
 $templatePath = Join-Path $fixture 'docs/development/alpha-guide.html'

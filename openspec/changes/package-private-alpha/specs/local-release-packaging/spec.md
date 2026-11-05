@@ -2,6 +2,17 @@
 
 ## ADDED Requirements
 
+### Requirement: Reviewed guide currency before packaging
+Release packaging SHALL check a committed guide review record against the delivered code, canonical specifications, guide and relevant build/release inputs before building. Missing or stale review SHALL fail clearly. Guide authoring SHALL remain a separate explicit maintenance workflow; packaging SHALL NOT rewrite guide content or its review record, or invoke an agent.
+
+#### Scenario: Delivered behavior changes
+- **WHEN** a reviewed code/specification/guide input changes or is added/removed
+- **THEN** packaging fails until the guide is reviewed and its currency record is deliberately refreshed
+
+#### Scenario: Current guide
+- **WHEN** the guide review record matches all current inputs
+- **THEN** packaging proceeds without modifying tracked guide content or its review record
+
 ### Requirement: Offline illustrated recipient guide
 The release ZIP SHALL include a short quick start and a single static HTML user guide with embedded media, no external URLs, scripts, frameworks or network dependencies. The guide SHALL identify the candidate and source revision and explain installation/scanning, routing, Learn capture and markers, Generate Swells, Perform audition/editing, Export WAV, save/reopen, host coverage, troubleshooting, limitations and feedback.
 
