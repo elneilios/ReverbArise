@@ -1,0 +1,15 @@
+/* Typography-only comparison: retain canvas, control heights and numeric legibility. */
+.v-a.type-calm{font-size:13px}
+.v-a.type-calm .heading,.v-a.type-calm .list .list-head .heading,.v-a.type-calm .inspector-head .heading,.v-a.type-calm .overview-top .heading,.v-a.type-calm .export-right .heading{font-size:18px;font-weight:600}
+.v-a.type-calm .nav button{font-size:16px}
+.v-a.type-calm .description,.v-a.type-calm .notice{font-size:13px}
+.v-a.type-calm .helper,.v-a.type-calm .help,.v-a.type-calm .learn-sub,.v-a.type-calm .sound-context,.v-a.type-calm .learn-sound-note,.v-a.type-calm .learn-current-body .helper{font-size:13px}
+.v-a.type-calm .section-tabs button,.v-a.type-calm .learn-tabs button{font-size:13px}
+.v-a.type-calm .btn,.v-a.type-calm .flags button,.v-a.type-calm .learn-control,.v-a.type-calm .learn-left .label,.v-a.type-calm .export-field-label,.v-a.type-calm .minor{font-size:13px}
+.v-a.type-calm .learn-current-body .heading{font-size:16px}
+.v-a.type-calm .caption,.v-a.type-calm .sound-module label,.v-a.type-calm .sound-module .caption,.v-a.type-calm .sound-module .engine-caption{font-size:12px}
+.v-a.type-calm .cells{column-gap:12px}
+.v-a.type-calm .ruler,.v-a.type-calm .lane label,.v-a.type-calm .host{font-size:12px}
+.v-a.type-calm .audition .helper{font-size:13px}
+.v-a.type-calm .drag-tile strong{font-size:15px}
+/* Retain 12 px numeric values and all existing dial / button / entry dimensions. */

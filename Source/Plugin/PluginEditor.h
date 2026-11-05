@@ -39,7 +39,15 @@ public:
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
+    // Explicit review seam; production adoption awaits combined integration/acceptance.
+    void enableResponsiveReview();
+    bool responsiveReviewEnabled()const noexcept{return responsiveReview;}
 private:
+    bool responsiveReview=false;
+    int inspectorSection=1;
+    m3::ui::controls::SegmentedSelector inspectorSections;
+    void layoutResponsive();
+    void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::controls::EllipsisLabel hoverHelp;
     juce::Component::SafePointer<juce::Component> hoverHelpSource;

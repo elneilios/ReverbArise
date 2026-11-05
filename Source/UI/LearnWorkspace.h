@@ -7,6 +7,7 @@
 #include "Controls/IconActionButton.h"
 #include "Controls/IrSelector.h"
 #include "Controls/ActionButton.h"
+#include "Controls/SegmentedSelector.h"
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
 
@@ -163,8 +164,21 @@ public:
         const auto heading=group.removeFromTop(learnGeometry::emptyHeadingHeight);group.removeFromTop(learnGeometry::emptyTextGap);
         return {icon,heading,group};
     }
+    void setResponsivePresentation(ResponsiveTypography type)
+    {
+        if(!responsive)
+        {
+            responsive=true;captureTitle.setText("Learn Settings",juce::dontSendNotification);
+            addAndMakeVisible(sections);sections.setName("learnSections");sections.setTitle("Learn settings section");
+            sections.onRequest=[this](int id){selectedSection=id;updateSections();resized();};
+            addAndMakeVisible(captureGroup);captureGroup.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureGroup,TextRole::sectionHeading);
+            addAndMakeVisible(soundScope);soundScope.setText("Defaults for new swells. Existing swells stay unchanged.",juce::dontSendNotification);applyTextRole(soundScope,TextRole::helper);
+        }
+        sections.setTextHeight(type.body);updateSections();resized();
+    }
     void resized()override
     {
+        if(responsive){layoutResponsive();return;}
         auto a=getLocalBounds();left=a.removeFromLeft(workspaceGeometry::learnSettingsWidth);a.removeFromLeft(workspaceGeometry::columnGap);right=a;
         auto controls=left.withTrimmedTop(spacing::related);
         const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& label,juce::Label& description)
@@ -199,12 +213,14 @@ public:
     }
     void paint(juce::Graphics& g)override
     {
-        g.setColour(separator);g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));
-        applyTextRole(g,TextRole::sectionHeading);g.drawText("Audio",timelineHeading,juce::Justification::left);
-        applyTextRole(g,TextRole::helper);g.drawText(statusText,timelineCaption,juce::Justification::left);
+        g.setColour(separator);
+        if(responsive){g.drawVerticalLine(left.getRight(),static_cast<float>(responsiveGeometry::dividerClearance),static_cast<float>(getHeight()-responsiveGeometry::dividerClearance));if(selectedSection==1)g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()-responsiveGeometry::dividerClearance));}
+        else{g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));}
+        applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Audio",timelineHeading,juce::Justification::left);
+        applyTextRole(g,*this,TextRole::helper);g.drawText(statusText,timelineCaption,juce::Justification::left);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         const auto x=[&](double sample){return chart.getX()+static_cast<float>((sample-first)/(last-first)*chart.getWidth());};
-        applyTextRole(g,TextRole::ruler);
+        applyTextRole(g,*this,TextRole::ruler);
         long double origin;const auto musical=songOrigin(clock,origin);
         const auto ticks=musical?makeSongBarRuler(first,last,chart.getWidth(),clock.rate,clock.bpm,clock.numerator,clock.denominator,clock.sample,clock.ppq):std::vector<SongBarTick>{};
         const auto readable=!ticks.empty() && std::all_of(ticks.begin(),ticks.end(),[](const auto& tick){return std::abs(tick.bar)<1000000;});
@@ -264,8 +280,8 @@ public:
             g.setColour(learnTypography::descriptionColour);
             constexpr std::array<float,9> bars{8,17,29,13,38,22,32,16,7};
             for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
-            applyTextRole(g,TextRole::emptyHeading);g.drawFittedText("Play audio in your DAW",regions[1],juce::Justification::centred,1);
-            applyTextRole(g,TextRole::emptyBody);g.drawFittedText(automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",regions[2],juce::Justification::centredTop,2);
+            applyTextRole(g,*this,TextRole::emptyHeading);g.drawFittedText("Play audio in your DAW",regions[1],juce::Justification::centred,1);
+            applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",regions[2],juce::Justification::centredTop,2);
         }
         if(hasKeyboardFocus(false)){
             g.setColour(aqua.withAlpha(.7f));g.drawRoundedRectangle(controlGeometry::insideStroke(chart.reduced(3),rule),radius,rule);}
@@ -277,9 +293,41 @@ public:
             g.fillEllipse(at-3,static_cast<float>(chart.getY()+5),6,6);
         }
         if(playhead && clock.sample>=first && clock.sample<=last){g.setColour(timing);g.drawVerticalLine(static_cast<int>(x(static_cast<double>(clock.sample))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));}
-        applyTextRole(g,TextRole::helper);g.drawText(visibleInspectionText(),timelineStatus,juce::Justification::left);
+        applyTextRole(g,*this,TextRole::helper);g.drawText(visibleInspectionText(),timelineStatus,juce::Justification::left);
     }
 private:
+    bool responsive=false;int selectedSection=1;
+    controls::SegmentedSelector sections;
+    juce::Label captureGroup,soundScope;
+    void updateSections()
+    {sections.display({{1,"Capture & Generate","Capture and generation policies"},{2,"Sound","Default sound for new swells"}},selectedSection);}
+    void layoutResponsive()
+    {
+        using namespace responsiveGeometry;
+        auto area=getLocalBounds();left=area.removeFromLeft(284);area.removeFromLeft(16);right=area;
+        auto column=left.withTrimmedRight(groupGap);captureTitle.setBounds(column.removeFromTop(headingHeight));column.removeFromTop(spacing::tight);
+        sections.setBounds(column.removeFromTop(tabsHeight));column.removeFromTop(contentPadding);
+        auto actions=column.removeFromBottom(132);actions.removeFromTop(contentPadding);
+        generate.setBounds(actions.removeFromTop(controlHeight));actions.removeFromTop(spacing::tight);
+        generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
+        const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
+        captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
+        const auto toggleRow=[&](controls::Switch& value,juce::Label& label)
+        {auto row=column.removeFromTop(36);value.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(contentPadding);label.setBounds(row);};
+        toggleRow(recapture,recaptureLabel);recaptureHelp.setBounds(column.removeFromTop(20));column.removeFromTop(contentPadding);divider=column.getY();column.removeFromTop(contentPadding);
+        automaticLabel.setBounds(column.removeFromTop(headingHeight));toggleRow(automatic,automaticToggleLabel);toggleRow(autoStop,autoStopLabel);
+        column.removeFromTop(contentPadding);sensitivityLabel.setBounds(column.removeFromTop(24));sensitivity.setBounds(column.removeFromTop(controlHeight));
+        for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible);
+        for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
+        auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(72);soundScope.setBounds(sound.removeFromTop(40));sound.removeFromTop(contentPadding);
+        irLabel.setBounds(sound.removeFromTop(24));auto choice=sound.removeFromTop(controlHeight);fileButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(spacing::tight);irBox.setBounds(choice);
+        sound.removeFromTop(contentPadding);irStatus.setBounds(sound.removeFromTop(20));soundScope.setVisible(soundVisible);
+        for(auto* c:std::initializer_list<juce::Component*>{&irLabel,&irBox,&fileButton,&irStatus})c->setVisible(soundVisible && automaticOn);
+        automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
+        auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
+        timelineRuler=canvas.removeFromTop(20);canvas.removeFromTop(spacing::tight);chart=canvas.removeFromTop(std::max(0,std::min(canvas.getHeight()-32,canvas.getWidth()/2)));
+        canvas.removeFromTop(contentPadding);timelineStatus=canvas.removeFromTop(20);
+    }
     std::optional<int64_t> nearestEvent(int64_t sample)const
     {
         if(!automaticOn || !generationView.displayed || chart.getWidth()<=0)return {};

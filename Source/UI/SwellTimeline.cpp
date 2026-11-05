@@ -209,9 +209,10 @@ void SwellTimeline::resized()
     else overview={-10000,-10000,0,0};
     auto waveControls=area.removeFromTop(24);waveZoomLabel.setBounds(waveControls.removeFromLeft(76).toNearestInt());
     waveZoom.setBounds(waveControls.removeFromLeft(std::min(240.0f,waveControls.getWidth())).toNearestInt());
-    ruler=area.removeFromTop(ui::controlGeometry::headingHeight).toNearestInt();
-    area.removeFromTop(ui::controlGeometry::feedbackHeight+ui::spacing::tight);
-    source=area.removeFromTop(std::max(40.0f,(area.getHeight()-32)/2));area.removeFromTop(32);wet=area;
+    ruler=area.removeFromTop(responsivePresentation?ui::responsiveGeometry::footerHeight:ui::controlGeometry::headingHeight).toNearestInt();
+    area.removeFromTop(responsivePresentation?ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap:ui::controlGeometry::feedbackHeight+ui::spacing::tight);
+    const auto laneGap=responsivePresentation?float(ui::responsiveGeometry::laneCaptionBand):32.f;
+    source=area.removeFromTop(std::max(40.0f,(area.getHeight()-laneGap)/2));area.removeFromTop(laneGap);wet=area;
     updateScroll();
 }
 void SwellTimeline::drawWave(juce::Graphics& g,const std::vector<CapturePeak>& peaks,juce::Rectangle<float> lane,juce::Colour colour,float gain,ui::WaveformPaintMetrics& metrics,int64_t placement)
@@ -285,8 +286,8 @@ void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& m
 void SwellTimeline::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);g.setFont(ui::fontFor(*this,ui::smallSize));
-    ui::controls::paintMusicalTimelineRuler(g,ruler,view,gridTiming());
-    if(!time.valid){ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
+    ui::controls::paintMusicalTimelineRuler(g,ruler,view,gridTiming(),this);
+    if(!time.valid){ui::applyTextRole(g,*this,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
         const auto area=source.getUnion(wet);auto headline=area.withHeight(64).withCentre(area.getCentre().translated(0,-30));
@@ -307,7 +308,7 @@ void SwellTimeline::paint(juce::Graphics& g)
     for(const auto& swell:data.session.swells)
     {const auto at=mini(static_cast<double>(swell.arrival));g.setColour(swell.id==data.session.primary?ui::aqua:ui::secondary);g.drawVerticalLine(static_cast<int>(at),overview.getBottom()-13,overview.getBottom());}
     }
-    ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Dry",source.translated(0,-24).withHeight(20),juce::Justification::centredLeft);
+    ui::applyTextRole(g,*this,ui::TextRole::helper);g.drawText("Dry",source.translated(0,responsivePresentation?-(ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap):-24).withHeight(20),juce::Justification::centredLeft);
     const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),gridTiming());
     for(const auto& tick:ticks)
     {
@@ -340,7 +341,7 @@ void SwellTimeline::paint(juce::Graphics& g)
     {
         const auto current=primary && primary->phase==Phase::ready;
         const auto colour=current?ui::aqua:ui::staleWet;
-        ui::applyTextRole(g,ui::TextRole::helper);g.setColour(colour);g.drawText(current?(data.shaped?"Wet":"Wet - preparing"):"Wet - stale",wet.translated(0,-25).withHeight(20),juce::Justification::left);
+        ui::applyTextRole(g,*this,ui::TextRole::helper);g.setColour(colour);g.drawText(current?(data.shaped?"Wet":"Wet - preparing"):"Wet - stale",wet.translated(0,responsivePresentation?-(ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap):-25).withHeight(20),juce::Justification::left);
     }
     else{g.setColour(ui::secondary);g.drawText(primary?primary->status:juce::String("Select a swell to inspect its wet audio"),wet,juce::Justification::centred);}
     if(data.dryAvailable && data.session.auditionMode==AuditionMode::dryWet){
@@ -362,7 +363,7 @@ void SwellTimeline::paint(juce::Graphics& g)
             g.setColour(ui::background);g.fillEllipse(handle);g.setColour(ui::secondary);g.drawEllipse(handle,1.5f);
         }
         const auto hint=gestureStatus.isNotEmpty()?gestureStatus:effectiveSnap() && !gridAvailable()?juce::String("Snap unavailable: fixed timing required; hold Ctrl or turn Snap off"):juce::String{};
-        if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
+        if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,*this,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
         if(data.raw)
         {
             int64_t a,b;juce::String error;
@@ -558,7 +559,11 @@ SwellOverview::SwellOverview(SwellTimeline& value):timeline(value)
     setName("songOverview");addAndMakeVisible(heading);heading.setName("overviewHeading");heading.setText("Overview",juce::dontSendNotification);
     ui::applyTextRole(heading,ui::TextRole::sectionHeading);heading.setInterceptsMouseClicks(false,false);
 }
-void SwellOverview::resized(){heading.setBounds(getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight));}
+void SwellOverview::resized()
+{
+    if(timeline.responsivePresentation){heading.setBounds(getLocalBounds().removeFromLeft(ui::responsiveGeometry::overviewHeadingWidth).withSizeKeepingCentre(ui::responsiveGeometry::overviewHeadingWidth,ui::responsiveGeometry::headingHeight));return;}
+    heading.setBounds(getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight));
+}
 juce::Rectangle<float> SwellOverview::detailBounds()const
 {
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
@@ -627,7 +632,7 @@ void SwellOverview::paint(juce::Graphics& g)
         const auto& t=timeline.gridTiming();
         for(const auto& tick:makeSongBarRuler(a,b,lane.getWidth(),t.rate,t.bpm,t.numerator,t.denominator,t.sample,t.ppq))
         {const auto at=lane.getX()+static_cast<float>((tick.samplePosition-a)/(b-a))*lane.getWidth();
-            g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),27,48,17,juce::Justification::left);
+            g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),timeline.responsivePresentation?2:27,48,timeline.responsivePresentation?14:17,juce::Justification::left);
             g.drawVerticalLine(static_cast<int>(at),43,49);}
     }
     const auto x=[&](double position){return lane.getX()+static_cast<float>((position-a)/(b-a))*lane.getWidth();};

@@ -1,0 +1,47 @@
+/* Static review specimen: proposed compact metrics, not approved native tokens. */
+.tools label{display:flex;align-items:center;gap:6px}.tools input{accent-color:#00efff;width:18px;height:18px}
+.v-a .header{height:64px}.v-a .wordmark{top:0;height:36px;width:250px}.v-a .nav,.v-a .settings{top:0}
+.v-a .description,.v-a .notice{top:40px;height:24px}.v-a .column{top:78px;height:380px}
+.v-a .audition{top:458px;height:44px}.v-a .overview{top:502px;height:58px}.v-a .overview img{height:24px}
+.v-a .section-content{height:238px}.v-a .cell{height:54px}.v-a .caption{height:18px;line-height:18px;font-size:13px}
+.v-a .cell-main{height:36px;gap:4px}.v-a .dial{width:36px;height:36px}.v-a .entry{height:26px;font-size:12px}
+.v-a .btn{height:32px}.v-a .reset-footer{height:32px}.v-a .reset-footer .btn{height:32px}
+.v-a .detail .lane{height:114px}.v-a .height-control .entry{height:24px}.v-a .audition .heading{width:104px}
+.v-a .audition .btn{height:32px}.v-a .list .add,.v-a .row-menu{height:32px}
+.v-a .learn-left{top:78px;height:502px}.v-a .learn-right{top:78px;height:502px}
+.v-a .learn-right img{height:310px}.v-a .learn-tabs{margin:4px 0 8px;height:32px}
+.v-a .learn-tabs button{font-size:14px}.v-a .learn-tabs button:first-child{flex:1.7}
+.v-a .learn-current-body{position:absolute;top:78px;left:0;right:12px;bottom:130px}
+.v-a .learn-current-body .heading{font-size:18px;line-height:26px;margin-bottom:4px}
+.v-a .learn-current-body .learn-control{height:32px}.v-a .learn-current-body .divider{margin:8px 0}
+.v-a .learn-current-body .label{margin-top:12px}.v-a .learn-current-body .bar{height:32px}
+.v-a .learn-current-body .helper{font-size:14px;line-height:20px}
+.v-a .learn-actions{position:absolute;left:0;right:12px;bottom:0;height:124px;border-top:1px solid #4a5058;padding-top:8px}
+.v-a .learn-actions .generate{margin-top:0;height:32px}.v-a .learn-actions .reason{margin-top:4px}
+.v-a .learn-actions .manual{margin-top:8px}.v-a .sound-context{font-size:14px;line-height:20px;margin-bottom:8px;color:#c4ccd4}
+.v-a .learn-sound-module{width:267px;max-width:100%}.v-a .learn-sound-note{margin-top:8px;line-height:20px;color:#c4ccd4;font-size:14px}
+.sound-module{width:100%;height:236px;display:flex;flex-direction:column;gap:0}
+.sound-module label{font-size:13px;font-weight:500}.sound-module .character-row{height:28px;flex:none;display:grid;grid-template-columns:62px minmax(0,1fr);gap:6px;align-items:center}
+.sound-module .character-select{background:#0f1418;color:#f8fafc;border:1px solid #6b737c;border-radius:4px;height:26px;width:100%;font-size:12px;padding:0 5px}
+.sound-module .engine-area{height:46px;flex:none}.sound-module .engine-caption{height:18px;line-height:18px;font-size:13px;font-weight:500}
+.sound-module .engine-area .row{gap:6px;height:28px}.sound-module .select{height:26px;font-size:12px;padding:0 6px;min-width:0;flex:1}
+.sound-module .folder{height:26px;width:28px;padding:0;flex:none}.sound-module .engine-params{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.sound-module .engine-params .entry{height:26px;font-size:12px;width:100%}.sound-module .cells{height:162px}
+.sound-module .cell{height:54px}.sound-module .caption{height:18px;line-height:18px;font-size:13px}
+.sound-module .cell-main{height:36px;gap:4px}.sound-module .dial{width:36px;height:36px}.sound-module .entry{height:26px;font-size:12px}
+.sound-module .filter-caption{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.sound-module .filter-bypass{border:1px solid #6b737c;border-radius:3px;background:#0f1418;color:#edf1f5;font-size:11px;line-height:16px;height:18px;padding:0 4px;flex:none}
+.sound-module .filter-bypass.on{border-color:#00efff;color:#00efff}
+.v-a .export-left{top:78px;height:490px}.v-a .export-right{top:78px;height:490px}
+.v-a .export-wave{height:324px}.v-a .export-right .heading{font-size:21px;margin-bottom:8px}
+.v-a .export-field{margin-top:8px}.v-a .export-field-label{height:20px;line-height:20px;font-size:14px;font-weight:500}
+.v-a .export-right .export-field .select{height:32px}.v-a .export-right .bar{height:32px;margin:0}
+.v-a .export-right .bar .entry{height:26px}.v-a .export-right .track.full:before{width:100%}.v-a .export-right .track.full:after{left:calc(100% - 5px)}
+.v-a .export-right .track.empty:before{width:0}.v-a .export-right .track.empty:after{left:0}
+.v-a .export-right .drag-tile{height:130px;margin:12px 0;gap:6px}.v-a .export-right .drag-tile svg{height:42px;width:32px}
+.v-a .export-right .drag-tile strong{font-size:16px}.v-a .export-right .drag-tile .helper{font-size:12px}
+.v-a .export-right>.btn{height:32px;margin-bottom:10px}.v-a .export-navigation{display:flex;gap:12px;align-items:center;margin-top:8px;height:32px}
+.v-a .export-navigation .zoom-row{width:280px;height:32px;flex:none}.v-a .export-navigation .zoom-row .btn{height:32px}
+.v-a .export-legend{font-size:12px;display:flex;justify-content:space-between;gap:10px;flex:1;white-space:nowrap}
+.v-a .export-play{margin-top:8px}.v-a .export-play .btn{height:32px}.v-a .export-play .helper{font-size:12px}
+.v-a.future .help{color:#e6bb72}

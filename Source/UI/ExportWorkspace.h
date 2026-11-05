@@ -106,8 +106,10 @@ public:
         }
         return NoticeMessage{"DAW wet is bypassed in Export", "Use Preview for this mix. Stay in Export while playing the delivered WAV to avoid doubling swells.",NoticeTone::information};
     }
+    void setResponsivePresentation(){responsive=true;resized();}
     void resized()override
     {
+        if(responsive){layoutResponsive();return;}
         auto body=getLocalBounds();right=body.removeFromRight((body.getWidth()-workspaceGeometry::columnGap)/3);
         body.removeFromRight(workspaceGeometry::columnGap);left=body;
         auto a=right;mixHeading=a.removeFromTop(controlGeometry::headingHeight);a.removeFromTop(spacing::related);
@@ -133,22 +135,22 @@ public:
     }
     void paint(juce::Graphics& g)override
     {
-        g.setColour(separator);g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,0.f,static_cast<float>(getHeight()));
-        applyTextRole(g,TextRole::sectionHeading);g.drawText("Export Preview",heading,juce::Justification::left);g.drawText("Export Levels",mixHeading,juce::Justification::left);
+        g.setColour(separator);g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,responsive?static_cast<float>(responsiveGeometry::dividerClearance):0.f,static_cast<float>(getHeight()-(responsive?responsiveGeometry::dividerClearance:0)));
+        applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Export Preview",heading,juce::Justification::left);g.drawText("Export Levels",mixHeading,juce::Justification::left);
         const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
-        applyTextRole(g,TextRole::helper);
+        applyTextRole(g,*this,TextRole::helper);
         const auto captionText=state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
             :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
             :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Right-drag: pan. Wheel: zoom.");
         g.drawFittedText(captionText,caption,juce::Justification::topLeft,2);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
-        if(!displayed){if(state.phase!=ExportPhase::error && juce::Time::getMillisecondCounterHiRes()-pendingSince<600)return;applyTextRole(g,TextRole::emptyBody);g.drawFittedText(state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Export unavailable. See the message above.":"Preparing your song-aligned mix",chart.reduced(spacing::section),juce::Justification::centred,2);return;}
+        if(!displayed){if(state.phase!=ExportPhase::error && juce::Time::getMillisecondCounterHiRes()-pendingSince<600)return;applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Export unavailable. See the message above.":"Preparing your song-aligned mix",chart.reduced(spacing::section),juce::Justification::centred,2);return;}
         const auto& p=*displayed->plan;const auto& m=displayed->metrics;
         const auto first=navigation.viewport().first,last=navigation.viewport().last;
         const auto x=[&](double at){return chart.getX()+static_cast<float>((at-first)/(last-first)*chart.getWidth());};
         long double origin;
-        if(::songOrigin(p.timing,origin))controls::paintMusicalTimelineRuler(g,ruler,navigation.viewport(),p.timing);
-        else {applyTextRole(g,TextRole::ruler);g.drawText("Musical timing unavailable",ruler,juce::Justification::left);}
+        if(::songOrigin(p.timing,origin))controls::paintMusicalTimelineRuler(g,ruler,navigation.viewport(),p.timing,this);
+        else {applyTextRole(g,*this,TextRole::ruler);g.drawText("Musical timing unavailable",ruler,juce::Justification::left);}
         {
             juce::Graphics::ScopedSaveState clip(g);g.reduceClipRegion(chart.reduced(1));
             for(const auto& coverage:p.warnings){g.setColour(coverage.kind==ExportCoverage::gap?capturedSilence:unavailableSource);
@@ -162,19 +164,19 @@ public:
                 g.fillPath(path);};
             const auto detail=state.detail;const auto bounds=detailBounds();const auto detailed=detail && detail->composition==p.identity && detail->first<=std::max(bounds.first,p.origin) && detail->end>=std::min(bounds.second,p.end);
             if(p.dry>0)draw(detailed?detail->dry:m.dryPeaks,text);if(p.wet>0)draw(detailed?detail->wet:m.wetPeaks,aqua);
-            if(!m.audibleStart){applyTextRole(g,TextRole::emptyBody);g.drawText("No audible signal in this mix",chart,juce::Justification::centred);}
+            if(!m.audibleStart){applyTextRole(g,*this,TextRole::emptyBody);g.drawText("No audible signal in this mix",chart,juce::Justification::centred);}
             const auto previewAt=state.cursor?state.cursor:state.previewPosition;
             if(previewAt){g.setColour(previewCursor);g.drawVerticalLine(juce::roundToInt(x(static_cast<double>(*previewAt))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));}
         }
-        applyTextRole(g,TextRole::helper);
+        applyTextRole(g,*this,TextRole::helper);
         auto key=legend;key=key.removeFromRight(controlGeometry::valueWidth*4);
         auto wetKey=key.removeFromLeft(controlGeometry::valueWidth*2);auto dryKey=key;
         const auto legendEntry=[&](juce::Rectangle<int> box,juce::Colour colour,const juce::String& label,bool active){
             auto dot=box.removeFromLeft(spacing::related).toFloat().withSizeKeepingCentre(spacing::tight*2.f,spacing::tight*2.f);g.setColour(colour);
-            if(active)g.fillEllipse(dot);else g.drawEllipse(dot,rule);box.removeFromLeft(spacing::tight);applyTextRole(g,TextRole::helper);g.drawText(label+(active?"":" (off)"),box,juce::Justification::left);};
+            if(active)g.fillEllipse(dot);else g.drawEllipse(dot,rule);box.removeFromLeft(spacing::tight);applyTextRole(g,*this,TextRole::helper);g.drawText(label+(active?"":" (off)"),box,juce::Justification::left);};
         legendEntry(wetKey,aqua,"Wet "+juce::String(p.wet*100,1)+"%",p.wet>0);
         legendEntry(dryKey,text,"Dry "+juce::String(p.dry*100,1)+"%",p.dry>0);
-        applyTextRole(g,TextRole::helper);
+        applyTextRole(g,*this,TextRole::helper);
         const auto current=state.cursor.value_or(state.previewPosition.value_or(m.audibleStart.value_or(p.origin)));
         g.drawText("Preview (song)  "+seconds((current-p.origin)/p.timing.rate)+" / "+seconds((p.end-p.origin)/p.timing.rate)+" | WAV "+seconds((p.end-p.origin)/p.timing.rate),timeArea,juce::Justification::centredLeft);
         g.drawFittedText(statusText(),statusArea,juce::Justification::topLeft,2);
@@ -187,6 +189,21 @@ public:
     juce::Rectangle<int> legendBounds()const noexcept{return legend;}
     juce::Rectangle<int> statusBounds()const noexcept{return statusArea;}
 private:
+    bool responsive=false;
+    void layoutResponsive()
+    {
+        using namespace responsiveGeometry;
+        auto area=getLocalBounds();right=area.removeFromRight(300);area.removeFromRight(18);left=area;
+        auto controls=right.withTrimmedLeft(contentPadding);mixHeading=controls.removeFromTop(headingHeight);controls.removeFromTop(contentPadding);
+        mix.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);
+        const auto tileHeight=std::max(0,std::min(exportTileHeight,controls.getHeight()-2*controlHeight-2*groupGap));tile.setBounds(controls.removeFromTop(tileHeight));
+        controls.removeFromTop(groupGap);save.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);back.setBounds(controls.removeFromTop(controlHeight));
+        auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(40);
+        ruler=preview.removeFromTop(24);preview.removeFromBottom(contentPadding);
+        auto transport=preview.removeFromBottom(controlHeight);play.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);stop.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);timeArea=transport;
+        preview.removeFromBottom(contentPadding);auto navigationRow=preview.removeFromBottom(controlHeight);zoom.setBounds(navigationRow.removeFromLeft(std::max(controls::TimelineZoomControls::minimumWidth(),navigationRow.getWidth()/2)));navigationRow.removeFromLeft(contentPadding);legend=navigationRow;
+        preview.removeFromBottom(contentPadding);statusArea=preview.removeFromBottom(statusText().isNotEmpty()?20:0);chart=preview;navigation.setBounds(chart);requestDetail();
+    }
     juce::String statusText()const
     {
         if(!displayed)return {};

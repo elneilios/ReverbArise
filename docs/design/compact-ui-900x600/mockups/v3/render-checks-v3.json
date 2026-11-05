@@ -1,0 +1,208 @@
+{
+  "renderer": "Installed Chrome; deviceScaleFactor 1; browser mockup checks only",
+  "pageErrors": [],
+  "cases": [
+    {
+      "name": "a3-learn-capture-generate",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-learn-sound-current",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-learn-sound-convolution-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "IR",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "soundBounds": {
+        "width": 267,
+        "height": 236,
+        "bottom": 420
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-learn-sound-algorithmic-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "Decay (s)",
+        "Size (%)",
+        "Damp (%)",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "soundBounds": {
+        "width": 267,
+        "height": 236,
+        "bottom": 420
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-perform-timing",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Target (bars)",
+        "Move Wet (ms)",
+        "Source start (bars)",
+        "Source end (bars)"
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-perform-envelope",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Pre-roll (s)",
+        "End Offset (s)",
+        "Fade In (ms)",
+        "Fade Out (ms)",
+        "Curve In",
+        "Curve Out"
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-perform-sound-current",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Level (dB)"
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-perform-sound-convolution-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "IR",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "soundBounds": {
+        "width": 267,
+        "height": 236,
+        "bottom": 416
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-perform-sound-algorithmic-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "Decay (s)",
+        "Size (%)",
+        "Damp (%)",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "soundBounds": {
+        "width": 267,
+        "height": 236,
+        "bottom": 416
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a3-export-levels",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Mix Character",
+        "Dry",
+        "Wet"
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    }
+  ],
+  "sharedModuleGeometryMatches": true,
+  "tabAndEngineDisclosureChecks": "passed"
+}
