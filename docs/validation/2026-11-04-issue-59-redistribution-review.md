@@ -17,6 +17,8 @@ The [JUCE 9 EULA](https://juce.com/legal/juce-9-licence/) was checked on 2026-11
 
 ## Decision to record before external sharing
 
+Owner direction received **2026-11-05**: plan to use the free tier for now. Recorded intended path: **JUCE Starter (commercial)**. Eligibility/entitlement and applicable conditions under the JUCE 9 EULA still require owner confirmation; this statement is a path preference, not approval of compliance or external sharing. Intended scope from #59 is private musician DAW evaluation. Final product distribution grant, exact approved candidate and any required additional materials remain pending.
+
 - Named owner/licensing path and non-confidential evidence reference; applicable entitlement and obligations satisfied.
 - Project distribution authority and intended private recipient/use/redistribution conditions.
 - JUCE, IR, font and third-party notice/material review completed; any extra required source/material supplied.
