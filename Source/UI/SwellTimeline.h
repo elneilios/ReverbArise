@@ -3,6 +3,7 @@
 #include <DSP/SwellEngine.h>
 #include "SwellViewport.h"
 #include "EnvelopeHandles.h"
+#include "WaveformDisplay.h"
 
 namespace m3
 {
@@ -13,6 +14,10 @@ public:
     void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true);
     void paint(juce::Graphics&) override;
     void resized() override;
+    void lookAndFeelChanged()override{invalidateWaveforms();}
+    void colourChanged()override{invalidateWaveforms();}
+    const ui::WaveformPaintMetrics& waveformPaintMetrics()const noexcept{return waveformLayer.metrics();}
+    const ui::WaveformPaintMetrics& wetPaintMetrics()const noexcept{return wetWaveformLayer.metrics();}
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
     void mouseUp(const juce::MouseEvent&) override {drag=Drag::none;repaint();}
@@ -68,7 +73,9 @@ private:
     void constrainNavigation();
     double navigationAnchor()const;
     std::pair<double,double> globalBounds() const;
-    void drawWave(juce::Graphics&,const Waveform&,juce::Rectangle<float>,juce::Colour,float gain,int64_t placement=0);
+    void paintWaveforms(juce::Graphics&,ui::WaveformPaintMetrics&,bool wetOnly);
+    void invalidateWaveforms(){waveformLayer.invalidate();wetWaveformLayer.invalidate();++waveformRevision;}
+    void drawWave(juce::Graphics&,const std::vector<CapturePeak>&,juce::Rectangle<float>,juce::Colour,float gain,ui::WaveformPaintMetrics&,int64_t placement=0);
     float x(int64_t sample) const {return static_cast<float>(view.pixel(static_cast<double>(sample),source.getX(),source.getWidth()));}
     SwellEngine& engine;CaptureSessionSnapshot capture;EditorSnapshot data;SongTime time;
     SwellViewport view;juce::ScrollBar scrollbar{false};juce::Rectangle<int> ruler;
@@ -94,17 +101,26 @@ private:
     bool playheadAvailable=false;
     bool inlineOverview=true;
     bool editingEnabled=true;
+    ui::WaveformLayer waveformLayer,wetWaveformLayer;
+    uint64_t waveformRevision=0;
 };
 class SwellOverview final : public juce::Component,public juce::SettableTooltipClient
 {
 public:
     explicit SwellOverview(SwellTimeline& value);
     void resized()override;
+    void lookAndFeelChanged()override{waveformLayer.invalidate();}
+    void colourChanged()override{waveformLayer.invalidate();}
+    const ui::WaveformPaintMetrics& waveformPaintMetrics()const noexcept{return waveformLayer.metrics();}
     juce::Rectangle<float> waveformBounds()const noexcept{return getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
     juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}
     void mouseDrag(const juce::MouseEvent& e)override{const auto lane=waveformBounds();timeline.navigateOverview((e.position.x-lane.getX())/std::max(1.0f,lane.getWidth()));repaint();}
-private:SwellTimeline& timeline;juce::Label heading;
+private:
+    void paintWaveforms(juce::Graphics&,ui::WaveformPaintMetrics&);
+    SwellTimeline& timeline;juce::Label heading;
+    ui::WaveformLayer waveformLayer;
+    uint64_t waveformRevision=UINT64_MAX;
 };
 }
