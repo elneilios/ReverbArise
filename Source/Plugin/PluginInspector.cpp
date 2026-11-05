@@ -212,8 +212,9 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
         if(index==placementValue)valueControls[index].setCaption(sampleUnitsButton.getToggleState()?"Move Wet (samples)":"Move Wet (ms)");
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
         const auto enabled=valid && (index<=sourceEndValue?(!w->frozen):shaped);
+        const auto valueAvailable=valid && ((index!=preRollValue && index!=endOffsetValue) || shaped);
         juce::String text,exactText;double fraction=.5,domain=span;
-        if(valid)
+        if(valueAvailable)
         {
             if(index<=sourceEndValue)
             {
@@ -238,7 +239,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 else {domain=std::max(span,std::abs(static_cast<double>(samples))*2+1);fraction=.5+static_cast<double>(samples)/domain;}
             }
         }
-        if(valid)
+        if(valueAvailable)
         {
             if(index<=sourceEndValue && !sampleUnitsButton.getToggleState())text=m3::ui::musicalReadout(index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd,time);
             else if(index>sourceEndValue && !(index==placementValue && sampleUnitsButton.getToggleState()))text=m3::ui::compactValue(exactText.getDoubleValue(),index==preRollValue || index==endOffsetValue?3:index==inCurveValue || index==outCurveValue?2:1);
@@ -249,7 +250,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
         const auto beat=rate*60/time.bpm*4/time.denominator;
         const auto units=index<=sourceEndValue?(musical?beat:1.):index==placementValue && sampleUnitsButton.getToggleState()?1.:index==preRollValue || index==endOffsetValue?rate:rate/1000.;
         double domainValue=0,minimum=-9223372036854775808./units,maximum=std::nextafter(9223372036854775808.,0.)/units,step=rate/1000./units,unitsPerFraction=domain/units;
-        if(valid)
+        if(valueAvailable)
         {
             if(index<=sourceEndValue){const auto sample=index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd;
                 domainValue=static_cast<double>((static_cast<long double>(sample)-(musical?origin:0))/units);

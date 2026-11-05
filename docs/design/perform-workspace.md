@@ -85,3 +85,12 @@ Hovering changes no musical, navigation or saved state. See the
 
 See [composition approval evidence](../validation/2026-11-04-issue-46-perform-composition.md)
 and [integration validation](../validation/2026-11-04-issue-46-integration.md).
+
+Pre-roll and End Offset depend on the selected swell's available raw wet bounds.
+Before those bounds exist their existing disabled value cells remain blank;
+song origin is not a substitute wet endpoint. Once preparation publishes, the
+same cells show their normal sample-derived values. Saved shape values and the
+existing control family, geometry, interaction and visual tokens are unchanged.
+Explicit manual insertion and input/IR edits request background preparation even
+with automatic policies off; readiness and Audition still require verified audio.
+See [manual preparation policy](../development/workflow-modes.md#explicit-manual-preparation-in-perform).

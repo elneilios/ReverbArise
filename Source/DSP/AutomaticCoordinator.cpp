@@ -190,6 +190,15 @@ void SwellEngine::prepareDefault(const PreviewContext& context)
     if(!workflowState)for(auto& w:model.swells)if(!w.ir.present() && w.status=="Waiting for default IR")
     {w.ir=asset;w.irName=model.defaultIRName;w.phase=Phase::stale;w.status="Waiting for source";}
 }
+void SwellEngine::requestManualPreparationLocked(const Swell& w,const PreviewContext& context)
+{
+    // Explicit Perform intent grants work for this target without changing the
+    // saved automatic policy. Pin its current source revision so inspect does
+    // not mistake a new/edited interval for a later dry-only capture change.
+    deferredLearnDependencies.erase(w.id);
+    forceRefresh.insert(w.id);
+    runtime[w.id].revision=juce::String(sourceDependency(context.capture.manifest,w.sourceStart,renderInputEnd(w)));
+}
 void SwellEngine::dispatchAutomatic(const PreviewContext& context)
 {
     const juce::ScopedLock guard(lock);
@@ -214,7 +223,7 @@ void SwellEngine::dispatchAutomatic(const PreviewContext& context)
             if(r.startSample>covered)break;if(end>covered)covered=end;if(covered>=renderInputEnd(w))break;
         }
         if(covered<renderInputEnd(w)){w.status="Waiting for source";continue;}
-        w.phase=Phase::checking;w.status="Queued for automatic dependency check";
+        w.phase=Phase::checking;w.status="Queued for dependency check";
     }
 }
 bool SwellEngine::automaticJob()
