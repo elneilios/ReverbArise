@@ -19,7 +19,7 @@
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
 public:
-    explicit PreverbAudioProcessorEditor(PreverbAudioProcessor&);
+    explicit PreverbAudioProcessorEditor(PreverbAudioProcessor&,std::function<void(const juce::String&)> buildInformationWriter={});
     ~PreverbAudioProcessorEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -131,10 +131,15 @@ private:
     m3::ui::FlatSurface diagnosticsContent;
     void layoutLiveDiagnostics();
     juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
-    std::array<juce::Component,5> settingsPages;
+    std::array<juce::Component,6> settingsPages;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
-    std::array<juce::Label,5> settingsHelp;
+    std::array<juce::Label,6> settingsHelp;
+    juce::Label aboutHeading;
+    std::array<juce::Label,3> buildInformationLabels;
+    std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
+    m3::ui::controls::ActionButton copyBuildInformation{"Copy build information",m3::ui::controls::CommandIcon::none,true};
+    std::function<void(const juce::String&)> buildInformationWriter;
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;

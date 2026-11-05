@@ -5,6 +5,13 @@ Windows PowerShell 5.1 and PowerShell 7 are supported. No extra PowerShell modul
 installer, signing service or hosted runner is required. Keep the release checkout
 idle throughout validation. Commit all intended source changes first.
 
+Before packaging, use [maintain-user-guide](../../.agents/skills/maintain-user-guide/SKILL.md)
+and the [currency workflow](user-guide-maintenance.md). `scripts/check-user-guide.ps1`
+must pass for the committed review. Packaging checks this read-only before
+building and never invokes a skill or rewrites guide content/review records.
+The generated Settings About identity must match the requested release version,
+candidate and clean source SHA; stale/local metadata fails packaging.
+
 ## Internal local package
 
 ```powershell
@@ -44,6 +51,30 @@ Windows build; inclusion is not a claim that every listed component is linked.
 The packager copies texts from the actual dependency checkout and fails if expected
 notices are absent. Owner review must still establish all applicable obligations.
 
+The payload also includes `README.txt`, `User-Guide.html` and
+`guide-provenance.json`. The guide is a static offline document: all four native
+production-editor screenshots and the existing production wordmark are embedded PNG data URIs, with no scripts or
+external resources. Its source template is [alpha-guide.html](alpha-guide.html).
+After Release/CTest and built identity verification, the packager runs
+`Release/preverb_learn_generation_ui_test.exe --guide-only` under the build lock
+with a fresh `PREVERB_UI_M3_OUTPUT` staging folder. Real fixture capture,
+generation, render and Export readiness are asserted before snapshots are saved.
+Missing/invalid captures or mismatched provenance fail packaging. All delivered
+guide files participate in the existing payload inventory and ZIP verification.
+
+For #59, rehearse on the issue branch with a distinct label such as
+`-Candidate alpha.rehearsal.1`. For #59 the owner-approved order is to package a clean committed PR revision
+containing the required integrations with `-Candidate alpha`, sign off that exact
+candidate, archive the signed-off change and merge, then verify clean merged main separately.
+If that output identity already exists, preserve it and use a recorded fresh
+`alpha.N`; never overwrite it. Extract into a new folder, verify hashes and view
+the HTML locally offline, checking every image. The final extracted binary needs
+its own consolidated FL Studio capture/generate/Perform/save-reopen smoke test, or an explicit owner waiver with the earlier trial and untested coverage recorded.
+Earlier fixture or host runs do not establish that final acceptance. Record
+clean-machine and second-host coverage explicitly, including unverified coverage.
+See the [alpha preparation evidence](../validation/2026-11-04-issue-59-alpha.md)
+and [pending redistribution review](../validation/2026-11-04-issue-59-redistribution-review.md).
+
 Existing final directories are never overwritten, even on concurrent invocations.
 Use a new explicit candidate identity for another attempt. If a failed operation
 leaves `out/releases/.staging-*`, preserve it for diagnostics or deliberately relocate
@@ -82,9 +113,10 @@ this review. No licensing review was approved by implementing or testing this sc
 2. Extract to a temporary directory. Preserve the complete `ReverbArise.vst3/`
    directory and its `Contents/`; do not extract only the inner `.vst3` binary.
 3. Close the DAW. Preserve the installed bundle for rollback. Copy the whole bundle
-   into your user VST3 folder, normally `%LOCALAPPDATA%\Programs\Common\VST3`, or the
-   machine folder `%COMMONPROGRAMFILES%\VST3` if deliberately using administrator
-   installation. Add the chosen folder to FL Studio's scan paths if necessary.
+   into the supported system folder `%PROGRAMFILES%\Common Files\VST3` with the
+   required Windows permission. FL Studio does not discover VST3 from custom user
+   search folders. For local testing use the repository's
+   [backed-up system installation helper](fl-studio-test-install.md).
 4. Rescan in FL Studio's Plugin Manager. Confirm ReverbArise appears once, loads,
    reports the intended numeric version and produces expected capture/render/playback.
 5. Open a **copy** of an existing saved FL Studio project. Verify plugin recognition,

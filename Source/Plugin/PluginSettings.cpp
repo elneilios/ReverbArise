@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <Core/BuildInformation.h>
 
 namespace
 {
@@ -55,8 +56,8 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     settingsTabs.setName("settingsTabs");settingsTabs.setTabBarDepth(36);
     settingsTabs.setColour(juce::TabbedComponent::backgroundColourId,m3::ui::background);
     settingsTabs.setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack);
-    const juce::StringArray titles{"Playback","Processing","Swell","Audition","Recovery"};
-    for(int i=0;i<5;++i)
+    const juce::StringArray titles{"Playback","Processing","Swell","Audition","Recovery","About"};
+    for(int i=0;i<6;++i)
     {
         settingsPages[i].setName("settings"+titles[i]);
         settingsTabs.addTab(titles[i],m3::ui::background,&settingsPages[i],false);
@@ -79,6 +80,31 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     settingsHelp[2].setText("Applies to the selected swell. Rename from its three-dot list menu.\nSource, envelope, Enabled, Solo and Freeze stay in the inspector.",juce::dontSendNotification);
     settingsHelp[3].setText("Audition loops captured audio. Isolation/tail affect its listening window.\nWet only uses Live Wet gain; stored legacy trim is inactive in live-level mode.",juce::dontSendNotification);
     settingsHelp[4].setText("Recovery actions run only when clicked. Clear map keeps swell assets.\nReset deleted targets allows automatic rediscovery.",juce::dontSendNotification);
+    settingsHelp[5].setText("Include this information when reporting a problem.\nIt identifies the running plugin; no project or audio data is copied.",juce::dontSendNotification);
+    m3::ui::applyTextRole(settingsHelp[5],m3::ui::TextRole::helper,juce::Justification::topLeft);
+    aboutHeading.setName("aboutReverbArise");aboutHeading.setText("About ReverbArise",juce::dontSendNotification);
+    m3::ui::applyTextRole(aboutHeading,m3::ui::TextRole::sectionHeading);settingsPages[5].addAndMakeVisible(aboutHeading);
+    const juce::StringArray buildCaptions{"Product version","Build identifier","Git commit"};
+    const juce::StringArray buildValues{juce::String(m3::build::version.data()),juce::String(m3::build::identifier.data()),
+        juce::String(m3::build::gitSha.data())+(m3::build::worktreeDirty?" (modified)":"")};
+    for(size_t i=0;i<buildInformationLabels.size();++i)
+    {
+        auto& label=buildInformationLabels[i];auto& value=buildInformationValues[i];
+        label.setText(buildCaptions[static_cast<int>(i)],juce::dontSendNotification);m3::ui::applyTextRole(label,m3::ui::TextRole::controlLabel);
+        value.setName("aboutBuildValue"+juce::String(static_cast<int>(i)));value.setText(buildValues[static_cast<int>(i)],juce::dontSendNotification);
+        value.setTitle(buildCaptions[static_cast<int>(i)]);value.setDescription(value.getText());value.setTooltip(value.getText());
+        m3::ui::applyTextRole(value,m3::ui::TextRole::helper);
+        settingsPages[5].addAndMakeVisible(label);settingsPages[5].addAndMakeVisible(value);
+    }
+    copyBuildInformation.setName("copyBuildInformation");copyBuildInformation.setTooltip("Copy product version, build identifier, full Git commit and source status for a bug report");
+    settingsHelp[5].setName("buildInformationCopyStatus");
+    copyBuildInformation.onClick=[this]{
+        buildInformationWriter(juce::String(m3::build::report()));
+        settingsHelp[5].setText("Build information copied to clipboard.\nPaste it into your bug report; no project or audio data was copied.",juce::dontSendNotification);
+        settingsHelp[5].setDescription(settingsHelp[5].getText());
+        if(auto* handler=settingsHelp[5].getAccessibilityHandler())handler->notifyAccessibilityEvent(juce::AccessibilityEvent::valueChanged);
+    };
+    settingsPages[5].addAndMakeVisible(copyBuildInformation);
     openDiagnosticsButton.setName("openDiagnostics");openDiagnosticsButton.onClick=[this]{setDiagnosticsOpen(true);};
     toneButton.setTooltip("Explicit scheduled 440 Hz test tone. Turn off here after testing.");
 }
@@ -110,4 +136,15 @@ void PreverbAudioProcessorEditor::layoutSettings()
     openDiagnosticsButton.setBounds(left,346,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
     for(int i=0;i<5;++i)settingsHelp[i].setBounds(left,i==4?394:310,width,70);
+    using namespace m3::ui;
+    aboutHeading.setBounds(left,spacing::section,width,controlGeometry::headingHeight);
+    auto aboutY=aboutHeading.getBottom()+spacing::section;
+    for(size_t i=0;i<buildInformationLabels.size();++i)
+    {
+        buildInformationLabels[i].setBounds(left,aboutY,labelWidth,controlGeometry::labelHeight);
+        buildInformationValues[i].setBounds(left+labelWidth,aboutY,width-labelWidth,controlGeometry::labelHeight);
+        aboutY+=controlGeometry::labelHeight+spacing::related;
+    }
+    copyBuildInformation.setBounds(left,aboutY+spacing::related,width,controlGeometry::height);
+    settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,2*learnTypography::secondaryLineHeight);
 }

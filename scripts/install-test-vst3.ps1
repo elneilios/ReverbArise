@@ -2,7 +2,9 @@
 param(
     # FL Studio scans VST3 only in supported system locations.
     [string] $Destination = (Join-Path $env:ProgramFiles 'Common Files/VST3'),
-    [switch] $Test
+    [switch] $Test,
+    [string] $ReleaseTag = '',
+    [string] $Candidate = ''
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'build-support.ps1')
@@ -14,7 +16,7 @@ try {
     if (-not $PSCmdlet.ShouldProcess((Join-Path $destinationPath 'ReverbArise.vst3'), 'Build Release and install for local FL Studio testing')) { exit 0 }
     Assert-TestHostClosed
     # Build through the supported wrapper; a failed build/test never installs stale output.
-    $code = Invoke-ReverbBuild -Root $root -Configuration Release -Test:$Test -PluginOnly:(-not $Test)
+    $code = Invoke-ReverbBuild -Root $root -Configuration Release -Test:$Test -PluginOnly:(-not $Test) -ReleaseTag $ReleaseTag -Candidate $Candidate
     if ($code -ne 0) { exit $code }
     $presets = Get-Content -LiteralPath (Join-Path $root 'CMakePresets.json') -Raw | ConvertFrom-Json
     $preset = @($presets.configurePresets | Where-Object { $_.name -eq 'windows-msvc' })[0]

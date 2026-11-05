@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot 'release-guide.ps1')
+. (Join-Path $PSScriptRoot 'user-guide-support.ps1')
 function Get-ReleaseNoticePaths {
     # Notices from the pinned dependency checkout, including supported codecs.
     ,@('LICENSE.md', 'JUCE-LICENSE.md')
@@ -119,10 +121,17 @@ function Assert-ReleaseArchive([string] $ZipPath, $Files) {
     } finally { $zip.Dispose() }
 }
 
-function Invoke-ReleaseBuild([string] $Root) {
+function Invoke-ReleaseBuild([string] $Root, [string] $ReleaseTag, [string] $Candidate) {
     $shell = (Get-Process -Id $PID).Path
-    & $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'scripts/build.ps1') -Configuration Release -Test
+    $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $Root 'scripts/build.ps1'),'-Configuration','Release','-Test','-ReleaseTag',$ReleaseTag)
+    if ($Candidate) { $arguments += @('-Candidate',$Candidate) }
+    & $shell @arguments
     if ($LASTEXITCODE -ne 0) { throw "Release build/CTest failed ($LASTEXITCODE); no package produced." }
+}
+
+function Assert-ReleaseBuildInformation([string] $Binary, $Identity, [string] $Sha) {
+    $information = Get-Content -LiteralPath (Join-Path $Binary 'build-information.json') -Raw | ConvertFrom-Json
+    if ($information.version -cne $Identity.version -or $information.releaseTag -cne $Identity.expectedTag -or $information.candidate -cne $Identity.candidate -or $information.buildIdentifier -cne $Identity.releaseIdentity -or $information.gitSha -cne $Sha -or $information.worktreeDirty -ne $false) { throw 'Built About identity mismatch; configure/rebuild the intended release source and candidate.' }
 }
 
 function Invoke-ReleasePublication([string] $Root, [string] $Directory, $Identity, [string] $Sha, [string] $Git, [switch] $RedistributionReviewed, [string] $LicenseReview, [string] $ConfirmPublish) {
@@ -165,6 +174,7 @@ function Invoke-ReverbRelease {
         $sha = Get-ReleaseSource $tools.Git $Root
         $identity = Get-ReleaseIdentity $tools.CMake $Root $ReleaseTag $Candidate
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha
+        Assert-UserGuideCurrent $Root
         $releases = Join-Path $Root 'out/releases'
         $destination = Join-Path $releases $identity.releaseIdentity
         if ($Publish) {
@@ -172,7 +182,7 @@ function Invoke-ReverbRelease {
             return
         }
         if (Test-Path -LiteralPath $destination) { throw "Release output already exists: $destination. Preserve it; use a new explicit candidate or deliberately relocate it while idle." }
-        Invoke-ReleaseBuild $Root
+        Invoke-ReleaseBuild $Root $ReleaseTag $Candidate
         $presets = Get-Content -LiteralPath (Join-Path $Root 'CMakePresets.json') -Raw | ConvertFrom-Json
         $preset = @($presets.configurePresets | Where-Object { $_.name -eq 'windows-msvc' })[0]
         $binary = [IO.Path]::GetFullPath($preset.binaryDir.Replace('${sourceDir}', $Root).Replace('${presetName}', 'windows-msvc'))
@@ -181,11 +191,16 @@ function Invoke-ReverbRelease {
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha
         $built = Get-ReleaseIdentity $tools.CMake $Root $ReleaseTag $Candidate $binary
         if (-not $built.builtVerified -or -not $built.tagVerified) { throw 'Built product identity was not verified.' }
+        Assert-ReleaseBuildInformation $binary $identity $sha
         $bundle = Get-ReleaseBundle $binary $identity.version
         $toolchain = Get-ReleaseToolchain $tools.CMake $binary
         $staging = Join-Path $releases ('.staging-' + [guid]::NewGuid().ToString('N'))
         $payload = Join-Path $staging 'payload'
         $null = New-Item -ItemType Directory -Path $payload -Force
+        $captures = Join-Path $staging 'native-guide-evidence'
+        $null = New-Item -ItemType Directory -Path $captures
+        Invoke-ReleaseGuideCapture $binary $captures $sha
+        Write-ReleaseGuide $Root $captures $payload $sha $identity.releaseIdentity
         $inventory = @(Get-ReleaseInventory $bundle)
         Copy-Item -LiteralPath $bundle -Destination $payload -Recurse
         $copied = @(Get-ReleaseInventory (Join-Path $payload 'ReverbArise.vst3'))
@@ -211,10 +226,20 @@ Before external distribution the owner must review JUCE eligibility/terms, proje
 WavPack, Inter, VST3 SDK, bundled IRs and any other applicable third-party conditions.
 Notices are in licenses/ and ReverbArise.vst3/Contents/Resources/.
 Unsigned build. Extract the complete ReverbArise.vst3 directory; do not copy only its binary.
-With the DAW closed, preserve any prior installation and copy the bundle to your user VST3
-folder (%LOCALAPPDATA%\Programs\Common\VST3), then rescan in FL Studio.
-Keep saved FL Studio projects and captured/cache assets; verify an existing project copy.
-See docs/development/releases.md in the source checkout for the manual acceptance checklist.
+With the DAW closed, preserve any prior installation and copy the bundle to the supported
+system VST3 folder (%PROGRAMFILES%\Common Files\VST3); administrator permission may be needed.
+FL Studio does not discover VST3 from custom user search folders. In Plugin Manager enable
+Verify plugins and Rescan previously verified plugins, then run Find installed plugins.
+Open User-Guide.html for the illustrated offline guide. Start at low monitoring volume.
+Route audio through ReverbArise, choose Learn, and play the DAW to capture; stop to inspect
+markers, then Generate Swells. In Perform select a ready swell, Audition, then Stop.
+Use Wet only to hear the effect alone. Stay in Perform for DAW playback and normal DAW
+render/bounce. Export is optional: it prepares a separate independent mix for Save WAV.
+Keep saved FL Studio projects and captured/cache assets; verify a project copy on reopen.
+Alpha limitations: unsigned Windows x64 VST3; other hosts and clean-machine compatibility
+are unverified unless the sender supplies exact acceptance evidence. No installer or signing.
+Report problems by replying to the private sender with this identity, DAW/version, steps,
+expected/actual result and screenshots. Never send private recordings without permission.
 "@ | Set-Content -LiteralPath (Join-Path $payload 'README.txt') -Encoding UTF8
         $files = @(Get-ReleaseInventory $payload)
         $artifact = "ReverbArise-$($identity.releaseIdentity)-win-x64.zip"
@@ -240,6 +265,7 @@ See docs/development/releases.md in the source checkout for the manual acceptanc
             toolchain = $toolchain; artifact = $artifact; sha256 = $hash
             validation = 'build.ps1 Release -Test; verify-version.cmake built checks; x64 PE/file version'
             redistribution = 'internal-evaluation-only; separate owner licensing review required'; files = $files
+            buildInformation = (Get-Content -LiteralPath (Join-Path $binary 'build-information.json') -Raw | ConvertFrom-Json)
         }
         $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $staging 'build-manifest.json') -Encoding UTF8
         Assert-ReleaseSource $tools.Git $Root $identity.releaseIdentity $sha

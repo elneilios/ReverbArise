@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-11-05T08:41:51.0052517Z",
+  "source": "e2cef2b8c0dec50e9c6b6dab2e21351bbf61bd50",
+  "identity": "v0.1.0-alpha",
+  "installed": "C:/Program Files/Common Files/VST3/ReverbArise.vst3",
+  "backup": "C:\\Users\\neila\\.codex\\worktrees\\c7de\\k7ma-preverb\\out\\vst3-install-backups\\20261105-084053-6e7e199cbd694ec8a1c69fd6b3a10958\\ReverbArise.vst3",
+  "moduleSha256": "0ca3890233fcd6ff764eb4152b5bbf14ed5f9aba3167248caf327a1d67f4a4cb",
+  "wholeBundleMatchesPackage": true,
+  "backupMatchesPriorSystem": true,
+  "userBundleUnchanged": true,
+  "hostAcceptance": "pending",
+  "buildLog": "out/build-logs/Release/20261105-084046-3ebfcc0b",
+  "ctestDuringInstall": false
+}

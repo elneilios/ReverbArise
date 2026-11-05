@@ -12,6 +12,24 @@ This is a numeric SemVer-style product version, not full SemVer prerelease synta
 
 ## Cheap verification and the packaging interface
 
+### Running build information
+
+CMake generates `generated/BuildInformationData.h` and `build-information.json`
+from the product version, explicit release tag/candidate and full Git SHA/status.
+Settings → About displays that compiled identity; Copy build information copies
+the full version/build/commit/source-status report. It does not read Git, touch
+project state or perform work on the audio callback. No build clock, random ID or
+absolute workspace path enters these generated identity values.
+
+The supported wrapper passes both identity inputs on every configure. An ordinary
+`scripts/build.ps1 -Configuration Release` clears prior candidate cache values and
+identifies `vX.Y.Z-local`. The release script explicitly forwards its existing
+`-ReleaseTag` / `-Candidate` inputs and rejects mismatched generated identity.
+When building/installing an identified candidate directly, pass those same
+optional arguments to `build.ps1` or `install-test-vst3.ps1`; defaults deliberately
+produce local builds. Missing Git identity is shown as unavailable and is not
+accepted for packaging. Numeric version, plugin IDs and storage schemas remain unchanged.
+
 Run from the repository root; use the installed CMake supporting the existing VS
 2026 generator for native builds. Script-only checks need CMake 3.22+, no compiler,
 JUCE download, Git tag lookup or plugin configure:

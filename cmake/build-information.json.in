@@ -1,0 +1,9 @@
+{
+  "productName": "@product_name@",
+  "version": "@version@",
+  "candidate": "@candidate@",
+  "releaseTag": "@release_tag@",
+  "buildIdentifier": "@build_identifier@",
+  "gitSha": "@git_sha@",
+  "worktreeDirty": @worktree_dirty@
+}
