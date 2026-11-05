@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed source-edge worker processing, explicit Regenerate all/selected adoption, legacy and frozen render preservation against code and active OpenSpec; added source-edge adoption instructions without UI or screenshot changes.",
+  "summary": "Reviewed the source-edge canonical spec sync and archive after merged PR 76. The guide already documents taper adoption, Regenerate all/selected, capture preservation and frozen behavior; no prose or screenshot change needed. Recorded canonical-spec hash updates only.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -835,8 +835,8 @@
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 19610,
-      "sha256": "f0ef285b5c096414922f224bb73306d7f2b167a89931aeed12057638ba5a3dd7"
+      "bytes": 20641,
+      "sha256": "32828a6c73642a59690f919a099e112abc9f434bdb5a017eb4fcaf43b2b79c1d"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
@@ -860,8 +860,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 5670,
-      "sha256": "ba3322ab20f76e5630e276c69802f80a80e968e58f634d6530ad68d3da843fe7"
+      "bytes": 6917,
+      "sha256": "400d6afd3fb154cf2d764e01af6fbbe0b0c284135b697b4792ef823531af6d50"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
