@@ -16,7 +16,7 @@
 ## 3. Integration and owner review
 
 - [x] 3.1 Run scripts/build.ps1 -Configuration Release -Test in this worktree using its existing wrapper/cache and build lock, plus affected native processor/UI suites and UI standards checks; record revision, environment, commands, actual results and skipped host/DPI coverage separately from fixture-only checks.
-- [ ] 3.2 Prepare the validated plugin and consolidate one brief owner FL Studio manual-only check: dry capture with automation off, manual insertion, Ready/wet waveform, sensible timing and audible Audition; record actual owner acceptance or failures without treating automated tests as host acceptance, then open/update one issue-scoped PR with evidence and Closes #55 only when fully resolved.
+- [x] 3.2 Prepare the validated plugin and consolidate one brief owner FL Studio manual-only check: dry capture with automation off, manual insertion, Ready/wet waveform, sensible timing and audible Audition; record actual owner acceptance or failures without treating automated tests as host acceptance, then open/update one issue-scoped PR with evidence and Closes #55 only when fully resolved.
 
 ## Workflow follow-up
 

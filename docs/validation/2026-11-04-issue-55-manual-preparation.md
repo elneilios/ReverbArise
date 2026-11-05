@@ -85,11 +85,12 @@ manual preparation/first-insertion test (5.36 s). Logs:
 plus this follow-up patch. UI standards, strict OpenSpec validation and whitespace
 checks also passed. This was an incremental warm build; no speedup claim is made.
 
-Pending: a focused FL Studio recheck of the first double-click using the updated
-candidate; prior '+' generation is owner-confirmed and need not be repeated.
-Verify dry capture with automation off, manual insertion, Ready/wet waveform,
-sensible timing and audible Perform Audition. Automated native/component results
-are separate from host acceptance. No additional host/DPI coverage is claimed.
+Owner acceptance, 5 November 2026: **Passed** the focused FL Studio recheck using
+the updated candidate: empty Perform after dry-only capture, first double-click
+with Snap on, target creation, Ready and Wet Only Audition. Prior '+' generation
+was separately owner-confirmed. This completes the issue-scoped host acceptance;
+automated timing/coverage/publication checks remain distinct from that report.
+No additional host/DPI coverage is claimed.
 The exact `large_hall.wv` file was not supplied; synthetic supported WavPack input
 tests the same import/decode/managed-assignment pipeline. #53 transport playback
 remains a separate issue.
@@ -105,8 +106,8 @@ Updated review bundle:
 `out/review/issue-55-first-double-click-20261105/ReverbArise.vst3`.
 Its copied native binary matches the updated build:
 SHA-256 `80BA38B17043ED2565B14648BA0C899738A867C3BE0197521185BE78A463B564`.
-Only the failed first-double-click path needs a focused host recheck; '+'
-generation already has owner confirmation. Keep the PR draft until that result.
+The owner confirmed the first-double-click path passed with this updated bundle;
+'+' generation already had owner confirmation. PR #62 is ready for owner review.
 
 No new control family, style token or geometry is introduced. The inspector
 change corrects unavailable data in existing disabled controls, retaining their
