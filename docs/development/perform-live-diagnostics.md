@@ -13,9 +13,16 @@ evidence. It reports the same decision used by timeline/inspector snapping:
 sample-position availability, capture rate, accepted and observed timing,
 division and the rejected prerequisite. Origin differences are observed minus
 accepted in samples. Invalid/missing timing leaves derived origins unavailable.
-The source grid can be unavailable while a separately validated playing run
-admits wet; grid availability alone cannot establish audible output. Stop can
-restore grid compatibility without proving the preceding Play was admitted.
+The coordinate anchor remains accepted capture timing. During Play, the grid
+can instead use the independently validated current run as its validation
+reference. Its session/reset/run identity and validation delta appear separately
+from the source/host delta. An admitted source-to-run offset is informational,
+not a Snap warning. The same decision gates canvas and inspector actions.
+Missing or rejected current run authority remains unavailable; a host tuple
+matching the saved origin does not override a rejected run. Diagnostics merely
+describe this control decision and never supply its authority. Grid availability
+alone cannot establish audible output. Stop can restore grid compatibility
+without proving the preceding Play was admitted.
 Snap On, Ctrl bypass, Snap Off and exact-entry policies are unchanged.
 
 Use **Copy diagnostics** in this window to share all readouts, including text

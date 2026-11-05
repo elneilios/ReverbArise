@@ -63,6 +63,7 @@ struct EditorSnapshot
     ExportSnapshot songExport;
     Session session;
     uint64_t sessionEpoch=0; // Coherent UI ownership token; never persisted.
+    std::optional<LiveClockSnapshot> gridClock; // Dedicated control authority, not telemetry.
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
@@ -171,6 +172,7 @@ public:
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
     void resetTransportClock() noexcept {liveClock.reset();}
+    std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
     void failNextLivePublicationForTesting() noexcept {livePublicationFail.store(true);notify();}

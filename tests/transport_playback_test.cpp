@@ -13,6 +13,19 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
 int main(int argc,char* argv[]){return runTest([&]{
+    {LiveTransportClock first,second;TransportTime at{{true,16,0,48000,122,4,4},true};
+        REQUIRE(!first.snapshot(3));REQUIRE(!gridClockContext(first.snapshot(3),true).available);
+        first.observe(at,73,3);const auto original=gridClockContext(first.snapshot(3),true);
+        REQUIRE(original.available && original.admitted && original.session==3 && original.run==1);
+        REQUIRE(!gridClockContext(first.snapshot(4),true).available && !second.snapshot(3));
+        at.song.sample+=24000;at.song.ppq+=61./60;first.observe(at,97,3);
+        REQUIRE(original.sameAuthority(gridClockContext(first.snapshot(3),true)));
+        REQUIRE(!gridClockContext(first.snapshot(3),false).available);
+        at.playing=false;first.observe(at,21,3);REQUIRE(!original.sameAuthority(gridClockContext(first.snapshot(3),false)));
+        at.playing=true;first.observe(at,55,3);REQUIRE(first.snapshot(3)->run==2);
+        REQUIRE(!original.sameAuthority(gridClockContext(first.snapshot(3),true)));
+        first.reset();REQUIRE(!first.snapshot(3));first.observe(at,55,4);REQUIRE(!first.snapshot(3) && first.snapshot(4)->run==1);
+    }
     // #73: these are injected sequences, not a reconstruction of unrecorded FL callbacks.
     for(bool stablePrefix:{false,true}){
         LiveTransportClock clock;auto player=std::make_unique<TransportPlayback>();

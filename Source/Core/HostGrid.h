@@ -17,7 +17,21 @@ inline constexpr std::array<GridChoice,7> gridChoices{{
     {GridDivision::beat,"beat","1 beat"},{GridDivision::bar,"bar","1 bar"},
     {GridDivision::twoBars,"two-bars","2 bars"},{GridDivision::fourBars,"four-bars","4 bars"}}};
 
-enum class GridGate {available,sampleUnavailable,captureRate,invalidTiming,rate,tempo,meter,origin,division,conversion};
+enum class GridGate {available,sampleUnavailable,captureRate,invalidTiming,rate,tempo,meter,origin,division,conversion,clockUnavailable,clockRejected,runOrigin};
+// Control-side copy of a validated clock, never diagnostic history. Coordinates
+// remain those of accepted capture; this reference only authorizes their use.
+struct GridClockContext
+{
+    SongTime reference{};
+    uint64_t session=0,run=0,reset=0;
+    bool playing=false,available=false,admitted=false;
+    bool sameAuthority(const GridClockContext& other)const noexcept
+    {
+        return playing==other.playing && available==other.available
+            && (!available || (session==other.session && reset==other.reset && run==other.run
+                && admitted==other.admitted && (!playing || transportMappingMatches(reference,other.reference))));
+    }
+};
 struct GridEvidence
 {
     SongTime accepted{},observed{};
@@ -25,6 +39,9 @@ struct GridEvidence
     GridDivision division=GridDivision::quarterBeat;
     bool sampleAvailable=false;
     GridGate gate=GridGate::sampleUnavailable;
+    GridClockContext clock{};
+    SongTime validationReference{};
+    bool usesRun=false;
 };
 
 // Fixed accepted mapping only. The existing transport authority decides whether
@@ -34,20 +51,34 @@ class HostGrid
 public:
     static std::optional<HostGrid> make(const SongTime& accepted,const SongTime& now,
                                       double captureRate,GridDivision division,
-                                      GridEvidence* evidence=nullptr,bool sampleAvailable=true)noexcept
+                                      GridEvidence* evidence=nullptr,bool sampleAvailable=true,
+                                      const GridClockContext* clock=nullptr)noexcept
     {
         if(evidence)*evidence={accepted,now,captureRate,division,sampleAvailable,GridGate::available};
+        if(evidence){evidence->validationReference=accepted;if(clock)evidence->clock=*clock;}
         const auto reject=[&](GridGate gate)->std::optional<HostGrid>{if(evidence)evidence->gate=gate;return {};};
         if(!sampleAvailable)return reject(GridGate::sampleUnavailable);
         if(!std::isfinite(captureRate) || captureRate<=0 || std::abs(captureRate-accepted.rate)>.001)
             return reject(GridGate::captureRate);
-        if(!transportMappingMatches(accepted,now)){
+        const auto* validation=&accepted;
+        if(clock && clock->playing){
+            if(evidence){evidence->validationReference=clock->reference;evidence->usesRun=true;}
+            if(!clock->available || !clock->session || !clock->run)return reject(GridGate::clockUnavailable);
+            if(!clock->admitted)return reject(GridGate::clockRejected);
+            long double origin;
+            if(!songOrigin(accepted,origin) || !songOrigin(clock->reference,origin))return reject(GridGate::invalidTiming);
+            if(accepted.rate!=clock->reference.rate)return reject(GridGate::rate);
+            if(accepted.bpm!=clock->reference.bpm)return reject(GridGate::tempo);
+            if(accepted.numerator!=clock->reference.numerator || accepted.denominator!=clock->reference.denominator)return reject(GridGate::meter);
+            validation=&clock->reference;
+        }
+        if(!transportMappingMatches(*validation,now)){
             long double a,b;
-            if(!songOrigin(accepted,a) || !songOrigin(now,b))return reject(GridGate::invalidTiming);
-            if(accepted.rate!=now.rate)return reject(GridGate::rate);
-            if(accepted.bpm!=now.bpm)return reject(GridGate::tempo);
-            if(accepted.numerator!=now.numerator || accepted.denominator!=now.denominator)return reject(GridGate::meter);
-            return reject(GridGate::origin);
+            if(!songOrigin(*validation,a) || !songOrigin(now,b))return reject(GridGate::invalidTiming);
+            if(validation->rate!=now.rate)return reject(GridGate::rate);
+            if(validation->bpm!=now.bpm)return reject(GridGate::tempo);
+            if(validation->numerator!=now.numerator || validation->denominator!=now.denominator)return reject(GridGate::meter);
+            return reject(clock && clock->playing?GridGate::runOrigin:GridGate::origin);
         }
         long double beats;
         switch(division)

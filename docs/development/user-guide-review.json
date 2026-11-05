@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed owner-authorized local integration of offline clock fix 1532f37 with issue 73 diagnostics. Guide now explains Copy diagnostics during Play and after Stop, whole-report retention and independent fixed-tempo offline validation. Reused existing ActionButton and diagnostic roles; no workspace screenshot change, state migration, timing tolerance relaxation or new host acceptance is claimed.",
+  "summary": "Reviewed issue 73 stable playback Snap implementation, including dedicated clock control authority, shared canvas/inspector validation, captured-grid ruler/entry semantics, diagnostics and preservation of accepted timing through compatible manual target/render updates. Guide explains fixed-tempo offsets and real drift without tempo-map claims. Existing controls, assets, screenshots and audio admission remain unchanged; native tests cover missing wet and disabled output.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -215,8 +215,8 @@
     },
     {
       "path": "Source/Core/HostGrid.h",
-      "bytes": 5921,
-      "sha256": "62060ecd43a99bb73b7f9deed92bc5fa03ff0017c7c39979305fae0cba30fde8"
+      "bytes": 7829,
+      "sha256": "41f2b0c64040f1bac257237f992e99be15ec3dacae59df5b13422df0cba4c7ed"
     },
     {
       "path": "Source/Core/ManagedAsset.h",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 80843,
-      "sha256": "d8b591b91730861e9052f903b5a6b70598ea45e213e350bebc3972301d1801da"
+      "bytes": 81209,
+      "sha256": "9c0d4d9384ac6bc0326660419dfb38589dcd1f45a7d854cef21bcd0038861b66"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22116,
-      "sha256": "bcfbcb1ad44264d376cd5e35975b35ad999241aeb7c97411660ab8e353129627"
+      "bytes": 22342,
+      "sha256": "1ee207fd64350426fc2cae854fa53d1ba6a83f887123081c3dcc4904f5e757b0"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/Playback/LiveTransportClock.h",
-      "bytes": 2305,
-      "sha256": "afb5f23f5f2669c5a8b12ebf62e762ca80fa0e6cbce9a3e946744836765306a0"
+      "bytes": 2764,
+      "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -500,18 +500,18 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 80398,
-      "sha256": "2071a6f8cb6ac0a29e08a279e3677bba0b41079b3df7167773675f65553848f2"
+      "bytes": 80463,
+      "sha256": "7c124799bf22a12936219be806adf08698d18db0dcd938680ceb9d8bf34e301a"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9813,
-      "sha256": "48ddb08870d4bcf5ee0c0fe4f8417e11aa13d840602f8dab290e73573c09b094"
+      "bytes": 9840,
+      "sha256": "e365f48bdd24972c31647e22c4413f451cc89e44540519cc3ecf99eae4dd234c"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 22143,
-      "sha256": "62e366f3a3d9b644e304d8a447211d4677b9d6867351a9a8477c26b18eb747cd"
+      "bytes": 22546,
+      "sha256": "897c09ce188bfea620df92d71c9dcb3f40bf66f9f8e0e98b5ded3a88c11b1a79"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -675,8 +675,8 @@
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
-      "bytes": 7785,
-      "sha256": "ad26edab92df1ecffb31febb53621aba75489caa25b3ab20447de44b677082d4"
+      "bytes": 9105,
+      "sha256": "67e865b761f63df50cc17df16ed3dbcb33896a059ed0170f7780a34030eac5a0"
     },
     {
       "path": "Source/UI/MusicalPosition.h",
@@ -700,18 +700,18 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 47866,
-      "sha256": "39d03ad8c322fc713ed88f79d7b71be21c95b2a5cc046f649ad17f3d75d19d3b"
+      "bytes": 48679,
+      "sha256": "fc2837c20b8aff8be9b69418b37126c1ed809cd1f0eb942649c5b0b0ad8f0f80"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 7626,
-      "sha256": "c198118721a3fe815844074a092e1a483e10d08fa3c0b0a5e5d519e036604d01"
+      "bytes": 7793,
+      "sha256": "8b628f2f077f92f364d90d832ac36694a88a06a679abd7b734cc5f1f9ca185d5"
     },
     {
       "path": "Source/UI/SwellViewport.h",
-      "bytes": 4183,
-      "sha256": "c2c2872c1d3a3efbbf88e3c40cba605e335a74d0b7ed9bed5bf4f370f7f64130"
+      "bytes": 4297,
+      "sha256": "f2689d906d0396f686d85cb7e6da631de044cef15107e9f56bf47385eba89ad2"
     },
     {
       "path": "Source/UI/TimingEdit.h",
@@ -775,8 +775,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 17085,
-      "sha256": "145b278ddfb1614a0a2bd9fa8b9cca1fbe139c4a5a9a03a8e80d4c407b0ac7e3"
+      "bytes": 17490,
+      "sha256": "a40a5db70dd906aea47f28591e088f2f67324bc11a30fe1b52376082a2727ada"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

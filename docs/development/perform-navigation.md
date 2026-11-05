@@ -19,8 +19,32 @@ interface is documented in [shared timeline controls](shared-timeline-controls.m
 It accepts the session's accepted `SongTime`, a current host observation, actual
 capture rate and a stable `GridDivision`. It reuses `transportMappingMatches`,
 `songOrigin` and `resolvePpqSample` rather than inferring a tempo map or bar origin.
-Compatible seeks/loops retain the mapping. Changed tempo, meter, rate or origin,
-invalid/non-finite timing and incompatible capture rates return unavailable.
+Compatible seeks/loops retain the mapping. Strict callers still reject changed
+tempo, meter, rate or origin, invalid/non-finite timing and incompatible capture
+rates. Perform additionally supplies the current independently validated live-run
+context. A stable run/source origin offset does not disable Snap: rate, tempo
+and meter must agree, and the host must match that run under the unchanged
+one-sample guard. A rejected playing run cannot fall back to the saved origin.
+
+The captured timing remains the quantization and musical-edit anchor, including
+the ruler and inspector position fields. Play/Stop never relocates the grid or
+saved source/swell/render coordinates. The dedicated engine clock publication
+is control authority; callback/worker diagnostic history and wet readiness are
+not. UI/clock observations can straddle a transition, so an unavailable current
+playing context cannot authorize a snapped edit. This is fixed-tempo support;
+tempo-map coverage and precision remain owned by issue #71.
+
+Manual target insertion and compatible render/generation updates retain the
+existing accepted timing tuple, rather than replacing it with the current
+playing tuple. A first usable mapping or a genuinely different musical mapping
+still follows the existing acceptance path. Explicit capture/generation
+transactions retain their existing ownership; no source timing is migrated.
+
+Canvas and inspector invocations retain their source/session/selection and clock
+ownership. Normal progress through one validated run preserves a gesture;
+changed clock, run, session or source cancels an obsolete invocation. Exact
+entry, reset and temporary Ctrl bypass retain canonical validation and do not
+become snapped merely because a playing context is supplied.
 
 The seven divisions are denominator beats (1/16, 1/8, 1/4, 1 beat) and numerator
 bars (1, 2, 4 bars). PPQ remains quarter notes. Quantization rounds absolute grid

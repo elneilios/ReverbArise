@@ -11,7 +11,7 @@ class SwellTimeline final : public juce::Component,public juce::SettableTooltipC
 {
 public:
     explicit SwellTimeline(SwellEngine& engine);
-    void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true);
+    void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true,bool hostPlaying=false);
     void paint(juce::Graphics&) override;
     void resized() override;
     void lookAndFeelChanged()override{invalidateWaveforms();}
@@ -44,8 +44,10 @@ public:
     void focusLost(FocusChangeType)override{drag=Drag::none;fineDrag=false;snapBypassed=false;}
     void setGridDivision(GridDivision division);
     GridDivision selectedGrid()const noexcept{return gridDivision;}
-    bool gridAvailable()const{return playheadAvailable && HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision).has_value();}
-    GridEvidence gridEvidence()const{GridEvidence result;HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision,&result,playheadAvailable);return result;}
+    std::optional<HostGrid> makeGrid(GridEvidence* evidence=nullptr)const{return HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision,evidence,playheadAvailable,&clockContext);}
+    bool gridAvailable()const{return makeGrid().has_value();}
+    GridEvidence gridEvidence()const{GridEvidence result;makeGrid(&result);return result;}
+    const SongTime& acceptedGridTiming()const{return gridTiming();}
     const juce::String& interactionStatus()const noexcept{return gestureStatus;}
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
@@ -89,6 +91,7 @@ private:
     Shape initialEnvelope;
     SwellViewport dragView;
     SongTime dragTime,dragAcceptedTime;
+    GridClockContext clockContext,dragClock;
     std::optional<HostGrid> dragGrid;
     uint64_t dragEpoch=0,dragInput=0;
     std::vector<juce::String> dragSelection;

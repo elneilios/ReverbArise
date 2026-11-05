@@ -460,7 +460,7 @@ void PreverbAudioProcessorEditor::refresh()
         else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
-    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
     hostInfo.setText((diagnostics.samplePositionAvailable && time.valid?m3::ui::footerPosition(time.sample,time):juce::String("Position unavailable"))
         +"    |    "+(diagnostics.tempoAvailable?m3::ui::compactValue(diagnostics.bpm,2)+" BPM":juce::String("BPM unavailable"))
         +"    |    "+(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+" / "+juce::String(diagnostics.denominator):juce::String("Meter unavailable")),juce::dontSendNotification);
@@ -491,7 +491,7 @@ void PreverbAudioProcessorEditor::refresh()
     listEmpty.setVisible(state.session.swells.empty());inspectorEmpty.setVisible(w==nullptr);inspectorViewport.setVisible(w!=nullptr);
     for(auto* child:inspectorContent.getChildren())child->setVisible(w!=nullptr);
     for(int field:{sourceA,sourceB,audibleA}){fields[field].setVisible(w && advancedTiming);fieldLabels[field].setVisible(w && advancedTiming);}
-    refreshValues(w,time);
+    refreshValues(w,!nextSpecial?timeline.acceptedGridTiming():time);
     listLabel.setText("Swells",juce::dontSendNotification);listCount.setText("("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     if(!learningLayout && !exportLayout && state.sessionEpoch!=navigationEpoch)
     {

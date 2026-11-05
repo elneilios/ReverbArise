@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.
+
 - [Combined #73 diagnostic test installation](validation/2026-11-05-issue-73-combined-test-install.md) — local integration of the existing offline repair and current grid/live evidence, with verification, installation inventory and the exact host capture procedure.
 
 - [Issue #73 clock investigation](validation/2026-11-05-issue-73-clock-investigation.md) — separate grid/live evidence, retained local offline fix and explicitly unresolved host attribution; no timing-policy repair or main integration is implied.

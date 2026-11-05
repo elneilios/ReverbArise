@@ -85,6 +85,23 @@ inline void multipleExportCases()
             REQUIRE(std::abs(live[n]-offline[440+n]*ramp)<1e-6f);}
         const auto savedAfterLive=p.swellEngine().savedSession();REQUIRE(savedBeforeLive.swells.size()==savedAfterLive.swells.size());
         for(size_t n=0;n<savedBeforeLive.swells.size();++n)REQUIRE(m3::sameSavedSwell(savedBeforeLive.swells[n],savedAfterLive.swells[n]));
+        // Re-run identical absolute audio under a fresh shifted clock. Grid
+        // availability must not change the prepared sample schedule or PCM.
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        const auto shiftedPosition=[&](int64_t sample){position(i,sample,true);heads[i].position.setPpqPosition((sample-16)/500.0);};
+        shiftedPosition(440);std::vector<float> shifted;
+        for(int stride:{11,23,30}){juce::AudioBuffer<float> block(2,stride);block.clear();p.processBlock(block,midi);
+            const auto state=p.swellEngine().snapshot();const auto context=m3::gridClockContext(state.gridClock,true);
+            const auto grid=m3::HostGrid::make(state.session.timing,p.getSongTime(),1000,m3::GridDivision::beat,nullptr,true,&context);
+            REQUIRE(grid && context.admitted && state.gridClock->session==state.sessionEpoch);
+            for(int n=0;n<stride;++n)shifted.push_back(block.getSample(0,n));shiftedPosition(440+static_cast<int64_t>(shifted.size()));}
+        REQUIRE(shifted.size()==live.size());for(size_t n=0;n<live.size();++n)REQUIRE(std::abs(shifted[n]-live[n])<1e-6f);
+        const auto kept=p.swellEngine().savedSession();for(size_t n=0;n<kept.swells.size();++n)REQUIRE(m3::sameSavedSwell(kept.swells[n],savedBeforeLive.swells[n]));
+        p.swellEngine().resetTransportClock();REQUIRE(!p.swellEngine().snapshot().gridClock);
+        p.swellEngine().restore(kept);REQUIRE(!p.swellEngine().snapshot().gridClock);
+        waitM3([&]{const auto state=p.swellEngine().savedSession();return std::all_of(state.swells.begin(),state.swells.end(),[](const auto& w){return !w.render.present() || w.phase==m3::Phase::ready;});});
+        const auto restored=p.swellEngine().savedSession();for(size_t n=0;n<kept.swells.size();++n)REQUIRE(m3::sameSavedSwell(kept.swells[n],restored.swells[n]));
+        REQUIRE(restored.timing.sample==kept.timing.sample && restored.timing.ppq==kept.timing.ppq && !p.swellEngine().snapshot().gridClock);
     }
 
     REQUIRE(processors[0]->getLatencySamples()==0 && processors[1]->getLatencySamples()==0);

@@ -79,7 +79,7 @@ private:
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
-    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;};
+    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;m3::GridClockContext clock;};
     std::array<ValueInvocation,valueCount> valueInvocations;
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;

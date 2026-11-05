@@ -1,6 +1,7 @@
 #pragma once
 #include "LiveDiagnostics.h"
 #include <Core/SwellSession.h>
+#include <Core/HostGrid.h>
 
 namespace m3
 {
@@ -19,6 +20,15 @@ struct LiveClockSnapshot
     bool sameRun(const LiveClockSnapshot& other) const noexcept
     {return session==other.session && reset==other.reset && run==other.run && playing==other.playing;}
 };
+inline GridClockContext gridClockContext(const std::optional<LiveClockSnapshot>& clock,bool playing)noexcept
+{
+    GridClockContext result;result.playing=playing;
+    if(clock && clock->playing==playing){
+        result.available=true;result.admitted=clock->gate==LiveGate::admitted;
+        result.reference=clock->reference;result.session=clock->session;result.run=clock->run;result.reset=clock->reset;
+    }
+    return result;
+}
 // Only the callback writes state. Worker reads a separate bounded atomic value
 // publication, never a telemetry snapshot or a pointer into callback ownership.
 class LiveTransportClock

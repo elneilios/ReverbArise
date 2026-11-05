@@ -59,6 +59,7 @@ EditorSnapshot SwellEngine::snapshot() const
         s.songExport.session=sessionGeneration.load();s.songExport.pass=pass;s.songExport.cursor=exportVoice->position();s.songExport.previewRequested=exportVoice->requested(exportVoice->request());
         if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";}
     s.sessionEpoch=sessionGeneration.load();
+    s.gridClock=transportClockSnapshot();
     s.learnGeneration=learnViewLocked();s.initialPerformHandoff=initialPerformOffer;
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=audioAllowed.load()?voice.position():std::nullopt;s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
@@ -138,7 +139,8 @@ bool SwellEngine::addTarget(int64_t arrival)
     if(!permitCreative())return false;
     const auto context=contextProvider(); const juce::ScopedLock guard(lock);
     std::vector<int64_t> arrivals; for(const auto& c:candidates) arrivals.push_back(c.sample);
-    if(!add(model,arrival,context.capture.manifest,context.time,arrivals,message)) return false;
+    const auto& targetTime=sameMusicalMapping(model.timing,context.time)?model.timing:context.time;
+    if(!add(model,arrival,context.capture.manifest,targetTime,arrivals,message)) return false;
     if(workflowState){performPositionEstablished=true;initialPerformOffer=0;}
     protectedGenerationCalibration.clear();
     ++monitoringGeneration;auto& w=model.swells.back();w.detectorAnchor=arrival;w.ir=model.defaultIR;w.irName=model.defaultIRName;
@@ -284,7 +286,7 @@ void SwellEngine::generate(bool all)
 {
     if(!permitCreative())return;
     const auto context=contextProvider(); const juce::ScopedLock guard(lock); stopLocked();
-    if(context.time.valid && context.capture.manifest.sampleRate==context.time.rate) model.timing=context.time;
+    if(context.time.valid && context.capture.manifest.sampleRate==context.time.rate && !sameMusicalMapping(model.timing,context.time)) model.timing=context.time;
     for(auto& w:model.swells)
     {
         if(w.frozen || w.status=="Importing IR")continue;
@@ -782,7 +784,8 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         if(requested.id==model.primary)r.raw=std::move(raw);
         r.preparedShape=UINT64_MAX;r.preparedMonitor=UINT64_MAX;
         r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
-        model.timing=context.time;auto& w=*find(model,requested.id);w.phase=Phase::ready;w.progress=1;w.status="Frozen render";
+        if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+        auto& w=*find(model,requested.id);w.phase=Phase::ready;w.progress=1;w.status="Frozen render";
         if(model.gainPolicy==GainPolicy::musical && w.calibration.state==CalibrationState::unavailable)
             w.status+=" | Calibration unavailable: unfreeze and restore source";
         ++liveRevision;forceRefresh.erase(w.id);return;
@@ -834,7 +837,8 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             auto& r=runtime[requested.id];r.cachedWetOnly=true;r.raw=std::make_shared<WetRender>(std::move(recovered));
             r.rawWave=waveform(*r.raw);r.preparedShape=UINT64_MAX;r.preparedRender.clear();
             r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
-            model.timing=context.time;auto& w=*find(model,requested.id);w.phase=Phase::error;w.status="Missing source: last-committed Wet Only available";
+            if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+            auto& w=*find(model,requested.id);w.phase=Phase::error;w.status="Missing source: last-committed Wet Only available";
         }
         else if(!cancel())failure(error);return;
     }
@@ -941,7 +945,8 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);
     else ++liveRevision;
-    model.timing=context.time; auto& runtimeState=runtime[w.id]; runtimeState.rawWave=std::move(wave);
+    if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+    auto& runtimeState=runtime[w.id]; runtimeState.rawWave=std::move(wave);
     runtimeState.verifiedRender=committed;
     runtimeState.sourceWave=std::move(sourceWave);runtimeState.lastUse=++useSerial;
     if(w.id==model.primary) runtimeState.raw=std::move(raw);

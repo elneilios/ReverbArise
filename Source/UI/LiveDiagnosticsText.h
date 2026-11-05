@@ -87,6 +87,9 @@ inline juce::String gridDiagnosticsText(const GridEvidence& d)
         case GridGate::rate:return "host sample-rate mismatch";case GridGate::tempo:return "tempo mismatch";
         case GridGate::meter:return "meter mismatch";case GridGate::origin:return "accepted-grid origin mismatch";
         case GridGate::division:return "invalid grid division";case GridGate::conversion:return "grid conversion unavailable";
+        case GridGate::clockUnavailable:return "current playback clock unavailable";
+        case GridGate::clockRejected:return "current playback clock rejected";
+        case GridGate::runOrigin:return "playback-run origin mismatch";
     }return "unavailable";};
     auto gridText=juce::String("Fixed grid (UI snapshot; independent of callback admission): ")+reason(d.gate);
     gridText+="\nGrid sample position available: "+juce::String(d.sampleAvailable?1:0)+" | capture Hz "+juce::String(d.captureRate,6)
@@ -96,6 +99,15 @@ inline juce::String gridDiagnosticsText(const GridEvidence& d)
     long double a,b;gridText+="\nGrid accepted / observed / delta samples: ";
     gridText+=d.sampleAvailable && songOrigin(d.accepted,a) && songOrigin(d.observed,b)
         ?juce::String(static_cast<double>(a),12)+" / "+juce::String(static_cast<double>(b),12)+" / "+juce::String(static_cast<double>(b-a),12):"unavailable";
+    gridText+="\nGrid coordinate anchor: accepted capture | validation: "+juce::String(d.usesRun?"current playback run":"accepted mapping");
+    if(d.clock.playing)gridText+=" | session "+juce::String(static_cast<juce::int64>(d.clock.session))
+        +" reset "+juce::String(static_cast<juce::int64>(d.clock.reset))+" run "+juce::String(static_cast<juce::int64>(d.clock.run))
+        +" | clock available/admitted "+juce::String(d.clock.available?1:0)+"/"+juce::String(d.clock.admitted?1:0);
+    gridText+="\nGrid validation reference: "+(d.validationReference.valid?liveTimingText(d.validationReference):juce::String("unavailable"));
+    gridText+="\nGrid validation / observed / delta samples: ";
+    gridText+=d.sampleAvailable && songOrigin(d.validationReference,a) && songOrigin(d.observed,b)
+        ?juce::String(static_cast<double>(a),12)+" / "+juce::String(static_cast<double>(b),12)+" / "+juce::String(static_cast<double>(b-a),12):"unavailable";
+    if(d.usesRun && d.gate==GridGate::available)gridText+="\nSource-to-run offset is informational; captured grid unchanged.";
     return gridText+"\n";
 }
 }
