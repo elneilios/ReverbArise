@@ -146,9 +146,9 @@ and contain recoverable staging/validation exceptions without losing accepted da
 
 | Check | Result / scope |
 | --- | --- |
-| Final native Release wrapper | `scripts/build.ps1 -Configuration Release -Test`: **65/65 passed**, 229.83 s CTest; production/test revision `4d2d098`, evidence working tree dirty. Logs: `out/build-logs/Release/20261105-005135-e03a3685/`. |
+| Final native Release wrapper | `scripts/build.ps1 -Configuration Release -Test`: **66/66 passed**, 211.68 s CTest; integrated production/test revision `46af486`, including approved #55 main `f746dac`. Logs: `out/build-logs/Release/20261105-010304-9d27b037/`. |
 | Native Debug wrapper | `scripts/build.ps1 -Configuration Debug`: build passed; wrapper testing was not requested. Logs: `out/build-logs/Debug/20261105-003545-39fd0f46/`. |
-| Focused native Debug CTest | **9/9 passed**, 161.55 s: workflow processor, capture transaction/failure/mailbox/context, Learn generation/model UI, swell UI and persistent capture. `out/debug-focused54.log`; this is not a full Debug suite. |
+| Focused native Debug CTest | **9/9 passed**, 161.55 s: workflow processor, capture transaction/failure/mailbox/context, Learn generation/model UI, swell UI and persistent capture. `out/debug-focused54.log`; this is not a full Debug suite. This precedes #55 integration; the capture implementation was unchanged by that merge. |
 | Final native UI supplement | Debug `preverb_swell_ui_test` passed after the scroll-stability correction and regenerated capture screenshots. `out/debug-ui-scroll54.log`. |
 | Long harness | All 19 accelerated matrix cases, two wall-clock cases and two unforced small-block probes passed their specified outcome/retry invariants. Probe captures failed as explicitly reported above. |
 | UI policy / OpenSpec | `scripts/check-ui-standards.ps1` passed: 50 files, 61 bounded occurrences, unchanged debt inventory. `openspec validate diagnose-learn-capture-failures --strict` passed; `git diff --check` passed. |
@@ -162,7 +162,8 @@ text height and scroll position across periodic diagnostic refreshes.
 An intermediate cold Release invocation passed 59/60 before main integration:
 the new before-Stop regression exposed the worker object compiled before that
 fix during iterative work. The subsequent integrated gate passed 65/65, and the
-final gate above rebuilt the scroll correction and passed 65/65 again. No failed
+scroll-correction gate passed 65/65, followed by the final 66/66 gate above after
+the approved #55 integration (only its documentation index conflicted). No failed
 intermediate run is presented as final validation. Dependency sources were warm;
 the initial worktree native compilation was cold, later builds incremental.
 Build-wrapper command-double fixtures were not run (wrapper unchanged).
@@ -178,3 +179,6 @@ host; no repetition of the injected automated edge cases is requested. The exact
 original error/cause remains unknown. The review PR uses `Refs #54`, leaving the
 reliability issue open for recurrence evidence and separately reviewed throughput
 or checkpoint design if needed.
+
+Review: [PR #65](https://github.com/elneilios/ReverbArise/pull/65), left open for
+owner review and merge; the OpenSpec change is not archived.

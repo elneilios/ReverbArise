@@ -18,6 +18,9 @@ Learn/event presentation, and accepted-source Stop policy. Failure fences invali
 both provisional waveform and generation snapshots. Harness success checks use
 `Result::accepted`; they do not require the old automatic Perform transition.
 No #38 behavior is redesigned by this change.
+A subsequent integration with approved main `f746dac` (#55) resolves only the
+documentation-index conflict, preserving its manual preparation behavior. The
+capture/diagnostic implementation and long-harness code remain unchanged.
 
 **Goals:** Make recurrence diagnosable; deterministically reproduce relevant failure paths and the waveform symptom; prove accepted source/history and retry safety with isolated disposable assets.
 
