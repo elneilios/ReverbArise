@@ -42,7 +42,7 @@ authorized by this planning-update invocation alone.
 
 - [x] 5.1 Run scripts/check-ui-standards.ps1 and scripts/build.ps1 -Configuration Debug -Test followed by Release -Test using the wrapper lock and existing warm trees. Resolve failures and record revision, commands, environment, cached/cold status, focused versus full/native/fixture results and skipped coverage once in dated validation evidence.
 - [x] 5.2 After section 6 passes, deliver the revised native/FL test build and obtain a brief targeted owner check for no forced speech and smooth preset/fader changes at the moving playhead. Retain the owner's passing presets, export alignment and save/reopen acceptance; request repeats only if affected behavior changes or a concrete failure warrants it. Record actual host/DPI coverage and unresolved limits, not inferred results.
-- [ ] 5.3 Review final scope and diff, commit only #51 work on its existing branch, and update existing PR #92 with issue/change links, policy approval, migration notes, retained and new test evidence and outstanding limitations. Verify the PR targets main and remains open for owner review; do not create a duplicate, self-merge, independently close the issue or archive the change.
+- [x] 5.3 Review final scope and diff, commit only #51 work on its existing branch, and update existing PR #92 with issue/change links, policy approval, migration notes, retained and new test evidence and outstanding limitations. Verify the PR targets main and remains open for owner review; do not create a duplicate, self-merge, independently close the issue or archive the change.
 
 ## Workflow follow-up
 
