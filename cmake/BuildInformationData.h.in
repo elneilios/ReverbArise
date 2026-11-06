@@ -1,0 +1,11 @@
+#pragma once
+#include <string_view>
+namespace m3::build
+{
+inline constexpr std::string_view productName="@product_name@";
+inline constexpr std::string_view version="@version@";
+inline constexpr std::string_view candidate="@candidate@";
+inline constexpr std::string_view identifier="@build_identifier@";
+inline constexpr std::string_view gitSha="@git_sha@";
+inline constexpr bool worktreeDirty=@worktree_dirty@;
+}

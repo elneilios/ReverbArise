@@ -3,14 +3,14 @@
 
 namespace m3::ui::controls
 {
-enum class ActionIcon { settings };
+enum class ActionIcon { settings, openFile };
 
 class IconActionButton final:public juce::Button
 {
 public:
-    explicit IconActionButton(ActionIcon role):juce::Button("Settings"),icon(role)
+    explicit IconActionButton(ActionIcon role):juce::Button(role==ActionIcon::settings?"Settings":"Open IR file"),icon(role)
     {
-        setTitle("Settings");setTooltip("Open Settings");setHelpText("Open Settings");
+        setTitle(getButtonText());setTooltip(role==ActionIcon::settings?"Open Settings":"Import WAV or WavPack IR");setHelpText(getTooltip());
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
     }
     // Space and Return have the same activation semantics. No mode toggling.
@@ -22,16 +22,24 @@ public:
     }
     void focusGained(FocusChangeType)override{repaint();}
     void focusLost(FocusChangeType)override{repaint();}
+    juce::Rectangle<float> outlineBounds(bool focused)const noexcept
+    {return controlGeometry::insideStroke(getLocalBounds(),focused?controlGeometry::focusStroke:rule);}
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
         const auto box=getLocalBounds().toFloat().reduced(.5f);
         const auto enabled=isEnabled();const auto ink=(over || down?aqua:m3::ui::text).withMultipliedAlpha(enabled?1.0f:.35f);
         g.setColour(background);g.fillRoundedRectangle(box,radius);
         g.setColour((hasKeyboardFocus(true)?aqua:outline).withMultipliedAlpha(enabled?1.0f:.35f));
-        g.drawRoundedRectangle(box,radius,hasKeyboardFocus(true)?2.0f:rule);
+        g.drawRoundedRectangle(outlineBounds(hasKeyboardFocus(true)),radius,hasKeyboardFocus(true)?controlGeometry::focusStroke:rule);
         const auto c=box.getCentre();g.setColour(ink);
         switch(icon)
         {
+            case ActionIcon::openFile:
+            {
+                juce::Path folder;folder.startNewSubPath(c.x-9,c.y+7);folder.lineTo(c.x-9,c.y-6);
+                folder.lineTo(c.x-2,c.y-6);folder.lineTo(c.x+1,c.y-3);folder.lineTo(c.x+9,c.y-3);
+                folder.lineTo(c.x+9,c.y+7);folder.closeSubPath();g.strokePath(folder,juce::PathStrokeType(1.5f));break;
+            }
             case ActionIcon::settings:
                 g.drawEllipse(juce::Rectangle<float>(14,14).withCentre(c),1.5f);
                 g.drawEllipse(juce::Rectangle<float>(5,5).withCentre(c),1.5f);

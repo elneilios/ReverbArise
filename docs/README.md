@@ -12,6 +12,49 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
+
+- [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.
+
+- [Combined #73 diagnostic test installation](validation/2026-11-05-issue-73-combined-test-install.md) — local integration of the existing offline repair and current grid/live evidence, with verification, installation inventory and the exact host capture procedure.
+
+- [Issue #73 clock investigation](validation/2026-11-05-issue-73-clock-investigation.md) — separate grid/live evidence, retained local offline fix and explicitly unresolved host attribution; no timing-policy repair or main integration is implied.
+- [Swells-list selection reveal](development/perform-navigation.md#fit-lifecycle) — explicit list navigation applies contextual Fit automatically, following the owner's native-review decision; [issue #93 evidence](validation/2026-11-05-issue-93-selection-reveal.md) records native verification and separate owner/host coverage.
+- [Stable Perform transport readout](development/transport-readout.md) — fixed field/separator geometry, truthful formatting, bounded overflow and scoped native approval for issue #68.
+- [Compact UI review — issue #58](design/compact-ui-900x600/README.md) — approved interim 900x600 layout, spacing tokens and future-capacity mockups; [native evidence and integration sequence](validation/2026-11-05-issue-58-compact-ui.md) distinguish interim approval from the pending combined implementation and final review.
+  [Combined integration evidence](validation/2026-11-06-issue-58-integration.md)
+  tracks the accepted #51/#68/#93 baseline and independent scale work.
+
+- [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
+
+- [Perform playback caution](validation/2026-11-05-perform-playback-warning.md) — persistent low-priority warning, native notice precedence/fit checks and scoped owner approval; playback/capture remain unchanged.
+
+- [Swell source-edge conditioning](development/swell-source-edges.md) — 1 ms wet-source tapers, explicit saved-render upgrades and capture preservation.
+
+- [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
+
+- [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — delivered in merged PR #63; [closeout](validation/2026-11-05-issue-59-closeout.md#executed-merged-main-verification--2026-11-05) records completed post-merge verification, scoped owner sign-offs and the explicit additional-host-smoke waiver. [Redistribution review](validation/2026-11-04-issue-59-redistribution-review.md#subsequent-owner-sign-off--2026-11-05) records the one-friend private evaluation scope; public distribution remains undecided.
+
+- [Fixed-tempo DAW export clock](development/offline-export-clock.md) — per-bounce runtime validation, unchanged sample scheduling and copyable failure diagnostics.
+
+- [Perform waveform display](development/waveform-display.md) — GUI-only summaries, layer ownership, invalidation and close-zoom fidelity; [issue #67 evidence](validation/2026-11-05-issue-67-waveform-paint.md) separates component timing, full editor refresh and owner/host coverage.
+
+- [OpenSpec housekeeping audit](validation/2026-11-05-openspec-housekeeping-audit.md) — four merged changes synced/archived, remaining active work and strict-validation length warnings.
+
+- [Manual Perform preparation](development/workflow-modes.md#explicit-manual-preparation-in-perform) — explicit render requests with automatic policies off and honest unavailable timing; [issue #55 evidence](validation/2026-11-04-issue-55-manual-preparation.md) records native results and owner FL Studio acceptance.
+
+- [Perform workspace](design/perform-workspace.md) and [navigation/state contracts](development/perform-navigation.md) — approved compact composition, contextual Fit, guarded fixed-grid gestures and optional UI preferences; [integration evidence](validation/2026-11-04-issue-46-integration.md) records validation and owner acceptance.
+
+- [Perform live diagnostics](development/perform-live-diagnostics.md) — read-only callback admission, historical rejection and worker preparation evidence for transport silence.
+
+- [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
+
+- [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.
+
+- [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
+
+- [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — delivered source/thread audit and original measurements; waveform optimisation subsequently shipped in #67 / PR #69. Host/resource follow-up remains tracked by #25.
+
 - [Local Windows releases](development/releases.md) — validated ZIPs, immutable outputs, manual publication and redistribution gate.
 
 - [Product version and release identity](development/product-version.md) — CMake authority, exact tag checks, candidate labels and schema/host compatibility.
@@ -20,6 +63,11 @@ This directory covers product identity, the existing implementation, development
 - [UI development standards](development/ui-development-standards.md) — shared controls, incremental consolidation, interaction tests and visual checkpoints for UI work.
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
+- [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implemented by merged #56 and synced/archived through #66.
+- [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
+- [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
+- [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
+- [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels and continuous gain preview are implemented by #51.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
 
 - [Asset storage audit](development/asset-storage-audit.md) and [dated investigation evidence](validation/2026-11-03-asset-storage-investigation.md) — source-backed Issue #8 findings; proposed portability and retention remain planning only.

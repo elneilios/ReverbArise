@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-alpha.2",
+  "previousRelease": "v0.1.0-alpha.rehearsal.3",
+  "previousGitSha": "7ea715ba08bef612d7389c19ccd90764d91bd02c",
+  "changes": [
+    "A compact, resizable workspace starts at 900 x 600. Settings Appearance offers window-size presets and 100% or 125% UI scale when they fit your display, with preferences remembered locally across openings.",
+    "Export now offers independent Dry and Wet levels with presets, continuous level preview and gain provenance for exported files. First use defaults to Dry 0% and Wet 100%.",
+    "Settings About shows the running build and full source revision, with copy feedback for bug reports. Copy diagnostics includes separate Snap-grid and live playback timing evidence.",
+    "Each release ZIP now includes these build-specific release notes alongside the illustrated offline user guide."
+  ],
+  "fixes": [
+    "Improved Perform waveform drawing and detail when zoomed in, with less repeated waveform preparation during editor refresh.",
+    "Selecting a swell from the list automatically fits its context into view. The Perform transport readout keeps stable field positions while playback advances.",
+    "New wet renders use a short source-edge taper to reduce sharp cut-edge excitation, including when swells overlap. Captured audio and dry playback are preserved.",
+    "Snap stays available with a stable validated playback-clock offset in fixed-tempo projects; Play and Stop do not move the captured editing grid.",
+    "Fixed-tempo DAW offline rendering validates its own bounce clock, handling a stable source-to-export origin difference without moving accepted swell audio."
+  ],
+  "upgradeSteps": [
+    "Close your DAW and preserve the previous complete VST3 bundle before replacing it with the complete ReverbArise.vst3 folder. Rescan in FL Studio and open a copy of an existing project first.",
+    "Existing verified wet renders keep their saved sound. Use Regenerate All once to upgrade older unfrozen swells to source-edge conditioning; no recapture is needed. Frozen swells retain saved audio until explicitly unfrozen and regenerated.",
+    "Older unversioned Export preferences reset to Dry 0% and Wet 100% when migrated. Existing export history and files remain preserved; check the levels before preparing another export."
+  ],
+  "knownLimitations": [
+    "This is an unsigned Windows x64 VST3 alpha with manual installation. Clean-machine, second-host and physical DPI coverage remains limited; this exact package still needs its final FL Studio smoke test.",
+    "The timing repairs cover fixed tempo and meter. Tempo automation and genuine changes within a playback or bounce clock remain outside that repair and can make Snap or wet playback unavailable.",
+    "FL Studio Song/Pattern mode and source-mute state cannot be reliably distinguished by the plugin. Follow the Perform playback caution; source silence alone does not establish the intended host workflow.",
+    "Source-edge conditioning reduces one source of sharp transients; it does not guarantee removal of all artifacts or overload. Start at low monitoring volume.",
+    "If prepared swells go silent, preserve the project and assets, then copy diagnostics while the symptom is happening and again after Stop. A working Snap grid alone does not prove wet playback was admitted."
+  ]
+}

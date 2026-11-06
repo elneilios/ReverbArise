@@ -21,8 +21,41 @@ template<class F> static void waitFor(F condition,const std::source_location loc
     const auto deadline=juce::Time::getMillisecondCounter()+30000;
     while(!condition()) { if(juce::Time::getMillisecondCounter()>deadline) throw std::runtime_error("Timeout at "+std::to_string(location.line())); juce::Thread::sleep(2); }
 }
+#include "LiveClockEngineCases.h"
 int main() { return runTest([]
 {
+    {
+        TestDirectory directory;PreviewContext empty;
+        SwellEngine editor(directory.file,[&]{return empty;});
+        Session base;base.automaticProcessing=false;base.swells.emplace_back();
+        auto& automatic=base.swells.front();automatic.provenance=Provenance::automatic;
+        automatic.arrival=automatic.sourceStart=automatic.detectorAnchor=100;automatic.sourceEnd=500;
+        const auto id=automatic.id;
+        for(int change=0;change<9;++change)
+        {
+            editor.restore(base);
+            REQUIRE(editor.edit(id,[&](auto& w,auto&)
+            {
+                if(change==0)w.name="User name";
+                if(change==1)w.enabled=false;
+                if(change==2)w.muted=true;
+                if(change==3)w.solo=true;
+                if(change==4)w.shape.gainDb=-6;
+                if(change==5)w.placement=50;
+                if(change==6)w.sourceEnd=450;
+                if(change==7)w.arrival=101;
+                if(change==8)w.irName="User IR label";
+                return true;
+            }));
+            const auto saved=editor.savedSession();
+            REQUIRE(saved.swells.front().id==id && saved.swells.front().detectorAnchor==100);
+            // An IR label alone is metadata; all actual musical/activity/name edits protect origin.
+            REQUIRE(saved.swells.front().provenance==(change==8?Provenance::automatic:Provenance::manualEdited));
+        }
+        editor.restore(base);REQUIRE(editor.assignBundledIR(id,0,"monumental",editor.assignmentEpoch()));
+        REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
+    }
+    runLiveClockEngineCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
     REQUIRE(capture.commit(0,1000,source.data(),3000));
@@ -38,6 +71,27 @@ int main() { return runTest([]
     waitFor([&]{auto s=engine.savedSession();return s.swells[0].irName=="ir.wav" && s.swells[1].irName=="ir.wav";});
     engine.generate(true); waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
     const auto initial=engine.snapshot(); REQUIRE(initial.renderCount==2 && initial.raw && initial.shaped);
+    // Preparation telemetry is worker-owned and does not imply playing admission.
+    {float l[16]{},r[16]{};TransportTime at{context.time,false};
+        engine.processTransportAudio(l,r,16,at);
+        waitFor([&]{const auto s=engine.snapshot();return s.liveReady && s.livePreparation.result=="Prepared window retained";});
+        const auto prepared=engine.snapshot().livePreparation;
+        REQUIRE(prepared.attempt>0 && prepared.preparedRevision==prepared.revision);
+        REQUIRE(prepared.lastAttemptResult=="Published complete window" && prepared.end>prepared.start);
+        REQUIRE(prepared.attemptedAtMs>0 && prepared.servicedAtMs>=prepared.attemptedAtMs);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=1;}
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Live clock or asset timing incompatible";});
+        const auto rejected=engine.snapshot().livePreparation;
+        REQUIRE(rejected.service>prepared.service && rejected.attempt==prepared.attempt);
+        REQUIRE(rejected.observed.ppq==1 && rejected.source.ppq==0);
+        REQUIRE(rejected.lastAttemptResult==prepared.lastAttemptResult);
+        {const juce::ScopedLock guard(contextLock);context.time.ppq=0;}
+        engine.setLivePlayback(false,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Live disabled";});
+        engine.setLivePlayback(true,LiveRouting::dryWet,0);
+        waitFor([&]{return engine.snapshot().livePreparation.result=="Prepared window retained";});
+    }
+
     REQUIRE(engine.edit(first,[&](auto& w,auto& text){return fullShape(w,initial.raw->start,initial.raw->end,text);}));
     waitFor([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.audition());
     float checkLeft[64]{},checkRight[64]{};engine.processAudio(checkLeft,checkRight,64,context.time);REQUIRE(engine.snapshot().playing);
@@ -142,6 +196,12 @@ int main() { return runTest([]
         REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::error;});
         REQUIRE(find(edits.savedSession(),a)->ir==imported.ir && edits.savedSession().defaultIR==future);
         const auto oldEpoch=edits.assignmentEpoch();const auto restored=edits.savedSession();edits.restore(restored);
+        REQUIRE(edits.snapshot().sessionEpoch!=oldEpoch);
+        REQUIRE(!edits.selectTargets({b},b,oldEpoch));
+        REQUIRE(!edits.removeTarget(a,oldEpoch));
+        REQUIRE(!edits.edit(a,[](auto& w,auto&){w.name="Stale row command";return true;},oldEpoch));
+        REQUIRE(edits.savedSession().selected==restored.selected && edits.savedSession().primary==restored.primary);
+        REQUIRE(find(edits.savedSession(),a)->name==find(restored,a)->name && edits.savedSession().swells.size()==restored.swells.size());
         REQUIRE(!edits.assignIR(a,find(restored,a)->inputGeneration,custom,false,oldEpoch));
         waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::ready;});
         auto request=*find(edits.savedSession(),a);
@@ -176,11 +236,13 @@ int main() { return runTest([]
         REQUIRE(edits.setGainPolicy(GainPolicy::musical));waitFor([&]{const auto state=edits.savedSession();return std::all_of(state.swells.begin(),state.swells.end(),[](const auto& w){return w.phase!=Phase::checking && w.phase!=Phase::rendering;});});
         REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
         REQUIRE(edits.setFrozen(calibrationTarget,true));const auto energySaved=edits.savedSession();
+        REQUIRE(find(energySaved,calibrationTarget)->provenance==Provenance::manualEdited);
         juce::String energyJson,energyError;Session energyDecoded;
         REQUIRE(encode(energySaved,energyJson,energyError) && decode(energyJson,energyDecoded,energyError));
         edits.restore(energyDecoded);waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
         REQUIRE(find(edits.savedSession(),calibrationTarget)->calibration==adopted.calibration);
         REQUIRE(edits.setFrozen(calibrationTarget,false));waitFor([&]{return find(edits.savedSession(),calibrationTarget)->phase==Phase::ready;});
+        REQUIRE(find(edits.savedSession(),calibrationTarget)->provenance==Provenance::manualEdited);
         REQUIRE(edits.setFrozen(a,true));request=*find(edits.savedSession(),a);
         REQUIRE(!edits.assignIR(a,request.inputGeneration,custom) && find(edits.savedSession(),a)->ir==request.ir);
         REQUIRE(edits.edit(a,[](auto& w,auto&){w.shape.gainDb=-8;w.shape.fadeIn=5;w.placement=10;w.enabled=false;w.solo=true;w.name="Keep name";return true;}));

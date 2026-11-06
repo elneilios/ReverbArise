@@ -1,11 +1,78 @@
 #include "CaptureWorker.h"
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 CaptureWorker::CaptureWorker(PluginCaptureQueue& q, juce::File root)
     : Thread("Preverb Capture"), queue(q), session(std::move(root)), published(session.snapshot()) {}
 
 CaptureWorker::~CaptureWorker() { stopThread(-1); }
+
+void CaptureWorker::failPass(CaptureFailureEvent event) noexcept
+{
+    if(event.epoch!=generation.load() || (workflowState && event.pass!=workflowState->snapshot().pass))return;
+    event.depth=queue.depth();event.capacity=PluginCaptureQueue::capacity;
+    callbackFinalDrops.store(event.dropped,std::memory_order_relaxed);
+    if(callbackFailedPass!=event.pass || callbackFailedEpoch!=event.epoch)
+    {
+        callbackFailedPass=event.pass;callbackFailedEpoch=event.epoch;
+        event.order=failureOrder.fetch_add(1,std::memory_order_relaxed)+1;
+        if(!callbackFailures.push(event))lostFailureEvents.fetch_add(1,std::memory_order_relaxed);
+    }
+    // Publish the callback-owned failure fence after its evidence is ready.
+    // A late worker failure from an older pass cannot overwrite this latch.
+    callbackFinalPass.store(event.pass,std::memory_order_release);
+}
+
+void CaptureWorker::rememberFailure(const CaptureFailureEvent& event,const juce::String& detail)
+{
+    const auto state=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    if(event.epoch!=generation.load() || event.pass!=state.pass || !state.locked())return;
+    if(currentFailure && currentFailure.event.pass==event.pass && currentFailure.event.epoch==event.epoch && currentFailure.event.order<=event.order)return;
+    currentFailure={};currentFailure.event=event;currentFailure.detail=detail.substring(0,512);
+    const auto& accepted=session.snapshot();
+    currentFailure.reference=accepted.reference;currentFailure.revision=accepted.manifest.revision;
+    currentFailure.project=accepted.manifest.projectId;currentFailure.instance=accepted.manifest.instanceId;
+    currentFailure.hadCommittedSource=!accepted.manifest.ranges.empty();
+    // A pass may remain recording until the next explicit DAW Stop. Publish the
+    // cause now: invalidating peaks must not leave the UI claiming healthy capture.
+    const juce::ScopedLock lock(snapshotLock);
+    published.failure=currentFailure;published.status=captureFailureFeedback(currentFailure);
+}
+
+void CaptureWorker::recordWorkerFailure(CaptureFailureReason reason,const juce::String& detail,int64_t start,int frames)
+{
+    CaptureFailureEvent event;event.reason=reason;event.pass=activePass;event.epoch=activeEpoch;
+    event.order=failureOrder.fetch_add(1,std::memory_order_relaxed)+1;
+    event.start=start;event.frames=frames;event.timing=lastTiming;event.baseline=passBaseline;
+    event.depth=queue.depth();event.capacity=PluginCaptureQueue::capacity;
+    event.queued=passFirstOrdinal?queue.totalQueued()-passFirstOrdinal+1:workerQueued;
+    if(callbackFinalPass.load(std::memory_order_acquire)==activePass)event.dropped=callbackFinalDrops.load();
+    rememberFailure(event,detail);failedPass.store(activePass,std::memory_order_release);
+}
+
+void CaptureWorker::collectCallbackFailures()
+{
+    CaptureFailureEvent event;
+    while(callbackFailures.pop(event))rememberFailure(event,captureFailureReasonText(event.reason));
+}
+
+void CaptureWorker::recoverWorkerException(const char* message)
+{
+    int length=0;while(length<512 && message[length])++length;
+    recordWorkerFailure(CaptureFailureReason::workerException,juce::String::fromUTF8(message,length),lastBlockStart,lastBlockFrames);
+    collectCallbackFailures();
+    // Keep ownership/failure metadata; settlement will reject and abort the pass.
+    session.abortPass();pending.clear();
+    const juce::ScopedLock guard(commandLock);
+    const auto state=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    if(state.phase==workflow::Phase::validating && state.pass==activePass && generation.load()==activeEpoch)
+    {
+        lastFailure=currentFailure;
+        if(callbackFinalPass.load(std::memory_order_acquire)==activePass)lastFailure.finalDropped=callbackFinalDrops.load();
+        workflowState->complete(activePass,false,false,false);activePass=0;hasPendingCapture=false;updateSnapshot();
+    }
+}
 
 void CaptureWorker::cancelWorkflowPass()
 {
@@ -28,6 +95,7 @@ CaptureSessionSnapshot CaptureWorker::snapshot() const
     const juce::ScopedLock commandGuard(commandLock);
     const juce::ScopedLock lock(snapshotLock);
     auto result = published;
+    if(result.failure && result.failure.event.epoch!=generation.load())result.failure={};
     if (loading.load())
     {
         result = {};
@@ -37,9 +105,39 @@ CaptureSessionSnapshot CaptureWorker::snapshot() const
         result.reference = restore.reference;
         result.status = "Loading saved capture assets; mapping paused";
     }
-    else if (hasPendingCapture.load() && ! result.unavailable && ! result.status.startsWith("Stale:"))
+    else if (hasPendingCapture.load() && ! result.unavailable && ! result.status.startsWith("Stale:")
+        && !(result.failure && workflowState && result.failure.event.pass==workflowState->snapshot().pass))
         result.status = "Capturing / committing; project save references the last committed revision";
     return result;
+}
+
+CaptureProgress CaptureWorker::progressSnapshot() const
+{
+    const juce::ScopedLock commandGuard(commandLock);
+    const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    const juce::ScopedLock lock(snapshotLock);
+    if(loading.load() || clearRequested.load() || !flow.locked() || publishedProgress.pass!=flow.pass
+        || publishedProgress.epoch!=generation.load() || passFailed(flow.pass))return {};
+    return publishedProgress;
+}
+std::optional<ProvisionalCaptureSnapshot> CaptureWorker::provisionalSnapshot() const
+{
+    const juce::ScopedLock commandGuard(commandLock);
+    const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
+    const juce::ScopedLock guard(snapshotLock);
+    if(loading.load() || clearRequested.load() || !flow.locked() || !publishedProvisional
+        || publishedProvisional->pass!=flow.pass || publishedProvisional->epoch!=generation.load()
+        || passFailed(flow.pass))return {};
+    return publishedProvisional;
+}
+
+void CaptureWorker::publishProgress()
+{
+    if(!progressDirty)return;
+    const auto now=juce::Time::getMillisecondCounter();
+    if(progressPublishedAt && now-progressPublishedAt<100)return;
+    const juce::ScopedLock lock(snapshotLock);publishedProgress=progress;
+    progressPublishedAt=now;progressDirty=false;
 }
 
 void CaptureWorker::requestRestore(const std::string& project, const std::string& instance,
@@ -83,6 +181,13 @@ void CaptureWorker::updateSnapshot()
                          std::memory_order_release);
     const juce::ScopedLock lock(snapshotLock);
     published = current;
+    if(lastFailure && lastFailure.event.epoch==generation.load())published.failure=lastFailure;
+    if(workflowState && currentFailure && currentFailure.event.epoch==generation.load()
+        && currentFailure.event.pass==workflowState->snapshot().pass && workflowState->snapshot().locked())published.failure=currentFailure;
+    publishedMetrics=workingMetrics;
+    if(workflowState && workflowState->snapshot().phase==workflow::Phase::failed)
+        published.status=published.failure && published.failure.event.pass==workflowState->snapshot().pass
+            ?captureFailureFeedback(published.failure):"Capture pass rejected; failure details unavailable. Stop and retry.";
     if (rateStale) published.status = "Stale: host sample rate changed; mapping paused. Clear and recapture.";
 }
 
@@ -92,7 +197,8 @@ void CaptureWorker::run()
     auto lastBlock = juce::Time::getMillisecondCounter();
     while (! threadShouldExit())
     {
-        if(workerHold.load()){wait(2);continue;}
+        if(workerHold.load()){workerHeld.store(true,std::memory_order_release);wait(2);continue;}
+        workerHeld.store(false,std::memory_order_release);
         if (restoreRequested.exchange(false, std::memory_order_acq_rel))
         {
             Restore command;
@@ -127,10 +233,23 @@ void CaptureWorker::run()
             updateSnapshot();
         while (queue.tryPop(block))
         {
-            if(workflowState)handleWorkflowBlock(block);else handleBlock(block);
+            if(workflowState)
+            {
+                try {handleWorkflowBlock(block);}
+                catch(const std::exception& error){recoverWorkerException(error.what());}
+                catch(...){recoverWorkerException("Unknown capture worker exception");}
+            }
+            else handleBlock(block);
             lastBlock = juce::Time::getMillisecondCounter();
         }
-        if(workflowState)settleWorkflowPass();
+        publishProgress();
+        if(workflowState)
+        {
+            collectCallbackFailures();
+            try {settleWorkflowPass();}
+            catch(const std::exception& error){recoverWorkerException(error.what());settleWorkflowPass();}
+            catch(...){recoverWorkerException("Unknown capture settlement exception");settleWorkflowPass();}
+        }
         // A second restore can arrive while the first is reading assets. Do not acknowledge
         // a flush barrier until the latest queued restore/clear command has completed.
         if (! loading.load() && ! restoreRequested.load() && ! clearRequested.load()
@@ -157,12 +276,30 @@ void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
     if(activePass!=state.pass || activeEpoch!=block.generation)
     {
         session.abortPass();pending.clear();continuity.reset();activePass=state.pass;activeEpoch=block.generation;
-        if(!session.beginPass(activePass,activeEpoch,state.recapture)){failedPass.store(activePass);return;}
+        if(currentFailure.event.pass!=activePass || currentFailure.event.epoch!=activeEpoch)currentFailure={};
+        passBaseline=block.timing;passBaseline.rate=block.sampleRate;lastTiming=passBaseline;workerQueued=0;passFirstOrdinal=block.queueOrdinal;
+        lastBlockStart=block.startSample;lastBlockFrames=static_cast<int>(block.frameCount);
+        passStartFailure.clear();
+        progress={};progress.pass=activePass;progress.epoch=activeEpoch;progressDirty=true;
+        std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider;
+        {const juce::ScopedLock guard(commandLock);provider=passContextProvider;}
+        // Engine locks and metadata copies stay outside the command fence and
+        // outside the callback. The same atomic pass still owns publication.
+        const auto context=provider?provider(activePass):std::nullopt;
+        const auto latest=workflowState->snapshot();
+        if(latest.pass!=activePass || !latest.locked() || generation.load()!=activeEpoch)return;
+        if(provider && !context){passStartFailure="Unable to pin capture generation settings";recordWorkerFailure(CaptureFailureReason::context,passStartFailure,block.startSample,static_cast<int>(block.frameCount));return;}
+        if(!session.beginPass(activePass,activeEpoch,state.recapture,context?&*context:nullptr)){recordWorkerFailure(CaptureFailureReason::rejected,"Capture pass could not begin",block.startSample,static_cast<int>(block.frameCount));return;}
     }
     hasPendingCapture.store(true);
-    if(failedPass.load()==activePass)return;
+    ++workerQueued;lastTiming=block.timing;lastTiming.rate=block.sampleRate;lastBlockStart=block.startSample;lastBlockFrames=static_cast<int>(block.frameCount);
+    if(passFailed(activePass))return;
     if(!std::isfinite(block.sampleRate) || std::abs(block.sampleRate-hostRate.load())>.001)
-    {failedPass.store(activePass);return;}
+    {recordWorkerFailure(CaptureFailureReason::sampleRate,"Capture sample rate is incompatible",block.startSample,static_cast<int>(block.frameCount));return;}
+    if(!block.frameCount || block.frameCount>maxCaptureBlockFrames || block.startSample>INT64_MAX-block.frameCount)
+    {recordWorkerFailure(CaptureFailureReason::range,"Invalid capture block range",block.startSample,static_cast<int>(block.frameCount));return;}
+    if(block.frameCount && block.frameCount<=maxCaptureBlockFrames && block.startSample<=INT64_MAX-block.frameCount)
+    {progress.add(block.startSample,block.frameCount,block.interleavedSamples.data(),state.recapture,session.snapshot().manifest);progressDirty=true;}
     handleBlock(block); // Reuse bounded five-second/silence/discontinuity batching.
 }
 
@@ -177,24 +314,37 @@ void CaptureWorker::settleWorkflowPass()
     CaptureSession::PassResult result;uint64_t committedGeneration=0;
     std::function<void(int64_t,int64_t,uint64_t,bool)> handler;
     std::function<void()> acceptedHandler;
+    bool usefulMaterial=false;std::function<void(uint64_t,uint64_t,bool)> settled;
     {
         const juce::ScopedLock guard(commandLock);
         state=workflowState->snapshot();if(state.phase!=workflow::Phase::draining || loading.load() || restoreRequested.load() || clearRequested.load())return;
         if(!workflowState->validating(state.pass))return;
         committedGeneration=generation.load();
     }
-    while(validationHold.load() && !threadShouldExit() && workflowState->snapshot().pass==state.pass)wait(2);
+    while(validationHold.load() && !threadShouldExit() && workflowState->snapshot().pass==state.pass){publishProgress();wait(2);}
     if(threadShouldExit())return;
+    collectCallbackFailures();
     flushPending();
-    if(activePass==state.pass && activeEpoch==committedGeneration && failedPass.load()!=state.pass)
+    if(activePass==state.pass && activeEpoch==committedGeneration && !passFailed(state.pass))
+    {
+        const auto began=juce::Time::getMillisecondCounterHiRes();
         result=session.preparePass(state.pass,activeEpoch);
-    else if(failedPass.load()==state.pass)result.error=session.passFailure().isNotEmpty()?session.passFailure():juce::String("Capture queue/data failure; previous source retained");
+        workingMetrics.maxValidationMs=std::max(workingMetrics.maxValidationMs,juce::Time::getMillisecondCounterHiRes()-began);
+        if(!result.success)recordWorkerFailure(session.passFailureReason()==CaptureFailureReason::none?CaptureFailureReason::rejected:session.passFailureReason(),result.error,lastBlockStart,lastBlockFrames);
+    }
+    else if(passFailed(state.pass))result.error=session.passFailure().isNotEmpty()?session.passFailure():passStartFailure.isNotEmpty()?passStartFailure:juce::String("Capture queue/data failure; previous source retained");
     else {result.success=true;result.error="No source captured";}
     {
         const juce::ScopedLock guard(commandLock);
         const auto current=workflowState->snapshot();
         if(generation.load()!=committedGeneration || current.pass!=state.pass || current.phase!=workflow::Phase::validating)
         {session.abortPass();pending.clear();activePass=0;hasPendingCapture=false;return;}
+        if(!result.success && currentFailure && currentFailure.event.pass==state.pass && currentFailure.event.epoch==committedGeneration)
+        {
+            lastFailure=currentFailure;
+            if(callbackFinalPass.load(std::memory_order_acquire)==state.pass)lastFailure.finalDropped=callbackFinalDrops.load();
+            result.error=captureFailureFeedback(lastFailure);
+        }
         if(result.success && activePass==state.pass)result.success=session.acceptPreparedPass(state.pass,activeEpoch);
         else session.abortPass();
         activePass=0;hasPendingCapture=false;handler=commitHandler;
@@ -204,9 +354,16 @@ void CaptureWorker::settleWorkflowPass()
     if(result.success && handler)for(const auto [a,b]:result.changedIntervals)handler(a,b,committedGeneration,result.replaced);
     {
         const juce::ScopedLock guard(commandLock);
+        usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
+        if(generation.load()==committedGeneration && result.success)settled=settlementHandler;
+    }
+    // Pin optional generation intent while the pass is still locked. Engine
+    // metadata/locks never enter the source publication fence or audio callback.
+    if(settled)settled(state.pass,committedGeneration,usefulMaterial);
+    {
+        const juce::ScopedLock guard(commandLock);
         // Explicit replacement may deliberately remove a note. Other accepted
         // useful source still qualifies; ordinary mapped-only/empty passes do not.
-        const auto usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
         if(generation.load()==committedGeneration && workflowState->complete(state.pass,result.success,usefulMaterial,result.replaced)
             && result.success && (result.changed || usefulMaterial))acceptedHandler=acceptedStateHandler;
     }
@@ -258,7 +415,21 @@ void CaptureWorker::flushPending()
     const auto frames=static_cast<uint32_t>(pending.size()/2);
     if(workflowState)
     {
-        if(failedPass.load()!=activePass && !session.stagePass(activePass,pendingStart,pendingRate,pending.data(),frames))failedPass.store(activePass);
+        if(!passFailed(activePass))
+        {
+            if(const auto delay=stageDelay.exchange(0))wait(static_cast<int>(std::min(delay,1000u)));
+            if(stageThrow.exchange(false))throw std::runtime_error("Injected capture storage exception");
+            const auto began=juce::Time::getMillisecondCounterHiRes();
+            const auto staged=session.stagePass(activePass,pendingStart,pendingRate,pending.data(),frames);
+            ++workingMetrics.stages;workingMetrics.maxStageMs=std::max(workingMetrics.maxStageMs,juce::Time::getMillisecondCounterHiRes()-began);
+            workingMetrics.maxWriteMs=std::max(workingMetrics.maxWriteMs,session.passWriteMilliseconds());
+            if(!staged)recordWorkerFailure(session.passFailureReason(),session.passFailure(),pendingStart,static_cast<int>(frames));
+            if(staged && !passFailed(activePass))if(auto manifest=session.stagedManifest())
+            {
+                const juce::ScopedLock guard(snapshotLock);
+                publishedProvisional=ProvisionalCaptureSnapshot{std::move(*manifest),activePass,activeEpoch,++provisionalSequence};
+            }
+        }
         pending.clear();return;
     }
     const auto armBefore=recapture.snapshot();

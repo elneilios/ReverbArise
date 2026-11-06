@@ -229,6 +229,7 @@ static bool validAsset(const Asset& a)
 }
 bool validate(const Session& s, juce::String& error)
 {
+    if(!validExportState(s.exportState,error))return false;
     if (s.swells.size() > maximumSwells || ! std::isfinite(s.auditionDb) || s.auditionDb < -60 || s.auditionDb > 0
         || !std::isfinite(s.liveWetDb) || s.liveWetDb < -60 || s.liveWetDb > (s.gainPolicy==GainPolicy::musical?12:0)
         || static_cast<int>(s.gainPolicy)<0 || static_cast<int>(s.gainPolicy)>1
@@ -243,6 +244,13 @@ bool validate(const Session& s, juce::String& error)
         || s.suppressed.size()>maximumSwells || !validAsset(s.defaultIR)
         || (s.defaultIR.present() && !s.defaultIR.path.startsWith("irs/")) || s.defaultIRName.length()>512)
     { error = "Invalid session preferences/capacity"; return false; }
+    if(s.importedIRs.size()>maximumImportedIRs){error="Imported IR collection capacity exceeded";return false;}
+    std::set<juce::String> imported;
+    for(const auto& entry:s.importedIRs)
+        if(!entry.asset.present() || !validAsset(entry.asset) || !entry.asset.path.startsWith("irs/")
+            || entry.asset.content.isEmpty() || !imported.insert(entry.asset.content).second
+            || entry.name.isEmpty() || entry.name.length()>512 || entry.name.containsChar('\0'))
+        {error="Invalid imported IR collection";return false;}
     if (s.timing.valid && (! std::isfinite(s.timing.rate) || s.timing.rate <= 0 || ! std::isfinite(s.timing.bpm)
         || s.timing.bpm <= 0 || ! std::isfinite(s.timing.ppq) || s.timing.numerator <= 0 || s.timing.denominator <= 0))
     { error = "Invalid saved timing"; return false; }
@@ -257,6 +265,7 @@ bool validate(const Session& s, juce::String& error)
             || w.sourceStart > w.arrival || w.sourceEnd <= w.arrival
             || ! checkedSubtract(w.sourceEnd, w.sourceStart, length) || length <= 0 || ! validShape(w.shape)
             || static_cast<int>(w.provenance)<0 || static_cast<int>(w.provenance)>2
+            || (w.generationSource.isNotEmpty() && (w.generationSource.length()!=64 || !w.generationSource.containsOnly("0123456789abcdef")))
             || ! validAsset(w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
             || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/"))
             || static_cast<int>(w.calibration.state)<0 || static_cast<int>(w.calibration.state)>3
@@ -300,11 +309,16 @@ juce::var assetMetadata(const Asset& a)
 bool encode(const Session& s, juce::String& json, juce::String& error)
 {
     if (! validate(s, error)) return false;
-    auto v = object(); put(v,"version",8); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    auto v = object(); put(v,"version",11); put(v,"autoGenerateOnStop",s.autoGenerateOnStop); put(v,"export",exportStateMetadata(s.exportState)); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    put(v,"performUi",performNavigationMetadata(s.performUi));
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
     put(v,"auditionMode",static_cast<int>(s.auditionMode)); put(v,"wetBlend",s.wetBlend);
+    put(v,"auditionFollowsLive",s.auditionFollowsLive);
     put(v,"defaultIR",assetMetadata(s.defaultIR)); put(v,"defaultIRName",s.defaultIRName);
+    juce::Array<juce::var> imported;
+    for(const auto& entry:s.importedIRs){auto item=object();put(item,"asset",assetMetadata(entry.asset));put(item,"name",entry.name);imported.add(item);}
+    put(v,"importedIRs",imported);
     juce::Array<juce::var> suppressed; for(auto anchor:s.suppressed) suppressed.add(integer(anchor));
     put(v,"suppressed",suppressed);
     put(v,"separation",s.separationSeconds); put(v,"autoRegenerate",s.autoRegenerate);
@@ -327,7 +341,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(g,"referenceStart",integer(w.calibration.referenceStart));put(g,"referenceEnd",integer(w.calibration.referenceEnd));
         put(g,"sourceIdentity",w.calibration.sourceIdentity);put(g,"irIdentity",w.calibration.irIdentity);
         put(g,"renderIdentity",w.calibration.renderIdentity);put(g,"revision",w.calibration.revision);put(a,"calibration",g);
-        put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));
+        put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));put(a,"generationSource",w.generationSource);
         put(a,"ir",assetMetadata(w.ir)); put(a,"render",assetMetadata(w.render));
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
         put(h,"end",integer(w.shape.endOffset)); put(h,"fadeIn",integer(w.shape.fadeIn)); put(h,"fadeOut",integer(w.shape.fadeOut));
@@ -376,7 +390,16 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;
     const auto version=p.small(v,"version");
-    if (version < 1 || version > 8) { error = "Unsupported swell state version"; return false; }
+    if (version < 1 || version > 11) { error = "Unsupported swell state version"; return false; }
+    s.autoGenerateOnStop=version>=11?p.boolean(v,"autoGenerateOnStop"):true;
+    if(version>=10 && !parseExportState(p.field(v,"export"),s.exportState,error))return false;
+    s.performUi=parsePerformNavigation(v["performUi"]);
+    if(version>=9)
+    {
+        const auto imported=p.field(v,"importedIRs");
+        if(!imported.isArray() || imported.size()>static_cast<int>(maximumImportedIRs)){error="Invalid imported IR collection capacity";return false;}
+        for(const auto& entry:*imported.getArray())s.importedIRs.push_back({p.asset(p.field(entry,"asset")),p.string(entry,"name")});
+    }
     if(version>=8){s.gainPolicy=static_cast<GainPolicy>(p.small(v,"gainPolicy"));s.gainRevision=p.string(v,"gainRevision");}
     else {s.gainPolicy=GainPolicy::legacy;s.gainRevision=legacyGainRevision;}
     if(version>=7)s.isolateDry=p.boolean(v,"isolateDry");
@@ -394,6 +417,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         { const auto text=value.toString();const auto anchor=text.getLargeIntValue();if(!value.isString() || juce::String(anchor)!=text)p.ok=false;s.suppressed.push_back(anchor); }
     }
     else {s.mappingEnabled=false;s.automaticProcessing=false;}
+    if(v.hasProperty("auditionFollowsLive"))s.auditionFollowsLive=p.boolean(v,"auditionFollowsLive");
     if(version>=3)s.postRollSeconds=p.number(v,"postRollSeconds");
     s.auditionDb=static_cast<float>(p.number(v,"auditionDb")); s.sensitivity=static_cast<float>(p.number(v,"sensitivity"));
     s.separationSeconds=p.number(v,"separation"); s.autoRegenerate=p.boolean(v,"autoRegenerate"); s.primary=p.string(v,"primary");
@@ -420,12 +444,21 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
                 w.calibration.windowFrames=p.big(g,"windowFrames");w.calibration.hopFrames=p.big(g,"hopFrames");}}
         if(version>=2) {w.provenance=static_cast<Provenance>(p.small(a,"provenance"));w.detectorAnchor=p.big(a,"detectorAnchor");}
         else {w.provenance=Provenance::manualEdited;w.detectorAnchor=w.arrival;}
+        if(version>=11)w.generationSource=p.string(a,"generationSource");
         w.ir=p.asset(p.field(a,"ir")); w.render=p.asset(p.field(a,"render"));
         const auto h=p.field(a,"shape"); w.shape.automaticStart=p.boolean(h,"automaticStart");
         w.shape.startOffset=p.big(h,"start"); w.shape.endOffset=p.big(h,"end"); w.shape.fadeIn=p.big(h,"fadeIn"); w.shape.fadeOut=p.big(h,"fadeOut");
         if(version>=3){w.shape.inTension=p.number(h,"inTension");w.shape.outTension=p.number(h,"outTension");}
         w.shape.inCurve=static_cast<Curve>(p.small(h,"inCurve")); w.shape.outCurve=static_cast<Curve>(p.small(h,"outCurve")); w.shape.gainDb=static_cast<float>(p.number(h,"gain"));
         w.phase=Phase::restoring; w.status="Restoring dependencies"; s.swells.push_back(std::move(w));
+    }
+    if(version<9)
+    {
+        const auto remember=[&](const Asset& asset,const juce::String& name){
+            if(asset.present() && asset.content.isNotEmpty() && name.isNotEmpty()
+                && std::none_of(s.importedIRs.begin(),s.importedIRs.end(),[&](const auto& entry){return entry.asset.content==asset.content;}))
+                s.importedIRs.push_back({asset,name});};
+        remember(s.defaultIR,s.defaultIRName);for(const auto& w:s.swells)remember(w.ir,w.irName);
     }
     if (! p.ok) { error="Malformed swell metadata"; return false; }
     if (! validate(s,error)) return false;

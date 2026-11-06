@@ -50,6 +50,7 @@ add_library(preverb_capture STATIC
     Source/Capture/CaptureAssetStore.cpp
     Source/Capture/CaptureChunkStore.cpp
     Source/Capture/CaptureManifest.cpp
+    Source/Capture/CaptureGenerationContext.cpp
     Source/Capture/SparseSongMap.cpp
     Source/Capture/SourceRangeReader.cpp
     Source/Capture/SourceVisitor.cpp
@@ -63,33 +64,38 @@ add_library(preverb_playback STATIC
 )
 target_include_directories(preverb_playback PUBLIC Source)
 
-add_library(preverb_dsp STATIC Source/DSP/ReverseConvolution.cpp Source/DSP/WavPackDecoder.cpp)
+add_library(preverb_dsp STATIC Source/DSP/ReverseConvolution.cpp Source/DSP/SourceEdgeConditioning.cpp Source/DSP/WavPackDecoder.cpp)
 target_include_directories(preverb_dsp PUBLIC Source)
 target_link_libraries(preverb_dsp PUBLIC juce::juce_dsp juce::juce_audio_formats PRIVATE WavPack::WavPack)
 
-add_library(preverb_session STATIC Source/Core/SwellSession.cpp Source/Core/ContentHash.cpp)
+add_library(preverb_session STATIC Source/Core/SwellSession.cpp Source/Core/ExportState.cpp Source/Core/ContentHash.cpp)
 target_include_directories(preverb_session PUBLIC Source)
 target_link_libraries(preverb_session PUBLIC juce::juce_core bcrypt)
 target_link_libraries(preverb_capture PUBLIC preverb_session)
 
-add_library(preverb_analysis STATIC Source/Analysis/OnsetAnalysis.cpp Source/Analysis/AutomaticTargets.cpp)
+add_library(preverb_analysis STATIC Source/Analysis/OnsetAnalysis.cpp Source/Analysis/AutomaticTargets.cpp
+    Source/Analysis/AutomaticGeneration.cpp Source/Analysis/LearnCandidates.cpp)
 target_include_directories(preverb_analysis PUBLIC Source)
 target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 
 juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav
     resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
+    resources/icons/learn.svg
+    resources/icons/perform.svg
+    resources/icons/export.svg
     resources/logo/svg/reverbarise-wordmark-dark.svg
     resources/fonts/inter/Inter-Regular.ttf
+    resources/fonts/inter/Inter-Medium.ttf
     resources/fonts/inter/Inter-SemiBold.ttf
     resources/fonts/inter/Inter-Bold.ttf
     resources/fonts/inter/Inter-Italic.ttf
 )
-add_library(preverb_assets STATIC Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
+add_library(preverb_assets STATIC Source/DSP/ExportFiles.cpp Source/DSP/SongMix.cpp Source/DSP/ExportSource.cpp Source/DSP/SongExport.cpp Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
-add_library(preverb_preview STATIC Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/SwellMonitoring.cpp)
+add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/LearnGeneration.cpp Source/DSP/SwellMonitoring.cpp)
 target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
@@ -107,6 +113,13 @@ juce_add_plugin(preverb_plugin
 )
 
 # Derived metadata, never an independent handwritten version authority.
+set(PREVERB_RELEASE_TAG "" CACHE STRING "Explicit packaging tag; empty for ordinary builds")
+set(PREVERB_RELEASE_CANDIDATE "" CACHE STRING "Explicit packaging candidate; empty for ordinary builds")
+include(cmake/BuildInformation.cmake)
+get_target_property(preverb_product_name preverb_plugin JUCE_PRODUCT_NAME)
+reverbarise_build_information("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" "${PROJECT_VERSION}" "${preverb_product_name}")
+set_source_files_properties(Source/Plugin/PluginSettings.cpp tests/learn_generation_ui_test.cpp
+    PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/generated")
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
 "{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
 
@@ -114,6 +127,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
     Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginSettings.cpp
+    Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
 )
@@ -144,8 +158,37 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
+    target_include_directories(preverb_presentation_policy_test PRIVATE Source)
+    target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)
+    add_test(NAME preverb_presentation_policy_test COMMAND preverb_presentation_policy_test)
+    add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
+    target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
+    add_test(NAME preverb_source_edges_test COMMAND preverb_source_edges_test)
+    add_executable(preverb_host_grid_test tests/host_grid_test.cpp)
+    target_include_directories(preverb_host_grid_test PRIVATE Source)
+    add_test(NAME preverb_host_grid_test COMMAND preverb_host_grid_test)
+    add_executable(preverb_timeline_controls_test tests/timeline_controls_test.cpp)
+    target_compile_definitions(preverb_timeline_controls_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_timeline_controls_test PRIVATE preverb_ui_resources juce::juce_gui_extra)
+    target_include_directories(preverb_timeline_controls_test PRIVATE Source)
+    add_test(NAME preverb_timeline_controls_test COMMAND preverb_timeline_controls_test)
+    add_executable(preverb_swell_list_order_test tests/swell_list_order_test.cpp)
+    target_link_libraries(preverb_swell_list_order_test PRIVATE preverb_session)
+    add_test(NAME preverb_swell_list_order_test COMMAND preverb_swell_list_order_test)
+    add_executable(preverb_swell_list_test tests/swell_list_test.cpp)
+    target_compile_definitions(preverb_swell_list_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_swell_list_test PRIVATE preverb_ui_resources juce::juce_gui_extra)
+    target_include_directories(preverb_swell_list_test PRIVATE Source)
+    add_test(NAME preverb_swell_list_test COMMAND preverb_swell_list_test)
+    find_program(PREVERB_UI_POWERSHELL NAMES powershell pwsh REQUIRED)
+    add_test(NAME preverb_ui_standards_check COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/scripts/check-ui-standards.ps1")
+    add_test(NAME preverb_ui_standards_lint_test COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/ui_standards_lint_test.ps1")
     math(EXPR product_version_code "(${PROJECT_VERSION_MAJOR} << 16) + (${PROJECT_VERSION_MINOR} << 8) + ${PROJECT_VERSION_PATCH}")
     add_executable(preverb_product_version_test tests/product_version_test.cpp)
+    target_include_directories(preverb_product_version_test PRIVATE Source "${CMAKE_BINARY_DIR}/generated")
     target_compile_definitions(preverb_product_version_test PRIVATE
         $<TARGET_PROPERTY:preverb_plugin,COMPILE_DEFINITIONS>
         EXPECTED_PRODUCT_VERSION="${PROJECT_VERSION}"
@@ -153,6 +196,10 @@ if(BUILD_TESTING)
     add_test(NAME preverb_product_version_test COMMAND preverb_product_version_test)
     add_test(NAME preverb_version_contract_test COMMAND ${CMAKE_COMMAND}
         "-DTEST_ROOT=${CMAKE_BINARY_DIR}/version-contract-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/product_version_test.cmake")
+    add_test(NAME preverb_build_information_test COMMAND ${CMAKE_COMMAND}
+        "-DTEST_ROOT=${CMAKE_BINARY_DIR}/build-information-fixtures" -P "${CMAKE_SOURCE_DIR}/tests/build_information_test.cmake")
+    add_test(NAME preverb_user_guide_currency_test COMMAND "${PREVERB_UI_POWERSHELL}"
+        -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tests/user_guide_currency_test.ps1")
     add_test(NAME preverb_built_version_test COMMAND ${CMAKE_COMMAND}
         "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DBINARY_DIR=${CMAKE_BINARY_DIR}" "-DCONFIGURATION=$<CONFIG>"
         -P "${CMAKE_SOURCE_DIR}/scripts/verify-version.cmake")
@@ -162,6 +209,15 @@ if(BUILD_TESTING)
     add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
     target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
     add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)
+    add_executable(preverb_capture_failure_test tests/capture_failure_test.cpp)
+    target_link_libraries(preverb_capture_failure_test PRIVATE preverb_capture)
+    add_test(NAME preverb_capture_failure_test COMMAND preverb_capture_failure_test)
+    add_executable(preverb_capture_failure_mailbox_test tests/capture_failure_mailbox_test.cpp)
+    target_include_directories(preverb_capture_failure_mailbox_test PRIVATE Source)
+    add_test(NAME preverb_capture_failure_mailbox_test COMMAND preverb_capture_failure_mailbox_test)
+    add_executable(preverb_capture_context_test tests/capture_context_test.cpp)
+    target_link_libraries(preverb_capture_context_test PRIVATE preverb_capture)
+    add_test(NAME preverb_capture_context_test COMMAND preverb_capture_context_test)
     add_executable(preverb_workflow_state_test tests/workflow_state_test.cpp)
     target_link_libraries(preverb_workflow_state_test PRIVATE preverb_session)
     add_test(NAME preverb_workflow_state_test COMMAND preverb_workflow_state_test)
@@ -178,9 +234,32 @@ if(BUILD_TESTING)
     add_executable(preverb_ir_handover_test tests/ir_handover_test.cpp)
     target_link_libraries(preverb_ir_handover_test PRIVATE preverb_preview)
     add_test(NAME preverb_ir_handover_test COMMAND preverb_ir_handover_test)
+    add_executable(preverb_ir_choices_test tests/ir_choices_test.cpp)
+    target_link_libraries(preverb_ir_choices_test PRIVATE preverb_preview)
+    add_test(NAME preverb_ir_choices_test COMMAND preverb_ir_choices_test)
+    add_executable(preverb_generation_configuration_test tests/generation_configuration_test.cpp)
+    target_link_libraries(preverb_generation_configuration_test PRIVATE preverb_preview)
+    add_test(NAME preverb_generation_configuration_test COMMAND preverb_generation_configuration_test)
+    add_executable(preverb_learn_generation_test tests/learn_generation_test.cpp)
+    target_link_libraries(preverb_learn_generation_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_learn_generation_test COMMAND preverb_learn_generation_test)
+    add_executable(preverb_learn_generation_ui_test tests/learn_generation_ui_test.cpp)
+    target_compile_definitions(preverb_learn_generation_ui_test PRIVATE PREVERB_BUILD_INFO_FILE="${CMAKE_BINARY_DIR}/build-information.json")
+    target_compile_definitions(preverb_learn_generation_ui_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_learn_generation_ui_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_learn_generation_ui_test COMMAND preverb_learn_generation_ui_test)
     add_executable(preverb_ir_streaming_test tests/ir_streaming_test.cpp)
     target_link_libraries(preverb_ir_streaming_test PRIVATE preverb_preview psapi)
     add_test(NAME preverb_ir_streaming_test COMMAND preverb_ir_streaming_test "${CMAKE_BINARY_DIR}/ir-streaming-metrics-$<CONFIG>.json")
+    add_executable(preverb_export_voice_test tests/export_voice_test.cpp)
+    target_link_libraries(preverb_export_voice_test PRIVATE preverb_preview)
+    add_test(NAME preverb_export_voice_test COMMAND preverb_export_voice_test)
+    add_executable(preverb_song_export_engine_test tests/song_export_engine_test.cpp)
+    target_link_libraries(preverb_song_export_engine_test PRIVATE preverb_preview)
+    add_test(NAME preverb_song_export_engine_test COMMAND preverb_song_export_engine_test)
+    add_executable(preverb_song_export_test tests/song_export_test.cpp)
+    target_link_libraries(preverb_song_export_test PRIVATE preverb_assets)
+    add_test(NAME preverb_song_export_test COMMAND preverb_song_export_test)
     add_executable(preverb_audition_mix_test tests/audition_mix_test.cpp)
     target_link_libraries(preverb_audition_mix_test PRIVATE preverb_preview)
     add_test(NAME preverb_audition_mix_test COMMAND preverb_audition_mix_test)
@@ -193,13 +272,58 @@ if(BUILD_TESTING)
     add_executable(preverb_automatic_targets_test tests/automatic_targets_test.cpp)
     target_link_libraries(preverb_automatic_targets_test PRIVATE preverb_analysis)
     add_test(NAME preverb_automatic_targets_test COMMAND preverb_automatic_targets_test)
+    add_executable(preverb_automatic_generation_test tests/automatic_generation_test.cpp)
+    target_link_libraries(preverb_automatic_generation_test PRIVATE preverb_analysis)
+    add_test(NAME preverb_automatic_generation_test COMMAND preverb_automatic_generation_test)
+    add_executable(preverb_learn_candidates_test tests/learn_candidates_test.cpp)
+    target_link_libraries(preverb_learn_candidates_test PRIVATE preverb_analysis)
+    add_test(NAME preverb_learn_candidates_test COMMAND preverb_learn_candidates_test)
     add_executable(preverb_swell_viewport_test tests/swell_viewport_test.cpp)
     target_link_libraries(preverb_swell_viewport_test PRIVATE preverb_session)
     add_test(NAME preverb_swell_viewport_test COMMAND preverb_swell_viewport_test)
+    add_executable(preverb_initial_perform_view_test tests/initial_perform_view_test.cpp)
+    target_link_libraries(preverb_initial_perform_view_test PRIVATE preverb_session)
+    add_test(NAME preverb_initial_perform_view_test COMMAND preverb_initial_perform_view_test)
     add_executable(preverb_swell_ui_test tests/swell_ui_test.cpp)
     target_compile_definitions(preverb_swell_ui_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_swell_ui_test PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_swell_ui_test COMMAND preverb_swell_ui_test)
+    add_executable(preverb_transport_readout_test tests/transport_readout_test.cpp)
+    target_compile_definitions(preverb_transport_readout_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_transport_readout_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_transport_readout_test COMMAND preverb_transport_readout_test)
+    add_executable(preverb_waveform_display_test tests/waveform_display_test.cpp)
+    target_link_libraries(preverb_waveform_display_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_waveform_display_test COMMAND preverb_waveform_display_test)
+    add_executable(preverb_waveform_paint_test tests/waveform_paint_test.cpp)
+    target_link_libraries(preverb_waveform_paint_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_waveform_paint_test COMMAND preverb_waveform_paint_test)
+    # Optional measurements, kept separate from correctness/CTest timings.
+    add_executable(preverb_waveform_paint_benchmark tests/waveform_paint_benchmark.cpp)
+    target_link_libraries(preverb_waveform_paint_benchmark PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_executable(preverb_waveform_editor_benchmark tests/waveform_editor_benchmark.cpp)
+    target_link_libraries(preverb_waveform_editor_benchmark PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_executable(preverb_manual_preparation_test tests/manual_preparation_test.cpp)
+    target_compile_definitions(preverb_manual_preparation_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_manual_preparation_test PRIVATE preverb_plugin juce::juce_audio_utils WavPack::WavPack)
+    add_test(NAME preverb_manual_preparation_test COMMAND preverb_manual_preparation_test)
+    # Native composition checkpoints; #58's explicit review seam is not the production default.
+    add_executable(preverb_perform_composition_preview tests/perform_composition_preview.cpp)
+    target_compile_definitions(preverb_perform_composition_preview PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_perform_composition_preview PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_perform_composition_preview COMMAND preverb_perform_composition_preview)
+    add_test(NAME preverb_perform_navigation_test COMMAND preverb_perform_composition_preview --test-navigation)
+    add_test(NAME preverb_perform_gesture_test COMMAND preverb_perform_composition_preview --test-gestures)
+    add_test(NAME preverb_perform_binding_test COMMAND preverb_perform_composition_preview --test-editor)
+    add_test(NAME preverb_perform_fit_test COMMAND preverb_perform_composition_preview --test-fit)
+    add_test(NAME preverb_perform_knob_test COMMAND preverb_perform_composition_preview --test-knobs)
+    add_test(NAME preverb_perform_knob_reset_test COMMAND preverb_perform_composition_preview --test-knob-resets)
+    add_test(NAME preverb_perform_audition_test COMMAND preverb_perform_composition_preview --test-audition)
+    add_test(NAME preverb_perform_audition_strip_test COMMAND preverb_perform_composition_preview --test-audition-strip)
+    add_test(NAME preverb_perform_readability_test COMMAND preverb_perform_composition_preview --test-readability)
+    add_test(NAME preverb_perform_hover_help_test COMMAND preverb_perform_composition_preview --test-hover-help)
+    add_test(NAME preverb_responsive_editor_test COMMAND preverb_perform_composition_preview --test-responsive)
+    add_test(NAME preverb_responsive_scale_test COMMAND preverb_perform_composition_preview --test-responsive-scale)
     add_executable(preverb_scoped_recapture_test tests/scoped_recapture_test.cpp)
     target_link_libraries(preverb_scoped_recapture_test PRIVATE preverb_capture)
     add_test(NAME preverb_scoped_recapture_test COMMAND preverb_scoped_recapture_test)

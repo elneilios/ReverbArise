@@ -135,6 +135,18 @@ try {
     Move-Item -LiteralPath (Join-Path $bundled 'ctest.hidden') -Destination (Join-Path $bundled 'ctest.exe')
 
     . (Join-Path $fixture 'scripts/build-support.ps1')
+    $null = Run-Case @('-Configuration','Release','-ReleaseTag','v0.1.0','-Candidate','alpha.test')
+    $identityCalls = @(Get-Content -LiteralPath $trace)
+    Assert ($identityCalls[0].Contains('-DPREVERB_RELEASE_TAG=v0.1.0') -and $identityCalls[0].Contains('-DPREVERB_RELEASE_CANDIDATE=alpha.test')) 'Explicit release identity not forwarded.'
+    $null = Run-Case @()
+    $identityCalls = @(Get-Content -LiteralPath $trace)
+    Assert ($identityCalls[0].Contains('-DPREVERB_RELEASE_TAG=') -and $identityCalls[0].Contains('-DPREVERB_RELEASE_CANDIDATE=') -and -not $identityCalls[0].Contains('alpha.test')) 'Ordinary build did not reset cached identity inputs.'
+    $null = Run-Case @('-Configuration', 'Release', '-PluginOnly')
+    $pluginCalls = @(Get-Content -LiteralPath $trace)
+    Assert ($pluginCalls.Count -eq 2) 'Plugin-only build launched tests.'
+    Assert ($pluginCalls[1].Contains('--target preverb_plugin_VST3')) 'Plugin-only build did not select VST3 target.'
+    $null = Run-Case @('-PluginOnly', '-Test') 1
+    Assert ((Get-Item -LiteralPath $trace).Length -eq 0) 'Conflicting plugin-only and test options launched native work.'
     $originalResolver = (Get-Item Function:Resolve-BuildTools).ScriptBlock
     $fixtureToolsRoot = $tools
     try {

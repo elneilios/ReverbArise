@@ -56,7 +56,27 @@ bool TransportPlayback::publish(std::unique_ptr<LivePublication> pub)
         if(old>=0)slots[old].state.store(retired,std::memory_order_release);
         return true;}return false;
 }
-void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows) noexcept
+void TransportPlayback::observe(const LivePublication* pub,int count,const TransportTime& time,
+    bool workflowAllows,bool on,bool validCount,bool running,bool missing,LiveGate mappingGate,const LiveClockSnapshot* clock) noexcept
+{
+    LiveCallbackObservation d;d.block=++observedBlocks;d.observed=time.song;d.count=count;
+    d.hasPublication=pub!=nullptr;d.playing=time.playing;d.workflowAllows=workflowAllows;
+    d.hostLooping=time.looping;d.hostLoopStart=time.loopStart;d.hostLoopEnd=time.loopEnd;
+    d.enabled=on;d.wetOnly=wetOnly.load();d.wetGain=level.load();
+    if(clock){d.usesLiveClock=true;d.liveRun=clock->run;d.liveSession=clock->session;d.liveReset=clock->reset;d.liveReference=clock->reference;d.clockGate=clock->gate;}
+    d.validCount=validCount;d.running=running;d.missing=missing;
+    if(pub){d.published=pub->mapping;d.revision=pub->revision;d.start=pub->start;d.end=pub->end;
+        d.loopStart=pub->loopStart;d.loopEnd=pub->loopEnd;
+        long double a,b;d.originsValid=songOrigin(pub->mapping,a) && songOrigin(time.song,b);
+        if(d.originsValid){d.publishedOrigin=static_cast<double>(a);d.observedOrigin=static_cast<double>(b);d.originDelta=static_cast<double>(b-a);}}
+    d.gate=!workflowAllows?LiveGate::workflow:!on?LiveGate::disabled:!time.playing?LiveGate::stopped:
+        !pub?LiveGate::noPublication:!validCount?LiveGate::invalidRange:mappingGate;
+    if(d.gate==LiveGate::admitted)d.gate=!running?LiveGate::reset:missing?LiveGate::missingCoverage:LiveGate::admitted;
+    callbackObservation.publish(d);
+    if(clock)causalPublication.publish(causalHistory.observe(d));
+    if(workflowAllows && on && time.playing && d.gate!=LiveGate::admitted)rejectionObservation.publish(d);
+}
+void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows,const LiveClockSnapshot* clock) noexcept
 {
     if(count<=0)return;
     const auto next=pending.exchange(-1,std::memory_order_acq_rel);bool publicationChanged=false;
@@ -68,10 +88,12 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
     }
     const auto* pub=current>=0?slots[current].data.get():nullptr;
     const auto newEpoch=epoch.load();const auto resetRequested=newEpoch!=seenEpoch;seenEpoch=newEpoch;
-    const auto mapping=pub && transportMappingMatches(pub->mapping,time.song);
+    const auto mappingGate=!pub?LiveGate::noPublication:clock?clock->accepts(pub->mapping,time.song):liveMappingGate(pub->mapping,time.song);
+    const auto mapping=mappingGate==LiveGate::admitted;
     int64_t end;
     const auto validCount=count<=1048576 && checkedAdd(time.song.sample,count,end);
-    const auto running=workflowAllows && enabled.load() && time.playing && mapping && validCount && !resetRequested;
+    const auto on=enabled.load();
+    const auto running=workflowAllows && on && time.playing && mapping && validCount && !resetRequested;
     const auto discontinuity=!wasRunning || !running || expectedPosition!=time.song.sample || resetRequested;
     const auto ramp=static_cast<int>(std::clamp(std::round(std::isfinite(time.song.rate)?time.song.rate*.005:1),1.0,9600.0));
     for(auto& v:voices)if(v.remaining>ramp){v.remaining=ramp;v.fromL=v.lastL;v.fromR=v.lastR;}
@@ -83,7 +105,8 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
     if(!running && dryRemaining==0 && gainRemaining==0 && std::all_of(voices.begin(),voices.end(),[](const auto& v){return v.remaining==0 && v.lastL==0 && v.lastR==0;})){
         if(dry==0){std::fill_n(left,count,0.0f);std::fill_n(right,count,0.0f);}
         for(auto& v:voices){v.audible=false;v.entry=nullptr;}
-        missed=anyMissing;liveActive=false;wasRunning=false;expectedPosition=validCount?end:time.song.sample;return;
+        missed=anyMissing;liveActive=false;wasRunning=false;expectedPosition=validCount?end:time.song.sample;
+        observe(pub,count,time,workflowAllows,on,validCount,running,anyMissing,mappingGate,clock);return;
     }
     for(int frame=0;frame<count;++frame){
         const auto p=validCount?time.song.sample+frame:0;
@@ -123,6 +146,7 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
         if(dryRemaining>0){dry+=dryStep;if(--dryRemaining==0)dry=dryTarget;}
         left[frame]=left[frame]*dry+l*gain;right[frame]=right[frame]*dry+r*gain;
     }
+    observe(pub,count,time,workflowAllows,on,validCount,running,anyMissing,mappingGate,clock);
     (void)publicationChanged;missed.store(anyMissing);liveActive.store(running);wasRunning=running;
     expectedPosition=validCount?end:time.song.sample;
 }

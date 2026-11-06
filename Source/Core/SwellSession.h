@@ -1,6 +1,9 @@
 #pragma once
 #include <Capture/CaptureManifest.h>
 #include <Core/SongTime.h>
+#include <Core/ManagedAsset.h>
+#include <Core/PerformNavigationState.h>
+#include <Core/ExportState.h>
 #include <juce_core/juce_core.h>
 #include <optional>
 #include <vector>
@@ -8,6 +11,7 @@
 namespace m3
 {
 constexpr size_t maximumSwells = 4096, maximumStateBytes = 8 * 1024 * 1024;
+constexpr size_t maximumImportedIRs = maximumSwells + 1;
 enum class Curve { linear, smooth, exponential };
 enum class Provenance { automatic, manualCreated, manualEdited };
 enum class AuditionMode { wetOnly, dryWet };
@@ -25,14 +29,10 @@ inline bool isEnergyRevision(const juce::String& revision) noexcept
 inline constexpr double candidateRmsSeconds=.020,candidateRmsHopSeconds=.001;
 inline constexpr float candidateWetCeilingDb=-1.0f,candidateMatchFloorDb=-60.0f,candidateMaximumBoostDb=24.0f;
 inline constexpr double candidateAttackSeconds=.100;
-struct Asset
+struct ImportedIR
 {
-    bool operator==(const Asset&) const = default;
-    juce::String path, checksum, content, dependency, irContent;
-    double rate = 0, bpm = 0;
-    int channels = 0, engine = 1, numerator = 4, denominator = 4;
-    int64_t frames = 0, start = 0, sourceStart = 0, sourceEnd = 0;
-    bool present() const noexcept { return path.isNotEmpty(); }
+    Asset asset;
+    juce::String name;
 };
 struct Shape
 {
@@ -70,6 +70,7 @@ struct Swell
     uint64_t inputGeneration = 0, shapeGeneration = 0;
     Provenance provenance = Provenance::manualCreated;
     int64_t detectorAnchor = 0;
+    juce::String generationSource; // Last explicit generation's PCM fingerprint, not a render claim.
 };
 struct Session
 {
@@ -77,9 +78,11 @@ struct Session
     std::vector<juce::String> selected;
     juce::String primary;
     SongTime timing;
+    PerformNavigationState performUi;
     float auditionDb = 0, sensitivity = 0.5f;
     double separationSeconds = 0.08;
     bool autoRegenerate = false;
+    bool autoGenerateOnStop = false;
     bool mappingEnabled = true, automaticProcessing = true, autoMarkersEnabled = true;
     bool isolateSelected = false, isolateDry = false;
     bool liveEnabled = true;
@@ -92,11 +95,29 @@ struct Session
     float regenerationSensitivity=.5f;
     AuditionMode auditionMode = AuditionMode::wetOnly;
     float wetBlend = 0.5f;
+    bool auditionFollowsLive = false; // Absent metadata preserves legacy monitoring.
     double postRollSeconds = 2;
+    ExportState exportState;
     Asset defaultIR;
     juce::String defaultIRName = "Preverb Hall";
+    std::vector<ImportedIR> importedIRs;
     std::vector<int64_t> suppressed;
 };
+inline bool initializeExport(Session& session,juce::String& error)
+{
+    if(session.exportState.initialized){error.clear();return true;}
+    session.exportState.initialized=true;session.exportState.dry=0;session.exportState.wet=1;error.clear();return true;
+}
+inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error)
+{
+    if(!std::isfinite(dry) || dry<0 || dry>1 || !std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export levels";return false;}
+    if(session.exportState.dry!=dry || session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
+    session.exportState.initialized=true;session.exportState.dry=dry;session.exportState.wet=wet;error.clear();return true;
+}
+// Transitional binding for the existing crossfade UI until the reviewed pair
+// control is integrated. This never adds a second processing stage.
+inline bool setExportMix(Session& session,float wet,juce::String& error)
+{return setExportLevels(session,1-wet,wet,error);}
 // Foundation eligibility uses already-verified readiness and timing metadata.
 // Full export preparation/asset verification remains the export workspace's job.
 inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexcept
@@ -113,7 +134,8 @@ inline bool sameSavedSwell(const Swell& a,const Swell& b)
         && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape
         && a.calibration==b.calibration && a.placement==b.placement && a.supportOffset==b.supportOffset
         && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
-        && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor;
+        && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor
+        && a.generationSource==b.generationSource;
 }
 bool checkedAdd(int64_t a, int64_t b, int64_t& result) noexcept;
 bool checkedSubtract(int64_t a, int64_t b, int64_t& result) noexcept;

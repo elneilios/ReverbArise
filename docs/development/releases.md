@@ -5,6 +5,13 @@ Windows PowerShell 5.1 and PowerShell 7 are supported. No extra PowerShell modul
 installer, signing service or hosted runner is required. Keep the release checkout
 idle throughout validation. Commit all intended source changes first.
 
+Before packaging, use [maintain-user-guide](../../.agents/skills/maintain-user-guide/SKILL.md)
+and the [currency workflow](user-guide-maintenance.md). `scripts/check-user-guide.ps1`
+must pass for the committed review. Packaging checks this read-only before
+building and never invokes a skill or rewrites guide content/review records.
+The generated Settings About identity must match the requested release version,
+candidate and clean source SHA; stale/local metadata fails packaging.
+
 ## Internal local package
 
 ```powershell
@@ -44,6 +51,32 @@ Windows build; inclusion is not a claim that every listed component is linked.
 The packager copies texts from the actual dependency checkout and fails if expected
 notices are absent. Owner review must still establish all applicable obligations.
 
+Use the [build-release skill](../../.agents/skills/build-release/SKILL.md) to prepare notes and the guide before packaging.
+
+The payload also includes `README.txt`, `Release-Notes.html`, `User-Guide.html` and
+`guide-provenance.json`. The guide is a static offline document: all four native
+production-editor screenshots and the existing production wordmark are embedded PNG data URIs, with no scripts or
+external resources. Its source template is [alpha-guide.html](alpha-guide.html).
+After Release/CTest and built identity verification, the packager runs
+`Release/preverb_learn_generation_ui_test.exe --guide-only` under the build lock
+with a fresh `PREVERB_UI_M3_OUTPUT` staging folder. Real fixture capture,
+generation, render and Export readiness are asserted before snapshots are saved.
+Missing/invalid captures or mismatched provenance fail packaging. All delivered
+guide files participate in the existing payload inventory and ZIP verification.
+
+For #59, rehearse on the issue branch with a distinct label such as
+`-Candidate alpha.rehearsal.1`. For #59 the owner-approved order is to package a clean committed PR revision
+containing the required integrations with `-Candidate alpha`, sign off that exact
+candidate, archive the signed-off change and merge, then verify clean merged main separately.
+If that output identity already exists, preserve it and use a recorded fresh
+`alpha.N`; never overwrite it. Extract into a new folder, verify hashes and view
+the HTML locally offline, checking every image. The final extracted binary needs
+its own consolidated FL Studio capture/generate/Perform/save-reopen smoke test, or an explicit owner waiver with the earlier trial and untested coverage recorded.
+Earlier fixture or host runs do not establish that final acceptance. Record
+clean-machine and second-host coverage explicitly, including unverified coverage.
+See the [alpha preparation evidence](../validation/2026-11-04-issue-59-alpha.md)
+and [pending redistribution review](../validation/2026-11-04-issue-59-redistribution-review.md).
+
 Existing final directories are never overwritten, even on concurrent invocations.
 Use a new explicit candidate identity for another attempt. If a failed operation
 leaves `out/releases/.staging-*`, preserve it for diagnostics or deliberately relocate
@@ -52,6 +85,42 @@ package replacement occurs. Build logs remain under `out/build-logs/Release/`.
 The wrapper's build lock is reacquired during verification/copying; another wrapper
 owning that tree causes release validation to fail. Do not edit source, run raw
 build tools or alter output files while releasing.
+
+## Release-specific notes
+
+Before packaging, author and commit `docs/development/release-notes/<releaseIdentity>.json`.
+The filename and `releaseIdentity` must match the complete candidate identity, for example
+`v0.1.0-alpha.2`. Compare against the previous build actually shared with the recipient,
+using its manifest's full source SHA; do not assume a rehearsal or the latest tag is that build.
+Include only changes delivered in the chosen source, with concise musician-facing fixes,
+known limitations and actionable upgrade steps. Review again after integration changes.
+
+Example schema (illustrative; replace the baseline and prose with verified release facts):
+
+```json
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-alpha.2",
+  "previousRelease": "v0.1.0-alpha.1",
+  "previousGitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "changes": ["Describe a delivered feature in musician-facing language."],
+  "fixes": ["Describe a verified fix and its practical effect."],
+  "upgradeSteps": [],
+  "knownLimitations": ["Describe remaining limitations and actual host coverage."]
+}
+```
+
+Use null for both previous fields only for a genuinely first release. All four sections
+are arrays of nonempty plain-text strings; empty arrays omit inapplicable sections.
+At least one change or fix is required. The packager fails missing/malformed or mismatched
+notes before the native build. It HTML-escapes prose and writes a self-contained
+`Release-Notes.html` with the exact candidate, packaged source SHA and comparison baseline.
+The notes enter the ordinary ZIP inventory/checksums; packaging never rewrites their
+tracked JSON source or fetches GitHub history. It does not establish the factual accuracy
+of the prose or whether the recorded baseline was actually shared: the skill's review does.
+Open the extracted HTML offline with the user guide before accepting the package.
+GitHub publication currently retains its existing short source/licensing description;
+this change concerns the notes inside the ZIP.
 
 ## Redistribution gate
 
@@ -81,10 +150,12 @@ this review. No licensing review was approved by implementing or testing this sc
    `build-manifest.json`. Inspect the recorded commit and explicit candidate label.
 2. Extract to a temporary directory. Preserve the complete `ReverbArise.vst3/`
    directory and its `Contents/`; do not extract only the inner `.vst3` binary.
+   Open `Release-Notes.html` and check the candidate, source, baseline and upgrade advice.
 3. Close the DAW. Preserve the installed bundle for rollback. Copy the whole bundle
-   into your user VST3 folder, normally `%LOCALAPPDATA%\Programs\Common\VST3`, or the
-   machine folder `%COMMONPROGRAMFILES%\VST3` if deliberately using administrator
-   installation. Add the chosen folder to FL Studio's scan paths if necessary.
+   into the supported system folder `%PROGRAMFILES%\Common Files\VST3` with the
+   required Windows permission. FL Studio does not discover VST3 from custom user
+   search folders. For local testing use the repository's
+   [backed-up system installation helper](fl-studio-test-install.md).
 4. Rescan in FL Studio's Plugin Manager. Confirm ReverbArise appears once, loads,
    reports the intended numeric version and produces expected capture/render/playback.
 5. Open a **copy** of an existing saved FL Studio project. Verify plugin recognition,
@@ -142,6 +213,11 @@ are not edited and assets are not clobbered. If upload fails, inspect GitHub's s
 manually before retrying; gh may have created a release with partial uploads.
 
 ## Verification scope
+
+Run `tests/release_notes_test.ps1` in Windows PowerShell 5.1 and PowerShell 7 for
+focused schema, identity, escaping, offline HTML and source-preservation checks.
+The release-wrapper fixture also checks early rejection of missing notes and their
+inclusion in stable/candidate inventories.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/release_wrapper_test.ps1

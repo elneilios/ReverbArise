@@ -1,5 +1,6 @@
 #pragma once
 #include <UI/WorkspaceTheme.h>
+#include "ModeIcon.h"
 #include <vector>
 
 namespace m3::ui::controls
@@ -10,6 +11,7 @@ struct SegmentChoice
     juce::String label,help;
     bool available=true;
     juce::String unavailableReason;
+    ModeIcon icon=ModeIcon::none;
 };
 
 // Model-owned selection: an input emits intent, never an optimistic toggle.
@@ -21,15 +23,24 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
         Segment(SegmentedSelector& group,size_t position):juce::Button(juce::String{}),owner(group),index(position)
         {setWantsKeyboardFocus(false);setMouseClickGrabsKeyboardFocus(false);onClick=[this]{owner.request(index);};}
         void mouseDown(const juce::MouseEvent& e)override{owner.focusChoice(index);juce::Button::mouseDown(e);}
-        void paintButton(juce::Graphics& g,bool over,bool down)override
+        void buttonStateChanged()override{owner.repaint();}
+        void paintButton(juce::Graphics& g,bool,bool)override
         {
             const auto& choice=owner.choices[index];const auto activeChoice=choice.id==owner.selected;
             const auto alpha=isEnabled()?1.0f:.4f;const auto box=getLocalBounds().toFloat().reduced(.5f);
             const auto path=owner.outlineFor(index,box);
             g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
-            g.setColour((over || down?aqua:outline).withAlpha(alpha));g.strokePath(path,juce::PathStrokeType(rule));
-            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(navigationFont());
-            g.drawText(choice.label,getLocalBounds().reduced(5,0),juce::Justification::centred);
+            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(owner.labelFont());
+            const auto content=getLocalBounds().toFloat().reduced(5,0);
+            if(choice.icon==ModeIcon::none)g.drawText(choice.label,content,juce::Justification::centred);
+            else
+            {
+                const auto labelWidth=juce::GlyphArrangement::getStringWidth(owner.labelFont(),choice.label);
+                const auto width=16.0f+8.0f+labelWidth;
+                const auto x=content.getCentreX()-width*.5f;
+                owner.iconCache.draw(g,choice.icon,{x,content.getCentreY()-8,16,16},activeChoice,alpha);
+                g.drawText(choice.label,juce::Rectangle<float>(x+24,content.getY(),labelWidth,content.getHeight()),juce::Justification::centredLeft);
+            }
         }
         std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
         {
@@ -55,6 +66,7 @@ public:
     SegmentedSelector()
     {setWantsKeyboardFocus(true);setTitle("Mode selection");setFocusContainerType(juce::Component::FocusContainerType::focusContainer);}
     std::function<void(int)> onRequest;
+    void setTextHeight(float height){textHeight=height;repaint();}
     void display(std::vector<SegmentChoice> next,int acceptedId)
     {
         bool rebuild=next.size()!=choices.size();
@@ -109,12 +121,22 @@ public:
     }
     void paintOverChildren(juce::Graphics& g)override
     {
+        // The joined children overlap by one pixel. Paint their borders here,
+        // with hover/press last, so a neighbouring selected fill cannot erase
+        // the shared edge. Keep child/accessibility order and hit areas stable.
+        const auto highlighted=[&](size_t index){const auto& button=*buttons[index];return button.isEnabled()
+            && (button.getState()==juce::Button::buttonOver || button.getState()==juce::Button::buttonDown);};
+        const auto border=[&](size_t index){const auto& button=*buttons[index];g.setColour((highlighted(index)?aqua:outline).withAlpha(button.isEnabled()?1.0f:.4f));
+            g.strokePath(outlineFor(index,controlGeometry::insideStroke(button.getBounds(),rule)),juce::PathStrokeType(rule));};
+        for(size_t i=0;i<buttons.size();++i)if(!highlighted(i))border(i);
+        for(size_t i=0;i<buttons.size();++i)if(highlighted(i))border(i);
         if(hasKeyboardFocus(true) && focused<buttons.size())
         {g.setColour(choices[focused].id==selected?background:aqua);g.strokePath(outlineFor(focused,buttons[focused]->getBounds().toFloat().reduced(2)),juce::PathStrokeType(2));}
     }
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
     {return std::make_unique<juce::AccessibilityHandler>(*this,juce::AccessibilityRole::group);}
 private:
+    juce::Font labelFont()const{return interFont(textHeight,InterFace::semibold);}
     juce::Path outlineFor(size_t index,juce::Rectangle<float> box)const
     {
         juce::Path path;const auto first=index==0,last=index+1==buttons.size();
@@ -130,7 +152,9 @@ private:
     }
     void updateHint(){if(focused<choices.size()){const auto& item=choices[focused];setTooltip(item.label+": "+(item.available?item.help:item.unavailableReason));}}
     std::vector<SegmentChoice> choices;
+    ModeIconCache iconCache;
     std::vector<std::unique_ptr<Segment>> buttons;
     int selected=0;size_t focused=0;
+    float textHeight=navigationSize;
 };
 }

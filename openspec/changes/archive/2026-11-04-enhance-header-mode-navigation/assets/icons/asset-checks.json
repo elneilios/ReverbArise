@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-03",
+  "scope": "Static asset preparation only; no production integration",
+  "view_box": [
+    0,
+    0,
+    16,
+    16
+  ],
+  "stroke_width_units": 1.6,
+  "rendered_sizes_px": [
+    14,
+    16,
+    20,
+    24,
+    32,
+    96
+  ],
+  "browser_review": "Inspected preview.png at 100% browser device scale, including inactive, active and disabled examples",
+  "native_juce_loading": "Not run",
+  "interactive_windows_dpi": "Not run",
+  "focus_clipping_acceptance": "Pending Agent 1 baseline and native tests",
+  "assets": {
+    "learn.svg": {
+      "sha256": "154f88a31833d28c0b8132f00798457523cb3c527dab1f2779d5a1e3e4606468",
+      "stroke_bounds_units": [
+        1.2,
+        0.7,
+        14.8,
+        15.3
+      ],
+      "circle_handles": 0,
+      "xml_and_primitive_checks": "pass"
+    },
+    "perform.svg": {
+      "sha256": "9297545655582e9c27b38993e90f5a4f183b6e15e06ad7111bde37cf394e070f",
+      "stroke_bounds_units": [
+        0.25,
+        0.85,
+        15.75,
+        14.95
+      ],
+      "circle_handles": 3,
+      "xml_and_primitive_checks": "pass"
+    },
+    "export.svg": {
+      "sha256": "bf776c63908f7bfd198733c4d85572fb252d4b3e5f9bbfdff3225cbdfe372abb",
+      "stroke_bounds_units": [
+        1.2,
+        0.7,
+        15.0,
+        15.3
+      ],
+      "circle_handles": 0,
+      "xml_and_primitive_checks": "pass"
+    }
+  },
+  "preview_pixels": [
+    1000,
+    870
+  ]
+}

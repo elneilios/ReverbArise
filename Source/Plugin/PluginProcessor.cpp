@@ -25,7 +25,17 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
         return PreviewContext{std::move(capture), getSongTime(), captureWorker.captureGeneration()};
     },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
+    swells->setAuditionWetOnly(false,swells->assignmentEpoch());
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
+    swells->useProvisionalSource([this]{return captureWorker.provisionalSnapshot();});
+    captureWorker.setSettlementHandler([this](uint64_t pass,uint64_t generation,bool useful){swells->captureSettled(pass,generation,useful);});
+    captureWorker.setPassContextProvider([this](uint64_t pass)->std::optional<CaptureGenerationContext>
+    {
+        const auto pinned=swells->passConfiguration(pass);if(!pinned)return {};
+        CaptureGenerationContext context;context.automatic=pinned->automatic;context.sensitivity=pinned->sensitivity;
+        context.separationSeconds=pinned->separationSeconds;context.ir=pinned->ir;context.irName=pinned->irName;
+        context.id=captureGenerationContextId(context);return context;
+    });
     captureWorker.setRecaptureHandler([this](int64_t a,int64_t b) { swells->recaptureCompleted(a,b); });
     captureWorker.setCommitHandler([this](int64_t a,int64_t b,uint64_t generation,bool recapture) {swells->captureCommitted(a,b,generation,recapture);});
     captureWorker.setAcceptedStateHandler([this]{persistentStateChanged();});
@@ -44,14 +54,14 @@ PreverbAudioProcessor::~PreverbAudioProcessor()
 
 void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 {
-    wasOffline=false;swells->endOffline();
+    wasOffline=false;swells->endOffline();swells->resetTransportClock();
     sampleRate.store(newSampleRate, std::memory_order_relaxed);
     captureWorker.setHostRate(newSampleRate);
 }
 
 void PreverbAudioProcessor::releaseResources()
 {
-    wasOffline=false;swells->endOffline();
+    wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
 bool PreverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -84,22 +94,42 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         previousWorkflowMode=workflow.mode;
     }
     workflow=workflowState.snapshot();
+    const CaptureHostTiming captureTiming{diagnostics.positionAvailable,diagnostics.samplePositionAvailable,
+        diagnostics.ppqPositionAvailable,diagnostics.tempoAvailable,diagnostics.meterAvailable,diagnostics.isPlaying,
+        diagnostics.isLooping,diagnostics.samplePosition,diagnostics.loopStart,diagnostics.loopEnd,
+        diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,diagnostics.numerator,diagnostics.denominator};
+    if(!offline && workflow.phase==workflow::Phase::recording && observedCapturePass!=workflow.pass)
+    {capturePassTime=transport.song;observedCapturePass=workflow.pass;capturePassDiagnosticBaseline=captureTiming;passQueuedBlocks=passDroppedBlocks=0;}
+    const auto rejectCapture=[&](CaptureFailureReason reason)
+    {
+        droppedCaptureBlockCount.fetch_add(1,std::memory_order_relaxed);++passDroppedBlocks;
+        CaptureFailureEvent event;event.reason=reason;event.pass=workflow.pass;event.epoch=captureGeneration;
+        event.start=diagnostics.samplePosition;event.frames=buffer.getNumSamples();event.queued=passQueuedBlocks;event.dropped=passDroppedBlocks;
+        event.timing=captureTiming;event.baseline=capturePassDiagnosticBaseline;captureWorker.failPass(event);
+    };
+    if(!offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
+        rejectCapture(CaptureFailureReason::timingUnavailable);
     if (!offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
         && diagnostics.isPlaying)
     {
-        if(observedCapturePass!=workflow.pass){capturePassTime=transport.song;observedCapturePass=workflow.pass;}
         const bool compatiblePass=transportMappingMatches(capturePassTime,transport.song);
         const auto channelCount = buffer.getNumChannels();
         const auto count=buffer.getNumSamples();
-        const auto wasQueued = count==0 || (channelCount >= 2
-            && transport.song.valid && compatiblePass && captureWorker.canMap()
-            && captureQueue.tryPush(samplePosition.load(std::memory_order_relaxed),
-                                    sampleRate.load(std::memory_order_relaxed),
-                                    buffer.getReadPointer(0),
-                                    buffer.getReadPointer(1),
-                                    count, captureGeneration, workflow.pass));
-        if (! wasQueued)
-        {droppedCaptureBlockCount.fetch_add(1, std::memory_order_relaxed);captureWorker.failPass(workflow.pass);}
+        CaptureFailureReason reason=CaptureFailureReason::none;
+        if(count<0 || count>maxCaptureBlockFrames)reason=CaptureFailureReason::blockSize;
+        else if(channelCount<2)reason=CaptureFailureReason::channels;
+        else if(!transport.song.valid || !std::isfinite(transport.song.ppq) || !std::isfinite(transport.song.bpm)
+            || transport.song.bpm<=0 || transport.song.numerator<=0 || transport.song.denominator<=0)reason=CaptureFailureReason::timingUnavailable;
+        else if(!std::isfinite(transport.song.rate) || transport.song.rate<=0 || std::abs(capturePassTime.rate-transport.song.rate)>.001)reason=CaptureFailureReason::sampleRate;
+        else if(diagnostics.samplePosition>INT64_MAX-count)reason=CaptureFailureReason::range;
+        else if(!compatiblePass)reason=CaptureFailureReason::timingChanged;
+        else if(!captureWorker.canMap())reason=CaptureFailureReason::mappingUnavailable;
+        if(count!=0)
+        {
+            if(reason!=CaptureFailureReason::none)rejectCapture(reason);
+            else if(captureQueue.tryPush(diagnostics.samplePosition,transport.song.rate,buffer.getReadPointer(0),buffer.getReadPointer(1),count,captureGeneration,workflow.pass,captureTiming))++passQueuedBlocks;
+            else rejectCapture(CaptureFailureReason::queueFull);
+        }
     }
 
     auto tonePeak = 0.0f;
@@ -214,7 +244,7 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
     const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.frozen && ready(w);});
     return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
         && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
-        std::any_of(session.swells.begin(),session.swells.end(),ready),frozen};
+        swells->hasExportableWet(time),frozen};
 }
 bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
 {
@@ -223,7 +253,7 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
     if(const auto block=workflow::entryBlock(workflowState.snapshot(),mode,readiness);block!=workflow::EntryBlock::none)
     {swells->diagnostic(m3::ui::entryExplanation(block));return false;}
     if(!workflowState.requestMode(mode,readiness))return false;
-    swells->stop();if(previous!=mode)persistentStateChanged();return true;
+    swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();if(previous!=mode)persistentStateChanged();return true;
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {
@@ -388,7 +418,9 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
 
 juce::AudioProcessorEditor* PreverbAudioProcessor::createEditor()
 {
-    return new PreverbAudioProcessorEditor(*this);
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*this);
+    editor->enableResponsivePresentation(std::make_shared<m3::ui::FilePresentationStorage>(m3::ui::FilePresentationStorage::userFile()));
+    return editor.release();
 }
 
 bool PreverbAudioProcessor::hasEditor() const
@@ -473,6 +505,8 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>8)
     {swells->diagnostic("Unsupported or malformed plugin state");return;}
     const auto version=state->getIntAttribute("stateVersion");m3::Session session;juce::String error;
+    // Envelopes predating creative metadata also retain the legacy Stop journey.
+    if(version<3)session.autoGenerateOnStop=true;
     auto savedMode=workflow::Mode::capture;
     if(version>=8)
     {

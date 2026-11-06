@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CaptureChunkStore.h"
+#include "CaptureFailure.h"
 
 #include <juce_core/juce_core.h>
 #include <unordered_map>
@@ -21,7 +22,7 @@ public:
     bool publishManifest(const CaptureManifest& manifest, juce::String& error) const;
     bool loadManifest(CaptureManifest& manifest, juce::String& error) const;
     // Immutable project-state references; loading metadata permits partial asset recovery.
-    bool publishSnapshot(const CaptureManifest& manifest, juce::String& reference, juce::String& error) const;
+    bool publishSnapshot(const CaptureManifest& manifest, juce::String& reference, juce::String& error,CaptureFailureReason* reason=nullptr) const;
     bool loadSnapshot(const juce::String& reference, CaptureManifest& manifest, juce::String& error) const;
     uint64_t audioReadCount() const noexcept { return audioReads; }
 

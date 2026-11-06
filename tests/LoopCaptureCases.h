@@ -21,6 +21,9 @@ inline void coherentHostTimingCases()
 inline void loopCaptureCases()
 {
     TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();
+    // This is a loop/readiness oracle, not an asynchronous factory-load race.
+    // The latter is tested explicitly by generation_configuration_test.
+    waitM3([&]{return engine.savedSession().defaultIR.present();});
     p->prepareToPlay(48000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setIsPlaying(true);
     head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     std::vector<float> source(96000*2);
@@ -29,7 +32,7 @@ inline void loopCaptureCases()
     const auto block=[&](int at,int frames){buffer.setSize(2,frames);for(int c=0;c<2;++c)for(int n=0;n<frames;++n)buffer.setSample(c,n,source[(at+n)*2+c]);
         head.position.setTimeInSamples(at);head.position.setPpqPosition(at/24000.0);
         {AudioAllocationGuard guard;p->processBlock(buffer,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);};
-    const auto pass=[&](int stride){head.position.setIsPlaying(true);for(int at=0;at<96000;at+=stride){block(at,std::min(stride,96000-at));juce::Thread::sleep(1);}finishCaptureFixture(*p,head.position);};
+    const auto pass=[&](int stride){head.position.setIsPlaying(true);for(int at=0;at<96000;at+=stride){block(at,std::min(stride,96000-at));juce::Thread::sleep(1);}finishCaptureFixture(*p,head.position,true);};
     pass(4096);
     waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=3 && s.swells.back().phase==m3::Phase::ready;});
     const auto finalId=engine.savedSession().swells.back().id;REQUIRE(m3::find(engine.savedSession(),finalId)->sourceEnd==96000);
@@ -65,6 +68,6 @@ inline void loopCaptureCases()
     REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));head.position.setIsPlaying(true);
     for(int at=96000;at<120000;at+=4096){const auto count=std::min(4096,120000-at);buffer.setSize(2,count);buffer.clear();
         head.position.setTimeInSamples(at);head.position.setPpqPosition(at/24000.0);p->processBlock(buffer,midi);}
-    finishCaptureFixture(*p,head.position);
+    finishCaptureFixture(*p,head.position,true);
     waitM3([&]{const auto state=engine.savedSession();const auto last=m3::find(state,finalId);return last && last->sourceEnd==last->arrival+24000 && last->phase==m3::Phase::ready;});
 }

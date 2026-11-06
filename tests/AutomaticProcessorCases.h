@@ -3,6 +3,7 @@
 inline void automaticProcessorCases()
 {
     TestDirectory root;auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    processor->swellEngine().setMonitoring(m3::AuditionMode::wetOnly,.5f); // This historical oracle explicitly exercises wet-only monitoring.
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0);
     auto& engine=processor->swellEngine();engine.setAutoMarkers(false);REQUIRE(processor->isMappingEnabled());
     processor->prepareToPlay(48000,4096);TestPlayHead head;juce::MidiBuffer midi;
@@ -27,8 +28,11 @@ inline void automaticProcessorCases()
         REQUIRE(processor->flushCaptureForTesting());
     };
     // Song bar 86 at 120 BPM/4:4, then bar 1, without any plugin capture/generate action.
+    // This fixture tests explicit Perform reanalysis, not missing-default capture.
+    waitM3([&]{return engine.savedSession().defaultIR.present();});
     pass(85*96000);pass(0);
-    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::live);engine.setAutoMarkers(true);
+    REQUIRE(engine.savedSession().swells.empty() && engine.savedSession().automaticProcessing && processor->getWorkflowSnapshot().mode==workflow::Mode::capture);
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));engine.setAutoMarkers(true);
     waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>=4 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     auto s=engine.savedSession();REQUIRE(s.automaticProcessing && s.auditionDb==0);
     const auto map=processor->getCaptureSnapshot().manifest;

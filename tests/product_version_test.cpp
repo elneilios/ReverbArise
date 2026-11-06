@@ -1,7 +1,9 @@
 #include <string_view>
+#include <Core/BuildInformation.h>
 #define REVERB_STRINGIFY_DETAIL(x) #x
 #define REVERB_STRINGIFY(x) REVERB_STRINGIFY_DETAIL(x)
 static_assert(std::string_view(JucePlugin_VersionString) == EXPECTED_PRODUCT_VERSION);
+static_assert(m3::build::version == EXPECTED_PRODUCT_VERSION);
 static_assert(JucePlugin_VersionCode == EXPECTED_PRODUCT_VERSION_CODE);
 static_assert(JucePlugin_ManufacturerCode == 0x4b374d61);
 static_assert(JucePlugin_PluginCode == 0x50727631);

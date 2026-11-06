@@ -57,10 +57,14 @@ All three paths use accepted calibration and Level. Equal Wet Only membership
 at unity controls agrees apart from documented boundary ramps. Audition isolation
 can select different overlaps and therefore a different protection context.
 
-Audition Dry + Wet uses linear blend (50% is half captured dry plus half wet),
-a separate sum guard and saved -60 to 0 dB trim. Live Dry + Wet adds wet at the
-saved Live wet level to unchanged incoming dry. Audition leaves live settings
-alone. Export snapshots accepted audio, policy and gain per instance; pending
+New Perform audition uses unity captured dry plus saved Live Wet gain, or that
+wet contribution alone with Wet only On. Wet and combined-sum safety guards can
+reduce level; audition boundary ramps and finite-window membership differ from
+host playback. Legacy sessions retain linear blend and saved -60 to 0 dB trim
+until an explicit Wet only toggle adopts live-level monitoring. Stored legacy
+trim is then inactive, not erased. Live Dry + Wet adds wet at saved Live Wet gain
+to unchanged incoming dry. Audition leaves live settings alone. Export snapshots
+accepted audio, policy and gain per instance; pending
 replacement work cannot change that bounce's snapshot.
 
 ## FL Studio acceptance

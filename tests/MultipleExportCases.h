@@ -37,6 +37,10 @@ inline void multipleExportCases()
     // An explicit [0,4000) loop has real captured data through 4001 due to rounding.
     heads[1].position.setIsLooping(true);heads[1].position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});position(1,0,false);
     juce::AudioBuffer<float> tick(2,64);tick.clear();processors[1]->processBlock(tick,midi);
+    // This fixture learned with Automatic Swells off. A new extraction window
+    // needs explicit Perform generation rather than implicit Off-pass work.
+    waitM3([&]{const auto saved=processors[1]->swellEngine().savedSession();const auto w=m3::find(saved,finalIds[1]);return w && w->phase==m3::Phase::stale && w->sourceEnd==4000;});
+    processors[1]->swellEngine().generate(true);
     try {waitM3([&]{const auto saved=processors[1]->swellEngine().savedSession();const auto w=m3::find(saved,finalIds[1]);return w && w->phase==m3::Phase::ready && w->sourceEnd==4000;});}
     catch(...){const auto state=processors[1]->swellEngine().snapshot();const auto w=m3::find(state.session,finalIds[1]);const auto timing=processors[1]->getHostPositionDiagnostics();
         std::cerr<<"Final loop fit: end="<<w->sourceEnd<<" provenance="<<static_cast<int>(w->provenance)<<" status="<<w->status<<" automatic="<<state.session.automaticProcessing<<" loop="<<timing.loopStart<<":"<<timing.loopEnd<<" | "<<state.message<<"\n";throw;}
@@ -47,8 +51,8 @@ inline void multipleExportCases()
     waitM3([&]{return m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->phase==m3::Phase::ready;});
     REQUIRE(m3::find(processors[1]->swellEngine().savedSession(),finalIds[1])->sourceEnd==4000);
     const auto captured0=processors[0]->getCaptureSnapshot().reference,captured1=processors[1]->getCaptureSnapshot().reference;
-    const auto bounce=[&](int i,int stride){auto& p=*processors[i];p.prepareToPlay(1000,stride);p.setNonRealtime(true);juce::MidiBuffer messages;std::vector<float> output(4000);juce::AudioBuffer<float> b(2,stride);
-        for(int at=0;at<4000;at+=stride){const auto n=std::min(stride,4000-at);position(i,at,false);b.setSize(2,n);b.clear();p.processBlock(b,messages);
+    const auto bounce=[&](int i,int stride,double origin=0,bool playing=false){auto& p=*processors[i];p.prepareToPlay(1000,stride);p.setNonRealtime(true);juce::MidiBuffer messages;std::vector<float> output(4000);juce::AudioBuffer<float> b(2,stride);
+        for(int at=0;at<4000;at+=stride){const auto n=std::min(stride,4000-at);position(i,at,playing);heads[i].position.setPpqPosition((at-origin)/500.);b.setSize(2,n);b.clear();p.processBlock(b,messages);
             REQUIRE(!p.swellEngine().snapshot().liveStatus.startsWith("Export incomplete"));std::copy_n(b.getReadPointer(0),n,output.data()+at);}return output;};
     const auto serial0=bounce(0,17),serial1=bounce(1,1023);
     auto future0=std::async(std::launch::async,[&]{return bounce(0,8192);});auto future1=std::async(std::launch::async,[&]{return bounce(1,31);});
@@ -62,6 +66,53 @@ inline void multipleExportCases()
             expected+=terms*.001*(i?.25:.125)*fade*std::min({1.0,age/2.0,(b-1-at)/2.0})*std::min(1.0,(age+1)/5.0);}
             REQUIRE(std::abs(samples[at]-expected)<1e-6);}}
     REQUIRE(serial0[440]>0 && serial1[440]>serial0[440] && serial1[3850]>0);
+    // #73: same accepted sample coordinates, real-time zero-input wet versus
+    // offline output. The first five samples are the independently defined join
+    // ramp; subsequent changing samples must agree, not just an energy flag.
+    for(int i=0;i<2;++i){auto& p=*processors[i];p.setNonRealtime(false);p.prepareToPlay(1000,64);
+        const auto savedBeforeLive=p.swellEngine().savedSession();
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        waitM3([&]{return p.swellEngine().snapshot().liveReady;});
+        position(i,440,true);
+        waitM3([&]{tick.clear();p.processBlock(tick,midi);const auto s=p.swellEngine().snapshot();return s.liveActive && !s.liveMissing && !s.liveIncompatible;});
+        // Confirmed Stop removes previous voices; wait through its bounded ramp.
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        position(i,440,true);std::vector<float> live;
+        for(int stride:{7,19,38}){juce::AudioBuffer<float> block(2,stride);block.clear();p.processBlock(block,midi);
+            for(int n=0;n<stride;++n)live.push_back(block.getSample(0,n));position(i,440+static_cast<int64_t>(live.size()),true);}
+        const auto& offline=i?serial1:serial0;REQUIRE(live.size()==64 && live[10]>0);
+        for(size_t n=0;n<live.size();++n){const auto ramp=std::min(1.0f,static_cast<float>(n+1)/5);
+            REQUIRE(std::abs(live[n]-offline[440+n]*ramp)<1e-6f);}
+        const auto savedAfterLive=p.swellEngine().savedSession();REQUIRE(savedBeforeLive.swells.size()==savedAfterLive.swells.size());
+        for(size_t n=0;n<savedBeforeLive.swells.size();++n)REQUIRE(m3::sameSavedSwell(savedBeforeLive.swells[n],savedAfterLive.swells[n]));
+        // Re-run identical absolute audio under a fresh shifted clock. Grid
+        // availability must not change the prepared sample schedule or PCM.
+        position(i,440,false);tick.clear();p.processBlock(tick,midi);
+        const auto shiftedPosition=[&](int64_t sample){position(i,sample,true);heads[i].position.setPpqPosition((sample-16)/500.0);};
+        shiftedPosition(440);std::vector<float> shifted;
+        for(int stride:{11,23,30}){juce::AudioBuffer<float> block(2,stride);block.clear();p.processBlock(block,midi);
+            const auto state=p.swellEngine().snapshot();const auto context=m3::gridClockContext(state.gridClock,true);
+            const auto grid=m3::HostGrid::make(state.session.timing,p.getSongTime(),1000,m3::GridDivision::beat,nullptr,true,&context);
+            REQUIRE(grid && context.admitted && state.gridClock->session==state.sessionEpoch);
+            for(int n=0;n<stride;++n)shifted.push_back(block.getSample(0,n));shiftedPosition(440+static_cast<int64_t>(shifted.size()));}
+        REQUIRE(shifted.size()==live.size());for(size_t n=0;n<live.size();++n)REQUIRE(std::abs(shifted[n]-live[n])<1e-6f);
+        const auto kept=p.swellEngine().savedSession();for(size_t n=0;n<kept.swells.size();++n)REQUIRE(m3::sameSavedSwell(kept.swells[n],savedBeforeLive.swells[n]));
+        p.swellEngine().resetTransportClock();REQUIRE(!p.swellEngine().snapshot().gridClock);
+        p.swellEngine().restore(kept);REQUIRE(!p.swellEngine().snapshot().gridClock);
+        waitM3([&]{const auto state=p.swellEngine().savedSession();return std::all_of(state.swells.begin(),state.swells.end(),[](const auto& w){return !w.render.present() || w.phase==m3::Phase::ready;});});
+        const auto restored=p.swellEngine().savedSession();for(size_t n=0;n<kept.swells.size();++n)REQUIRE(m3::sameSavedSwell(kept.swells[n],restored.swells[n]));
+        REQUIRE(restored.timing.sample==kept.timing.sample && restored.timing.ppq==kept.timing.ppq && !p.swellEngine().snapshot().gridClock);
+    }
+
+    REQUIRE(processors[0]->getLatencySamples()==0 && processors[1]->getLatencySamples()==0);
+    const auto accepted0=processors[0]->swellEngine().savedSession(),accepted1=processors[1]->swellEngine().savedSession();
+    REQUIRE(bounce(0,37,16)==serial0 && bounce(1,509,-31)==serial1);
+    REQUIRE(bounce(0,513,16,true)==serial0);
+    auto offset0=std::async(std::launch::async,[&]{return bounce(0,8192,16);});
+    auto offset1=std::async(std::launch::async,[&]{return bounce(1,31,-31);});
+    REQUIRE(offset0.get()==serial0 && offset1.get()==serial1);
+    for(int i=0;i<2;++i){const auto after=processors[i]->swellEngine().savedSession();const auto& before=i?accepted1:accepted0;
+        for(size_t n=0;n<before.swells.size();++n)REQUIRE(m3::sameSavedSwell(before.swells[n],after.swells[n]));}
     REQUIRE(processors[0]->getCaptureSnapshot().reference==captured0 && processors[1]->getCaptureSnapshot().reference==captured1);
     // Musical exports snapshot each instance's calibrated accepted schedule;
     // irregular and independently interleaved callbacks remain deterministic.
@@ -87,6 +138,10 @@ inline void multipleExportCases()
         for(int n=0;n<64;++n)REQUIRE(tail.getSample(0,n)==(routing==m3::LiveRouting::wetOnly?0.0f:.4f));
     }
     // A mapping change while future/current wet remains required is still fatal.
+    processors[0]->prepareToPlay(1000,64);position(0,440,false);heads[0].position.setPpqPosition((440.-16)/500.);
+    tick.clear();processors[0]->processBlock(tick,midi);REQUIRE(tick.getMagnitude(0,64)>0);
+    position(0,504,false);heads[0].position.setPpqPosition((504.-19)/500.);tick.clear();processors[0]->processBlock(tick,midi);
+    REQUIRE(processors[0]->swellEngine().snapshot().offlineStatus.contains("run origin delta=3.000000000 samples"));
     processors[0]->prepareToPlay(1000,64);position(0,440,false);tick.clear();processors[0]->processBlock(tick,midi);
     position(0,504,false);heads[0].position.setPpqPosition(0);tick.clear();processors[0]->processBlock(tick,midi);
     REQUIRE(processors[0]->swellEngine().snapshot().liveStatus.startsWith("Export incomplete"));

@@ -48,6 +48,7 @@ public:
     size_t getCapturedRegionCount() const noexcept;
     uint64_t getDroppedCaptureBlockCount() const noexcept;
     uint64_t getTimelineDiscontinuityCount() const noexcept;
+    uint64_t getOmittedCaptureFailureCount() const noexcept {return captureWorker.omittedFailureEvents();}
     void setTestToneEnabled(bool enabled) noexcept;
     bool isTestToneEnabled() const noexcept;
     float getGeneratedTonePeak() const noexcept { return generatedTonePeak.load(std::memory_order_relaxed); }
@@ -57,6 +58,7 @@ public:
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
+    CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
     SongTime getSongTime() const noexcept;
@@ -102,6 +104,8 @@ private:
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     std::atomic<bool> hostNotificationsEnabled{false};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
+    CaptureHostTiming capturePassDiagnosticBaseline;
+    uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
     std::atomic<uint64_t> diagnosticsSequence{0};
 
     std::atomic<bool> positionAvailable{false};

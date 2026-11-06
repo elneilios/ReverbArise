@@ -26,8 +26,10 @@ int main(){return runTest([]
     REQUIRE(engine.selectTargets({a},a));
     const auto original=engine.savedSession();SwellAssetStore assets(engine.assetDirectory());WetRender rawA,rawB;juce::String error;
     REQUIRE(assets.readRender(find(original,a)->render,previewMemoryBudget,rawA,error));REQUIRE(assets.readRender(find(original,b)->render,previewMemoryBudget,rawB,error));
-    const auto position=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=p/250.;return TransportTime{context.time,playing};};
+    const auto position=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=(p-(playing?16:0))/250.;return TransportTime{context.time,playing};};
     float l[80]{},r[80]{};auto time=position(950,false);engine.processTransportAudio(l,r,16,time);waitFor([&]{return engine.snapshot().liveReady;});
+    const auto resumePlaying=[&]{const auto resumed=position(950,true);std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);
+        engine.processTransportAudio(l,r,16,resumed);REQUIRE(engine.transportClockSnapshot() && engine.transportClockSnapshot()->gate==LiveGate::admitted);};
     time=position(950,true);engine.processTransportAudio(l,r,16,time);
     REQUIRE(std::abs(l[15]-sample(*find(original,a),rawA,965)-sample(*find(original,b),rawB,965))<1e-6);
     const auto invalid=root.file.getChildFile("invalid.wav");REQUIRE(invalid.replaceWithText("not audio"));
@@ -40,7 +42,7 @@ int main(){return runTest([]
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(engine.snapshot().retainedIRName=="accepted.wav" && find(engine.savedSession(),b)->render==find(original,b)->render);
     // A bounce intentionally uses the accepted version despite the requested error.
-    time=position(950,false);std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);engine.processOfflineAudio(l,r,80,time);
+    time=position(950,true);time.playing=false;std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);engine.processOfflineAudio(l,r,80,time);
     for(int i=5;i<80;++i)REQUIRE(std::abs(l[i]-sample(*find(original,a),rawA,950+i)-sample(*find(original,b),rawB,950+i))<1e-6);
     REQUIRE(engine.snapshot().offlineStatus.contains("accepted IRs") && !engine.snapshot().offlineStatus.contains("incomplete"));engine.endOffline();
     const auto next=root.file.getChildFile("next.wav");writeTestWav(next,1,1000,std::vector<float>(201,.002f));
@@ -58,7 +60,10 @@ int main(){return runTest([]
             REQUIRE(assigned.ir.content==entry.decodedHash && assigned.shape==find(saved,a)->shape && assigned.arrival==find(saved,a)->arrival);
             REQUIRE(find(engine.savedSession(),b)->ir==neighbour.ir && find(engine.savedSession(),b)->render==neighbour.render && engine.savedSession().defaultIR==saved.defaultIR);}
         const auto assigned=engine.savedSession();engine.restore(assigned);REQUIRE(find(engine.savedSession(),a)->ir==find(assigned,a)->ir);
-        engine.restore(saved);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});}
+        engine.restore(saved);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
+        // Restore retires the old clock. Model the next real host callback,
+        // rather than relying on render completion to overwrite saved origin.
+        REQUIRE(!engine.transportClockSnapshot());resumePlaying();}
     {const auto saved=engine.savedSession();
         REQUIRE(engine.assignBundledIR(a,find(saved,a)->inputGeneration,"monumental"));waitFor([&]{return find(engine.savedSession(),a)->irName=="Monumental";});
         engine.generate();waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
@@ -71,11 +76,11 @@ int main(){return runTest([]
             REQUIRE(find(engine.savedSession(),a)->shape.startOffset==-2000 && engine.snapshot().retainedIRName=="Monumental");};
         shorten();REQUIRE(engine.resetSwell(a,false));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
         REQUIRE(find(engine.savedSession(),a)->shape.automaticStart && find(engine.savedSession(),a)->render.irContent==find(engine.savedSession(),a)->ir.content);
-        engine.restore(crop);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});shorten();
+        engine.restore(crop);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});resumePlaying();shorten();
         REQUIRE(engine.edit(a,[](auto& w,auto& error){return fullShape(w,w.sourceStart-499,renderInputEnd(w),error);}));
         waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
         REQUIRE(find(engine.savedSession(),a)->render.start==501 && find(engine.savedSession(),a)->shape.startOffset==-499);
-        engine.restore(saved);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});}
+        engine.restore(saved);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});resumePlaying();}
     // A decoded but computationally oversized request cannot consume the old voice.
     const auto huge=root.file.getChildFile("oversized.wav");writeTestWav(huge,1,10,std::vector<float>(200000,.001f));
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,huge));waitFor([&]{return find(engine.savedSession(),a)->irName=="oversized.wav";});
@@ -83,6 +88,7 @@ int main(){return runTest([]
     REQUIRE(find(engine.savedSession(),a)->status.containsIgnoreCase("budget") && engine.snapshot().retainedIRName=="next.wav");
     REQUIRE(engine.residentBytes()<previewMemoryBudget);
     engine.restore(replacement);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
+    resumePlaying();
     for(int kind=0;kind<4;++kind){
         REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
         REQUIRE(engine.snapshot().retainedIRName=="next.wav");
@@ -94,6 +100,7 @@ int main(){return runTest([]
     REQUIRE(engine.assignIR(a,find(beforeDelete,a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     engine.removeSelected();REQUIRE(!find(engine.savedSession(),a) && engine.snapshot().retainedIRName.isEmpty());
     engine.restore(beforeDelete);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
+    resumePlaying();
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(engine.edit(a,[](auto& w,auto&){w.shape.gainDb=-3;return true;}));REQUIRE(engine.snapshot().retainedIRName.isEmpty());
     engine.generate();waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
@@ -108,7 +115,11 @@ int main(){return runTest([]
     waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(assets.directory().getChildFile(find(engine.savedSession(),a)->ir.path).deleteFile());
-    time=position(950,false);engine.processTransportAudio(l,r,16,time);waitFor([&]{return engine.snapshot().retainedIRName.isEmpty();});
+    // A warm verified window need not reopen its assets just because Play
+    // stops. Seek beyond that window to require fresh dependency validation.
+    time=position(4500,false);engine.processTransportAudio(l,r,16,time);
+    REQUIRE(engine.transportClockSnapshot()->gate==LiveGate::stopped);
+    waitFor([&]{return engine.snapshot().retainedIRName.isEmpty();});
     engine.restore(original);waitFor([&]{return find(engine.savedSession(),b)->phase==Phase::ready;});REQUIRE(engine.snapshot().retainedIRName.isEmpty());
     REQUIRE(engine.selectTargets({b},b));REQUIRE(engine.setFrozen(b,true));REQUIRE(!engine.assignIR(b,find(engine.savedSession(),b)->inputGeneration,next));
     REQUIRE(engine.snapshot().retainedIRName.isEmpty() && engine.residentBytes()<previewMemoryBudget);

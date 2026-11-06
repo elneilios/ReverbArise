@@ -1,7 +1,8 @@
 #pragma once
 inline void liveProcessorCases()
 {
-    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();
+    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);auto& engine=p->swellEngine();engine.setMonitoring(m3::AuditionMode::wetOnly,.5f); // Preserve the wet-only numerical/resource oracle.
+
     REQUIRE(engine.setGainPolicy(m3::GainPolicy::legacy)); // Original live sample oracle.
     engine.setAutomaticProcessing(false);p->prepareToPlay(1000,1000);TestPlayHead head;p->setPlayHead(&head);
     head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
@@ -63,6 +64,8 @@ inline void liveProcessorCases()
     REQUIRE(engine.snapshot().renderCount==count);
     armCaptureFixture(*p);position(500,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.25f);
     p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
+    waitM3([&]{return engine.savedSession().swells[1].phase==m3::Phase::stale;});
+    REQUIRE(engine.snapshot().renderCount==count);engine.generate(true);
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.renderCount>count && s.session.swells[1].phase==m3::Phase::ready;});
     buffer.setSize(2,16);position(490,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(std::abs(buffer.getSample(0,10)-41*.00025f)<1e-6f);

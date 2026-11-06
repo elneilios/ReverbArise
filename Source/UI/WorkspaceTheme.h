@@ -1,6 +1,8 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <PreverbUIResources.h>
+#include "UiGeometry.h"
+#include "ResponsivePresentation.h"
 #include <array>
 
 namespace m3::ui
@@ -22,12 +24,12 @@ inline const char* resource(const juce::String& filename,int& bytes)
 }
 
 // Explicit embedded faces: no installed-family lookup or synthetic weights.
-enum class InterFace { regular, semibold, bold, italic };
+enum class InterFace { regular, semibold, bold, italic, medium };
 inline juce::Typeface::Ptr interTypeface(InterFace face)
 {
     static const auto faces=[]{
-        std::array<juce::Typeface::Ptr,4> result;
-        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf"};
+        std::array<juce::Typeface::Ptr,5> result;
+        const char* names[]={"Inter-Regular.ttf","Inter-SemiBold.ttf","Inter-Bold.ttf","Inter-Italic.ttf","Inter-Medium.ttf"};
         for(size_t i=0;i<result.size();++i)
         {
             int size=0;const auto* bytes=resource(names[i],size);jassert(bytes && size>0);
@@ -42,12 +44,40 @@ inline InterFace interStyle(const juce::String& style)
 {
     if(style.containsIgnoreCase("italic"))return InterFace::italic;
     if(style.containsIgnoreCase("semi"))return InterFace::semibold;
+    if(style.containsIgnoreCase("medium"))return InterFace::medium;
     return style.containsIgnoreCase("bold")?InterFace::bold:InterFace::regular;
 }
 inline juce::Font interFont(float height,InterFace face=InterFace::regular)
 {return juce::Font(juce::FontOptions(interTypeface(face)).withHeight(height));}
 inline juce::Font interFont(float height,int flags)
 {return interFont(height,(flags&juce::Font::italic)?InterFace::italic:(flags&juce::Font::bold)?InterFace::bold:InterFace::regular);}
+
+// Production standards revision 1: appearance roles, independent of bindings.
+inline const juce::Colour headerBodyInk{0xffc7cdd4};
+enum class TextRole { sectionHeading,controlLabel,helper,ruler,emptyHeading,emptyBody,tagline,headerBody,controlValue };
+struct TextStyle {float height;InterFace face;juce::Colour ink;int lineHeight;};
+inline TextStyle textStyle(TextRole role)
+{
+    switch(role)
+    {
+        case TextRole::sectionHeading:return {headingSize,InterFace::semibold,text,controlGeometry::headingHeight};
+        case TextRole::controlLabel:return {bodySize,InterFace::medium,text,controlGeometry::labelHeight};
+        case TextRole::helper:return {learnTypography::secondarySize,InterFace::regular,learnTypography::descriptionColour,learnTypography::secondaryLineHeight};
+        case TextRole::ruler:return {learnTypography::secondarySize,InterFace::medium,text,learnTypography::secondaryLineHeight};
+        case TextRole::emptyHeading:return {emptyHeadingSize,InterFace::semibold,text,learnGeometry::emptyHeadingHeight};
+        case TextRole::emptyBody:return {bodySize,InterFace::regular,learnTypography::descriptionColour,learnGeometry::emptyTextHeight};
+        case TextRole::tagline:return {headingSize,InterFace::italic,text,46};
+        case TextRole::headerBody:return {bodySize,InterFace::regular,headerBodyInk,32};
+        case TextRole::controlValue:return {controlSize,InterFace::regular,text,controlGeometry::valueHeight};
+    }
+    jassertfalse;return {bodySize,InterFace::regular,text,learnTypography::secondaryLineHeight};
+}
+inline juce::Font textFont(TextRole role)
+{const auto style=textStyle(role);return interFont(style.height,style.face);}
+inline void applyTextRole(juce::Label& label,TextRole role,juce::Justification alignment=juce::Justification::centredLeft)
+{label.setFont(textFont(role));label.setColour(juce::Label::textColourId,textStyle(role).ink);label.setJustificationType(alignment);}
+inline void applyTextRole(juce::Graphics& graphics,TextRole role)
+{graphics.setFont(textFont(role));graphics.setColour(textStyle(role).ink);}
 
 class FlatSurface:public juce::Component
 {
@@ -64,9 +94,20 @@ class FlatViewport:public juce::Viewport
 {
 public:void paint(juce::Graphics& g)override{g.fillAll(background);}
 };
-class WorkspaceTheme final:public juce::LookAndFeel_V4
+class WorkspaceTheme:public juce::LookAndFeel_V4
 {
 public:
+    void setResponsiveViewport(int width,int height)noexcept{responsive=true;responsiveType=ResponsiveTypography::at(width,height);}
+    bool usesResponsiveTypography()const noexcept{return responsive;}
+    float resolvedHeight(float height)const noexcept
+    {
+        if(!responsive)return height;
+        if(height==headingSize)return responsiveType.heading;
+        if(height==navigationSize)return responsiveType.navigation;
+        if(height==bodySize)return responsiveType.body;
+        if(height==controlSize || height==smallSize || height==captionSize)return responsiveType.value;
+        return height;
+    }
     WorkspaceTheme()
     {
         for(const int id:std::initializer_list<int>{juce::Label::textColourId,juce::TextEditor::textColourId,
@@ -89,13 +130,13 @@ public:
         setColour(juce::TextButton::textColourOffId,text);setColour(juce::TextButton::textColourOnId,background);
     }
     bool interAvailable()const{return interTypeface(InterFace::regular)!=nullptr && interTypeface(InterFace::semibold)!=nullptr
-        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr;}
+        && interTypeface(InterFace::bold)!=nullptr && interTypeface(InterFace::italic)!=nullptr && interTypeface(InterFace::medium)!=nullptr;}
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
-        return interFont(height,flags);
+        return interFont(resolvedHeight(height),flags);
     }
-    juce::Font getLabelFont(juce::Label& label)override{return interFont(label.getFont().getHeight(),interStyle(label.getFont().getTypefaceStyle()));}
+    juce::Font getLabelFont(juce::Label& label)override{return interFont(resolvedHeight(label.getFont().getHeight()),interStyle(label.getFont().getTypefaceStyle()));}
     juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
     juce::Font getPopupMenuFont()override{return font(bodySize);}
     juce::Font getSliderPopupFont(juce::Slider&)override{return font(controlSize);}
@@ -107,7 +148,7 @@ public:
     {
         return interTypeface(interStyle(f.getTypefaceStyle()));
     }
-    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
+    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(responsive?bodySize:controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
     {
         const auto active=b.getName()=="audition" || b.getToggleState();
@@ -177,6 +218,9 @@ public:
         g.setColour(aqua.withMultipliedAlpha(s.isEnabled()?1.0f:.3f));g.drawLine(static_cast<float>(x),cy,pos,cy,3);
         g.fillEllipse(pos-5,cy-5,10,10);
     }
+private:
+    bool responsive=false;
+    ResponsiveTypography responsiveType;
 };
 
 // Custom Graphics painting does not automatically use the component's font
@@ -189,6 +233,15 @@ inline juce::Font fontFor(juce::Component& component,float height,int flags=0)
 inline juce::Font navigationFont()
 {return interFont(navigationSize,InterFace::semibold);}
 
+inline juce::Font componentTextFont(juce::Component& component,TextRole role)
+{
+    const auto style=textStyle(role);
+    const auto* theme=dynamic_cast<const WorkspaceTheme*>(&component.getLookAndFeel());
+    return interFont(theme?theme->resolvedHeight(style.height):style.height,style.face);
+}
+inline void applyTextRole(juce::Graphics& graphics,juce::Component& component,TextRole role)
+{const auto style=textStyle(role);graphics.setFont(componentTextFont(component,role));graphics.setColour(style.ink);}
+
 class Wordmark final:public juce::Component
 {
 public:
@@ -196,8 +249,17 @@ public:
     {int size=0;const auto* bytes=resource("reverbarise-wordmark-dark.svg",size);
         if(bytes)image=juce::Drawable::createFromImageData(bytes,static_cast<size_t>(size));setInterceptsMouseClicks(false,false);}
     bool loaded()const noexcept{return image!=nullptr;}
+    void setOpticalAlignment(bool enabled){optical=enabled;repaint();}
     void paint(juce::Graphics& g)override
-    {if(image)image->drawWithin(g,getLocalBounds().toFloat(),juce::RectanglePlacement::centred,1);}
-private:std::unique_ptr<juce::Drawable> image;
+    {
+        if(!image)return;
+        if(optical)
+        {
+            const auto ink=image->getOutlineAsPath().getBounds();
+            if(!ink.isEmpty()){image->draw(g,1.0f,juce::RectanglePlacement(juce::RectanglePlacement::xLeft|juce::RectanglePlacement::yMid).getTransformToFit(ink,getLocalBounds().toFloat()));return;}
+        }
+        image->drawWithin(g,getLocalBounds().toFloat(),juce::RectanglePlacement::centred,1);
+    }
+private:std::unique_ptr<juce::Drawable> image;bool optical=false;
 };
 }

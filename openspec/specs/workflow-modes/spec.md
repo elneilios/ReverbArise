@@ -18,7 +18,7 @@ Each instance SHALL have exactly one Capture, Live or Finalise mode. Fresh insta
 - **THEN** their mode, capture-pass ownership and output remain independent
 
 ### Requirement: Mode entry prerequisites reflect verified material
-Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Finalise entry SHALL require useful compatible source plus an enabled, unmuted, solo-eligible ready render compatible with the current rate, tempo and meter. Mapped silence alone SHALL NOT satisfy usefulness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit replacement.
+Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Finalise entry SHALL require an enabled, unmuted, solo-eligible verified exportable wet render compatible with current rate, tempo and meter, independently of dry availability or mixdown readiness. Mapped silence alone SHALL NOT satisfy usefulness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit replacement.
 
 #### Scenario: Manual workflow after dry capture
 - **WHEN** useful source has committed with Automatic Swells off and no prepared swell
@@ -26,7 +26,7 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 
 #### Scenario: Silence or failed verification
 - **WHEN** coverage is only silence, unavailable, incompatible or still validating
-- **THEN** neither mode becomes available by treating that coverage as useful compatible source
+- **THEN** neither mode becomes available by treating that coverage as useful compatible source; an independently verified eligible wet render retains its explicit recovery eligibility
 - **AND** valid stored material is retained without reinterpretation
 
 #### Scenario: Finalise readiness
@@ -42,6 +42,15 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 - **THEN** Live entry and wet editing/playback are available without recreating source
 - **AND** unfrozen source-dependent swells remain unavailable, captured-dry audition still requires real dry, and no Recapture permission is granted
 
+#### Scenario: Export with independently recoverable wet
+- **WHEN** dry source is missing but an eligible frozen wet render verifies at compatible timing
+- **THEN** Finalise entry is available and wet-only preparation requires no invented dry; dry-inclusive mixes use the explicitly warned-silence policy
+- **AND** source-dependent unavailable renders do not become exportable merely because the mode changed
+
+#### Scenario: Entry and current file readiness differ
+- **WHEN** a verified wet render permits Finalise entry and the user selects 0% Wet or a new mix is still preparing
+- **THEN** Finalise remains selected, its current Save/Drag/preview actions reflect actual mixdown readiness and dry-only source alone still cannot unlock initial entry
+
 ### Requirement: Capture activity locks manual mode switching
 Manual mode switching SHALL be disabled during active DAW Capture and while its Stop-triggered drain, commit or validation is settling. Rejection SHALL identify the reason, apply to every command path, and leave current mode/source unchanged. A stopped idle Capture SHALL permit transitions whose prerequisites hold.
 
@@ -55,11 +64,11 @@ Manual mode switching SHALL be disabled during active DAW Capture and while its 
 - **AND** Live can be selected explicitly while stopped if its prerequisites hold
 
 ### Requirement: Validated useful Stop commits automatically enter Live
-An explicit DAW Stop SHALL close the pass once and settle asynchronously. Useful new audio, or successful explicit mapped replacement with useful committed material remaining, SHALL automatically select Live without waiting for wet renders. Empty, mapped-only, aborted, incompatible or failed passes, and sessions left without useful material, SHALL remain Capture with truthful results and prior valid data intact.
+An explicit DAW Stop SHALL close the pass once and settle asynchronously. Useful source acceptance SHALL settle in Learn. Only enabled Auto-generate on Stop with effective Automatic Swells SHALL request the shared Generate transaction after matching final analysis; Perform entry SHALL require a nonempty changed generation commit, without waiting for wet renders. Empty, mapped-only, aborted, incompatible or failed passes, and sessions left without useful material, SHALL remain Capture with truthful results and prior valid data intact.
 
 #### Scenario: Stop while wet work remains pending
-- **WHEN** source validation succeeds and related swell jobs are still queued or rendering
-- **THEN** Live is selected immediately after source acceptance and reports unfinished wet preparation honestly
+- **WHEN** source validation and an eligible shared generation transaction succeed while wet jobs are still queued or rendering
+- **THEN** Perform is selected atomically with the successful generation commit and reports unfinished wet preparation honestly
 
 #### Scenario: Empty or failed pass
 - **WHEN** Stop closes an empty/mapped-only pass, publication fails, or no useful material remains after a silence-only replacement
@@ -67,11 +76,11 @@ An explicit DAW Stop SHALL close the pass once and settle asynchronously. Useful
 
 #### Scenario: Identical explicit recapture
 - **WHEN** an explicitly armed pass receives useful mapped audio identical to the accepted source and validation succeeds
-- **THEN** Live is selected and Recapture disarms without forcing duplicate source or wet assets
+- **THEN** Recapture disarms, source identity is reused and Learn remains selected unless the opted-in shared transaction commits a genuine changed automatic result
 
 #### Scenario: Recapture deliberately replaces a note with silence
 - **WHEN** an explicitly armed pass successfully replaces mapped samples with silence and other useful committed source remains
-- **THEN** Live is selected and Recapture disarms, including for identical already-mapped silence; unchanged PCM retains its source/render identity
+- **THEN** Recapture disarms, including for identical already-mapped silence; unchanged PCM retains identity, and Perform entry still requires opted-in successful changed generation
 
 ### Requirement: Transport events cannot publish a capture pass twice
 Capture settlement SHALL be idempotent and scoped to its originating instance/session/pass. Duplicate Stop reports, loops, seeks, restarts, restoration and superseded work SHALL NOT publish a pass twice, overwrite a newer revision or trigger a stale mode transition. Missing timing SHALL NOT be interpreted as zero position or a successful Stop.
@@ -107,11 +116,11 @@ Realtime host processing SHALL only perform bounded transport observation, captu
 - **THEN** dry audio continues under the mode contract, mode status remains settling/failed as appropriate and realtime processing performs no blocking storage work
 
 ### Requirement: Creative mode names are separate from durable identity
-User-facing mode names SHALL be Learn, Perform and Export for the existing capture, live and finalise behaviors respectively. Visible mode guidance, rejection reasons and accessible text SHALL use those names consistently. Saved identifiers, state versions, plugin identities and mode/audio semantics SHALL remain compatible. Functional concepts such as source capture, Recapture and live wet SHALL retain their accurate meaning.
+User-facing mode names SHALL be Learn, Perform and Export for the existing capture, live and finalise behaviors respectively. Visible mode guidance, rejection reasons and accessible text SHALL use those names consistently. Saved mode identifiers and plugin identities SHALL remain compatible; versioned generation preferences and revised optional Stop transitions SHALL follow their explicit migration contracts. Audio routing SHALL retain its existing mode semantics. Functional concepts such as source capture, Recapture and live wet SHALL retain their accurate meaning.
 
 #### Scenario: Reopen saved workflow modes
 - **WHEN** supported projects saved with Capture, Live or Finalise identifiers reopen
-- **THEN** their corresponding Learn, Perform or Export mode is displayed with the same source, swells, edits, readiness rules and output behavior, without a state migration or implicit recording/audition
+- **THEN** their corresponding Learn, Perform or Export mode is displayed with the same source, swells, edits, readiness rules and output behavior, without renumbering modes or implicit recording/audition; the separately versioned Auto-generate preference follows its legacy migration
 - **AND** projects lacking saved mode metadata still enter Learn with Recapture off under the existing legacy policy
 
 #### Scenario: Save and restore a newly labelled mode
@@ -119,11 +128,37 @@ User-facing mode names SHALL be Learn, Perform and Export for the existing captu
 - **THEN** the original durable mode representation round-trips, the chosen display label returns, and a real mode change retains existing host save notification behavior
 
 #### Scenario: Automatic transition while renders prepare
-- **WHEN** useful accepted source or the approved explicit replacement qualifies for automatic Live entry under the existing Stop policy
-- **THEN** Perform becomes selected after source acceptance without waiting for wet jobs, with honest background preparation status
+- **WHEN** the opted-in Stop route commits one or more new or genuinely regenerated automatic swells from useful accepted source
+- **THEN** Perform becomes selected after the generation commit without waiting for wet jobs, with honest background preparation status
 - **AND** mapped-only, fresh all-silent, failed and erased-last-useful-source outcomes retain their existing Learn behavior
 
 #### Scenario: Existing eligibility and routing
 - **WHEN** a user requests Perform or Export with silent-only, incompatible, frozen-recovery or ready-render material
 - **THEN** the existing eligibility rules decide the request without being weakened by presentation changes
 - **AND** Learn captures only under its existing policy, Perform schedules wet without capture, and Export leaves DAW output dry with only explicitly initiated supported preview
+
+### Requirement: Optional automatic generation follows useful Stop only
+Auto-generate on Stop SHALL admit generation only after successfully accepted useful Stop with effective Automatic Swells enabled, waiting for final matching analysis. Toggling ON, restoring state, editing settings or entering Learn SHALL NOT trigger generation. OFF SHALL cancel pending automatic intent before commit. Changed settings/source/default/timing or workflow authority SHALL invalidate the request without retargeting it to later work.
+
+#### Scenario: Preference changes without capture
+- **WHEN** Auto-generate is enabled, the project restores or Learn settings change without a newly accepted useful Stop
+- **THEN** no automatic generation starts and existing swells remain unchanged
+
+#### Scenario: Stop request awaits final analysis
+- **WHEN** a useful accepted Stop admits an automatic request and its pinned identities change or Auto-generate is disabled before commit
+- **THEN** that request is cancelled without generating against a later snapshot or changing the accepted mode
+
+### Requirement: Generation authority cannot outlive its workflow
+Explicit Generate and eligible Stop generation SHALL share readiness, replacement and cancellation guards. Only an idle Learn request with matching final source/settings/timing/IR authority can publish. Capture restart, incompatible mode changes, restore, cancellation or changed dependencies SHALL invalidate pending publication and prevent partial definitions or stale Perform entry.
+
+#### Scenario: Restart or switch while generation prepares
+- **WHEN** a valid mode change, capture restart or restore supersedes a held generation request
+- **THEN** no prepared definitions publish and no stale completion changes the accepted mode
+
+#### Scenario: Manual navigation without generation
+- **WHEN** an idle Learn user selects Perform or Export while candidate analysis is pending
+- **THEN** existing readiness rules govern navigation, pending generation is invalidated and no automatic generation is implied
+
+#### Scenario: Duplicate Stop or unsuccessful generation
+- **WHEN** Stop repeats or generation is empty, protected-only, unchanged, failed or cancelled
+- **THEN** no duplicate transaction commits, prior swells remain and the generation path stays Learn with its honest outcome

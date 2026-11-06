@@ -110,11 +110,41 @@ Seeking and looping SHALL abandon the old wet position and join prepared audio a
 - **THEN** wet reaches zero through a disclosed ramp no longer than 5 ms and does not restart until a subsequent valid Play
 
 ### Requirement: Timing incompatibility is explicit
-Live wet SHALL require valid absolute host sample position and a compatible fixed sample-rate, tempo, meter and sample-to-PPQ mapping. Unsupported or changed timing SHALL suppress affected wet and identify the reason, without reinterpreting assets or altering stored edits. Returning to compatible timing SHALL require fresh validation before wet resumes.
+Live wet SHALL require valid absolute host samples and fixed rate/tempo/meter compatible with accepted assets. A fresh valid playing run SHALL establish an ephemeral sample-to-PPQ mapping independent of parked/source origin. Each run SHALL retain its mapping within the existing one-sample origin tolerance; unsupported changes SHALL suppress wet with a reason. Fresh validation SHALL precede resumption. Stored sample positions, edits and assets SHALL remain unchanged.
 
 #### Scenario: Change tempo or sample rate
 - **WHEN** the host mapping becomes incompatible with prepared assets
 - **THEN** those swells are unavailable for live playback and the workspace explains the incompatibility; default Dry + Wet continues passing dry
+
+#### Scenario: Playing clock differs from parked source mapping
+- **GIVEN** verified ready wet at fixed absolute sample positions and a compatible fixed rate, tempo and meter
+- **WHEN** a fresh playing run supplies a valid mapping whose origin differs from the parked/source mapping, including the recorded approximately 16-sample difference
+- **THEN** the playing mapping is validated independently and eligible wet plays at its stored absolute sample positions
+- **AND** no saved mapping, source, render, placement or persistent identity is rewritten or offset, and a resident valid window remains eligible for a warm join
+
+#### Scenario: Zero-offset transport remains compatible
+- **WHEN** a fresh playing run has the same origin as parked/source timing
+- **THEN** existing absolute-position output, routing and gain behavior remain unchanged
+
+#### Scenario: Mapping changes inside a playing run
+- **WHEN** origin changes by more than the existing one-sample allowance during an established playing run
+- **THEN** affected live wet is suppressed with the actual timing reason and the established run mapping is retained
+- **AND** seeking, looping, preparation misses and revision updates do not silently establish a replacement baseline
+
+#### Scenario: Invalid timing does not create a new run
+- **WHEN** host timing is missing, nonfinite or out of range, or a callback range is invalid
+- **THEN** affected wet is unavailable and that observation cannot establish a valid playing mapping or masquerade as a confirmed Stop
+- **AND** returning timing is freshly validated against the retained run mapping before wet resumes
+
+#### Scenario: Confirmed Stop followed by a new Play
+- **WHEN** valid stopped transport is followed by a fresh valid playing run
+- **THEN** a new runtime mapping is validated independently, with no automatic audition and no persistent edit
+- **AND** only complete current assets can join at the new absolute Song position without replaying elapsed audio
+
+#### Scenario: Session and workflow admission are independent
+- **WHEN** state is restored, the audio session is replaced, or Perform is re-entered while the host is already playing
+- **THEN** live admission requires fresh runtime validation and current asset dependencies, and no stale run identity can admit old work
+- **AND** disabled live output remains disabled and Capture, Audition, internal Export and host offline timing behavior retain their existing contracts
 
 ### Requirement: Preparation is bounded and unavailable audio is visible
 Playback preparation SHALL remain inside the displayed 256 MiB PCM working budget, including pinned pages and concurrent render/audition work, without requiring the whole song resident. Only prepared samples SHALL play. A cold seek or resource miss SHALL report preparation or unavailable coverage, omit missing wet and join at the current position when ready, rather than replaying missed audio.
@@ -310,3 +340,115 @@ Mode gating SHALL reuse bounded click-prevention transitions of at most 5 ms and
 #### Scenario: Worker completion in Finalise
 - **WHEN** a render or IR replacement completes while Finalise is selected
 - **THEN** accepted state can update under its normal dependency guards but scheduled wet remains bypassed
+
+### Requirement: Live admission diagnostics distinguish failure gates
+Developer Diagnostics SHALL distinguish configuration/workflow exclusion, unavailable publication, incompatible timing, invalid callback range and missing prepared coverage. Observations SHALL identify their callback or worker context and expose mapping values, preparation/publication revisions, window bounds and retry outcome without modifying session state or adding unbounded callback work.
+
+#### Scenario: Published mapping is rejected while playing
+- **GIVEN** a publication exists and enabled Perform playback rejects incoming host timing
+- **WHEN** developer Diagnostics is inspected
+- **THEN** it identifies the rejected timing dimension and displays source/published and observed sample, PPQ, rate, tempo, meter, inferred origins and origin difference with enough precision to assess the supported tolerance
+- **AND** callback range validity, publication revision and current position are visible without presenting worker observations as the same callback
+
+#### Scenario: A valid playing origin differs from source origin
+- **WHEN** a separately validated playing run has an origin offset from parked/source timing
+- **THEN** Diagnostics reports the run identity, its baseline and validation result separately from the informational source/publication origin delta
+- **AND** a supported cross-state offset is not falsely reported as a current mapping rejection, while a rejected change within the run remains identifiable
+
+#### Scenario: Stop clears a play-gated failure
+- **WHEN** transport stops after a mapping rejection
+- **THEN** stopped readiness is distinguished from successful playing admission and a bounded last-rejection observation remains identifiable as historical evidence
+- **AND** no stopped observation claims wet was audible or a window was newly prepared solely because the playing flag cleared
+
+#### Scenario: Disabled output and preparation misses
+- **WHEN** workflow, saved live enable, routing, wet level or unavailable coverage explains absent wet
+- **THEN** Diagnostics exposes the relevant configuration or preparation reason separately from timing rejection, including current/prepared revision and published coverage when available
+
+#### Scenario: Inspect without disturbing the failing instance
+- **WHEN** Diagnostics opens, refreshes or closes during playback or while stopped
+- **THEN** project state, source/render identities, assets, transport and output remain unchanged
+- **AND** callback observation publication performs no allocation, deallocation, lock, blocking wait, file access or logging
+
+### Requirement: Transient live preparation rejection recovers at current position
+Recoverable preparation or publication rejection SHALL remain eligible for bounded worker retry while current dependencies and timing are valid. Recovery SHALL validate the latest session, source/render identity and mapping before admitting complete prepared wet at current Song time. Unsupported timing and invalid assets SHALL remain explicitly unavailable; recovery SHALL NOT reinterpret stored positions or fabricate ready output.
+
+#### Scenario: Stopped preparation followed by moving Song playback
+- **GIVEN** an instance with 61 eligible swells has a stopped prepared window
+- **WHEN** compatible Song playback starts before a swell and advances through it
+- **THEN** available wet follows its absolute position and later windows remain eligible for preparation without an Export roundtrip, reset or recapture
+
+#### Scenario: A transient publication attempt fails
+- **WHEN** a preparation/publication attempt is transiently rejected and its blocking condition subsequently clears while playback continues
+- **THEN** a later bounded worker attempt can publish a fully revalidated current window and wet joins at the then-current offset with the existing bounded transition
+- **AND** elapsed wet is not replayed and retry status remains distinct from permanent timing incompatibility
+
+#### Scenario: Dependencies change during retry
+- **WHEN** source, render, session generation or mapping changes before a pending retry publishes
+- **THEN** obsolete work is rejected and only complete output validated against the latest compatible dependencies can be admitted
+
+#### Scenario: Genuine incompatibility persists
+- **WHEN** rate, tempo, meter or the established playing-run mapping remains unsupported
+- **THEN** affected wet stays unavailable with its actual reason and stored positions and accepted assets remain intact
+- **AND** retry does not relax mapping guards or report readiness without validation
+
+#### Scenario: Worker revalidates across clock transitions
+- **WHEN** preparation spans a confirmed Stop/Play, restore or live admission transition
+- **THEN** publication revalidates current run identity, timing, source/render dependencies and coverage or remains retryable
+- **AND** a matching render revision or resident window alone does not certify a superseded clock validation, while still-valid resident PCM can be reused without changing its positions
+
+### Requirement: Offline bounces validate their own runtime mapping
+Each fresh host offline bounce SHALL establish a valid fixed-tempo runtime mapping independently of parked/source PPQ origin. Assets SHALL retain compatible rate, tempo and meter. Subsequent wet-required callbacks SHALL match the established bounce mapping within one sample. Stored source/render positions and identities SHALL remain unchanged.
+
+#### Scenario: Export origin differs from prepared origin
+- **GIVEN** compatible ready wet at absolute sample positions
+- **WHEN** a fresh offline run supplies a valid origin offset, including the observed 16-sample difference at 48 kHz and 122 BPM
+- **THEN** available swells render at their original absolute sample offsets with either Playing flag value and irregular blocks
+- **AND** unchanged source/render assets, calibration and gain plans are retained without compensating sample shifts
+
+#### Scenario: Genuine drift during required wet
+- **WHEN** an established offline run changes origin beyond one sample, rate, tempo or meter while wet remains current or due
+- **THEN** export fails visibly with precise failing timing and does not silently replace the baseline
+- **AND** the existing completed-wet tail exception remains in force
+
+#### Scenario: Lifecycle and separate instances
+- **WHEN** offline processing is entered anew, preparation restarts, or an existing supported backward export restart occurs
+- **THEN** the instance establishes a fresh mapping independently of other instances
+- **AND** zero-length/invalid callbacks cannot admit wet, while accepted pending IR contributions retain their original snapshot rules
+
+### Requirement: Offline timing failures are shareable
+Offline timing errors SHALL retain the prepared, bounce-reference and failing host timing values. Diagnostics SHALL offer a keyboard-accessible Copy diagnostics action that copies the full current report and retained error without changing saved session state.
+
+#### Scenario: Copy a failed bounce report
+- **WHEN** the owner invokes Copy diagnostics after offline timing failure
+- **THEN** the clipboard includes precise timing/error information, current capture/gain observations, Snap/grid availability and live/worker observations
+- **AND** the action changes no source, swell, routing, transport or saved preference
+
+### Requirement: Live timing rejection retains its causal observations
+Diagnostics SHALL retain bounded ephemeral evidence of a live run's initial observation, last admitted callback before its first timing rejection, and that first rejection. Each SHALL identify its run/session/reset, callback range, timing and admission result. Run-reference-to-host origin deltas SHALL be explicit and distinct from source/publication deltas. Missing or incoherent evidence SHALL remain unavailable. Collection SHALL preserve existing timing admission and real-time safety.
+
+#### Scenario: Source offset remains stable during playback
+- **GIVEN** valid fixed rate, tempo and meter with a playing origin different from accepted source timing
+- **WHEN** callbacks remain compatible with the established run
+- **THEN** diagnostics distinguishes the informational source offset from the validated run origin without claiming a live rejection
+- **AND** available prepared wet retains its existing absolute-position admission and output
+
+#### Scenario: Recorded run origin changes
+- **GIVEN** a run starts at sample 3399344 and PPQ 143.999322222222219 at 48000 Hz, 122 BPM and 4/4
+- **WHEN** that same run observes sample 3795967 and PPQ 160.801390972220531
+- **THEN** evidence identifies the approximately minus-16-sample run-origin delta, the first rejecting callback and the last preceding admitted observation if one exists
+- **AND** a near-zero source/publication-to-host delta cannot be presented as successful run validation or permission to replace the reference
+
+#### Scenario: Later symptoms cannot replace the first cause
+- **WHEN** additional rejected callbacks, seeks, loops, window publications or preparation misses follow a run's first timing rejection
+- **THEN** the run's first rejection and its preceding admitted observation remain retained separately from the existing latest historical rejection
+- **AND** neither evidence collection nor those events silently create a new run baseline
+
+#### Scenario: New run and unavailable preceding evidence
+- **WHEN** a confirmed Stop/Play, session replacement or explicit audio reset establishes a new run under the existing lifecycle
+- **THEN** evidence is associated with the new identity and prior observations cannot be labelled as its causal sequence
+- **AND** if no callback was admitted before its rejection, or a coherent snapshot cannot be read, the preceding evidence is explicitly unavailable
+
+#### Scenario: Inspect evidence without changing the project
+- **WHEN** diagnostics is opened, refreshed or closed while playback continues, or the project is saved and reopened
+- **THEN** observation does not change admission, routing, wet samples, source/render identities, saved definitions or host transport, and diagnostic history is not persisted in the project
+- **AND** callback evidence uses bounded work without allocation, deallocation, locks, blocking, file access, text formatting or logging

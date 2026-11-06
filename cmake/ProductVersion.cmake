@@ -1,4 +1,10 @@
 # Read only the literal root project declaration; never configure or fetch dependencies.
+function(reverbarise_validate_candidate candidate)
+    if(NOT candidate MATCHES "^[A-Za-z0-9]+([.-][A-Za-z0-9]+)*$")
+        message(FATAL_ERROR "Invalid CANDIDATE label: use alphanumeric components separated by dots or hyphens, e.g. rc.1")
+    endif()
+endfunction()
+
 function(reverbarise_product_version source_dir output)
     file(STRINGS "${source_dir}/CMakeLists.txt" declarations REGEX "^[ \t]*project[ \t]*\\(")
     list(LENGTH declarations count)

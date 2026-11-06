@@ -5,8 +5,11 @@
 using namespace m3;
 template<class F>static void await(F f,const std::source_location loc=std::source_location::current())
 {const auto deadline=juce::Time::getMillisecondCounter()+30000;while(!f()){if(juce::Time::getMillisecondCounter()>deadline)throw std::runtime_error("Automatic timeout "+std::to_string(loc.line()));juce::Thread::sleep(3);}}
+
+#include "PassOwnedGenerationCases.h"
 int main(){return runTest([]
 {
+    passOwnedGenerationCases();
     TestDirectory root;CaptureSession capture(root.file);juce::CriticalSection mutex;
     PreviewContext context{capture.snapshot(),{true,0,0,48000,120,4,4},0};
     SwellEngine engine(root.file,[&]{const juce::ScopedLock guard(mutex);return context;});

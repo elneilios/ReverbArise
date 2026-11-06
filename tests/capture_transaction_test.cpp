@@ -79,18 +79,18 @@ int main(){return runTest([]{
         auto pass=mode.begin(true);
         REQUIRE(queue->tryPush(0,48000,note,note,4,worker.captureGeneration(),pass));
         REQUIRE(queue->tryPush(100,48000,note,note,4,worker.captureGeneration(),pass));
-        REQUIRE(mode.stop(pass) && worker.flush() && mode.snapshot().mode==workflow::Mode::live);
+        REQUIRE(mode.stop(pass) && worker.flush() && mode.snapshot().mode==workflow::Mode::capture);
         REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,false}) && mode.arm(true));pass=mode.begin(true);
         REQUIRE(queue->tryPush(0,48000,zero,zero,4,worker.captureGeneration(),pass));
         REQUIRE(mode.stop(pass) && worker.flush() && worker.hasUsefulSource());
         REQUIRE(worker.snapshot().manifest.ranges.front().kind==CaptureCoverageKind::silence);
-        REQUIRE(mode.snapshot().mode==workflow::Mode::live && !mode.snapshot().recapture);
+        REQUIRE(mode.snapshot().mode==workflow::Mode::capture && !mode.snapshot().recapture);
         REQUIRE(acceptedUpdates==2);
         const auto acceptedSilence=worker.snapshot().reference;
         REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,false}) && mode.arm(true));pass=mode.begin(true);
         REQUIRE(queue->tryPush(0,48000,zero,zero,4,worker.captureGeneration(),pass));
         REQUIRE(mode.stop(pass) && worker.flush() && worker.snapshot().reference==acceptedSilence);
-        REQUIRE(mode.snapshot().mode==workflow::Mode::live && !mode.snapshot().recapture && acceptedUpdates==3);
+        REQUIRE(mode.snapshot().mode==workflow::Mode::capture && !mode.snapshot().recapture && acceptedUpdates==3);
         REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,false}) && mode.arm(true));pass=mode.begin(true);
         REQUIRE(queue->tryPush(100,48000,zero,zero,4,worker.captureGeneration(),pass));
         REQUIRE(mode.stop(pass) && worker.flush() && !worker.hasUsefulSource());
@@ -104,7 +104,7 @@ int main(){return runTest([]{
         auto pass=mode.begin(true);REQUIRE(pass && queue->tryPush(0,48000,left,right,4,worker.captureGeneration(),pass));
         REQUIRE(worker.flush());REQUIRE(worker.snapshot().manifest.ranges.empty());
         REQUIRE(mode.stop(pass));REQUIRE(worker.flush());
-        REQUIRE(mode.snapshot().mode==workflow::Mode::live && !worker.snapshot().manifest.ranges.empty());
+        REQUIRE(mode.snapshot().mode==workflow::Mode::capture && !worker.snapshot().manifest.ranges.empty());
         const auto accepted=worker.snapshot();
         REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,true}));pass=mode.begin(true);
         REQUIRE(queue->tryPush(0,48000,right,left,4,worker.captureGeneration(),pass));REQUIRE(mode.stop(pass));REQUIRE(worker.flush());
@@ -113,5 +113,40 @@ int main(){return runTest([]{
         REQUIRE(queue->tryPush(0,48000,right,left,4,worker.captureGeneration(),pass));worker.failPass(pass);
         REQUIRE(mode.stop(pass) && worker.flush());REQUIRE(mode.snapshot().phase==workflow::Phase::failed && worker.snapshot().reference==accepted.reference);
         worker.cancelWorkflowPass();REQUIRE(!mode.snapshot().recapture);worker.stopThread(-1);
+    }
+    {
+        auto queue=std::make_unique<PluginCaptureQueue>();workflow::State mode;
+        CaptureGenerationContext a;a.id=captureGenerationContextId(a);auto b=a;b.sensitivity=.25f;b.id=captureGenerationContextId(b);
+        std::atomic<bool> chooseB{false},holdPin{false},pinWaiting{false};std::atomic<unsigned> pins{0},audioChanges{0},acceptedChanges{0};
+        CaptureWorker worker(*queue,root.file.getChildFile("context-worker"));worker.useWorkflow(mode);worker.setHostRate(48000);
+        worker.setPassContextProvider([&](uint64_t)->std::optional<CaptureGenerationContext>{
+            ++pins;if(holdPin){pinWaiting=true;const auto until=juce::Time::getMillisecondCounter()+10000;while(holdPin && juce::Time::getMillisecondCounter()<until)juce::Thread::sleep(1);pinWaiting=false;}
+            return chooseB.load()?b:a;});
+        worker.setCommitHandler([&](int64_t,int64_t,uint64_t,bool){++audioChanges;});worker.setAcceptedStateHandler([&]{++acceptedChanges;});worker.startThread();
+        float left[]{.1f,.2f,.3f,.4f},right[]{-.1f,-.2f,-.3f,-.4f};
+        auto pass=mode.begin(true);REQUIRE(queue->tryPush(0,48000,left,right,4,worker.captureGeneration(),pass));
+        REQUIRE(mode.stop(pass) && worker.flush());const auto first=worker.snapshot();
+        REQUIRE(captureContextAt(first.manifest,0)->id==a.id && pins==1 && audioChanges==1);
+        REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,false}) && mode.arm(true));chooseB=true;pass=mode.begin(true);
+        REQUIRE(queue->tryPush(0,48000,left,right,4,worker.captureGeneration(),pass) && worker.flush());
+        chooseB=false; // The worker must retain the first pinned value for this entire pass.
+        REQUIRE(queue->tryPush(0,48000,left,right,4,worker.captureGeneration(),pass) && worker.flush());
+        worker.holdValidationForTesting(true);REQUIRE(mode.stop(pass));
+        const auto until=juce::Time::getMillisecondCounter()+10000;
+        while(mode.snapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<until)juce::Thread::sleep(2);
+        REQUIRE(mode.snapshot().phase==workflow::Phase::validating && worker.snapshot().reference==first.reference && captureContextAt(worker.snapshot().manifest,0)->id==a.id);
+        worker.holdValidationForTesting(false);REQUIRE(worker.flush());const auto second=worker.snapshot();
+        REQUIRE(second.reference!=first.reference && captureContextAt(second.manifest,0)->id==b.id);
+        REQUIRE(pins==2 && audioChanges==1 && acceptedChanges==2); // Metadata persists without source-dirty/render callbacks.
+        REQUIRE(mode.requestMode(workflow::Mode::capture,{true,true,false}) && mode.arm(true));holdPin=true;pass=mode.begin(true);
+        REQUIRE(queue->tryPush(0,48000,right,left,4,worker.captureGeneration(),pass));
+        const auto pinDeadline=juce::Time::getMillisecondCounter()+5000;while(!pinWaiting && juce::Time::getMillisecondCounter()<pinDeadline)juce::Thread::sleep(1);
+        const auto reachedPin=pinWaiting.load();if(!reachedPin)holdPin=false;REQUIRE(reachedPin);
+        const auto restoreStart=juce::Time::getMillisecondCounterHiRes();
+        worker.requestRestore(second.manifest.projectId,second.manifest.instanceId,second.reference,second.manifest.revision);
+        const auto restoreElapsed=juce::Time::getMillisecondCounterHiRes()-restoreStart;holdPin=false;
+        REQUIRE(restoreElapsed<1000 && worker.flush());
+        REQUIRE(worker.snapshot().reference==second.reference && captureContextAt(worker.snapshot().manifest,0)->id==b.id && audioChanges==1 && acceptedChanges==2);
+        worker.stopThread(-1);
     }
 });}

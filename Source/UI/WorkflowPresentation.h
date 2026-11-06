@@ -20,7 +20,7 @@ inline const char* modeSubtitle(workflow::Mode mode) noexcept
     switch(mode)
     {
         case workflow::Mode::capture:return "Capture audio and discover musical moments";
-        case workflow::Mode::live:return "Shape, edit and play your swells";
+        case workflow::Mode::live:return "Shape and place reverse swells with precision";
         case workflow::Mode::finalise:return "Preview your prepared swells";
     }
     return "Mode unavailable";
@@ -40,6 +40,8 @@ inline const char* entryExplanation(workflow::EntryBlock block) noexcept
 }
 inline const char* workflowStatus(workflow::Snapshot state) noexcept
 {
+    if(state.mode==workflow::Mode::capture && state.admissionFailed)
+        return "Capture could not start - stop and play again";
     switch(state.phase)
     {
         case workflow::Phase::recording:return "Recording - stop the DAW to commit";

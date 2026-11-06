@@ -1,6 +1,217 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.0 · **Purpose:** Design reference and implementation handoff · **Status:** Visual direction approved; numerical design tokens proposed for validation against the approved mockups.
+**Version:** 1.7 · **Production standards revision:** 7 · **Purpose:** Production UI authority and design reference. Revision 7 adopts the owner-reviewed responsive composition for issue #58, retaining revision 6's stable transport readout.
+
+## Responsive composition — issue #58
+
+This section takes precedence over the older fixed-size Learn/header values
+below for the main editor. The owner approved Option A revision 4, its interim
+native composition and the combined #51/#68/#93 layout. See the
+[integration evidence](../validation/2026-11-06-issue-58-integration.md) for review
+corrections and separately outstanding host/DPI and Appearance interaction checks.
+
+`ResponsivePresentation.h` owns the named composition tokens. Baseline/default
+content is 900x600 at 100%; useful expansion includes 1000x700, 1100x850,
+1400x900, 1400x1000 and 1600x1000. These are logical workspace sizes, distinct
+from user magnification and host/Windows scaling.
+
+| Role | 900x600 | 1100x850 | 1400x1000 |
+| --- | --- | --- | --- |
+| Heading / navigation | 16 / 14 | 18 / 16 | 21 / 18 |
+| Body / caption and value | 12 / 11 | 13 / 12 | 14 / 13 |
+| Notice | 12 | 13 | 14 |
+
+Roles interpolate using both dimensions through `ResponsiveTypography`; a wide,
+short window cannot overgrow text. Normal notices use the whole reserved row;
+exceptional wrapping has an 11-height floor and retains full accessible details.
+The transport readout retains its independently approved fixed 15-height font.
+
+| Token | Value / scope |
+| --- | --- |
+| Outer horizontal margin | 12 |
+| Content padding / group gap | 8 / 12 |
+| Perpendicular-divider clearance | 8 at both ends; no touching T/cross junctions |
+| Control / exact entry / compact dial | 32 / 26 / 36 |
+| Exact-entry horizontal inset | 6 |
+| Header / tab / audition bands | 64 / 32 / 48 |
+| Perform list / inspector widths | 160 / 276 |
+
+Learn uses Capture & Generate / Sound tabs, with Generate/readiness/manual help
+below the content. Sound's current Default IR/import controls stay available
+with automatic detection off. Its scope note follows the controls. Shared Sound
+remains #80 work; a Learn Level default is a separate extension. Both are outside
+#58 by explicit owner decision.
+Perform uses Timing / Envelope / Sound; Enabled/Solo/Freeze and Reset actions
+stay outside inspector scrolling. Export retains its dominant preview, accepted
+Character/Dry/Wet family and protected file/return actions. No future DSP slots ship.
+
+Use the shared PresentationSurface transform once for 100%/125% user scale.
+Owned Settings/Diagnostics keep comfortable typography, magnify consistently
+and use bounded viewports with focus reveal when the work area is constrained.
+Native choosers and native chrome keep their platform policy. No sub-100%
+choice is supported without separate native readability/interaction approval.
+
+## Validated production standards — Learn and shared header
+
+This section takes precedence over historical numerical suggestions below. Values
+are extracted from approved Learn #11/PR #39 and header #35/PR #40 code at main
+`2848fcd`, with [approval and validation scope](../validation/2026-11-04-issue-37-ui-standards.md).
+They preserve existing appearance; they do not approve unrelated legacy controls.
+All sizes are JUCE logical pixels/font heights, not typographic points or physical
+Windows pixels. Use the embedded static Inter faces and shared role APIs; installed
+font lookup, synthetic weights and implicit default fonts are not alternatives.
+
+### Typography and semantic ink
+
+| Role / consumer | Height, face and line box | Code authority / ink |
+| --- | --- | --- |
+| Learn section heading / timeline title | 21 SemiBold, 30 box | `WorkspaceTheme` / `UiGeometry`; primary `#F8FAFC` |
+| Learn control label | 14 Medium, 24 box; switch labels vertically centred | Same; primary |
+| Learn helper and metadata | 14 Regular, 20 per line; helper supports two lines | `learnTypography`; `#C4CCD4` |
+| Learn ruler | 14 Medium, 20 box | Learn painting; primary |
+| Learn empty heading | 24 SemiBold, 32 box | Theme / `learnGeometry`; primary |
+| Learn empty body | 14 Regular, 40 box for two lines | Theme / `learnGeometry`; Learn helper ink |
+| Header tagline | 21 Italic, 46 primary row | Theme / `WorkflowHeader`; primary |
+| Mode navigation | 18 SemiBold, 36 control | Theme / `SegmentedSelector`; selected/inactive semantic ink |
+| Header description and notice body | 14 Regular, 32 information row | Theme / `HeaderInformation`, header `NoticeBar`; `#C7CDD4` |
+| Numeric control value / dropdown | 13 Regular, 28 value / 34 control | Theme / control geometry; primary |
+| Perform transport readout | 15 Regular, existing information band | `Controls/TransportReadout`; primary |
+
+There is no universal line-height multiplier. Preserve the actual text box and
+face as well as font height. General legacy `smallSize=12`, `captionSize=11` and
+`modeDescriptionSize=16` are not permission to shrink a new production role;
+the actual approved header description uses the 14 body role.
+
+| Semantic role | Value | Authority and use |
+| --- | --- | --- |
+| background / aqua / hover | `#0F1418` / `#00EFFF` / `#00C2CC` | `WorkspaceTheme`; uniform surface / accent / hover |
+| timing | `#FFC700` | Theme; restrained timing/targets |
+| primary / general secondary | `#F8FAFC` / `#EDF1F5` | Theme; retain general secondary separately |
+| separator / outline | `#4A5058` / `#6B737C` | Theme; thin dividers / interactive outlines |
+| danger / warning | `#FF6B5E` / `#E6BB72` | Theme; error / warning semantics |
+| Learn helper / header body | `#C4CCD4` / `#C7CDD4` | Scoped roles above; do not merge near-matching colours |
+
+Existing captured-silence, unavailable-source, wet-data, stale and preview-cursor
+colours remain named data roles in `WorkspaceTheme`; data classification is not
+a general accent variant. Copy, severity and real coverage supplement colour.
+
+### Comfortable geometry and responsive layout
+
+| Role | Approved Learn/header measurement | Authority |
+| --- | --- | --- |
+| Comfortable rhythm | tight 4, label-help 6, related 12, group 16, section 24 | `UiGeometry::spacing` |
+| Control / label / heading heights | 34 / 24 / 30 | `controlGeometry` |
+| Numeric value / step strip | 74 x 28 / 18 wide | `controlGeometry` |
+| Switch track / component | 44 x 24 / 56 x 36 | `Switch` and control geometry |
+| Focus | 2 stroke, 3 outset, 6 padding | Control geometry; contain the full stroke |
+| Rule / ordinary radius | 1 / 4 | Theme; switches and joined segments retain their own geometry |
+| Learn settings / column gap | 304 / 28 | `workspaceGeometry` |
+| Outer inset | 16 below editor width 1200, otherwise 20 | `workspaceGeometry::outerInset` |
+| Header | 82 high; 46 primary and 32 information row | `WorkflowHeader`, `WorkspaceLayout` |
+| Header navigation | 330 below header width 1200, otherwise 360; 36 high | `WorkflowHeader`; inner-width breakpoint differs from editor inset |
+| Mode icon / label gap | canonical 16 canvas / 8 | `ModeIcon`, `SegmentedSelector` |
+| Header description accent | 2 x 16, 8 text gap, 8 trailing inset | `HeaderInformation` |
+| Learn metadata / ruler gap | 6 / 10 | `learnGeometry` |
+| Empty icon / heading / body boxes | 38 / 32 / 40; gaps 12 / 6 | `learnGeometry` |
+
+Supported logical sizes are 1100x850 minimum/default, 1400x900, 1400x1000 and
+1600x1000. Learn remains a narrow settings column and one dominant dry canvas;
+Perform uses the approved scoped profile below. The notice
+row remains reserved without shifting controls. Preserve the wordmark SVG,
+canonical monochrome mode SVGs, square inner segment joins, outer rounded ends
+and focus/shared-edge painting. Do not add raised cards, shadows or new controls.
+
+### Shared controls and density governance
+
+Use `Controls/Switch`, `SliderControl` with `NumericInputControl`,
+`SegmentedSelector`, `IconActionButton`, `HeaderInformation` and `NoticeBar`.
+Use the invocation-aware IR selector's shared no-wheel policy. Screen code owns
+placement and domain copy; bindings retain ranges, units, validation, accepted
+model state and stale invocation rejection. See [UI development standards](../development/ui-development-standards.md)
+for ownership, remaining migration, tests and review fixtures. Shared styling
+alone does not make an independent widget a shared library control.
+
+Comfortable means the approved Learn usage of the existing spacing/geometry
+roles. `compactInset` is an existing width-breakpoint name, **not** a compact
+density profile. The approved Perform compact profile below has no runtime toggle.
+Further profiles may alter named spacing, row/group gaps and column allocation
+only after assessment with representative dense content.
+Typography, semantic ink, legibility, focus and interaction language are
+invariants. Do not solve density by shrinking text. Review overflow, waveform
+room, hit targets and keyboard access at supported sizes before adopting values.
+
+New tokens, visual variants and one-off exceptions need explicit owner review
+with rationale, named scope/consumers, native evidence where applicable and
+regression coverage. Materially changed/new families need both look and feel
+approval before wider rollout. An unchanged extraction retains prior acceptance.
+Record approved changes in code and this guide together and increment the
+production standards revision; this revision does not change plugin/state versions.
+
+| Revision | Baseline / decision | Scope |
+| --- | --- | --- |
+| 1 | #11 and #35 approved native implementation, extracted in #37 | Learn comfortable and shared header; compact values await Perform review |
+| 2 | #4 standalone list look/feel approved 2026-11-04 | Swells list identity/scroll interaction policy; existing Perform row appearance retained, no new visual values or compact profile |
+| 3 | #46 revision-4 native compact composition and Snap family approved 2026-11-04 | Perform-only profile below; shared Zoom/Fit controls from merged #49, no Learn/header density changes |
+| 4 | #46 owner approved Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); actual native look/feel approved 2026-11-04. Other families and layout tokens unchanged |
+| 5 | #46 owner approved revised presentation on 2026-11-04 | Perform 52-pixel single-row audition strip, grouped inspector/full Source labels, compact values with exact editing, shared ruler and aligned headings; normal-font bottom context help across modes. Existing typography/control families reused; no popup tooltips |
+| 6 | #68 native readout look/feel approved 2026-11-05 | Perform-only stable Bar, Beat, BPM and meter slots; existing footer 15-pixel Inter Regular/primary ink and tight/related spacing retained. No highlight decoration or host behavior change |
+| 7 | #58 Option A revision 4 and interim/combined native composition reviewed 2026-11-05/06 | Responsive main-editor roles, named 900x600 composition, persistent Reset, Learn/Perform sections and delivered Export family. Appearance/auxiliary interaction and host/DPI acceptance remain separately recorded; no DSP/default Level extension |
+
+### Stable Perform transport information
+
+`Controls/TransportReadout` owns the four read-only slots, fixed separators and
+centred status group. Right-align numbers inside font-measured value reserves;
+never centre or resize the combined live string. Reserve signed six-digit bars,
+three-digit beats plus three decimals, four-digit BPM plus two decimals,
+three-digit meter parts and full unavailable text. This is a display budget,
+not a host-domain limit. Larger values ellipsize within their own slot and retain
+full accessible/context-help text. Reuse existing primary ink, 15-pixel Inter
+Regular and tight/related spacing; no automatic font compression. The owner
+approved this scoped family in its live native preview before editor integration.
+See [binding and sizing policy](../development/transport-readout.md).
+
+### Chronological Swells list interaction
+
+`Controls/SwellList` owns the specialized virtualized list. Rows follow canonical
+absolute arrival samples with an ordinal persistent-ID tie-breaker. Names and wet
+placement never determine order. Selection and delayed commands follow IDs;
+snapshot refresh submits no edits. Keep the visible row's pixel offset during
+background insertion/reordering, reveal explicit selection or a moved visible
+primary minimally, and do not repeatedly reveal an offscreen primary. Clear
+ephemeral ownership on session replacement. Preserve the current row rendering
+through extraction; this does not validate legacy Perform measurements as new
+defaults. See [shared control policies](../development/ui-development-standards.md)
+and [scoped approval/evidence](../validation/2026-11-04-issue-4-swell-list.md).
+
+## Approved scoped Perform compact profile — issue #46
+
+The owner approved the actual revision-4 native composition on 4 November 2026.
+`PerformLayout.h::performGeometry` owns these scoped metrics; comfortable Learn
+and shared-header defaults remain unchanged. The fixture and production editor
+consume the named profile following merged Export PR #50.
+
+| Allocation | Below / at-or-above editor width 1200 |
+| --- | --- |
+| List / inspector / column gap | 180 / 304 / 16; wide 210 / 320 / 16 |
+| Column content inset | 12 from horizontal rules |
+| Audition / Overview / info bands | 52 / 120 / 36; bottom help consumes existing padding and at most four pixels of position/body space |
+| Toolbar / readout | 48 / 26 |
+| Toolbar inset / control / external gap | 6 / 36 / 8 |
+| Snap / grid widths | 96 / 136; remaining width belongs to approved shared Zoom/Fit row |
+| Audition and Overview vertical inset | 8 |
+
+Horizontal rules remain continuous after child painting; vertical rules stop
+short of band boundaries. Obsolete Perform marker tooling is omitted. Typography,
+list row heights, semantics and inspector field capabilities retain their separate
+authorities. The latching action family received its separate native approval;
+automated production binding and grid tests establish its integrated behavior.
+See [#46 evidence](../validation/2026-11-04-issue-46-perform-composition.md).
+
+## Historical design intent and provisional suggestions
+
+The remaining Parts I–III retain the original design reference. Their generic
+eight-region layout, palette/type tables and numerical starting suggestions do
+not override the production section above or authorise unimplemented features.
 
 This document combines two design references: **(1) Layout Structure / Border Specification** and **(2) UI Visual Style Guide**. The product name is **ReverbArise** (previously Preverb). The objective is a professional, minimal, high-contrast audio-plugin interface: dark charcoal, aqua/teal highlights, carefully restrained yellow timing markers, and a large waveform editor.
 
@@ -66,7 +277,7 @@ The **background is one continuous dark-charcoal field**. Large filled cards, se
 
 **5 — Selected Swell (right):** Context inspector, blank instructional state if nothing selected. For a selection: swell title, per-swell IR selector; Pre-roll/Start; End Offset (overlap); Fade In; Fade Out; Level; Curve. Knobs and typeable exact values mirror changes made by dragging main-editor handles. Do not repeat the envelope graph as a second editor here.
 
-**6 — Audition:** Play/Stop and one continuous Dry ↔ Wet mix slider with editable percentage (100% = wet only). Audition settings apply to audition only, **not** the plugin’s main mixer output. No redundant “Wet Only” mode button.
+**6 — Audition:** Play/Stop and the accepted latching listening-mode button, showing Dry + wet when Off and Wet only when On. Equal 8-pixel action gaps and inline readiness status fit the approved 52-pixel strip. Play loops the finite prepared window until Stop or an existing safety guard. Audition remains independent of Export; existing protection and legacy monitoring preferences remain disclosed.
 
 **7 — Overview:** Header must read **“Overview”** (not “Song Overview”). Contains the **only major rounded outline** around the complete-song timeline. Shows actually captured regions versus unmapped gaps, current viewport and swell locations; empty state “No audio mapped yet”. Do not invent waveform data for uncaptured regions.
 
@@ -131,6 +342,7 @@ are historical evidence, not the current font-selection policy.
 | Inter **Bold** | Plugin brand, main headings, Swells / Selected Swell / Overview |
 | Inter **SemiBold** | Section labels and emphasized selected swell name |
 | Inter **Regular** | Control captions, target/pre-roll/length labels, numeric display, helper text, descriptions and secondary metadata |
+| Inter **Medium** | Learn control labels (500), subsequently approved in #11; see production section above |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
 Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.
@@ -199,7 +411,7 @@ The style mockup is an **end-goal appearance**, not permission to add new DSP fe
 - [ ] Per-swell IR selection; knobs plus typeable exact numbers.
 - [ ] Positive/negative end offset around unchanged dry event.
 - [ ] Auto-marker on/off and sensitivity.
-- [ ] One audition Dry↔Wet mix slider; wet-only equals 100%.
+- [ ] One audition listening-mode toggle, showing its selected Dry + wet / Wet only state, and inline truthful status.
 - [ ] Overview visible in both empty and loaded states, titled **Overview**.
 - [ ] No speculative or duplicated controls; preserve source/processing correctness.
 
