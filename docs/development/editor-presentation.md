@@ -9,8 +9,9 @@ pending. See the [canonical work/validation record](../validation/2026-11-05-iss
 
 `UI/PresentationPreferences.h` defines the UI-only record, injectable storage and
 one per-editor preference session. It has no processor, audio, capture, render or
-musical session dependency. It is not yet connected to editor Settings or its
-lifecycle. Current desired content bounds are 900–2000 by 600–1400 logical units;
+musical session dependency. The review editor now connects it to Settings and its
+lifecycle; production activation remains gated on combined native acceptance.
+Current desired content bounds are 900–2000 by 600–1400 logical units;
 accepted scale values in this policy are 100 and 125 percent. No sub-100-percent
 choice is enabled by the policy.
 
@@ -25,7 +26,7 @@ data directory as fallback. The function does not create or write a file.
 Each open editor loads once. Only explicit preference changes update its desired
 values. `saveIfDue()` coalesces edits for 750 ms; a failed write retains the
 in-memory value and pending patch for a later retry. Editor-close integration
-must explicitly flush outside the audio callback. Another editor's save cannot
+explicitly flushes outside the audio callback. Another editor's save cannot
 change an already-open editor; a subsequent opening loads the latest record.
 
 Readers and writers both acquire a non-waiting transaction lock; contention is
@@ -61,16 +62,31 @@ to expose through reachable recovery UI. The result is an effective temporary
 presentation; it must never be persisted over the desired preference. Returning
 to a larger display should resolve the original desired value again.
 
-## Integration and verification still required
+## Review editor integration
 
 `UI/EditorPresentationState.h` connects the per-editor desired preference to the
 fit policy without depending on components or musical state. It supplies fitting
 size/scale availability, explicit choice handling, physical-content-to-logical
 manual resize conversion, initial-read retry and temporary display recovery.
 Display changes resolve effective geometry without persistence. The component
-owner must apply the effective state to its scaled content root and call
-coalesced persistence on the GUI/lifecycle path; those real editor bindings are
-still pending.
+owner applies the effective state to `PresentationSurface`, and calls coalesced
+persistence on its GUI timer and an explicit flush on destruction. Main painting
+and children share a logical content root. User magnification is one component
+transform below the host-facing editor; host/device scaling is owned by JUCE.
+
+The review-only Appearance tab exposes four workspace presets, free resizing and
+fitting 100%/125% choices using shared deliberate selectors. Recovery changes
+effective bounds while retaining desired preferences. Display work area and
+measurable embedding/native chrome set fit constraints; external host chrome
+still requires final host validation. Normal plugin defaults remain unchanged.
+Review defaults use transient storage; file persistence is explicitly injected
+by tests. This keeps preview exploration away from the user's saved profile.
+
+Owned Settings/Diagnostics use the same user magnification with their existing
+comfortable typography. A viewport bounds them to the display work area and
+reveals focused controls including the focus margin. Native chooser/chrome
+remain native. These component paths require regression and native review;
+software transforms are not evidence of physical Windows DPI behaviour.
 
 The standalone `preverb_presentation_policy_test` source covers field recovery,
 coalescing, failed saves, explicit close/reopen, independent editor sessions,
@@ -81,11 +97,10 @@ results, the initial reader race and its correction are in the linked validation
 record. These are standalone policy checks, not full plugin or physical DPI
 acceptance.
 
-After policy verification, connect the content-root transform, shared Settings
-controls, explicit size/scale actions and lifecycle persistence. Preserve active
-entries, waveform zoom, popup anchoring and accepted musical state. Measure host
-chrome and display changes, keep Settings/Diagnostics reachable, and prove
-unsupported-combination feedback in the actual editor. These integration checks
-remain separate from standalone policy coverage and the final merged native
-900x600 acceptance gate. No production defaults or user preference files are
-changed by adding these unused policy classes.
+`preverb_responsive_scale_test` exercises the real editor's content transform,
+Settings callbacks, input coordinates, active entries, waveform cache resolution,
+preference reopen, display recovery and musical-state invariance. Its results
+must be recorded separately from policy checks and the final merged native
+900x600 acceptance gate. See the
+[combined integration record](../validation/2026-11-06-issue-58-integration.md)
+for current build/test status and remaining coverage.

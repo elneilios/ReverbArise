@@ -22,6 +22,8 @@ This directory covers product identity, the existing implementation, development
 - [Swells-list selection reveal](development/perform-navigation.md#fit-lifecycle) — explicit list navigation applies contextual Fit automatically, following the owner's native-review decision; [issue #93 evidence](validation/2026-11-05-issue-93-selection-reveal.md) records native verification and separate owner/host coverage.
 - [Stable Perform transport readout](development/transport-readout.md) — fixed field/separator geometry, truthful formatting, bounded overflow and scoped native approval for issue #68.
 - [Compact UI review — issue #58](design/compact-ui-900x600/README.md) — approved interim 900x600 layout, spacing tokens and future-capacity mockups; [native evidence and integration sequence](validation/2026-11-05-issue-58-compact-ui.md) distinguish interim approval from the pending combined implementation and final review.
+  [Combined integration evidence](validation/2026-11-06-issue-58-integration.md)
+  tracks the accepted #51/#68/#93 baseline and independent scale work.
 
 - [FL Song/Pattern and source-mute spike outcome](validation/2026-11-05-issue-1-spike-outcome.md) — no reliable direct discriminator established; script onboarding/offline limitations and input-silence ambiguity recorded. Investigation complete; product workflow remains a separate decision.
 

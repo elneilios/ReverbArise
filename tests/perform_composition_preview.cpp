@@ -224,6 +224,7 @@ public:
     void verifyReadability();
     void verifyHoverHelp();
     void verifyResponsive(const juce::File& output);
+    void verifyResponsiveScale();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     void refresh()
@@ -376,6 +377,7 @@ private:
 #include "PerformReadabilityCases.h"
 #include "PerformHoverHelpCases.h"
 #include "ResponsiveEditorCases.h"
+#include "ResponsiveScaleCases.h"
 class Review final:public juce::Component
 {
 public:
@@ -408,11 +410,13 @@ public:
         else sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);
         sizes.setSelectedId(1,juce::dontSendNotification);
         sizes.onChange=[this,compact]{const std::array<juce::Point<int>,4> dimensions=compact?std::array<juce::Point<int>,4>{{{900,600},{1000,700},{1100,850},{1400,900}}}:std::array<juce::Point<int>,4>{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];setSize(size.x,size.y+44);};
-        applyTextRole(note,TextRole::helper);note.setText(compact?"#58 INTERIM | awaiting Export integration | no audio device":selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(compact?900:1100,compact?644:894);
+        applyTextRole(note,TextRole::helper);note.setText(compact?"#58 combined #51 / #68 / #93 | no audio device":selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(compact?900:1100,compact?644:894);
         if(selectionReview){auto& zoom=require<controls::TimelineZoomControls>(*editor,"performZoom");zoom.beforeInvocation();zoom.onZoomFraction(.55);}
     }
     void resized()override
-    {auto area=getLocalBounds();auto strip=area.removeFromTop(44).reduced(6);scenes.setBounds(strip.removeFromLeft(210));strip.removeFromLeft(8);sizes.setBounds(strip.removeFromLeft(146));strip.removeFromLeft(12);note.setBounds(strip);editor->setBounds(area);}
+    {const juce::ScopedValueSetter<bool> guard(layingOutEditor,true);auto area=getLocalBounds();auto strip=area.removeFromTop(44).reduced(6);scenes.setBounds(strip.removeFromLeft(210));strip.removeFromLeft(8);sizes.setBounds(strip.removeFromLeft(146));strip.removeFromLeft(12);note.setBounds(strip);editor->setBounds(area);}
+    void childBoundsChanged(juce::Component* child)override
+    {if(child==editor.get() && !layingOutEditor)setSize(editor->getWidth(),editor->getHeight()+44);}
     void verifyCompactBaseline()const{REQUIRE(editor->getWidth()==900 && editor->getHeight()==600);}
     void capture(const juce::File& directory)
     {
@@ -429,6 +433,7 @@ public:
 private:
     std::unique_ptr<Review> fixture;
     std::unique_ptr<PreverbAudioProcessorEditor> editor;
+    bool layingOutEditor=false;
     juce::ComboBox scenes,sizes;juce::Label note;
 };
 }
@@ -441,6 +446,7 @@ int main(int argc,char** argv)
         using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
+        if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}
         if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive")
         {

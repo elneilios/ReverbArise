@@ -52,8 +52,12 @@ Perform SHALL provide grouped Zoom minus, horizontal zoom slider, Zoom plus, Fit
 #### Scenario: Initial entry and return
 - **WHEN** Perform first receives usable source without a saved view
 - **THEN** it Fits once without waiting for all wet renders
-- **AND WHEN** selection, background publication or mode return occurs after user navigation
-- **THEN** the user view is retained until explicit Fit or navigation, without host seeking or repeated auto-fit
+- **AND WHEN** background publication, incidental selection refresh or mode return occurs after user navigation
+- **THEN** the user view is retained until explicit Fit or navigation, including explicit Swells-list selection that applies contextual Fit, without host seeking or repeated auto-fit
+
+#### Scenario: Rendering completes after list navigation
+- **WHEN** a pending selected render completes after the user has selected another swell or manually panned or zoomed
+- **THEN** matching waveform content refreshes without replaying list reveal, refitting or overriding the user's newer view
 
 #### Scenario: Compact navigation reflow
 - **WHEN** the centre column cannot accommodate both navigation groups in one row

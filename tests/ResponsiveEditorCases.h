@@ -5,7 +5,7 @@
 void Composition::verifyResponsive(const juce::File& output)
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
-    auto panel=productionEditor();panel->stopAutomaticRefreshForReview();panel->enableResponsiveReview();
+    auto panel=productionEditor();panel->stopAutomaticRefreshForReview();panel->enableResponsiveReview({},PresentationFitContext{{4000,3000},{0,0}});
     auto& settings=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
     auto& swellSettings=*settings.getTabContentComponent(2);
     const auto checkSettingsRoutes=[&]
@@ -40,7 +40,7 @@ void Composition::verifyResponsive(const juce::File& output)
         auto& notice=require<controls::NoticeBar>(*panel,"workspaceNotice");
         REQUIRE(notice.currentMessage() && notice.completeMessageFits());
         REQUIRE(notice.displayedTextHeight()>=responsiveGeometry::noticeMinimum);
-        auto& reset=require<juce::Component>(*panel,"resetWetShape");REQUIRE(reset.getParentComponent()==panel.get());
+        auto& reset=require<juce::Component>(*panel,"resetWetShape");REQUIRE(reset.getParentComponent()==find(*panel,"presentationContent"));
         REQUIRE(reset.getBottom()<=layout.work.getBottom()-responsiveGeometry::contentPadding);
         REQUIRE(require<controls::TimelineZoomControls>(*panel,"performZoom").getWidth()>=controls::TimelineZoomControls::minimumWidth());
         REQUIRE(panel->timelineComponent().sourceLane().getHeight()>=70);REQUIRE(panel->timelineComponent().wetLane().getHeight()>=70);
@@ -96,7 +96,12 @@ void Composition::verifyResponsive(const juce::File& output)
         }
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));panel->refresh();
         checkSettingsRoutes();
-        for(const auto* name:{"exportPlay","exportStop","exportMix","exportSave","exportReturn","exportDrag"})checkVisible(name);
+        for(const auto* name:{"exportPlay","exportStop","exportLevels","exportMixCharacter","exportDry","exportWet","exportSave","exportReturn","exportDrag"})checkVisible(name);
+        auto& levels=require<controls::ExportLevelsControl>(*panel,"exportLevels");
+        REQUIRE(levels.selector.getBottom()+spacing::labelHelp<=levels.dry.getY());
+        REQUIRE(levels.dry.getBottom()+spacing::labelHelp<=levels.wet.getY());
+        REQUIRE(levels.getLocalBounds().contains(levels.wet.getBounds()));
+        REQUIRE(levels.getBottom()+responsiveGeometry::groupGap<=require<juce::Component>(*panel,"exportDrag").getY());
         capture("export-"+juce::String(size.x)+"x"+juce::String(size.y));
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
     }

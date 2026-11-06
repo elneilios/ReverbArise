@@ -298,13 +298,18 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
+{
+    if(responsiveReview){g.fillAll(m3::ui::background);return;}
+    paintWorkspace(g);
+}
+void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
 {
     if(responsiveReview)
     {
         using namespace m3::ui;
-        const ResponsiveWorkspaceLayout layout(getLocalBounds());g.fillAll(background);g.setColour(separator);
+        const ResponsiveWorkspaceLayout layout(workspaceBounds());g.fillAll(background);g.setColour(separator);
         g.drawHorizontalLine(layout.header.getBottom(),float(layout.header.getX()),float(layout.header.getRight()));
         if(learningLayout || exportLayout)return;
         for(const auto y:{layout.work.getBottom(),layout.audition.getBottom(),layout.overview.getBottom()})
@@ -373,7 +378,7 @@ void PreverbAudioProcessorEditor::armSelected()
 }
 void PreverbAudioProcessorEditor::resized()
 {
-    if(responsiveReview){layoutResponsive();return;}
+    if(responsiveReview){resizePresentation();return;}
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     const auto inset=m3::ui::workspaceGeometry::outerInset(getWidth());
     hoverHelp.setBounds(inset,getHeight()-m3::ui::controlGeometry::feedbackHeight,getWidth()-2*inset,m3::ui::controlGeometry::feedbackHeight);
@@ -429,10 +434,9 @@ void PreverbAudioProcessorEditor::resized()
     layoutSettings();layoutLiveDiagnostics();
 
 }
-void PreverbAudioProcessorEditor::enableResponsiveReview()
+void PreverbAudioProcessorEditor::enableResponsiveReview(std::shared_ptr<m3::ui::PresentationStorage> storage,std::optional<m3::ui::PresentationFitContext> display)
 {
     if(responsiveReview)return;
-    responsiveReview=true;
     inspectorSections.setName("inspectorSections");addAndMakeVisible(inspectorSections);
     inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();};
     // Fixed actions and flags belong to the editor, outside the scrolling fields.
@@ -440,8 +444,17 @@ void PreverbAudioProcessorEditor::enableResponsiveReview()
         addAndMakeVisible(child);
     for(auto& control:valueControls)control.setCompactPresentation(true);
     timeline.setResponsivePresentation(true);
-    setResizeLimits(m3::ui::responsiveGeometry::minimumWidth,m3::ui::responsiveGeometry::minimumHeight,2000,1400);
-    setSize(900,600);resized();refresh();
+    inspectorViewport.setFocusRevealEnabled(true);diagnosticsViewport.setFocusRevealEnabled(true);
+    const auto children=getChildren();
+    for(auto* child:children)
+        if(dynamic_cast<juce::ResizableCornerComponent*>(child)==nullptr && dynamic_cast<juce::ResizableBorderComponent*>(child)==nullptr)
+            presentationSurface.contentRoot().addChildComponent(child);
+    addAndMakeVisible(presentationSurface);presentationSurface.toBack();
+    presentationSurface.setPainter([this](auto& drawing){paintWorkspace(drawing);});
+    responsiveReview=true;reviewDisplay=display;
+    presentationStorage=storage?std::move(storage):std::make_shared<m3::ui::TransientPresentationStorage>();
+    presentation=std::make_unique<m3::ui::EditorPresentationState>(*presentationStorage,presentationDisplay());
+    initialisePresentation();applyPresentation();refresh();
 }
 void PreverbAudioProcessorEditor::refreshResponsiveSections()
 {
@@ -465,13 +478,14 @@ void PreverbAudioProcessorEditor::refreshResponsiveSections()
 void PreverbAudioProcessorEditor::layoutResponsive()
 {
     using namespace m3::ui;using namespace responsiveGeometry;
-    const ResponsiveWorkspaceLayout layout(getLocalBounds());const auto type=ResponsiveTypography::at(getWidth(),getHeight());
-    workspaceTheme.setResponsiveViewport(getWidth(),getHeight());
+    const auto bounds=workspaceBounds();
+    const ResponsiveWorkspaceLayout layout(bounds);const auto type=ResponsiveTypography::at(bounds.getWidth(),bounds.getHeight());
+    workspaceTheme.setResponsiveViewport(bounds.getWidth(),bounds.getHeight());
     // SliderControl owns a private shared theme. Resolve that same profile
     // without recreating controls or interrupting an active text invocation.
     const auto updateThemes=[&](auto&& self,juce::Component& parent)->void
     {
-        if(auto* theme=dynamic_cast<WorkspaceTheme*>(&parent.getLookAndFeel()))theme->setResponsiveViewport(getWidth(),getHeight());
+        if(auto* theme=dynamic_cast<WorkspaceTheme*>(&parent.getLookAndFeel()))theme->setResponsiveViewport(bounds.getWidth(),bounds.getHeight());
         for(auto* child:parent.getChildren())self(self,*child);
     };
     updateThemes(updateThemes,*this);
@@ -509,7 +523,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     auditionWetOnly.setBounds(audition.removeFromLeft(96));audition.removeFromLeft(contentPadding);monitorStatus.setBounds(audition);
     songOverview.setBounds(layout.overview.reduced(0,contentPadding));hostInfo.setBounds(layout.position);
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
-    layoutSettings();layoutLiveDiagnostics();refreshResponsiveSections();
+    layoutSettings();layoutPresentationSettings();layoutLiveDiagnostics();refreshResponsiveSections();
 }
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
@@ -558,8 +572,8 @@ void PreverbAudioProcessorEditor::refresh()
         || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
     if(nextLearning!=learningLayout || nextExport!=exportLayout)
     {
-        if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
-        else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
+        if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:workspaceRoot().getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
+        else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==&workspaceRoot())c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
     if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
@@ -802,7 +816,7 @@ void PreverbAudioProcessorEditor::refresh()
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
     if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
-    if(learningLayout || exportLayout)for(auto* c:getChildren())if(!isShared(c))c->setVisible(false);
+    if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;

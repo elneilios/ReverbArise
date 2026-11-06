@@ -76,6 +76,16 @@ public:
     // Implementations merge only changed fields against the latest disk value.
     virtual juce::Result save(PresentationPatch)=0;
 };
+// Nonpersistent review default. Production adoption supplies FilePresentationStorage;
+// fixtures can inject their own storage without touching a user's real profile.
+class TransientPresentationStorage final:public PresentationStorage
+{
+public:
+    LoadedPresentation load()override{return {value,PresentationReadStatus::valid};}
+    juce::Result save(PresentationPatch patch)override
+    {if(!patch.valid())return juce::Result::fail("Invalid presentation preference");patch.apply(value);return juce::Result::ok();}
+private:PresentationPreferences value;
+};
 class FilePresentationStorage final:public PresentationStorage
 {
 public:

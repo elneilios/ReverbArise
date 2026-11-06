@@ -106,7 +106,7 @@ public:
         }
         return NoticeMessage{"DAW wet is bypassed in Export", "Use Preview for this mix. Stay in Export while playing the delivered WAV to avoid doubling swells.",NoticeTone::information};
     }
-    void setResponsivePresentation(){responsive=true;resized();}
+    void setResponsivePresentation(){responsive=true;mix.setResponsivePresentation();resized();}
     void resized()override
     {
         if(responsive){layoutResponsive();return;}
@@ -195,7 +195,7 @@ private:
         using namespace responsiveGeometry;
         auto area=getLocalBounds();right=area.removeFromRight(300);area.removeFromRight(18);left=area;
         auto controls=right.withTrimmedLeft(contentPadding);mixHeading=controls.removeFromTop(headingHeight);controls.removeFromTop(contentPadding);
-        mix.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);
+        mix.setBounds(controls.removeFromTop(mix.preferredHeight()));controls.removeFromTop(groupGap);
         const auto tileHeight=std::max(0,std::min(exportTileHeight,controls.getHeight()-2*controlHeight-2*groupGap));tile.setBounds(controls.removeFromTop(tileHeight));
         controls.removeFromTop(groupGap);save.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);back.setBounds(controls.removeFromTop(controlHeight));
         auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(40);

@@ -127,6 +127,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
     Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginSettings.cpp
+    Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
 )
@@ -322,6 +323,7 @@ if(BUILD_TESTING)
     add_test(NAME preverb_perform_readability_test COMMAND preverb_perform_composition_preview --test-readability)
     add_test(NAME preverb_perform_hover_help_test COMMAND preverb_perform_composition_preview --test-hover-help)
     add_test(NAME preverb_responsive_editor_test COMMAND preverb_perform_composition_preview --test-responsive)
+    add_test(NAME preverb_responsive_scale_test COMMAND preverb_perform_composition_preview --test-responsive-scale)
     add_executable(preverb_scoped_recapture_test tests/scoped_recapture_test.cpp)
     target_link_libraries(preverb_scoped_recapture_test PRIVATE preverb_capture)
     add_test(NAME preverb_scoped_recapture_test COMMAND preverb_scoped_recapture_test)

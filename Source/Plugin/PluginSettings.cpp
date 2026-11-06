@@ -6,14 +6,46 @@ namespace
 class WorkspaceWindow final:public juce::DocumentWindow
 {
 public:
-    WorkspaceWindow(const juce::String& title,juce::Component& content,int width,int height,std::function<void()> closed)
-        :DocumentWindow(title,m3::ui::background,DocumentWindow::closeButton),onClose(std::move(closed))
+    WorkspaceWindow(const juce::String& title,juce::Component& content,int width,int height,std::function<void()> closed,int scale=0)
+        :DocumentWindow(title,m3::ui::background,DocumentWindow::closeButton),onClose(std::move(closed)),logicalWidth(width),logicalHeight(height),scalable(scale!=0)
     {
         setUsingNativeTitleBar(true);setResizable(false,false);
-        setContentNonOwned(&content,false);setSize(width,height);
+        if(scalable)
+        {
+            setLookAndFeel(&comfortableTheme);
+            surface.contentRoot().addAndMakeVisible(content);content.setBounds(0,0,width,height);
+            viewport.setName("auxiliaryPresentationViewport");viewport.setFocusRevealEnabled(true);viewport.setViewedComponent(&surface,false);
+            setContentNonOwned(&viewport,false);setPresentationScale(scale);
+        }
+        else{setContentNonOwned(&content,false);setSize(width,height);}
     }
+    ~WorkspaceWindow()override{setLookAndFeel(nullptr);}
     void closeButtonPressed()override{setVisible(false);if(onClose)onClose();}
-private:std::function<void()> onClose;
+    void setPresentationScale(int scale)
+    {
+        if(!scalable)return;
+        const auto* display=juce::Desktop::getInstance().getDisplays().getDisplayForRect(getScreenBounds());
+        if(!display)return;
+        const auto work=display->userBounds.toNearestInt();juce::BorderSize<int> frame;
+        if(const auto* peer=getPeer())if(const auto measured=peer->getFrameSizeIfPresent())frame=*measured;
+        if(scale==lastScale && work==lastWork && frame==lastFrame)return;
+        lastScale=scale;lastWork=work;lastFrame=frame;
+        const auto width=(logicalWidth*scale+99)/100,height=(logicalHeight*scale+99)/100;
+        surface.present(logicalWidth,logicalHeight,scale);surface.setSize(width,height);
+        const auto border=getContentComponentBorder();
+        const juce::Rectangle<int> available{0,0,std::max(1,work.getWidth()-frame.getLeftAndRight()-border.getLeftAndRight()),std::max(1,work.getHeight()-frame.getTopAndBottom()-border.getTopAndBottom())};
+        const auto scroll=viewport.getScrollBarThickness();
+        setSize(std::min(width+(height>available.getHeight()?scroll:0),available.getWidth())+border.getLeftAndRight(),std::min(height+(width>available.getWidth()?scroll:0),available.getHeight())+border.getTopAndBottom());
+        if(isVisible())setTopLeftPosition(juce::jlimit(work.getX()+frame.getLeft(),std::max(work.getX()+frame.getLeft(),work.getRight()-getWidth()-frame.getRight()),getX()),
+            juce::jlimit(work.getY()+frame.getTop(),std::max(work.getY()+frame.getTop(),work.getBottom()-getHeight()-frame.getBottom()),getY()));
+    }
+private:
+    std::function<void()> onClose;
+    int logicalWidth,logicalHeight,lastScale=0;bool scalable;
+    juce::Rectangle<int> lastWork;juce::BorderSize<int> lastFrame;
+    m3::ui::controls::PresentationSurface surface;
+    m3::ui::controls::FocusViewport viewport;
+    m3::ui::WorkspaceTheme comfortableTheme;
 };
 }
 
@@ -28,12 +60,12 @@ void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
     if(destroying)return;
     if(!settingsWindow && open)
     {
-        settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{});
-        settingsWindow->setName("settingsWindow");settingsWindow->setLookAndFeel(&workspaceTheme);
+        settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{},responsiveReview?presentation->effective().effective.scalePercent:0);
+        settingsWindow->setName("settingsWindow");if(!responsiveReview)settingsWindow->setLookAndFeel(&workspaceTheme);
         settingsWindow->addMouseListener(this,true);
-        settingsWindow->centreAroundComponent(this,640,570);
+        settingsWindow->centreAroundComponent(this,settingsWindow->getWidth(),settingsWindow->getHeight());
     }
-    if(settingsWindow){settingsWindow->setVisible(open);if(open){refresh();settingsWindow->toFront(true);}}
+    if(settingsWindow){settingsWindow->setVisible(open);if(open){refresh();updateAuxiliaryPresentation();settingsWindow->toFront(true);}}
 }
 void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
 {
@@ -43,12 +75,18 @@ void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
     if(!diagnosticsWindow && open)
     {
         diagnosticsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Diagnostics",diagnosticsViewport,1000,650,
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;});
-        diagnosticsWindow->setName("diagnosticsWindow");diagnosticsWindow->setLookAndFeel(&workspaceTheme);
+            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;},responsiveReview?presentation->effective().effective.scalePercent:0);
+        diagnosticsWindow->setName("diagnosticsWindow");if(!responsiveReview)diagnosticsWindow->setLookAndFeel(&workspaceTheme);
         diagnosticsWindow->addMouseListener(this,true);
-        diagnosticsWindow->centreAroundComponent(this,1000,650);
+        diagnosticsWindow->centreAroundComponent(this,diagnosticsWindow->getWidth(),diagnosticsWindow->getHeight());
     }
-    if(diagnosticsWindow){diagnosticsWindow->setVisible(open);if(open){refresh();diagnosticsWindow->toFront(true);}}
+    if(diagnosticsWindow){diagnosticsWindow->setVisible(open);if(open){refresh();updateAuxiliaryPresentation();diagnosticsWindow->toFront(true);}}
+}
+void PreverbAudioProcessorEditor::updateAuxiliaryPresentation()
+{
+    if(!presentation)return;const auto scale=presentation->effective().effective.scalePercent;
+    for(auto* window:{settingsWindow.get(),diagnosticsWindow.get()})
+        if(auto* workspace=dynamic_cast<WorkspaceWindow*>(window))workspace->setPresentationScale(scale);
 }
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
