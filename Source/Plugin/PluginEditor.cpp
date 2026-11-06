@@ -217,6 +217,15 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     placementLabel.setText("Move wet (ms)",juce::dontSendNotification);placementEditor.setName("legacy_wetPlacement");placementEditor.setReadOnly(true);
     diagnosticsContent.addAndMakeVisible(timingButton);timingButton.setName("advancedTiming");
     timingButton.onClick=[this]{advancedTiming=!advancedTiming;resized();};
+    diagnosticsContent.addAndMakeVisible(copyDiagnosticsButton);copyDiagnosticsButton.setName("copyDiagnostics");
+    copyDiagnosticsButton.setTooltip("Copy the complete diagnostic text, precise host/source timing and retained offline export error to paste into a support message.");
+    copyDiagnosticsButton.onClick=[this]{
+        diagnosticsRefreshedAt=-1;refresh();
+        juce::SystemClipboard::copyTextToClipboard("ReverbArise diagnostics\n\n"+status.getText()+"\n\n"+captureDiagnostic.getText()
+            +"\n\n"+detail.getText()+"\n\n"+playbackDiagnostic.getText()+"\n\n"+policyDiagnostic.getText()
+            +"\n\nSnap\nEffective snap: "+juce::String(timeline.effectiveSnap()?"On":"Off")
+            +" | Fixed grid available: "+juce::String(timeline.gridAvailable()?"Yes":"No")+"\n\n"+liveDiagnostic.getText());
+    };
     // The swell name is renamed from the list row menu, not the Selected panel.
     for(int i=arrival;i<fieldCount;++i){inspectorContent.addAndMakeVisible(fieldLabels[i]);inspectorContent.addAndMakeVisible(fields[i]);}
     fields[name].setVisible(false);fieldLabels[name].setVisible(false);
@@ -420,6 +429,7 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
     detail.setBounds(diagnostic.removeFromTop(140));
     playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
     auto row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
+    copyDiagnosticsButton.setBounds(row.removeFromLeft(200).reduced(1));
     for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
     row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
     helper.setBounds({});
@@ -457,7 +467,7 @@ void PreverbAudioProcessorEditor::refresh()
         else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
-    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
     hostInfo.display(m3::ui::transportPresentation(time,diagnostics.samplePositionAvailable,
         diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
@@ -486,7 +496,7 @@ void PreverbAudioProcessorEditor::refresh()
     listEmpty.setVisible(state.session.swells.empty());inspectorEmpty.setVisible(w==nullptr);inspectorViewport.setVisible(w!=nullptr);
     for(auto* child:inspectorContent.getChildren())child->setVisible(w!=nullptr);
     for(int field:{sourceA,sourceB,audibleA}){fields[field].setVisible(w && advancedTiming);fieldLabels[field].setVisible(w && advancedTiming);}
-    refreshValues(w,time);
+    refreshValues(w,!nextSpecial?timeline.acceptedGridTiming():time);
     listLabel.setText("Swells",juce::dontSendNotification);listCount.setText("("+juce::String(static_cast<int>(state.session.swells.size()))+")",juce::dontSendNotification);
     if(!learningLayout && !exportLayout && state.sessionEpoch!=navigationEpoch)
     {
@@ -604,7 +614,9 @@ void PreverbAudioProcessorEditor::refresh()
     if(diagnosticsOpen && (diagnosticsRefreshedAt<0 || now-diagnosticsRefreshedAt>=200))
     {
     diagnosticsRefreshedAt=now;
-    liveDiagnostic.setText(m3::ui::liveDiagnosticsText(state),juce::dontSendNotification);layoutLiveDiagnostics();
+    const auto timingEvidence=(mode==workflow::Mode::live?m3::ui::gridDiagnosticsText(timeline.gridEvidence())
+        :juce::String("Fixed grid: not evaluated outside Perform\n"))+"\n"+m3::ui::liveDiagnosticsText(state);
+    liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);layoutLiveDiagnostics();
     juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(time.sample):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(time.ppq,3):"unavailable")
         <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);

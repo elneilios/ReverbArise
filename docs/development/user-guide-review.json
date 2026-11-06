@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical song-export and ui-design-system sync for merged issue 51 against the already delivered guide and owner-approved behavior: independent levels, continuous preview, pending WAV readiness, stopped/zero behavior and quiet accessible notices. Existing guide instructions remain accurate; no prose or screenshot change is needed. Archive is a lifecycle/documentation-only operation.",
+  "summary": "Reviewed issue 73 after accepted-main integration and canonical spec sync: captured-grid Snap with validated run offsets, independent offline bounce clocks, causal diagnostics and all existing Export levels/continuous-preview, TransportReadout and selection/Fit guidance remain coherent. Historical source-only diagnostic rejection is scoped explicitly; current run admission stays separate. Three completed changes archived with Purpose/unrelated requirements preserved. No new host acceptance, UI styling or tempo-map implementation is claimed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -215,8 +215,8 @@
     },
     {
       "path": "Source/Core/HostGrid.h",
-      "bytes": 4660,
-      "sha256": "10ac08a7bc6ca5eb5c7de06c4a3304de941b0b43d468d03c6acb79103a851905"
+      "bytes": 7829,
+      "sha256": "41f2b0c64040f1bac257237f992e99be15ec3dacae59df5b13422df0cba4c7ed"
     },
     {
       "path": "Source/Core/ManagedAsset.h",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 81785,
-      "sha256": "26712e41cd1daa1c3477cf8d741b1f1ee7569fdc57af646c870d213b2571607f"
+      "bytes": 82194,
+      "sha256": "e053fe615e263908afdd253f975ffc88fa5e99a864e02fb3af9e6f63c905fe17"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22400,
-      "sha256": "2a8b0a2e10c20d1a66127e6eb32e3c86fbe58b887c15372e2f0637a0ac56deae"
+      "bytes": 22715,
+      "sha256": "ba21316bb8943b509247357b0ebad38bddcbdd2cf62d357b340bdaad147abc57"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -435,8 +435,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 36590,
-      "sha256": "0111732bbd6075fb2dab5e18fdc24c85400bf85dcdf0a88b6ec35f38627ce4a6"
+      "bytes": 38068,
+      "sha256": "0074f0bd5839f990d74637fe829208c20b6dc8c3ba7d39bd4104ef36c0b2534f"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -470,13 +470,13 @@
     },
     {
       "path": "Source/Playback/LiveDiagnostics.h",
-      "bytes": 3159,
-      "sha256": "9b575c92002903654fd5a7fc6096853297cd989581791e7634f3e85476225064"
+      "bytes": 4615,
+      "sha256": "ac53cd49a78f0690b0485383781c0d59cb606d375fa5a03b3709271bb9c6f708"
     },
     {
       "path": "Source/Playback/LiveTransportClock.h",
-      "bytes": 2305,
-      "sha256": "afb5f23f5f2669c5a8b12ebf62e762ca80fa0e6cbce9a3e946744836765306a0"
+      "bytes": 2764,
+      "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -490,28 +490,28 @@
     },
     {
       "path": "Source/Playback/TransportPlayback.cpp",
-      "bytes": 11833,
-      "sha256": "6cc241eb32c18eb64efc2c10121c6c11d8781f07ce4f4ab09e02c059137a2a9c"
+      "bytes": 12013,
+      "sha256": "cfb65fac7bd19bf7bd5d19e8db0bfdff0b49ba2fc87855a42a65c3a6e028eb27"
     },
     {
       "path": "Source/Playback/TransportPlayback.h",
-      "bytes": 3700,
-      "sha256": "2e6baabb6213d429579ed93b6d706ca389348d4d5aaf8519bf0c1f35129c7a24"
+      "bytes": 3914,
+      "sha256": "aefb397399872dee192b70c3b248a0ea131e5ae3f39da1fd74f7d187a59ebb49"
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 79108,
-      "sha256": "0c461f1234a1dbdff3d20bd40f78bf2e3832f032483a974cea3a14b68f3846c0"
+      "bytes": 80329,
+      "sha256": "d77583b5277a7527ecbcde962e6c2f4ec56559941dd76f5512596d698b259697"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 9779,
-      "sha256": "fc51bcf56cccbb3ffd57c7b1bb631d92f3cd33e6b99f1ae46a89dbbe65d12ee4"
+      "bytes": 9922,
+      "sha256": "1dc809835db09086132b260cb20d1e35c7625086d601df8bd228209c1d62cb5f"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 22143,
-      "sha256": "62e366f3a3d9b644e304d8a447211d4677b9d6867351a9a8477c26b18eb747cd"
+      "bytes": 22546,
+      "sha256": "897c09ce188bfea620df92d71c9dcb3f40bf66f9f8e0e98b5ded3a88c11b1a79"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -685,8 +685,8 @@
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
-      "bytes": 4741,
-      "sha256": "a77bbbf6c3a6701cf935fef4ba7689824e636cbbedb9f10309ff380429c7b9b4"
+      "bytes": 9105,
+      "sha256": "67e865b761f63df50cc17df16ed3dbcb33896a059ed0170f7780a34030eac5a0"
     },
     {
       "path": "Source/UI/MusicalPosition.h",
@@ -710,18 +710,18 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 47866,
-      "sha256": "39d03ad8c322fc713ed88f79d7b71be21c95b2a5cc046f649ad17f3d75d19d3b"
+      "bytes": 48679,
+      "sha256": "fc2837c20b8aff8be9b69418b37126c1ed809cd1f0eb942649c5b0b0ad8f0f80"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 7452,
-      "sha256": "ab692c81e1a82a006a8dba71876766696fc7201582ff0c5a985f4a82086effac"
+      "bytes": 7793,
+      "sha256": "8b628f2f077f92f364d90d832ac36694a88a06a679abd7b734cc5f1f9ca185d5"
     },
     {
       "path": "Source/UI/SwellViewport.h",
-      "bytes": 4183,
-      "sha256": "c2c2872c1d3a3efbbf88e3c40cba605e335a74d0b7ed9bed5bf4f370f7f64130"
+      "bytes": 4297,
+      "sha256": "f2689d906d0396f686d85cb7e6da631de044cef15107e9f56bf47385eba89ad2"
     },
     {
       "path": "Source/UI/TimingEdit.h",
@@ -790,8 +790,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 17515,
-      "sha256": "574d70c5309728deeec10f1e74efcb3e1bbfdf6398a460e8a615064d142371e0"
+      "bytes": 18904,
+      "sha256": "c2f91ee29c7c9304f97e669e28a879f607eec2350867b04180c5d7b6c84194be"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -885,13 +885,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 94209,
-      "sha256": "7ea462dcfca684072e7c9c55ac8a55cd6ca1030e5b9947e5505de747055e7c44"
+      "bytes": 99946,
+      "sha256": "af75381cfcd01264358179548a14c36c3da33ed078c4db015349c7055e264925"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 34763,
-      "sha256": "019ab598337e830061f1af816b6f64f80dfce740dec03c9d650f87ebb8a7beeb"
+      "bytes": 40047,
+      "sha256": "53d904487bc553a0c9cd9199e5213bd5e5e9d51fed0e7443d9bea4b4d7595477"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",

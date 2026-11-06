@@ -17,6 +17,57 @@ int main()
     try
     {
         using namespace m3;
+        {const SongTime source{true,3399344,144,48000,122,4,4};
+            const SongTime start{true,3683360,156.030555555560028,48000,122,4,4};
+            const SongTime during{true,4205600,178.153222222234945,48000,122,4,4};
+            GridClockContext clock{start,3,2,3,true,true,true};GridEvidence evidence;
+            const auto accepted=HostGrid::make(source,source,48000,GridDivision::quarterBeat);
+            const auto shifted=HostGrid::make(source,during,48000,GridDivision::quarterBeat,&evidence,true,&clock);
+            CHECK(accepted && shifted && evidence.usesRun && evidence.gate==GridGate::available);
+            // Independent rational grid at 48 kHz / 122 BPM: samples per
+            // quarter = 1440000/61, captured origin = -16/61.
+            for(int64_t quarter=130;quarter<190;++quarter){const auto tick=(quarter*1440000-16+30)/61;
+                CHECK(shifted->snap(tick+3)==tick && accepted->snap(tick+3)==tick);}
+            CHECK(SwellViewport{}.snapToGrid(4205600,source,during,48000,GridDivision::quarterBeat,&clock)==shifted->snap(4205600));
+            for(int offset:{-12000,-31,-2,0,2,16,12000}){auto host=source;host.sample+=offset;clock.reference=host;
+                const auto grid=HostGrid::make(source,host,48000,GridDivision::beat,nullptr,true,&clock);CHECK(grid);
+                CHECK(grid->snap(3399350)==accepted->snap(3399350));
+                ++host.sample;CHECK(HostGrid::make(source,host,48000,GridDivision::beat,nullptr,true,&clock));
+                ++host.sample;CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,nullptr,true,&clock));}
+            clock.reference=start;clock.admitted=false;
+            CHECK(!HostGrid::make(source,source,48000,GridDivision::beat,&evidence,true,&clock));CHECK(evidence.gate==GridGate::clockRejected);
+            clock.admitted=true;CHECK(!HostGrid::make(source,source,48000,GridDivision::beat,&evidence,true,&clock));CHECK(evidence.gate==GridGate::runOrigin);
+            clock.available=false;CHECK(!HostGrid::make(source,during,48000,GridDivision::beat,&evidence,true,&clock));CHECK(evidence.gate==GridGate::clockUnavailable);
+            clock.available=true;clock.run=0;CHECK(!HostGrid::make(source,during,48000,GridDivision::beat,nullptr,true,&clock));clock.run=2;
+            CHECK(!HostGrid::make(source,during,48000,GridDivision::beat,&evidence,false,&clock));CHECK(evidence.gate==GridGate::sampleUnavailable);
+            CHECK(!HostGrid::make(source,during,44100,GridDivision::beat,nullptr,true,&clock));
+            for(int field=0;field<5;++field){auto changed=during;
+                if(field==0)changed.rate=44100;if(field==1)changed.bpm=123;if(field==2)changed.denominator=8;
+                if(field==3)changed.ppq=std::numeric_limits<double>::quiet_NaN();if(field==4)changed.sample=INT64_MAX;
+                CHECK(!HostGrid::make(source,changed,48000,GridDivision::beat,nullptr,true,&clock));}
+            CHECK(!HostGrid::make(source,during,48000,static_cast<GridDivision>(99),nullptr,true,&clock));
+            clock.playing=false;CHECK(!HostGrid::make(source,during,48000,GridDivision::beat,nullptr,true,&clock));
+            CHECK(HostGrid::make(source,source,48000,GridDivision::beat,nullptr,true,&clock));
+        }
+        {const SongTime source{true,3399344,144,48000,122,4,4};auto host=source;GridEvidence evidence;
+            CHECK(HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::available);
+            host.ppq=143.999322222222219;
+            CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::origin);
+            CHECK(evidence.accepted.ppq==144 && evidence.observed.ppq==host.ppq && evidence.captureRate==48000 && evidence.sampleAvailable);
+            for(int offset:{-31,-2,-1,0,1,2,16}){host=source;host.sample+=offset;
+                CHECK(HostGrid::make(source,host,48000,GridDivision::beat,&evidence).has_value()==(std::abs(offset)<=1));
+                CHECK(evidence.gate==(std::abs(offset)<=1?GridGate::available:GridGate::origin));}
+            host=source;CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence,false));CHECK(evidence.gate==GridGate::sampleUnavailable);
+            const auto rejected=[&](GridGate expected){CHECK(!HostGrid::make(source,host,48000,GridDivision::beat,&evidence));CHECK(evidence.gate==expected);};
+            host.valid=false;rejected(GridGate::invalidTiming);host=source;host.ppq=std::numeric_limits<double>::quiet_NaN();rejected(GridGate::invalidTiming);
+            host=source;host.rate=44100;rejected(GridGate::rate);host=source;host.bpm=123;rejected(GridGate::tempo);
+            host=source;host.denominator=8;rejected(GridGate::meter);
+            CHECK(!HostGrid::make(source,source,44100,GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::captureRate);
+            CHECK(!HostGrid::make(source,source,48000,static_cast<GridDivision>(100),&evidence));CHECK(evidence.gate==GridGate::division);
+            CHECK(!HostGrid::make(source,source,std::numeric_limits<double>::quiet_NaN(),GridDivision::beat,&evidence));CHECK(evidence.gate==GridGate::captureRate);
+            const SongTime enormous{true,0,0,std::numeric_limits<double>::max()/100,60,1000000,1};
+            CHECK(!HostGrid::make(enormous,enormous,enormous.rate,GridDivision::fourBars,&evidence));CHECK(evidence.gate==GridGate::conversion);
+        }
         for(const auto meter:{std::pair{4,4},std::pair{3,4},std::pair{6,8}})
         {
             const SongTime accepted{true,1000,0,48000,120,meter.first,meter.second};
@@ -25,9 +76,12 @@ int main()
             for(size_t n=0;n<gridChoices.size();++n)
             {
                 const auto grid=HostGrid::make(accepted,accepted,48000,gridChoices[n].division);CHECK(grid);
+                GridEvidence evidence;const auto explained=HostGrid::make(accepted,accepted,48000,gridChoices[n].division,&evidence);
+                CHECK(explained && evidence.gate==GridGate::available);
                 for(int64_t sample=-200000;sample<=200000;sample+=137)
                 {
                     CHECK(grid->snap(sample)==oracle(sample,1000,intervals[n]));
+                    CHECK(explained->snap(sample)==grid->snap(sample));
                     CHECK(SwellViewport{}.snapToGrid(sample,accepted,accepted,48000,gridChoices[n].division)==oracle(sample,1000,intervals[n]));
                 }
                 CHECK(grid->snap(1000+intervals[n]/2)==1000+intervals[n]);

@@ -1038,6 +1038,57 @@ int main(int argc,char* argv[]){return runTest([&]
     auto* liveEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticLiveAdmission"));REQUIRE(liveEvidence);
     REQUIRE(liveEvidence->getText().contains(m3::ui::liveCallbackText(engine.snapshot().liveObservation,"Current callback")));
     REQUIRE(liveEvidence->getText().contains("Current callback") && liveEvidence->getText().contains("stopped (not playing admission)"));
+    REQUIRE(liveEvidence->getText().startsWith(m3::ui::gridDiagnosticsText(editor.timelineComponent().gridEvidence())));
+    REQUIRE(liveEvidence->getDescription()==liveEvidence->getText());
+    // UI grid provenance is independent of stopped callback readiness.
+    head.position.setTimeInSamples(16);head.position.setPpqPosition(0);buffer.clear();processor->processBlock(buffer,midi);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("accepted-grid origin mismatch");});
+    REQUIRE(!editor.timelineComponent().gridAvailable());
+    REQUIRE(editor.timelineComponent().gridEvidence().gate==m3::GridGate::origin);
+    // Same captured grid, independently validated shifted playback clock.
+    const auto snapSaved=engine.savedSession();const auto gridBefore= m3::HostGrid::make(snapSaved.timing,snapSaved.timing,
+        processor->getCaptureSnapshot().manifest.sampleRate,m3::GridDivision::quarterBeat);REQUIRE(gridBefore);
+    head.position.setIsPlaying(true);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
+    REQUIRE(engine.snapshot().gridClock && engine.snapshot().gridClock->gate==m3::LiveGate::admitted);
+    REQUIRE(editor.timelineComponent().gridAvailable() && editor.timelineComponent().gridEvidence().usesRun);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("Source-to-run offset is informational");});
+    REQUIRE(liveEvidence->getText().contains("Grid validation / observed / delta samples:"));
+    for(int at:{64,256,32}){head.position.setTimeInSamples(at+16);head.position.setPpqPosition(at*snapSaved.timing.bpm/(60*snapSaved.timing.rate));
+        buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
+        REQUIRE(editor.timelineComponent().makeGrid()->snap(12345)==gridBefore->snap(12345));}
+    REQUIRE(engine.savedSession().timing.sample==snapSaved.timing.sample && engine.savedSession().timing.ppq==snapSaved.timing.ppq);
+    for(size_t i=0;i<snapSaved.swells.size();++i)REQUIRE(m3::sameSavedSwell(snapSaved.swells[i],engine.savedSession().swells[i]));
+    // A rejected run cannot fall back to its accepted source origin.
+    head.position.setTimeInSamples(0);head.position.setPpqPosition(0);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
+    REQUIRE(!editor.timelineComponent().gridAvailable() && editor.timelineComponent().gridEvidence().gate==m3::GridGate::clockRejected);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("current playback clock rejected");});
+    head.position.setIsPlaying(false);
+    editor.timelineComponent().setSnapBypassed(true);REQUIRE(!editor.timelineComponent().effectiveSnap());
+    editor.timelineComponent().setSnapBypassed(false);REQUIRE(editor.timelineComponent().effectiveSnap());
+    head.position.setTimeInSamples(0);buffer.clear();processor->processBlock(buffer,midi);
+    waitUI([&]{editor.refresh();return liveEvidence->getText().contains("admission): available");});
+    REQUIRE(editor.timelineComponent().gridAvailable());
+    REQUIRE(engine.snapshot().gridClock && !engine.snapshot().gridClock->playing);
+    {m3::GridEvidence missing;const auto text=m3::ui::gridDiagnosticsText(missing);
+        REQUIRE(text.contains("sample position unavailable") && text.contains("delta samples: unavailable"));
+        m3::EditorSnapshot injected; m3::LiveCallbackObservation d;
+        d.block=1;d.usesLiveClock=true;d.liveRun=1;d.liveSession=73;d.playing=true;d.gate=m3::LiveGate::admitted;d.clockGate=m3::LiveGate::admitted;
+        d.liveReference={true,3399344,143.999322222222219,48000,122,4,4};d.observed=d.liveReference;
+        d.hasPublication=d.originsValid=true;d.published={true,3399344,144,48000,122,4,4};
+        d.publishedOrigin=-.262295081746;d.observedOrigin=15.737704918254;d.originDelta=16;
+        m3::LiveCausalHistory history;history.observe(d);d.block=2;d.gate=d.clockGate=m3::LiveGate::origin;
+        d.observed={true,3795967,160.801390972220531,48000,122,4,4};d.observedOrigin=-.262295041699;d.originDelta=.000000040047;
+        injected.liveCausal=history.observe(d);
+        const auto liveText=m3::ui::liveDiagnosticsText(injected);
+        REQUIRE(liveText.contains("First timing rejection in retained run | block 2 | PPQ-zero origin mismatch"));
+        REQUIRE(liveText.contains("Preceding admitted callback at first rejection | block 1 | admitted"));
+        REQUIRE(liveText.contains("Run reference / observed / delta samples:") && liveText.contains("Run clock gate: PPQ-zero origin mismatch"));
+        REQUIRE(liveText.contains("0.000000040047"));bool signedRunDelta=false;
+        for(const auto& line:juce::StringArray::fromLines(liveText))if(line.startsWith("Run reference / observed / delta samples:"))
+            signedRunDelta=signedRunDelta || std::abs(line.fromLastOccurrenceOf(" / ",false,false).getDoubleValue()+16)<.00001;
+        REQUIRE(signedRunDelta);
+        REQUIRE(m3::ui::liveDiagnosticsText({}).contains("First timing rejection in retained run: unavailable"));
+    }
     REQUIRE(liveEvidence->getFont().getHeight()==m3::ui::textStyle(m3::ui::TextRole::helper).height);
     REQUIRE(liveEvidence->getParentComponent()->getLocalBounds().contains(liveEvidence->getBounds()));
     for(const auto& line:juce::StringArray::fromLines(liveEvidence->getText())){
@@ -1045,6 +1096,18 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(glyphs.getBoundingBox(0,-1,true).getWidth()<liveEvidence->getWidth());
     }
     snapshotPanel(*liveEvidence,"live-admission-evidence");
+    auto* copy=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"copyDiagnostics"));REQUIRE(copy);
+    REQUIRE(copy->getTitle()=="Copy diagnostics" && copy->isEnabled());
+    REQUIRE(copy->getParentComponent()->getLocalBounds().contains(copy->getBounds()));
+    const auto previousClipboard=juce::SystemClipboard::getTextFromClipboard();
+    REQUIRE(copy->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    const auto copied=juce::SystemClipboard::getTextFromClipboard();juce::SystemClipboard::copyTextToClipboard(previousClipboard);
+    for(const auto* section:{"ReverbArise diagnostics","Timing","Capture / assets","Selection / render","Playback / export",
+        "Offline blocks:","Processing / gain","Fixed grid available:","Current callback","Worker source:",
+        "Fixed grid (UI snapshot", "Run start callback", "Preceding admitted callback at first rejection",
+        "First timing rejection in retained run", "Run reference / observed / delta samples:"})REQUIRE(copied.contains(section));
+    REQUIRE(!copied.contains("Experimental output protection"));
 
     juce::String beforeJson,afterJson,jsonError;REQUIRE(m3::encode(beforeSettings,beforeJson,jsonError) && m3::encode(engine.savedSession(),afterJson,jsonError));
     REQUIRE(beforeJson==afterJson && engine.snapshot().renderCount==beforeSettingsRenders && processor->getCaptureSnapshot().manifest.revision==beforeSettingsCapture);
@@ -1304,9 +1367,24 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(engine.savedSession().swells[1].sourceStart==neighbour.sourceStart && engine.savedSession().swells[1].render==neighbour.render);
     }
     const auto source=timeline.sourceLane();const auto xEnd=static_cast<float>(timeline.viewport().pixel(24000,source.getX(),source.getWidth()));
+    const auto beforeSourceEndEdit=engine.savedSession();
     REQUIRE(timeline.beginDrag({xEnd,source.getBottom()-5}));timeline.dragTo({static_cast<float>(timeline.viewport().pixel(20000,source.getX(),source.getWidth())),source.getBottom()-5});
-    REQUIRE(engine.savedSession().swells[0].sourceEnd==20000 && engine.savedSession().swells[0].phase==m3::Phase::stale && engine.savedSession().swells[1].phase==m3::Phase::ready);
-    editor.refresh();snapshotEditor(editor,"stale");
+    {const auto observedSourceEdit=engine.savedSession();const auto& edited=observedSourceEdit.swells[0];
+        const auto progressing=edited.phase==m3::Phase::stale || edited.phase==m3::Phase::checking
+            || edited.phase==m3::Phase::queued || edited.phase==m3::Phase::rendering || edited.phase==m3::Phase::ready;
+        if(edited.sourceEnd!=20000 || edited.inputGeneration!=beforeSourceEndEdit.swells[0].inputGeneration+1 || !progressing || observedSourceEdit.swells[1].phase!=m3::Phase::ready)
+            std::cerr<<"Source-end edit evidence: end="<<observedSourceEdit.swells[0].sourceEnd
+                <<" phase="<<static_cast<int>(observedSourceEdit.swells[0].phase)<<" status="<<observedSourceEdit.swells[0].status
+                <<" neighbour phase="<<static_cast<int>(observedSourceEdit.swells[1].phase)<<" status="<<observedSourceEdit.swells[1].status
+                <<" input generation="<<edited.inputGeneration<<" before="<<beforeSourceEndEdit.swells[0].inputGeneration
+                <<" autoRegenerate="<<observedSourceEdit.autoRegenerate<<" gesture="<<timeline.interactionStatus()<<"\n";
+        REQUIRE(edited.sourceEnd==20000 && edited.inputGeneration==beforeSourceEndEdit.swells[0].inputGeneration+1 && progressing);
+        REQUIRE(edited.shape==beforeSourceEndEdit.swells[0].shape && edited.shapeGeneration==beforeSourceEndEdit.swells[0].shapeGeneration);
+        if(edited.phase==m3::Phase::ready)REQUIRE(edited.render.sourceStart==edited.sourceStart && edited.render.sourceEnd==m3::renderInputEnd(edited));
+        REQUIRE(observedSourceEdit.swells[1].phase==m3::Phase::ready
+            && observedSourceEdit.swells[1].inputGeneration==beforeSourceEndEdit.swells[1].inputGeneration
+            && m3::sameSavedSwell(observedSourceEdit.swells[1],beforeSourceEndEdit.swells[1]));}
+    editor.refresh();snapshotEditor(editor,"source-edit-preparing");
     auto field=dynamic_cast<juce::TextEditor*>(named(editor,"sourceSampleEnd"));REQUIRE(field);field->setText("24000",false);field->onReturnKey();
     auto generate=dynamic_cast<juce::TextButton*>(named(editor,"generate"));REQUIRE(generate);generate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.snapshot().sourceDetail && engine.snapshot().sourceDetail->peaks.size()>1000);
@@ -1368,6 +1446,54 @@ int main(int argc,char* argv[]){return runTest([&]
     auto exportStatus=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(exportStatus && exportStatus->getText().startsWith("Export warning"));
     REQUIRE(engine.snapshot().offlineBlocks==1 && engine.snapshot().offlineStatus.startsWith("Export warning"));snapshotEditor(editor,"export-error");
     processor->setNonRealtime(false);processor->prepareToPlay(48000,4096);
+    // #73: real processor clock, absent wet assets and disabled output. Canvas,
+    // knob drag, wheel and keyboard all use the captured zero-origin grid.
+    {auto session=engine.savedSession();session.swells.resize(1);auto& w=session.swells[0];
+        w.id=juce::Uuid().toDashedString();w.arrival=w.sourceStart=0;w.sourceEnd=24000;w.frozen=false;w.ir={};w.render={};
+        w.shape=m3::initialShape(48000);w.placement=0;w.phase=m3::Phase::stale;
+        session.timing={true,0,0,48000,120,4,4};session.selected={w.id};session.primary=w.id;session.automaticProcessing=false;
+        engine.restore(session);engine.setLivePlayback(false,m3::LiveRouting::dryWet,0);
+        head.position.setTimeInSamples(0);head.position.setPpqPosition(0);head.position.setIsPlaying(false);buffer.clear();processor->processBlock(buffer,midi);
+        head.position.setTimeInSamples(16);head.position.setIsPlaying(true);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
+        auto& canvas=editor.timelineComponent();canvas.setSnap(true);canvas.setSnapBypassed(false);canvas.setGridDivision(m3::GridDivision::quarterBeat);
+        m3::SwellViewport frame;frame.first=-24000;frame.last=48000;canvas.setViewport(frame);editor.refresh();
+        REQUIRE(canvas.gridAvailable() && !engine.snapshot().liveActive && !engine.savedSession().swells[0].ir.present());
+        const auto grid=canvas.makeGrid();REQUIRE(grid && grid->snap(-12240)==-12000);
+        auto cell=dynamic_cast<m3::ui::KnobValue*>(named(editor,"sourceSampleStartCell"));REQUIRE(cell);
+        auto& knob=cell->valueKnob();editor.modifierKeysChanged({});
+        knob.onDragStart();knob.setValue(knob.getValue()-.17,juce::sendNotificationSync);knob.onDragEnd();
+        if(engine.savedSession().swells[0].sourceStart!=-12000)std::cerr<<"Shifted knob source="<<engine.savedSession().swells[0].sourceStart
+            <<" span="<<canvas.viewport().span()<<" status="<<engine.snapshot().message<<"\n";
+        REQUIRE(engine.savedSession().swells[0].sourceStart==-12000);
+        const auto resetSource=[&]{REQUIRE(engine.edit(w.id,[](auto& value,auto&){value.sourceStart=0;return true;}));editor.refresh();};
+        resetSource();wheelOver(knob,-.1f);REQUIRE(engine.savedSession().swells[0].sourceStart==-6000);
+        REQUIRE(knob.keyPressed(juce::KeyPress(juce::KeyPress::leftKey)));REQUIRE(engine.savedSession().swells[0].sourceStart==-12000);
+        resetSource();const auto lane=canvas.sourceLane();const auto at=[&](int64_t sample){return static_cast<float>(canvas.viewport().pixel(sample,lane.getX(),lane.getWidth()));};
+        REQUIRE(canvas.beginDrag({at(0),lane.getBottom()-5}));
+        // Ordinary progress in this same run does not invalidate its gesture.
+        head.position.setTimeInSamples(256);head.position.setPpqPosition(.01);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
+        canvas.dragTo({at(-12240),lane.getBottom()-5});REQUIRE(engine.savedSession().swells[0].sourceStart==-12000);
+        resetSource();editor.modifierKeysChanged(juce::ModifierKeys::ctrlModifier);
+        knob.onDragStart();knob.setValue(knob.getValue()-.17,juce::sendNotificationSync);knob.onDragEnd();
+        REQUIRE(engine.savedSession().swells[0].sourceStart==-12240);editor.modifierKeysChanged({});
+        const auto beforeInsert=engine.savedSession();const juce::Point<float> insertPoint{at(13000),lane.getY()+20};
+        const auto stamp=juce::Time::getCurrentTime();
+        juce::MouseEvent insert(juce::Desktop::getInstance().getMainMouseSource(),insertPoint,{},0,0,0,0,0,&canvas,&canvas,stamp,insertPoint,stamp,2,false);
+        canvas.mouseDoubleClick(insert);REQUIRE(engine.savedSession().swells.size()==beforeInsert.swells.size()+1);
+        REQUIRE(engine.savedSession().timing.sample==session.timing.sample && engine.savedSession().timing.ppq==session.timing.ppq);
+        REQUIRE(m3::find(engine.savedSession(),engine.savedSession().primary)->arrival==12000);
+        REQUIRE(engine.selectTargets({w.id},w.id));editor.refresh();
+        // Reject a previously started knob when the run drifts to saved origin.
+        resetSource();knob.onDragStart();head.position.setTimeInSamples(240);buffer.clear();processor->processBlock(buffer,midi);
+        knob.setValue(knob.getValue()-.17,juce::sendNotificationSync);knob.onDragEnd();REQUIRE(engine.savedSession().swells[0].sourceStart==0);
+        editor.refresh();REQUIRE(!canvas.gridAvailable());
+        auto units=dynamic_cast<juce::ToggleButton*>(named(editor,"sampleUnits"));REQUIRE(units);units->setToggleState(true,juce::dontSendNotification);units->onClick();editor.refresh();
+        auto exact=dynamic_cast<juce::TextEditor*>(named(editor,"sourceSampleStart"));REQUIRE(exact);exact->setText("-1234",false);exact->onReturnKey();
+        REQUIRE(engine.savedSession().swells[0].sourceStart==-1234 && !engine.savedSession().swells[0].render.present());
+        engine.resetTransportClock();editor.refresh();REQUIRE(!canvas.gridAvailable() && canvas.gridEvidence().gate==m3::GridGate::clockUnavailable);
+        head.position.setIsPlaying(false);head.position.setTimeInSamples(0);head.position.setPpqPosition(0);buffer.clear();processor->processBlock(buffer,midi);
+        editor.refresh();REQUIRE(canvas.gridAvailable());
+    }
     // The knob's floating proxy must never round an absolute sample through
     // double. Both typed and relative edits retain the odd sample above 2^53.
     {

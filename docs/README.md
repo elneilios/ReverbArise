@@ -12,6 +12,13 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
+
+- [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.
+
+- [Combined #73 diagnostic test installation](validation/2026-11-05-issue-73-combined-test-install.md) — local integration of the existing offline repair and current grid/live evidence, with verification, installation inventory and the exact host capture procedure.
+
+- [Issue #73 clock investigation](validation/2026-11-05-issue-73-clock-investigation.md) — separate grid/live evidence, retained local offline fix and explicitly unresolved host attribution; no timing-policy repair or main integration is implied.
 - [Swells-list selection reveal](development/perform-navigation.md#fit-lifecycle) — explicit list navigation applies contextual Fit automatically, following the owner's native-review decision; [issue #93 evidence](validation/2026-11-05-issue-93-selection-reveal.md) records native verification and separate owner/host coverage.
 - [Stable Perform transport readout](development/transport-readout.md) — fixed field/separator geometry, truthful formatting, bounded overflow and scoped native approval for issue #68.
 
@@ -24,6 +31,8 @@ This directory covers product identity, the existing implementation, development
 - [User guide maintenance](development/user-guide-maintenance.md) — explicit code/spec review and read-only release currency gate; [build information](development/product-version.md#running-build-information) explains Settings About and candidate identity.
 
 - [Private alpha preparation](validation/2026-11-04-issue-59-alpha.md) — delivered in merged PR #63; [closeout](validation/2026-11-05-issue-59-closeout.md#executed-merged-main-verification--2026-11-05) records completed post-merge verification, scoped owner sign-offs and the explicit additional-host-smoke waiver. [Redistribution review](validation/2026-11-04-issue-59-redistribution-review.md#subsequent-owner-sign-off--2026-11-05) records the one-friend private evaluation scope; public distribution remains undecided.
+
+- [Fixed-tempo DAW export clock](development/offline-export-clock.md) — per-bounce runtime validation, unchanged sample scheduling and copyable failure diagnostics.
 
 - [Perform waveform display](development/waveform-display.md) — GUI-only summaries, layer ownership, invalidation and close-zoom fidelity; [issue #67 evidence](validation/2026-11-05-issue-67-waveform-paint.md) separates component timing, full editor refresh and owner/host coverage.
 

@@ -56,15 +56,15 @@ struct SwellViewport
         first=at-size*anchor;last=first+size;return constrain(limits,minimum);
     }
     std::optional<int64_t> snapToGrid(int64_t position,const SongTime& accepted,const SongTime& now,
-                                    double captureRate,GridDivision division)const noexcept
+                                    double captureRate,GridDivision division,const GridClockContext* clock=nullptr)const noexcept
     {
-        const auto grid=HostGrid::make(accepted,now,captureRate,division);
+        const auto grid=HostGrid::make(accepted,now,captureRate,division,nullptr,true,clock);
         return grid?grid->snap(position):std::optional<int64_t>{};
     }
     std::optional<int64_t> snapToGridWithin(int64_t position,int64_t lower,int64_t upper,const SongTime& accepted,
-                                          const SongTime& now,double captureRate,GridDivision division)const noexcept
+                                          const SongTime& now,double captureRate,GridDivision division,const GridClockContext* clock=nullptr)const noexcept
     {
-        const auto grid=HostGrid::make(accepted,now,captureRate,division);
+        const auto grid=HostGrid::make(accepted,now,captureRate,division,nullptr,true,clock);
         return grid?grid->snapWithin(position,lower,upper):std::optional<int64_t>{};
     }
     int64_t snap(int64_t position,const SongTime& time,bool enabled) const noexcept

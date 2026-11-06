@@ -27,6 +27,7 @@ void PreverbAudioProcessorEditor::beginValueEdit(int index)
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;
     valueInvocations[index]={current.sessionEpoch,current.session.selected,processor.getSongTime(),current.session.timing,
         processor.getCaptureSnapshot().manifest.sampleRate,processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
+    valueInvocations[index].clock=m3::gridClockContext(current.gridClock,processor.getHostPositionDiagnostics().isPlaying);
     valueTokens[index]=w?w->inputGeneration:0;
     valueRawStarts[index]=current.raw?current.raw->start:0;valueRawEnds[index]=current.raw?current.raw->end:0;
 }
@@ -81,7 +82,10 @@ bool PreverbAudioProcessorEditor::valueIntentCurrent(int index)const
 {
     if(!valueAnchors[index])return false;const auto& invocation=valueInvocations[index];
     const auto flow=processor.getWorkflowSnapshot();const auto current=processor.swellEngine().savedSession();const auto latest=m3::find(current,valueAnchors[index]->id);
+    const auto currentClock=processor.swellEngine().transportClockSnapshot();
+    const auto gridClock=m3::gridClockContext(currentClock,processor.getHostPositionDiagnostics().isPlaying);
     return flow.pass==valueWorkflowTokens[index] && flow.mode==workflow::Mode::live && invocation.epoch==processor.swellEngine().assignmentEpoch()
+        && invocation.clock.sameAuthority(gridClock)
         && current.primary==valueAnchors[index]->id && current.selected==invocation.selected && latest && latest->inputGeneration==valueTokens[index]
         && latest->frozen==valueAnchors[index]->frozen && transportMappingMatches(invocation.time,processor.getSongTime())
         && invocation.accepted.valid==current.timing.valid && (!invocation.accepted.valid || transportMappingMatches(invocation.accepted,current.timing))
@@ -109,7 +113,7 @@ void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps)
         if(timeline.effectiveSnap())
         {
             const auto initial=m3::timingAnchorSample(anchor,kind,valueRawStarts[index]);
-            const auto grid=invocation.sampleAvailable?m3::HostGrid::make(invocation.accepted,invocation.time,invocation.rate,timeline.selectedGrid()):std::optional<m3::HostGrid>{};
+            const auto grid=m3::HostGrid::make(invocation.accepted,invocation.time,invocation.rate,timeline.selectedGrid(),nullptr,invocation.sampleAvailable,&invocation.clock);
             const auto next=initial && grid?grid->adjacent(*initial,sign*direction):std::optional<int64_t>{};
             if(!next){processor.swellEngine().diagnostic("Snap unavailable: no next point in compatible fixed host timing");return;}
             displacement=static_cast<double>((static_cast<long double>(*next)-*initial)*sign);
@@ -155,7 +159,7 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
     {
         if(sampleUnitsButton.getToggleState())
         {value=text.getLargeIntValue();if(juce::String(value)!=text){processor.swellEngine().diagnostic("Enter an exact integer sample value");return false;}}
-        else if(!m3::parseMusicalPosition(text,time,value)){processor.swellEngine().diagnostic("Enter bar.beat.fraction or choose exact samples in Settings");return false;}
+        else if(!m3::parseMusicalPosition(text,invocation.accepted.valid?invocation.accepted:time,value)){processor.swellEngine().diagnostic("Enter bar.beat.fraction or choose exact samples in Settings");return false;}
     }
     else
     {
@@ -174,7 +178,7 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
                 index==placementValue?m3::TimingAnchor::move:index==preRollValue?m3::TimingAnchor::start:index==endOffsetValue?m3::TimingAnchor::end:index==fadeInValue?m3::TimingAnchor::fadeIn:m3::TimingAnchor::fadeOut;
             const auto initial=m3::timingAnchorSample(anchor,kind,valueRawStarts[index]);int64_t change,requested;
             if(!initial || !sampleCount(static_cast<long double>(*delta)*valueSpans[index]*(index==preRollValue || index==fadeOutValue?-1:1),change) || !m3::checkedAdd(*initial,change,requested)){error="Timing candidate overflow";return false;}
-            const auto grid=invocation.sampleAvailable?m3::HostGrid::make(invocation.accepted,time,invocation.rate,timeline.selectedGrid()):std::optional<m3::HostGrid>{};long double origin=0;songOrigin(invocation.accepted,origin);
+            const auto grid=m3::HostGrid::make(invocation.accepted,time,invocation.rate,timeline.selectedGrid(),nullptr,invocation.sampleAvailable,&invocation.clock);long double origin=0;songOrigin(invocation.accepted,origin);
             return m3::applyTimingCandidate(w,anchor,kind,requested,valueRawStarts[index],valueRawEnds[index],timeline.effectiveSnap(),grid?&*grid:nullptr,origin,error);
         }
         if(index==targetValue)return m3::moveArrival(w,value,error);

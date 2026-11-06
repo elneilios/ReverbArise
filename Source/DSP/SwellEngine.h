@@ -65,6 +65,7 @@ struct EditorSnapshot
     ExportSnapshot songExport;
     Session session;
     uint64_t sessionEpoch=0; // Coherent UI ownership token; never persisted.
+    std::optional<LiveClockSnapshot> gridClock; // Dedicated control authority, not telemetry.
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
@@ -87,6 +88,7 @@ struct EditorSnapshot
     std::vector<juce::String> auditionMembers;
     LivePreparationObservation livePreparation;
     std::optional<LiveCallbackObservation> liveObservation,liveLastRejection;
+    std::optional<LiveCausalObservation> liveCausal;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
@@ -172,6 +174,7 @@ public:
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
     void resetTransportClock() noexcept {liveClock.reset();}
+    std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
     void failNextLivePublicationForTesting() noexcept {livePublicationFail.store(true);notify();}
@@ -350,6 +353,7 @@ private:
     std::atomic<float> regeneration{.5f};
     std::unique_ptr<TransportPlayback> offlinePlayer;
     Session offlineSession;
+    LiveClockSnapshot offlineClock;
     juce::File offlineRoot;
     std::vector<LiveEntry> offlineEntries;
     std::vector<Swell> offlineMembers;

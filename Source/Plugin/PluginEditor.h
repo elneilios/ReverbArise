@@ -16,6 +16,7 @@
 #include <UI/PerformLayout.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
+#include <UI/Controls/ActionButton.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
@@ -80,7 +81,7 @@ private:
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
-    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;};
+    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;m3::GridClockContext clock;};
     std::array<ValueInvocation,valueCount> valueInvocations;
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;
@@ -115,6 +116,7 @@ private:
     uint64_t navigationEpoch=0;
     juce::TextButton recaptureButton{"Recapture & regenerate"},cancelButton{"Cancel recapture"},fullButton{"Full response"},resetButton{"Reset shape"},setBarsButton{"Set source from bars"},clearButton{"Clear map"};
     juce::TextButton assetInfoButton{"Copy asset info"};
+    m3::ui::controls::ActionButton copyDiagnosticsButton{"Copy diagnostics"};
     juce::ToggleButton enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
     m3::ui::controls::InvocationToggle autoButton{"Auto-refresh after recapture"};
     juce::Slider auditionSlider,toneStartSlider,toneEndSlider;

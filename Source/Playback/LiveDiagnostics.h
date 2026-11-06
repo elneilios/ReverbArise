@@ -64,11 +64,41 @@ struct LiveCallbackObservation
     bool usesLiveClock=false;
     SongTime observed{},published{};
     int64_t start=0,end=0,loopStart=0,loopEnd=0;
+    int64_t hostLoopStart=0,hostLoopEnd=0;
     double publishedOrigin=0,observedOrigin=0,originDelta=0;
     int count=0;
     LiveGate gate=LiveGate::noPublication;
+    LiveGate clockGate=LiveGate::invalidTiming;
     bool hasPublication=false,originsValid=false,validCount=false,playing=false;
+    bool hostLooping=false;
     bool workflowAllows=false,enabled=false,wetOnly=false,running=false,missing=false;
     float wetGain=1;
+};
+
+// Callback-owned values only. No publication/asset pointers and no dynamic trace.
+struct LiveCausalObservation
+{
+    LiveCallbackObservation runStart{},lastAdmitted{},firstRejection{},precedingAdmitted{};
+    bool hasStart=false,hasAdmitted=false,hasRejection=false,hasPreceding=false;
+};
+class LiveCausalHistory
+{
+    LiveCausalObservation state;
+public:
+    const LiveCausalObservation& observe(const LiveCallbackObservation& d) noexcept
+    {
+        if(!d.usesLiveClock)return state;
+        const auto& previous=state.runStart;
+        if(state.hasStart && (previous.liveSession!=d.liveSession || previous.liveReset!=d.liveReset || previous.liveRun!=d.liveRun))state={};
+        if(!d.playing || !d.liveRun)return state;
+        if(!state.hasStart){state.runStart=d;state.hasStart=true;}
+        const auto timing=[](LiveGate g){return g==LiveGate::invalidTiming || g==LiveGate::rate || g==LiveGate::tempo || g==LiveGate::meter || g==LiveGate::origin;};
+        if(!state.hasRejection && (timing(d.gate) || timing(d.clockGate))){
+            state.firstRejection=d;state.hasRejection=true;state.hasPreceding=state.hasAdmitted;
+            if(state.hasAdmitted)state.precedingAdmitted=state.lastAdmitted;
+        }
+        if(d.gate==LiveGate::admitted){state.lastAdmitted=d;state.hasAdmitted=true;}
+        return state;
+    }
 };
 }

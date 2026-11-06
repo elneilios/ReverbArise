@@ -806,7 +806,7 @@ Snap SHALL be a latching toggle button, not a checkbox. Its remembered On/Off pr
 - **AND** key transitions alone do not move handles; subsequent pointer movement uses the effective policy without an artificial drag-baseline jump
 
 ### Requirement: Rhythmic snapping uses trustworthy host coordinates
-Snap SHALL offer explicit 1/16 beat, 1/8 beat, 1/4 beat, 1 beat and 1/2/4 bar divisions. Beat units SHALL follow the reported meter denominator and bars its numerator. Quantization SHALL use validated absolute host PPQ origin with nearest-grid rounding and checked sample conversion, never display names, pixels or a fabricated tempo map.
+Snap SHALL offer explicit 1/16 beat, 1/8 beat, 1/4 beat, 1 beat and 1/2/4 bar divisions. Beat units SHALL follow the reported meter denominator and bars its numerator. Quantization SHALL use validated absolute host PPQ origin with nearest-grid rounding and checked sample conversion, never display names, pixels or a fabricated tempo map. The accepted captured grid SHALL remain the editing coordinate system when an independently validated fixed-tempo playback run has a different origin.
 
 #### Scenario: Meter and fractional PPQ
 - **WHEN** trustworthy compatible timing reports 4/4, 3/4 or 6/8 with fractional PPQ or negative lead-in
@@ -814,13 +814,42 @@ Snap SHALL offer explicit 1/16 beat, 1/8 beat, 1/4 beat, 1 beat and 1/2/4 bar di
 - **AND** unchanged-origin seeks/loops retain that mapping without changing captured positions
 
 #### Scenario: Missing or changed mapping
-- **WHEN** host timing is absent, non-finite, overflowing, capture-rate incompatible or no longer matches the accepted fixed tempo/meter/origin
+- **WHEN** host timing is absent, non-finite, overflowing, capture-rate incompatible, has incompatible tempo/meter, or its origin matches neither the accepted mapping nor an independently validated current fixed-tempo playback run
 - **THEN** effective Snap On prevents horizontal snapped publication and explains unavailable timing rather than guessing
 - **AND** Snap Off or Ctrl bypass permits valid unsnapped sample edits while navigation and vertical editing remain usable
+- **AND** a known rejected current run SHALL NOT become available through a fallback to the saved origin, even if the latest observation happens to match that saved origin
 
 #### Scenario: Timing changes during a drag
 - **WHEN** a drag's session, selection, mode or validated mapping changes
 - **THEN** further publication from that obsolete gesture is cancelled with prior accepted musical/source state preserved and an understandable reason
+
+#### Scenario: Stable fixed-tempo playback offset
+- **GIVEN** accepted capture timing and an independently validated current playback run have compatible rate, tempo and meter
+- **WHEN** the host remains consistent with that run although its origin differs from the accepted capture origin, including the recorded approximately +16-sample case
+- **THEN** Snap remains available and quantizes to the same accepted captured-grid sample positions as before Play
+- **AND** positive, negative and zero stable offsets use the same validation policy without a hard-coded offset or expanded drift tolerance
+- **AND** Play, Stop, seeks and loops alone do not rewrite accepted timing, source, swell positions or render assets
+
+#### Scenario: Actual drift after an admitted offset
+- **GIVEN** a shifted fixed-tempo run previously made the captured grid available
+- **WHEN** subsequent host timing violates that run's existing one-sample mapping guard or its rate, tempo or meter compatibility
+- **THEN** snapped publication becomes unavailable and obsolete gestures cannot continue under the previous admission
+- **AND** diagnostics distinguish the run rejection from an informational source-to-run offset
+
+#### Scenario: Shared editing and readiness
+- **WHEN** the shifted run is valid and the user uses canvas timing gestures, inspector knobs/wheel, snapped keyboard actions or target insertion
+- **THEN** each path uses the same accepted grid and availability decision with existing canonical bounds, modifiers, exact-entry and identity guards
+- **AND** grid availability does not require an audible swell, prepared render, selected IR, enabled wet output or an open Diagnostics window
+
+#### Scenario: Stopped empty and restored sessions
+- **WHEN** the transport is stopped, an empty session bootstraps timing, or a saved session is reopened
+- **THEN** existing trustworthy stopped/empty behavior remains and a retired or unavailable run cannot authorize another session's grid
+- **AND** unchanged source/render identities and saved Snap/grid preferences survive with no autoplay or persistent clock migration
+
+#### Scenario: Tempo automation remains outside fixed-grid coverage
+- **WHEN** instantaneous BPM changes or timing does not establish a compatible fixed-tempo mapping
+- **THEN** this fixed-tempo repair does not fabricate a global grid or infer exact tempo-ramp conversions
+- **AND** exact sample editing and existing temporary bypass remain available under their normal model guards, with truthful timing feedback
 
 ### Requirement: Horizontal handle snapping preserves exact musical edits
 Effective Snap SHALL quantize horizontal target, source-bound and editable envelope-time gestures to one absolute grid. Vertical amplitude/tension SHALL remain continuous. Whole-wet translation SHALL preserve internal spacing. Exact numeric entry SHALL remain unsnapped. Every accepted edit SHALL preserve ordering, source PCM, unrelated identities and existing model guards.
@@ -1011,3 +1040,32 @@ Explicit list selection in Perform SHALL frame the accepted primary using the sa
 - **WHEN** list selection automatically fits a swell
 - **THEN** only selection and navigation change; captured PCM, timing, shape, enablement, IR/render assets and generation inputs remain unchanged
 - **AND** selection does not start playback, seek the host or request rendering
+
+### Requirement: Fixed-grid diagnostics explain the actual availability decision
+Diagnostics SHALL identify the actual fixed-grid availability result, rejected timing dimension, accepted mapping, observed mapping, capture rate and sample-position availability. Valid origins and their delta SHALL be shown with enough precision to assess the existing one-sample allowance. Missing inputs SHALL remain unavailable. Grid evidence SHALL be labelled independently from live callback admission and SHALL NOT change Snap, editing or playback policy.
+
+#### Scenario: Playback offset disables the accepted source grid
+- **GIVEN** accepted timing at sample 3399344, PPQ 144, 48000 Hz, 122 BPM and 4/4
+- **WHEN** grid evaluation uses host sample 3399344 and PPQ 143.999322222222219 with the same rate, tempo and meter under source-only validation (no playing-run context)
+- **THEN** diagnostics identifies the approximately 16-sample accepted-to-host origin difference as a grid-origin rejection under the existing policy
+- **AND** it does not infer live rejection from that grid result or claim the existing offline fix repairs Snap
+
+#### Scenario: Stop restores grid compatibility
+- **WHEN** stopped host timing again matches the accepted source mapping after a grid rejection
+- **THEN** current grid evidence reflects that compatibility and labels its evaluation context
+- **AND** restored grid availability is not presented as proof of preceding wet audibility or successful live preparation
+
+#### Scenario: Other grid prerequisites fail
+- **WHEN** sample position is unavailable, timing is invalid or nonfinite, capture rate is incompatible, tempo or meter differs, or grid conversion cannot be represented
+- **THEN** diagnostics identifies the failing prerequisite without inventing an origin or reducing every failure to an origin mismatch
+- **AND** the existing Snap On rejection, Ctrl bypass, Snap Off, exact-entry and stale-gesture protections remain unchanged
+
+#### Scenario: UI and callback observations have different provenance
+- **WHEN** a grid decision and a live callback or worker observation come from different snapshots
+- **THEN** diagnostics labels those contexts separately and exposes the exact inputs used for the grid evaluation without claiming callback-level simultaneity
+- **AND** unavailable evidence cannot be substituted with a later stopped observation
+
+#### Scenario: Read diagnostic detail without editing
+- **WHEN** grid evidence is refreshed, inspected or the editor is reopened
+- **THEN** it uses the existing Diagnostics presentation and accessible full text without changing saved navigation, Snap preference, source/render identities, job counts or host transport
+- **AND** the main workspace retains its existing concise unavailable message and supported editing alternatives

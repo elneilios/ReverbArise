@@ -53,13 +53,14 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
     waveZoom.onValueChange=[this]{invalidateWaveforms();repaint();};addAndMakeVisible(waveZoom);
     waveZoomLabel.setTooltip(waveZoom.getTooltip());waveZoomLabel.setText("Height",juce::dontSendNotification);ui::applyTextRole(waveZoomLabel,ui::TextRole::controlLabel);addAndMakeVisible(waveZoomLabel);
 }
-void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available)
+void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available,bool hostPlaying)
 {
+    const auto nextClock=gridClockContext(s.gridClock,hostPlaying);
     if(drag!=Drag::none && drag!=Drag::overview)
     {
         const bool wetDrag=drag!=Drag::arrival && drag!=Drag::sourceStart && drag!=Drag::sourceEnd;
         const auto owner=find(s.session,dragId);
-        const bool timingChanged=t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
+        const bool timingChanged=!dragClock.sameAuthority(nextClock) || t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
             || s.session.timing.valid!=dragAcceptedTime.valid || (s.session.timing.valid && !transportMappingMatches(dragAcceptedTime,s.session.timing));
         if(s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
             || available!=dragSampleAvailable || (wetDrag && (owner->inputGeneration!=dragInput || owner->render.content!=dragRender
@@ -68,7 +69,7 @@ void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t
     }
     if(!sameCaptureDisplay(capture,c) || !sameWetDisplay(data,s) || time.valid!=t.valid || time.rate!=t.rate
         || time.bpm!=t.bpm || time.numerator!=t.numerator || time.denominator!=t.denominator)invalidateWaveforms();
-    capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;
+    capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;clockContext=nextClock;
     scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();
 }
 void SwellTimeline::setSnap(bool enabled){if(enabled!=snapEnabled){snapEnabled=enabled;rebaseDrag();}}
@@ -100,8 +101,9 @@ bool SwellTimeline::prepareDrag(juce::Point<float> point)
     if(data.sessionEpoch!=engine.assignmentEpoch()){drag=Drag::none;gestureMessage("Session changed; start a new gesture");return false;}
     const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return false;}
     dragEpoch=data.sessionEpoch;dragSelection=data.session.selected;dragTime=time;dragAcceptedTime=data.session.timing;
+    dragClock=clockContext;
     dragRaw=data.raw;dragInput=w->inputGeneration;dragRender=w->render.content;dragSampleAvailable=playheadAvailable;dragFrozen=w->frozen;
-    dragGrid=playheadAvailable?HostGrid::make(dragAcceptedTime,dragTime,capture.manifest.sampleRate,gridDivision):std::optional<HostGrid>{};
+    dragGrid=makeGrid();
     dragView=view;lastPointer=point;rebaseDrag();gestureMessage({});return drag!=Drag::none;
 }
 std::pair<double,double> SwellTimeline::globalBounds() const
@@ -283,7 +285,7 @@ void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& m
 void SwellTimeline::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);g.setFont(ui::fontFor(*this,ui::smallSize));
-    ui::controls::paintMusicalTimelineRuler(g,ruler,view,time);
+    ui::controls::paintMusicalTimelineRuler(g,ruler,view,gridTiming());
     if(!time.valid){ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
@@ -306,7 +308,7 @@ void SwellTimeline::paint(juce::Graphics& g)
     {const auto at=mini(static_cast<double>(swell.arrival));g.setColour(swell.id==data.session.primary?ui::aqua:ui::secondary);g.drawVerticalLine(static_cast<int>(at),overview.getBottom()-13,overview.getBottom());}
     }
     ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Dry",source.translated(0,-24).withHeight(20),juce::Justification::centredLeft);
-    const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),time);
+    const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),gridTiming());
     for(const auto& tick:ticks)
     {
         const auto at=static_cast<float>(view.pixel(tick.sample,source.getX(),source.getWidth()));
@@ -468,6 +470,9 @@ void SwellTimeline::dragTo(juce::Point<float> point)
     const auto changed=engine.edit(dragId,[&](Swell& w,juce::String& error)
     {
         invoked=true;
+        if(dragClock.playing){const auto latest=engine.transportClockSnapshot();
+            if(!dragClock.sameAuthority(gridClockContext(latest,true)) || (snapping && (!latest || !HostGrid::make(dragAcceptedTime,latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,true,&dragClock))))
+            {stale=true;error=failure="Playback clock changed; start a new gesture";return false;}}
         // edit(expected epoch) owns the engine's recursive UI lock. Recheck the
         // current selection inside that same transaction, including secondary IDs.
         const auto current=engine.savedSession();
@@ -528,14 +533,18 @@ void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(t
 void SwellTimeline::mouseDrag(const juce::MouseEvent& e){setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
 void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
 {
-    if(!editingEnabled)return;
+    if(!editingEnabled || data.sessionEpoch!=engine.assignmentEpoch())return;
     setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(!source.contains(e.position))return;
     for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}
     const auto candidate=view.sample(e.position.x,source.getX(),source.getWidth());
     if(effectiveSnap())
-    {const auto at=playheadAvailable?view.snapToGrid(candidate,gridTiming(),time,capture.manifest.sampleRate,gridDivision):std::optional<int64_t>{};
+    {auto grid=makeGrid();
+        if(clockContext.playing){const auto latest=engine.transportClockSnapshot();
+            if(!clockContext.sameAuthority(gridClockContext(latest,true)) || !latest
+                || !HostGrid::make(gridTiming(),latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,playheadAvailable,&clockContext))grid.reset();}
+        const auto at=grid?grid->snap(candidate):std::optional<int64_t>{};
         if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at);}
     else engine.addTarget(candidate);
 }
@@ -615,7 +624,7 @@ void SwellOverview::paint(juce::Graphics& g)
     {g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::bodySize));g.drawText("No audio mapped yet",lane,juce::Justification::centred);return;}
     if(timeline.time.valid)
     {
-        const auto& t=timeline.time;
+        const auto& t=timeline.gridTiming();
         for(const auto& tick:makeSongBarRuler(a,b,lane.getWidth(),t.rate,t.bpm,t.numerator,t.denominator,t.sample,t.ppq))
         {const auto at=lane.getX()+static_cast<float>((tick.samplePosition-a)/(b-a))*lane.getWidth();
             g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),27,48,17,juce::Justification::left);
