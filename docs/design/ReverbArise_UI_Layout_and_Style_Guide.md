@@ -1,6 +1,12 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.10 · **Production standards revision:** 10 · **Purpose:** Production UI authority and design reference. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
+**Version:** 1.11 · **Production standards revision:** 11 · **Purpose:** Production UI authority and design reference. Revision 11 adopts the owner-approved #107 control inventory and shared contracts after merged #80's revisions 8–10. This documentation revision changes no production token or native control appearance.
+
+See the [control inventory and family roadmap](ui-control-inventory.md),
+[shared contracts](../development/ui-control-contracts.md) and
+[approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
+Legacy debt remains explicit; family migrations retain scoped native approval.
+
 
 ## Responsive composition — issue #58
 
@@ -160,6 +166,7 @@ production standards revision; this revision does not change plugin/state versio
 | 9 | #80 integrated-review correction requested 2026-11-06 | Folder/import and Settings glyph buttons reuse ActionButton's surface: stable off-white content and aqua hover/pressed outline, existing contained focus/disabled treatment. No new token; wider legacy button-state audit remains #107. Corrected native interaction approved 2026-11-06; evidence is separately recorded |
 
 | 10 | #80 owner identified idle IR-to-Level gap on 2026-11-06; revised native spacing approved | Empty IR feedback collapses; present feedback uses one or two helper lines and adjacent fields reflow using existing spacing. Reset remains fixed. No new token |
+| 11 | #107 audit and shared contracts explicitly approved 2026-11-06 | Full consumer ownership/state inventory, C1–C8 contracts and separate P1–P8 delivery packets, reconciled against merged #80. Documentation/governance only; all numerical roles and native approvals unchanged; #108 and #8 remain independent |
 
 ### Stable Perform transport information
 

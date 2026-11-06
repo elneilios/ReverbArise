@@ -19,6 +19,15 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 11 adopts the owner-approved
+[control inventory and family roadmap](../design/ui-control-inventory.md) and
+[shared control contracts](ui-control-contracts.md), reconciled with merged #80.
+Use them to identify actual ownership, applicable state/interaction matrices,
+field help/validation composition and bounded child delivery. This is contract
+governance, not certification of legacy widgets or approval of new native variants.
+[Audit evidence](../validation/2026-11-06-issue-107-control-audit.md) records scope
+and validation; #108 Level and #8 recovery/engine work remain independent.
+
 `ActionButton::paintSurface` owns the common command-button surface for text and
 glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
 neutral surface, stable off-white content, aqua hover/pressed outline, contained
@@ -88,7 +97,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 10; scoped knob focus review below). Its responsive composition section
+numerical authority (production standards revision 11; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
