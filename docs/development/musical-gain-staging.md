@@ -5,6 +5,15 @@ balance. Swell **Level at 0 dB** means that calibrated starting point. Level
 is adjustable from -60 to +12 dB. Reset wet shape returns Level to 0 dB and
 normal timing/fade defaults without accumulating gain or recalibrating edits.
 
+Level's durable domain is finite -60 to +12 dB, including fractional saved values
+that are not multiples of the editor's 1 dB coarse / 0.1 dB fine steps. The
+semantic constants live with `Shape`; a dial's display/gesture range is separate
+and must never constrain loading or rewrite actual dB values. Issue #108's
+focused -12 to +12 dB dial remains a native review candidate until owner approval.
+Legacy/Musical and frozen values retain their calibration and raw assets; no
+state-schema conversion is needed, and the previous UI can read the same values.
+Level is non-parameter plugin state, without a normalized host automation mapping.
+
 Calibration compares the strongest 20 ms RMS window in the local dry attack
 with the strongest equivalent window in default shaped wet, then adds the
 approved +6 dB target. The dry reference stops at 100 ms, source end or next

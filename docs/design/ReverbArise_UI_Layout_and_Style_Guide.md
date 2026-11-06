@@ -4,6 +4,12 @@
 
 ## Responsive composition — issue #58
 
+Pending revision 11 candidate: issue #108 focuses Level's dial sweep while keeping
+extended exact entry. Existing tokens and control geometry are reused. This is
+opt-in native review only; accepted production standards remain revision 10
+until scoped owner approval. See the UI development standards for its binding
+and accessibility contract and native test/review commands.
+
 This section takes precedence over the older fixed-size Learn/header values
 below for the main editor. The owner approved Option A revision 4, its interim
 native composition and the combined #51/#68/#93 layout. See the

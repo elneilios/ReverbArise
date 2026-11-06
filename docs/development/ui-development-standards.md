@@ -19,6 +19,16 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Issue #108 candidate (pending standards revision 11): the existing `KnobValue`
+family can accept explicit absolute numeric accessibility intent via `onAbsolute`;
+other consumers retain their current delta path. The focused Level binding keeps
+its [-60,+12] exact/accessible domain separate from its [-12,+12] dial sweep and
+pins extended relative edits to their actual initial value. Actual numeric text
+and full-range help remain truthful at the saturated lower indicator. No new
+visual token or variant is introduced. `--test-level` checks the candidate and
+`--review-level` launches it; production mapping remains unchanged until the
+owner approves this revised family's native look and interaction feel.
+
 `ActionButton::paintSurface` owns the common command-button surface for text and
 glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
 neutral surface, stable off-white content, aqua hover/pressed outline, contained

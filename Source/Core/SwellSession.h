@@ -29,6 +29,9 @@ inline bool isEnergyRevision(const juce::String& revision) noexcept
 inline constexpr double candidateRmsSeconds=.020,candidateRmsHopSeconds=.001;
 inline constexpr float candidateWetCeilingDb=-1.0f,candidateMatchFloorDb=-60.0f,candidateMaximumBoostDb=24.0f;
 inline constexpr double candidateAttackSeconds=.100;
+// Durable Level domain. The editor's focused dial sweep is a separate policy.
+inline constexpr float minimumSwellLevelDb=-60.0f,maximumSwellLevelDb=12.0f,defaultSwellLevelDb=0.0f;
+inline constexpr double swellLevelStepDb=1.0,swellLevelFineStepDb=.1;
 struct ImportedIR
 {
     Asset asset;
@@ -40,7 +43,7 @@ struct Shape
     bool automaticStart = true;
     int64_t startOffset = 0, endOffset = 1, fadeIn = 0, fadeOut = 0;
     Curve inCurve = Curve::linear, outCurve = Curve::linear;
-    float gainDb = 0;
+    float gainDb = defaultSwellLevelDb;
     double inTension = 0, outTension = 0;
 };
 struct GainCalibration

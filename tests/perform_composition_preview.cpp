@@ -224,6 +224,7 @@ public:
     void verifyEditorBindings();
     void verifyFit();
     void verifyKnobs();
+    void verifyFocusedLevel();
     void verifyKnobResets();
     void verifyAudition();
     void verifyAuditionStrip();
@@ -376,6 +377,7 @@ private:
 #include "PerformEditorBindingCases.h"
 #include "PerformFitCases.h"
 #include "PerformKnobCases.h"
+#include "FocusedLevelCases.h"
 #include "PerformKnobResetCases.h"
 #include "PerformAuditionCases.h"
 #include "PerformAuditionStripCases.h"
@@ -404,20 +406,29 @@ private:juce::ComboBox scenes,sizes;juce::Label note;
 class IntegratedReview final:public juce::Component
 {
 public:
-    explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false,bool selectionReview=false,bool compact=false,bool irReview=false):fixture(std::move(scope))
+    explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false,bool selectionReview=false,bool compact=false,bool irReview=false,bool levelReview=false):fixture(std::move(scope))
     {
         editor=fixture->composition.productionEditor();addAndMakeVisible(*editor);
+        if(levelReview)editor->enableFocusedLevelReview();
         if(compact)editor->enableResponsiveReview();
-        if(irReview){require<controls::SegmentedSelector>(*editor,"learnSections").onRequest(2);require<controls::SegmentedSelector>(*editor,"inspectorSections").onRequest(3);}
+        if(irReview || levelReview){require<controls::SegmentedSelector>(*editor,"learnSections").onRequest(2);require<controls::SegmentedSelector>(*editor,"inspectorSections").onRequest(3);}
         addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);
         scenes.addItemList({"Sparse / selected","Empty swells","Dense / long labels"},1);scenes.setSelectedId(1,juce::dontSendNotification);
         scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
+        if(levelReview)
+        {
+            scenes.clear();scenes.addItemList({"Level -12 dB","Level 0 dB","Level +12 dB","Extended -30 dB","Extended -60 dB"},1);
+            scenes.setSelectedId(2,juce::dontSendNotification);
+            scenes.onChange=[this]{const std::array<float,5> values{-12,0,12,-30,-60};auto& cell=require<KnobValue>(*editor,"swellLevelCell");
+                cell.valueField().setText(juce::String(values[static_cast<size_t>(scenes.getSelectedId()-1)]),false);cell.valueField().onReturnKey();};
+        }
         if(compact)sizes.addItemList({"900 x 600","1000 x 700","1100 x 850","1400 x 900"},1);
         else sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);
         sizes.setSelectedId(1,juce::dontSendNotification);
         sizes.onChange=[this,compact]{const std::array<juce::Point<int>,4> dimensions=compact?std::array<juce::Point<int>,4>{{{900,600},{1000,700},{1100,850},{1400,900}}}:std::array<juce::Point<int>,4>{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];if(compact){editor->setPresentationSize(size.x,size.y);setSize(editor->getWidth(),editor->getHeight()+44);}else setSize(size.x,size.y+44);};
         applyTextRole(note,TextRole::helper);note.setText(irReview?"#80 | Shared IR in Learn / Perform Sound | no audio device":compact?"#58 combined #51 / #68 / #73 / #93 | no audio device":selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(compact?900:1100,compact?644:894);
         if(selectionReview){auto& zoom=require<controls::TimelineZoomControls>(*editor,"performZoom");zoom.beforeInvocation();zoom.onZoomFraction(.55);}
+        if(levelReview)note.setText("#108 | Focused dial / extended entry | native control review",juce::dontSendNotification);
     }
     void resized()override
     {
@@ -457,15 +468,16 @@ int main(int argc,char** argv)
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
         if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}
-        if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || command=="--review-ir-integrated")
+        if(command=="--test-level"){content->composition.verifyFocusedLevel();std::cout<<"Focused Level endpoints, extended persistence, absolute accessibility and stale-binding checks passed.\n";return;}
+        if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-level")
         {
             class Window final:public juce::DocumentWindow
             {
-            public:explicit Window(std::unique_ptr<Review> scope,bool slim,bool selection,bool compact,bool irReview):DocumentWindow(irReview?"Issue #80 - Shared IR integrated review":compact?"Issue #58 - Compact responsive UI checkpoint":selection?"Issue #93 - Swell selection navigation":slim?"Issue #46 - Audition strip layout checkpoint":"Issue #46 - Integrated Perform review",background,closeButton)
-                {setUsingNativeTitleBar(true);auto* review=new IntegratedReview(std::move(scope),slim,selection,compact,irReview);setContentOwned(review,true);setResizable(true,false);setResizeLimits(compact?900:1100,compact?644:894,2000,1444);centreWithSize(compact?900:1100,compact?644:924);if(compact)review->verifyCompactBaseline();setVisible(true);}
+            public:explicit Window(std::unique_ptr<Review> scope,bool slim,bool selection,bool compact,bool irReview,bool levelReview):DocumentWindow(levelReview?"Issue #108 - Focused Level review":irReview?"Issue #80 - Shared IR integrated review":compact?"Issue #58 - Compact responsive UI checkpoint":selection?"Issue #93 - Swell selection navigation":slim?"Issue #46 - Audition strip layout checkpoint":"Issue #46 - Integrated Perform review",background,closeButton)
+                {setUsingNativeTitleBar(true);auto* review=new IntegratedReview(std::move(scope),slim,selection,compact,irReview,levelReview);setContentOwned(review,true);setResizable(true,false);setResizeLimits(compact?900:1100,compact?644:894,2000,1444);centreWithSize(compact?900:1100,compact?644:924);if(compact)review->verifyCompactBaseline();setVisible(true);}
                 void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
             };
-            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated",command=="--review-ir-integrated");juce::MessageManager::getInstance()->runDispatchLoop();return;
+            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-level",command=="--review-ir-integrated",command=="--review-level");juce::MessageManager::getInstance()->runDispatchLoop();return;
         }
         if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}
         if(command=="--test-gestures"){content->composition.verifyGestures();std::cout<<"Perform grid/translation/modifier/stale-owner/source checks passed.\n";return;}
