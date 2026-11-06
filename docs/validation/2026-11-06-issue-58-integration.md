@@ -4,6 +4,14 @@ Worktree: `6b94/k7ma-preverb`, branch `codex/58-compact-responsive-ui`.
 Tested source: `807fa1b` plus this record's scale/integration working-tree patch.
 This record continues the [5 November evidence](2026-11-05-issue-58-compact-ui.md).
 
+**Latest integration:** #73 PR #100 merged as `80a12f0` during closeout. #58 was
+rebased onto that accepted main. The ruler conflict retains #73's `gridTiming()`
+authority and #58's component-aware responsive typography/caption clearance.
+The other conflict retained both required include sets. Accepted live/offline
+clock, Snap inspector/canvas bindings and Copy Diagnostics are preserved.
+The full Release gate is being repeated for this combined baseline. Earlier
+results below remain evidence for their stated source, not a post-#73 claim.
+
 ## Accepted upstream baseline
 
 Rebased #58 onto `6b2ae10`, the accepted #51 PR #92 merge. This also includes
