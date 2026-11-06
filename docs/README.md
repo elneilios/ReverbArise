@@ -12,6 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #8 fresh-profile validation](validation/2026-11-06-issue-8-fresh-profile.md) — passing destination-only restore in a separate Windows account, exact metadata/audio and zero generation/recapture work.
 - [Issue #8 Storage polish and recovery candidate](validation/2026-11-06-issue-8-storage-polish-recovery.md) — retained scans, pinned actions, native recovery tests and explicit remaining profile/rollout gates.
 - [Issue #8 FL Studio Storage smoke](validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) — successful installation retry, Backup/Save As/project-copy/reopen/Locate/Restore results and explicit same-profile/default-IR limits.
 
