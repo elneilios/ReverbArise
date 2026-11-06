@@ -62,6 +62,7 @@ add_library(preverb_capture STATIC
     Source/Capture/ScopedRecapture.cpp
 )
 target_include_directories(preverb_capture PUBLIC Source)
+target_compile_definitions(preverb_capture PUBLIC PREVERB_COMPATIBILITY_TEST=$<BOOL:${PREVERB_COMPATIBILITY_TEST}>)
 target_link_libraries(preverb_capture PUBLIC juce::juce_core juce::juce_audio_formats bcrypt)
 
 add_library(preverb_playback STATIC

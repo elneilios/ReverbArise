@@ -186,7 +186,12 @@ void CaptureWorker::updateSnapshot()
     committedRate.store(current.manifest.ranges.empty() ? 0 : current.manifest.sampleRate);
     if (! current.manifest.ranges.empty() && rate > 0
         && std::abs(current.manifest.sampleRate - rate) > 0.001)
+    {
+#if PREVERB_COMPATIBILITY_TEST
+        if(!rateStale){diagnosticLatchedStored=current.manifest.sampleRate;diagnosticLatchedHost=rate;diagnosticLatchedAt=juce::Time::getMillisecondCounterHiRes();}
+#endif
         rateStale = true;
+    }
     mappingAllowed.store(! loading.load() && ! restoreRequested.load() && ! clearRequested.load()
                          && ! rateStale && (! current.unavailable || recoveryCaptureArmed.load()),
                          std::memory_order_release);
@@ -200,6 +205,10 @@ void CaptureWorker::updateSnapshot()
         published.status=published.failure && published.failure.event.pass==workflowState->snapshot().pass
             ?captureFailureFeedback(published.failure):"Capture pass rejected; failure details unavailable. Stop and retry.";
     if (rateStale) published.status = "Stale: host sample rate changed; mapping paused. Clear and recapture.";
+#if PREVERB_COMPATIBILITY_TEST
+    publishedRates={current.manifest.sampleRate,rate,!current.manifest.ranges.empty(),rateStale,canMap(),false,rateRechecks,rateRecheckResult};
+    publishedRates.latchedStored=diagnosticLatchedStored;publishedRates.latchedHost=diagnosticLatchedHost;publishedRates.latchedAt=diagnosticLatchedAt;
+#endif
 }
 
 void CaptureWorker::run()
@@ -211,6 +220,25 @@ void CaptureWorker::run()
         if(workerHold.load()){workerHeld.store(true,std::memory_order_release);wait(2);continue;}
         workerHeld.store(false,std::memory_order_release);
         if(refreshAdmission.exchange(false))updateSnapshot();
+#if PREVERB_COMPATIBILITY_TEST
+        if(rateRecheckRequested.exchange(false))
+        {
+            const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
+            const auto rate=hostRate.load();const auto& source=session.snapshot();
+            ++rateRechecks;
+            if(!workflowState || !diagnosticStopped.load() || flow.mode!=workflow::Mode::capture || flow.locked() || isLoading())
+                rateRecheckResult=RateRecheck::stoppedRequired;
+            else if(!std::isfinite(rate) || rate<=0 || (!source.manifest.ranges.empty() && (!std::isfinite(source.manifest.sampleRate) || source.manifest.sampleRate<=0)))
+                rateRecheckResult=RateRecheck::invalidRate;
+            else if(source.unavailable)rateRecheckResult=RateRecheck::unavailable;
+            else if(!source.manifest.ranges.empty() && std::abs(source.manifest.sampleRate-rate)>.001)
+                rateRecheckResult=RateRecheck::mismatch;
+            else {rateStale=false;rateRecheckResult=RateRecheck::recovered;}
+            // Only recompute admission; never touch source, revision, waveform,
+            // saved state or queued pass ownership. Every capture guard remains.
+            updateSnapshot();
+        }
+#endif
         if (restoreRequested.exchange(false, std::memory_order_acq_rel))
         {
             Restore command;

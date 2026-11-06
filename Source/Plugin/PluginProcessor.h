@@ -49,6 +49,8 @@ public:
     HostPositionDiagnostics getHostPositionDiagnostics() const noexcept;
 #if PREVERB_COMPATIBILITY_TEST
     compatibility::Telemetry compatibilityTelemetry;
+    compatibility::RateHistory compatibilityRates;
+    bool recheckCompatibilityRate();
     juce::String compatibilityReport(bool detailed=true);
     void clearCompatibilityReport(){compatibilityTelemetry.clear();}
 #endif

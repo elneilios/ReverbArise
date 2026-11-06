@@ -20,7 +20,7 @@ juce::String phase(workflow::Snapshot s)
 juce::String observationText(const compatibility::Observation& o)
 {
     const auto& t=o.timing;juce::String s;
-    s<<juce::String(o.at,0)<<" ms | "<<compatibility::text(o.gate)
+    s<<juce::String(static_cast<juce::int64>(o.at))<<" ms | "<<compatibility::text(o.gate)
         <<" | "<<(o.nonzero?"input present":"silent input")
         <<" L="<<juce::String(o.left,6)<<" R="<<juce::String(o.right,6)
         <<" | playback "<<(t.position?(t.playing?"running":"stopped"):"unknown")
@@ -38,10 +38,17 @@ juce::String observationText(const compatibility::Observation& o)
     return s;
 }
 }
+bool PreverbAudioProcessor::recheckCompatibilityRate()
+{
+    const auto d=getHostPositionDiagnostics();const auto flow=getWorkflowSnapshot();
+    if(!d.positionAvailable || d.isPlaying || flow.mode!=workflow::Mode::capture || flow.locked() || captureWorker.isLoading())return false;
+    captureWorker.requestDiagnosticRateRecheck();return true;
+}
 juce::String PreverbAudioProcessor::compatibilityReport(bool detailed)
 {
     auto& model=compatibilityTelemetry;model.drain();const auto& o=model.latest;
     const auto flow=getWorkflowSnapshot();const auto capture=getCaptureSnapshot();
+    const auto rates=captureWorker.diagnosticRates();
     const auto age=model.hasLatest?juce::Time::getMillisecondCounterHiRes()-o.at:0;
     juce::String s="ReverbArise Compatibility Test - experimental private diagnostic\n";
     s<<"Audio: "<<(!model.hasLatest?"No audio callbacks observed":age>1500?"No recent audio callbacks (host may be idle)":"Audio callbacks arriving")
@@ -52,9 +59,20 @@ juce::String PreverbAudioProcessor::compatibilityReport(bool detailed)
         <<"\nReported tempo: "<<(model.hasLatest && o.timing.tempo?juce::String(o.timing.bpm,3)+" BPM - compare with your intended tempo; no correction applied":"unavailable")
         <<"\nLast callback start gate: "<<(model.hasLatest?compatibility::text(o.gate):"unknown until audio callbacks arrive")
         <<"\n"<<phase(flow)<<" | committed regions: "<<number(capture.manifest.ranges.size())
-        <<"\nCapture worker: "<<capture.status
+        <<"\nCapture worker: "<<(rates.stale?juce::String("Capture paused to protect saved source; sample-rate check required"):capture.status)
         <<"\n"<<(capture.failure?juce::String("Last rejected pass (historical): ")+captureFailureReasonText(capture.failure.event.reason):juce::String("No recorded capture failure"))
         <<"\nOpen plugin, start patch/playback, attempt capture, stop, then Copy report.\n";
+    s<<"Capture rate: "<<(rates.loading?"loading saved state; rate pending":rates.hasSource?juce::String(rates.stored,3)+" Hz saved":"no stored capture")
+        <<" | host "<<juce::String(rates.current,3)<<" Hz | stale-rate latch: "<<(rates.stale?"set":"not set")<<"\n";
+    if(rates.stale)s<<"Stop transport, then Recheck capture rate. This keeps all captured audio. A genuine rate mismatch stays blocked.\n";
+    using Recheck=CaptureWorker::RateRecheck;
+    const char* result="Not requested";
+    switch(rates.result){case Recheck::none:break;case Recheck::stoppedRequired:result="Stop transport and wait for idle Learn mode, then retry";break;
+        case Recheck::invalidRate:result="Rate unavailable or invalid; capture remains protected";break;
+        case Recheck::mismatch:result="Saved and host rates differ; source retained. Test a fresh empty instance at the intended rate";break;
+        case Recheck::unavailable:result="Saved source is unavailable; recover its assets before rechecking. Source retained";break;
+        case Recheck::recovered:result="Rates matched at recheck; stale-rate latch released. Source retained. Stop then play to attempt capture; other guards still apply";break;}
+    s<<(rates.pending?"Rate recheck pending. Last result: ":"Last completed rate recheck: ")<<result<<"\n";
 #if PREVERB_COMPATIBILITY_METER_4_4
     s<<"EXPERIMENT: fixed 4/4 supplied ONLY when host time signature is unavailable. Host meter takes precedence.\n";
     if(model.hasLatest)s<<"Raw host time signature: "<<(!o.timing.position?"unknown (host position unavailable; no fallback)":o.rawMeterAvailable?juce::String(o.rawNumerator)+"/"+juce::String(o.rawDenominator):"unavailable; using experimental 4/4")<<"\n";
@@ -86,10 +104,13 @@ juce::String PreverbAudioProcessor::compatibilityReport(bool detailed)
         <<"\nJUCE exposes playback/looping as booleans when PositionInfo exists; individual boolean-field availability is not exposed. Seconds are observed only, never used for capture admission."
         <<"\nClear resets diagnostic history only; lifetime counters and accepted source are retained.\n";
     if(model.hasLatest)s<<"\nLatest observation:\n"<<observationText(o)<<"\n";
+    s<<"\nRate rechecks completed="<<number(rates.checks)<<"; mapping currently "<<(rates.allowed?"permitted":"blocked")<<"\n"<<compatibilityRates.report();
+    s<<"Raw capture-worker status: "<<capture.status<<"\n";
+    if(rates.latchedAt>0)s<<"Last observed mismatch that set the stale-rate latch (historical): saved "<<juce::String(rates.latchedStored,3)<<" Hz / host "<<juce::String(rates.latchedHost,3)<<" Hz at "<<juce::String(static_cast<juce::int64>(rates.latchedAt))<<" ms\n";
     if(capture.failure){const auto& f=capture.failure;s<<"\nHistorical worker rejection: "<<captureFailureReasonText(f.event.reason)<<" pass="<<number(f.event.pass)<<" queued="<<number(f.event.queued)<<" dropped="<<number(f.finalDropped)<<"\n";}
     s<<"\nBounded activity history:\n";for(const auto& event:model.history)s<<observationText(event)<<"\n";
     s<<"\nWorker confirmations (retained even when host callbacks stop):\n";
-    for(const auto& e:model.settlementHistory)s<<juce::String(e.at,0)<<" ms | pass "<<number(e.pass)<<" | "<<(e.useful?"capture completed successfully":"completed without new useful source")<<"\n";
+    for(const auto& e:model.settlementHistory)s<<juce::String(static_cast<juce::int64>(e.at))<<" ms | pass "<<number(e.pass)<<" | "<<(e.useful?"capture completed successfully":"completed without new useful source")<<"\n";
     s<<"Older confirmations truncated="<<number(model.settlementTruncated)<<"; omitted="<<number(model.settlementOmitted.load()-model.settlementOmittedBaseline)<<"\n";
     return s;
 }

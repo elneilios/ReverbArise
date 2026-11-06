@@ -3,6 +3,45 @@
 Issue #111 adds a diagnostic companion for Stuart's VCV Host-FX investigation;
 #60 consumes the same observations for Audacity. Neither host is claimed fixed.
 
+## Rate-recheck diagnostic candidate
+
+Stuart's test of source `9a8b9d073e33ea03dac059dc2cdcfa510c3ecd8f` confirmed
+incoming stereo signal, effective experimental 4/4 and a pre-start mapping block.
+The worker reported a stale sample rate with 13 existing committed regions. The
+video also showed 31.8 seconds of existing capture. That evidence establishes
+the admission block but does not identify the stored rate or the earlier rate
+transition. Separate observations show fluctuating tempo and repeated sample
+positions while PPQ advances; those are potential subsequent recording failures,
+not the cause of that blocked start.
+
+The next diagnostic candidate adds **Recheck capture rate**. The request originates
+on the message thread and is processed by the capture worker. Both sides require
+known stopped transport and idle Learn mode; the worker independently rejects busy,
+loading, unavailable-source, invalid-rate and genuinely mismatched-rate states.
+Only a matching saved/current rate (or no existing source) permits releasing the
+stale latch and recomputing admission. Source manifests, revision, pass identity,
+saved state and audio assets are untouched. No resampling, automatic clearing,
+timing tolerance changes or automatic recording restart are introduced. Stop then
+play supplies the existing required admission edge. The last recheck result is
+labelled historical, independently of current rates and mapping admission.
+
+The report exposes saved versus current rate, stale-latch state, current mapping
+permission, recheck outcome/count and a bounded history of the last 16 host
+`prepareToPlay` calls (rate, maximum block size and monotonic time). Atomic payload
+fields and bounded retry reads avoid data races. This instance-lifetime setup
+evidence survives Clear report so the startup sequence is not lost. Audio callbacks
+only publish known stopped/running state through a lock-free boolean. Worker
+recheck code, diagnostic state and prepare history compile out of ordinary builds.
+
+Build this private candidate with `scripts/build.ps1 -Configuration Release
+-CompatibilityMeterFourFour -Test -ReleaseTag v0.1.0 -Candidate
+compatibility.111.rate-recheck.2` (one command). The existing isolated diagnostic
+packager defaults to this candidate and requires matching configured identity and
+authored notes. It reuses release-note validation/rendering, records Stuart's exact
+previous shared ZIP/full source SHA, and inventories both HTML and JSON notes.
+Standard release gates remain unchanged; the explicit #111 waivers and private
+delivery authorisation continue to apply. Existing outputs are never modified.
+
 ## Explicit 4/4 experiment requested after diagnostic implementation
 
 The owner subsequently requested hard-coded 4/4 for this private build. Build

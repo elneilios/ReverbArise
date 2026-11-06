@@ -31,6 +31,14 @@ public:
     void holdWorkerForTesting(bool hold) noexcept {workerHold.store(hold);}
     bool workerHeldForTesting() const noexcept {return workerHeld.load(std::memory_order_acquire);}
     bool canMap() const noexcept { return mappingAllowed.load(std::memory_order_acquire); }
+#if PREVERB_COMPATIBILITY_TEST
+    enum class RateRecheck { none, stoppedRequired, invalidRate, mismatch, unavailable, recovered };
+    struct RateDiagnostics {double stored=0,current=0;bool hasSource=false,stale=false,allowed=false,pending=false;uint64_t checks=0;RateRecheck result=RateRecheck::none;bool loading=false;double latchedStored=0,latchedHost=0,latchedAt=0;};
+    RateDiagnostics diagnosticRates()const
+    {const juce::ScopedLock guard(snapshotLock);auto r=publishedRates;r.current=hostRate.load();r.allowed=canMap();r.pending=rateRecheckRequested.load();r.loading=isLoading();return r;}
+    void diagnosticTransportStopped(bool stopped)noexcept {diagnosticStopped.store(stopped);}
+    void requestDiagnosticRateRecheck(){rateRecheckRequested.store(true);notify();}
+#endif
     bool hasUsefulSource() const noexcept {return usefulSource.load(std::memory_order_acquire);}
     void setChangeTolerance(double tolerance) noexcept {changeTolerance.store(tolerance);}
     bool isLoading() const noexcept { return loading.load() || restoreRequested.load() || clearRequested.load(); }
@@ -108,6 +116,13 @@ private:
     int64_t pendingStart = 0;
     double pendingRate = 0;
     bool pendingSilence = false, rateStale = false;
+#if PREVERB_COMPATIBILITY_TEST
+    std::atomic<bool> diagnosticStopped{false},rateRecheckRequested{false};
+    RateDiagnostics publishedRates;
+    uint64_t rateRechecks=0;
+    RateRecheck rateRecheckResult=RateRecheck::none;
+    double diagnosticLatchedStored=0,diagnosticLatchedHost=0,diagnosticLatchedAt=0;
+#endif
     uint64_t pendingRecaptureToken = 0;
     m3::ScopedRecapture recapture;
     std::function<void(int64_t,int64_t)> recaptureHandler;

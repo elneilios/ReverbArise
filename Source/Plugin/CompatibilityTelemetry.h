@@ -8,6 +8,39 @@
 
 namespace compatibility
 {
+// Serialized host prepare writer, bounded message-thread reads. Every payload
+// field is atomic: no racy plain-struct seqlock and no callback allocation.
+class RateHistory
+{
+public:
+    static_assert(std::atomic<double>::is_always_lock_free);
+    static constexpr size_t capacity=16;
+    void prepared(double rate,int frames)noexcept
+    {
+        const auto n=count.load(std::memory_order_relaxed);auto& slot=slots[n%capacity];
+        slot.sequence.fetch_add(1,std::memory_order_acq_rel);
+        slot.rate.store(rate,std::memory_order_relaxed);slot.frames.store(frames,std::memory_order_relaxed);
+        slot.at.store(juce::Time::getMillisecondCounterHiRes(),std::memory_order_relaxed);
+        slot.ordinal.store(n+1,std::memory_order_relaxed);slot.sequence.fetch_add(1,std::memory_order_release);
+        count.store(n+1,std::memory_order_release);
+    }
+    juce::String report()const
+    {
+        const auto n=count.load(std::memory_order_acquire);juce::String s;
+        s<<"Host preparation history (instance lifetime): "<<juce::String(static_cast<juce::int64>(n))
+            <<" calls; older entries omitted="<<juce::String(static_cast<juce::int64>(n>capacity?n-capacity:0))<<"\n";
+        for(auto i=n>capacity?n-capacity:0;i<n;++i){const auto& slot=slots[i%capacity];bool copied=false;
+            for(int attempt=0;attempt<8;++attempt){const auto before=slot.sequence.load(std::memory_order_acquire);if(before&1)continue;
+                const auto rate=slot.rate.load();const auto frames=slot.frames.load();const auto at=slot.at.load();const auto ordinal=slot.ordinal.load();
+                if(slot.sequence.load(std::memory_order_acquire)!=before || ordinal!=i+1)continue;
+                s<<"prepare #"<<juce::String(static_cast<juce::int64>(ordinal))<<": "<<juce::String(rate,3)<<" Hz, max block "<<frames<<", "<<juce::String(static_cast<juce::int64>(at))<<" ms\n";copied=true;break;}
+            if(!copied)s<<"prepare observation changed during read; unavailable\n";
+        }return s;
+    }
+private:
+    struct Slot {std::atomic<uint64_t> sequence{0},ordinal{0};std::atomic<double> rate{0},at{0};std::atomic<int> frames{0};};
+    std::array<Slot,capacity> slots{};std::atomic<uint64_t> count{0};
+};
 enum class Gate { ready, offline, mode, locked, position, samples, ppq, tempo, meter, mapping, edge, admission };
 inline const char* text(Gate g)
 {

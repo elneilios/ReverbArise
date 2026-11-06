@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-compatibility.111.rate-recheck.2",
+  "previousRelease": "ReverbArise-PRIVATE-compatibility-111-EXPERIMENTAL-4-4-9a8b9d073e33-win-x64.zip",
+  "previousGitSha": "9a8b9d073e33ea03dac059dc2cdcfa510c3ecd8f",
+  "changes": [
+    "The Compatibility Test window now shows the saved capture sample rate, current host rate and whether an earlier rate change is still blocking capture.",
+    "Copy report includes the last sixteen host audio setup calls, including sample rates and requested maximum block sizes. This setup history is retained for the plugin instance even after Clear report."
+  ],
+  "fixes": [
+    "Recheck capture rate can release a stale-rate block after the host returns to the saved capture's rate. Transport must be stopped in idle Learn mode. The action keeps captured audio and never resamples or clears it.",
+    "A genuine sample-rate mismatch stays blocked and points you towards a fresh empty test instance instead of discarding existing capture."
+  ],
+  "upgradeSteps": [
+    "Close the DAW and keep the previous entire ReverbArise.vst3 bundle outside plugin scan folders for rollback. Install the complete new bundle in the system Common Files/VST3 folder.",
+    "Preserve your VCV patch. If the companion reports stale capture, stop transport, click Recheck capture rate and read the result. If rates match, restart transport and attempt capture, then stop and Copy report.",
+    "If saved and host rates differ, preserve that instance and test a fresh empty instance with VCV set to 48 kHz before loading the plugin. Clear report does not clear captured audio or repair a rate mismatch."
+  ],
+  "knownLimitations": [
+    "This remains a private unsigned Windows experimental build. It retains the explicit 4/4 assumption only when the host supplies no time signature; a supplied host meter takes precedence.",
+    "The existing sample/PPQ consistency and fixed-tempo guards remain active. This build does not correct VCV clock jitter, tempo changes or repeated sample positions, and may still reject capture for those reasons.",
+    "The previously shared build was tested in VCV and confirmed incoming audio plus a stale-rate block. This new binary has native simulated-host coverage, not VCV, Audacity or FL Studio acceptance; alternate DPI and clean-machine behaviour remain untested.",
+    "Compare the approximately 280 BPM reported by VCV with your intended tempo. No tempo correction or fabricated song clock is applied."
+  ]
+}

@@ -7,6 +7,48 @@ struct Host final:juce::AudioPlayHead
     juce::Optional<PositionInfo> position;
     juce::Optional<PositionInfo> getPosition()const override{return position;}
 };
+static void rateRecheckCases()
+{
+    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);Host host;
+    p->setPlayHead(&host);p->prepareToPlay(48000,128);p->swellEngine().setLearningAutomatic(false);
+    REQUIRE(!p->recheckCompatibilityRate()); // No transport evidence yet.
+    juce::AudioPlayHead::PositionInfo info;info.setBpm(120);info.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    juce::AudioBuffer<float> audio(2,128);juce::MidiBuffer midi;
+    const auto process=[&](int64_t at,bool playing){info.setIsPlaying(playing);info.setTimeInSamples(at);info.setPpqPosition(double(at)/24000);host.position=info;
+        for(int c=0;c<2;++c)std::fill_n(audio.getWritePointer(c),128,.25f);
+        {AudioAllocationGuard guard;p->processBlock(audio,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);};
+    process(0,true);REQUIRE(!p->recheckCompatibilityRate());process(128,false);REQUIRE(p->flushCaptureForTesting());
+    const auto source=p->getCaptureSnapshot();const auto pass=p->getWorkflowSnapshot().pass;
+    juce::MemoryBlock stateBefore;p->getStateInformation(stateBefore);
+    REQUIRE(source.manifest.sampleRate==48000 && !source.manifest.ranges.empty());
+    p->prepareToPlay(44100,8192);process(128,false);REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(p->compatibilityReport().contains("48000.000 Hz saved | host 44100.000 Hz"));
+    REQUIRE(p->recheckCompatibilityRate());REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(p->compatibilityReport().contains("Saved and host rates differ"));
+    REQUIRE(p->compatibilityReport().contains("mapping currently blocked"));
+    p->prepareToPlay(48000,128);process(128,false);REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(p->compatibilityReport().contains("stale-rate latch: set"));
+    REQUIRE(p->recheckCompatibilityRate());REQUIRE(p->flushCaptureForTesting());
+    auto report=p->compatibilityReport();REQUIRE(report.contains("Rates matched at recheck; stale-rate latch released"));
+    REQUIRE(report.contains("mapping currently permitted"));REQUIRE(report.contains("44100.000 Hz, max block 8192"));
+    REQUIRE(report.contains("saved 48000.000 Hz / host 44100.000 Hz"));
+    REQUIRE(p->getCaptureSnapshot().reference==source.reference && p->getCaptureSnapshot().manifest.revision==source.manifest.revision);
+    REQUIRE(p->getWorkflowSnapshot().pass==pass && p->getWorkflowSnapshot().phase==workflow::Phase::idle);
+    juce::MemoryBlock stateAfter;p->getStateInformation(stateAfter);REQUIRE(stateBefore==stateAfter);
+    CaptureSession original(root.file);REQUIRE(original.restore(source.manifest.projectId,source.manifest.instanceId,source.reference,source.manifest.revision));
+    float left=0,right=0;REQUIRE(original.readSample(0,left,right) && left==.25f && right==.25f);
+    process(256,true);REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::recording);
+    process(384,false);REQUIRE(p->flushCaptureForTesting());REQUIRE(p->getWorkflowSnapshot().result==workflow::Result::accepted);
+    p->clearCompatibilityReport();REQUIRE(p->compatibilityReport().contains("prepare #2: 44100.000")); // Preserve lifetime setup evidence.
+    compatibility::RateHistory bounded;for(int i=0;i<40;++i)bounded.prepared(48000+i,128);
+    REQUIRE(bounded.report().contains("40 calls; older entries omitted=24"));REQUIRE(!bounded.report().contains("prepare #1:"));
+    REQUIRE(bounded.report().contains("prepare #40:"));
+    compatibility::RateHistory concurrent;std::atomic<bool> done=false;bool reportsBounded=true;
+    std::thread writer([&]{for(int i=0;i<4000;++i)concurrent.prepared(48000+i,128);done.store(true);});
+    while(!done.load()){if(concurrent.report().length()>4096)reportsBounded=false;}
+    writer.join();REQUIRE(reportsBounded);REQUIRE(concurrent.report().contains("4000 calls; older entries omitted=3984"));
+    std::cout<<"Rate recheck: real mismatch stays blocked; returned matching rate releases latch; source/identity preserved; subsequent capture accepted; setup history bounded\n";
+}
 #if PREVERB_COMPATIBILITY_METER_4_4
 static void fixedMeterExperiment()
 {
@@ -23,9 +65,11 @@ static void fixedMeterExperiment()
     REQUIRE(p->flushCaptureForTesting());REQUIRE(p->getWorkflowSnapshot().result==workflow::Result::accepted);
     const auto committed=p->getCaptureSnapshot();REQUIRE(!committed.manifest.ranges.empty());
     REQUIRE(p->compatibilityReport().contains("raw host meter=unavailable"));
-    process(1000,1000.0*279.965/(48000*60),true);
-    process(1064,2,true); // Real sample/PPQ mapping now disagrees: other guard still rejects.
-    process(1128,2,false);REQUIRE(p->flushCaptureForTesting());
+    // Exact consecutive observations from Stuart's report: PPQ advances about
+    // 128 samples while the host sample position repeats. Keep this guard.
+    info.setBpm(280.100547);process(329095,31.994458,true);
+    process(329095,32.006907,true);
+    process(329223,32.019356,false);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().result==workflow::Result::failed);
     REQUIRE(p->getCaptureSnapshot().failure.event.reason==CaptureFailureReason::timingChanged);
     REQUIRE(p->getCaptureSnapshot().reference==committed.reference);
@@ -37,6 +81,7 @@ static void fixedMeterExperiment()
 #endif
 int main(int argc,char** argv){return runTest([&]{
     juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;
+    rateRecheckCases();
 #if PREVERB_COMPATIBILITY_METER_4_4
     fixedMeterExperiment();
 #endif
@@ -94,6 +139,7 @@ int main(int argc,char** argv){return runTest([&]{
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);
     juce::MessageManager::getInstance()->runDispatchLoopUntil(80);
     auto* window=editor->compatibilityWindowForTesting();REQUIRE(window && window->isVisible() && !window->isCurrentlyModal());
+    window->recheckRate();REQUIRE(window->feedbackText().contains("Recheck requested"));REQUIRE(processor->flushCaptureForTesting());
     editor->showCompatibility();REQUIRE(editor->compatibilityWindowForTesting()==window);
     window->copyReport();REQUIRE(window->feedbackText().contains("Report copied"));
     REQUIRE(juce::SystemClipboard::getTextFromClipboard()==processor->compatibilityReport());

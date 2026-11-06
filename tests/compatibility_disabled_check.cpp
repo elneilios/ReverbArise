@@ -5,6 +5,8 @@
 template<class T> concept HasTelemetry=requires(T& v){v.compatibilityTelemetry;v.compatibilityReport();};
 template<class T> concept HasCompanion=requires(T& v){v.showCompatibility();};
 template<class T> concept HasDiagnosticHeader=requires(T& v){v.onCompatibility;};
+template<class T> concept HasRateRecheck=requires(T& v){v.requestDiagnosticRateRecheck();v.diagnosticRates();};
 static_assert(!HasTelemetry<PreverbAudioProcessor>);
 static_assert(!HasCompanion<PreverbAudioProcessorEditor>);
 static_assert(!HasDiagnosticHeader<m3::ui::WorkflowHeader>);
+static_assert(!HasRateRecheck<CaptureWorker>);

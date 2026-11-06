@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([string] $Candidate = 'compatibility.111.rate-recheck.2')
 & {
     $ErrorActionPreference = 'Stop'
     $root = Split-Path $PSScriptRoot -Parent
@@ -23,6 +23,10 @@ param()
         $identity = Get-Content (Join-Path $binary 'build-information.json') -Raw | ConvertFrom-Json
         if ($identity.gitSha -cne $sha) { throw 'Build SHA differs from source; rebuild this commit' }
         $version = (Get-Content (Join-Path $binary 'product-identity.json') -Raw | ConvertFrom-Json).version
+        $releaseIdentity = "v$version-$Candidate"
+        $notes = Get-ReleaseNotes $root $releaseIdentity
+        if ($identity.buildIdentifier -cne $releaseIdentity) { throw 'Build candidate does not match diagnostic release notes; rebuild with matching ReleaseTag and Candidate' }
+        $variantLabel = $releaseIdentity + $(if ($meterExperiment) { '-EXPERIMENTAL-4-4' } else { '-diagnostic' })
         $null = Invoke-ReleaseNative $tools.CMake @("-DSOURCE_DIR=$root", "-DBINARY_DIR=$binary", '-DCONFIGURATION=Release', '-P', (Join-Path $root 'scripts/verify-version.cmake'))
         $bundle = Get-ReleaseBundle $binary $version
         $null = Invoke-ReleaseNative $tools.CTest @('--test-dir', $binary, '-C', 'Release', '--output-on-failure', '--no-tests=error', '-R', '^preverb_(compatibility_test|workflow_processor_test|capture_failure_test|ui_standards_check)$')
@@ -31,6 +35,12 @@ param()
         $null = New-Item -ItemType Directory -Path $destination
         $payload = Join-Path $destination 'payload'
         $null = New-Item -ItemType Directory -Path $payload
+        Write-ReleaseNotes $notes $payload $sha
+        # User-guide refresh remains explicitly waived for #111. Use an accurate
+        # local installation link in this private-only payload, before ZIP creation.
+        $notesHtml = Join-Path $payload 'Release-Notes.html'
+        (Get-Content $notesHtml -Raw).Replace('See User-Guide.html for installation and full instructions.', 'See README.txt for installation, rollback and the private test procedure.') | Set-Content $notesHtml -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $root "docs/development/release-notes/$releaseIdentity.json") -Destination (Join-Path $payload 'Release-Notes.json')
         $before = @(Get-ReleaseInventory $bundle)
         Copy-Item -LiteralPath $bundle -Destination $payload -Recurse
         $after = @(Get-ReleaseInventory (Join-Path $payload 'ReverbArise.vst3'))
@@ -48,7 +58,7 @@ param()
         if ($flac -notmatch '(?s)\A(/\*.*?\*/)') { throw 'Missing FLAC notice' }
         $matches[1] | Set-Content (Join-Path $notices 'FLAC-LICENSE.txt') -Encoding UTF8
         @"
-ReverbArise $version - PRIVATE EXPERIMENTAL COMPATIBILITY TEST #111
+ReverbArise $releaseIdentity - PRIVATE EXPERIMENTAL COMPATIBILITY TEST #111
 For Stuart. Windows x64 Release, unsigned. Not a public release.
 Source SHA: $sha
 Variant: $variant. Same plugin and saved-session identities.
@@ -69,14 +79,17 @@ Open the plugin, select Learn, start the patch/playback, attempt capture normall
 stop, then click Copy report and send the text to Neil. Close/reopen the companion
 using Compatibility report in the plugin header. Clear report resets only diagnostic
 history. No audio or private project paths are included in the report.
+If the companion reports stale-rate capture, stop transport and click Recheck
+capture rate. The worker releases the latch only when rates match; saved source
+is retained. A genuine mismatch stays blocked. Use a fresh empty instance at the
+intended rate for that case. Restart transport after a successful recheck.
 
 RELEASE NOTES
-Adds independent raw input measurements, exact pre-start gate observations,
-per-field host timing evidence, capture outcomes and bounded processor-instance
-history retained across editor reopen. The only optional timing-policy exception is
-the explicitly labelled missing-meter 4/4 experiment described above.
-Silence and absent callbacks are distinct; observed seconds never drive capture.
-Repeats are coalesced and history/queue omissions are disclosed.
+Read Release-Notes.html for changes since Stuart's previously shared 4/4 experiment
+at source 9a8b9d073e33ea03dac059dc2cdcfa510c3ecd8f. This build adds explicit, source-
+preserving rate recheck and saved/current/setup-rate evidence. Other capture guards
+and the existing optional missing-meter 4/4 experiment remain in place. No clock,
+sample/PPQ or tempo correction is introduced.
 
 VALIDATION / LIMITS
 Native MSVC Release build; focused compatibility, workflow processor, capture failure
@@ -89,7 +102,8 @@ remains #60. Do not distribute publicly. Third-party notices included in license
 and bundle Contents/Resources. No new redistribution rights are granted.
 "@ | Set-Content (Join-Path $payload 'README.txt') -Encoding UTF8
         $manifest = [ordered]@{
-            sourceSha=$sha; variant=$variant; configuration='Release'; target='windows-x64'; version=$version
+            sourceSha=$sha; releaseIdentity=$releaseIdentity; previousRelease=$notes.previousRelease; previousGitSha=$notes.previousGitSha
+            variant=$variant; configuration='Release'; target='windows-x64'; version=$version
             buildInformation=$identity; toolchain=(Get-ReleaseToolchain $tools.CMake $binary)
             trackedSourceClean=$true; untrackedFiles=(Invoke-ReleaseNative $tools.Git @('-C', $root, 'ls-files', '--others', '--exclude-standard'))
             validation='native Release build; focused compatibility/workflow/capture-failure/UI checks; PE/version/plugin identity; per-entry ZIP SHA256'

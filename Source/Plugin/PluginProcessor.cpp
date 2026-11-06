@@ -57,8 +57,14 @@ PreverbAudioProcessor::~PreverbAudioProcessor()
     cancelPendingUpdate();
 }
 
-void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
+void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int maximumBlockSize)
 {
+#if PREVERB_COMPATIBILITY_TEST
+    compatibilityRates.prepared(newSampleRate,maximumBlockSize);
+    captureWorker.diagnosticTransportStopped(false);
+#else
+    juce::ignoreUnused(maximumBlockSize);
+#endif
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
     sampleRate.store(newSampleRate, std::memory_order_relaxed);
     captureWorker.setHostRate(newSampleRate);
@@ -66,6 +72,9 @@ void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 
 void PreverbAudioProcessor::releaseResources()
 {
+#if PREVERB_COMPATIBILITY_TEST
+    captureWorker.diagnosticTransportStopped(false);
+#endif
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
@@ -89,6 +98,9 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     updateHostPositionDiagnostics(buffer.getNumSamples());
     awaitingRestoredPosition.store(false,std::memory_order_release);
     const auto diagnostics = getHostPositionDiagnostics();
+#if PREVERB_COMPATIBILITY_TEST
+    captureWorker.diagnosticTransportStopped(diagnostics.positionAvailable && !diagnostics.isPlaying);
+#endif
     const TransportTime transport{{diagnostics.positionAvailable && diagnostics.samplePositionAvailable
         && diagnostics.ppqPositionAvailable && diagnostics.tempoAvailable && diagnostics.meterAvailable,
         diagnostics.samplePosition,diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,
