@@ -91,7 +91,9 @@ bool publishSongExport(SongMix& mix,const juce::File& instance,ExportFile& outpu
         if(!writer->flush() || raw->failed || raw->file->getStatus().failed() || injected(fault,ExportFileStage::close,error)){error="Export WAV flush/close failed";return false;}writer.reset();
         ExportFile candidate;candidate.composition=plan->identity;candidate.rate=plan->timing.rate;candidate.origin=plan->origin;candidate.frames=plan->end-plan->origin;candidate.wet=plan->wet;
         auto percent=juce::String(static_cast<double>(plan->wet)*100,3);while(percent.endsWithChar('0'))percent=percent.dropLastCharacters(1);if(percent.endsWithChar('.'))percent=percent.dropLastCharacters(1);
-        candidate.path="exports/Swells-"+percent+"pct-wet-"+juce::Uuid().toString()+".wav";candidate.checksum=checksum(scratch.file,cancel);
+        candidate.dry=plan->dry;candidate.gainLaw=2;
+        const auto dryPercent=juce::String(static_cast<double>(plan->dry)*100,3);
+        candidate.path="exports/Swells-v2-"+dryPercent+"pct-dry-"+percent+"pct-wet-"+juce::Uuid().toString()+".wav";candidate.checksum=checksum(scratch.file,cancel);
         if(!metadataValid(candidate,error) || injected(fault,ExportFileStage::verify,error) || !verify(scratch.file,candidate,error,cancel))return false;
         const auto destination=instance.getChildFile(candidate.path);
         if(interrupted(cancel,error) || injected(fault,ExportFileStage::publish,error))return false;

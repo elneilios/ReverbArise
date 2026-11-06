@@ -30,8 +30,6 @@ public:
         const auto prefix=message?(message->tone==NoticeTone::error?"Error: ":message->tone==NoticeTone::warning?"Warning: ":"Information: "):"";
         setTitle(juce::String(prefix)+label);setDescription(detail);setHelpText(detail);setTooltip(label+(detail.isEmpty()?"":"\n"+detail));
         if(announce)if(auto* accessible=getAccessibilityHandler())accessible->notifyAccessibilityEvent(juce::AccessibilityEvent::valueChanged);
-        if(announce && isShowing())juce::AccessibilityHandler::postAnnouncement(label,message->tone==NoticeTone::error
-            ?juce::AccessibilityHandler::AnnouncementPriority::high:juce::AccessibilityHandler::AnnouncementPriority::medium);
         repaint();return true;
     }
     const std::optional<NoticeMessage>& currentMessage()const noexcept{return message;}

@@ -27,7 +27,7 @@ bool ExportSourceReader::prepare(std::shared_ptr<const SongExportPlan> input,uin
     plan.reset();cache={};cached=SIZE_MAX;missing.clear();readable.clear();allowance=availableBytes;
     if(!input || input->end<=input->origin || !isValidCaptureManifest(input->source,error))return false;
     plan=std::move(input);readable.resize(plan->source.ranges.size(),false);
-    if(plan->wet==1){error.clear();return true;}
+    if(plan->dry==0){error.clear();return true;}
     auto cursor=plan->origin;
     for(size_t i=0;i<plan->source.ranges.size();++i)
     {
@@ -50,7 +50,7 @@ bool ExportSourceReader::read(int64_t start,std::span<float> stereo,juce::String
         || !checkedAdd(start,static_cast<int64_t>(stereo.size()/2),end) || start<plan->origin || end>plan->end)
     {error="Invalid Export dry page";return false;}
     std::fill(stereo.begin(),stereo.end(),0.f);
-    if(plan->wet==1){error.clear();return true;}
+    if(plan->dry==0){error.clear();return true;}
     for(size_t i=0;i<plan->source.ranges.size();++i)
     {
         const auto& range=plan->source.ranges[i];const auto a=std::max(start,range.startSample);

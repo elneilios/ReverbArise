@@ -19,7 +19,7 @@ void put(juce::var& v,const char* key,const juce::var& value){v.getDynamicObject
 }
 bool validExportState(const ExportState& state,juce::String& error)
 {
-    if(!percentage(state.wet) || state.history.size()>maximumExportRevisions
+    if(!percentage(state.wet) || !percentage(state.dry) || state.history.size()>maximumExportRevisions
         || (!state.desiredIdentity.isEmpty() && !hash(state.desiredIdentity))
         || (!state.initialized && (!state.history.empty() || state.desiredIdentity.isNotEmpty() || state.completedPath.isNotEmpty())))
     {error="Invalid Export preferences or revision capacity";return false;}
@@ -27,7 +27,7 @@ bool validExportState(const ExportState& state,juce::String& error)
     for(const auto& f:state.history)
     {
         if(!path(f.path) || !paths.insert(f.path.toLowerCase()).second || !hash(f.composition) || !hash(f.checksum)
-            || !percentage(f.wet) || !std::isfinite(f.rate) || f.rate<=0 || f.rate>768000
+            || !percentage(f.wet) || !percentage(f.dry) || (f.gainLaw!=1 && f.gainLaw!=2) || !std::isfinite(f.rate) || f.rate<=0 || f.rate>768000
             || f.frames<=0 || static_cast<uint64_t>(f.frames)>(UINT32_MAX-1024ull)/8
             || f.origin>INT64_MAX-f.frames)
         {error="Invalid immutable Export revision";return false;}
@@ -38,27 +38,34 @@ bool validExportState(const ExportState& state,juce::String& error)
 }
 juce::var exportStateMetadata(const ExportState& state)
 {
-    auto v=object();put(v,"initialized",state.initialized);put(v,"wet",state.wet);
+    auto v=object();put(v,"version",2);put(v,"initialized",state.initialized);put(v,"wet",state.wet);put(v,"dry",state.dry);
     put(v,"desiredIdentity",state.desiredIdentity);put(v,"completedPath",state.completedPath);
     juce::Array<juce::var> files;
     for(const auto& f:state.history){auto a=object();put(a,"composition",f.composition);put(a,"checksum",f.checksum);put(a,"path",f.path);
-        put(a,"rate",f.rate);put(a,"origin",juce::String(f.origin));put(a,"frames",juce::String(f.frames));put(a,"wet",f.wet);files.add(a);}
+        put(a,"rate",f.rate);put(a,"origin",juce::String(f.origin));put(a,"frames",juce::String(f.frames));put(a,"wet",f.wet);put(a,"dry",f.dry);put(a,"gainLaw",f.gainLaw);files.add(a);}
     put(v,"history",files);return v;
 }
 bool parseExportState(const juce::var& v,ExportState& output,juce::String& error)
 {
     ExportState state;bool ok=v.isObject();
+    const bool legacy=v.isObject() && !v.hasProperty("version");
     const auto field=[&](const juce::var& a,const char* name){if(!a.isObject() || !a.hasProperty(name))ok=false;return a[name];};
     const auto text=[&](const juce::var& a,const char* name){const auto x=field(a,name);if(!x.isString())ok=false;return x.toString();};
     const auto number=[&](const juce::var& a,const char* name){const auto x=field(a,name);if(!x.isDouble() && !x.isInt() && !x.isInt64())ok=false;return static_cast<double>(x);};
     const auto big=[&](const juce::var& a,const char* name){const auto x=text(a,name);const auto n=x.getLargeIntValue();if(juce::String(n)!=x)ok=false;return n;};
+    if(!legacy && number(v,"version")!=2)ok=false;
     const auto initialized=field(v,"initialized");if(!initialized.isBool())ok=false;state.initialized=static_cast<bool>(initialized);
     const auto wet=number(v,"wet");if(!std::isfinite(wet) || wet<0 || wet>1)ok=false;state.wet=static_cast<float>(wet);state.desiredIdentity=text(v,"desiredIdentity");state.completedPath=text(v,"completedPath");
+    if(!legacy){const auto dry=number(v,"dry");if(!std::isfinite(dry) || dry<0 || dry>1)ok=false;state.dry=static_cast<float>(dry);}
     const auto history=field(v,"history");if(!history.isArray() || history.size()>static_cast<int>(maximumExportRevisions)){error="Invalid Export history capacity";return false;}
     for(const auto& a:*history.getArray()){ExportFile f;f.composition=text(a,"composition");f.checksum=text(a,"checksum");f.path=text(a,"path");
-        f.rate=number(a,"rate");f.origin=big(a,"origin");f.frames=big(a,"frames");const auto weight=number(a,"wet");if(!std::isfinite(weight) || weight<0 || weight>1)ok=false;f.wet=static_cast<float>(weight);state.history.push_back(std::move(f));}
+        f.rate=number(a,"rate");f.origin=big(a,"origin");f.frames=big(a,"frames");const auto weight=number(a,"wet");if(!std::isfinite(weight) || weight<0 || weight>1)ok=false;f.wet=static_cast<float>(weight);
+        if(legacy){f.dry=1-f.wet;f.gainLaw=1;}
+        else {const auto dry=number(a,"dry"),law=number(a,"gainLaw");if(!std::isfinite(dry) || dry<0 || dry>1 || (law!=1 && law!=2))ok=false;f.dry=static_cast<float>(dry);if(law==1 || law==2)f.gainLaw=static_cast<int>(law);}
+        state.history.push_back(std::move(f));}
     if(!ok){error="Malformed Export metadata";return false;}
     if(!validExportState(state,error))return false;
+    if(legacy){state.dry=0;state.wet=1;state.desiredIdentity.clear();state.completedPath.clear();}
     output=std::move(state);return true;
 }
 }

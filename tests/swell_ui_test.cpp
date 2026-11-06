@@ -6,6 +6,7 @@
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
+#include "ExportLevelsCases.h"
 #include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
 
@@ -273,6 +274,12 @@ int main(int argc,char* argv[]){return runTest([&]
     swellListCaptureCases();
     uiStandardsCases();
     learnTimelineCases();
+    if(argc>1 && (juce::String(argv[1])=="--review-export-levels" || juce::String(argv[1])=="--review-export-levels-large")){
+        exportLevelsReview::cases();auto panel=std::make_unique<exportLevelsReview::Panel>();
+        if(juce::String(argv[1])=="--review-export-levels-large")panel->setSize(1400,1000);
+        controlReview::run(std::move(panel));return;
+    }
+    exportLevelsReview::cases();
     if(argc>1 && juce::String(argv[1])=="--review-export-controls"){exportControlReview::cases();controlReview::run(std::make_unique<exportControlReview::Panel>());return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-controls"){exportControlReview::cases();return;}
     exportControlReview::cases();
@@ -587,8 +594,8 @@ int main(int argc,char* argv[]){return runTest([&]
         // audio device or the owner's DAW. Product audio still uses processBlock.
         class PreviewClock final:private juce::Timer{
         public:explicit PreviewClock(m3::SwellEngine& owner):owner(owner){startTimerHz(50);}
-        private:void timerCallback()override{const auto s=owner.snapshot().songExport;if(s.prepared){
-            std::array<float,960> l{},r{};owner.processAudio(l.data(),r.data(),960,s.prepared->plan->timing);}}
+        private:void timerCallback()override{const auto s=owner.snapshot().songExport;const auto pin=s.prepared?s.prepared:s.previous;if(pin){
+            std::array<float,960> l{},r{};owner.processAudio(l.data(),r.data(),960,pin->plan->timing);}}
             m3::SwellEngine& owner;
         } clock(engine);
         snapshotEditor(editor,"export-ready");controlReview::run(std::make_unique<PreverbAudioProcessorEditor>(*processor));return;}
@@ -634,8 +641,41 @@ int main(int argc,char* argv[]){return runTest([&]
             if(wet==0)REQUIRE(aquaPixels==0 && dryPixels>0);if(wet==1)REQUIRE(aquaPixels>0 && dryPixels==0);
             snapshotEditor(editor,"export-mix-"+juce::String(juce::roundToInt(wet*100)));}
         {
+            auto* levels=dynamic_cast<m3::ui::controls::ExportLevelsControl*>(named(editor,"exportLevels"));REQUIRE(levels);
+            levels->beforeInvocation();levels->selector.setSelectedId(5,juce::sendNotificationSync);
+            waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+            REQUIRE(engine.savedSession().exportState.dry==1 && engine.savedSession().exportState.wet==1);
+            levels->beforeInvocation();levels->dry.setValue(65,juce::sendNotificationSync);
+            REQUIRE(engine.savedSession().exportState.dry==.65f && engine.savedSession().exportState.wet==1);
+            REQUIRE(levels->selector.getSelectedId()==6);
+            levels->beforeInvocation();levels->wet.setValue(25,juce::sendNotificationSync);
+            REQUIRE(engine.savedSession().exportState.dry==.65f && engine.savedSession().exportState.wet==.25f && levels->selector.getSelectedId()==1);
+            const auto acceptedPair=engine.savedSession().exportState;levels->beforeInvocation();
+            REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));
+            levels->dry.setValue(35,juce::sendNotificationSync);
+            REQUIRE(engine.savedSession().exportState.dry==acceptedPair.dry && engine.savedSession().exportState.wet==acceptedPair.wet);
+            REQUIRE(engine.setExportLevels(0,1,engine.assignmentEpoch()));
+            waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+            for(auto* control:levels->getChildren())REQUIRE(levels->getLocalBounds().contains(control->getBounds()));
+            REQUIRE(exportView->getLocalBounds().contains(levels->getBounds()));
+        }
+        {
+            auto stoppedFixture=engine.snapshot();stoppedFixture.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";
+            exportView->display(stoppedFixture);REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning && named(editor,"exportSave")->isEnabled());
             auto fixture=engine.snapshot();fixture.songExport.phase=m3::ExportPhase::preparing;fixture.songExport.previous=fixture.songExport.prepared;fixture.songExport.prepared.reset();fixture.session.exportState.wet=.35f;exportView->display(fixture);
             REQUIRE(!named(editor,"exportSave")->isEnabled() && !named(editor,"exportDrag")->isEnabled());snapshotEditor(editor,"export-pending");
+            auto* nav=dynamic_cast<m3::ui::controls::TimelineNavigation*>(named(editor,"exportNavigation"));REQUIRE(nav);
+            nav->zoom(.4,.5);nav->pan(.1);const auto before=exportView->viewport();
+            fixture.songExport.cursor=fixture.songExport.previous->plan->origin+127;
+            fixture.songExport.previewRequested=true;fixture.songExport.previewLevels=m3::ExportVoice::AcceptedLevels{1,.35f,2};
+            exportView->display(fixture);REQUIRE(named(editor,"exportStop")->isEnabled());
+            REQUIRE(exportView->notice()->text.contains("Preview continues") && exportView->notice()->detail.contains("pending"));
+            REQUIRE(exportView->viewport().first==before.first && exportView->viewport().last==before.last);
+            auto measured=std::make_shared<m3::PreparedExport>(*fixture.songExport.previous);
+            auto currentPlan=std::make_shared<m3::SongExportPlan>(*measured->plan);currentPlan->dry=1;currentPlan->wet=.35f;currentPlan->identity="preview-measured";
+            measured->plan=currentPlan;measured->metrics.peak=2;fixture.songExport.preview=measured;exportView->display(fixture);
+            REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning);
+            REQUIRE(exportView->viewport().first==before.first && !named(editor,"exportSave")->isEnabled());
             fixture.songExport.phase=m3::ExportPhase::error;fixture.songExport.message="Required wet asset unavailable";exportView->display(fixture);
             auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice);notice->display(exportView->notice());
             REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::error);snapshotEditor(editor,"export-unavailable");
@@ -644,6 +684,12 @@ int main(int argc,char* argv[]){return runTest([&]
             fixture.songExport.prepared=prepared;exportView->display(fixture);notice->display(exportView->notice());REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning);snapshotEditor(editor,"export-warned-dry");
             prepared->metrics.audibleStart.reset();prepared->metrics.audibleEnd.reset();prepared->metrics.wetPeaks.clear();prepared->metrics.dryPeaks.clear();
             exportView->display(fixture);REQUIRE(!named(editor,"exportPlay")->isEnabled() && named(editor,"exportSave")->isEnabled());snapshotEditor(editor,"export-silent");
+            prepared->metrics.peak=2;fixture.songExport.prepared=prepared;exportView->display(fixture);
+            REQUIRE(exportView->notice()->tone==m3::ui::controls::NoticeTone::warning && exportView->notice()->detail.contains("no automatic attenuation"));
+            REQUIRE(exportView->notice()->detail.contains("uncaptured dry exported as silence"));
+            fixture.songExport.phase=m3::ExportPhase::idle;fixture.songExport.message="Silent: Dry 0% / Wet 0%";
+            fixture.songExport.previous=fixture.songExport.prepared;fixture.songExport.prepared.reset();exportView->display(fixture);
+            REQUIRE(!named(editor,"exportPlay")->isEnabled() && !named(editor,"exportSave")->isEnabled() && !named(editor,"exportDrag")->isEnabled());
             editor.refresh();
         }
         {
