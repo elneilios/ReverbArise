@@ -1,7 +1,33 @@
 # Private compatibility diagnostic variant
 
-Issue #111 adds a read-only companion for Stuart's VCV Host-FX investigation;
+Issue #111 adds a diagnostic companion for Stuart's VCV Host-FX investigation;
 #60 consumes the same observations for Audacity. Neither host is claimed fixed.
+
+## Explicit 4/4 experiment requested after diagnostic implementation
+
+The owner subsequently requested hard-coded 4/4 for this private build. Build
+with `scripts/build.ps1 -Configuration Release -CompatibilityMeterFourFour -Test`.
+This implies the diagnostic variant and explicitly enables
+`PREVERB_COMPATIBILITY_METER_4_4`. Without the extra switch, diagnostics keep the
+original missing-meter guard. Ordinary wrapper builds disable both switches.
+CMake rejects the meter experiment without the diagnostic companion.
+
+Only a present PositionInfo with an absent time signature receives effective 4/4.
+A host-supplied meter always wins, including invalid values that must still be
+rejected. The coherent diagnostic getter supplies the same effective meter to
+capture, UI and subsequent processing. The real host sample position, PPQ and
+reported BPM remain untouched. Raw meter absence stays separately visible in the
+companion/report. The experimental assumption is labelled prominently even before
+callbacks arrive, and in the ZIP filename, README and manifest. No runtime meter
+selector or saved-state schema change is introduced in this narrow build.
+
+Existing `transportMappingMatches` still compares inferred sample origins across
+observations (tolerance one sample) with fixed rate/tempo/meter. The native fixture
+proves capture commits at 279.965 BPM with absent meter and consistent real sample/
+PPQ fields, and rejects an inconsistent sample/PPQ observation while preserving
+earlier source. Supplied 3/4 is retained. Other missing-field and capture guards
+remain covered. These are controlled native results; VCV input reception, tempo
+intent and mapping consistency remain unverified until Stuart tests the ZIP.
 
 Build with `scripts/build.ps1 -Configuration Release -CompatibilityTest -Test`.
 The switch explicitly configures `PREVERB_COMPATIBILITY_TEST=TRUE`; ordinary
@@ -36,7 +62,8 @@ capture timing; it does not independently establish inconsistent sample/PPQ
 mapping. Input reception remains unverified in Stuart's host until this independent
 measurement runs. Reported tempo is shown with a request to compare it with the
 intended tempo, never corrected automatically. A user-selected missing-meter
-fallback is separately authorised for investigation, not implemented here.
+fallback was initially authorised for investigation; the subsequent explicit 4/4
+request is implemented only by the optional experimental switch described above.
 
 One callback producer transfers plain observations through a 256-slot SPSC queue
 to one message-thread consumer. Release/acquire indices protect slot ownership;

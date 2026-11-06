@@ -33,7 +33,15 @@ inline void processorCaptureFailureCases()
         {
             case 0:host.position.setPpqPosition({});break;
             case 1:host.position.setBpm({});break;
-            case 2:host.position.setTimeSignature({});break;
+            case 2:
+#if PREVERB_COMPATIBILITY_METER_4_4
+                // Missing meter is the explicit experimental exception. A host-
+                // supplied invalid meter must still fail without replacement.
+                host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{0,0});
+#else
+                host.position.setTimeSignature({});
+#endif
+                break;
             case 3:host.position.setTimeInSamples({});break;
             case 4:host.position.setBpm(121);expected=CaptureFailureReason::timingChanged;break;
             case 5:input.setSize(2,8193);expected=CaptureFailureReason::blockSize;break;

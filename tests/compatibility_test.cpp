@@ -7,8 +7,39 @@ struct Host final:juce::AudioPlayHead
     juce::Optional<PositionInfo> position;
     juce::Optional<PositionInfo> getPosition()const override{return position;}
 };
+#if PREVERB_COMPATIBILITY_METER_4_4
+static void fixedMeterExperiment()
+{
+    TestDirectory root;auto p=std::make_unique<PreverbAudioProcessor>(root.file);Host host;
+    p->prepareToPlay(48000,64);p->setPlayHead(&host);p->swellEngine().setLearningAutomatic(false);
+    juce::AudioPlayHead::PositionInfo info;info.setIsPlaying(true);info.setBpm(279.965);
+    juce::AudioBuffer<float> audio(2,64);juce::MidiBuffer midi;
+    const auto process=[&](int64_t at,double ppq,bool playing){info.setTimeInSamples(at);info.setPpqPosition(ppq);info.setIsPlaying(playing);host.position=info;
+        for(int c=0;c<2;++c)std::fill_n(audio.getWritePointer(c),64,.25f);
+        {AudioAllocationGuard guard;p->processBlock(audio,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);};
+    process(0,0,true);REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::recording);
+    REQUIRE(p->getSongTime().numerator==4 && p->getSongTime().denominator==4);
+    process(64,64.0*279.965/(48000*60),true);process(128,128.0*279.965/(48000*60),false);
+    REQUIRE(p->flushCaptureForTesting());REQUIRE(p->getWorkflowSnapshot().result==workflow::Result::accepted);
+    const auto committed=p->getCaptureSnapshot();REQUIRE(!committed.manifest.ranges.empty());
+    REQUIRE(p->compatibilityReport().contains("raw host meter=unavailable"));
+    process(1000,1000.0*279.965/(48000*60),true);
+    process(1064,2,true); // Real sample/PPQ mapping now disagrees: other guard still rejects.
+    process(1128,2,false);REQUIRE(p->flushCaptureForTesting());
+    REQUIRE(p->getWorkflowSnapshot().result==workflow::Result::failed);
+    REQUIRE(p->getCaptureSnapshot().failure.event.reason==CaptureFailureReason::timingChanged);
+    REQUIRE(p->getCaptureSnapshot().reference==committed.reference);
+    info.setTimeSignature(juce::AudioPlayHead::TimeSignature{3,4});process(2000,2,false);
+    REQUIRE(p->getSongTime().numerator==3 && p->getSongTime().denominator==4);
+    info.setTimeSignature(juce::AudioPlayHead::TimeSignature{0,0});process(2000,2,false);
+    REQUIRE(p->getSongTime().numerator==0); // Supplied invalid meter is not silently replaced.
+}
+#endif
 int main(int argc,char** argv){return runTest([&]{
     juce::ScopedJuceInitialiser_GUI gui;TestDirectory root;
+#if PREVERB_COMPATIBILITY_METER_4_4
+    fixedMeterExperiment();
+#endif
     auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
     Host host;processor->setPlayHead(&host);processor->prepareToPlay(48000,64);
     juce::AudioBuffer<float> audio(2,64);juce::MidiBuffer midi;
@@ -24,9 +55,15 @@ int main(int argc,char** argv){return runTest([&]{
     info.setTimeInSamples(0);host.position=info;process(.5f);REQUIRE(processor->compatibilityReport().contains("host musical position is missing"));
     info.setPpqPosition(0);host.position=info;process(.5f);REQUIRE(processor->compatibilityReport().contains("host tempo is missing"));
     info.setBpm(279.965);host.position=info;process(.5f);
-    report=processor->compatibilityReport();REQUIRE(report.contains("Capture blocked: host time signature unavailable"));
+    report=processor->compatibilityReport();
+#if PREVERB_COMPATIBILITY_METER_4_4
+    REQUIRE(report.contains("EXPERIMENT: fixed 4/4 supplied ONLY"));REQUIRE(processor->getSongTime().valid);
+#else
+    REQUIRE(report.contains("Capture blocked: host time signature unavailable"));
+    REQUIRE(report.contains("does not establish inconsistent sample/PPQ mapping"));
+#endif
     REQUIRE(report.contains("279.965 BPM - compare with your intended tempo"));
-    REQUIRE(report.contains("signal received"));REQUIRE(report.contains("does not establish inconsistent sample/PPQ mapping"));
+    REQUIRE(report.contains("signal received"));
     REQUIRE(processor->getWorkflowSnapshot().phase==workflow::Phase::idle);
     REQUIRE(processor->getDroppedCaptureBlockCount()==0);REQUIRE(processor->getCaptureSnapshot().manifest.revision==0);
     if(argc>1 && juce::String(argv[1])=="--snapshot"){

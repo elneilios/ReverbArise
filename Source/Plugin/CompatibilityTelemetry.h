@@ -33,6 +33,7 @@ struct Observation
     Gate gate=Gate::position;
     CaptureFailureReason rejection=CaptureFailureReason::none;
     bool secondsAvailable=false,loopAvailable=false,nonzero=false,nonfinite=false,attempt=false,started=false,discontinuity=false;
+    bool rawMeterAvailable=false;int rawNumerator=0,rawDenominator=0;
     double seconds=0,loopBegin=0,loopEnd=0,at=0;
     float left=0,right=0;
     int channels=0,frames=0;
@@ -42,6 +43,7 @@ inline bool sameState(const Observation& a,const Observation& b)
 {
     const auto& x=a.timing;const auto& y=b.timing;
     return a.gate==b.gate && a.rejection==b.rejection && a.nonzero==b.nonzero && a.nonfinite==b.nonfinite
+        && a.rawMeterAvailable==b.rawMeterAvailable && a.rawNumerator==b.rawNumerator && a.rawDenominator==b.rawDenominator
         && a.attempt==b.attempt && a.started==b.started && a.discontinuity==b.discontinuity
         && a.secondsAvailable==b.secondsAvailable && a.loopAvailable==b.loopAvailable
         && a.flow.phase==b.flow.phase && a.flow.result==b.flow.result && a.flow.pass==b.flow.pass

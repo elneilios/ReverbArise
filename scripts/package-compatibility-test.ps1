@@ -16,13 +16,17 @@ param()
         Assert-BuildCache $binary $root
         $cache = Get-Content (Join-Path $binary 'CMakeCache.txt') -Raw
         if ($cache -notmatch '(?m)^PREVERB_COMPATIBILITY_TEST:BOOL=(ON|TRUE)\r?$') { throw 'Diagnostic variant is not configured' }
+        $meterExperiment = $cache -match '(?m)^PREVERB_COMPATIBILITY_METER_4_4:BOOL=(ON|TRUE)\r?$'
+        $variant = 'PREVERB_COMPATIBILITY_TEST=ON; PREVERB_COMPATIBILITY_METER_4_4=' + $meterExperiment.ToString().ToUpperInvariant()
+        $variantLabel = if ($meterExperiment) { 'compatibility-111-EXPERIMENTAL-4-4' } else { 'compatibility-111' }
+        $meterNote = if ($meterExperiment) { 'EXPERIMENT: this build supplies fixed 4/4 ONLY when host meter is absent. A real host meter wins. Real host sample/PPQ/tempo and mapping-consistency guards remain in force. Other guards may still block/reject capture. This is not proof of VCV compatibility.' } else { 'No meter fallback is enabled. Missing host time signature blocks capture.' }
         $identity = Get-Content (Join-Path $binary 'build-information.json') -Raw | ConvertFrom-Json
         if ($identity.gitSha -cne $sha) { throw 'Build SHA differs from source; rebuild this commit' }
         $version = (Get-Content (Join-Path $binary 'product-identity.json') -Raw | ConvertFrom-Json).version
         $null = Invoke-ReleaseNative $tools.CMake @("-DSOURCE_DIR=$root", "-DBINARY_DIR=$binary", '-DCONFIGURATION=Release', '-P', (Join-Path $root 'scripts/verify-version.cmake'))
         $bundle = Get-ReleaseBundle $binary $version
         $null = Invoke-ReleaseNative $tools.CTest @('--test-dir', $binary, '-C', 'Release', '--output-on-failure', '--no-tests=error', '-R', '^preverb_(compatibility_test|workflow_processor_test|capture_failure_test|ui_standards_check)$')
-        $destination = Join-Path $root "out/diagnostic-releases/compatibility-111-$sha"
+        $destination = Join-Path $root "out/diagnostic-releases/$variantLabel-$sha"
         if (Test-Path -LiteralPath $destination) { throw "Immutable diagnostic output already exists: $destination" }
         $null = New-Item -ItemType Directory -Path $destination
         $payload = Join-Path $destination 'payload'
@@ -47,7 +51,8 @@ param()
 ReverbArise $version - PRIVATE EXPERIMENTAL COMPATIBILITY TEST #111
 For Stuart. Windows x64 Release, unsigned. Not a public release.
 Source SHA: $sha
-Variant: PREVERB_COMPATIBILITY_TEST=ON. Same plugin and saved-session identities.
+Variant: $variant. Same plugin and saved-session identities.
+$meterNote
 
 INSTALL / ROLLBACK
 Close every DAW before changing the installation. Back up your project first.
@@ -68,7 +73,8 @@ history. No audio or private project paths are included in the report.
 RELEASE NOTES
 Adds independent raw input measurements, exact pre-start gate observations,
 per-field host timing evidence, capture outcomes and bounded processor-instance
-history retained across editor reopen. No timing fallback or capture-guard change.
+history retained across editor reopen. The only optional timing-policy exception is
+the explicitly labelled missing-meter 4/4 experiment described above.
 Silence and absent callbacks are distinct; observed seconds never drive capture.
 Repeats are coalesced and history/queue omissions are disclosed.
 
@@ -83,7 +89,7 @@ remains #60. Do not distribute publicly. Third-party notices included in license
 and bundle Contents/Resources. No new redistribution rights are granted.
 "@ | Set-Content (Join-Path $payload 'README.txt') -Encoding UTF8
         $manifest = [ordered]@{
-            sourceSha=$sha; variant='PREVERB_COMPATIBILITY_TEST=ON'; configuration='Release'; target='windows-x64'; version=$version
+            sourceSha=$sha; variant=$variant; configuration='Release'; target='windows-x64'; version=$version
             buildInformation=$identity; toolchain=(Get-ReleaseToolchain $tools.CMake $binary)
             trackedSourceClean=$true; untrackedFiles=(Invoke-ReleaseNative $tools.Git @('-C', $root, 'ls-files', '--others', '--exclude-standard'))
             validation='native Release build; focused compatibility/workflow/capture-failure/UI checks; PE/version/plugin identity; per-entry ZIP SHA256'
@@ -92,7 +98,7 @@ and bundle Contents/Resources. No new redistribution rights are granted.
         }
         $manifest | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $payload 'BUILD-IDENTITY.json') -Encoding UTF8
         $files = @(Get-ReleaseInventory $payload)
-        $zip = Join-Path $destination "ReverbArise-PRIVATE-compatibility-test-111-$($sha.Substring(0,12))-win-x64.zip"
+        $zip = Join-Path $destination "ReverbArise-PRIVATE-$variantLabel-$($sha.Substring(0,12))-win-x64.zip"
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::CreateFromDirectory($payload, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
         Assert-ReleaseArchive $zip $files

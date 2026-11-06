@@ -30,6 +30,7 @@ juce::String observationText(const compatibility::Observation& o)
         <<" | sample="<<(t.sample?juce::String(t.samplePosition):"unavailable")
         <<" seconds="<<field(o.secondsAvailable,o.seconds)<<" PPQ="<<field(t.ppq,t.ppqPosition)
         <<" BPM="<<field(t.tempo,t.bpm)<<" meter="<<(t.meter?juce::String(t.numerator)+"/"+juce::String(t.denominator):"unavailable")
+        <<" raw host meter="<<(o.rawMeterAvailable?juce::String(o.rawNumerator)+"/"+juce::String(o.rawDenominator):"unavailable")
         <<" looping="<<int(t.looping)<<" loop PPQ="<<field(o.loopAvailable,o.loopBegin)<<".."<<field(o.loopAvailable,o.loopEnd)
         <<" rate="<<juce::String(t.rate)<<" frames="<<o.frames<<" channels="<<o.channels
         <<" pass="<<number(o.flow.pass)<<" queued="<<number(o.queued)<<" dropped="<<number(o.dropped)
@@ -54,7 +55,12 @@ juce::String PreverbAudioProcessor::compatibilityReport(bool detailed)
         <<"\nCapture worker: "<<capture.status
         <<"\n"<<(capture.failure?juce::String("Last rejected pass (historical): ")+captureFailureReasonText(capture.failure.event.reason):juce::String("No recorded capture failure"))
         <<"\nOpen plugin, start patch/playback, attempt capture, stop, then Copy report.\n";
+#if PREVERB_COMPATIBILITY_METER_4_4
+    s<<"EXPERIMENT: fixed 4/4 supplied ONLY when host time signature is unavailable. Host meter takes precedence.\n";
+    if(model.hasLatest)s<<"Raw host time signature: "<<(!o.timing.position?"unknown (host position unavailable; no fallback)":o.rawMeterAvailable?juce::String(o.rawNumerator)+"/"+juce::String(o.rawDenominator):"unavailable; using experimental 4/4")<<"\n";
+#else
     if(model.hasLatest && !o.timing.meter)s<<"Missing meter alone prevents capture. This does not establish inconsistent sample/PPQ mapping.\n";
+#endif
     if(!detailed){
         s<<"\nRecent activity (older entries retained in Copy report):\n";
         const auto first=model.history.size()>8?model.history.size()-8:0;
@@ -68,6 +74,7 @@ juce::String PreverbAudioProcessor::compatibilityReport(bool detailed)
     s<<"\nVersion: "<<juce::String(m3::build::version.data())<<" | source SHA: "<<juce::String(m3::build::gitSha.data())
         <<" | build: "<<juce::String(m3::build::identifier.data())<<" | dirty="<<int(m3::build::worktreeDirty)
         <<"\nVariant: PREVERB_COMPATIBILITY_TEST=ON | Windows Release required for delivery"
+        <<" | PREVERB_COMPATIBILITY_METER_4_4="<<int(PREVERB_COMPATIBILITY_METER_4_4)
         <<"\nHost detected: "<<juce::PluginHostType().getHostDescription()<<" | wrapper: "<<juce::AudioProcessor::getWrapperTypeDescription(wrapperType)
         <<"\nOS: "<<juce::SystemStats::getOperatingSystemName()<<" | sample rate "<<juce::String(getSampleRate())
         <<" | configured block "<<getBlockSize()<<" | buses "<<getTotalNumInputChannels()<<" in / "<<getTotalNumOutputChannels()<<" out"

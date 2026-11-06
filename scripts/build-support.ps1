@@ -103,8 +103,9 @@ function Get-BuildRevision([string] $Git, [string] $Root) {
 
 function Invoke-ReverbBuild {
     [CmdletBinding()]
-    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '', [switch] $CompatibilityTest)
+    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '', [switch] $CompatibilityTest, [switch] $CompatibilityMeterFourFour)
     $ErrorActionPreference = 'Stop'
+    if ($CompatibilityMeterFourFour) { $CompatibilityTest = [switch]$true }
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
     $preset = 'windows-msvc-' + $Configuration.ToLowerInvariant()
     $stages = [ordered]@{ Preflight = 'not run'; Configure = 'not run'; Build = 'not run'; Test = 'not requested' }
@@ -132,7 +133,7 @@ function Invoke-ReverbBuild {
             if ($stage -eq 'Test' -and -not $Test) { continue }
             $executable = $tools.CMake
             $arguments = switch ($stage) {
-                'Configure' { @('--preset', 'windows-msvc', '-DFETCHCONTENT_UPDATES_DISCONNECTED=ON', "-DPREVERB_RELEASE_TAG=$ReleaseTag", "-DPREVERB_RELEASE_CANDIDATE=$Candidate", "-DPREVERB_COMPATIBILITY_TEST=$($CompatibilityTest.IsPresent.ToString().ToUpperInvariant())") }
+                'Configure' { @('--preset', 'windows-msvc', '-DFETCHCONTENT_UPDATES_DISCONNECTED=ON', "-DPREVERB_RELEASE_TAG=$ReleaseTag", "-DPREVERB_RELEASE_CANDIDATE=$Candidate", "-DPREVERB_COMPATIBILITY_TEST=$($CompatibilityTest.IsPresent.ToString().ToUpperInvariant())", "-DPREVERB_COMPATIBILITY_METER_4_4=$($CompatibilityMeterFourFour.IsPresent.ToString().ToUpperInvariant())") }
                 'Build' { @('--build', '--preset', $preset) }
                 'Test' { @('--preset', $preset, '--no-tests=error') }
             }

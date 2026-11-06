@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Preverb VERSION 0.1.0 LANGUAGES C CXX)
 option(PREVERB_COMPATIBILITY_TEST "Private read-only host compatibility companion" OFF)
+option(PREVERB_COMPATIBILITY_METER_4_4 "Private experiment: supply 4/4 only when host meter is absent" OFF)
+if(PREVERB_COMPATIBILITY_METER_4_4 AND NOT PREVERB_COMPATIBILITY_TEST)
+    message(FATAL_ERROR "The 4/4 experiment requires the compatibility-test variant")
+endif()
 
 include(cmake/ProductVersion.cmake)
 reverbarise_product_version("${CMAKE_CURRENT_SOURCE_DIR}" product_version)
@@ -136,6 +140,7 @@ target_sources(preverb_plugin PRIVATE
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
 target_compile_definitions(preverb_plugin PUBLIC PREVERB_COMPATIBILITY_TEST=$<BOOL:${PREVERB_COMPATIBILITY_TEST}>)
+target_compile_definitions(preverb_plugin PUBLIC PREVERB_COMPATIBILITY_METER_4_4=$<BOOL:${PREVERB_COMPATIBILITY_METER_4_4}>)
 set_source_files_properties(Source/Plugin/CompatibilityReport.cpp PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/generated")
 
 target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)

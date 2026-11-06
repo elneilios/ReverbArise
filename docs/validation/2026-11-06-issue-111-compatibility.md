@@ -68,5 +68,20 @@ The fixture's non-silent input does not establish that Stuart's real patch reach
 the plugin. His observed missing meter alone explains timing validity being false;
 sample/PPQ consistency and the intended tempo remain unverified.
 
-The explicitly user-selected missing-meter fallback is authorised for a separate
-investigation after diagnostic delivery. It is not implemented in this package.
+## Subsequent explicit fixed-4/4 request
+
+Before ZIP delivery the owner explicitly requested hard-coded 4/4. The delivery
+variant therefore additionally enables `PREVERB_COMPATIBILITY_METER_4_4` through
+`-CompatibilityMeterFourFour`, labelled EXPERIMENTAL-4-4 in the ZIP. The earlier
+diagnostic-only revision `b320e906a8a3d663756a6eab20cd01328056fb12` successfully
+rebuilt and passed four focused native checks in 4.28 s before this scope change.
+
+The new native scenario exercises real host samples and PPQ at 279.965 BPM and
+48 kHz with absent meter. It requires successful source commit under effective
+4/4, retains raw host absence in the report, rejects deliberately inconsistent
+sample/PPQ mapping, preserves earlier source and respects a supplied 3/4 meter.
+The existing meter-failure injection uses a supplied invalid 0/0 meter in this
+variant, verifying that only absence receives the experiment. Diagnostic-only
+builds retain the original absent-meter blocking assertion. Final experiment
+build/check results and exact SHA are in the package manifest. No actual VCV
+capture success or intended tempo is claimed from these controlled scenarios.

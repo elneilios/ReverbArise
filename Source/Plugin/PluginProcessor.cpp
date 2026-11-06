@@ -252,7 +252,14 @@ HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() cons
     diagnostics.blockSize = blockSize.load(std::memory_order_relaxed);
     diagnostics.sampleRate = sampleRate.load(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
-    if (diagnosticsSequence.load(std::memory_order_relaxed) == sequence) return diagnostics;
+    if (diagnosticsSequence.load(std::memory_order_relaxed) == sequence) {
+#if PREVERB_COMPATIBILITY_METER_4_4
+        // Explicit owner-selected experimental build. Preserve every real host
+        // position/tempo field and every other guard; supplied host meter wins.
+        if(diagnostics.positionAvailable && !diagnostics.meterAvailable){diagnostics.meterAvailable=true;diagnostics.numerator=4;diagnostics.denominator=4;}
+#endif
+        return diagnostics;
+    }
     }
     HostPositionDiagnostics unavailable;
     unavailable.sampleRate = sampleRate.load(std::memory_order_relaxed);
@@ -447,6 +454,9 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
     compatibilityObservation.seconds=compatibilityObservation.secondsAvailable?*position->getTimeInSeconds():0;
     compatibilityObservation.loopAvailable=position && position->getLoopPoints().hasValue();
     if(compatibilityObservation.loopAvailable){compatibilityObservation.loopBegin=position->getLoopPoints()->ppqStart;compatibilityObservation.loopEnd=position->getLoopPoints()->ppqEnd;}
+    compatibilityObservation.rawMeterAvailable=position && position->getTimeSignature().hasValue();
+    compatibilityObservation.rawNumerator=compatibilityObservation.rawMeterAvailable?position->getTimeSignature()->numerator:0;
+    compatibilityObservation.rawDenominator=compatibilityObservation.rawMeterAvailable?position->getTimeSignature()->denominator:0;
 #endif
     // Host queries may be relatively slow. Keep the prior complete snapshot
     // readable until the tiny atomic publication below, rather than making
