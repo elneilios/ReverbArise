@@ -10,8 +10,9 @@
 - Read-only guide currency, UI standards, strict OpenSpec change validation,
   affected documentation link targets and `git diff --check` pass.
 - Release identity: `v0.1.0-test.issue103`; numeric plugin version remains 0.1.0.
-- System installation succeeds from clean code commit `87240d5`; the owner's
-  exact FL Studio green-slot smoke remains pending. Draft PR: [#105](https://github.com/elneilios/ReverbArise/pull/105).
+- System installation succeeds from clean code commit `87240d5`; the owner
+  confirms both FL Studio green-slot cycles resume correctly. Owner-review PR:
+  [#105](https://github.com/elneilios/ReverbArise/pull/105).
 
 ## Scope and environment
 
@@ -231,11 +232,17 @@ succeeds (exit 0); no folder ACL is changed.
   above covers the same code before committing, with its earlier build identity
   recorded separately. Installer inventory/version/hash checks cover the installed artifact.
 
-[Draft PR #105](https://github.com/elneilios/ReverbArise/pull/105) targets main,
-uses `Refs #103`, links this change and evidence, and is left open for owner
-review. It is not merged; the issue and OpenSpec change remain open/unarchived.
+[PR #105](https://github.com/elneilios/ReverbArise/pull/105) targets main,
+links this change and evidence, and is left open for owner review. It is not
+merged; the issue and OpenSpec change remain open/unarchived.
 The owner was asked for one consolidated smoke after rescan with Verify plugins
 and Rescan previously verified plugins, confirming the system bundle and About
 identity, then two green-slot disable/re-enable cycles during running transport.
-Actual FL Studio reactivation, its exact callback sequence and physical host/DPI
-coverage remain unverified pending that response.
+The owner responds **"Both cycles resume correctly"**, confirming the reported
+green-slot playback recovery on the installed candidate. This is scoped host
+acceptance in the existing prepared project, separate from the automated
+sample-offset and persistence checks. An instrumented VST3 callback trace,
+exact FL Studio version, other hosts and a physical DPI matrix were not supplied
+or claimed. With the reported flow accepted, the PR changes to `Closes #103`
+and is made ready for owner review; no merge, independent issue closure or
+OpenSpec archive is authorized by this acceptance.
