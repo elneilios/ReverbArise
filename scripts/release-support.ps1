@@ -1,4 +1,5 @@
 . (Join-Path $PSScriptRoot 'release-guide.ps1')
+. (Join-Path $PSScriptRoot 'release-notes.ps1')
 . (Join-Path $PSScriptRoot 'user-guide-support.ps1')
 function Get-ReleaseNoticePaths {
     # Notices from the pinned dependency checkout, including supported codecs.
@@ -182,6 +183,7 @@ function Invoke-ReverbRelease {
             return
         }
         if (Test-Path -LiteralPath $destination) { throw "Release output already exists: $destination. Preserve it; use a new explicit candidate or deliberately relocate it while idle." }
+        $notes = Get-ReleaseNotes $Root $identity.releaseIdentity
         Invoke-ReleaseBuild $Root $ReleaseTag $Candidate
         $presets = Get-Content -LiteralPath (Join-Path $Root 'CMakePresets.json') -Raw | ConvertFrom-Json
         $preset = @($presets.configurePresets | Where-Object { $_.name -eq 'windows-msvc' })[0]
@@ -201,6 +203,7 @@ function Invoke-ReverbRelease {
         $null = New-Item -ItemType Directory -Path $captures
         Invoke-ReleaseGuideCapture $binary $captures $sha
         Write-ReleaseGuide $Root $captures $payload $sha $identity.releaseIdentity
+        Write-ReleaseNotes $notes $payload $sha
         $inventory = @(Get-ReleaseInventory $bundle)
         Copy-Item -LiteralPath $bundle -Destination $payload -Recurse
         $copied = @(Get-ReleaseInventory (Join-Path $payload 'ReverbArise.vst3'))
@@ -231,6 +234,7 @@ system VST3 folder (%PROGRAMFILES%\Common Files\VST3); administrator permission 
 FL Studio does not discover VST3 from custom user search folders. In Plugin Manager enable
 Verify plugins and Rescan previously verified plugins, then run Find installed plugins.
 Open User-Guide.html for the illustrated offline guide. Start at low monitoring volume.
+Open Release-Notes.html for changes, upgrade steps and known limitations of this build.
 Route audio through ReverbArise, choose Learn, and play the DAW to capture; stop to inspect
 markers, then Generate Swells. In Perform select a ready swell, Audition, then Stop.
 Use Wet only to hear the effect alone. Stay in Perform for DAW playback and normal DAW

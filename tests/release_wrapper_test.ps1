@@ -12,7 +12,7 @@ $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'scripts') -Force
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'cmake')
 Copy-Item -LiteralPath (Join-Path $repository 'scripts/verify-version.cmake') -Destination (Join-Path $fixture 'scripts')
 Copy-Item -LiteralPath (Join-Path $repository 'cmake/ProductVersion.cmake') -Destination (Join-Path $fixture 'cmake')
-foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1','release-guide.ps1','user-guide-support.ps1','check-user-guide.ps1','review-user-guide.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
+foreach ($scriptFile in @('release.ps1','release-support.ps1','build-support.ps1','release-guide.ps1','release-notes.ps1','user-guide-support.ps1','check-user-guide.ps1','review-user-guide.ps1')) { Copy-Item -LiteralPath (Join-Path $repository ('scripts/' + $scriptFile)) -Destination (Join-Path $fixture 'scripts') }
 Copy-Item -LiteralPath (Join-Path $repository 'CMakePresets.json') -Destination $fixture
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'docs/development') -Force
 Copy-Item -LiteralPath (Join-Path $repository 'docs/development/alpha-guide.html') -Destination (Join-Path $fixture 'docs/development')
@@ -28,6 +28,11 @@ $null=New-Item -ItemType Directory -Path (Join-Path $fixture 'Source')
 $null=New-Item -ItemType Directory -Path (Join-Path $fixture 'openspec/specs/fixture') -Force
 'fixture production code' | Set-Content (Join-Path $fixture 'Source/fixture.cpp')
 'fixture canonical specification' | Set-Content (Join-Path $fixture 'openspec/specs/fixture/spec.md')
+$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'docs/development/release-notes') -Force
+foreach ($identity in @('v0.1.0','v0.1.0-rc.1')) {
+    @{ schemaVersion=1; releaseIdentity=$identity; previousRelease=$null; previousGitSha=$null; changes=@('Fixture release only'); fixes=@(); upgradeSteps=@(); knownLimitations=@('Simulated package, not a plugin build') } |
+        ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $fixture "docs/development/release-notes/$identity.json") -Encoding UTF8
+}
 & (Join-Path $repository 'scripts/review-user-guide.ps1') -Root $fixture -Summary 'Simulated release fixture only'
 $null = & $actualNative $tools.Git @('-C', $fixture, 'init', '--quiet')
 $null = & $actualNative $tools.Git @('-C', $fixture, 'config', 'user.name', 'Release Fixture')
@@ -158,6 +163,9 @@ $sha=Get-ReleaseSource $tools.Git $fixture
 foreach ($entry in @(@('guide-readiness-failed','readiness failed'),@('guide-stale','provenance mismatch'),@('guide-missing','not find|does not exist|cannot find'),@('guide-corrupt','Parameter is not valid|invalid|FromStream'))) {
     Fail-Case $entry[0] $entry[1]
 }
+$beforeNotesBuilds = $script:buildCalls
+Fail-Case 'missing-release-notes' 'Release notes missing' @{ Candidate = 'rc.missing' }
+Assert ($script:buildCalls -eq $beforeNotesBuilds) 'Missing release notes started a native build.'
 Invoke-ReverbRelease -Root $fixture -ReleaseTag v0.1.0
 Assert ((Get-Location).Path -eq $start) 'Caller location was not restored.'
 $stable = Join-Path $fixture 'out/releases/v0.1.0'
@@ -174,6 +182,9 @@ Assert ([IO.File]::ReadAllText($reviewFile) -ceq $savedReview) 'Packaging rewrot
 Assert ($manifest.buildInformation.gitSha -ceq $sha -and $manifest.buildInformation.buildIdentifier -ceq 'v0.1.0') 'Packaged About information mismatch.'
 Assert ($provenance.logo.sha256 -ceq (Get-FileHash -LiteralPath (Join-Path $fixture $logoRelative) -Algorithm SHA256).Hash.ToLowerInvariant() -and $provenance.logo.width -eq 640 -and $guide -match '<main>\s*<img class="brand" src="data:image/png;base64,') 'Production logo is missing or not at the top.'
 Assert ((Get-Content (Join-Path $stable 'payload/README.txt') -Raw).Contains('play the DAW to capture')) 'Quick start missing.'
+$notes = Get-Content (Join-Path $stable 'payload/Release-Notes.html') -Raw -Encoding UTF8
+Assert ($notes.Contains('ReverbArise v0.1.0') -and $notes.Contains($sha) -and $notes.Contains('Fixture release only')) 'Build-specific release notes missing.'
+Assert (@($manifest.files | Where-Object { $_.path -ceq 'Release-Notes.html' }).Count -eq 1) 'Release notes absent from verified ZIP inventory.'
 $templatePath = Join-Path $fixture 'docs/development/alpha-guide.html'
 $templateBytes = [IO.File]::ReadAllBytes($templatePath)
 try {
@@ -193,6 +204,7 @@ Invoke-ReverbRelease -Root $fixture -ReleaseTag v0.1.0 -Candidate rc.1
 $candidateDir = Join-Path $fixture 'out/releases/v0.1.0-rc.1'
 $candidate = Get-Content (Join-Path $candidateDir 'build-manifest.json') -Raw | ConvertFrom-Json
 Assert ($candidate.releaseIdentity -ceq 'v0.1.0-rc.1' -and $candidate.version -ceq '0.1.0' -and $candidate.artifact -match '-rc.1-win-x64') 'Candidate lost its label.'
+Assert ((Get-Content (Join-Path $candidateDir 'payload/Release-Notes.html') -Raw -Encoding UTF8).Contains('ReverbArise v0.1.0-rc.1')) 'Candidate release notes identity mismatch.'
 Assert ($script:ghCalls.Count -eq 0) 'Packaging reached GitHub.'
 $publish = @{ Publish = $true; RedistributionReviewed = $true; LicenseReview = 'SIMULATED license review only - no permission to distribute'; ConfirmPublish = "v0.1.0@$sha" }
 Fail-Case 'no-gate' 'Redistribution gate' @{ Publish = $true }

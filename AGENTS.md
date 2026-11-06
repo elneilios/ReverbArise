@@ -18,6 +18,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.
 
 ## Implementation safeguards
+- **Release packaging:** Use the [build-release skill](.agents/skills/build-release/SKILL.md) when preparing a release/alpha ZIP. Author release-specific notes against the previous shared build before running the existing packager; preserve its validation and immutable-output gates.
 - **Local Windows validation:** Use `scripts/build.ps1 -Configuration Debug|Release [-Test]`; see [development setup](docs/development/development.md). Its per-build-directory lock prevents overlapping wrapper operations. Do not run raw CMake/MSBuild against an active wrapper's tree; independent worktrees use separate trees. Report fixture checks separately from native MSVC/CTest results.
 - **FL Studio test installation:** When asked to deliver a build for local host testing, use the [install-test-vst3 skill](.agents/skills/install-test-vst3/SKILL.md) and `scripts/install-test-vst3.ps1` instead of manual copying. It builds Release and installs into the system Common Files/VST3 folder with a retained previous bundle. FL Studio does not scan VST3 in custom user search paths. See [test installation](docs/development/fl-studio-test-install.md).
 - Inspect affected code and focused tests before changing behaviour; prefer extending working mechanisms over replacing them.
