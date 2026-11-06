@@ -31,3 +31,9 @@ Include:
 5. **Review notes:** remaining risks, screenshots for UI when useful, and any owner-only host checks.
 
 Open or update **one** PR targeting `main`, leave it open for owner review, and do not self-merge, independently close issues or archive OpenSpec changes.
+
+## After completed delivery
+
+- [ ] Apply [completed-work cleanup](completed-work-cleanup.md) to this task's regenerable output after validation, packaging and delivery finish; defer output still needed for acceptance, debugging or an active review.
+- [ ] Preserve local changes, releases, rollback bundles, durable assets and validation evidence; verify Git status after cleanup.
+- [ ] Report removed paths and measured reclaimed space, or state that no eligible output existed; explain retained output and any blocked cleanup.

@@ -47,3 +47,7 @@ After delivered user-facing code/spec or release-input changes, use [maintain-us
 Use `references/delivery-checklist.md` and the authoritative PR issue-reference convention in `CONTRIBUTING.md`. Commit on an issue-specific branch and open or update one PR with issue/change links, key decisions, test evidence and remaining limitations. Do not push directly to `main`, self-merge, independently close issues or auto-archive OpenSpec.
 
 If a standard OpenSpec phase must stop, report its outcome and exact next invocation; do not silently continue across the boundary.
+
+## 5. Clean up completed work
+
+After delivery, automatically follow [references/completed-work-cleanup.md](references/completed-work-cleanup.md) for this task's regenerable build output. Preserve active builds/reviews, local changes, releases and evidence. A planning/approval pause or unfinished acceptance is not completed work. Include removed output, reclaimed space and any retained output with its reason in the final report; do not claim cleanup ran when only instructions were updated.
