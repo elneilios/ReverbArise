@@ -19,6 +19,15 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 13 adopts the owner's
+[focus visibility policy](ui-control-contracts.md#focus-visibility-policy).
+Shared command buttons show their aqua brackets for keyboard/accessibility focus,
+and hide them after pointer clicks without discarding actual focus or keyboard
+activation. Hover and held feedback are unchanged. Other families adopt this
+policy only in their own design-system jobs, preserving their separate editing,
+caret and selection cues. Reuse the shared input observer where appropriate;
+never disable focus or keyboard operation as a way to hide its decoration.
+
 Production standards revision 11 adopts the owner-approved
 [control inventory and family roadmap](../design/ui-control-inventory.md) and
 [shared control contracts](ui-control-contracts.md), reconciled with merged #80.
@@ -100,7 +109,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 12; scoped knob focus review below). Its responsive composition section
+numerical authority (production standards revision 13; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

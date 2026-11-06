@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the #107 IR import correction against merged main. The dropdown keeps its original label and feedback spacing; the import body matches its top, bottom and height, and the larger action frame contains outside focus. Original glyph and import behavior are unchanged. Existing guide instructions and screenshots remain accurate; no additional prose is needed.",
+  "summary": "Reviewed the owner-approved #107 keyboard/accessibility-only command focus policy. Updated the guide to distinguish visible command brackets from retained focus after mouse clicks; hover/held ink, IR alignment, bindings and capture/Perform/Export/Storage behavior remain unchanged. Other control-family renderers are deferred to their own jobs; no screenshot change is needed for this input-visibility clarification.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -560,8 +560,8 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 7076,
-      "sha256": "6f95d4f0627792a7a99e6d6d86afb0855d41f6794af5dcb792804d17d1b0538a"
+      "bytes": 7901,
+      "sha256": "bbaae8202e61f32e7470ceada0c3ca24dd926021eb9386957baf8115499cc077"
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
@@ -599,14 +599,19 @@
       "sha256": "19c53fde561af00945450ef3c7c85b802a232da8bf4d8451bfc7563b7f343140"
     },
     {
+      "path": "Source/UI/Controls/FocusVisibility.h",
+      "bytes": 1907,
+      "sha256": "732892a2eecc2bbda33bba7a3edcefddd9b026e6a9a4cf2a86c3a4ec41f15cb8"
+    },
+    {
       "path": "Source/UI/Controls/HeaderInformation.h",
       "bytes": 1305,
       "sha256": "1c82bc370403437e53e26223272dd06616698f454102201ea7d42ecc07b8e8ea"
     },
     {
       "path": "Source/UI/Controls/IconActionButton.h",
-      "bytes": 1923,
-      "sha256": "55503ced644f7dbe356fe3fce2ece16edcad02852cf4b10f553cd82ae9b5c86b"
+      "bytes": 1917,
+      "sha256": "d01d40b20a8f42926fd2ec17ae955c5b2897e85486ef26a22c37e94afe3c63d2"
     },
     {
       "path": "Source/UI/Controls/InvocationSlider.h",
@@ -870,8 +875,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 25445,
-      "sha256": "8bbff46c116ebcfbc9722682ec9945e893be01b5b4dccd509f5ddf270b624aeb"
+      "bytes": 25570,
+      "sha256": "0a12728989f24cb484311e53a83497b15595859f47ee7fb38a2fba842a238fd7"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

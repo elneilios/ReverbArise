@@ -21,6 +21,12 @@ Implementation uses the approved C1/P1 contract from standards revision 11. Nati
 - [x] 3.2 Directly launch the prepared actual-editor review covering 900x600/100%, 1000x700, 1100x850, 1400x1000 and supported 100%/125% user scale with long labels, disabled/error states and Settings/Diagnostics; verify complete focus/hit/accessibility access and record scoped integrated acceptance. Record physical Windows DPI/FL Studio coverage honestly; request a consolidated host smoke only for concrete unresolved host behavior.
 - [x] 3.3 Update production standards from the then-current approved revision, C1 contracts, inventory/debt, dated evidence and affected guide content/currency together using the guide-maintenance workflow. Verify strict OpenSpec, UI guard, documentation links, guide currency and whitespace checks pass; leave one owner-review PR with `Refs #107` and a consumer-scoped diff. Verify #108/#8 worktrees and excluded runtime areas are untouched; do not self-merge or close #107.
 
+## 4. Owner-approved focus visibility follow-up
+
+- [x] 4.1 Implement keyboard/accessibility focus visibility for shared command buttons while retaining actual focus, one-shot invocation and existing hover/press ink. Cover first/repeated pointer clicks, pointer-driven focus restoration, Tab/Shift+Tab, Return/Space and explicit accessibility focus/press/toggle, including non-consuming input tracking and lifetime guards. Keep other control-family renderers unchanged.
+- [x] 4.2 Record the 2026-11-06 owner decision in agent guidance, shared contracts, standards revision and this change's design/spec. Apply it now to shared command buttons; require adoption in the remaining families' own design-system jobs, retaining caret/editing/selection cues and explicit native/file-drag boundaries. Review guide currency and dated evidence.
+- [ ] 4.3 Run the supported native Release tests and static/OpenSpec/guide checks for the follow-up, directly launch the updated native preview, and update the same owner-review PR without self-merging or closing #107. Retain the existing geometry/colour/IR acceptance and record physical DPI/host limits honestly.
+
 ## Workflow follow-up
 
 - Keep #107 open for remaining control families. This child is command buttons only.

@@ -21,6 +21,14 @@ Migrated text and glyph command actions SHALL share reviewed, distinguishable id
 - **THEN** the import button's visible body matches the selector's top, bottom and height
 - **AND** its original folder glyph fits within that body, the outside focus frame remains contained, and field feedback retains its existing gap below the inputs
 
+#### Scenario: Input method controls focus visibility
+- **WHEN** a shared command receives keyboard navigation or explicit accessibility focus
+- **THEN** its aqua brackets identify the focused command, including when focus was already present
+- **AND** Return/Space and accessibility activation retain one-shot guarded delivery
+- **WHEN** the user clicks with the pointer, including clicking an already focused command
+- **THEN** the brackets are hidden while actual focus and keyboard eligibility are retained
+- **AND** hover and mouse-down body feedback is unchanged, mouse movement alone does not clear keyboard focus visibility, and pointer-driven programmatic focus restoration does not reintroduce brackets
+
 ### Requirement: Command activation preserves binding authority
 Migrated commands SHALL support pointer, Return, Space and applicable accessibility activation through the same eligible command path. One activation SHALL issue at most one command. Disabled, stale or destroyed targets SHALL NOT gain permission through a new input path. Existing command effects, target/session guards, persistent data and audio behavior SHALL remain unchanged.
 

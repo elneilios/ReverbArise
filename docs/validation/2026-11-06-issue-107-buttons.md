@@ -431,3 +431,61 @@ layout/scale and protected binding/audio/persistence cases. Tasks are 10/10.
 This supersedes the pending-review/current-verification notes above. No separate
 knob, #108, Storage/recovery or physical DPI/FL Studio approval is inferred.
 The corrected review window is preserved until the owner finishes with it.
+
+## Owner-approved keyboard/accessibility focus visibility — 2026-11-06
+
+The owner explicitly approved showing aqua brackets for keyboard and accessibility
+focus, hiding them after mouse clicks, and preserving hover/held feedback. They
+also directed later design-system jobs to adopt the same policy for other
+controls. This is scoped approval of the visibility behavior; the accepted
+revision-12 bracket geometry, body/glyph colours and IR alignment remain unchanged.
+
+Implementation scope: shared CommandButton text/icon/latch consumers only. The
+shared FocusVisibility observer watches JUCE mouse-down and focused-component key
+input without consuming events, storing keystrokes, changing actual focus or
+issuing model commands. Keyboard traversal and explicit accessibility focus mark
+visible focus, including an already focused button. Pointer input hides decoration
+but retains activation/focus; direct pointer-driven restoration keeps provenance.
+Mouse movement alone does not clear the keyboard indicator. Accessibility press
+and toggle retain guarded one-shot dispatch. Observers detach through their shared
+resource lifetime and safe focused-component reference.
+
+Other renderers (including knobs, selectors, entries, native-dialog boundaries and
+FileDragTile's specialized presentation) are deferred to their own family jobs.
+AGENTS.md, the shared contracts' Focus visibility policy and standards revision 13
+record this instruction for other agents. Caret/editing and selection feedback
+remain distinct. No #108/#8 worktree or model/audio/storage implementation changes.
+
+Verification map: 4.1 is medium-risk shared UI input/state with native focus,
+callback/lifetime and body-pixel invariance checks; 4.2 is low-risk guidance/guide
+currency; 4.3 is current-baseline native integration and preview/PR delivery.
+Warm Release build `20261106-230652-2c5e59dc` passed. Focused native
+preverb_swell_ui_test --test-command-buttons passed, exit 0, including repeated
+clicks on an already focused command, direct restoration, forward/backward Tab,
+Return/Space, explicit accessibility focus/press/toggle and original lifetime/
+eligibility oracles. The added text-editor peer input check proves the observer
+leaves a real typed edit intact. Hover/held body pixels are identical when only
+focus visibility differs. Log: out/command-focus-visibility/command-focus.log.
+
+UI standards passes 66 files/59 bounded occurrences with no debt regeneration.
+Guide prose now explains visibility versus retained focus, and its semantic review
+record is refreshed. The completed previous preview PID 56488 was closed after
+exact path/argument verification for the rebuild. Current follow-up validation
+and the updated native preview are recorded below when complete; previous 85/85
+results above are not relabelled as tests of this follow-up.
+The full current actual-editor native fixture also passed, exit 0 (out/command-focus-visibility/editor.log). Follow-up implementation and durable policy tasks are verified; final combined native/preview/PR delivery remains task 4.3.
+
+### Focus visibility follow-up final verification
+
+Supported Release wrapper 20261106-231844-b6e1acc5 passed configure/build and
+85/85 CTest, exit 0, 243.00 s. This result includes the focus observer and current
+keyboard/accessibility/pointer tests, existing native foreground checks, actual
+editor/IR/Export/scale and Storage/engine/audio/persistence regressions. No required
+check was skipped or weakened; native MSVC/CTest is distinct from host/DPI coverage.
+
+The updated actual-editor preview was directly launched from a verified copy of
+the passing binary at out/command-focus-visibility/command-focus-review.exe,
+argument --review-command-integrated, PID 55928. Hover/held ink, corner and
+IR geometry reuse their existing acceptance. The owner's explicit visibility
+instruction is the scoped approval for this follow-up; no repeated whole-plugin
+UAT or new host check is required. Other family renderers retain their staged jobs.

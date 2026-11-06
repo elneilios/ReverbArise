@@ -19,7 +19,7 @@ public:
     {
         ActionButton::paintSurface(g,*this,over,down);
         const auto c=getLocalBounds().toFloat().getCentre();
-        g.setColour(commandInk(CommandVariant::neutral,{isEnabled(),over,down,hasKeyboardFocus(true),false}).glyph);
+        g.setColour(commandInk(CommandVariant::neutral,{isEnabled(),over,down,isFocusVisible(),false}).glyph);
         switch(icon)
         {
             case ActionIcon::openFile:

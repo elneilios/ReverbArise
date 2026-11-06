@@ -163,6 +163,48 @@ inline void cases()
     {button->setEnabled(true);host.addAndMakeVisible(button);button->setBounds(x,20,150,34);x+=165;}
     for(auto* button:std::array<juce::Button*,5>{&ordinary,&primary,&dangerous,&settings,&latch})
     {button->grabKeyboardFocus();pump();REQUIRE(button->hasKeyboardFocus(true));const auto frame=render(*button);REQUIRE(frame.getPixelAt(1,5)==aqua && frame.getPixelAt(75,1)==background);}
+    // Focus ownership and its decoration are independent across input methods.
+    for(auto* command:std::array<CommandButton*,2>{&ordinary,&settings})
+    {
+        unsigned delivered=0,captured=0;
+        command->onClick=[&]{++delivered;};command->beforeInvocation=[&]{++captured;};
+        auto* handler=command->getAccessibilityHandler();REQUIRE(handler);
+        REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::focus));pump();
+        REQUIRE(command->hasKeyboardFocus(true) && command->isFocusVisible() && delivered==0 && captured==0);
+        const auto keyboardFrame=render(*command,true,true);
+        controlReview::pointerClick(*command);pump();
+        REQUIRE(command->hasKeyboardFocus(true) && !command->isFocusVisible() && delivered==1 && captured==1);
+        const auto pointerFrame=render(*command,true,true);
+        REQUIRE(pointerFrame.getPixelAt(1,5)==background && keyboardFrame.getPixelAt(1,5)==aqua);
+        const auto body=commandBodyBounds(command->getLocalBounds());
+        for(int y=body.getY();y<body.getBottom();++y)for(int x=body.getX();x<body.getRight();++x)
+            REQUIRE(pointerFrame.getPixelAt(x,y)==keyboardFrame.getPixelAt(x,y));
+        controlReview::pointerClick(*command);pump();
+        REQUIRE(!command->isFocusVisible() && delivered==2 && captured==2);
+        primary.grabKeyboardFocus();command->grabKeyboardFocus();pump();
+        REQUIRE(command->hasKeyboardFocus(true) && !command->isFocusVisible()); // Pointer dialog-style restoration.
+        command->moveKeyboardFocusToSibling(true);pump();
+        auto* next=dynamic_cast<CommandButton*>(juce::Component::getCurrentlyFocusedComponent());
+        REQUIRE(next && next!=command && next->isFocusVisible());
+        next->moveKeyboardFocusToSibling(false);pump();REQUIRE(command->hasKeyboardFocus(true) && command->isFocusVisible());
+        REQUIRE(command->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));pump();
+        REQUIRE(command->isFocusVisible() && delivered==3 && captured==3);
+        REQUIRE(command->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));pump();
+        REQUIRE(command->isFocusVisible() && delivered==4 && captured==4);
+        controlReview::pointerClick(*command);pump();REQUIRE(!command->isFocusVisible());
+        REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::focus));pump();
+        REQUIRE(command->isFocusVisible() && delivered==5 && captured==5);
+        REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::press));pump();
+        REQUIRE(command->isFocusVisible() && delivered==6 && captured==6);
+        command->onClick={};command->beforeInvocation={};
+    }
+    // Observing keyboard input in a different family must not consume its edit.
+    {
+        controlReview::pointerClick(ordinary);pump();REQUIRE(!ordinary.isFocusVisible());
+        juce::TextEditor entry;host.addAndMakeVisible(entry);entry.setBounds(8,120,180,30);entry.grabKeyboardFocus();pump();
+        REQUIRE(host.getPeer()->handleKeyPress(juce::KeyPress('q',{},'q')));pump();REQUIRE(entry.getText()=="q");
+        ordinary.grabKeyboardFocus();pump();REQUIRE(ordinary.isFocusVisible());
+    }
     ActionButton longLabel("Recapture and regenerate selected swell");longLabel.setSize(160,34);host.addAndMakeVisible(longLabel);
     REQUIRE(longLabel.getAccessibilityHandler()->getTitle()==longLabel.getButtonText());
     const auto labelFont=componentTextFont(longLabel,TextRole::controlLabel);

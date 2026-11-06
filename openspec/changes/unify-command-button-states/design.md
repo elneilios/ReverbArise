@@ -16,6 +16,21 @@ This is a cross-cutting family extraction spanning shared controls and main/auxi
 
 ## Decisions
 
+### Owner-approved focus visibility follow-up — 2026-11-06
+
+The owner approved keyboard/accessibility-only aqua brackets, with mouse clicks
+retaining focus but hiding its decoration. Hover, held feedback, geometry, glyphs
+and callbacks stay as accepted. A shared `FocusVisibility` observer tracks JUCE
+pointer/keyboard input without consuming keys or changing focus. Command buttons
+use it when painting; explicit accessibility focus also updates provenance, even
+on an already focused button. Direct focus restoration retains input provenance.
+
+Standards revision 13 records the decision for all applicable families. Implement
+it now in the shared command family; adopt it in other controls only within their
+own design-system jobs. Knobs, selectors, entries, native-dialog boundaries and
+FileDragTile's specialized painter retain their current rendering. Preserve caret,
+editing, selection and accepted-state feedback independently of focus decoration.
+
 ### Current implementation status
 
 The owner approved native family revision 4: “this is perfect and looks good”.

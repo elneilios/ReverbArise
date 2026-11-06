@@ -1,5 +1,6 @@
 #pragma once
 #include <UI/WorkspaceTheme.h>
+#include "FocusVisibility.h"
 namespace m3::ui::controls
 {
 enum class CommandIcon { none, play, stop, save, returnBack, add };
@@ -16,6 +17,7 @@ public:
         juce::Button::setButtonText(label);if(follow)setTitle(label);
     }
     std::function<void()> beforeInvocation;
+    bool isFocusVisible()const noexcept{return hasKeyboardFocus(true) && focusVisibility->isVisible();}
     void invokeCommand()
     {
         if(!isEnabled())return;
@@ -26,17 +28,24 @@ public:
     void mouseDown(const juce::MouseEvent& e)override
     {
         if(!isEnabled())return;
+        focusVisibility->pointerInput();
         const juce::Component::SafePointer<CommandButton> safe(this);
         const auto prepare=beforeInvocation;if(prepare)prepare();
         if(safe && safe->isEnabled())safe->juce::Button::mouseDown(e);
     }
     bool keyPressed(const juce::KeyPress& key)override
     {
+        focusVisibility->keyboardInput();
         if(key.isKeyCode(juce::KeyPress::spaceKey) || key.isKeyCode(juce::KeyPress::returnKey))
         {invokeCommand();return true;}
         return juce::Button::keyPressed(key);
     }
-    void focusGained(FocusChangeType)override{repaint();}
+    void focusGained(FocusChangeType cause)override
+    {
+        if(cause==focusChangedByMouseClick)focusVisibility->pointerInput();
+        else if(cause==focusChangedByTabKey)focusVisibility->keyboardInput();
+        repaint();
+    }
     void focusLost(FocusChangeType)override{repaint();}
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
     {
@@ -67,8 +76,10 @@ public:
             {return command.isToggleable()?Interfaces{std::make_unique<Value>(command)}:Interfaces{};}
             static juce::AccessibilityActions actions(CommandButton& command)
             {
-                auto result=juce::AccessibilityActions{}.addAction(juce::AccessibilityActionType::press,[&command]{command.invokeCommand();});
-                if(command.isToggleable())result=result.addAction(juce::AccessibilityActionType::toggle,[&command]{command.invokeCommand();});
+                auto result=juce::AccessibilityActions{}
+                    .addAction(juce::AccessibilityActionType::focus,[&command]{command.focusVisibility->accessibilityInput();command.grabKeyboardFocus();})
+                    .addAction(juce::AccessibilityActionType::press,[&command]{command.focusVisibility->accessibilityInput();command.invokeCommand();});
+                if(command.isToggleable())result=result.addAction(juce::AccessibilityActionType::toggle,[&command]{command.focusVisibility->accessibilityInput();command.invokeCommand();});
                 return result;
             }
             CommandButton& owner;
@@ -77,6 +88,7 @@ public:
     }
 private:
     bool keepGlyphTitle;
+    juce::SharedResourcePointer<FocusVisibility> focusVisibility;
 };
 class ActionButton:public CommandButton
 {
@@ -90,12 +102,13 @@ public:
     // and focus are resolved independently from hover and held-press feedback.
     static void paintSurface(juce::Graphics& g,juce::Button& button,bool over,bool down,bool emphasized=false)
     {
+        const auto* command=dynamic_cast<CommandButton*>(&button);
         paintCommandSurface(g,button.getLocalBounds(),emphasized?CommandVariant::primary:CommandVariant::neutral,
-                            {button.isEnabled(),over,down,button.hasKeyboardFocus(true),false});
+                            {button.isEnabled(),over,down,command?command->isFocusVisible():button.hasKeyboardFocus(true),false});
     }
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
-        const CommandState state{isEnabled(),over,down,hasKeyboardFocus(true),effectiveLatchState()};
+        const CommandState state{isEnabled(),over,down,isFocusVisible(),effectiveLatchState()};
         paintCommandSurface(g,getLocalBounds(),variant,state);
         g.setColour(commandInk(variant,state).content);
         auto area=getLocalBounds().toFloat().reduced(12,4);

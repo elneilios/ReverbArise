@@ -31,6 +31,12 @@ Their earlier approvals continue to describe their command/binding scope; the
 button evidence covers the revised common states. FileDragTile retains its
 specialized painter, and generic Rename buttons retain the neutral fallback.
 
+Revision 13 adds keyboard/accessibility-only focus decoration to the shared
+command family, with actual focus and mouse feedback retained. The owner directed
+the same policy for other applicable controls during their own design-system
+jobs; see the [decision and boundaries](../development/ui-control-contracts.md#focus-visibility-policy).
+This is not an immediate migration of the remaining C2–C8 renderers.
+
 ## Header and shared workspace feedback
 
 Sources: [WorkflowHeader](../../Source/UI/WorkflowHeader.h),

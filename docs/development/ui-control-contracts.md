@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, 6 November 2026; production standards revision 12.**
+**Owner-approved contracts, 6 November 2026; production standards revision 13.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -29,11 +29,32 @@ Future changes update inventory rows, contract exceptions and evidence together.
 
 ## Common state matrix and precedence — accepted contract
 
+### Focus visibility policy
+
+**Owner decision, 2026-11-06:** distinguish focus ownership from its decoration.
+Show focus decoration for keyboard navigation and accessibility-driven focus.
+Pointer clicks hide the decoration while retaining actual focus, keyboard
+activation and the existing hover/held feedback. Repeated clicks on an already
+focused control must also hide it. Keyboard navigation/activation or an explicit
+accessibility focus request makes it visible again; mouse movement alone does
+not clear it. Programmatic restoration retains the preceding input provenance.
+
+Implemented now in the shared C1 command family using `Controls/FocusVisibility.h`:
+the observer never consumes keys, invokes commands or stores keystrokes. Other
+families adopt this policy when their own design-system jobs begin, with their
+normal component/binding checks; do not retrofit them in unrelated work. This
+includes the existing native-dialog boundary and specialized FileDragTile focus
+presentation. Carets, text-editing baselines, selected/latched state and menu
+selection are separate feedback and must remain understandable after pointer use.
+
+The common state matrix below states the family contract, not a claim that every
+legacy control already implements this visibility policy.
+
 | State / combination | Required resolution for applicable families |
 | --- | --- |
 | Idle | Approved neutral surface/type and discoverable enabled affordance |
 | Hover / pressed | Use owning family's reviewed feedback; matching command semantics share the same surface response; do not infer semantics from names or labels |
-| Focus | Contained visible focus, independent of hover; preserve each approved family geometry, including knob corner focus |
+| Focus | Use the focus visibility policy as each family is migrated; retain contained geometry independent of hover, including the approved knob corner motif |
 | Selected / latched | Display accepted state; do not confuse inspected/focused option with committed selection |
 | Disabled + hover/pressed | Disabled eligibility suppresses activation; resolve disabled ink/surface before transient emphasis; audit existing mismatches before changing them |
 | Disabled + focus/selected | Preserve understandable state and a documented focus rule; no blanket removal of selection or unreachable explanation; do not invent a global alpha/focus geometry |
@@ -332,7 +353,7 @@ native review must use the actual prepared fixture and retain one review window.
 
 | Policy | Current authority / disposition |
 | --- | --- |
-| Neutral/primary/destructive/latching command state | Shared command resolver, explicit roles, outside corner focus and paired IR body geometry; #107 family and integrated correction approved at revision 12; P1 complete |
+| Neutral/primary/destructive/latching command state | Shared resolver/roles and IR geometry approved at revision 12; keyboard/accessibility-only decoration approved at revision 13; shared C1 implementation, other families retain their staged jobs |
 | No-wheel IR/deliberate selector | Existing DeliberateSelector and UI standards; plain Settings boxes remain P2 debt |
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
