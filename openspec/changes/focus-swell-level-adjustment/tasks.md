@@ -1,6 +1,8 @@
 # Tasks
 
-Planning for #108 only. No task below is implemented or approved merely by creating this proposal. Begin only after a new Apply request. Preserve task-level Apply instruction refreshes and owner control-review boundaries.
+Owner-confirmed planning revision: fixed -12/+12 editing limits, 0 dB at 12 o'clock, and older saved values preserved until accepted edits/reset. This update changes planning only; use Apply separately for the correction. Preserve task-level Apply instruction refreshes and owner control-review boundaries.
+
+Sections 1-4 below preserve the completed `541b8ba` baseline under the **superseded extended-editing contract**. Their checked boxes and dated results are historical; they do not prove the revised contract. Section 5 contains all remaining correction work. Existing proposal/design/delta requirements govern the current target behavior.
 
 ## 1. Shared Level contract and compatibility
 
@@ -22,7 +24,15 @@ Planning for #108 only. No task below is implemented or approved merely by creat
 
 - [x] 4.1 Run the supported `scripts/build.ps1` Debug/Release validation appropriate to affected components and native integration, `scripts/check-ui-standards.ps1`, strict OpenSpec validation and whitespace checks; record revision, exact commands, results, warm/cold cache status and skipped coverage in dated evidence. Run a brief final FL Studio smoke only for concrete unresolved host behavior using the install-test-vst3 skill if installation is needed; preserve prior passing checks and report untested DPI/host coverage.
 
+## 5. Owner-confirmed fixed-limits correction
+
+- [ ] 5.1 Separate the single [-12,+12] new-edit domain from the unchanged [-60,+12] saved-state/DSP compatibility domain. Verify command/model and real processor-wrapper tests preserve -60/-30/non-step saved values through load/focus/unrelated edits/save/frozen reopen, reject new out-of-range/nonfinite numeric and accessibility edits, accept valid bounded values and reset to 0; document the compatibility boundary without a state/asset migration.
+- [ ] 5.2 Prepare the revised shared control/binding candidate with readable -12/+12 endpoint labels and a clear 0 dB reference physically at 12 o'clock, using existing text roles/tokens. Verify native paint/angle/layout checks and actual mouseDown/mouseDrag/mouseUp in both directions, fine movement, lower/upper limits, wheel/key/exact/accessibility parity, stale intents and reset. For a saved -30 value, verify outward relative input is a no-op, an inward coarse step selects -11 from the displayed bounded position, typed -24 is rejected, and untouched/cancelled input preserves sound; update affected candidate standards/help and tests together without introducing extended authoring.
+- [ ] 5.3 Launch one prepared native preview directly for the owner and retain it through review; show endpoint labels, 0 at 12 o'clock, compact/larger/user-scale presentation and the saved-value indication. Record explicit approval of this revised family's presentation/interaction before wider rollout, or revise only the candidate. Reuse prior calibration/listening approval; do not ask the owner to repeat passing automated edge cases or the whole sound comparison.
+- [ ] 5.4 After task 5.3 approval, integrate the accepted fixed-limit candidate across affected Level authoring consumers and remove the old extended-edit policy/help. Verify defaults/neighbour/instance/freeze isolation, no refresh-time writes, raw/calibration reuse, legacy save/reopen before and after accepted edits, and gain agreement for new -12/0/+12 values across admitted audition/live/plugin WAV/offline paths with their existing protection policies. Use maintain-user-guide to update the relevant prose and explicit review record; verify read-only currency and affected links.
+- [ ] 5.5 Complete proportionate supported Debug/Release native builds and focused component/integration/compatibility checks for the revised contract; run UI standards, strict OpenSpec and whitespace checks. Record exact revision/commands/results, source and binary identity, warm/cold status, earlier pointer coverage limits, scoped owner approval and untested host/DPI coverage in fresh dated evidence. Update the existing PR for review only after it matches this plan; request a host smoke only for concrete unresolved host behavior.
+
 ## Workflow follow-up
 
-- Keep the #108 planning delivery distinct from implementing this change; leave its proposal for review and require a new Apply request.
+- This revision is planning-only. Continue implementation through `$openspec-apply-change focus-swell-level-adjustment` after this update; do not treat earlier checked tasks or native approval as proof of the revised labels/limits.
 - Future implementation uses one coherent review PR and no self-merge. Sync/archive only through a separately requested standard lifecycle step.
