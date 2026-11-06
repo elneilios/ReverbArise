@@ -2,6 +2,8 @@
 
 Baseline: `752b3a33865ca6ec3e2e7b4b13baac839509b8bb`, fetched origin/main on 2026-11-03. [Design](../../openspec/changes/portable-project-assets/design.md), [dated evidence](../validation/2026-11-03-asset-storage-investigation.md), [issue](https://github.com/elneilios/ReverbArise/issues/8).
 
+Current phase-0 follow-up (2026-11-06): [contract/version and rollback matrix](asset-storage-contracts.md) and [measured disposable-root audit](../validation/2026-11-06-issue-8-storage-audit.md) cover main df765d9. The original observations and estimates below retain their 2026-11-03 baseline; they are not relabelled as measurements.
+
 ## Evidence and source index
 
 **Verified (source)** means traced code or inspected test assertions, not executed tests or host verification. **Derived** means arithmetic/code implications. **Unknown** means unmeasured runtime/host behavior. **Proposed** behavior is in the design. No user assets were enumerated, decoded or changed. Issue documentation links predate the docs reorganization: current guides are [development](development.md), [M3 persistence](m3-persistence.md), [workflow](workflow-modes.md). M3's v3 state and development's idle-commit guidance reflect older milestones: current processor state is v8 and workflow capture is Stop-transactional. These older paragraphs do not prove current commit timing.

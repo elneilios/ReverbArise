@@ -1,12 +1,12 @@
 # Tasks
 
-Future implementation checklist only. All tasks intentionally remain unchecked. A later explicit approval must authorize each phase; this planning submission does not authorize storage writes, migration, deletion, DSP changes or application of the change. See design.md for phase gates and rollback.
+Phase 0 was authorized on 2026-11-06. Checked tasks record verified phase-0 evidence only; owner-review tasks and all later phases remain gated. See [measured results](../../../docs/validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](../../../docs/development/asset-storage-contracts.md). Later phases require separate explicit approval. Phase 0 permits disposable fixture writes only; it does not authorize relocation, deletion or other changes to user storage, DSP or production storage behavior. See design.md for phase gates and rollback.
 
 ## 1. Contract and measurement gate
 
 - [ ] 1.1 Complete the owner-reviewed version/readiness matrix and handoff against main df765d95170caaaab10a646e43088ea3be66ce53 (or explicitly record a newer baseline): processor envelope v8, creative v1–11, capture schemas 1/2, Export v2/unversioned legacy. Use the design reconciliation as static input only; verify current source/context and all Export-history ownership contracts without editing UI/state machine/capture semantics. This planning revision does not complete the task.
-- [ ] 1.2 Create the dated deterministic disposable-root growth fixture described in the evidence report; verify 3–5 minute dense/sparse input, silence/gaps, forty swells, repeated IR writes/generations and shape-only edits through per-step bytes/counts/hash reports rather than theoretical totals.
-- [ ] 1.3 Exercise reopen, Clear, duplicate, old snapshots and concurrent processes in disposable roots; verify unchanged prior source/render hashes and distinguish shared directory IDs from independently accepted maps in the report.
+- [x] 1.2 Create the dated deterministic disposable-root growth fixture described in the evidence report; verify 3–5 minute dense/sparse input, silence/gaps, forty swells, repeated IR writes/generations and shape-only edits through per-step bytes/counts/hash reports rather than theoretical totals.
+- [x] 1.3 Exercise reopen, Clear, duplicate, old snapshots and concurrent processes in disposable roots; verify unchanged prior source/render hashes and distinguish shared directory IDs from independently accepted maps in the report.
 - [ ] 1.4 Perform the optional FL Studio/JUCE state-context/path spike without guessing project paths; document supported versions, observations and explicit-folder fallback, with no dependency on the spike finding path support.
 - [ ] 1.5 Document the approved version/readiness, backup and binary rollback matrix beside the audit; verify every supported old format has a fixture and unknown dependency versions fail safely before phase 2 is authorized.
 

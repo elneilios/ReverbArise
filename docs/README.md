@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #8 measured storage audit](validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](development/asset-storage-contracts.md) — deterministic capture/IR/render growth, synchronized clone writers, version fixtures and preserved phase/owner-review gates.
+
 - [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
 
 - [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.

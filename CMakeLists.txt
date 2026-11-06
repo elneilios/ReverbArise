@@ -390,3 +390,10 @@ if(BUILD_TESTING)
     target_include_directories(preverb_song_bar_ruler_test PRIVATE Source)
     add_test(NAME preverb_song_bar_ruler_test COMMAND preverb_song_bar_ruler_test)
 endif()
+
+if(BUILD_TESTING)
+    # Opt-in disk-growth audit; CTest runs only its small compatibility fixtures.
+    add_executable(preverb_storage_audit tests/storage_audit.cpp)
+    target_link_libraries(preverb_storage_audit PRIVATE preverb_assets Psapi)
+    add_test(NAME preverb_storage_audit_compatibility COMMAND preverb_storage_audit)
+endif()
