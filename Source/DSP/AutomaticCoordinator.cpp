@@ -102,33 +102,20 @@ void SwellEngine::acceptedSourceLocked(const CaptureManifest& map)
     }
     acceptedSource=map;
 }
-void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool explicitRecapture)
+void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool /*explicitRecapture*/)
 {
     const auto context=contextProvider();if(context.captureGeneration!=generation)return;
     const juce::ScopedLock guard(lock);if(captureEpochProvider && captureEpochProvider()!=generation)return;
-    if(workflowState)
-    {
-        invalidateLearnLocked();automaticBoundsDirty=false;
-        for(auto& w:model.swells)if(!w.frozen && w.sourceStart<b && renderInputEnd(w)>a)
-        {
-            ++w.inputGeneration;w.phase=Phase::stale;w.status="Source changed; waiting for explicit generation";
-            deferredLearnDependencies.insert(w.id);forceRefresh.erase(w.id);passRenderRequests.erase(w.id);invalidateLiveLocked(w.id);
-        }
-        notify();return;
-    }
-    automaticBoundsDirty=true;if(context.capture.manifest.schemaVersion<2 && model.automaticProcessing && model.autoMarkersEnabled)dirtyLocked(a,b);
+    invalidateLearnLocked();
+    if(!workflowState){automaticBoundsDirty=true;
+        if(context.capture.manifest.schemaVersion<2 && model.automaticProcessing && model.autoMarkersEnabled)dirtyLocked(a,b);}
     for(auto& w:model.swells)if(!w.frozen && w.sourceStart<b && renderInputEnd(w)>a)
     {
-        if(!captureAllowsAutomatic(context.capture.manifest,std::max(a,w.sourceStart),std::min(b,renderInputEnd(w))))
-        {
-            // Fence an older queued/in-flight automatic render, including forced
-            // Recapture and legacy refresh paths. Keep definitions/assets intact.
-            ++w.inputGeneration;w.phase=Phase::stale;w.status="Dry-only capture changed source; generate in Perform";
-            forceRefresh.erase(w.id);passRenderRequests.erase(w.id);invalidateLiveLocked(w.id);
-            if(w.id==model.primary)stopLocked();
-        }
-        else if(explicitRecapture){invalidateLiveLocked(w.id);forceRefresh.insert(w.id);
-            if(w.ir.present()){w.phase=Phase::checking;w.status="Checking completed recapture";}if(w.id==model.primary)stopLocked();}
+        // An admitted IR import already fenced older renders. Source changes
+        // must not cancel that assignment's ownership; its completed assignment
+        // will reconcile against the latest immutable accepted source.
+        if(w.status!="Importing IR"){++w.inputGeneration;w.phase=Phase::stale;w.status="Accepted source changed; checking dependencies";}
+        invalidateLiveLocked(w.id);
     }
     notify();
 }
@@ -175,10 +162,10 @@ CompletedPasses SwellEngine::applicableCompletedPasses(const CaptureManifest& ma
 }
 void SwellEngine::prepareDefault(const PreviewContext& context)
 {
-    if(context.capture.status.startsWith("Loading"))return;
+    if(context.capture.status.startsWith("Loading") || context.capture.unavailable)return;
     const auto scope=juce::String(context.capture.manifest.projectId)+"/"+context.capture.manifest.instanceId;
     uint64_t generation;
-    {const juce::ScopedLock guard(lock);if((workflowState && workflowState->snapshot().locked()) || !awaitingCaptureReference.isEmpty() || model.defaultIR.present() || defaultAttemptScope==scope)return;
+    {const juce::ScopedLock guard(lock);if(!initialiseDefaultIfMissing || (workflowState && workflowState->snapshot().locked()) || !awaitingCaptureReference.isEmpty() || model.defaultIR.present() || defaultAttemptScope==scope)return;
         defaultAttemptScope=scope;generation=sessionGeneration.load();}
     Asset asset;juce::String error;SwellAssetStore store(instanceRoot(context.capture.manifest));
     const auto ok=installBundledImpulse(store,defaultImpulseId,available(),asset,error);
@@ -195,25 +182,22 @@ void SwellEngine::requestManualPreparationLocked(const Swell& w,const PreviewCon
     // Explicit Perform intent grants work for this target without changing the
     // saved automatic policy. Pin its current source revision so inspect does
     // not mistake a new/edited interval for a later dry-only capture change.
-    deferredLearnDependencies.erase(w.id);
     forceRefresh.insert(w.id);
     runtime[w.id].revision=juce::String(sourceDependency(context.capture.manifest,w.sourceStart,renderInputEnd(w)));
 }
-void SwellEngine::dispatchAutomatic(const PreviewContext& context)
+void SwellEngine::reconcileRenders(const PreviewContext& context)
 {
     const juce::ScopedLock guard(lock);
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return;
-    if((!model.automaticProcessing && passRenderRequests.empty() && forceRefresh.empty()) || !context.time.valid || context.time.rate!=context.capture.manifest.sampleRate
+    if(context.capture.unavailable || context.capture.status.startsWith("Loading"))return;
+    if(!context.time.valid || context.time.rate!=context.capture.manifest.sampleRate
        || (model.timing.valid && !transportMappingMatches(model.timing,context.time)) || juce::Time::getMillisecondCounterHiRes()<nextAutomaticEdit)return;
-    if(automaticBoundsDirty && (!workflowState || performWindowsRequested)){auto trial=model;juce::String error;
+    if(automaticBoundsDirty && model.automaticProcessing && (!workflowState || (workflowState->snapshot().mode==workflow::Mode::live && performWindowsRequested))){auto trial=model;juce::String error;
         if(!updateAutomaticWindows(trial,context.time,error,applicableCompletedPasses(context.capture.manifest))){message=error;return;}
         for(const auto& old:model.swells)if(const auto* now=find(trial,old.id);now && (now->inputGeneration!=old.inputGeneration || now->shapeGeneration!=old.shapeGeneration))invalidateLiveLocked(old.id);
         model=std::move(trial);automaticBoundsDirty=false;performWindowsRequested=false;}
     for(auto& w:model.swells)
     {
-        if(deferredLearnDependencies.contains(w.id) && !forceRefresh.contains(w.id))continue;
-        if(w.frozen || (!model.automaticProcessing && !passRenderRequests.contains(w.id) && !forceRefresh.contains(w.id)) || (w.phase!=Phase::stale && w.phase!=Phase::empty))continue;
-        if(!captureAllowsAutomatic(context.capture.manifest,w.sourceStart,renderInputEnd(w)) && !passRenderRequests.contains(w.id) && !forceRefresh.contains(w.id))continue;
+        if(w.frozen || (w.phase!=Phase::stale && w.phase!=Phase::empty))continue;
         if(!w.ir.present()){w.status="Missing IR: assign an impulse response";continue;}
         // Coverage alone is cheap admission; decoding/checksum validation stays in renderJob.
         int64_t covered=w.sourceStart;

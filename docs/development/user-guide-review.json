@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the approved issue 80 swell-workspace spec sync: four shared Sound requirements and detection-independent Learn Default IR access match the implemented bindings, owner approvals and existing guide prose. Archived all 13 completed tasks and planning artifacts intact. No new runtime behavior or guide prose change; the owner chose to retain the tested installed build.",
+  "summary": "Reviewed synchronized canonical automatic-swell-processing and swell-regeneration against delivered common-engine/normal recovery bindings and prior approved native/profile evidence. The guide already describes automatic existing-swell maintenance with detection/Stop off, complete-only Recapture, exact Locate/Restore, frozen/custom-IR/metadata/export limits and forced upgrades accurately; no prose/screenshots change needed. Archive only the completed shared-engine change; portability and later safety gates remain active.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 27410,
-      "sha256": "8b814095ac7d3c4cdfc18b2e654b65a1ecb2d5374b27ef7c8d9cbc0b76cf5181"
+      "bytes": 31110,
+      "sha256": "b31c2cfe5aaf4a877f15e876e09ba218816bf242fc96ac79a3c340602e92f62b"
     },
     {
       "path": "CMakePresets.json",
@@ -125,23 +125,23 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 16864,
-      "sha256": "8def03d32a4181899da945148a15af8386ab1075a788f5fdb4811b8535aba6db"
+      "bytes": 19017,
+      "sha256": "fc5e133bf725a7afd4ee6f95683fc3ba87ade467ce52f1a3bcaab3c8c0642367"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 3560,
-      "sha256": "9301b5462f8c51de8b8f90298219a5e6fe2299e77ac832efb19bf3afd80a8cc1"
+      "bytes": 4077,
+      "sha256": "4c3d0e96099e6bfdca305cbfab51335d3cce9ec6e8cf311015011c1d86ed9713"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 24893,
-      "sha256": "19c28c6c3e4a5dd96b49eeb60cd31817048c735f46db4e1269d752e8da9206c7"
+      "bytes": 26273,
+      "sha256": "9a80aa0e29cddecf374d83073f0a591ed05353a2dd46b15b2fc68fade382254e"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 7068,
-      "sha256": "70a5483322ea70d5d2dc6b876e601e2bfd24bd0d99989a27234b8c9f7b83cc6b"
+      "bytes": 7412,
+      "sha256": "5c0ab4a7df9f41b71aa802cbaed06657c1dd8a10cd57165b821e498517c95027"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -285,8 +285,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 25850,
-      "sha256": "611f3b8e75ef512fc8a0d7fe6f0182b893a60827addff94ba0c17331e8f4a4f9"
+      "bytes": 24705,
+      "sha256": "5c4f2aa5b0b4c4b14f725aa53fac6a0c1ac200738d52b1bbea6ee12f29ad6e58"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -340,8 +340,8 @@
     },
     {
       "path": "Source/DSP/LearnGeneration.cpp",
-      "bytes": 17043,
-      "sha256": "fa112363c9691c1d2d43ea0e34bb9ce63fe05432cfb7715099d1897c7b6907d5"
+      "bytes": 16971,
+      "sha256": "6abbb55c8b99f630e46aa08c95d59ae266333830eecdf07177d1db60e8c307b8"
     },
     {
       "path": "Source/DSP/PreviewEngine.cpp",
@@ -355,13 +355,13 @@
     },
     {
       "path": "Source/DSP/ReverseConvolution.cpp",
-      "bytes": 9792,
-      "sha256": "beb36b7713c38c0d38ac4ee1b088c79fc9b36ec0b33e7db5703b61c7e08260c2"
+      "bytes": 10101,
+      "sha256": "aff765e6c7bdac80fd9671872a047555161f5b3b39b889a238c37ed5ca2e1c05"
     },
     {
       "path": "Source/DSP/ReverseConvolution.h",
-      "bytes": 1634,
-      "sha256": "d6e6f3332c2a533485af646f7a1eabc885d77eacbbfaf3708ba483c682a10d63"
+      "bytes": 1827,
+      "sha256": "aed05c998d07aa14dc161b7709d33b25cdf894af820a68d66c2ac51462dd6134"
     },
     {
       "path": "Source/DSP/SongExport.cpp",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 82323,
-      "sha256": "c76816f95d21fbeda135e057dac7fe5c8f74f5d9471e7359102c6f2812189f52"
+      "bytes": 82995,
+      "sha256": "496ffb13ed83580ac780a800e092fcd38472456399a8d511b5f1c0a929aa01cf"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22856,
-      "sha256": "50f8b503c475504fd271fc9f47ec9d6bbaa20b990901d5ef807c7b44bcdb3028"
+      "bytes": 23200,
+      "sha256": "b8e2a14e24b0eb4d057e6014abb701f0a1de968be7d14aa37755096a9a9dca69"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -435,8 +435,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38068,
-      "sha256": "0074f0bd5839f990d74637fe829208c20b6dc8c3ba7d39bd4104ef36c0b2534f"
+      "bytes": 38067,
+      "sha256": "dfefc3d5d72fe88dc954e3c29d834dcd27623fb1d57ab0267de81c1696e36f2b"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86421,
-      "sha256": "27455c80781c5b92d6c2b531b9290c5337231c02ba32460849a320df4f89bb20"
+      "bytes": 86614,
+      "sha256": "fa5686308d474133a4aa2b267780a449521d1fb964136fd299136ed3f5800fd7"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12231,
-      "sha256": "2cae5ab832d05d9a143842a9c5a09d8e6a44d13fe03ee354270882bdbfeb6d0d"
+      "bytes": 13055,
+      "sha256": "bfe50fa4968c9761aa254fcba5d4562c8ff313fd053b20b9d6f6dd054bf7e445"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -515,23 +515,43 @@
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
-      "bytes": 8799,
-      "sha256": "ebe67ca8fbecc062b948cec75db57715ce5c6cdb2a7dbe0a999b56bc8a892e7d"
+      "bytes": 8801,
+      "sha256": "7839b62d1e6ec9f535bf1b887b9409ad2b569cdddb65a57152a282e12dbc9910"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 29120,
-      "sha256": "56be56ab9739dbdc61df9c6de69f3ccdddaf19b202e5ac36275a54113adcd9bf"
+      "bytes": 35913,
+      "sha256": "4006b8ed7d3677ada8dcdbf60f391e0f017722952404259c596a43ffeeaf5eb0"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 6955,
-      "sha256": "80320d253a276c447cf8d72e0192990008918a393a1cd3f522ba7e93a2b848f3"
+      "bytes": 7672,
+      "sha256": "11db711f770d45ba16f9b0472396480b7101de23d4dc9add5a0c4f273bec116c"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 16480,
-      "sha256": "4726088d344c5bdca8edc35e1fc9633b1b2fce96af8de333585eaba10e5674e9"
+      "bytes": 21989,
+      "sha256": "a28fcc91bdace8e0f7095139abd7117b3c7d7f590b58f6612e5a1ced10b36663"
+    },
+    {
+      "path": "Source/Storage/AssetInventory.cpp",
+      "bytes": 23028,
+      "sha256": "c0c0ef6424feec72a09cfb57ae4818d5ceb90b1ed50fc50ee58c2a7b58ffc3a6"
+    },
+    {
+      "path": "Source/Storage/AssetInventory.h",
+      "bytes": 3188,
+      "sha256": "df5db970032ba4af301c88e72cb406344db431ad6aec124eb025979e0ab81de6"
+    },
+    {
+      "path": "Source/Storage/PortableAssets.cpp",
+      "bytes": 38480,
+      "sha256": "548708923bc3bbc0a221d98d849f96b8d2aabcb116b00a5378bf3d9592a63131"
+    },
+    {
+      "path": "Source/Storage/PortableAssets.h",
+      "bytes": 4478,
+      "sha256": "e5b0f623770d1f111da25bcabf4d34ead90887a2c18c3eed87392c2c2ff54dee"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -734,6 +754,11 @@
       "sha256": "15affd2644ca290dcfa48d4806cc1bcbfc55146cac76dd67f138d235b0e4ae00"
     },
     {
+      "path": "Source/UI/PortableStoragePanel.h",
+      "bytes": 18169,
+      "sha256": "078ea6ceea5c3b9081121e25326ae92ce656050b4ce3f2b90ade970a2f1aafb8"
+    },
+    {
       "path": "Source/UI/PresentationFit.h",
       "bytes": 2832,
       "sha256": "1840734b843339433918661b47cfefb3d628b5113683c4a1ba7b90536b37df6f"
@@ -752,6 +777,11 @@
       "path": "Source/UI/SongBarRuler.h",
       "bytes": 1908,
       "sha256": "2d6a7060929d1cb4cc18323778723b3eb5d534d9b3d139e64b8c264c6a1d0ab5"
+    },
+    {
+      "path": "Source/UI/StorageInventoryPanel.h",
+      "bytes": 7610,
+      "sha256": "dfddcbb127fbac5a7f036055cecb80e97ed90c7e12d4bf01a6a60c745c0e28df"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -829,14 +859,19 @@
       "sha256": "3802d3bee984124f611c6a62ef5bb2c5697d39aeb15b6d680a3b8804bae57a1c"
     },
     {
+      "path": "cmake/ProjectFolderProbe.cmake",
+      "bytes": 2886,
+      "sha256": "388ec22898bb57836594824aa842d22f25f90e1e371fd7834342a67e88432678"
+    },
+    {
       "path": "cmake/build-information.json.in",
       "bytes": 232,
       "sha256": "ee171d7bbd9b03871bd27161e42b506c9a6eba19a05eb1a0302f51ab9dd63ce3"
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21965,
-      "sha256": "ed242a7be19f5893ae773730eea37b107f74fd7f2ee89f079fb2291b866f7f72"
+      "bytes": 25093,
+      "sha256": "ad7a45dcf3827216f0c23e4ebbc747638d9831e332409fb75407faa3150a8120"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -870,8 +905,8 @@
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
-      "bytes": 33045,
-      "sha256": "bfe99145a0d992c08e7816c5ff5287c5f73c841658f0776a392380873194d16a"
+      "bytes": 33021,
+      "sha256": "d5c9a39d2c514ab9e4c15ebc3bab0f6b7405ad702e24fa217e329b6d6a6cae38"
     },
     {
       "path": "openspec/specs/editor-presentation/spec.md",
@@ -925,8 +960,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 8679,
-      "sha256": "0cbe5cce4639339f3a877d3cdde163d2300c11579d53ada1925a90d2a4827633"
+      "bytes": 12882,
+      "sha256": "1370c2b1474e4266dc6aa280fa9dab3388b1a36bc354cda9e2fb9a183f9f6264"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
@@ -1025,8 +1060,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32658,
-      "sha256": "5d88b26910e0f8acc09822cbd99f6c8b87951b1480b2af3b694da3b1ea137085"
+      "bytes": 32785,
+      "sha256": "3c7e6b7b27189797451a467cec0eb4090c7cd331aa82f97273875c6456b86b7d"
     }
   ]
 }

@@ -1,0 +1,75 @@
+{
+  "testedRevision": "407df25471734642902bf1f14e9076c73e8431cb",
+  "host": "FL Studio 26.1.7.5654",
+  "receipt": {
+    "version": 1,
+    "storeId": "c1390ee0-b79e-4440-91fc-897c51614582",
+    "snapshot": "3b25fdddd41d9bb1c0951af317ecd1898ba688e19727c9ea510abef9fc369773",
+    "projectId": "8e550fe6-b5c2-4c3e-a565-c5433a0d426a",
+    "instanceId": "e2764d0c-fcd1-49a8-9c55-f79ceae30ff9",
+    "files": "2",
+    "bytes": "691757",
+    "exclusions": "Pending work, other instances, older FLPs and external Playlist copies are excluded.",
+    "unknownCaptureHistory": true,
+    "producer": "ReverbArise\nVersion: 0.1.0\nBuild: v0.1.0-local\nGit commit: 407df25471734642902bf1f14e9076c73e8431cb\nSource status: unmodified\n"
+  },
+  "backupFiles": [
+    {
+      "path": "store.json",
+      "bytes": 78,
+      "sha256": "991a094f6f41c98f7201628b700d69884e39eea440ceec9fbe4e37e739803f01"
+    },
+    {
+      "path": "descriptors/6a0a1fb7d0247338f60f222c40f6b29afc3136c4e1c09b882abe12e511cdcfa1.json",
+      "bytes": 453,
+      "sha256": "6a0a1fb7d0247338f60f222c40f6b29afc3136c4e1c09b882abe12e511cdcfa1"
+    },
+    {
+      "path": "objects/sha256/be/be50f1187b22b0244105379859545eb97213b52bebfac267d774c4c4024bd06b.wav",
+      "bytes": 691304,
+      "sha256": "be50f1187b22b0244105379859545eb97213b52bebfac267d774c4c4024bd06b"
+    },
+    {
+      "path": "receipts/3b25fdddd41d9bb1c0951af317ecd1898ba688e19727c9ea510abef9fc369773.json",
+      "bytes": 565,
+      "sha256": "8efcdac89cae4b55161b1e587fa456b426135bf7c2909e5aa5aaed796f4e5eb2"
+    },
+    {
+      "path": "snapshots/3b25fdddd41d9bb1c0951af317ecd1898ba688e19727c9ea510abef9fc369773.json",
+      "bytes": 3726,
+      "sha256": "3b25fdddd41d9bb1c0951af317ecd1898ba688e19727c9ea510abef9fc369773"
+    },
+    {
+      "path": "transactions/ea0dbb5b-3278-4f7e-8a6f-81bb4136d420/plan.json",
+      "bytes": 4017,
+      "sha256": "1fe30922521c126d5a21e015f4ebd01ca1cb07db7959cc639eb56ba8401a5e41"
+    }
+  ],
+  "duplicateFlpSha256": "4378c96cc3d8b52a2a209fa10b279e995693fbcdd93f291e65e0be1036539222",
+  "originalAliasesStillMatch": true,
+  "installedDllSha256": "75e179adf80bdaaa244c415cb2fd8905ad8b8b30eb4c7a101238b25033030f48",
+  "previousBundle": "out/vst3-install-backups/20261106-134243-9bafb5f9ee214d0b965bccca7323638e/ReverbArise.vst3",
+  "hostProcessModule": "C:/Program Files/Common Files/VST3/ReverbArise.vst3/Contents/x86_64-win/ReverbArise.vst3",
+  "scenarios": {
+    "automaticInventory": "passed",
+    "backup": "passed",
+    "saveAsDifferentFolder": "passed",
+    "fileSystemFlpDuplicate": "passed",
+    "reopenDuplicate": "passed",
+    "explicitTransferredReceiptLocate": "passed",
+    "idempotentRestoreCopy": "passed"
+  },
+  "scope": {
+    "instances": 1,
+    "originalsAvailable": true,
+    "profile": "same Windows user",
+    "sourceAudio": false,
+    "swells": 0,
+    "dependencies": "bundled managed default IR WAV and descriptor",
+    "playbackOrListeningAcceptance": false,
+    "separateWindowsProfile": false,
+    "completeDpiMatrix": false,
+    "pluginInstanceClone": false
+  },
+  "build": "Release wrapper PASS; CTest not rerun for unchanged source; prior affected 8/8 remains separate evidence"
+}

@@ -37,7 +37,7 @@ inline void learnPassPolicyCases()
         waitM3([&]{const auto s=engine.savedSession();return !s.swells.empty() && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         const auto initial=engine.savedSession();const auto before=engine.snapshot();
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
-        engine.setPreferences(0,.5f,.08,true); // Legacy refresh must not defeat Off.
+        engine.setPreferences(0,.5f,.08,true); // Legacy value survives; detection Off only suppresses new markers.
         engine.setLearningAutomatic(automatic);
         REQUIRE(processor->setRecaptureExisting(replace));
         pass(true,.4f);
@@ -47,31 +47,32 @@ inline void learnPassPolicyCases()
         REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::live);
         if(automatic)waitM3([&]{const auto s=engine.savedSession();return s.swells.size()>initial.swells.size() && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
         else{
-            juce::Thread::sleep(200);const auto after=engine.snapshot();
-            REQUIRE(after.analysisCount==before.analysisCount && after.renderCount==before.renderCount);
-            REQUIRE(after.session.swells.size()==initial.swells.size());
-            const auto* w=m3::find(after.session,initial.swells[0].id);REQUIRE(w && w->render==initial.swells[0].render);
-            if(replace)REQUIRE(w->phase==m3::Phase::stale);
-            else REQUIRE(w->phase==m3::Phase::ready);
+            const auto changed=replace?static_cast<uint64_t>(std::count_if(initial.swells.begin(),initial.swells.end(),[](const auto& w){return !w.frozen && w.sourceStart<32768 && m3::renderInputEnd(w)>0;})):0;
+            const auto maintained=before.renderCount+changed;
+            waitM3([&]{const auto state=engine.snapshot();return state.renderCount==maintained && std::all_of(state.session.swells.begin(),state.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
+            const auto after=engine.snapshot();
+            REQUIRE(after.analysisCount==before.analysisCount && after.session.swells.size()==initial.swells.size());
+            const auto* w=m3::find(after.session,initial.swells[0].id);REQUIRE(w && w->phase==m3::Phase::ready);
+            REQUIRE(replace?w->render!=initial.swells[0].render:w->render==initial.swells[0].render);
             if(replace){
-                engine.recaptureCompleted(0,32768);juce::Thread::sleep(80);
-                REQUIRE(engine.snapshot().renderCount==before.renderCount);
+                const auto accepted=w->render;engine.recaptureCompleted(0,32768);juce::Thread::sleep(80);
+                REQUIRE(engine.snapshot().renderCount==maintained);
                 auto saved=engine.savedSession();engine.restore(saved,processor->getCaptureSnapshot().reference);
-                waitM3([&]{return m3::find(engine.savedSession(),initial.swells[0].id)->phase==m3::Phase::stale;});
-                REQUIRE(engine.snapshot().renderCount==before.renderCount);
+                waitM3([&]{return m3::find(engine.savedSession(),initial.swells[0].id)->phase==m3::Phase::ready;});
+                REQUIRE(engine.snapshot().renderCount==maintained && m3::find(engine.savedSession(),w->id)->render==accepted);
             }
             REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
             engine.setLearningAutomatic(true); // Enabling previews dry-only coverage, without creating definitions.
             waitM3([&]{return engine.snapshot().learnGeneration.canGenerate;});
             const auto previewAnalysis=engine.snapshot().analysisCount;REQUIRE(previewAnalysis>before.analysisCount);
             REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));juce::Thread::sleep(100);
-            REQUIRE(engine.snapshot().analysisCount==previewAnalysis && engine.snapshot().renderCount==before.renderCount);
-            // Merely entering Perform does no disabled-pass work; an explicit
-            // Generate is still allowed, including changed dry-only source.
+            REQUIRE(engine.snapshot().analysisCount==previewAnalysis && engine.snapshot().renderCount==maintained);
+            // Mode entry does not duplicate maintenance. Explicit Regenerate still
+            // forces a new revision of the accepted existing definition.
             REQUIRE(engine.selectTargets({w->id},w->id));engine.generate(false);
             waitM3([&]{return m3::find(engine.savedSession(),initial.swells[0].id)->phase==m3::Phase::ready;});
             REQUIRE(engine.snapshot().analysisCount==previewAnalysis);
-            REQUIRE(engine.snapshot().renderCount==before.renderCount+1);
+            REQUIRE(engine.snapshot().renderCount==maintained+1);
             REQUIRE(engine.addTarget(65536+14000));const auto manual=engine.savedSession().primary;
             waitM3([&]{return m3::find(engine.savedSession(),manual)->phase==m3::Phase::ready;});
             const auto ready=engine.snapshot().renderCount;

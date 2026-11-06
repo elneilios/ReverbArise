@@ -46,7 +46,14 @@ void Composition::verifyReadability()
         {juce::Graphics graphics(expected);graphics.fillAll(background);controls::paintMusicalTimelineRuler(graphics,expected.getBounds(),timeline.viewport(),processor->getSongTime());}
         for(int y=0;y<ruler.getHeight();++y)for(int x=0;x<ruler.getWidth();++x)REQUIRE(actual.getPixelAt(x,y)==expected.getPixelAt(x,y));
     }
-    viewport.setViewPosition(0,0);panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);panel->toFront(true);
+    viewport.setViewPosition(0,0);panel->addToDesktop(0);panel->setVisible(true);panel->toFront(true);
+    // Exact-value editing is a real native focus test. A temporary/no-activate
+    // peer can lose focus after its delayed activation, restoring rounded text.
+    auto* peer=panel->getPeer();REQUIRE(peer);
+   #if JUCE_WINDOWS
+    ::SetForegroundWindow(static_cast<HWND>(peer->getNativeHandle()));
+   #endif
+    peer->grabFocus();wait([&]{return peer->isFocused() && juce::Process::isForegroundProcess();});
     auto& preRoll=require<KnobValue>(*panel,"preRollCell");const auto compact=preRoll.valueField().getText();REQUIRE(compact=="0.5");
     const auto focusBefore=engine.savedSession();int commits=0;const auto commit=preRoll.onCommit;preRoll.onCommit=[&](const auto& value){++commits;return commit(value);};
     struct Notifications final:juce::AudioProcessorListener
@@ -60,6 +67,7 @@ void Composition::verifyReadability()
     auto& curve=require<KnobValue>(*panel,"curveInTensionCell");curve.valueField().setText("0.123456789",false);curve.valueField().onReturnKey();panel->refresh();
     REQUIRE(m3::find(engine.savedSession(),saved.primary)->shape.inTension==.123456789 && curve.valueField().getText()=="0.12");
     viewport.setViewPosition(0,curve.getY());curve.valueField().grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    wait([&]{return curve.valueField().hasKeyboardFocus(false);});
     REQUIRE(curve.valueField().getText().getDoubleValue()==.123456789);curve.valueField().onEscapeKey();panel->removeFromDesktop();
     const auto point=timeline.wetLane().getCentre();const auto now=juce::Time::getCurrentTime();
     timeline.mouseMove(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&timeline,&timeline,now,point,now,0,false));
@@ -72,6 +80,10 @@ void Composition::verifyReadability()
     // Actual processor snapshots -> editor refresh, independent of the component's
     // synthetic presentation tests. Consistent host PPQ keeps Song origin at zero.
     const auto originalHead=head.position;
+    // This is a footer geometry/readout oracle, not a material-tempo render
+    // request. Freeze its accepted sounds before exercising many real clocks.
+    wait([&]{const auto s=engine.savedSession();return std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
+    for(const auto& w:engine.savedSession().swells)REQUIRE(engine.setFrozen(w.id,true));
     juce::String beforeReadout,error;REQUIRE(m3::encode(engine.savedSession(),beforeReadout,error));
     const auto renderRevision=engine.snapshot().renderCount,captureRevision=processor->getCaptureSnapshot().manifest.revision;
     juce::AudioBuffer<float> transportAudio(2,64);juce::MidiBuffer transportMidi;
@@ -95,6 +107,7 @@ void Composition::verifyReadability()
         const auto help=find(*panel,"hoverHelp");REQUIRE(help && footer.getBottom()<=help->getY());
     }
     head.position=originalHead;transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
+    wait([&]{const auto s=engine.savedSession();return std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     const auto returnGeometry=footer.geometry();
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();REQUIRE(!footer.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();REQUIRE(footer.isVisible() && footer.geometry()==returnGeometry);

@@ -64,8 +64,6 @@ inline void liveProcessorCases()
     REQUIRE(engine.snapshot().renderCount==count);
     armCaptureFixture(*p);position(500,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),250,.25f);
     p->processBlock(buffer,midi);finishCaptureFixture(*p,head.position);
-    waitM3([&]{return engine.savedSession().swells[1].phase==m3::Phase::stale;});
-    REQUIRE(engine.snapshot().renderCount==count);engine.generate(true);
     waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.renderCount>count && s.session.swells[1].phase==m3::Phase::ready;});
     buffer.setSize(2,16);position(490,true);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(std::abs(buffer.getSample(0,10)-41*.00025f)<1e-6f);
@@ -87,7 +85,7 @@ inline void liveProcessorCases()
     head.position.setIsLooping(false);
     // Returning from incompatible timing cannot revive a formerly published voice.
     head.position.setBpm(241);buffer.clear();p->processBlock(buffer,midi);REQUIRE(engine.snapshot().liveIncompatible);
-    waitM3([&]{return engine.savedSession().swells[1].phase==m3::Phase::stale;});
+    waitM3([&]{const auto s=engine.savedSession();return s.swells[1].phase==m3::Phase::ready && s.swells[1].render.bpm==241;});
     head.position.setBpm(240);position(490,true);buffer.clear();p->processBlock(buffer,midi);REQUIRE(buffer.getMagnitude(0,16)==0);
     // Clearing/restoring cannot expose an old publication before validation.
     engine.generate(true);position(490,false);buffer.clear();p->processBlock(buffer,midi);waitM3([&]{return engine.snapshot().liveReady && engine.savedSession().swells[1].phase==m3::Phase::ready;});

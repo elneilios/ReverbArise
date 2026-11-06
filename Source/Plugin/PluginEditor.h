@@ -19,6 +19,7 @@
 #include <UI/Controls/ActionButton.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
+#include <UI/PortableStoragePanel.h>
 #include <UI/Controls/FocusViewport.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
@@ -29,6 +30,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void refresh();
+    bool assetRecoveryWarningVisible()const{return recoveryWarning && recoveryWarning->isVisible();}
     void modifierKeysChanged(const juce::ModifierKeys&)override;
     void mouseEnter(const juce::MouseEvent& event)override{updateHoverHelp(event);}
     void mouseMove(const juce::MouseEvent& event)override{updateHoverHelp(event);}
@@ -95,6 +97,16 @@ private:
     void initialiseSettings();
     void showRegenerationResult(const m3::RegenerationResult&);
     void layoutSettings();
+    void refreshStorageScope(const CaptureSessionSnapshot&,uint64_t);
+    void serviceAssetRecovery();
+    void showAssetRecoveryWarning(const m3::storage::portable::Input&,bool metadataFailure=false);
+    m3::storage::InventoryService recoveryInspection;
+    juce::File recoveryInspectionRoot;
+    juce::String recoveryInspectionReference;
+    uint64_t recoveryInspectionEpoch=UINT64_MAX;
+    bool recoveryInspected=false,recoveryWarned=false,metadataRecoveryWarned=false;
+    std::unique_ptr<juce::AlertWindow> recoveryWarning;
+
     void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
     void curveChanged(bool);
     void setPreferences();
@@ -170,6 +182,9 @@ private:
     void layoutLiveDiagnostics();
     juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
     std::array<juce::Component,7> settingsPages;
+    std::unique_ptr<m3::ui::PortableStoragePanel> storageInventory;
+    m3::ui::controls::FocusViewport storageViewport;
+    juce::String storageIdentity;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
     std::array<juce::Label,6> settingsHelp;

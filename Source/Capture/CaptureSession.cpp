@@ -57,6 +57,13 @@ bool CaptureSession::restore(const std::string& project, const std::string& inst
     return ! state.unavailable;
 }
 
+bool CaptureSession::reload(const std::string& project,const std::string& instance,const juce::String& reference,uint64_t revision)
+{
+    CaptureSession candidate(root);
+    if(!candidate.restore(project,instance,reference,revision))
+    {state.status="Recovery reload failed; previous accepted source retained: "+candidate.snapshot().status;return false;}
+    state=std::move(candidate.state);assets=std::move(candidate.assets);assetScope=std::move(candidate.assetScope);return true;
+}
 bool CaptureSession::makeRange(CaptureManifestRange& range, const float* samples, double rate)
 {
     range.kind = std::all_of(samples, samples + range.frameCount * 2,
@@ -213,6 +220,18 @@ bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace,const 
     passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
 }
 
+bool CaptureSession::beginRecoveryPass(uint64_t token,uint64_t epoch,const std::vector<std::pair<int64_t,int64_t>>& required,const CaptureGenerationContext* context)
+{
+    if(!token || staged || required.empty() || required.size()>65536 || state.manifest.revision>=static_cast<uint64_t>(INT64_MAX))return false;
+    auto coverage=required;std::sort(coverage.begin(),coverage.end());
+    for(const auto [a,b]:coverage)if(b<=a)return false;
+    staged=std::make_unique<CaptureSession>(root);staged->state.manifest=state.manifest;
+    staged->state.manifest.ranges.clear();staged->state.manifest.generationContexts.clear();staged->state.manifest.contextSpans.clear();
+    staged->provisional=true;passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
+    replaceMapped=false;passUseful=false;passReplaced=false;passAnyChanged=false;passError.clear();passChanges.clear();passContextChanges.clear();
+    passReason=CaptureFailureReason::none;recoveryRequired=std::move(coverage);
+    passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
+}
 bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames)
 {
     if(!staged || token!=passToken || passError.isNotEmpty())return false;
@@ -261,6 +280,11 @@ CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t e
     if(!staged || token!=passToken || epoch!=passEpoch || state.manifest.revision!=baseRevision)
     {result.error="Obsolete capture pass";return result;}
     result.error=passError;
+    if(result.error.isEmpty() && !recoveryRequired.empty())
+        for(const auto [start,end]:recoveryRequired){auto covered=start;
+            for(const auto& range:staged->state.manifest.ranges){const auto tail=range.startSample+static_cast<int64_t>(range.frameCount);
+                if(tail<=covered)continue;if(range.startSample>covered)break;covered=tail;if(covered>=end)break;}
+            if(covered<end){result.error="Re-learning is incomplete; previous source and arrangement retained";passReason=CaptureFailureReason::rejected;break;}}
     if(result.error.isEmpty())
     {
         result.changed=passAnyChanged;
@@ -295,7 +319,7 @@ CaptureSession::PassResult CaptureSession::finishPass(uint64_t token,uint64_t ep
 }
 
 void CaptureSession::abortPass()
-{staged.reset();prepared.reset();passContext.reset();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passContextChanges.clear();passAnyChanged=false;passUseful=false;passReplaced=false;}
+{staged.reset();prepared.reset();passContext.reset();recoveryRequired.clear();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passContextChanges.clear();passAnyChanged=false;passUseful=false;passReplaced=false;}
 
 void CaptureSession::rebuildOverview()
 {
