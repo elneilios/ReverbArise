@@ -173,6 +173,8 @@ public:
             sections.onRequest=[this](int id){selectedSection=id;updateSections();resized();};
             addAndMakeVisible(captureGroup);captureGroup.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureGroup,TextRole::sectionHeading);
             addAndMakeVisible(soundScope);soundScope.setText("Defaults for new swells. Existing swells stay unchanged.",juce::dontSendNotification);applyTextRole(soundScope,TextRole::helper);
+            captureGroup.setName("learnSourceCaptureHeading");soundScope.setName("learnSoundScope");
+            captureGroup.setBorderSize({});soundScope.setBorderSize({});
         }
         sections.setTextHeight(type.body);updateSections();resized();
     }
@@ -319,9 +321,10 @@ private:
         column.removeFromTop(contentPadding);sensitivityLabel.setBounds(column.removeFromTop(24));sensitivity.setBounds(column.removeFromTop(controlHeight));
         for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible);
         for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
-        auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(72);soundScope.setBounds(sound.removeFromTop(40));sound.removeFromTop(contentPadding);
+        auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
         irLabel.setBounds(sound.removeFromTop(24));auto choice=sound.removeFromTop(controlHeight);fileButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(spacing::tight);irBox.setBounds(choice);
-        sound.removeFromTop(contentPadding);irStatus.setBounds(sound.removeFromTop(20));soundScope.setVisible(soundVisible);
+        sound.removeFromTop(contentPadding);irStatus.setBounds(sound.removeFromTop(20));
+        sound.removeFromTop(contentPadding);soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);
         for(auto* c:std::initializer_list<juce::Component*>{&irLabel,&irBox,&fileButton,&irStatus})c->setVisible(soundVisible);
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);

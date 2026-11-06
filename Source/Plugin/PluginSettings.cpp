@@ -60,8 +60,8 @@ void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
     if(destroying)return;
     if(!settingsWindow && open)
     {
-        settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{},responsiveReview?presentation->effective().effective.scalePercent:0);
-        settingsWindow->setName("settingsWindow");if(!responsiveReview)settingsWindow->setLookAndFeel(&workspaceTheme);
+        settingsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Settings",settingsTabs,640,570,[]{},responsivePresentation?presentation->effective().effective.scalePercent:0);
+        settingsWindow->setName("settingsWindow");if(!responsivePresentation)settingsWindow->setLookAndFeel(&workspaceTheme);
         settingsWindow->addMouseListener(this,true);
         settingsWindow->centreAroundComponent(this,settingsWindow->getWidth(),settingsWindow->getHeight());
     }
@@ -75,8 +75,8 @@ void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
     if(!diagnosticsWindow && open)
     {
         diagnosticsWindow=std::make_unique<WorkspaceWindow>("ReverbArise - Diagnostics",diagnosticsViewport,1000,650,
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;},responsiveReview?presentation->effective().effective.scalePercent:0);
-        diagnosticsWindow->setName("diagnosticsWindow");if(!responsiveReview)diagnosticsWindow->setLookAndFeel(&workspaceTheme);
+            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->diagnosticsOpen=false;},responsivePresentation?presentation->effective().effective.scalePercent:0);
+        diagnosticsWindow->setName("diagnosticsWindow");if(!responsivePresentation)diagnosticsWindow->setLookAndFeel(&workspaceTheme);
         diagnosticsWindow->addMouseListener(this,true);
         diagnosticsWindow->centreAroundComponent(this,diagnosticsWindow->getWidth(),diagnosticsWindow->getHeight());
     }

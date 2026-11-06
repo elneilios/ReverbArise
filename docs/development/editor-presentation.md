@@ -1,16 +1,16 @@
 # Editor presentation implementation — issue #58
 
-This work is in flight on `codex/58-compact-responsive-ui`. The normal plugin
-still uses the existing production presentation. The interim 900x600 layout is
-owner-approved; final upstream integration and the combined native review are
-pending. See the [canonical work/validation record](../validation/2026-11-05-issue-58-compact-ui.md).
+The host-facing factory enables the responsive composition and user-local
+preferences. A fresh profile opens at 900x600/100%. The owner has reviewed the
+combined #51/#68/#93 native composition; final Appearance/auxiliary interaction
+and host fit checks remain recorded separately in the
+[integration evidence](../validation/2026-11-06-issue-58-integration.md).
 
 ## Preference boundary
 
 `UI/PresentationPreferences.h` defines the UI-only record, injectable storage and
 one per-editor preference session. It has no processor, audio, capture, render or
-musical session dependency. The review editor now connects it to Settings and its
-lifecycle; production activation remains gated on combined native acceptance.
+musical session dependency. The editor connects it to Settings and its lifecycle.
 Current desired content bounds are 900–2000 by 600–1400 logical units;
 accepted scale values in this policy are 100 and 125 percent. No sub-100-percent
 choice is enabled by the policy.
@@ -62,7 +62,7 @@ to expose through reachable recovery UI. The result is an effective temporary
 presentation; it must never be persisted over the desired preference. Returning
 to a larger display should resolve the original desired value again.
 
-## Review editor integration
+## Editor integration
 
 `UI/EditorPresentationState.h` connects the per-editor desired preference to the
 fit policy without depending on components or musical state. It supplies fitting
@@ -74,13 +74,13 @@ persistence on its GUI timer and an explicit flush on destruction. Main painting
 and children share a logical content root. User magnification is one component
 transform below the host-facing editor; host/device scaling is owned by JUCE.
 
-The review-only Appearance tab exposes four workspace presets, free resizing and
+The Appearance tab exposes four workspace presets, free resizing and
 fitting 100%/125% choices using shared deliberate selectors. Recovery changes
 effective bounds while retaining desired preferences. Display work area and
 measurable embedding/native chrome set fit constraints; external host chrome
-still requires final host validation. Normal plugin defaults remain unchanged.
-Review defaults use transient storage; file persistence is explicitly injected
-by tests. This keeps preview exploration away from the user's saved profile.
+still requires final host validation. The host factory supplies file storage;
+native review defaults use transient storage and focused tests inject temporary
+file storage. This keeps preview exploration away from the user's saved profile.
 
 Owned Settings/Diagnostics use the same user magnification with their existing
 comfortable typography. A viewport bounds them to the display work area and

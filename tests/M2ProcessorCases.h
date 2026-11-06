@@ -45,8 +45,13 @@ inline void m2ProcessorCases()
         for (auto* child : editor->getChildren())
         {
             REQUIRE(editor->getLocalBounds().contains(child->getBounds()));
-            if (child->getName() == "audition") auditionEnabled = child->isEnabled();
         }
+        const auto inspect=[&](auto&& self,juce::Component& parent)->void
+        {
+            if(parent.getName()=="audition")auditionEnabled=parent.isEnabled();
+            for(auto* child:parent.getChildren())self(self,*child);
+        };
+        inspect(inspect,*editor);
         REQUIRE(auditionEnabled);
         const auto imagePath = juce::SystemStats::getEnvironmentVariable("PREVERB_UI_PREVIEW_OUTPUT", {});
         if (imagePath.isNotEmpty())

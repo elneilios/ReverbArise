@@ -42,15 +42,17 @@ public:
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
-    // Explicit review seam; production adoption awaits combined integration/acceptance.
+    // The host factory supplies user-local storage; fixtures inject isolated storage.
+    void enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage>,std::optional<m3::ui::PresentationFitContext> display={});
+    // Native review defaults never write the user's real presentation profile.
     void enableResponsiveReview(std::shared_ptr<m3::ui::PresentationStorage> storage={},std::optional<m3::ui::PresentationFitContext> display={});
-    bool responsiveReviewEnabled()const noexcept{return responsiveReview;}
+    bool responsiveReviewEnabled()const noexcept{return responsivePresentation;}
     bool setPresentationScale(int);
     bool setPresentationSize(int,int);
     void setPresentationDisplayForReview(m3::ui::PresentationFitContext);
     const m3::ui::EditorPresentationState* presentationState()const noexcept{return presentation.get();}
 private:
-    bool responsiveReview=false;
+    bool responsivePresentation=false;
     bool applyingPresentation=false,updatingPresentationControls=false;
     m3::ui::controls::PresentationSurface presentationSurface;
     std::shared_ptr<m3::ui::PresentationStorage> presentationStorage;
@@ -69,8 +71,8 @@ private:
     void updateAuxiliaryPresentation();
     void paintWorkspace(juce::Graphics&);
     m3::ui::PresentationFitContext presentationDisplay()const;
-    juce::Component& workspaceRoot()noexcept{return responsiveReview?presentationSurface.contentRoot():*this;}
-    juce::Rectangle<int> workspaceBounds()const noexcept{return responsiveReview?presentationSurface.contentRoot().getLocalBounds():getLocalBounds();}
+    juce::Component& workspaceRoot()noexcept{return responsivePresentation?presentationSurface.contentRoot():*this;}
+    juce::Rectangle<int> workspaceBounds()const noexcept{return responsivePresentation?presentationSurface.contentRoot().getLocalBounds():getLocalBounds();}
     int inspectorSection=1;
     m3::ui::controls::SegmentedSelector inspectorSections;
     void layoutResponsive();

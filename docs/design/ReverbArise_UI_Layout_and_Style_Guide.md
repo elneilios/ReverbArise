@@ -1,6 +1,55 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.6 · **Production standards revision:** 6 · **Purpose:** Production UI authority and design reference. Revision 6 adopts the owner-approved stable Perform transport readout.
+**Version:** 1.7 · **Production standards revision:** 7 · **Purpose:** Production UI authority and design reference. Revision 7 adopts the owner-reviewed responsive composition for issue #58, retaining revision 6's stable transport readout.
+
+## Responsive composition — issue #58
+
+This section takes precedence over the older fixed-size Learn/header values
+below for the main editor. The owner approved Option A revision 4, its interim
+native composition and the combined #51/#68/#93 layout. See the
+[integration evidence](../validation/2026-11-06-issue-58-integration.md) for review
+corrections and separately outstanding host/DPI and Appearance interaction checks.
+
+`ResponsivePresentation.h` owns the named composition tokens. Baseline/default
+content is 900x600 at 100%; useful expansion includes 1000x700, 1100x850,
+1400x900, 1400x1000 and 1600x1000. These are logical workspace sizes, distinct
+from user magnification and host/Windows scaling.
+
+| Role | 900x600 | 1100x850 | 1400x1000 |
+| --- | --- | --- | --- |
+| Heading / navigation | 16 / 14 | 18 / 16 | 21 / 18 |
+| Body / caption and value | 12 / 11 | 13 / 12 | 14 / 13 |
+| Notice | 12 | 13 | 14 |
+
+Roles interpolate using both dimensions through `ResponsiveTypography`; a wide,
+short window cannot overgrow text. Normal notices use the whole reserved row;
+exceptional wrapping has an 11-height floor and retains full accessible details.
+The transport readout retains its independently approved fixed 15-height font.
+
+| Token | Value / scope |
+| --- | --- |
+| Outer horizontal margin | 12 |
+| Content padding / group gap | 8 / 12 |
+| Perpendicular-divider clearance | 8 at both ends; no touching T/cross junctions |
+| Control / exact entry / compact dial | 32 / 26 / 36 |
+| Exact-entry horizontal inset | 6 |
+| Header / tab / audition bands | 64 / 32 / 48 |
+| Perform list / inspector widths | 160 / 276 |
+
+Learn uses Capture & Generate / Sound tabs, with Generate/readiness/manual help
+below the content. Sound's current Default IR/import controls stay available
+with automatic detection off. Its scope note follows the controls. Shared Sound
+remains #80 work; a Learn Level default is a separate extension. Both are outside
+#58 by explicit owner decision.
+Perform uses Timing / Envelope / Sound; Enabled/Solo/Freeze and Reset actions
+stay outside inspector scrolling. Export retains its dominant preview, accepted
+Character/Dry/Wet family and protected file/return actions. No future DSP slots ship.
+
+Use the shared PresentationSurface transform once for 100%/125% user scale.
+Owned Settings/Diagnostics keep comfortable typography, magnify consistently
+and use bounded viewports with focus reveal when the work area is constrained.
+Native choosers and native chrome keep their platform policy. No sub-100%
+choice is supported without separate native readability/interaction approval.
 
 ## Validated production standards — Learn and shared header
 
@@ -106,6 +155,7 @@ production standards revision; this revision does not change plugin/state versio
 | 4 | #46 owner approved Level 1 dB / Shift 0.1 dB and four-corner knob focus | KnobValue-only focus: existing aqua, 2-pixel contained stroke, open sides, legs 20% of inside box (8 pixels for 42-pixel dial); actual native look/feel approved 2026-11-04. Other families and layout tokens unchanged |
 | 5 | #46 owner approved revised presentation on 2026-11-04 | Perform 52-pixel single-row audition strip, grouped inspector/full Source labels, compact values with exact editing, shared ruler and aligned headings; normal-font bottom context help across modes. Existing typography/control families reused; no popup tooltips |
 | 6 | #68 native readout look/feel approved 2026-11-05 | Perform-only stable Bar, Beat, BPM and meter slots; existing footer 15-pixel Inter Regular/primary ink and tight/related spacing retained. No highlight decoration or host behavior change |
+| 7 | #58 Option A revision 4 and interim/combined native composition reviewed 2026-11-05/06 | Responsive main-editor roles, named 900x600 composition, persistent Reset, Learn/Perform sections and delivered Export family. Appearance/auxiliary interaction and host/DPI acceptance remain separately recorded; no DSP/default Level extension |
 
 ### Stable Perform transport information
 

@@ -39,7 +39,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 6; scoped knob focus review below). Its Learn/header table
+numerical authority (production standards revision 7; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

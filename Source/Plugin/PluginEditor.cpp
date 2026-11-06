@@ -301,12 +301,12 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
 PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    if(responsiveReview){g.fillAll(m3::ui::background);return;}
+    if(responsivePresentation){g.fillAll(m3::ui::background);return;}
     paintWorkspace(g);
 }
 void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
 {
-    if(responsiveReview)
+    if(responsivePresentation)
     {
         using namespace m3::ui;
         const ResponsiveWorkspaceLayout layout(workspaceBounds());g.fillAll(background);g.setColour(separator);
@@ -378,7 +378,7 @@ void PreverbAudioProcessorEditor::armSelected()
 }
 void PreverbAudioProcessorEditor::resized()
 {
-    if(responsiveReview){resizePresentation();return;}
+    if(responsivePresentation){resizePresentation();return;}
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     const auto inset=m3::ui::workspaceGeometry::outerInset(getWidth());
     hoverHelp.setBounds(inset,getHeight()-m3::ui::controlGeometry::feedbackHeight,getWidth()-2*inset,m3::ui::controlGeometry::feedbackHeight);
@@ -436,7 +436,11 @@ void PreverbAudioProcessorEditor::resized()
 }
 void PreverbAudioProcessorEditor::enableResponsiveReview(std::shared_ptr<m3::ui::PresentationStorage> storage,std::optional<m3::ui::PresentationFitContext> display)
 {
-    if(responsiveReview)return;
+    enableResponsivePresentation(storage?std::move(storage):std::make_shared<m3::ui::TransientPresentationStorage>(),display);
+}
+void PreverbAudioProcessorEditor::enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage> storage,std::optional<m3::ui::PresentationFitContext> display)
+{
+    if(responsivePresentation)return;
     inspectorSections.setName("inspectorSections");addAndMakeVisible(inspectorSections);
     inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();};
     // Fixed actions and flags belong to the editor, outside the scrolling fields.
@@ -451,7 +455,7 @@ void PreverbAudioProcessorEditor::enableResponsiveReview(std::shared_ptr<m3::ui:
             presentationSurface.contentRoot().addChildComponent(child);
     addAndMakeVisible(presentationSurface);presentationSurface.toBack();
     presentationSurface.setPainter([this](auto& drawing){paintWorkspace(drawing);});
-    responsiveReview=true;reviewDisplay=display;
+    responsivePresentation=true;reviewDisplay=display;
     presentationStorage=storage?std::move(storage):std::make_shared<m3::ui::TransientPresentationStorage>();
     presentation=std::make_unique<m3::ui::EditorPresentationState>(*presentationStorage,presentationDisplay());
     initialisePresentation();applyPresentation();refresh();
@@ -486,6 +490,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     const auto updateThemes=[&](auto&& self,juce::Component& parent)->void
     {
         if(auto* theme=dynamic_cast<WorkspaceTheme*>(&parent.getLookAndFeel()))theme->setResponsiveViewport(bounds.getWidth(),bounds.getHeight());
+        if(auto* slider=dynamic_cast<m3::ui::controls::InvocationSlider*>(&parent))slider->setValueFont(componentTextFont(parent,TextRole::controlValue));
         for(auto* child:parent.getChildren())self(self,*child);
     };
     updateThemes(updateThemes,*this);
@@ -821,7 +826,7 @@ void PreverbAudioProcessorEditor::refresh()
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;
     refreshHoverHelp();
-    if(responsiveReview)refreshResponsiveSections();
+    if(responsivePresentation)refreshResponsiveSections();
     updating=false;if(initialFrame)publishPerformNavigation();
 }
 bool PreverbAudioProcessorEditor::navigationIntentCurrent()const

@@ -1,13 +1,34 @@
 #pragma once
+#include <cstdlib>
 
 void Composition::verifyResponsiveScale()
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
     TestDirectory profile;auto storage=std::make_shared<FilePresentationStorage>(profile.file.getChildFile("presentation.json"));
     const PresentationFitContext large{{4000,3000},{0,0}};
+   #if JUCE_WINDOWS
+    // Exercise the real host factory without reading/writing the user's profile.
+    {
+        struct LocalProfile
+        {
+            juce::String previous=juce::SystemStats::getEnvironmentVariable("LOCALAPPDATA",{});
+            explicit LocalProfile(const juce::File& directory){_putenv_s("LOCALAPPDATA",directory.getFullPathName().toRawUTF8());}
+            ~LocalProfile(){_putenv_s("LOCALAPPDATA",previous.toRawUTF8());}
+        } isolatedProfile(profile.file);
+        std::unique_ptr<juce::AudioProcessorEditor> hosted(processor->createEditor());
+        auto* actual=dynamic_cast<PreverbAudioProcessorEditor*>(hosted.get());REQUIRE(actual && actual->presentationState());
+        actual->stopAutomaticRefreshForReview();actual->setPresentationDisplayForReview(large);
+        REQUIRE(actual->getWidth()==900 && actual->getHeight()==600);
+        REQUIRE(actual->setPresentationSize(1000,700));hosted.reset();
+        REQUIRE(FilePresentationStorage::userFile().isAChildOf(profile.file));
+        REQUIRE(FilePresentationStorage::userFile().existsAsFile());
+        hosted.reset(processor->createEditor());actual=dynamic_cast<PreverbAudioProcessorEditor*>(hosted.get());
+        REQUIRE(actual && actual->presentationState()->desired().width==1000);
+    }
+   #endif
     const auto open=[&]
     {
-        auto editor=productionEditor();editor->stopAutomaticRefreshForReview();editor->enableResponsiveReview(storage,large);
+        auto editor=productionEditor();editor->stopAutomaticRefreshForReview();editor->enableResponsivePresentation(storage,large);
         editor->refresh();return editor;
     };
     auto panel=open(),other=open();
@@ -91,6 +112,35 @@ void Composition::verifyResponsiveScale()
     REQUIRE(panel->presentationState()->desired()==desired);REQUIRE(juce::Point<int>(panel->getWidth(),panel->getHeight())==juce::Point<int>(1375,1063));
     processor->flushHostStateChangesForTesting();REQUIRE(notices.dirty==0);
     REQUIRE(m3::encode(engine.savedSession(),after,error));REQUIRE(before==after);
+    // Owned windows use the same magnification without resizing the editor.
+    auto& header=require<WorkflowHeader>(*panel,"workflowHeader");header.onSettings();
+    auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(panel->settingsPanel()->getTopLevelComponent());REQUIRE(settingsWindow);
+    settingsWindow->setVisible(false);
+    auto& ownedTabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());ownedTabs.setCurrentTabIndex(5);
+    auto& auxiliary=require<controls::PresentationSurface>(*settingsWindow,"presentationSurface");
+    for(int scale:{100,125,100})
+    {
+        REQUIRE(panel->setPresentationScale(scale));
+        REQUIRE(auxiliary.contentRoot().getWidth()==640 && auxiliary.contentRoot().getHeight()==570);
+        REQUIRE(std::abs(auxiliary.contentRoot().getTransform().mat00-scale/100.f)<.001f);
+        auto& viewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
+        auto& copy=require<juce::Component>(*panel->settingsPanel(),"copyBuildInformation");viewport.reveal(copy);
+        REQUIRE(viewport.getViewArea().intersects(auxiliary.getLocalArea(&copy,copy.getLocalBounds())));
+        REQUIRE(panel->getWidth()==presentationExtent(panel->presentationState()->effective().effective).width);
+    }
+    settingsWindow->setSize(settingsWindow->getWidth(),250);settingsWindow->setVisible(true);settingsWindow->toFront(true);
+    auto& copyAction=require<juce::Component>(*panel->settingsPanel(),"copyBuildInformation");copyAction.grabKeyboardFocus();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    auto& focusViewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
+    REQUIRE(copyAction.hasKeyboardFocus(true));
+    REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
+    settingsWindow->setVisible(false);
+    ownedTabs.setCurrentTabIndex(4);
+    require<juce::TextButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
+    auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
+    diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());
+    REQUIRE(panel->setPresentationScale(125));panel->refresh();
+    REQUIRE(!diagnosticsWindow->isVisible());
     REQUIRE(panel->setPresentationScale(100));REQUIRE(panel->setPresentationSize(900,600));
     auto& zoom=require<controls::TimelineZoomControls>(*panel,"performZoom");
     auto& list=require<controls::SwellList>(*panel,"swellList");

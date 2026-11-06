@@ -82,3 +82,76 @@ and native screenshots were refreshed. UI standards and diff whitespace passed.
 The first relink met the still-open review executable; after closing that one
 review window, incremental relink and tests passed. The corrected preview is
 reopened for review; no host installation or production activation occurred.
+
+## Learn alignment and Sound composition review
+
+The owner identified Source Capture's horizontal label inset and an awkward
+scope-note/gap above the Sound picker. The responsive Source Capture and scope
+labels now use the same zero text inset as their sibling labels. Sound begins
+at the shared content-padding gap below its tabs; the scope note follows the IR
+picker/status instead of occupying a separate introductory band. Regression
+assertions cover the actual label insets, alignment and content gaps.
+Incremental Release compile and both focused native CTest checks passed
+(2/2, 14.39 seconds). Learn snapshots at 900x600 and 1400x1000 were refreshed.
+
+Review also identified that Learn and Perform do not yet share the actual Sound
+component. GitHub #80 remains open and the current model stores Default IR but
+no Learn Level default. The mockup Level was previously a future-capacity slot.
+The owner explicitly chose to fix layout here and handle the shared component
+and persisted Learn Level separately. #80 owns the shared IR foundation; new
+Learn Level semantics are a further extension. Neither blocks #58.
+No dummy Level control or new default-gain behavior is introduced.
+
+## Production integration and remaining gates
+
+The host-facing `createEditor()` now enables the responsive composition and
+user-local file storage. Direct legacy fixture construction remains available
+for existing regression baselines; host construction and native review both use
+the same production initialisation path. A Windows factory test redirects only
+its own process's local profile to a temporary directory, exercises fresh
+900x600 opening and actual file-backed close/reopen, then restores the variable.
+
+Expanded Release compact/scale fixtures passed **2/2, 27.65 seconds**, including
+16 supported/breakpoint-neighbour sizes, delivered Export ready/preparing/error
+presentations with retained WAV identity, factory preferences, owned Settings
+scale/reachability and Diagnostics close/hidden-refresh behavior. The first
+auxiliary test searched an inactive Settings page; selecting its actual tab
+corrected the fixture without changing production behavior.
+
+This verifies task 2.1's responsive allocations/reflow across the listed sizes.
+Task 2.6 uses its specified fallback: current Learn Default IR access and
+Perform IR/Level access are covered, musical identities are preserved, and the
+owner explicitly excludes a shared module/default Level until separate work.
+
+Full supported Release wrapper verification is running. Final Appearance and
+auxiliary interaction review and one consolidated FL Studio fit/scale smoke
+remain owner checkpoints. No installation or release has been performed here.
+
+Living presentation, workspace, UI standards and production style guidance now
+describe the implemented composition and size/scale contracts. Revision 7 records
+the named approved compact allocations and remaining review scope; reference
+destinations exist, UI standards pass without inventory regeneration and strict
+OpenSpec validation passes. Physical Windows 125/150/200% coverage is untested;
+software transforms are not recorded as physical DPI passes. The offline guide
+review/capture gate is tracked separately in task 4.5.
+
+The supported wrapper `scripts/build.ps1 -Configuration Release -Test` passed
+**75/75 tests, 292.89 seconds CTest**, on `0abf17a` plus the production-integration
+patch. Logs: `out/build-logs/Release/20261106-005556-67831ffc`. Dependencies were
+reused; previously unbuilt test/benchmark targets required their first local
+compilation. No caches were cleared. Compiler parallelism was capped at two.
+
+The final UI patch connects the shared slider's explicit value font to the same
+responsive role used by other values. Actual NumericInputControl font assertions
+pass at all 16 sizes. Added dense/empty 100%/125% journeys and native keyboard
+focus reveal in a vertically constrained Settings window also pass. Final
+focused Release CTest: **2/2, 30.72 seconds**. The first dense/empty test wrongly
+expected Export admission without a ready swell; it now proves that the existing
+guard rejects that entry, rather than changing production admission.
+
+Combined evidence covers the common controls' unchanged guarded bindings from
+the full suite plus compact routes/geometry, fixed Reset, source/IR/render
+identity preservation, popup transforms, active exact text and Escape, actual
+factory persistence, fit recovery and owned-window lifetime/focus. Tasks 1.2,
+2.2–2.5, 3.1, 3.4–3.6 and 4.1 use these complementary checks. Physical DPI/host
+acceptance and scoped scale-family review remain separate owner gates.
