@@ -158,9 +158,8 @@ launcher's descendant wait could complete; dependency/build caches were retained
 No DAW was terminated, owner preview closed, other installation changed, project
 asset touched, release published, PR opened, push performed, spec synced or change
 archived. The system build includes the existing offline repair and diagnostics.
-The completed results below will identify source revision, dirty state, logs,
-installed identity/hash and retained prior bundle. Canonical specs are not synced;
-the approved delta governs this local repair. Issue #71 remains separate, with
+Canonical specs are not synced; the approved delta governs this local repair.
+Issue #71 remains separate, with
 its own host-map coverage/precision and persistence review requirements.
 
 ## Minimal owner check after installation
@@ -172,3 +171,18 @@ accepted grid. Native tests own drift, missing assets, modifiers, persistence an
 audio edge cases. No repeat accepted bounce or five-block diagnostic collection
 is requested unless a fresh failure occurs. FL Studio acceptance and untested
 host/DPI coverage remain distinct from installation and automated passing.
+
+## Owner FL Studio acceptance — 6 November 2026
+
+Following delivery of installed test build `1c60857`, the owner confirmed:
+
+- Snap stays available during playback.
+- The snapped edit matches the inspector.
+- Wet audio is still working.
+
+This accepts the requested local fixed-tempo Snap smoke check and confirms
+audible wet in that owner run. No further repetition of this check or the
+previously accepted offline bounce is requested. It does not establish new
+host/DPI coverage, tempo-automation support or a reproduction of the older live
+rejection. All work remains local; no push, PR, issue closure, spec sync or
+archive follows automatically from this acceptance.
