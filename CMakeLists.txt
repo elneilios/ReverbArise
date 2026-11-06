@@ -127,6 +127,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginEditor.cpp
     Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginSettings.cpp
+    Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
 )
@@ -157,6 +158,10 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
+    target_include_directories(preverb_presentation_policy_test PRIVATE Source)
+    target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)
+    add_test(NAME preverb_presentation_policy_test COMMAND preverb_presentation_policy_test)
     add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
     target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
     add_test(NAME preverb_source_edges_test COMMAND preverb_source_edges_test)
@@ -302,7 +307,7 @@ if(BUILD_TESTING)
     target_compile_definitions(preverb_manual_preparation_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_manual_preparation_test PRIVATE preverb_plugin juce::juce_audio_utils WavPack::WavPack)
     add_test(NAME preverb_manual_preparation_test COMMAND preverb_manual_preparation_test)
-    # Isolated issue #46 layout checkpoint: never instantiated by the plugin.
+    # Native composition checkpoints; #58's explicit review seam is not the production default.
     add_executable(preverb_perform_composition_preview tests/perform_composition_preview.cpp)
     target_compile_definitions(preverb_perform_composition_preview PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_perform_composition_preview PRIVATE preverb_plugin juce::juce_audio_utils)
@@ -317,6 +322,8 @@ if(BUILD_TESTING)
     add_test(NAME preverb_perform_audition_strip_test COMMAND preverb_perform_composition_preview --test-audition-strip)
     add_test(NAME preverb_perform_readability_test COMMAND preverb_perform_composition_preview --test-readability)
     add_test(NAME preverb_perform_hover_help_test COMMAND preverb_perform_composition_preview --test-hover-help)
+    add_test(NAME preverb_responsive_editor_test COMMAND preverb_perform_composition_preview --test-responsive)
+    add_test(NAME preverb_responsive_scale_test COMMAND preverb_perform_composition_preview --test-responsive-scale)
     add_executable(preverb_scoped_recapture_test tests/scoped_recapture_test.cpp)
     target_link_libraries(preverb_scoped_recapture_test PRIVATE preverb_capture)
     add_test(NAME preverb_scoped_recapture_test COMMAND preverb_scoped_recapture_test)

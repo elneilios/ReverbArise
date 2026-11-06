@@ -30,12 +30,12 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
             const auto alpha=isEnabled()?1.0f:.4f;const auto box=getLocalBounds().toFloat().reduced(.5f);
             const auto path=owner.outlineFor(index,box);
             g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
-            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(navigationFont());
+            g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(owner.labelFont());
             const auto content=getLocalBounds().toFloat().reduced(5,0);
             if(choice.icon==ModeIcon::none)g.drawText(choice.label,content,juce::Justification::centred);
             else
             {
-                const auto labelWidth=juce::GlyphArrangement::getStringWidth(navigationFont(),choice.label);
+                const auto labelWidth=juce::GlyphArrangement::getStringWidth(owner.labelFont(),choice.label);
                 const auto width=16.0f+8.0f+labelWidth;
                 const auto x=content.getCentreX()-width*.5f;
                 owner.iconCache.draw(g,choice.icon,{x,content.getCentreY()-8,16,16},activeChoice,alpha);
@@ -66,6 +66,7 @@ public:
     SegmentedSelector()
     {setWantsKeyboardFocus(true);setTitle("Mode selection");setFocusContainerType(juce::Component::FocusContainerType::focusContainer);}
     std::function<void(int)> onRequest;
+    void setTextHeight(float height){textHeight=height;repaint();}
     void display(std::vector<SegmentChoice> next,int acceptedId)
     {
         bool rebuild=next.size()!=choices.size();
@@ -135,6 +136,7 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
     {return std::make_unique<juce::AccessibilityHandler>(*this,juce::AccessibilityRole::group);}
 private:
+    juce::Font labelFont()const{return interFont(textHeight,InterFace::semibold);}
     juce::Path outlineFor(size_t index,juce::Rectangle<float> box)const
     {
         juce::Path path;const auto first=index==0,last=index+1==buttons.size();
@@ -153,5 +155,6 @@ private:
     ModeIconCache iconCache;
     std::vector<std::unique_ptr<Segment>> buttons;
     int selected=0;size_t focused=0;
+    float textHeight=navigationSize;
 };
 }

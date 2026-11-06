@@ -30,7 +30,7 @@ New or refactored UI SHALL reuse repository-owned control families and named pre
 - **THEN** geometry, font faces, focus visibility, keyboard/typed edits and accepted model state remain equivalent, including rejected or stale intents
 
 ### Requirement: Density preserves invariant visual and interaction roles
-Typography, semantic colour, legibility, focus and control interaction language SHALL remain invariant across density profiles. The approved Learn spacing SHALL be documented as comfortable. Compact density SHALL remain unavailable for production use until assessed and approved against Perform content; it SHALL NOT be achieved by arbitrary text reduction or unreviewed token values.
+Semantic colour, legibility, focus and control interaction language SHALL remain consistent across density profiles. Typography SHALL use the owner-approved responsive compact/expanded roles, rather than fixed heights across all sizes. The approved Learn spacing SHALL be documented as comfortable. Compact geometry SHALL require scoped native approval across its affected Learn, Perform, Export and header consumers before production rollout; it SHALL NOT be achieved by arbitrary text reduction or unreviewed token values. The 900x600 baseline SHALL work at 100% UI scale, independently of optional reviewed proportional scaling.
 
 #### Scenario: Prepare Perform work
 - **WHEN** a contributor plans a denser three-column Perform workspace
@@ -38,7 +38,12 @@ Typography, semantic colour, legibility, focus and control interaction language 
 
 #### Scenario: Adopt a compact profile
 - **WHEN** a compact proposal is assessed at supported sizes with representative dense content
-- **THEN** approval covers readability, overflow, waveform room, hit targets, keyboard and focus before its values enter production, and comfortable consumers retain their accepted appearance
+- **THEN** approval covers readability, overflow, waveform room, hit targets, keyboard and focus before its values enter production, and changes to comfortable consumers are limited to their explicitly reviewed responsive composition using the explicitly approved responsive text roles while preserving focus and interaction policies
+
+#### Scenario: Review the compact baseline across modes
+- **WHEN** 900x600 composition and optional proportional scales are presented for acceptance
+- **THEN** 100% UI scale independently passes readability, useful waveform space, hit-target, keyboard and overflow review in all three modes
+- **AND** any compact header treatment, inspector section family or new metric receives named scoped approval before production adoption
 
 ### Requirement: Styling drift has actionable automated checks
 A lightweight repository check SHALL reject unapproved raw styling and duplicated interaction policy in governed UI files, with actionable file/rule diagnostics and nonzero failure. It SHALL distinguish styling from legitimate layout/domain calculations and allow only explicit scoped exceptions. Existing debt SHALL be bounded so enforcement does not require unrelated migration.
@@ -52,7 +57,7 @@ A lightweight repository check SHALL reject unapproved raw styling and duplicate
 - **THEN** it passes without requiring review for ordinary placement arithmetic, while a new occurrence cannot hide behind a file-wide legacy exemption
 
 ### Requirement: Component and native evidence establish practical UI confidence
-Automated checks SHALL cover resolved typography, clipping, focus containment, layout/overflow and keyboard/edit interaction for affected patterns. Reusable native fixtures SHALL support visual review at 1100x850 and documented larger sizes. Evidence SHALL separate automated proof, native owner approval, actual Windows DPI and FL Studio results, recording untested coverage honestly.
+Automated checks SHALL cover resolved typography, clipping, focus containment, layout/overflow and keyboard/edit interaction for affected patterns. Reusable native fixtures SHALL support visual review at the 900x600 baseline at 100% UI scale, intermediate sizes, responsive breakpoints, 1100x850 and documented larger sizes. Evidence SHALL separate automated proof, native owner approval, actual Windows DPI and FL Studio results, recording untested coverage honestly.
 
 #### Scenario: Review supported geometry and scale
 - **WHEN** Learn/header and shared patterns are validated
@@ -61,6 +66,11 @@ Automated checks SHALL cover resolved typography, clipping, focus containment, l
 #### Scenario: Approve a material family revision
 - **WHEN** a new or materially revised control family is ready for rollout
 - **THEN** its prepared native preview is opened for owner look and interaction review before further consumers adopt it; passing automated cases and prior approvals are not repeated without a concrete reason
+
+#### Scenario: Primary 1080p acceptance and complete control access
+- **WHEN** compact implementation is validated on the owner's 1920x1080 display
+- **THEN** actual Windows scaling and FL Studio work-area fit are recorded, Reset remains visible without scrolling and every supported control has demonstrated mouse/keyboard access
+- **AND** separate results cover Windows 100/125/150% where available, with 200% and any non-fitting combinations explicitly passed, failed, unsupported or untested rather than inferred from software screenshots
 
 ### Requirement: Standards evolve through traceable review
 Agent guidance SHALL direct UI work to the production guide and shared controls. New tokens, variants, density profiles and one-off exceptions SHALL require explicit owner review, named scope, rationale, affected consumers and validation. Approved changes SHALL update versioned code/documentation together; future UI plans SHALL identify reuse, justified exceptions and review gates without modifying generated OpenSpec workflows.

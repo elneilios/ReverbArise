@@ -40,8 +40,17 @@ public:
     controls::SegmentedSelector& modeSelector()noexcept{return selector;}
     controls::IconActionButton& settingsAction()noexcept{return settings;}
     controls::HeaderInformation& modeInformation()noexcept{return role;}
+    void setResponsivePresentation(ResponsiveTypography type)
+    {responsive=true;wordmark.setOpticalAlignment(true);tagline.setVisible(false);selector.setTextHeight(type.navigation);role.setWrappedPresentation(true);resized();}
     void resized()override
     {
+        if(responsive)
+        {
+            using namespace responsiveGeometry;
+            settings.setBounds(getWidth()-36,0,36,primaryHeight);
+            selector.setBounds(getWidth()-378,0,330,primaryHeight);
+            wordmark.setBounds(0,6,201,25);role.setBounds(220,2,std::max(0,getWidth()-610),32);return;
+        }
         constexpr int primaryHeight=46,controlHeight=36,controlY=(primaryHeight-controlHeight)/2;
         auto area=getLocalBounds();auto gear=area.removeFromRight(36);settings.setBounds(gear.withY(controlY).withHeight(controlHeight));
         area.removeFromRight(12);const auto column=area.removeFromRight(getWidth()<1200?330:360);
@@ -54,5 +63,6 @@ private:
     controls::HeaderInformation role;
     controls::SegmentedSelector selector;
     controls::IconActionButton settings{controls::ActionIcon::settings};
+    bool responsive=false;
 };
 }

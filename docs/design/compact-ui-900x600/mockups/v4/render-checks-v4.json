@@ -1,0 +1,402 @@
+{
+  "renderer": "Installed Chrome; deviceScaleFactor 1; browser mockup checks only",
+  "pageErrors": [],
+  "cases": [
+    {
+      "name": "a4-learn-capture-generate",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [],
+      "dividerClearances": [
+        {
+          "region": "region learn-left",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-learn-sound-current",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [],
+      "dividerClearances": [
+        {
+          "region": "region learn-left",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-learn-sound-convolution-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "IR",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region learn-left",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": {
+        "width": 259,
+        "height": 236,
+        "bottom": 420
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-learn-sound-algorithmic-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "Decay (s)",
+        "Size (%)",
+        "Damp (%)",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region learn-left",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": {
+        "width": 259,
+        "height": 236,
+        "bottom": 420
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-perform-timing",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Target (bars)",
+        "Move Wet (ms)",
+        "Source start (bars)",
+        "Source end (bars)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region column list",
+          "top": 8,
+          "bottom": 8
+        },
+        {
+          "region": "region column inspector",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-perform-envelope",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Pre-roll (s)",
+        "End Offset (s)",
+        "Fade In (ms)",
+        "Fade Out (ms)",
+        "Curve In",
+        "Curve Out"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region column list",
+          "top": 8,
+          "bottom": 8
+        },
+        {
+          "region": "region column inspector",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-perform-sound-current",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Level (dB)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region column list",
+          "top": 8,
+          "bottom": 8
+        },
+        {
+          "region": "region column inspector",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-perform-sound-convolution-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "IR",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region column list",
+          "top": 8,
+          "bottom": 8
+        },
+        {
+          "region": "region column inspector",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": {
+        "width": 259,
+        "height": 236,
+        "bottom": 416
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-perform-sound-algorithmic-future",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Character",
+        "Decay (s)",
+        "Size (%)",
+        "Damp (%)",
+        "Tone",
+        "Stretch",
+        "Low Cut (Hz)",
+        "High Cut (Hz)",
+        "Level (dB)"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region column list",
+          "top": 8,
+          "bottom": 8
+        },
+        {
+          "region": "region column inspector",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": {
+        "width": 259,
+        "height": 236,
+        "bottom": 416
+      },
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    },
+    {
+      "name": "a4-export-levels",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "contentOverflow": [],
+      "captionOverflow": [],
+      "brokenImages": [],
+      "controls": [
+        "Mix Character",
+        "Dry",
+        "Wet"
+      ],
+      "dividerClearances": [
+        {
+          "region": "region export-right",
+          "top": 8,
+          "bottom": 8
+        }
+      ],
+      "soundBounds": null,
+      "overlapsPinned": false,
+      "learnNoteOverlapsActions": false
+    }
+  ],
+  "sharedModuleGeometryMatches": true,
+  "tabAndEngineDisclosureChecks": "passed",
+  "responsiveChecks": [
+    {
+      "size": [
+        900,
+        600
+      ],
+      "fonts": {
+        "heading": 16,
+        "body": 12,
+        "value": 11
+      },
+      "fullNoticeVisible": true,
+      "noticeText": "ⓘCaution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",
+      "logoLeft": 12,
+      "contentLeft": 12,
+      "clearances": {
+        "headerToWork": 8,
+        "inspectorLeft": 9,
+        "inspectorRight": 8,
+        "tabsToContent": 8,
+        "contentToReset": 8,
+        "resetToDivider": 8
+      },
+      "moduleContained": true
+    },
+    {
+      "size": [
+        1000,
+        750
+      ],
+      "fonts": {
+        "heading": 17,
+        "body": 12.5,
+        "value": 11.5
+      },
+      "fullNoticeVisible": true,
+      "noticeText": "ⓘCaution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",
+      "logoLeft": 12,
+      "contentLeft": 12,
+      "clearances": {
+        "headerToWork": 8,
+        "inspectorLeft": 9,
+        "inspectorRight": 8,
+        "tabsToContent": 8,
+        "contentToReset": 139,
+        "resetToDivider": 8
+      },
+      "moduleContained": true
+    },
+    {
+      "size": [
+        1100,
+        850
+      ],
+      "fonts": {
+        "heading": 18,
+        "body": 13,
+        "value": 12
+      },
+      "fullNoticeVisible": true,
+      "noticeText": "ⓘCaution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",
+      "logoLeft": 12,
+      "contentLeft": 12,
+      "clearances": {
+        "headerToWork": 8,
+        "inspectorLeft": 9,
+        "inspectorRight": 8,
+        "tabsToContent": 8,
+        "contentToReset": 226,
+        "resetToDivider": 8
+      },
+      "moduleContained": true
+    },
+    {
+      "size": [
+        1400,
+        1000
+      ],
+      "fonts": {
+        "heading": 21,
+        "body": 14,
+        "value": 13
+      },
+      "fullNoticeVisible": true,
+      "noticeText": "ⓘCaution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",
+      "logoLeft": 12,
+      "contentLeft": 12,
+      "clearances": {
+        "headerToWork": 8,
+        "inspectorLeft": 9,
+        "inspectorRight": 8,
+        "tabsToContent": 8,
+        "contentToReset": 357,
+        "resetToDivider": 8
+      },
+      "moduleContained": true
+    }
+  ],
+  "arbitraryResizeAndTabRetention": "passed"
+}

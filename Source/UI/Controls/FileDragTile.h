@@ -35,8 +35,8 @@ public:
         g.strokePath(file,juce::PathStrokeType(1.7f));
         for(int n=0;n<7;++n){const auto h=5.f+static_cast<float>((n*7)%13);g.drawLine(c.x-16+n*5.f,top+34-h*.5f,c.x-16+n*5.f,top+34+h*.5f,1.5f);}
         g.setColour(aqua.withMultipliedAlpha(alpha));g.fillRect(c.x-24,top+48,48.f,18.f);g.setColour(background.withMultipliedAlpha(alpha));g.setFont(interFont(bodySize,InterFace::semibold));g.drawText("WAV",juce::Rectangle<float>(c.x-24,top+48,48,18),juce::Justification::centred);
-        g.setColour(m3::ui::text.withMultipliedAlpha(alpha));g.setFont(textFont(TextRole::sectionHeading));g.drawFittedText(getButtonText(),juce::Rectangle<int>(8,juce::roundToInt(top+83),getWidth()-16,30),juce::Justification::centred,1,.75f);
-        g.setColour(status.isEmpty()?secondary.withMultipliedAlpha(alpha):textStyle(TextRole::helper).ink);g.setFont(status.isEmpty()?interFont(bodySize,InterFace::italic):textFont(TextRole::helper));g.drawText(status.isEmpty()?juce::String("Song-aligned ")+juce::String::charToString(0x2022)+" preserves timing":status,juce::Rectangle<float>(8,top+120,getWidth()-16.f,24),juce::Justification::centred);
+        g.setColour(m3::ui::text.withMultipliedAlpha(alpha));g.setFont(componentTextFont(*this,TextRole::sectionHeading));g.drawFittedText(getButtonText(),juce::Rectangle<int>(8,juce::roundToInt(top+83),getWidth()-16,30),juce::Justification::centred,1,.75f);
+        g.setColour(status.isEmpty()?secondary.withMultipliedAlpha(alpha):textStyle(TextRole::helper).ink);g.setFont(status.isEmpty()?interFont(bodySize,InterFace::italic):componentTextFont(*this,TextRole::helper));g.drawText(status.isEmpty()?juce::String("Song-aligned ")+juce::String::charToString(0x2022)+" preserves timing":status,juce::Rectangle<float>(8,top+120,getWidth()-16.f,24),juce::Justification::centred);
     }
 private:
     bool dragged=false;juce::String status;

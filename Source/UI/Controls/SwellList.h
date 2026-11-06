@@ -36,7 +36,12 @@ public:
     {for(size_t i=0;i<rows.size();++i)if(rows[i].id==id)return static_cast<int>(i);return -1;}
     const juce::String& primaryId()const noexcept{return primary;}
     static juce::Rectangle<int> menuAnchor(const juce::MouseEvent& event)
-    {const auto p=event.getScreenPosition();return {p.x,p.y,1,1};}
+    {
+        // Keep fractional coordinates through nested user/host transforms and
+        // round once at the native popup boundary.
+        const auto p=event.eventComponent->localPointToGlobal(event.position).roundToInt();
+        return {p.x,p.y,1,1};
+    }
 
     void display(std::vector<SwellListRow> next,const std::vector<juce::String>& selection,
                  const juce::String& nextPrimary,uint64_t sessionEpoch=0)

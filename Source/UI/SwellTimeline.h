@@ -1,4 +1,5 @@
 #pragma once
+#include <UI/ResponsivePresentation.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <DSP/SwellEngine.h>
 #include "SwellViewport.h"
@@ -54,6 +55,7 @@ public:
     const SwellViewport& viewport() const noexcept {return view;}
     void setViewport(SwellViewport v) {if(!std::isfinite(v.first) || !std::isfinite(v.last) || !std::isfinite(v.span()) || v.span()<=0)return;if(v.first!=view.first || v.last!=view.last)drag=Drag::none;view=v;updateScroll();repaint();}
     void setInlineOverview(bool enabled){inlineOverview=enabled;resized();repaint();}
+    void setResponsivePresentation(bool enabled){if(responsivePresentation!=enabled){responsivePresentation=enabled;resized();repaint();}}
     void navigateOverview(double fraction);
     juce::Rectangle<float> sourceLane() const noexcept {return source;}
     juce::Rectangle<float> wetLane() const noexcept {return wet;}
@@ -103,7 +105,7 @@ private:
     bool snapEnabled=true,snapBypassed=false,updatingScroll=false;
     GridDivision gridDivision=GridDivision::quarterBeat;
     bool playheadAvailable=false;
-    bool inlineOverview=true;
+    bool inlineOverview=true,responsivePresentation=false;
     bool editingEnabled=true;
     ui::WaveformLayer waveformLayer,wetWaveformLayer;
     uint64_t waveformRevision=0;
@@ -116,7 +118,8 @@ public:
     void lookAndFeelChanged()override{waveformLayer.invalidate();}
     void colourChanged()override{waveformLayer.invalidate();}
     const ui::WaveformPaintMetrics& waveformPaintMetrics()const noexcept{return waveformLayer.metrics();}
-    juce::Rectangle<float> waveformBounds()const noexcept{return getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
+    juce::Rectangle<float> waveformBounds()const noexcept
+    {return timeline.responsivePresentation?getLocalBounds().toFloat().withTrimmedLeft(ui::responsiveGeometry::overviewHeadingWidth+ui::responsiveGeometry::contentPadding).reduced(1):getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
     juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}

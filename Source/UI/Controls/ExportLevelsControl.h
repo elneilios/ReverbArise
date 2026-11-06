@@ -46,12 +46,19 @@ public:
         int id=1;for(size_t n=0;n<candidates.size();++n)if(pair==candidates[n].levels){id=static_cast<int>(n)+2;break;}
         selector.setSelectedId(id,juce::dontSendNotification);
     }
+    void setResponsivePresentation(){responsive=true;resized();}
+    int preferredHeight()const noexcept
+    {
+        return responsive?3*(responsiveGeometry::captionHeight+spacing::labelHelp+responsiveGeometry::controlHeight)+2*responsiveGeometry::contentPadding
+            :3*(controlGeometry::labelHeight+spacing::labelHelp+controlGeometry::height+spacing::related);
+    }
     void resized()override
     {
         auto area=getLocalBounds();
         for(auto row:std::array<std::pair<juce::Label*,juce::Component*>,3>{{{&characterLabel,&selector},{&dryLabel,&dry},{&wetLabel,&wet}}}){
-            row.first->setBounds(area.removeFromTop(controlGeometry::labelHeight));area.removeFromTop(spacing::labelHelp);
-            row.second->setBounds(area.removeFromTop(controlGeometry::height));area.removeFromTop(spacing::related);
+            if(responsive)row.first->setFont(componentTextFont(*this,TextRole::controlLabel));
+            row.first->setBounds(area.removeFromTop(responsive?responsiveGeometry::captionHeight:controlGeometry::labelHeight));area.removeFromTop(spacing::labelHelp);
+            row.second->setBounds(area.removeFromTop(responsive?responsiveGeometry::controlHeight:controlGeometry::height));area.removeFromTop(responsive?responsiveGeometry::contentPadding:spacing::related);
         }
     }
     std::function<void()> beforeInvocation;
@@ -59,7 +66,7 @@ public:
     DeliberateSelector selector;SliderControl dry,wet;
 private:
     void commit(Pair pair){if(pair==accepted)return;display(pair);if(onChange)onChange(pair);}
-    Pair accepted;bool refreshing=false;
+    Pair accepted;bool refreshing=false,responsive=false;
     juce::Label characterLabel,dryLabel,wetLabel;
 };
 }

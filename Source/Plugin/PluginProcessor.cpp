@@ -418,7 +418,9 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
 
 juce::AudioProcessorEditor* PreverbAudioProcessor::createEditor()
 {
-    return new PreverbAudioProcessorEditor(*this);
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*this);
+    editor->enableResponsivePresentation(std::make_shared<m3::ui::FilePresentationStorage>(m3::ui::FilePresentationStorage::userFile()));
+    return editor.release();
 }
 
 bool PreverbAudioProcessor::hasEditor() const

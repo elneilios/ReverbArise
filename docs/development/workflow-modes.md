@@ -1,5 +1,13 @@
 # Workflow modes
 
+The responsive editor opens fresh profiles at 900x600/100%. Learn separates
+Capture & Generate from Sound without changing workflow admission; existing
+Default IR is available with detection off. Perform separates Timing, Envelope
+and Sound while keeping Reset actions visible. Export retains its independent
+mix and delivery guards. Settings Appearance controls workspace size and optional
+100%/125% user magnification; these are local presentation preferences, not
+musical session settings. See [editor presentation](editor-presentation.md).
+
 Issue #10 introduced the foundation mode authority. Issue #16 adds the shared
 Learn / Perform / Export header; the dedicated Learn/Export layouts and WAV
 composition remain separate issues. This guide records the implemented contract;

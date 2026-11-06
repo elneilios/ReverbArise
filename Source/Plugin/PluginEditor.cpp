@@ -298,9 +298,26 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
+    if(responsivePresentation){g.fillAll(m3::ui::background);return;}
+    paintWorkspace(g);
+}
+void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
+{
+    if(responsivePresentation)
+    {
+        using namespace m3::ui;
+        const ResponsiveWorkspaceLayout layout(workspaceBounds());g.fillAll(background);g.setColour(separator);
+        g.drawHorizontalLine(layout.header.getBottom(),float(layout.header.getX()),float(layout.header.getRight()));
+        if(learningLayout || exportLayout)return;
+        for(const auto y:{layout.work.getBottom(),layout.audition.getBottom(),layout.overview.getBottom()})
+            g.drawHorizontalLine(y,float(layout.header.getX()),float(layout.header.getRight()));
+        for(const auto line:{layout.listDivider(),layout.inspectorDivider()})
+            g.drawVerticalLine(juce::roundToInt(line.getStartX()),line.getStartY(),line.getEndY());
+        return;
+    }
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
     if(learningLayout || exportLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
     const m3::ui::PerformLayout perform(getLocalBounds());
@@ -361,6 +378,7 @@ void PreverbAudioProcessorEditor::armSelected()
 }
 void PreverbAudioProcessorEditor::resized()
 {
+    if(responsivePresentation){resizePresentation();return;}
     const m3::ui::WorkspaceLayout layout(getLocalBounds());
     const auto inset=m3::ui::workspaceGeometry::outerInset(getWidth());
     hoverHelp.setBounds(inset,getHeight()-m3::ui::controlGeometry::feedbackHeight,getWidth()-2*inset,m3::ui::controlGeometry::feedbackHeight);
@@ -416,6 +434,102 @@ void PreverbAudioProcessorEditor::resized()
     layoutSettings();layoutLiveDiagnostics();
 
 }
+void PreverbAudioProcessorEditor::enableResponsiveReview(std::shared_ptr<m3::ui::PresentationStorage> storage,std::optional<m3::ui::PresentationFitContext> display)
+{
+    enableResponsivePresentation(storage?std::move(storage):std::make_shared<m3::ui::TransientPresentationStorage>(),display);
+}
+void PreverbAudioProcessorEditor::enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage> storage,std::optional<m3::ui::PresentationFitContext> display)
+{
+    if(responsivePresentation)return;
+    inspectorSections.setName("inspectorSections");addAndMakeVisible(inspectorSections);
+    inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();};
+    // Fixed actions and flags belong to the editor, outside the scrolling fields.
+    for(auto* child:std::initializer_list<juce::Component*>{&selectedStatus,&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})
+        addAndMakeVisible(child);
+    for(auto& control:valueControls)control.setCompactPresentation(true);
+    timeline.setResponsivePresentation(true);
+    inspectorViewport.setFocusRevealEnabled(true);diagnosticsViewport.setFocusRevealEnabled(true);
+    const auto children=getChildren();
+    for(auto* child:children)
+        if(dynamic_cast<juce::ResizableCornerComponent*>(child)==nullptr && dynamic_cast<juce::ResizableBorderComponent*>(child)==nullptr)
+            presentationSurface.contentRoot().addChildComponent(child);
+    addAndMakeVisible(presentationSurface);presentationSurface.toBack();
+    presentationSurface.setPainter([this](auto& drawing){paintWorkspace(drawing);});
+    responsivePresentation=true;reviewDisplay=display;
+    presentationStorage=storage?std::move(storage):std::make_shared<m3::ui::TransientPresentationStorage>();
+    presentation=std::make_unique<m3::ui::EditorPresentationState>(*presentationStorage,presentationDisplay());
+    initialisePresentation();applyPresentation();refresh();
+}
+void PreverbAudioProcessorEditor::refreshResponsiveSections()
+{
+    const bool selected=m3::find(state.session,state.session.primary)!=nullptr && !learningLayout && !exportLayout;
+    inspectorSections.display({{1,"Timing","Target and source timing"},{2,"Envelope","Swell envelope"},{3,"Sound","Sound for selected swell"}},inspectorSection);
+    for(auto* child:std::initializer_list<juce::Component*>{&inspectorSections,&selectedStatus,&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})
+        child->setVisible(selected);
+    for(auto& group:inspectorGroups)group.setVisible(false);
+    for(int i=0;i<valueCount;++i)
+    {
+        const auto section=i==levelValue?3:(i==targetValue || i==placementValue || i==sourceStartValue || i==sourceEndValue)?1:2;
+        valueControls[i].setVisible(selected && section==inspectorSection);
+    }
+    for(auto* child:std::initializer_list<juce::Component*>{&irBox,&irStatus,&loadIRButton})child->setVisible(selected && inspectorSection==3);
+    // Mute/full response/curve presets are owned by Settings, not this inspector.
+    // Section refresh must not hide their existing access route.
+    const bool editable=inspectorContent.isEnabled();
+    for(auto* child:std::initializer_list<juce::Component*>{&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})child->setEnabled(child->isEnabled() && selected && editable);
+    repaint();
+}
+void PreverbAudioProcessorEditor::layoutResponsive()
+{
+    using namespace m3::ui;using namespace responsiveGeometry;
+    const auto bounds=workspaceBounds();
+    const ResponsiveWorkspaceLayout layout(bounds);const auto type=ResponsiveTypography::at(bounds.getWidth(),bounds.getHeight());
+    workspaceTheme.setResponsiveViewport(bounds.getWidth(),bounds.getHeight());
+    // SliderControl owns a private shared theme. Resolve that same profile
+    // without recreating controls or interrupting an active text invocation.
+    const auto updateThemes=[&](auto&& self,juce::Component& parent)->void
+    {
+        if(auto* theme=dynamic_cast<WorkspaceTheme*>(&parent.getLookAndFeel()))theme->setResponsiveViewport(bounds.getWidth(),bounds.getHeight());
+        if(auto* slider=dynamic_cast<m3::ui::controls::InvocationSlider*>(&parent))slider->setValueFont(componentTextFont(parent,TextRole::controlValue));
+        for(auto* child:parent.getChildren())self(self,*child);
+    };
+    updateThemes(updateThemes,*this);
+    for(auto& control:valueControls)control.lookAndFeelChanged();
+    workflowHeader.setResponsivePresentation(type);workflowHeader.setBounds(layout.header);
+    noticeBar.setResponsivePresentation(type);noticeBar.setBounds(layout.notice);hoverHelp.setBounds(layout.help);
+    learnWorkspace.setResponsivePresentation(type);exportWorkspace.setResponsivePresentation();
+    learnWorkspace.setBounds(layout.body);exportWorkspace.setBounds(layout.body);
+    if(learningLayout || exportLayout)return;
+    for(auto* child:std::initializer_list<juce::Component*>{&markerButton,&markerLabel,&markerKnob,&recaptureExisting,&headerStatus,&spanLabel,&regenerationLabel,&regenerationKnob,&markerState})
+    {child->setBounds({});child->setVisible(false);}
+    auto listArea=layout.list.withTrimmedRight(contentPadding);auto title=listArea.removeFromTop(headingHeight);
+    auto add=title.removeFromRight(24);addButton.setBounds(add);addButton.setButtonText("+");
+    listCount.setBounds(title.removeFromRight(36));listLabel.setBounds(title);listArea.removeFromTop(contentPadding);
+    list.setBounds(listArea.withTrimmedBottom(contentPadding));listEmpty.setBounds(list.getBounds().reduced(contentPadding));
+    auto heading=layout.inspectorHeading;selectedStatus.setBounds(heading.removeFromRight(56));inspectorHeading.setBounds(heading);
+    auto flags=layout.flags;enabledButton.setBounds(flags.removeFromLeft(90));soloButton.setBounds(flags.removeFromLeft(65));freezeButton.setBounds(flags);
+    inspectorSections.setTextHeight(type.body);inspectorSections.setBounds(layout.tabs);
+    inspectorViewport.setBounds(layout.fields);inspectorEmpty.setBounds(layout.fields);
+    auto resets=layout.resets;resetButton.setBounds(resets.removeFromLeft((resets.getWidth()-contentPadding)/2));resets.removeFromLeft(contentPadding);resetMenu.setBounds(resets);
+    const auto width=layout.fields.getWidth();
+    const auto pair=[&](int first,int second,int y)
+    {valueControls[first].setBounds(0,y,(width-contentPadding)/2,valueRowHeight);valueControls[second].setBounds((width+contentPadding)/2,y,(width-contentPadding)/2,valueRowHeight);};
+    pair(targetValue,placementValue,0);
+    valueControls[sourceStartValue].setBounds(0,valueRowHeight,width,valueRowHeight);valueControls[sourceEndValue].setBounds(0,2*valueRowHeight,width,valueRowHeight);
+    pair(preRollValue,endOffsetValue,0);pair(fadeInValue,fadeOutValue,valueRowHeight);pair(inCurveValue,outCurveValue,2*valueRowHeight);
+    irStatus.setBounds(0,0,width,24);auto choice=juce::Rectangle<int>(0,24,width,controlHeight);
+    loadIRButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(contentPadding);irBox.setBounds(choice);
+    valueControls[levelValue].setBounds(0,24+controlHeight+contentPadding,width,valueRowHeight);
+    inspectorContent.setSize(width,std::max(layout.fields.getHeight(),3*valueRowHeight));
+    timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
+    performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setBounds(layout.grid.reduced(0,3));
+    auto audition=layout.audition.reduced(0,contentPadding);auditionHeading.setBounds(audition.removeFromLeft(88));
+    auditionButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);stopButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);
+    auditionWetOnly.setBounds(audition.removeFromLeft(96));audition.removeFromLeft(contentPadding);monitorStatus.setBounds(audition);
+    songOverview.setBounds(layout.overview.reduced(0,contentPadding));hostInfo.setBounds(layout.position);
+    for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
+    layoutSettings();layoutPresentationSettings();layoutLiveDiagnostics();refreshResponsiveSections();
+}
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
     const auto inset=m3::ui::spacing::section;
@@ -463,8 +577,8 @@ void PreverbAudioProcessorEditor::refresh()
         || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
     if(nextLearning!=learningLayout || nextExport!=exportLayout)
     {
-        if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
-        else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==this)c->setVisible(visible);performVisibility.clear();}
+        if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:workspaceRoot().getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
+        else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==&workspaceRoot())c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
     if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
@@ -707,11 +821,12 @@ void PreverbAudioProcessorEditor::refresh()
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
     if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
-    if(learningLayout || exportLayout)for(auto* c:getChildren())if(!isShared(c))c->setVisible(false);
+    if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;
     refreshHoverHelp();
+    if(responsivePresentation)refreshResponsiveSections();
     updating=false;if(initialFrame)publishPerformNavigation();
 }
 bool PreverbAudioProcessorEditor::navigationIntentCurrent()const

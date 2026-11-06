@@ -173,7 +173,9 @@ static void aboutBindings(bool review=false)
 static void alphaGuide()
 {
     GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
-    PreverbAudioProcessorEditor editor(processor);editor.setSize(1400,1000);editor.setVisible(true);editor.refresh();
+    PreverbAudioProcessorEditor editor(processor);
+    editor.enableResponsivePresentation(std::make_shared<m3::ui::TransientPresentationStorage>(),m3::ui::PresentationFitContext{{4000,3000},{0,0}});
+    editor.setSize(1400,1000);editor.setVisible(true);editor.refresh();
     REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture && engine.savedSession().swells.empty());
     REQUIRE(!named(editor,"learnGenerateSwells")->isEnabled());captureImage(editor,"alpha-empty-learn");
     fixture.record();const auto markers=fixture.ready();editor.refresh();
