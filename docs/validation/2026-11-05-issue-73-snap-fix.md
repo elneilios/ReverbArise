@@ -106,6 +106,58 @@ already-ready render matches its new source bounds. It no longer assumes a
 specific transient worker phase survives until an arbitrarily timed read. This
 adds revision/render-coherence checks without altering production or timeouts.
 The corrected final UI fixture and full Debug gate remain to be verified below.
+
+### Completed final verification, 6 November
+
+Clean final source is `1c6085753477914a70f574c7dfe6a22ee5785512`; production
+code remains identical to `eed71ff`. Its Release wrapper build passed
+(`out/build-logs/Release/20261106-001108-38acc2fc`), followed by the corrected
+native Release UI fixture passing **1/1**, **12.20 s**
+(`out/issue-73/snap-final-ui-release.log`). The full **71/71 Release** result on
+unchanged production above remains applicable; final test-only corrections are
+covered separately instead of mislabelled as another full Release suite.
+
+The final `scripts/build.ps1 -Configuration Debug -Test` passed configure,
+build and **71/71 native CTest**, **499.48 s**, on clean `1c60857`:
+`out/build-logs/Debug/20261106-001147-ee11c9be`. The corrected UI case passed
+inside that full run (**54.20 s**), as did retained IR, engine, processor,
+streaming, lifecycle, concurrency, persistence and existing offline cases.
+The final source diff after `eed71ff` contains test/evidence changes only.
+
+UI standards passed (**51 files / 61 existing bounded occurrences**), strict
+OpenSpec validation passed, whitespace checks passed and user-guide currency
+passed after explicit semantic review. The production guide/layout/controls and
+debt inventory are unchanged. Native results do not establish new FL Studio or
+DPI acceptance. Heavy native work was coordinated with #58; one bounded
+two-worker incremental compile slot was allowed during early Debug, with no
+concurrent host installation. These timings are validation measurements, not
+performance/speedup claims.
+
+### Verified local FL Studio installation
+
+The existing normal-write ACL denial at the same system destination was already
+established during the preceding combined installation. After all gates passed,
+the supported `scripts/install-test-vst3.ps1` was run with Windows UAC elevation,
+hosts closed, no ACL changes and no manual bundle copying. The installer rebuilt
+the Release VST3 target at clean `1c60857` and returned **0**. Its plugin-only
+build did not rerun CTest; the native gates above preceded installation. Build
+log: `out/build-logs/Release/20261106-002400-ab3b223f`.
+
+- Identifier: **v0.1.0-local**, Git `1c6085753477914a70f574c7dfe6a22ee5785512`, source unmodified.
+- Installed: `C:\Program Files\Common Files\VST3\ReverbArise.vst3`.
+- x64 binary SHA256: `0114e1f8480c69cba8ca74b407b76cd9b0c46653ea1789fa9f1ff69cae0a7abd`.
+- Retained previous bundle: `out/vst3-install-backups/20261106-002409-9092f151b7f349c78cedf40040f9d35f/ReverbArise.vst3`.
+- Independent verification: all **six installed files** match the final Release
+  output and all **six retained files** match the saved pre-install inventory.
+  The previous binary hash is `dc53c456aa3cb2f82f2ff2a962c59d9ee8fa6357808bd64eb81ea3f5c36e06af`.
+
+Logs, pre-install inventory and verification JSON are retained under ignored
+`out/issue-73/snap-*`. Preserve the backup before removing this worktree/output.
+The install helper disabled reuse of its MSBuild worker servers so the UAC
+launcher's descendant wait could complete; dependency/build caches were retained.
+No DAW was terminated, owner preview closed, other installation changed, project
+asset touched, release published, PR opened, push performed, spec synced or change
+archived. The system build includes the existing offline repair and diagnostics.
 The completed results below will identify source revision, dirty state, logs,
 installed identity/hash and retained prior bundle. Canonical specs are not synced;
 the approved delta governs this local repair. Issue #71 remains separate, with
