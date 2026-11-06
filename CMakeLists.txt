@@ -418,3 +418,9 @@ if(BUILD_TESTING)
     target_link_libraries(preverb_storage_settings_test PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_storage_settings_test COMMAND preverb_storage_settings_test)
 endif()
+
+# Explicitly opt-in; default product builds do not observe or log host metadata.
+option(PREVERB_PROJECT_FOLDER_PROBE "Enable diagnostic task 1.4 VST3 state-stream metadata logging" OFF)
+if(PREVERB_PROJECT_FOLDER_PROBE)
+    include(cmake/ProjectFolderProbe.cmake)
+endif()

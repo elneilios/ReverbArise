@@ -168,3 +168,5 @@ Deferrable tuning only: which supported Windows path lengths/volumes qualify ini
 ## Authorization update — 2026-11-06
 
 The owner explicitly requested reconciling these existing artifacts and PR #31, then starting task 1.4's diagnostic FL Studio project-folder discovery spike. This supersedes only the earlier optional/unstarted spike status. It does not authorize later storage writers, default-root cutover, Backup/Restore UI, re-learn recovery, cache eviction or cleanup implementation. Preserve phase 0/1 evidence and completed tasks; unknown host capability is an acceptable spike result and explicit-folder/user-data fallback remains mandatory.
+
+Discovery spike result: task 1.4 completed on FL Studio 26.1.7 build 5654 / JUCE 9.0.4. Seven getState/setState streams across unsaved, first-save, reopen, Save As and moved disposable FLPs lacked IStreamAttributes; no reliable project-folder signal was established through this route. See [dated runtime evidence](../../../docs/validation/2026-11-06-issue-8-project-folder-spike.md). Preserve explicit-folder/user-data fallback; this result authorizes no association/default-root change or other later task.

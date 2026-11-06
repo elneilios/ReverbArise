@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed actual Storage Settings integration and native bindings: documented scan-on-open/reopen, Stop scan, current-instance scope, incomplete coverage and unchanged backup protection. Existing Learn/Perform screenshots and workflows remain current.",
+  "summary": "Reviewed the owner-approved future storage/recovery plan and diagnostic-only host-folder probe. Normal product behavior is unchanged; the probe is opt-in and locally reset OFF. Backup/Restore/folder selection/re-learn recovery remain planned, so no user-facing guide prose or screenshots were changed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 28835,
-      "sha256": "8a3bb7b95f93a13a523d5e4bf7743bd65ec457afab4028a1f9cd9538055172c6"
+      "bytes": 29108,
+      "sha256": "b507aafc00a57ef615749d9cd8487374d94ce4198edfbe69ed1c57c15387b851"
     },
     {
       "path": "CMakePresets.json",
@@ -832,6 +832,11 @@
       "path": "cmake/ProductVersion.cmake",
       "bytes": 1622,
       "sha256": "3802d3bee984124f611c6a62ef5bb2c5697d39aeb15b6d680a3b8804bae57a1c"
+    },
+    {
+      "path": "cmake/ProjectFolderProbe.cmake",
+      "bytes": 2886,
+      "sha256": "388ec22898bb57836594824aa842d22f25f90e1e371fd7834342a67e88432678"
     },
     {
       "path": "cmake/build-information.json.in",
