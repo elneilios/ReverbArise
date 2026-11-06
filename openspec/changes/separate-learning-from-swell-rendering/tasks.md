@@ -1,6 +1,6 @@
 # Tasks
 
-Implementation is underway; checked tasks have native verification and documented ownership. Issue #8 / PR #31 retains its separate native recovery review and all later storage safety gates.
+Implementation and verification are complete; checked tasks have native evidence and documented ownership. Issue #8 / PR #31 retains its separate native recovery review and all later storage safety gates.
 
 ## 1. Dependency ownership and minimum work
 
@@ -25,7 +25,7 @@ Implementation is underway; checked tasks have native verification and documente
 ## 4. Final integration boundary
 
 - [x] 4.1 Run affected native MSVC/CTest capture, marker generation, dependency/render, playback/shape, persistence, recovery and UI suites plus the supported Release build wrapper; verify UI standards, strict OpenSpec, links/whitespace and dated evidence with honest host/DPI coverage.
-- [ ] 4.2 Update PR #31 with final ownership/behavior, tests, native approval and remaining storage gates; verify portable-project-assets task 3.10 is completed only after its own guarded acceptance checks, without enabling association, writer migration, cleanup, compression, release or merge.
+- [x] 4.2 Update PR #31 with final ownership/behavior, tests, native approval and remaining storage gates; verify portable-project-assets task 3.10 is completed only after its own guarded acceptance checks, without enabling association, writer migration, cleanup, compression, release or merge.
 
 ## Workflow follow-up
 
