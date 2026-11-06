@@ -89,6 +89,23 @@ other tests is retained rather than rerunning the whole suite for a test-only
 precondition correction.
 
 Pending final native Debug gate, corrected-fixture repeats and verified system installation.
+
+Final-fixture Release handover passed five consecutive runs (**5.91 s**,
+`out/issue-73/snap-final-handover-release.log`) after a clean `f7a6294` wrapper
+build. Debug configure/build then passed on that revision, but its UI test
+captured the previously unexplained transient assertion: source end was exactly
+20000, selected phase was Rendering / "Convolving", and the neighbour was Ready.
+The worker had legitimately advanced beyond Stale before inspection. That Debug
+run was cancelled after the known failure, before completing the remaining
+engine/processor cases; it is not a pass (`out/build-logs/Debug/20261106-000204-9c752c2f`).
+
+The UI fixture now takes one coherent model copy and verifies the input revision
+advances exactly once, the requested endpoint/shape and unrelated ready swell
+are preserved, the selected state is a valid preparation/ready state, and any
+already-ready render matches its new source bounds. It no longer assumes a
+specific transient worker phase survives until an arbitrarily timed read. This
+adds revision/render-coherence checks without altering production or timeouts.
+The corrected final UI fixture and full Debug gate remain to be verified below.
 The completed results below will identify source revision, dirty state, logs,
 installed identity/hash and retained prior bundle. Canonical specs are not synced;
 the approved delta governs this local repair. Issue #71 remains separate, with

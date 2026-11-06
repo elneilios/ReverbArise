@@ -1320,15 +1320,24 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(engine.savedSession().swells[1].sourceStart==neighbour.sourceStart && engine.savedSession().swells[1].render==neighbour.render);
     }
     const auto source=timeline.sourceLane();const auto xEnd=static_cast<float>(timeline.viewport().pixel(24000,source.getX(),source.getWidth()));
+    const auto beforeSourceEndEdit=engine.savedSession();
     REQUIRE(timeline.beginDrag({xEnd,source.getBottom()-5}));timeline.dragTo({static_cast<float>(timeline.viewport().pixel(20000,source.getX(),source.getWidth())),source.getBottom()-5});
-    {const auto observedSourceEdit=engine.savedSession();
-        if(observedSourceEdit.swells[0].sourceEnd!=20000 || observedSourceEdit.swells[0].phase!=m3::Phase::stale || observedSourceEdit.swells[1].phase!=m3::Phase::ready)
+    {const auto observedSourceEdit=engine.savedSession();const auto& edited=observedSourceEdit.swells[0];
+        const auto progressing=edited.phase==m3::Phase::stale || edited.phase==m3::Phase::checking
+            || edited.phase==m3::Phase::queued || edited.phase==m3::Phase::rendering || edited.phase==m3::Phase::ready;
+        if(edited.sourceEnd!=20000 || edited.inputGeneration!=beforeSourceEndEdit.swells[0].inputGeneration+1 || !progressing || observedSourceEdit.swells[1].phase!=m3::Phase::ready)
             std::cerr<<"Source-end edit evidence: end="<<observedSourceEdit.swells[0].sourceEnd
                 <<" phase="<<static_cast<int>(observedSourceEdit.swells[0].phase)<<" status="<<observedSourceEdit.swells[0].status
                 <<" neighbour phase="<<static_cast<int>(observedSourceEdit.swells[1].phase)<<" status="<<observedSourceEdit.swells[1].status
-                <<" autoRegenerate="<<observedSourceEdit.autoRegenerate<<" gesture="<<timeline.interactionStatus()<<"\n";}
-    REQUIRE(engine.savedSession().swells[0].sourceEnd==20000 && engine.savedSession().swells[0].phase==m3::Phase::stale && engine.savedSession().swells[1].phase==m3::Phase::ready);
-    editor.refresh();snapshotEditor(editor,"stale");
+                <<" input generation="<<edited.inputGeneration<<" before="<<beforeSourceEndEdit.swells[0].inputGeneration
+                <<" autoRegenerate="<<observedSourceEdit.autoRegenerate<<" gesture="<<timeline.interactionStatus()<<"\n";
+        REQUIRE(edited.sourceEnd==20000 && edited.inputGeneration==beforeSourceEndEdit.swells[0].inputGeneration+1 && progressing);
+        REQUIRE(edited.shape==beforeSourceEndEdit.swells[0].shape && edited.shapeGeneration==beforeSourceEndEdit.swells[0].shapeGeneration);
+        if(edited.phase==m3::Phase::ready)REQUIRE(edited.render.sourceStart==edited.sourceStart && edited.render.sourceEnd==m3::renderInputEnd(edited));
+        REQUIRE(observedSourceEdit.swells[1].phase==m3::Phase::ready
+            && observedSourceEdit.swells[1].inputGeneration==beforeSourceEndEdit.swells[1].inputGeneration
+            && m3::sameSavedSwell(observedSourceEdit.swells[1],beforeSourceEndEdit.swells[1]));}
+    editor.refresh();snapshotEditor(editor,"source-edit-preparing");
     auto field=dynamic_cast<juce::TextEditor*>(named(editor,"sourceSampleEnd"));REQUIRE(field);field->setText("24000",false);field->onReturnKey();
     auto generate=dynamic_cast<juce::TextButton*>(named(editor,"generate"));REQUIRE(generate);generate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.snapshot().sourceDetail && engine.snapshot().sourceDetail->peaks.size()>1000);
