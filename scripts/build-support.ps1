@@ -103,7 +103,7 @@ function Get-BuildRevision([string] $Git, [string] $Root) {
 
 function Invoke-ReverbBuild {
     [CmdletBinding()]
-    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '')
+    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '', [switch] $CompatibilityTest)
     $ErrorActionPreference = 'Stop'
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
     $preset = 'windows-msvc-' + $Configuration.ToLowerInvariant()
@@ -127,15 +127,18 @@ function Invoke-ReverbBuild {
         $stages.Preflight = 'pass'
         Write-Host "Tools: $($tools.CMake); $($tools.CTest)"
         if ($PluginOnly) { Write-Host 'Build target: preverb_plugin_VST3 (plugin only; CTest not requested)' }
+        elseif ($CompatibilityTest) { Write-Host 'Private diagnostic targets and focused compatibility/workflow/capture-failure checks (full regression not selected)' }
         foreach ($stage in @('Configure', 'Build', 'Test')) {
             if ($stage -eq 'Test' -and -not $Test) { continue }
             $executable = $tools.CMake
             $arguments = switch ($stage) {
-                'Configure' { @('--preset', 'windows-msvc', '-DFETCHCONTENT_UPDATES_DISCONNECTED=ON', "-DPREVERB_RELEASE_TAG=$ReleaseTag", "-DPREVERB_RELEASE_CANDIDATE=$Candidate") }
+                'Configure' { @('--preset', 'windows-msvc', '-DFETCHCONTENT_UPDATES_DISCONNECTED=ON', "-DPREVERB_RELEASE_TAG=$ReleaseTag", "-DPREVERB_RELEASE_CANDIDATE=$Candidate", "-DPREVERB_COMPATIBILITY_TEST=$($CompatibilityTest.IsPresent.ToString().ToUpperInvariant())") }
                 'Build' { @('--build', '--preset', $preset) }
                 'Test' { @('--preset', $preset, '--no-tests=error') }
             }
             if ($stage -eq 'Build' -and $PluginOnly) { $arguments += @('--target', 'preverb_plugin_VST3') }
+            elseif ($stage -eq 'Build' -and $CompatibilityTest) { $arguments += @('--target', 'preverb_plugin_VST3', 'preverb_compatibility_test', 'preverb_compatibility_disabled_check', 'preverb_workflow_processor_test', 'preverb_capture_failure_test') }
+            if ($stage -eq 'Test' -and $CompatibilityTest) { $arguments += @('-R', '^preverb_(compatibility_test|workflow_processor_test|capture_failure_test|ui_standards_check)$') }
             if ($stage -eq 'Test') { $executable = $tools.CTest }
             $log = Join-Path $logDirectory ($stage.ToLowerInvariant() + '.log')
             Write-Host "$stage $Configuration... ($log)"

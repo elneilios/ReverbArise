@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(Preverb VERSION 0.1.0 LANGUAGES C CXX)
+option(PREVERB_COMPATIBILITY_TEST "Private read-only host compatibility companion" OFF)
 
 include(cmake/ProductVersion.cmake)
 reverbarise_product_version("${CMAKE_CURRENT_SOURCE_DIR}" product_version)
@@ -124,6 +125,7 @@ file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
 "{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
 
 target_sources(preverb_plugin PRIVATE
+    Source/Plugin/CompatibilityReport.cpp
     Source/Plugin/PluginEditor.cpp
     Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginSettings.cpp
@@ -133,6 +135,8 @@ target_sources(preverb_plugin PRIVATE
 )
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
+target_compile_definitions(preverb_plugin PUBLIC PREVERB_COMPATIBILITY_TEST=$<BOOL:${PREVERB_COMPATIBILITY_TEST}>)
+set_source_files_properties(Source/Plugin/CompatibilityReport.cpp PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/generated")
 
 target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)
 target_link_libraries(preverb_plugin PRIVATE
@@ -158,6 +162,15 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    if(PREVERB_COMPATIBILITY_TEST)
+        add_library(preverb_compatibility_disabled_check OBJECT tests/compatibility_disabled_check.cpp)
+        target_include_directories(preverb_compatibility_disabled_check PRIVATE Source "${juce_SOURCE_DIR}/modules")
+        target_link_libraries(preverb_compatibility_disabled_check PRIVATE preverb_ui_resources)
+        add_executable(preverb_compatibility_test tests/compatibility_test.cpp)
+        target_compile_definitions(preverb_compatibility_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+        target_link_libraries(preverb_compatibility_test PRIVATE preverb_plugin juce::juce_audio_utils)
+        add_test(NAME preverb_compatibility_test COMMAND preverb_compatibility_test)
+    endif()
     add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
     target_include_directories(preverb_presentation_policy_test PRIVATE Source)
     target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)

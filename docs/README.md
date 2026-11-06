@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Private compatibility test](development/compatibility-test.md) — opt-in modeless companion, pre-start admission and independent raw-input evidence for #111 / Audacity #60; private packaging and validation limits.
+
 - [Swell-engine architecture](development/swell-engine-architecture.md) — implemented ownership/call paths, data-flow/lifecycle diagrams and material regeneration boundaries; [native/profile verification](validation/2026-11-06-shared-swell-engine.md).
 
 - [Issue #8 fresh-profile validation](validation/2026-11-06-issue-8-fresh-profile.md) — passing destination-only restore in a separate Windows account, exact metadata/audio and zero generation/recapture work.

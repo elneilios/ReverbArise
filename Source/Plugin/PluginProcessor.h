@@ -10,6 +10,9 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
+#if PREVERB_COMPATIBILITY_TEST
+#include "CompatibilityTelemetry.h"
+#endif
 #include <Storage/PortableAssets.h>
 
 struct HostPositionDiagnostics
@@ -44,6 +47,11 @@ public:
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     HostPositionDiagnostics getHostPositionDiagnostics() const noexcept;
+#if PREVERB_COMPATIBILITY_TEST
+    compatibility::Telemetry compatibilityTelemetry;
+    juce::String compatibilityReport(bool detailed=true);
+    void clearCompatibilityReport(){compatibilityTelemetry.clear();}
+#endif
     void setMappingEnabled(bool enabled);
     bool isMappingEnabled() const noexcept;
     void requestClearCapture();
@@ -117,6 +125,11 @@ private:
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
+#if PREVERB_COMPATIBILITY_TEST
+    compatibility::Observation compatibilityObservation;
+    bool compatibilityPriorSample=false;
+    int64_t compatibilityExpectedSample=0;
+#endif
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
     std::atomic<uint64_t> diagnosticsSequence{0};

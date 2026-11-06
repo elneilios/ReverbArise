@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginProcessor.h"
+#include "CompatibilityWindow.h"
 #include <UI/SwellTimeline.h>
 #include <UI/WorkspaceTheme.h>
 #include <UI/WorkspaceLayout.h>
@@ -30,6 +31,10 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void refresh();
+#if PREVERB_COMPATIBILITY_TEST
+    void showCompatibility(){if(!compatibilityWindow)compatibilityWindow=std::make_unique<CompatibilityWindow>(processor);compatibilityWindow->show();}
+    CompatibilityWindow* compatibilityWindowForTesting(){return compatibilityWindow.get();}
+#endif
     bool assetRecoveryWarningVisible()const{return recoveryWarning && recoveryWarning->isVisible();}
     void modifierKeysChanged(const juce::ModifierKeys&)override;
     void mouseEnter(const juce::MouseEvent& event)override{updateHoverHelp(event);}
@@ -198,6 +203,9 @@ private:
     juce::TextButton openDiagnosticsButton{"Open diagnostics..."};
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
+#if PREVERB_COMPATIBILITY_TEST
+    std::unique_ptr<CompatibilityWindow> compatibilityWindow;
+#endif
     juce::Label headerStatus,helper;
     m3::ui::controls::EllipsisLabel monitorStatus;
     m3::ui::controls::EllipsisLabel selectedStatus,performSoundScope;

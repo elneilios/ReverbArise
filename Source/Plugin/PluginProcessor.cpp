@@ -29,7 +29,11 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     swells->setAuditionWetOnly(false,swells->assignmentEpoch());
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
     swells->useProvisionalSource([this]{return captureWorker.provisionalSnapshot();});
-    captureWorker.setSettlementHandler([this](uint64_t pass,uint64_t generation,bool useful){swells->captureSettled(pass,generation,useful);});
+    captureWorker.setSettlementHandler([this](uint64_t pass,uint64_t generation,bool useful){swells->captureSettled(pass,generation,useful);
+#if PREVERB_COMPATIBILITY_TEST
+        compatibilityTelemetry.settled(pass,useful);
+#endif
+    });
     captureWorker.setPassContextProvider([this](uint64_t pass)->std::optional<CaptureGenerationContext>
     {
         const auto pinned=swells->passConfiguration(pass);if(!pinned)return {};
@@ -94,15 +98,51 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     if(offline && !wasOffline)offlineWorkflowMode=workflowState.snapshot().mode;
     wasOffline=offline;
     auto workflow=workflowState.snapshot();
+#if PREVERB_COMPATIBILITY_TEST
+    auto& observation=compatibilityObservation;
+    observation.flow=workflow;observation.attempt=false;observation.started=false;
+    observation.rejection=CaptureFailureReason::none;
+    observation.channels=buffer.getNumChannels();observation.frames=buffer.getNumSamples();
+    observation.left=observation.right=0;observation.nonzero=false;observation.nonfinite=false;
+    // Raw host input, before tone/monitoring/DSP and independent of admission.
+    for(int c=0;c<std::min(2,buffer.getNumChannels());++c)
+        for(int i=0;i<buffer.getNumSamples();++i){const auto v=buffer.getSample(c,i);
+            observation.nonzero|=v!=0;observation.nonfinite|=!std::isfinite(v);
+            if(std::isfinite(v)){auto& peak=c==0?observation.left:observation.right;peak=std::max(peak,std::abs(v));}}
+    using compatibility::Gate;
+    observation.gate=offline?Gate::offline:workflow.mode!=workflow::Mode::capture?Gate::mode
+        :workflow.locked()?Gate::locked:!diagnostics.positionAvailable?Gate::position
+        :!diagnostics.samplePositionAvailable?Gate::samples:!diagnostics.ppqPositionAvailable?Gate::ppq
+        :!diagnostics.tempoAvailable?Gate::tempo:!diagnostics.meterAvailable?Gate::meter
+        :!captureWorker.canMap()?Gate::mapping
+        :(diagnostics.isPlaying && previousHostPlaying && previousWorkflowMode==workflow::Mode::capture)?Gate::edge:Gate::ready;
+    observation.attempt=!offline && diagnostics.positionAvailable && diagnostics.isPlaying
+        && workflow.mode==workflow::Mode::capture && !workflow.locked()
+        && (!previousHostPlaying || previousWorkflowMode!=workflow::Mode::capture);
+#endif
     if(!offline && diagnostics.positionAvailable)
     {
         if(diagnostics.isPlaying && workflow.mode==workflow::Mode::capture && !workflow.locked() && (!previousHostPlaying || previousWorkflowMode!=workflow::Mode::capture))
+#if PREVERB_COMPATIBILITY_TEST
+        {
+            // Report the very same argument given to begin, including a mapping
+            // change since the earlier observation. No extra admission policy.
+            const bool compatible=transport.song.valid && captureWorker.canMap();
+            if(transport.song.valid && !compatible)observation.gate=Gate::mapping;
+            if(workflowState.begin(compatible))swells->captureStarted(transport.song.sample);
+        }
+#else
             if(workflowState.begin(transport.song.valid && captureWorker.canMap()))swells->captureStarted(transport.song.sample);
+#endif
         if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording){swells->captureStopped();workflowState.stop(workflow.pass);}
         previousHostPlaying=diagnostics.isPlaying;
         previousWorkflowMode=workflow.mode;
     }
     workflow=workflowState.snapshot();
+#if PREVERB_COMPATIBILITY_TEST
+    observation.started=observation.attempt && workflow.phase==workflow::Phase::recording;
+    if(observation.attempt && !observation.started && observation.gate==Gate::ready)observation.gate=Gate::admission;
+#endif
     const CaptureHostTiming captureTiming{diagnostics.positionAvailable,diagnostics.samplePositionAvailable,
         diagnostics.ppqPositionAvailable,diagnostics.tempoAvailable,diagnostics.meterAvailable,diagnostics.isPlaying,
         diagnostics.isLooping,diagnostics.samplePosition,diagnostics.loopStart,diagnostics.loopEnd,
@@ -115,6 +155,9 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         CaptureFailureEvent event;event.reason=reason;event.pass=workflow.pass;event.epoch=captureGeneration;
         event.start=diagnostics.samplePosition;event.frames=buffer.getNumSamples();event.queued=passQueuedBlocks;event.dropped=passDroppedBlocks;
         event.timing=captureTiming;event.baseline=capturePassDiagnosticBaseline;captureWorker.failPass(event);
+#if PREVERB_COMPATIBILITY_TEST
+        observation.rejection=reason;
+#endif
     };
     if(!offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
         rejectCapture(CaptureFailureReason::timingUnavailable);
@@ -141,6 +184,16 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         }
     }
 
+#if PREVERB_COMPATIBILITY_TEST
+    observation.timing=captureTiming;observation.flow=workflow;
+    observation.queued=passQueuedBlocks;observation.dropped=passDroppedBlocks;
+    observation.discontinuity=compatibilityPriorSample && diagnostics.samplePositionAvailable
+        && diagnostics.isPlaying && diagnostics.samplePosition!=compatibilityExpectedSample;
+    compatibilityPriorSample=diagnostics.samplePositionAvailable && diagnostics.isPlaying;
+    compatibilityExpectedSample=diagnostics.samplePosition<=INT64_MAX-buffer.getNumSamples()
+        ?diagnostics.samplePosition+buffer.getNumSamples():diagnostics.samplePosition;
+    compatibilityTelemetry.publish(observation);
+#endif
     auto tonePeak = 0.0f;
     if (workflow.mode==workflow::Mode::live && testToneEnabled.load(std::memory_order_relaxed)
         && diagnostics.positionAvailable
@@ -389,6 +442,12 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
 
     auto* hostPlayHead = getPlayHead();
     const auto position = hostPlayHead != nullptr ? hostPlayHead->getPosition() : juce::Optional<juce::AudioPlayHead::PositionInfo>{};
+#if PREVERB_COMPATIBILITY_TEST
+    compatibilityObservation.secondsAvailable=position && position->getTimeInSeconds().hasValue();
+    compatibilityObservation.seconds=compatibilityObservation.secondsAvailable?*position->getTimeInSeconds():0;
+    compatibilityObservation.loopAvailable=position && position->getLoopPoints().hasValue();
+    if(compatibilityObservation.loopAvailable){compatibilityObservation.loopBegin=position->getLoopPoints()->ppqStart;compatibilityObservation.loopEnd=position->getLoopPoints()->ppqEnd;}
+#endif
     // Host queries may be relatively slow. Keep the prior complete snapshot
     // readable until the tiny atomic publication below, rather than making
     // worker/UI readers report unavailable timing throughout getPosition().

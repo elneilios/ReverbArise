@@ -274,6 +274,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
+#if PREVERB_COMPATIBILITY_TEST
+    workflowHeader.onCompatibility=[this]{showCompatibility();};
+    juce::MessageManager::callAsync([safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this)]{if(safe)safe->showCompatibility();});
+#endif
 }
 PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)

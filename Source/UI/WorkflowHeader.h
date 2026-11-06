@@ -3,6 +3,7 @@
 #include "Controls/SegmentedSelector.h"
 #include "Controls/IconActionButton.h"
 #include "Controls/HeaderInformation.h"
+#include "Controls/ActionButton.h"
 
 namespace m3::ui
 {
@@ -21,9 +22,15 @@ public:
         selector.onRequest=[this](int id){const auto callback=onModeRequested;if(callback)callback(static_cast<workflow::Mode>(id-1));};
         settings.onClick=[this]{const auto callback=onSettings;if(callback)callback();};
         display(presentWorkflow({},{}));
+#if PREVERB_COMPATIBILITY_TEST
+        addAndMakeVisible(compatibility);compatibility.onClick=[this]{if(onCompatibility)onCompatibility();};
+#endif
     }
     std::function<void(workflow::Mode)> onModeRequested;
     std::function<void()> onSettings;
+#if PREVERB_COMPATIBILITY_TEST
+    std::function<void()> onCompatibility;
+#endif
     void display(const WorkflowPresentation& presentation,const juce::String& detail={})
     {
         std::vector<controls::SegmentChoice> choices;
@@ -49,7 +56,11 @@ public:
             using namespace responsiveGeometry;
             settings.setBounds(getWidth()-36,0,36,primaryHeight);
             selector.setBounds(getWidth()-378,0,330,primaryHeight);
-            wordmark.setBounds(0,6,201,25);role.setBounds(220,2,std::max(0,getWidth()-610),32);return;
+            wordmark.setBounds(0,6,201,25);role.setBounds(220,2,std::max(0,getWidth()-610),32);
+#if PREVERB_COMPATIBILITY_TEST
+            role.setVisible(false);compatibility.setBounds(role.getBounds());
+#endif
+            return;
         }
         constexpr int primaryHeight=46,controlHeight=36,controlY=(primaryHeight-controlHeight)/2;
         auto area=getLocalBounds();auto gear=area.removeFromRight(36);settings.setBounds(gear.withY(controlY).withHeight(controlHeight));
@@ -57,6 +68,9 @@ public:
         selector.setBounds(column.withY(controlY).withHeight(controlHeight));role.setBounds(column.withY(primaryHeight).withHeight(32));
         area.removeFromRight(16);wordmark.setBounds(area.removeFromLeft(getWidth()<1200?250:290).withY(0).withHeight(primaryHeight));
         area.removeFromLeft(16);tagline.setBounds(area.withY(0).withHeight(primaryHeight));
+#if PREVERB_COMPATIBILITY_TEST
+        role.setVisible(false);compatibility.setBounds(role.getBounds());
+#endif
     }
 private:
     Wordmark wordmark;juce::Label tagline;
@@ -64,5 +78,8 @@ private:
     controls::SegmentedSelector selector;
     controls::IconActionButton settings{controls::ActionIcon::settings};
     bool responsive=false;
+#if PREVERB_COMPATIBILITY_TEST
+    controls::ActionButton compatibility{"Compatibility report"};
+#endif
 };
 }
