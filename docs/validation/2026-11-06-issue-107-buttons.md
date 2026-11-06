@@ -489,3 +489,4 @@ argument --review-command-integrated, PID 55928. Hover/held ink, corner and
 IR geometry reuse their existing acceptance. The owner's explicit visibility
 instruction is the scoped approval for this follow-up; no repeated whole-plugin
 UAT or new host check is required. Other family renderers retain their staged jobs.
+Focus-policy delivery is complete: PR #114 updated and ready for owner review, implementation commit 84101ba, 13/13 tasks verified by refreshed Apply instructions. Canonical sync/archive, umbrella closure and PR merge remain separate owner actions. The working source for the follow-up has no changes to other family renderers or runtime model/storage/audio implementation.
