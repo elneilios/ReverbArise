@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed issue #103 explicit host reset forwarding and the owner-authorized UI test stack repair. The broad MSVC UI test alone reserves 8 MiB for its measured 764040-byte Debug fixture frame and nested native calls; production rendering and callback behavior are unaffected by that test setting. Existing Perform bypass/asset-retention and timing/readiness guidance needs no new musician action, prose or screenshot. Actual FL Studio green-slot smoke remains pending.",
+  "summary": "Reviewed the canonical transport-swell-playback sync for approved issue #103 against the delivered atomic host-reset forwarding, passing native regression coverage and owner FL Studio acceptance. The added requirement and five scenarios document existing delivered recovery, timing/asset guards and retained source/edits. Existing Perform bypass, readiness and compatible-timing guidance remains accurate; no prose or screenshot change. Completed OpenSpec artifacts moved intact to the dated archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -930,8 +930,8 @@
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 40047,
-      "sha256": "53d904487bc553a0c9cd9199e5213bd5e5e9d51fed0e7443d9bea4b4d7595477"
+      "bytes": 42398,
+      "sha256": "e13a99da384a0c5dd5a3576247cb34a2382a974ee9cd0b3c60e0c736ccf2f521"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",

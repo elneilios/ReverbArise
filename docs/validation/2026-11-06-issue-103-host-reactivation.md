@@ -246,3 +246,28 @@ exact FL Studio version, other hosts and a physical DPI matrix were not supplied
 or claimed. With the reported flow accepted, the PR changes to `Closes #103`
 and is made ready for owner review; no merge, independent issue closure or
 OpenSpec archive is authorized by this acceptance.
+
+## Owner-approved archive and merge closeout
+
+The owner subsequently approves PR #105 and explicitly requests archive, merge
+and issue completion. The required archive sync choice is answered
+**"Sync now, then archive and merge"**.
+
+- Synced the one added requirement and its five scenarios into canonical
+  `transport-swell-playback`, verifying an exact additive merge that preserves
+  its existing title, Purpose and all prior requirements.
+- Archived all completed artifacts and metadata intact at
+  `openspec/changes/archive/2026-11-06-restore-swell-playback-after-host-reactivation/`.
+  All eight tasks are complete; the active change list no longer contains it.
+- Canonical validation: 18 specs pass with existing unrelated long-requirement
+  warnings; the affected transport spec also passes strict validation.
+- Reviewed the canonical sync against implemented code, prior native evidence,
+  scoped owner host acceptance and existing guide prose. No guide prose or
+  screenshot changes are needed; its explicit currency record is refreshed and
+  the read-only currency check passes.
+- This closeout changes specifications, archive placement and review/evidence
+  metadata only. Native tests and the accepted installed build are retained;
+  they are not rebuilt or reinstalled for these documentation-only changes.
+
+The archive follow-up is committed through PR #105 before the explicitly
+authorized merge. GitHub merge and completed-issue state are verified afterward.
