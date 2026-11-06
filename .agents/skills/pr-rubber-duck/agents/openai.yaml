@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Rubber Duck"
+  short_description: "Challenge agent PRs with evidence and dialogue"
+  default_prompt: "Use $pr-rubber-duck to independently review this PR and rubber-duck the risky assumptions with its author agent."
