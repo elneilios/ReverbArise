@@ -6,6 +6,7 @@
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
+#include "CommandButtonCases.h"
 #include "ConvolutionIrCases.h"
 #include "ExportLevelsCases.h"
 #include "ModeIconCases.h"
@@ -50,9 +51,16 @@ static juce::Component* named(juce::Component& root,const juce::String& name)
         return findNamed(*editor->diagnosticsPanel(),name);}
     return nullptr;
 }
-static juce::TextButton* findButton(juce::Component& root,const juce::String& text)
-{for(auto child:root.getChildren()){if(auto b=dynamic_cast<juce::TextButton*>(child);b && b->getButtonText()==text)return b;if(auto b=findButton(*child,text))return b;}return nullptr;}
-static juce::TextButton* button(juce::Component& root,const juce::String& text)
+static juce::Button* findButton(juce::Component& root,const juce::String& text)
+{for(auto child:root.getChildren()){if(auto b=dynamic_cast<juce::Button*>(child);b && b->getButtonText()==text)return b;if(auto b=findButton(*child,text))return b;}return nullptr;}
+static void invokeCommand(juce::Button& button)
+{
+    auto* command=dynamic_cast<m3::ui::controls::ActionButton*>(&button);REQUIRE(command);
+    REQUIRE(button.isEnabled());
+    REQUIRE(command->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
+}
+static juce::Button* button(juce::Component& root,const juce::String& text)
 {
     if(auto b=findButton(root,text))return b;
     if(auto editor=dynamic_cast<PreverbAudioProcessorEditor*>(&root))
@@ -133,6 +141,13 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
+    {
+        commandButtonCases::cases();
+        if(juce::String(argv[1])=="--review-command-buttons")commandButtonCases::run();
+        return;
+    }
+    commandButtonCases::cases();
     if(argc>1 && (juce::String(argv[1])=="--test-ir-editor" || juce::String(argv[1])=="--review-ir-editor" || juce::String(argv[1])=="--review-ir-editor-failed"))
     {
         convolutionIrCases::cases();
@@ -388,7 +403,7 @@ int main(int argc,char* argv[]){return runTest([&]
             auto activeOwner=std::make_unique<PreverbAudioProcessorEditor>(liveProcessor);auto& active=*activeOwner;active.setVisible(true);
             auto gear=dynamic_cast<juce::Button*>(named(active,"diagnostics"));REQUIRE(gear);gear->onClick();
             auto tabs=dynamic_cast<juce::TabbedComponent*>(active.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
-            auto open=dynamic_cast<juce::TextButton*>(named(active,"openDiagnostics"));REQUIRE(open);open->onClick();
+            auto open=dynamic_cast<m3::ui::controls::ActionButton*>(named(active,"openDiagnostics"));REQUIRE(open);open->onClick();
             playhead.position.setTimeInSamples(512);playhead.position.setPpqPosition(512./24000);silence.clear();liveProcessor.processBlock(silence,events);
             REQUIRE(liveProcessor.flushCaptureForTesting());active.refresh();
             REQUIRE(liveProcessor.getCaptureSnapshot().manifest.revision==revision); // Provisional until DAW Stop.
@@ -913,7 +928,7 @@ int main(int argc,char* argv[]){return runTest([&]
         processor->holdCaptureWorkerForTesting(false);REQUIRE(processor->flushCaptureForTesting());
         REQUIRE(processor->getWorkflowSnapshot().phase==workflow::Phase::failed);editor.refresh();snapshotEditor(editor,"workflow-failed");
         largeWorkflowSnapshot("workflow-failed");
-        auto openFailureDetails=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openFailureDetails);
+        auto openFailureDetails=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openFailureDetails);
         openFailureDetails->onClick();editor.refresh();
         auto failureEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticCapture"));REQUIRE(failureEvidence);
         REQUIRE(failureEvidence->getText().contains("Current failed pass") && failureEvidence->getText().contains("Capture queue filled"));
@@ -1023,7 +1038,7 @@ int main(int argc,char* argv[]){return runTest([&]
     head.position.setTimeInSamples(0);head.position.setPpqPosition(0);head.position.setIsPlaying(true);
     waitUI([&]{buffer.clear();processor->processBlock(buffer,midi);const auto s=engine.snapshot();return !s.liveMissing && !s.liveIncompatible;});
     editor.refresh();snapshotEditor(editor,"live-playing");
-    REQUIRE(!dynamic_cast<juce::TextButton*>(named(editor,"audition"))->isEnabled());
+    REQUIRE(!dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"audition"))->isEnabled());
     {auto& timeline=editor.timelineComponent();const auto lane=timeline.sourceLane();const auto view=timeline.viewport();
         const auto x=static_cast<int>(view.pixel(0,lane.getX(),lane.getWidth()));const auto img=timeline.createComponentSnapshot(timeline.getLocalBounds());
         REQUIRE(x>=0 && x<img.getWidth());const auto colour=img.getPixelAt(x,static_cast<int>(lane.getY()+3));REQUIRE(colour.getRed()>200 && colour.getGreen()>150 && colour.getBlue()<200);}
@@ -1044,7 +1059,7 @@ int main(int argc,char* argv[]){return runTest([&]
     for(int page=0;page<6;++page){tabs->setCurrentTabIndex(page);snapshotPanel(*tabs,"settings-"+tabs->getTabNames()[page].toLowerCase());}
     tabs->setCurrentTabIndex(4); // Continue the existing Recovery action checks after visiting About.
     REQUIRE(visibleOffscreen(named(editor,"generate")));snapshotEditor(editor,"settings-open");
-    auto openDetails=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);openDetails->onClick();editor.refresh();
+    auto openDetails=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);invokeCommand(*openDetails);editor.refresh();
     REQUIRE(editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.diagnosticsPanel()));
     snapshotPanel(*editor.diagnosticsPanel(),"dedicated-diagnostics");
     auto* liveEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticLiveAdmission"));REQUIRE(liveEvidence);
@@ -1160,7 +1175,7 @@ int main(int argc,char* argv[]){return runTest([&]
     editor.setSize(1100,850);editor.refresh();snapshotEditor(editor,"musical-gain-default");
     auto gainStatus=dynamic_cast<juce::Label*>(named(editor,"selectedStatus"));REQUIRE(gainStatus && gainStatus->getTooltip().contains("Requested Level"));
     auto gainDetails=dynamic_cast<juce::Label*>(named(editor,"diagnosticPolicy"));REQUIRE(gainDetails && gainDetails->getHeight()>=80);
-    auto openGainDiagnostics=dynamic_cast<juce::TextButton*>(named(editor,"openDiagnostics"));REQUIRE(openGainDiagnostics);openGainDiagnostics->onClick();editor.refresh();
+    auto openGainDiagnostics=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openGainDiagnostics);openGainDiagnostics->onClick();editor.refresh();
     REQUIRE(gainDetails->getText().contains(m3::approvedGainRevision) && gainDetails->getText().contains("protection"));
     snapshotPanel(*editor.diagnosticsPanel(),"musical-gain-diagnostics");snapshotPanel(*editor.settingsPanel(),"musical-gain-settings");
     REQUIRE(liveLevel->getMaximum()==12);liveLevel->setValue(4,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);
@@ -1398,7 +1413,7 @@ int main(int argc,char* argv[]){return runTest([&]
             && m3::sameSavedSwell(observedSourceEdit.swells[1],beforeSourceEndEdit.swells[1]));}
     editor.refresh();snapshotEditor(editor,"source-edit-preparing");
     auto field=dynamic_cast<juce::TextEditor*>(named(editor,"sourceSampleEnd"));REQUIRE(field);field->setText("24000",false);field->onReturnKey();
-    auto generate=dynamic_cast<juce::TextButton*>(named(editor,"generate"));REQUIRE(generate);generate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    auto generate=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"generate"));REQUIRE(generate);generate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.snapshot().sourceDetail && engine.snapshot().sourceDetail->peaks.size()>1000);
     timeline.setSnap(false);const auto sourceAgain=timeline.sourceLane();const auto targetPixel=static_cast<float>(timeline.viewport().pixel(0,sourceAgain.getX(),sourceAgain.getWidth()));
     REQUIRE(timeline.beginDrag({targetPixel,sourceAgain.getY()+15}));timeline.dragTo({static_cast<float>(timeline.viewport().pixel(13,sourceAgain.getX(),sourceAgain.getWidth())),sourceAgain.getY()+15});
@@ -1406,9 +1421,9 @@ int main(int argc,char* argv[]){return runTest([&]
     editor.refresh();auto arrival=dynamic_cast<juce::TextEditor*>(named(editor,"arrivalSample"));REQUIRE(arrival);arrival->setText("0",false);arrival->onReturnKey();generate->onClick();waitUI([&]{return engine.snapshot().auditionReady;});
     auto suggest=button(editor,"Suggest onsets");REQUIRE(suggest);suggest->onClick();waitUI([&]{return !engine.snapshot().analyzing;});
     REQUIRE(!engine.snapshot().candidates.empty());timeline.zoom(4);editor.refresh();const auto beforeConfirmation=engine.savedSession().swells.size();
-    auto confirm=button(editor,"Confirm");REQUIRE(confirm && confirm->isEnabled());confirm->onClick();REQUIRE(engine.savedSession().swells.size()==beforeConfirmation+1);
-    auto remove=button(editor,"Delete");REQUIRE(remove);remove->onClick();REQUIRE(engine.savedSession().swells.size()==beforeConfirmation);
-    auto add=button(editor,"+");REQUIRE(add);add->onClick();REQUIRE(engine.savedSession().swells.size()==beforeConfirmation+1);remove->onClick();
+    auto confirm=button(editor,"Confirm");REQUIRE(confirm && confirm->isEnabled());invokeCommand(*confirm);REQUIRE(engine.savedSession().swells.size()==beforeConfirmation+1);
+    editor.refresh();auto remove=button(editor,"Delete");REQUIRE(remove);invokeCommand(*remove);REQUIRE(engine.savedSession().swells.size()==beforeConfirmation);
+    editor.refresh();auto add=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"Add at playhead"));REQUIRE(add && add->getButtonText()=="+");invokeCommand(*add);REQUIRE(engine.savedSession().swells.size()==beforeConfirmation+1);editor.refresh();invokeCommand(*remove);
     REQUIRE(engine.selectTargets({first},first));editor.refresh();
     const auto saved=engine.savedSession();auto many=saved;many.swells.clear();
     engine.setAutomaticProcessing(true);
@@ -1420,7 +1435,7 @@ int main(int argc,char* argv[]){return runTest([&]
     const auto ghost=timeline.grabPoints();const auto ghostEnd=*std::find_if(ghost.begin(),ghost.end(),[](auto p){return p.kind==m3::EnvelopePoint::end;});
     REQUIRE(ghostEnd.point.x>=timeline.wetLane().getX() && ghostEnd.point.x<=timeline.wetLane().getRight());
     snapshotEditor(editor,"pending-support");snapshotEditor(editor,"waiting");
-    REQUIRE(!dynamic_cast<juce::TextButton*>(named(editor,"audition"))->isEnabled());
+    REQUIRE(!dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"audition"))->isEnabled());
     engine.restore(saved);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     const auto shapeBefore=saved.swells[0].shape;
     REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape.automaticStart=false;w.shape.startOffset=raw->start-100;return true;}));
@@ -1450,7 +1465,7 @@ int main(int argc,char* argv[]){return runTest([&]
     }
 
     engine.restore(saved);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-    auto advanced=dynamic_cast<juce::TextButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
+    auto advanced=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
     REQUIRE(visibleOffscreen(named(editor,"sourceSampleStart")));snapshotEditor(editor,"precise-timing");
     const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});editor.refresh();snapshotEditor(editor,"error");
     REQUIRE(engine.assetDirectory().getChildFile(engine.savedSession().swells[0].ir.path).deleteFile());

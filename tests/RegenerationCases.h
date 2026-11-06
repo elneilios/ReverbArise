@@ -14,7 +14,10 @@ static void regenerationCases(bool review=false)
     auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
     auto* all=dynamic_cast<juce::Button*>(named(editor,"regenerateAll"));
     auto* feedback=dynamic_cast<juce::Label*>(named(editor,"regenerationFeedback"));REQUIRE(all && feedback);
-    const auto invoke=[&]{all->onClick();REQUIRE(feedback->getDescription()==feedback->getText());};
+    const auto invoke=[&]{
+        if(all->isEnabled())invokeCommand(*all);
+        else all->onClick(); // Retain the model-level rejection oracle beneath disabled UI.
+        REQUIRE(feedback->getDescription()==feedback->getText());};
     const auto count=engine.snapshot().renderCount;invoke();REQUIRE(feedback->getText()=="Queued 1 for regeneration.");
     await([&]{return engine.savedSession().swells[0].phase==m3::Phase::ready && engine.snapshot().renderCount==count+1;});
     editor.refresh();REQUIRE(feedback->getText()=="Queued 1 for regeneration.");

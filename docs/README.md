@@ -12,6 +12,10 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Shared command buttons — issue #107](validation/2026-11-06-issue-107-buttons.md) — owner-approved native family revision 4, explicit command roles and independent aqua corner focus; production migration, automated checks and integrated acceptance are recorded separately. Knobs and independently owned #108/#8 implementation remain outside this migration.
+
+- [UI control inventory and roadmap](design/ui-control-inventory.md) and [shared contracts](development/ui-control-contracts.md) — owner-approved #107 audit, reconciled with merged #80; [evidence](validation/2026-11-06-issue-107-control-audit.md). Production migrations remain separate family changes.
+
 - [Swell-engine architecture](development/swell-engine-architecture.md) — implemented ownership/call paths, data-flow/lifecycle diagrams and material regeneration boundaries; [native/profile verification](validation/2026-11-06-shared-swell-engine.md).
 
 - [Issue #8 fresh-profile validation](validation/2026-11-06-issue-8-fresh-profile.md) — passing destination-only restore in a separate Windows account, exact metadata/audio and zero generation/recapture work.
