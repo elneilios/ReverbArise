@@ -208,8 +208,17 @@ pass and rejects obsolete or disabled invocations. Export mix remains independen
 Fit includes selected dry source, requested envelope, placed raw tail and overlapping
 wet context. Pending renders use source/request metadata. Without selection it
 fits captured extent, including gaps; empty uses a finite neutral view. Initial
-Perform entry Fits once when source/definitions arrive. Selection and background
-refresh do not refit; mode return retains the view. Explicit Fit resets context.
+Perform entry Fits once when source/definitions arrive. Explicit Swells-list
+selection (including clicking the same selected row after panning or zooming away)
+applies the same contextual Fit operation as the toolbar, framing the accepted
+primary's complete source/wet/envelope and overlap context with existing margins.
+The view changes pan and zoom as needed. This follows the owner's issue #93 native
+review decision, superseding the original zoom-preservation requirement.
+Incidental selection refresh and background rendering do not refit;
+mode return retains the view. The initial Generate handoff retains its separate
+once-only framing policy. Automatic list Fit publishes through the same viewport-change
+path as manual navigation, synchronizing lanes, ruler, handles, toolbar and
+Overview and retaining the view through existing optional navigation preferences.
 The separate **Height** control changes waveform display amplitude in dB only.
 
 Horizontal edits quantize absolute samples before canonical setters. Whole-wet

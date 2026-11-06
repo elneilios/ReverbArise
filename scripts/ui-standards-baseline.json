@@ -7,7 +7,7 @@
       "path": "Source/Plugin/PluginEditor.cpp",
       "rule": "font-construction",
       "occurrence": "juce::FontOptions(",
-      "count": 12,
+      "count": 11,
       "scope": "retained legacy consumer",
       "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"

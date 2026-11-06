@@ -246,6 +246,39 @@ The bottom band SHALL show available host musical position, BPM and meter, with 
 - **WHEN** host position or musical mapping is unavailable, stops or seeks
 - **THEN** each readout reflects its actual availability and state without prototype constants or fabricated beat positions
 
+#### Scenario: Presentation remains read-only
+- **WHEN** transport values update or the footer is resized, inspected or reopened
+- **THEN** only its presentation changes, without host transport requests, timing changes, audio processing changes or saved-state edits
+
+### Requirement: Perform transport fields retain stable geometry
+Perform SHALL reserve independent Bar, Beat, BPM and meter slots with consistently aligned numeric values. At a fixed editor size and scale, field boundaries, separators and the complete status group's bounds SHALL remain fixed across value and availability updates. Geometry SHALL depend on available space and the display policy rather than current text width.
+
+#### Scenario: Playback and seeking cross digit boundaries
+- **WHEN** playback or seeking crosses bars 9 to 10 and 99 to 100, or beat and fractional-beat boundaries in either direction
+- **THEN** all field bounds, separator positions and enclosing status bounds remain identical, with existing musical rounding preserved
+
+#### Scenario: Tempo, meter and availability change
+- **WHEN** tempo changes between integral and fractional displays, meter changes including 4/4 to 6/8 and 12/8, or any host field becomes unavailable and returns
+- **THEN** neighbouring slots and separators stay anchored and each field reports its actual value or explicit unavailability
+
+### Requirement: Stable transport information remains readable
+The footer SHALL retain existing typography, semantic ink and dark styling at supported logical sizes and scales. Its slots SHALL accommodate realistic multi-digit bars, fractional beats, fractional tempos and meters without truncation or overlap. Oversized values SHALL remain inspectable without moving neighbouring slots or silently changing host values or displayed precision.
+
+#### Scenario: Supported size and scale matrix
+- **WHEN** the footer is shown at 1100x850, 1400x900, 1400x1000 and 1600x1000 with 100%, 125%, 150% and 200% scale coverage
+- **THEN** ordinary and multi-digit values, units, separators and unavailable indications remain legible and contained above context help, with no automatic font shrinking
+- **AND** native software-scale evidence and physical Windows/host coverage are recorded separately
+
+#### Scenario: Large positions and unusual host values
+- **WHEN** display values include negative lead-in, six-digit bars, three-digit beats with fractional display, four-digit tempos with two decimals or three-digit meter parts
+- **THEN** they fit without truncation and maintain the same slot geometry as ordinary values
+- **AND** still larger representable values retain a full accessible/help representation and a clear bounded overflow indication without overlapping adjacent fields
+
+#### Scenario: Scoped presentation acceptance
+- **WHEN** the revised read-only footer is ready for production integration
+- **THEN** its native preview is launched directly for owner look/feel review, including changing and unavailable values at minimum size
+- **AND** new tokens or visual exceptions receive explicit scoped approval before rollout, with standards and regression coverage updated together
+
 ### Requirement: Exact edits preserve model and session compatibility
 Knobs, fields and canvas gestures SHALL update one canonical selected-swell value, preserve independent parameters and reject invalid input transactionally. Refresh SHALL not overwrite an active edit. Existing plugin/parameter/state/asset identities and saved preferences SHALL survive; UI-only controls SHALL NOT silently become host automation parameters.
 
@@ -745,8 +778,12 @@ Perform SHALL provide one inline row containing Zoom minus, horizontal zoom slid
 #### Scenario: Initial entry and return
 - **WHEN** Perform first receives usable source without a saved view
 - **THEN** it Fits once without waiting for all wet renders
-- **AND WHEN** selection, background publication or mode return occurs after user navigation
-- **THEN** the user view is retained until explicit Fit or navigation, without host seeking or repeated auto-fit
+- **AND WHEN** background publication, incidental selection refresh or mode return occurs after user navigation
+- **THEN** the user view is retained until explicit Fit or navigation, including explicit Swells-list selection that applies contextual Fit, without host seeking or repeated auto-fit
+
+#### Scenario: Rendering completes after list navigation
+- **WHEN** a pending selected render completes after the user has selected another swell or manually panned or zoomed
+- **THEN** matching waveform content refreshes without replaying list reveal, refitting or overriding the user's newer view
 
 ### Requirement: Snap preference and temporary bypass are independent
 Snap SHALL be a latching toggle button, not a checkbox. Its remembered On/Off preference SHALL be independent of the remembered rhythmic grid. Ctrl SHALL temporarily bypass snap and show the button off without changing either preference. Shift SHALL independently enable existing fine-drag; Ctrl+Shift SHALL combine both behaviors.
@@ -945,3 +982,32 @@ Candidate counts and progress SHALL use restrained Learn status text; actionable
 #### Scenario: Native acceptance
 - **WHEN** the integrated controls and overlay are ready for owner review
 - **THEN** one prepared native preview is launched directly with keyboard, disabled, busy and dense-marker states; any required token exception is reviewed before rollout and untested host/DPI coverage remains explicit
+
+### Requirement: Explicit Swells-list navigation fits the accepted primary
+Explicit list selection in Perform SHALL frame the accepted primary using the same pan, zoom and complete-context policy as Fit. Both waveform lanes, target, envelope handles, ruler, toolbar and Overview SHALL share that viewport. Repeating selection of an already-fitted swell SHALL remain visually stable. Selection SHALL follow persistent identity and canonical absolute position.
+
+#### Scenario: Navigate distant swells
+- **WHEN** the user clicks an offscreen swell and then another distant swell
+- **THEN** each accepted primary immediately receives the same view as explicit Fit, including available source, requested envelope, placed wet and overlap context
+- **AND** the view changes zoom as needed to show that complete region with existing Fit margins
+
+#### Scenario: Already visible and repeated selection
+- **WHEN** a clicked swell is already visible at a manually chosen pan or zoom
+- **THEN** selection still applies contextual Fit to show its complete region
+- **AND WHEN** the same selected row is clicked again after panning or zooming away
+- **THEN** its complete fitted region returns without requiring a different selection first
+- **AND** repeating selection on the already-fitted region causes no visual viewport movement
+
+#### Scenario: Pending rendering and timeline boundaries
+- **WHEN** the selected render is pending, or its context includes negative lead-in or reaches known timeline boundaries
+- **THEN** automatic framing matches explicit Fit's finite bounded view using available timing and does not wait for rendering or invent waveform content
+
+#### Scenario: Stable identities and multiple selection
+- **WHEN** rows reorder or names change before explicit selection, including Ctrl/Shift selection
+- **THEN** automatic Fit follows the accepted primary's persistent identity and canonical absolute timing while preserving existing selected-ID and modifier semantics
+- **AND** empty or rejected obsolete-session selection does not fit another row's swell
+
+#### Scenario: Navigation has no creative or audio side effects
+- **WHEN** list selection automatically fits a swell
+- **THEN** only selection and navigation change; captured PCM, timing, shape, enablement, IR/render assets and generation inputs remain unchanged
+- **AND** selection does not start playback, seek the host or request rendering

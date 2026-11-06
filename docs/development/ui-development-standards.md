@@ -19,8 +19,27 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Shared NoticeBar updates visible severity, accessible title/description/help and
+standard accessibility change events without explicitly synthesizing speech.
+Do not call postAnnouncement for notice refreshes: on Windows JUCE can invoke
+SAPI whenever an accessibility client (including automation) is active. Keep
+assistive access and OS accessibility settings intact. This interaction-policy
+correction is owner-approved in the issue #51 follow-up; it adds no visual variant.
+
+Issue #51's `Controls/ExportLevelsControl.h` review candidate composes the existing
+`DeliberateSelector`, `SliderControl` and `NumericInputControl` policies. It emits
+one pair edit for a preset, preserves the untouched level for fader edits, derives
+Custom from the exact canonical pair and refreshes without notifications. Its
+binding owns session/pass validation and accepted-state rejection/reconciliation.
+The owner approved minimum and larger native appearance/interaction and accepted
+the generated preset comparison for integration on 2026-11-05, reserving final
+listening acceptance for FL Studio. Production Export now consumes this composition
+with session/pass-pinned pair edits. No new styling token or variant is introduced.
+The dedicated native
+fixture is `--review-export-levels` on `preverb_swell_ui_test`.
+
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 5; scoped knob focus review below). Its Learn/header table
+numerical authority (production standards revision 6; scoped knob focus review below). Its Learn/header table
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)
@@ -83,6 +102,15 @@ lists the integration baseline, component ownership and remaining legacy consume
   changes. Verify resolved typeface names/styles and embedded resource coverage.
 
 ## Incremental migration
+
+`Controls/TransportReadout` owns the owner-approved #68 read-only Perform footer:
+independent value slots, separators, typography, bounded overflow and accessible
+help. Editor code binds existing diagnostics and musical timing without host
+actions or persistence changes. Preserve `hostInfo` as its component name. The
+native family approval covers spacing, readability and stability as values change;
+its [sizing policy](transport-readout.md) and component/editor tests travel together.
+The retired editor font setup reduces its existing font-construction debt count
+by one; the inventory is manually narrowed for that exact removal, not regenerated.
 
 Settings About reuses the existing tab container, sectionHeading/controlLabel/helper
 text roles, EllipsisLabel, ActionButton and comfortable geometry. It adds no style

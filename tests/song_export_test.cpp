@@ -4,10 +4,40 @@
 #include <Capture/SourceRangeReader.h>
 #include <limits>
 #include "SongMixCases.h"
+#include "ExportPresetListening.h"
 #include <UI/Controls/ExternalFileDrag.h>
 using namespace m3;
-int main(){return runTest([]{
+int main(int argc,char** argv){return runTest([&]{
+    if(argc==3 && juce::String(argv[1])=="--render-preset-listening"){renderExportPresetListening(juce::File(argv[2]));return;}
     songMixCases();
+    {
+        juce::String error;
+        ExportState pair;pair.initialized=true;pair.dry=.87321f;pair.wet=.45678f;
+        ExportFile old;old.path="exports/Swells-65pct-wet-old.wav";
+        old.composition=juce::String::repeatedString("a",64);old.checksum=juce::String::repeatedString("b",64);
+        old.rate=48000;old.frames=96000;old.wet=.65f;old.dry=.35f;old.gainLaw=1;
+        pair.history.push_back(old);pair.completedPath=old.path;pair.desiredIdentity=old.composition;
+        ExportState restored;const auto encoded=exportStateMetadata(pair);
+        Session levels;levels.exportState=pair;const auto originalLevels=levels.exportState;
+        REQUIRE(!setExportLevels(levels,-.1f,.5f,error) && levels.exportState==originalLevels);
+        REQUIRE(setExportLevels(levels,1,1,error) && levels.exportState.dry==1 && levels.exportState.wet==1 && levels.exportState.desiredIdentity.isEmpty());
+        const auto unchanged=levels.exportState;REQUIRE(setExportLevels(levels,1,1,error) && levels.exportState==unchanged);
+        REQUIRE(parseExportState(encoded,restored,error) && restored==pair);
+        auto legacy=exportStateMetadata(pair);legacy.getDynamicObject()->removeProperty("version");
+        legacy.getDynamicObject()->removeProperty("dry");
+        for(auto& item:*legacy["history"].getArray()){item.getDynamicObject()->removeProperty("dry");item.getDynamicObject()->removeProperty("gainLaw");}
+        REQUIRE(parseExportState(legacy,restored,error));
+        REQUIRE(restored.dry==0 && restored.wet==1 && restored.desiredIdentity.isEmpty() && restored.completedPath.isEmpty());
+        REQUIRE(restored.history.size()==1 && restored.history[0].path==old.path && restored.history[0].checksum==old.checksum && restored.history[0].gainLaw==1);
+        for(int fault=0;fault<5;++fault){auto invalid=exportStateMetadata(pair);
+            if(fault==0)invalid.getDynamicObject()->setProperty("dry",1.0000000001);
+            if(fault==1)invalid.getDynamicObject()->setProperty("dry","0.5");
+            if(fault==2)invalid.getDynamicObject()->setProperty("version",3);
+            if(fault==3)invalid["history"][0].getDynamicObject()->setProperty("gainLaw",2.5);
+            if(fault==4)invalid["history"][0].getDynamicObject()->setProperty("dry",-1);
+            const auto before=restored;REQUIRE(!parseExportState(invalid,restored,error) && restored==before);
+        }
+    }
     {
         using namespace m3::ui::controls;unsigned invoked=0;
         const auto accept=[&](const juce::String& path){++invoked;REQUIRE(path=="C:/verified.wav");return true;};
@@ -22,7 +52,7 @@ int main(){return runTest([]{
         Session old;old.auditionMode=AuditionMode::dryWet;old.wetBlend=.65f;juce::String encoded,error;
         REQUIRE(encode(old,encoded,error));auto legacy=juce::JSON::parse(encoded);legacy.getDynamicObject()->setProperty("version",9);legacy.getDynamicObject()->removeProperty("export");
         Session restored;REQUIRE(decode(juce::JSON::toString(legacy),restored,error) && !restored.exportState.initialized);
-        REQUIRE(initializeExport(restored,error) && restored.exportState.wet==.65f);
+        REQUIRE(initializeExport(restored,error) && restored.exportState.dry==0 && restored.exportState.wet==1);
         REQUIRE(setExportMix(restored,1,error) && restored.wetBlend==.65f);REQUIRE(initializeExport(restored,error) && restored.exportState.wet==1);
         old.auditionMode=AuditionMode::wetOnly;REQUIRE(initializeExport(old,error) && old.exportState.wet==1 && old.wetBlend==.65f);
         ExportFile file;file.path="exports/Swells-65pct-wet-aaaa.wav";file.composition=juce::String::repeatedString("a",64);file.checksum=juce::String::repeatedString("b",64);
@@ -50,6 +80,8 @@ int main(){return runTest([]{
     w.phase=Phase::ready;session.swells.push_back(w);
     std::shared_ptr<const SongExportPlan> first,other;juce::String error;
     REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,.65f,first,error));
+    REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,1,.65f,other,error));
+    REQUIRE(other->dry==1 && other->wet==.65f && other->identity!=first->identity);
     REQUIRE(first->origin==0 && first->end==48000 && first->members.size()==1 && first->identity.length()==64);
     session.selected={w.id};session.primary=w.id;session.isolateSelected=true;session.isolateDry=true;session.auditionDb=-24;
     session.liveWetDb=-10;session.auditionMode=AuditionMode::dryWet;session.wetBlend=.2f;
@@ -98,10 +130,10 @@ int main(){return runTest([]{
         REQUIRE(std::all_of(page.begin(),page.end(),[](float v){return v==0;}));
         REQUIRE(std::any_of(reader.warnings().begin(),reader.warnings().end(),[](const auto& w){return w.start==100 && w.kind==ExportCoverage::unavailable;}));
         REQUIRE(reader.prepare(input,1024*1024,error));
-        const auto reads=reader.audioReads();input=std::make_shared<SongExportPlan>(*input);input->wet=1;
+        const auto reads=reader.audioReads();input=std::make_shared<SongExportPlan>(*input);input->dry=0;input->wet=1;
         REQUIRE(reader.prepare(input,0,error) && reader.warnings().empty() && reader.audioReads()==reads);
         REQUIRE(reader.read(0,page,error) && std::all_of(page.begin(),page.end(),[](float v){return v==0;}));
-        input=std::make_shared<SongExportPlan>(*input);input->wet=0;input->source.ranges.clear();
+        input=std::make_shared<SongExportPlan>(*input);input->dry=1;input->wet=0;input->source.ranges.clear();
         REQUIRE(reader.prepare(input,0,error) && reader.warnings().size()==1 && reader.warnings()[0].start==0 && reader.warnings()[0].end==240);
         input=std::make_shared<SongExportPlan>(*input);input->source=map;
         REQUIRE(!reader.prepare(input,8,error) && error.contains("memory"));

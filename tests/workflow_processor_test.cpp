@@ -179,7 +179,7 @@ int main(){return runTest([]{
     p->flushHostStateChangesForTesting();REQUIRE(listener.changes==beforeNoop && !listener.wrongThread);
     e.setLivePlayback(true,m3::LiveRouting::wetOnly,0);
     REQUIRE(p->requestWorkflowMode(workflow::Mode::finalise));
-    REQUIRE(e.savedSession().exportState.initialized && e.savedSession().exportState.wet==.7f);
+    REQUIRE(e.savedSession().exportState.initialized && e.savedSession().exportState.dry==0 && e.savedSession().exportState.wet==1);
     REQUIRE(e.setExportMix(0,e.assignmentEpoch()) && e.savedSession().wetBlend==.7f);
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::finalise);
     REQUIRE(!e.setExportMix(.8f,e.assignmentEpoch()+1));

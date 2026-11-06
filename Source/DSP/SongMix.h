@@ -27,6 +27,10 @@ public:
     bool adoptMeasurements(const SongMixMetrics&,const juce::String& identity,juce::String& error);
     bool summarize(int64_t first,int64_t end,size_t bins,SongMixDetail&,juce::String& error,const RenderCancellation& cancel={});
     bool read(int64_t at,std::span<float> output,juce::String& error);
+    // Verified worker-only branches before output levels. A positive plan level
+    // admits that branch; prepare at unit levels to admit both, without measuring.
+    bool readLayers(int64_t at,std::span<float> source,std::span<float> wet,juce::String& error)
+    {if(!layersReady){error="Export layers are not prepared";return false;}return branches(at,source,wet,error);}
     const SongMixMetrics& metrics()const noexcept{return measured;}
     const std::shared_ptr<const SongExportPlan>& plan()const noexcept{return current;}
     uint64_t workingBytes()const noexcept;
@@ -41,6 +45,6 @@ private:
     std::vector<std::pair<int64_t,int64_t>> occupied;
     std::shared_ptr<const SongExportPlan> current;
     SongMixMetrics measured;
-    bool ready=false;
+    bool ready=false,layersReady=false;
 };
 }

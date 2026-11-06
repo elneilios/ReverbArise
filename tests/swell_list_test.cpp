@@ -22,23 +22,26 @@ static void cases()
     m3::ui::WorkspaceTheme theme; // Same embedded fonts and row theme as production.
     SwellList list;list.setLookAndFeel(&theme);list.setBounds(0,0,260,300);list.setVisible(true);
     auto rows=fixture();const auto first=juce::String("id-0000");int notifications=0;
-    std::vector<juce::String> selection;juce::String primary,toggled,menuId;
+    std::vector<juce::String> selection;juce::String primary,toggled,menuId,revealed;int reveals=0;
+    list.onReveal=[&](auto id,uint64_t){revealed=id;++reveals;};
     list.onSelection=[&](auto ids,auto id){++notifications;selection=std::move(ids);primary=id;};
     list.onToggleEnabled=[&](auto id){toggled=id;};
     list.onMenu=[&](auto row,const auto& e){menuId=row.id;REQUIRE(SwellList::menuAnchor(e).getPosition()==e.getScreenPosition());};
     list.display(rows,{first},first);REQUIRE(notifications==0 && list.rowAt(0)->id==first);
     REQUIRE(list.getModel()->getNameForRow(0)=="Custom 50");
-    click(list,{12,18});REQUIRE(toggled==first);
-    click(list,{80,84});REQUIRE(primary=="id-0001");
+    click(list,{12,18});REQUIRE(toggled==first && reveals==0);
+    click(list,{80,84});REQUIRE(primary=="id-0001" && revealed==primary && reveals==1);
+    click(list,{80,84});REQUIRE(reveals==2 && revealed==primary); // Same selected row reactivation.
     click(list,{80,148},juce::ModifierKeys::ctrlModifier);REQUIRE(selection.size()==2 && primary=="id-0002");
-    click(list,{list.getWidth()-12,148});REQUIRE(menuId=="id-0002");
+    const auto beforeMenu=reveals;
+    click(list,{list.getWidth()-12,148});REQUIRE(menuId=="id-0002" && reveals==beforeMenu);
     list.display(rows,{"id-0001","id-0002"},"id-0002");
     const auto before=notifications;
     rows.back().arrival=10000000; // Original row zero now becomes the last row.
     list.display(rows,{"id-0001","id-0002"},"id-0002");
     REQUIRE(notifications==before && list.isRowSelected(list.rowFor("id-0001")) && list.primaryId()=="id-0002");
     REQUIRE(list.getLastRowSelected()==list.rowFor("id-0002"));
-    list.keyPressed(juce::KeyPress(juce::KeyPress::downKey));REQUIRE(primary=="id-0003" && selection.size()==1);
+    list.keyPressed(juce::KeyPress(juce::KeyPress::downKey));REQUIRE(primary=="id-0003" && selection.size()==1 && revealed==primary);
     list.display(rows,{first},first);
     auto* viewport=list.getViewport();viewport->setViewPosition(0,15*64+17);
     const auto oldY=viewport->getViewPositionY();const auto anchor=list.rowAt(oldY/64)->id;
@@ -71,15 +74,19 @@ static void cases()
     // A selected row activates on release. Recycle that visible row between
     // press and release: the action must still address its pressed identity.
     rows=fixture(5);list.display(rows,{first},first,3);viewport->setViewPosition(0,0);
-    const auto heldPress=[&]
+    const auto heldPress=[&](int x=12)
     {
-        const juce::Component::SafePointer<juce::Component> component(list.getComponentAt(juce::Point<int>{12,20}));REQUIRE(component);
-        const auto at=juce::Time::getCurrentTime();const juce::Point<float> p{12,20};
+        const juce::Component::SafePointer<juce::Component> component(list.getComponentAt(juce::Point<int>{x,20}));REQUIRE(component);
+        const auto at=juce::Time::getCurrentTime();const juce::Point<float> p{static_cast<float>(x),20};
         juce::MouseEvent e(juce::Desktop::getInstance().getMainMouseSource(),p,juce::ModifierKeys::leftButtonModifier,0,0,0,0,0,component,component,at,p,at,1,false);
         component->mouseDown(e);return std::make_pair(component,e);
     };
     auto held=heldPress();rows.back().arrival=500000;list.display(rows,{first},first,3);toggled.clear();
     REQUIRE(held.first);held.first->mouseUp(held.second);REQUIRE(toggled==first);
+    rows=fixture(5);list.display(rows,{first},first,3);viewport->setViewPosition(0,0);
+    auto heldBody=heldPress(80);rows.back().arrival=500000;rows.back().name="Renamed while held";list.display(rows,{first},first,3);
+    const auto beforeHeldReveal=reveals;REQUIRE(heldBody.first);heldBody.first->mouseUp(heldBody.second);
+    REQUIRE(reveals==beforeHeldReveal+1 && revealed==first);
     viewport->setViewPosition(0,0);rows=fixture(5);list.display(rows,{first},first,4);auto heldReset=heldPress();
     list.display(rows,{first},first,5);toggled.clear();const auto staleNotifications=notifications;
     if(heldReset.first)heldReset.first->mouseUp(heldReset.second);REQUIRE(toggled.isEmpty() && notifications==staleNotifications);

@@ -3,6 +3,15 @@
 
 inline void workspaceNoticeCases()
 {
+    {
+        using namespace m3::ui::controls;NoticeBar bar;
+        REQUIRE(bar.display(NoticeMessage{"DAW wet is bypassed in Export","Preview uses accepted layers",NoticeTone::information}));
+        REQUIRE(bar.getTitle()=="Information: DAW wet is bypassed in Export" && bar.getDescription()=="Preview uses accepted layers");
+        REQUIRE(!bar.display(NoticeMessage{"DAW wet is bypassed in Export","Preview uses accepted layers",NoticeTone::information}));
+        REQUIRE(bar.display(NoticeMessage{"Preparation failed","Prior files retained",NoticeTone::error}));
+        REQUIRE(bar.getTitle()=="Error: Preparation failed" && bar.getHelpText()=="Prior files retained");
+        REQUIRE(bar.display({}) && bar.getTitle().isEmpty() && bar.getDescription().isEmpty() && !bar.isVisible());
+    }
     using namespace m3;using namespace m3::ui;using controls::NoticeTone;
     CaptureSessionSnapshot capture;EditorSnapshot editor;workflow::Snapshot flow;
     {

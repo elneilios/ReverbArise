@@ -57,7 +57,9 @@ EditorSnapshot SwellEngine::snapshot() const
         const auto pass=workflowState->snapshot().pass;s.songExport=exportState;
         if(exportState.session!=sessionGeneration.load() || exportState.pass!=pass)s.songExport={ExportPhase::preparing,"Preparing export mix",{}};
         s.songExport.session=sessionGeneration.load();s.songExport.pass=pass;s.songExport.cursor=exportVoice->position();s.songExport.previewRequested=exportVoice->requested(exportVoice->request());
-        if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";}
+        if(s.songExport.previewRequested){const auto levels=exportVoice->acceptedLevels();if(levels.revision)s.songExport.previewLevels=levels;}
+        if(exportVoice->starved())s.songExport.message="Preview stopped: audio pages unavailable; WAV unchanged";
+        if(exportVoice->invalidAudio())s.songExport.message="Preview stopped: non-finite mixed audio; WAV unchanged";}
     s.sessionEpoch=sessionGeneration.load();
     s.gridClock=transportClockSnapshot();
     s.learnGeneration=learnViewLocked();s.initialPerformHandoff=initialPerformOffer;
@@ -432,13 +434,15 @@ bool SwellEngine::setPerformNavigation(PerformNavigationState preferences,uint64
     return true;
 }
 bool SwellEngine::setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass)
+{return setExportLevels(1-wet,wet,expectedSession,expectedPass);}
+bool SwellEngine::setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass)
 {
     const juce::ScopedLock guard(lock);
     if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return false;
     const auto before=model.exportState;
-    if(!m3::setExportMix(model,wet,message))return false;
-    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();exportVoice->stop();exportState={ExportPhase::preparing,"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
+    if(!m3::setExportLevels(model,dry,wet,message))return false;
+    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();if((dry==0 && wet==0) || (wet>0 && !exportPreviewWetAvailable))exportVoice->stop();else if(exportVoice->requested(exportVoice->request()) && exportPreviewPin && exportPreviewSession==sessionGeneration.load() && exportPreviewPass==workflowState->snapshot().pass && exportPreviewRevision==liveRevision)exportVoice->setLevels(exportVoice->request(),dry,wet,exportPreviewPin->plan->end);else exportVoice->stop();exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
 }
 bool SwellEngine::audition()
 {
@@ -456,7 +460,7 @@ bool SwellEngine::audition()
     return voice.start(at->second.monitor,1,true);
 }
 void SwellEngine::stop() { const juce::ScopedLock guard(lock);
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && exportState.prepared)
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && (exportState.prepared || exportPreviewPin))
         if(const auto at=exportVoice->position())exportState.previewPosition=*at;
     voice.stop();exportVoice->stop(); }
 void SwellEngine::processAudio(float* left,float* right,int frames,const SongTime& time) noexcept
@@ -525,10 +529,10 @@ uint64_t SwellEngine::occupiedLocked() const
     }
     std::set<const PreparedExport*> countedExports;
     const auto countExport=[&](const std::shared_ptr<const PreparedExport>& p){if(p && countedExports.insert(p.get()).second)bytes+=(p->metrics.dryPeaks.capacity()+p->metrics.wetPeaks.capacity())*sizeof(CapturePeak);};
-    countExport(exportState.prepared);countExport(exportState.previous);countExport(exportPreviewPin);if(detailWork)countExport(detailWork->accepted);
+    countExport(exportState.prepared);countExport(exportState.previous);countExport(exportState.preview);countExport(exportPreviewPin);if(detailWork)countExport(detailWork->accepted);
     if(exportState.detail)bytes+=(exportState.detail->dry.capacity()+exportState.detail->wet.capacity())*sizeof(CapturePeak);
     // Reserve bounded metadata still held by an editor between snapshot refreshes.
-    return bytes+activeJobBytes+exportVoice->workingBytes()+exportPageFrames*4*sizeof(float)+16384+1024*1024
+    return bytes+activeJobBytes+exportPreviewBytes.load()+exportVoice->workingBytes()+exportPageFrames*4*sizeof(float)+16384+1024*1024
         +(workflowState?maximumStateBytes*3:0); // Learn metadata, including an editor-held snapshot; absent in standalone engines.
 }
 uint64_t SwellEngine::residentBytes() const { const juce::ScopedLock guard(lock); return occupiedLocked(); }

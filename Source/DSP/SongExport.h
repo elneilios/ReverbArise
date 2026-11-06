@@ -5,7 +5,7 @@
 
 namespace m3
 {
-inline constexpr const char* songExportRevision="song-export-v1";
+inline constexpr const char* songExportRevision="song-export-v2-independent-levels";
 enum class ExportCoverage { gap, unavailable };
 struct ExportWarning
 {
@@ -34,6 +34,7 @@ struct SongExportPlan
     GainPolicy gainPolicy=GainPolicy::legacy;
     juce::String gainRevision;
     float wet=1;
+    float dry=0;
     int64_t origin=0,end=0;
     std::vector<ExportWetMember> members;
     std::vector<ExportWarning> warnings;
@@ -44,4 +45,7 @@ bool prepareSongExportPlan(const Session&,const CaptureManifest&,const juce::Str
                            const SongTime&,float wet,std::shared_ptr<const SongExportPlan>&,
                            juce::String& error);
 juce::String songExportIdentity(const SongExportPlan&);
+bool prepareSongExportPlan(const Session&,const CaptureManifest&,const juce::String& sourceReference,
+                           const SongTime&,float dry,float wet,std::shared_ptr<const SongExportPlan>&,
+                           juce::String& error);
 }
