@@ -4,7 +4,7 @@ Future implementation checklist only. All tasks intentionally remain unchecked. 
 
 ## 1. Contract and measurement gate
 
-- [ ] 1.1 Reconcile the merged #11 accepted-context/version/dependency contract and #6 export ownership with their owners; deliver a version matrix and handoff note, verified against exact commits without editing their UI/state machine/capture semantics.
+- [ ] 1.1 Complete the owner-reviewed version/readiness matrix and handoff against main df765d95170caaaab10a646e43088ea3be66ce53 (or explicitly record a newer baseline): processor envelope v8, creative v1–11, capture schemas 1/2, Export v2/unversioned legacy. Use the design reconciliation as static input only; verify current source/context and all Export-history ownership contracts without editing UI/state machine/capture semantics. This planning revision does not complete the task.
 - [ ] 1.2 Create the dated deterministic disposable-root growth fixture described in the evidence report; verify 3–5 minute dense/sparse input, silence/gaps, forty swells, repeated IR writes/generations and shape-only edits through per-step bytes/counts/hash reports rather than theoretical totals.
 - [ ] 1.3 Exercise reopen, Clear, duplicate, old snapshots and concurrent processes in disposable roots; verify unchanged prior source/render hashes and distinguish shared directory IDs from independently accepted maps in the report.
 - [ ] 1.4 Perform the optional FL Studio/JUCE state-context/path spike without guessing project paths; document supported versions, observations and explicit-folder fallback, with no dependency on the spike finding path support.
@@ -12,7 +12,7 @@ Future implementation checklist only. All tasks intentionally remain unchecked. 
 
 ## 2. Read-only inventory and dependency adapters
 
-- [ ] 2.1 Add bounded legacy/new-format read adapters and a dependency visitor covering source, silence/gaps, default IR, each swell's IR/render/calibration, supported #6 export references and #11 accepted provenance; verify zero-swell/default-IR, frozen/disabled/stale state and unknown-schema closure tests.
+- [ ] 2.1 Add bounded legacy/new-format read adapters and a dependency visitor covering source, silence/gaps, every schema-2 context IR/span/origin, default IR, each swell's IR/render/calibration, creative-v11 generationSource/autoGenerateOnStop and every saved Export history WAV/descriptor. Verify zero-swell historical-context IRs distinct from current defaults, explicit empty IRs, schema-1 unknown history, frozen/disabled/stale state, v2 and legacy Export gains/laws, and unknown-version closure tests. Do not replay contexts or generate on restore.
 - [ ] 2.2 Add read-only selected-root inventory by category/revision and exact-file versus decoded-equivalence duplicate reporting; verify fixture totals, count shared physical objects once, unknown/inaccessible scope and no user writes.
 - [ ] 2.3 Add rebuildable observed-snapshot/alias/pin accounting with conservative legacy protection; verify missing index, interrupted catalog update, offline roots and unenumerated FLPs never make durable data eligible.
 - [ ] 2.4 Expose location/count/byte/uncertainty summaries in the existing settings/diagnostics area after preparing a native preview; obtain owner look/interaction approval for revised control families before broader rollout and verify component/binding tests without altering #11 Learn controls.
@@ -20,14 +20,14 @@ Future implementation checklist only. All tasks intentionally remain unchecked. 
 
 ## 3. Exact-byte Pack and Relink
 
-- [ ] 3.1 Add immutable portable descriptor/snapshot/receipt versions and bounded parsing with legacy aliases; verify exact source spans, coverage semantics, session edits/defaults, dependency identities and malformed/oversized-state rejection.
+- [ ] 3.1 Add immutable portable descriptor/snapshot/receipt versions and bounded parsing with legacy aliases; verify exact source/context spans, coverage semantics, session edits/defaults/auto-generation policy/fingerprints and all Export-history paths/checksums/origins/frames/gain laws. Preserve separate version domains and schema-1 unknown provenance; verify malformed/oversized-state rejection and receipts distinguish managed dependency closure from unenumerated external Playlist files.
 - [ ] 3.2 Add coherent accepted-state pinning and explicit per-instance collection scope; verify capture/import/render races never mix epochs and missing instances/history are excluded from completeness claims.
 - [ ] 3.3 Add copy-to-destination staging, operation journal, closure verification and completion publication; verify destination-only hashes and fault injection at every WAV/descriptor/snapshot/marker boundary without changing original refs.
 - [ ] 3.4 Add cancellation, interrupted-pack inspection/resume and storage diagnostics; verify disk-full, read-only, locked/offline roots and cross-volume copies preserve originals and previous successful packs.
 - [ ] 3.5 Add handle-aware containment and Windows path policy; verify traversal, reserved/device/UNC/drive-relative paths, alternate streams, Unicode/long paths, case collisions and symlink/junction replacement races cannot escape the owned operation.
 - [ ] 3.6 Add explicit Relink with store/snapshot/hash validation and ambiguous-candidate handling; verify moved folders, changed absolute hints, conflicting store copies and unknown versions without silently adopting newer heads.
 - [ ] 3.7 Add Pack/Relink settings controls after native preview approval; verify bindings show scope, excluded pending work, incomplete status and backup responsibility without changing creative/capture workflow.
-- [ ] 3.8 Run destination-only restore in an isolated Windows profile with original cache/IRs unavailable; verify exact source/wet hashes, positions, peaks, edits/defaults and zero convolution/resampling/recapture counters for compatible complete snapshots.
+- [ ] 3.8 Run destination-only restore in an isolated Windows profile with original cache/IRs unavailable; verify exact source/wet/export-history hashes, historical context IRs, positions, peaks, edits/defaults/auto-generation policy and zero convolution/resampling/recapture counters for compatible complete snapshots. Include zero-swell context-only IR dependencies and non-current/legacy-law exports; missing history must fail complete-pack validation without changing accepted state.
 - [ ] 3.9 Document the transfer and relink procedure, multi-instance receipts and failure recovery; verify it against one consolidated short FL Studio Save As/duplicate/reopen/transfer smoke test and record actual host/DPI/PC coverage without repeating automated edge cases.
 
 ## 4. Optional association and independent future writes

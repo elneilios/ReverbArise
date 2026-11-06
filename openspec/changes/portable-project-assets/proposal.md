@@ -6,7 +6,7 @@ ReverbArise stores irreplaceable captures and saved render dependencies outside 
 
 ## What Changes
 
-- Deliver a source-backed audit and explicitly separate verified code, arithmetic estimates, host unknowns and proposals.
+- Deliver a source-backed audit and explicitly separate verified code, arithmetic estimates, host unknowns and proposals. Preserve the original 2026-11-03 audit; the design records a 2026-11-06 contract reconciliation at main df765d95170caaaab10a646e43088ea3be66ce53, not a new runtime audit.
 - Propose an explicitly associated project asset folder, immutable portable snapshots, Pack/Relink and verified copy-before-switch migration; include completed wet renders for regeneration-free compatible reopen.
 - Propose content-addressed immutable objects with distinct dependency descriptors and independent writer branches; preserve existing project/instance identities and legacy paths.
 - Propose read-only storage inventory, protected historical dependencies, opt-in quarantine for proven scratch, and recovery journals. Unknown old FLP references prohibit inferred durable-asset reclamation.
@@ -22,7 +22,7 @@ ReverbArise stores irreplaceable captures and saved render dependencies outside 
 
 ### Modified Capabilities
 
-None. Existing `song-timeline-audio`, `swell-session`, `swell-regeneration`, `impulse-response-library` and workflow contracts remain authoritative. The new capabilities extend resolution/administration without changing capture, musical rendering or editing rules.
+None. Existing capture source/context, Learn generation, song export, `song-timeline-audio`, `swell-session`, `swell-regeneration`, `impulse-response-library` and workflow contracts remain authoritative. Adapters must distinguish processor envelope v8, creative state v11, capture schemas 1/2 and Export metadata v2/unversioned legacy; accepted context IRs and every saved export-history dependency belong to pack closure. The new capabilities extend resolution/administration without changing capture, musical rendering or editing rules.
 
 ## Impact
 

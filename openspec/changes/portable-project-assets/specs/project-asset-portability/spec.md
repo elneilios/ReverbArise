@@ -18,7 +18,7 @@ The system SHALL support a user-selected asset folder without requiring the host
 - **THEN** the previous folder and committed references remain authoritative and original files remain intact
 
 ### Requirement: Complete packs contain accepted dependency closure
-A complete pack SHALL include the selected accepted source coverage, session metadata, default and assigned IRs, exact completed wet render dependencies, calibration and supported accepted provenance. Pending work SHALL be excluded explicitly. A missing dependency or unknown dependency-bearing version SHALL prevent a complete-pack claim.
+A complete pack SHALL include accepted source coverage, session metadata, default/assigned/context IRs, completed wet renders, calibration, provenance and every saved Export history dependency. Missing dependencies or unknown dependency-bearing versions SHALL prevent a complete-pack claim. Pending work SHALL be excluded explicitly.
 
 #### Scenario: Default IR without swells
 - **WHEN** a session with an imported default IR and no swell definitions is packed
@@ -32,8 +32,27 @@ A complete pack SHALL include the selected accepted source coverage, session met
 - **WHEN** the selected accepted state contains frozen, disabled or stale retained swell references
 - **THEN** their exact referenced dependencies and saved statuses are preserved without automatic substitution or regeneration
 
+#### Scenario: Historical context IR differs from current defaults
+- **WHEN** an accepted schema-2 context pins an IR absent from the current Default IR and swell assignments, including an automatic-OFF or zero-swell session
+- **THEN** the complete pack includes that IR and exact context ownership without replaying history as a generation command or inventing an IR for an empty reference
+
+#### Scenario: Previous Export revision remains in saved history
+- **WHEN** saved Export history contains non-current or legacy gain-law revisions
+- **THEN** every referenced WAV and its checksum, origin, frame count and gain metadata are preserved and verified, and any missing required history file prevents a complete-pack claim
+
+#### Scenario: Legacy contextless capture remains contextless
+- **WHEN** a supported schema-1 manifest is packed
+- **THEN** its exact source and unknown historical context are retained without silently migrating provenance or changing existing swell assignments
+
+### Requirement: Version adapters preserve accepted metadata
+Adapters SHALL distinguish processor, creative, capture and Export versions. They SHALL preserve context ownership/origins, generation fingerprints, auto-generation policy and Export checksums/timing/Dry/Wet/gain laws. Schema-1 historical context SHALL remain unknown.
+
+#### Scenario: Mixed supported version domains
+- **WHEN** an envelope-v8 session contains creative-v11 state, schema-2 capture and Export-v2 or legacy history
+- **THEN** adapters preserve each domain independently, retain explicit empty references and reject unknown dependency-bearing versions without changing accepted state
+
 ### Requirement: Pack scope identifies all participating instances
-The system SHALL identify the sessions and instance snapshots included in a pack. It SHALL NOT claim project-wide or historical FLP completeness from a single instance or from capture manifests alone. Packing SHALL NOT authorize source-store deletion or modification of the FLP.
+The system SHALL identify the sessions and instance snapshots included in a pack. It SHALL NOT claim project-wide or historical FLP completeness from a single instance or from capture manifests alone. Packing SHALL NOT authorize source-store deletion or modification of the FLP. Receipts SHALL distinguish included managed Export history from unenumerated external Playlist files; packing SHALL NOT claim to rewrite or relink external DAW file references.
 
 #### Scenario: Another instance is unavailable
 - **WHEN** one instance is packed while another project's instance state has not been collected
@@ -48,7 +67,7 @@ A complete compatible pack SHALL restore exact source positions, sparse silence/
 
 #### Scenario: Clean Windows profile
 - **WHEN** the FLP and complete compatible pack are transferred to a second profile with original caches and external IRs unavailable, then the folder is relinked
-- **THEN** accepted sample/channel data, coverage, edits, timing, IR choices and wet results match without resampling or render regeneration
+- **THEN** accepted sample/channel data, coverage, edits, timing, IR choices and wet results match without resampling, render regeneration, historical-context execution or auto-generation on restore/relink
 
 #### Scenario: Incompatible timing or engine
 - **WHEN** the receiving environment is incompatible with saved timing or render requirements
