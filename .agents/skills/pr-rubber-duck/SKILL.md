@@ -64,3 +64,17 @@ Lead with actionable findings ordered by severity, or state that no actionable f
 - Evidence from the code path or a focused repro, and a concise correction direction when useful.
 
 Keep unresolved questions and verification gaps separate from findings. Finish with reviewed head commit, checks performed, dialogue status, and material limitations. Use supported PR diff links or local file links when possible. Say "No actionable findings in the reviewed scope" when warranted; do not imply complete correctness or issue a GitHub approval unless explicitly requested.
+
+## Offer to publish findings
+
+When actionable findings remain, number them with stable IDs such as F1 and F2 and present their proposed review-comment text and locations before asking whether to add them to the PR. Offer these choices, using a supported user-input tool when available:
+
+1. **Add all**: publish all confirmed findings shown in this review.
+2. **Add high only**: publish only P0 and P1 findings; show the matching IDs and count. If none qualify, say so and do not post anything for this choice.
+3. **Choose from list**: let the user select finding IDs from the numbered list, then publish only those selections. Choosing this option alone does not authorize posting an unspecified subset.
+
+The user can also decline or defer. Wait for an explicit selection before posting unless prior authorization already clearly covers the specific findings and scope. Do not offer to publish an empty findings list or include unresolved questions as confirmed defects.
+
+Before posting, verify the PR head and selected findings' locations are still current and check for existing equivalent review comments. Revalidate findings affected by new commits; if their substance changes, show the revised comments for selection again. Skip duplicates and findings already fixed. Prefer inline review comments anchored to the verified diff and a neutral COMMENT review event; do not submit APPROVE or REQUEST_CHANGES without explicit authorization. If inline comments are unavailable, explain the limitation and obtain agreement before substituting a top-level PR comment.
+
+Report which finding IDs were posted with links and identify any skipped or failed items. On partial failure, check what was created before retrying to avoid duplicates. Posting findings does not authorize code changes or merging.
