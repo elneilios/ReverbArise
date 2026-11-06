@@ -322,7 +322,7 @@ private:
         auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(72);soundScope.setBounds(sound.removeFromTop(40));sound.removeFromTop(contentPadding);
         irLabel.setBounds(sound.removeFromTop(24));auto choice=sound.removeFromTop(controlHeight);fileButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(spacing::tight);irBox.setBounds(choice);
         sound.removeFromTop(contentPadding);irStatus.setBounds(sound.removeFromTop(20));soundScope.setVisible(soundVisible);
-        for(auto* c:std::initializer_list<juce::Component*>{&irLabel,&irBox,&fileButton,&irStatus})c->setVisible(soundVisible && automaticOn);
+        for(auto* c:std::initializer_list<juce::Component*>{&irLabel,&irBox,&fileButton,&irStatus})c->setVisible(soundVisible);
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
         timelineRuler=canvas.removeFromTop(20);canvas.removeFromTop(spacing::tight);chart=canvas.removeFromTop(std::max(0,std::min(canvas.getHeight()-32,canvas.getWidth()/2)));

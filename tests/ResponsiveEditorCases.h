@@ -80,6 +80,15 @@ void Composition::verifyResponsive(const juce::File& output)
             // enabling generation in the processor or scheduling audio work.
             auto enabledView=engine.snapshot();enabledView.session.automaticProcessing=true;enabledView.session.autoMarkersEnabled=true;
             auto& learn=require<LearnWorkspace>(*panel,"learnWorkspace");
+            auto manualView=enabledView;manualView.session.automaticProcessing=false;manualView.session.autoMarkersEnabled=false;
+            learn.display(processor->getCaptureSnapshot(),manualView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
+            for(const auto* name:{"learnIRLabel","learnDefaultIR","learnImportIR","learnIRStatus"})
+            {
+                auto& control=require<juce::Component>(learn,name);
+                REQUIRE(control.isVisible()==(section==2));
+                if(section==2)checkVisible(name);
+            }
+            REQUIRE(!require<juce::Component>(learn,"learnMarkerSensitivity").isVisible());
             learn.display(processor->getCaptureSnapshot(),enabledView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
             for(const auto* name:{"learnGenerateSwells","learnGenerateReason","learnManualSwellsHelp"})checkVisible(name);
             if(section==1){checkVisible("learnAutoGenerateOnStop");checkVisible("learnMarkerSensitivity");}

@@ -65,3 +65,20 @@ controls and checks their bounds and separation from the drag action.
   checked and confirmed through refreshed vanilla Apply: **4/23 complete**.
 - Full Release wrapper gate, combined 900x600 owner review, final host/DPI
   coverage and production activation: pending. #58 remains last and unfinalised.
+
+## Learn Sound review correction
+
+Owner review identified an empty Sound tab with Automatic Swells off. The
+responsive layout incorrectly reused the automatic-generation visibility gate
+for Default IR, Import IR and their labels/status. Sound defaults now follow
+the selected tab independently; existing pass-lock enablement and assignment
+bindings remain unchanged. Automatic generation controls keep their own gate.
+
+The compact fixture now explicitly checks the Sound controls with automatic
+processing/markers off as well as on, at every existing size. Previously its
+discovery assertions used only an enabled synthetic view and missed this state.
+Focused Release CTest passed **2/2, 12.79 seconds** (compact editor and scale),
+and native screenshots were refreshed. UI standards and diff whitespace passed.
+The first relink met the still-open review executable; after closing that one
+review window, incremental relink and tests passed. The corrected preview is
+reopened for review; no host installation or production activation occurred.
