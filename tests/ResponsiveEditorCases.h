@@ -28,7 +28,7 @@ void Composition::verifyResponsive(const juce::File& output)
     {
         const auto image=panel->createComponentSnapshot(panel->getLocalBounds());REQUIRE(image.isValid());
         if(output.getFullPathName().isNotEmpty() && (panel->getWidth()==900 || (panel->getWidth()==1400 && panel->getHeight()==1000)))
-        {REQUIRE(output.createDirectory().wasOk());auto stream=output.getChildFile(name+".png").createOutputStream();REQUIRE(stream && juce::PNGImageFormat().writeImageToStream(image,*stream));}
+        {REQUIRE(output.createDirectory().wasOk());auto stream=output.getChildFile(name+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(image,*stream));}
         return image;
     };
     for(auto size:{juce::Point<int>{900,600},{955,700},{956,700},{957,700},{1000,700},{1099,849},{1100,850},{1101,851},{1199,850},{1200,850},{1201,850},{1400,900},{1399,999},{1400,1000},{1401,1001},{1600,1000}})

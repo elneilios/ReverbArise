@@ -9,8 +9,18 @@ rebased onto that accepted main. The ruler conflict retains #73's `gridTiming()`
 authority and #58's component-aware responsive typography/caption clearance.
 The other conflict retained both required include sets. Accepted live/offline
 clock, Snap inspector/canvas bindings and Copy Diagnostics are preserved.
-The full Release gate is being repeated for this combined baseline. Earlier
-results below remain evidence for their stated source, not a post-#73 claim.
+The combined Release gate passed on clean `e5b8b18`: **75/75 tests, 293.57 seconds
+CTest**. Logs: `out/build-logs/Release/20261106-012558-ed464d70`. Earlier results
+below remain evidence for their stated source. The final guide's four ordinary
+production-editor captures and self-contained HTML assembly passed through the
+existing release-guide helpers; review artifacts are under `out/issue58-guide`.
+Guide currency, UI standards and strict OpenSpec validation pass.
+
+During evidence inspection the compact capture helper was found to append PNG
+bytes to an existing file. It now rewinds/truncates, matching the established
+guide capture policy. This is a fixture-output correction only; refreshed
+screenshots replace the old bytes. Product code is unchanged from the complete
+combined wrapper pass.
 
 ## Accepted upstream baseline
 
