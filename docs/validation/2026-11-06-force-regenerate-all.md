@@ -3,6 +3,18 @@
 Implementation: `063bb45`, on `codex/force-regenerate-all`, based on `df765d9`.
 OpenSpec change: `force-regenerate-all`.
 
+## Owner-authorized closeout
+
+The owner authorized archiving and merging PR #104 on 2026-11-06. Two existing
+regeneration requirements and one feedback requirement were synced into the
+canonical `swell-regeneration` spec, preserving its purpose and unrelated blocks.
+The changed spec passed strict validation; all 18 canonical specs passed normal
+validation with existing unrelated length warnings retained. All five tasks are
+complete. The change is archived at
+`openspec/changes/archive/2026-11-06-force-regenerate-all/`.
+Closeout changes affect specs, task placement and validation/guide records only;
+the passing 75-test implementation is unchanged.
+
 ## Behavior and coverage
 
 Every explicit All request queues eligible confirmed swells, including current
