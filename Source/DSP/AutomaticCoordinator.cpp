@@ -175,7 +175,7 @@ CompletedPasses SwellEngine::applicableCompletedPasses(const CaptureManifest& ma
 }
 void SwellEngine::prepareDefault(const PreviewContext& context)
 {
-    if(context.capture.status.startsWith("Loading"))return;
+    if(context.capture.status.startsWith("Loading") || context.capture.unavailable || recoveryGenerationHold.load() || recoveryReloadOnly.load())return;
     const auto scope=juce::String(context.capture.manifest.projectId)+"/"+context.capture.manifest.instanceId;
     uint64_t generation;
     {const juce::ScopedLock guard(lock);if((workflowState && workflowState->snapshot().locked()) || !awaitingCaptureReference.isEmpty() || model.defaultIR.present() || defaultAttemptScope==scope)return;
@@ -201,6 +201,7 @@ void SwellEngine::requestManualPreparationLocked(const Swell& w,const PreviewCon
 }
 void SwellEngine::dispatchAutomatic(const PreviewContext& context)
 {
+    if(recoveryGenerationHold.load() || recoveryReloadOnly.load())return;
     const juce::ScopedLock guard(lock);
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return;
     if((!model.automaticProcessing && passRenderRequests.empty() && forceRefresh.empty()) || !context.time.valid || context.time.rate!=context.capture.manifest.sampleRate

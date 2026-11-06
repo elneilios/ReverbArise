@@ -43,3 +43,11 @@ The controls currently require a coherent available accepted source to establish
 `preverb_portable_storage_preview --review` opens the candidate using disposable fixtures. The three buttons perform real backup, exact-backup location and restore-copy operations, with native folder selection and explicit receipt-file selection after reopening. Restore goes to the displayed disposable recovery destination. The composition reuses shared controls/tokens and guards picker/results by session identity/epoch. Hiding/closing cancels work. It deliberately does not exercise live association or missing-asset Re-learn recovery.
 
 See [dated phase-2 evidence](../validation/2026-11-06-issue-8-portable-backend.md), [version/rollback matrix](asset-storage-contracts.md) and the active `portable-project-assets` tasks for remaining approval gates.
+
+## Missing-asset recovery validation candidate
+
+The current branch adds worker/control APIs for admitting decodable metadata when source is unavailable, validating a backup against the current arrangement, copying original legacy instance folders, and reloading the current arrangement transactionally. A failed reload retains the previously accepted capture map/reference. It never adopts older backup edits or changes the working-folder association.
+
+`preverb_portable_recovery_test --review` composes the candidate recovery screen with disposable fixtures. It offers explicit original-folder/receipt selection and reviewed re-learning. Re-learning stages fresh source without Clear, preserves accepted history until required saved source/swell coverage is complete, and suppresses automatic generation without changing the saved policy. Explicit generation checks fresh coverage and assigned IRs; missing frozen results require consent, while surviving frozen results remain unchanged. Unknown song bounds and missing Export/Playlist audio cannot be reconstructed from swell metadata alone.
+
+This composition remains behind task 3.10's native owner review and production integration gate. The production Settings binding still uses the previously approved Backup/Restore/Locate flow; the new recovery actions are not yet shipped there. Phase 4 association/writer ownership, cleanup and compression retain their separate gates.

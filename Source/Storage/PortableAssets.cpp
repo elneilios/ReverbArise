@@ -273,7 +273,7 @@ const Snapshot& snapshot(const Verified& p){return p.state;}
 const Receipt& receipt(const Verified& p){return p.receipt;}
 bool prepare(const Input& in,std::shared_ptr<Prepared>& out,juce::String& error,const Hooks& hooks)
 {
-    try{auto p=std::make_shared<Prepared>();p->state.processorXml=in.processorXml;p->state.manifestJson=in.manifestJson;p->state.exclusions=in.exclusions;p->state.producer=in.producer;
+    try{require(!in.sourceUnavailable,"Source assets are unavailable; locate or restore them before creating a complete backup");auto p=std::make_shared<Prepared>();p->state.processorXml=in.processorXml;p->state.manifestJson=in.manifestJson;p->state.exclusions=in.exclusions;p->state.producer=in.producer;
         require(legacy(in.processorXml,in.manifestJson,p->state.observed,error),error);const auto& s=p->state.observed;
         require(uuid(s.project) && uuid(s.instance) && in.instanceRoot.getFileName()==s.instance && in.instanceRoot.getParentDirectory().getFileName()==s.project,"Selected source root does not match accepted identities");
         require(s.dependencies.size()<=maxFiles,"Too many accepted dependencies");p->root=std::make_shared<Root>(in.instanceRoot);
@@ -281,6 +281,16 @@ bool prepare(const Input& in,std::shared_ptr<Prepared>& out,juce::String& error,
             require(d.checksum.isEmpty() || d.checksum==e.sha256,"Accepted checksum differs: "+d.path);if(d.descriptor.isNotEmpty())require(sameMetadata(readText(*p->root,d.path),d.descriptor),"Accepted descriptor differs: "+d.path);
             p->state.files.push_back(e);p->files.push_back(h);}
         Snapshot checked;require(decodeSnapshot(encodeSnapshot(p->state),checked,error),error);p->state=std::move(checked);out=std::move(p);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool prepareLegacyRecovery(const juce::File& selected,const Input& target,std::shared_ptr<Prepared>& out,juce::String& error,const Hooks& hooks)
+{
+    try{require(xmlShape(target.processorXml) && target.processorXml.getNumBytesAsUTF8()<=maxDocumentBytes,"Invalid saved recovery metadata");
+        const auto xml=juce::XmlDocument::parse(target.processorXml);require(xml!=nullptr,"Saved recovery metadata could not be decoded");
+        Input candidate=target;candidate.instanceRoot=selected;candidate.sourceUnavailable=false;
+        const auto reference=xml->getStringAttribute("manifestReference");
+        if(reference.isNotEmpty()){Root root(selected);candidate.manifestJson=readText(root,reference,maximumMetadataBytes);}
+        return prepare(candidate,out,error,hooks);
     }catch(const std::exception& e){return fail(error,e.what());}
 }
 namespace
@@ -338,6 +348,22 @@ bool locate(const juce::File& selected,const Locator& expected,std::shared_ptr<V
         out=std::move(v);error.clear();return true;
     }catch(const std::exception& e){return fail(error,e.what());}
 }
+bool matchesRecoveryTarget(const Verified& verified,const Input& target,juce::String& error)
+{
+    try{
+        ObservedSnapshot current;
+        require(legacy(target.processorXml,verified.state.manifestJson,current,error),"Backup source does not match the project reference: "+error);
+        require(current.project==verified.state.observed.project && current.instance==verified.state.observed.instance
+            && current.reference==verified.state.observed.reference && current.capture.revision==verified.state.observed.capture.revision
+            && target.instanceRoot.getFileName()==current.instance && target.instanceRoot.getParentDirectory().getFileName()==current.project,
+            "Backup belongs to another instance or source revision");
+        for(const auto& dependency:current.dependencies){const auto file=std::find_if(verified.state.files.begin(),verified.state.files.end(),[&](const auto& e){return e.path==dependency.path;});
+            require(file!=verified.state.files.end() && (dependency.checksum.isEmpty() || file->sha256==dependency.checksum),"Backup lacks a current dependency: "+dependency.path);
+            if(dependency.descriptor.isNotEmpty()){const auto saved=std::find_if(verified.state.observed.dependencies.begin(),verified.state.observed.dependencies.end(),[&](const auto& d){return d.path==dependency.path;});
+                require(saved!=verified.state.observed.dependencies.end() && sameMetadata(saved->descriptor,dependency.descriptor),"Backup descriptor does not match the current arrangement: "+dependency.path);}}
+        error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
 bool locateReceipt(const juce::File& selectedReceipt,std::shared_ptr<Verified>& out,juce::String& error,const Hooks& hooks)
 {
     try{require(selectedReceipt.getParentDirectory().getFileName()=="receipts","Select a completion receipt inside the backup receipts folder");
@@ -355,4 +381,15 @@ Result restoreCopy(const std::shared_ptr<Verified>& v,const juce::File& selected
         result.receipt=v->receipt;result.success=true;
     }catch(const std::exception& e){result.error=e.what();result.cancelled=hooks.cancelled && hooks.cancelled();}return result;
 }
+Result restoreLegacyCopy(const std::shared_ptr<Prepared>& prepared,const juce::File& destination,const Hooks& hooks)
+{
+    Result failed;if(hooks.cancelled && hooks.cancelled()){failed.cancelled=true;failed.error="Recovery cancelled";return failed;}if(!prepared){failed.error="Select and verify the original assets first";return failed;}
+    auto verified=std::make_shared<Verified>();verified->state=prepared->state;verified->root=prepared->root;verified->files=prepared->files;
+    // A legacy report deliberately has no portable store ID or completion receipt.
+    verified->receipt=receiptFor({{},prepared->state.id},prepared->state);
+    const auto expected=destination.getChildFile(prepared->state.observed.project).getChildFile(prepared->state.observed.instance);
+    if(expected==prepared->root->directory){failed.success=true;failed.receipt=verified->receipt;return failed;}
+    return restoreCopy(verified,destination,hooks);
+}
+
 }

@@ -199,7 +199,7 @@ void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapsh
     {
         if(identity!=storageIdentity){storageIdentity=identity;storageInventory->bind([this](auto& input,auto& error){return processor.pinPortableAssets(input,error);});}
         storageInventory->setSize(std::max(1,storageViewport.getWidth()-storageViewport.getScrollBarThickness()),
-            std::max(storageViewport.getHeight(),m3::ui::PortableStoragePanel::preferredHeight()));
+            std::max(1,storageViewport.getHeight()));
         storageInventory->poll();
     }
 }

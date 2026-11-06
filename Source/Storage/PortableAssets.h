@@ -14,6 +14,7 @@ struct Input
     juce::String processorXml,manifestJson;
     juce::String producer="Synthetic/control input";
     juce::String exclusions=scopeExclusions;
+    bool sourceUnavailable=false; // Runtime admission only; never a complete-pack certificate.
     uint64_t controlEpoch=0; // Runtime binding token only; never serialized into a backup.
 };
 struct Entry {juce::String path,object,sha256;uint64_t bytes=0;};
@@ -57,6 +58,9 @@ struct Result
     juce::String operation,error;
     Receipt receipt;
 };
+// Explicit original-instance-folder recovery; no store/association is adopted.
+bool prepareLegacyRecovery(const juce::File& selectedInstance,const Input& target,std::shared_ptr<Prepared>&,juce::String& error,const Hooks& = {});
+Result restoreLegacyCopy(const std::shared_ptr<Prepared>&,const juce::File& selectedProjectsRoot,const Hooks& = {});
 Result backup(const std::shared_ptr<Prepared>&,const juce::File& selectedFolder,const Hooks& = {});
 // Resume accepts only an explicitly supplied source root; journal hints never
 // authorize discovery. Already published objects are verified, never overwritten.
@@ -71,6 +75,8 @@ bool locate(const juce::File& selectedFolder,const Locator& expected,
 // The selected receipt is read through the same pinned-root policy, then the
 // exact store/snapshot and complete closure are verified; no head inference.
 bool locateReceipt(const juce::File& selectedReceipt,std::shared_ptr<Verified>&,juce::String& error,const Hooks& = {});
+// Validate current accepted references against a verified backup without adopting its edits.
+bool matchesRecoveryTarget(const Verified&,const Input&,juce::String& error);
 const Snapshot& snapshot(const Verified&);
 const Receipt& receipt(const Verified&);
 // An explicit recovery copy into a selected existing root, recreating legacy

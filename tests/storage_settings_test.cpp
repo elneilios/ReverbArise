@@ -30,18 +30,21 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     const auto firstRoot=processor.swellEngine().assetDirectory();for(const auto& file:report->files)REQUIRE(file.root==firstRoot.getFullPathName());
     std::map<juce::String,juce::String> originalHashes;for(const auto& file:report->files)originalHashes[file.path]=file.sha256;
     juce::MemoryBlock before;processor.getStateInformation(before);const auto beforeCapture=processor.getCaptureSnapshot();const auto renders=processor.swellEngine().snapshot().renderCount;
-    tabs.setCurrentTabIndex(5);storage->poll();REQUIRE(!storage->scanning() && !storage->displayedReport());tabs.setCurrentTabIndex(7);wait([&]{return storage->displayedReport()!=nullptr;});
+    tabs.setCurrentTabIndex(5);storage->poll();REQUIRE(!storage->scanning() && storage->displayedReport());const auto* retainedReport=storage->displayedReport();tabs.setCurrentTabIndex(7);REQUIRE(storage->displayedReport()==retainedReport);wait([&]{return storage->displayedReport()!=retainedReport;});
     juce::MemoryBlock after;processor.getStateInformation(after);REQUIRE(after==before && processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
     for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
-    settings->setVisible(false);storage->poll();REQUIRE(!storage->scanning() && !storage->displayedReport());header->onSettings();wait([&]{return storage->displayedReport()!=nullptr;});
+    settings->setVisible(false);storage->poll();REQUIRE(!storage->scanning() && storage->displayedReport());header->onSettings();wait([&]{return !storage->scanning();});
     // Exercise the production Backup/Locate/Restore controls with real accepted state.
     const auto action=[&](const juce::String& name)->m3::ui::controls::ActionButton&{auto* c=dynamic_cast<m3::ui::controls::ActionButton*>(find(*storage,name));REQUIRE(c);return *c;};
     auto* viewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.getTabContentComponent(7));REQUIRE(viewport && viewport->getViewedComponent()==storage);
-    REQUIRE(storage->getHeight()>=m3::ui::PortableStoragePanel::preferredHeight());
+    REQUIRE(storage->getHeight()==viewport->getHeight());
     TestDirectory backup;REQUIRE(backup.file.createDirectory().wasOk());
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(backup.file);};
     const auto operation=[&](const juce::String& name){action(name).onClick();wait([&]{storage->poll();return !storage->busy() && storage->lastResult()!=nullptr;});};
-    viewport->reveal(action("backupAssets"));REQUIRE(viewport->getViewArea().intersects(action("backupAssets").getBounds()));
+    auto* contentViewport=dynamic_cast<m3::ui::controls::FocusViewport*>(find(*storage,"storageContentViewport"));REQUIRE(contentViewport);
+    const auto buttonBounds=action("backupAssets").getBounds();contentViewport->setViewPosition(0,10000);
+    REQUIRE(action("backupAssets").getBounds()==buttonBounds && storage->getLocalBounds().contains(buttonBounds));
+    REQUIRE(buttonBounds.getY()>=contentViewport->getBottom());
     operation("backupAssets");if(!storage->lastResult()->success)std::cerr<<storage->lastResult()->error<<'\n';REQUIRE(storage->lastResult()->success);
     const auto locator=storage->lastResult()->receipt.locator;
     operation("locateAssets");REQUIRE(storage->lastResult()->success);
@@ -71,7 +74,7 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_STORAGE_SETTINGS_OUTPUT",{});
     const auto screenshot=[&](const juce::File& path){auto stream=path.createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(tabs.createComponentSnapshot(tabs.getLocalBounds()),*stream));};
     if(output.isNotEmpty())screenshot(juce::File(output));
-    viewport->setViewPosition(0,storage->getHeight());
+    contentViewport->setViewPosition(0,10000);
     if(output.isNotEmpty())screenshot(juce::File(output).getSiblingFile(juce::File(output).getFileNameWithoutExtension()+"-controls.png"));
     if(argc>1 && juce::String(argv[1])=="--review")juce::MessageManager::getInstance()->runDispatchLoop();
     std::cout<<"Storage Settings: production page/tab indexes, automatic scanning, current-session references, reopen, unchanged saved state/render counts/hashes and restore-scope fencing passed.\n";

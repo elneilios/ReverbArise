@@ -58,7 +58,14 @@ public:
     void setToneEndBar(int bar) noexcept;
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
-    bool pinPortableAssets(m3::storage::portable::Input&,juce::String& error) const;
+    bool pinPortableAssets(m3::storage::portable::Input&,juce::String& error,bool allowUnavailable=false) const;
+    bool beginRelearning(const m3::storage::portable::Input& expected,juce::String& error);
+    void cancelRelearning();
+    // Worker/control only: validates current source/IRs before queuing explicit recovery rendering.
+    bool regenerateRecovered(bool frozenConsent,juce::String& error,bool validateOnly=false);
+    uint64_t captureStageCountForTesting()const{return captureWorker.metrics().stages;}
+    bool isRelearning()const noexcept{return captureWorker.recoveryArmed();}
+    bool reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error);
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
     CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
     bool flushCaptureForTesting() { return captureWorker.flush(); }
@@ -104,6 +111,10 @@ public:
 private:
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
+    struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};
+    std::optional<RecoveryIntent> recoveryIntent;
+    mutable juce::CriticalSection storageStateLock;
+    std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;

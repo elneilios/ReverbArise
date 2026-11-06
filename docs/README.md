@@ -12,6 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #8 Storage polish and recovery candidate](validation/2026-11-06-issue-8-storage-polish-recovery.md) — retained scans, pinned actions, native recovery tests and explicit remaining profile/rollout gates.
 - [Issue #8 FL Studio Storage smoke](validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) — successful installation retry, Backup/Save As/project-copy/reopen/Locate/Restore results and explicit same-profile/default-IR limits.
 
 - [Issue #8 approved Storage actions](validation/2026-11-06-issue-8-storage-actions.md) — production Backup/Restore/Locate bindings, explicit receipt selection, native tests and remaining profile/host/recovery gates.

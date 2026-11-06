@@ -78,10 +78,20 @@ void CaptureWorker::cancelWorkflowPass()
 {
     const juce::ScopedLock guard(commandLock);
     if(workflowState)workflowState->cancel();
+    if(recoveryCaptureArmed.exchange(false))mappingAllowed.store(false);refreshAdmission=true;notify();
     // Pass identity invalidates queued/provisional work. The accepted source
     // epoch must stay fixed: cancelling is not Clear or a source revision.
 }
 
+bool CaptureWorker::armRecovery(std::vector<std::pair<int64_t,int64_t>> required)
+{
+    if(required.empty() || required.size()>65536)return false;
+    for(const auto [a,b]:required)if(b<=a)return false;
+    const juce::ScopedLock guard(commandLock);
+    if(isLoading() || !workflowState || workflowState->snapshot().locked())return false;
+    workflowState->reset(workflow::Mode::capture);recoveryRequired=std::move(required);recoveryCaptureArmed=true;mappingAllowed.store(true);
+    refreshAdmission=true;notify();return true;
+}
 void CaptureWorker::setHostRate(double rate) noexcept
 {
     hostRate.store(rate);
@@ -141,7 +151,7 @@ void CaptureWorker::publishProgress()
 }
 
 void CaptureWorker::requestRestore(const std::string& project, const std::string& instance,
-                                    const juce::String& reference, uint64_t revision,workflow::Mode mode)
+                                    const juce::String& reference, uint64_t revision,workflow::Mode mode,bool preserveOnFailure)
 {
     recapture.cancel();
     const juce::ScopedLock lock(commandLock);
@@ -149,7 +159,8 @@ void CaptureWorker::requestRestore(const std::string& project, const std::string
     mappingAllowed.store(false);
     generation.fetch_add(1);
     loading.store(true);
-    restore = {project, instance, reference, revision};
+    recoveryCaptureArmed=false;recoveryRequired.clear();
+    restore = {project, instance, reference, revision,preserveOnFailure};
     restoreRequested.store(true, std::memory_order_release);
 }
 
@@ -177,7 +188,7 @@ void CaptureWorker::updateSnapshot()
         && std::abs(current.manifest.sampleRate - rate) > 0.001)
         rateStale = true;
     mappingAllowed.store(! loading.load() && ! restoreRequested.load() && ! clearRequested.load()
-                         && ! rateStale && ! current.unavailable,
+                         && ! rateStale && (! current.unavailable || recoveryCaptureArmed.load()),
                          std::memory_order_release);
     const juce::ScopedLock lock(snapshotLock);
     published = current;
@@ -199,6 +210,7 @@ void CaptureWorker::run()
     {
         if(workerHold.load()){workerHeld.store(true,std::memory_order_release);wait(2);continue;}
         workerHeld.store(false,std::memory_order_release);
+        if(refreshAdmission.exchange(false))updateSnapshot();
         if (restoreRequested.exchange(false, std::memory_order_acq_rel))
         {
             Restore command;
@@ -209,7 +221,8 @@ void CaptureWorker::run()
             while (queue.tryPop(block)) {}
             continuity.reset();
             rateStale = false;
-            session.restore(command.project, command.instance, command.reference, command.revision);
+            if(command.preserveOnFailure)session.reload(command.project,command.instance,command.reference,command.revision);
+            else session.restore(command.project, command.instance, command.reference, command.revision);
             { const juce::ScopedLock lock(commandLock);
               if (generation.load() == commandGeneration) loading.store(false); }
             updateSnapshot();
@@ -289,7 +302,9 @@ void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
         const auto latest=workflowState->snapshot();
         if(latest.pass!=activePass || !latest.locked() || generation.load()!=activeEpoch)return;
         if(provider && !context){passStartFailure="Unable to pin capture generation settings";recordWorkerFailure(CaptureFailureReason::context,passStartFailure,block.startSample,static_cast<int>(block.frameCount));return;}
-        if(!session.beginPass(activePass,activeEpoch,state.recapture,context?&*context:nullptr)){recordWorkerFailure(CaptureFailureReason::rejected,"Capture pass could not begin",block.startSample,static_cast<int>(block.frameCount));return;}
+        std::vector<std::pair<int64_t,int64_t>> required;{const juce::ScopedLock guard(commandLock);if(recoveryCaptureArmed.load())required=recoveryRequired;}
+        if(!(required.empty()?session.beginPass(activePass,activeEpoch,state.recapture,context?&*context:nullptr)
+            :session.beginRecoveryPass(activePass,activeEpoch,required,context?&*context:nullptr))){recordWorkerFailure(CaptureFailureReason::rejected,"Capture pass could not begin",block.startSample,static_cast<int>(block.frameCount));return;}
     }
     hasPendingCapture.store(true);
     ++workerQueued;lastTiming=block.timing;lastTiming.rate=block.sampleRate;lastBlockStart=block.startSample;lastBlockFrames=static_cast<int>(block.frameCount);
@@ -347,6 +362,7 @@ void CaptureWorker::settleWorkflowPass()
         }
         if(result.success && activePass==state.pass)result.success=session.acceptPreparedPass(state.pass,activeEpoch);
         else session.abortPass();
+        if(result.success && recoveryCaptureArmed.load()){recoveryCaptureArmed=false;recoveryRequired.clear();}
         activePass=0;hasPendingCapture=false;handler=commitHandler;
         updateSnapshot();
         if(!result.success){const juce::ScopedLock snapshotGuard(snapshotLock);published.status=result.error;}

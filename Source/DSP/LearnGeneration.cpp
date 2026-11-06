@@ -101,7 +101,7 @@ bool SwellEngine::selectInitialPerform(uint64_t session,uint64_t handoff,const j
 }
 bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
 {
-    if(!workflowState)return false;
+    if(!workflowState || recoveryGenerationHold.load() || recoveryReloadOnly.load())return false;
     std::optional<LearnRequest> generation;
     {
         const juce::ScopedLock guard(lock);

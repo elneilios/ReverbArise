@@ -20,8 +20,8 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     REQUIRE(requested==1 && panel.displayedReport()->physicalFiles==2 && panel.displayedReport()->reclaimableBytes==0);
     for(auto* child:panel.getChildren())REQUIRE(panel.getLocalBounds().contains(child->getBounds()));
     for(int i=0;i<20;++i)panel.poll();REQUIRE(requested==1);
-    const auto before=panel.displayedReport()->physicalBytes;window.setVisible(false);panel.poll();REQUIRE(!panel.scanning() && !panel.displayedReport());
-    window.setVisible(true);wait([&]{return panel.displayedReport()!=nullptr;});REQUIRE(requested==2 && panel.displayedReport()->physicalBytes==before);
+    const auto before=panel.displayedReport()->physicalBytes;window.setVisible(false);panel.poll();REQUIRE(!panel.scanning() && panel.displayedReport());
+    const auto* retained=panel.displayedReport();window.setVisible(true);REQUIRE(panel.displayedReport()==retained);wait([&]{return panel.displayedReport()!=retained;});REQUIRE(requested==2 && panel.displayedReport()->physicalBytes==before);
     panel.bind([&]{storage::Request r;r.roots={scope.getChildFile("offline")};return r;});REQUIRE(!panel.displayedReport());wait([&]{return panel.displayedReport()!=nullptr;});REQUIRE(!panel.displayedReport()->inventoryComplete);
     window.setVisible(false);panel.poll();panel.bind([&]{++requested;storage::Request r;r.roots={scope};return r;});panel.poll();REQUIRE(requested==2 && !panel.scanning());
     window.setVisible(true);wait([&]{return panel.displayedReport()!=nullptr;});REQUIRE(requested==3);

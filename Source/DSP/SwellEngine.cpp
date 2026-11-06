@@ -23,14 +23,14 @@ void SwellEngine::setExpected(const SongTime& time)
 juce::File SwellEngine::instanceRoot(const CaptureManifest& map) const
 { return root.getChildFile(map.projectId).getChildFile(map.instanceId); }
 Session SwellEngine::savedSession() const { const juce::ScopedLock guard(lock); return model; }
-bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Session& session,juce::File& directory,uint64_t& epoch,juce::String& error) const
+bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Session& session,juce::File& directory,uint64_t& epoch,juce::String& error,bool allowUnavailable) const
 {
     const juce::ScopedLock guard(lock);
     const auto before=contextProvider();
     const bool knownSource=(before.capture.reference==captureReference && before.captureGeneration==captureGeneration)
         || (storageRestoreReference.isNotEmpty() && before.capture.reference==storageRestoreReference)
         || (storageRestoreReference.isEmpty() && before.capture.reference.isEmpty() && before.capture.manifest.revision==0 && before.capture.manifest.ranges.empty());
-    if(before.capture.unavailable || before.capture.status.startsWith("Loading") || !knownSource)
+    if((before.capture.unavailable && !allowUnavailable) || before.capture.status.startsWith("Loading") || !knownSource)
     {error="Accepted source is unavailable or still settling. Retry after it settles.";return false;}
     auto accepted=model;const auto after=contextProvider();
     if(before.captureGeneration!=after.captureGeneration || before.capture.reference!=after.capture.reference
@@ -38,6 +38,25 @@ bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Sessio
         || before.capture.manifest.instanceId!=after.capture.manifest.instanceId)
     {error="Accepted source changed while its creative state was pinned. Retry.";return false;}
     capture=before.capture;session=std::move(accepted);directory=instanceRoot(before.capture.manifest);epoch=sessionGeneration.load();error.clear();return true;
+}
+bool SwellEngine::reloadStorageAssets(uint64_t expectedSession,juce::String expectedReference)
+{
+    const juce::ScopedLock guard(lock);
+    if(sessionGeneration.load()!=expectedSession || (workflowState && workflowState->snapshot().locked()))return false;
+    auto current=model;restore(std::move(current),std::move(expectedReference));recoveryReloadOnly=true;return true;
+}
+void SwellEngine::holdRecoveryGeneration(bool enabled)
+{const juce::ScopedLock guard(lock);recoveryGenerationHold=enabled;invalidateLearnLocked();stopIntent.reset();}
+bool SwellEngine::generateRecovered(uint64_t expectedSession,const juce::String& reference,const std::vector<juce::String>& targets,bool frozenConsent,juce::String& error)
+{
+    const juce::ScopedLock guard(lock);const auto context=contextProvider();
+    if(sessionGeneration.load()!=expectedSession || context.capture.unavailable || context.capture.reference!=reference
+        || (workflowState && workflowState->snapshot().locked())){error="Recovery session/source changed; retry.";return false;}
+    for(const auto& id:targets){const auto* w=find(model,id);if(!w || (w->frozen && !frozenConsent)){error="Replacing missing frozen results requires explicit consent.";return false;}}
+    stopLocked();invalidateLearnLocked();stopIntent.reset();recoveryGenerationHold=false;recoveryReloadOnly=false;
+    for(const auto& id:targets){auto& w=*find(model,id);if(w.frozen)recoveryFrozenReplacements.insert(id);
+        deferredLearnDependencies.erase(id);forceRefresh.insert(id);++w.inputGeneration;w.phase=Phase::queued;w.status="Queued after explicit recovery";w.progress=0;}
+    error.clear();notify();return true;
 }
 void SwellEngine::useWorkflow(workflow::State& state,std::function<uint64_t()> epoch)
 {
@@ -119,6 +138,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
 {
     juce::String error; if(!validate(session,error)) { const juce::ScopedLock guard(lock); message=error; return; }
     const juce::ScopedLock guard(lock); stopLocked(); sessionGeneration.fetch_add(1); analysisRequest.fetch_add(1);
+    recoveryGenerationHold=false;recoveryReloadOnly=false;recoveryFrozenReplacements.clear();
     invalidateLearnLocked();learnCandidates.reset();settledLearnCandidates.reset();learnUsable=false;deferredLearnDependencies.clear();
     initialPerformOffer=0;performPositionEstablished=find(session,session.primary)!=nullptr;
     protectedGenerationCalibration.clear();for(const auto& w:session.swells)if(w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
@@ -302,8 +322,8 @@ void SwellEngine::loadIR(const juce::File& file,bool primaryOnly)
 }
 void SwellEngine::generate(bool all)
 {
-    if(!permitCreative())return;
-    const auto context=contextProvider(); const juce::ScopedLock guard(lock); stopLocked();
+    if(!permitCreative() || recoveryGenerationHold.load())return;
+    const auto context=contextProvider(); const juce::ScopedLock guard(lock); recoveryReloadOnly=false;stopLocked();
     if(context.time.valid && context.capture.manifest.sampleRate==context.time.rate && !sameMusicalMapping(model.timing,context.time)) model.timing=context.time;
     for(auto& w:model.swells)
     {
@@ -607,6 +627,7 @@ void SwellEngine::inspect(const PreviewContext& context)
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && !model.exportState.initialized)initializeExport();
     if(context.capture.status.startsWith("Loading") || (awaitingCaptureReference.isNotEmpty() && context.capture.reference!=awaitingCaptureReference)) return;
     awaitingCaptureReference.clear();
+    if(recoveryReloadOnly.load() && !context.capture.unavailable && context.capture.reference!=storageRestoreReference)recoveryReloadOnly=false;
     // A reader can temporarily miss the host's coherent timing publication.
     // That gates playback/preparation, but does not change any captured asset.
     long double origin;
@@ -900,6 +921,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     if(cancel()) return;
     if(!cached)
     {
+        if(recoveryReloadOnly.load()){failure("Saved render could not be loaded. Explicit recovery generation is required.");return;}
         if(restoreOrCheck){const juce::ScopedLock guard(lock);
             if(!matching && !forceRefresh.contains(requested.id) && !passRenderRequests.contains(requested.id)
                 && !captureAllowsAutomatic(context.capture.manifest,requested.sourceStart,renderInputEnd(requested))){
@@ -961,6 +983,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     auto& w=*find(model,requested.id); ++monitoringGeneration;
     const auto support=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd);
     if(w.render!=committed || w.calibration!=calibration || w.supportOffset!=support)persistentChangedLocked(false);
+    recoveryFrozenReplacements.erase(w.id);
     w.render=committed;w.calibration=calibration;w.supportOffset=support;w.phase=Phase::ready; w.progress=1; w.status=cached?"Ready (verified saved render)":"Ready (committed render)";
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);
@@ -1056,7 +1079,7 @@ void SwellEngine::run()
                         if(learnRenderHold.load() && w.status=="Queued after Generate Swells")continue;
                         if(w.status=="Preparing extended wet support" && juce::Time::getMillisecondCounterHiRes()<nextAutomaticEdit)continue;
                         if(!context.time.valid && w.phase==Phase::restoring) continue;
-                        work=w; restoreOrCheck=w.phase!=Phase::queued; break;
+                        work=w;if(recoveryFrozenReplacements.contains(w.id))work->frozen=false;restoreOrCheck=w.phase!=Phase::queued; break;
                     }
                     if(!work) if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
                     {

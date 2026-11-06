@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed approved phase-2 production Storage controls and actual native bindings. Updated the guide for scrolling to Backup/Restore/Locate, exact receipt selection after reopening, per-instance exclusions, separate FLP/external audio backup, conflict preservation and the still-pending missing-source/reload/association/Re-learn limits. No prototype screenshot is presented as production UI.",
+  "summary": "Reviewed production Storage scan retention and timestamps, pinned actions, scrollable measured content and copy-only scope. Updated those instructions. Candidate missing-asset Re-learn controls remain outside the shipped guide pending native approval.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 30193,
-      "sha256": "aa97a322623aadece87fdf8967584536e5ecd9d6694b545ec6e2c7d721d0ce82"
+      "bytes": 30723,
+      "sha256": "d9eecf1d794949d60f14685b8c8c199a5446d29005cc9f6a7e1507c3aa47ab1a"
     },
     {
       "path": "CMakePresets.json",
@@ -125,23 +125,23 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 16864,
-      "sha256": "8def03d32a4181899da945148a15af8386ab1075a788f5fdb4811b8535aba6db"
+      "bytes": 19017,
+      "sha256": "fc5e133bf725a7afd4ee6f95683fc3ba87ade467ce52f1a3bcaab3c8c0642367"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 3560,
-      "sha256": "9301b5462f8c51de8b8f90298219a5e6fe2299e77ac832efb19bf3afd80a8cc1"
+      "bytes": 4077,
+      "sha256": "4c3d0e96099e6bfdca305cbfab51335d3cce9ec6e8cf311015011c1d86ed9713"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 24893,
-      "sha256": "19c28c6c3e4a5dd96b49eeb60cd31817048c735f46db4e1269d752e8da9206c7"
+      "bytes": 26239,
+      "sha256": "245d9c394420aed80e77891540a20994385646215031ea3c1e1437f3657dc75a"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 7068,
-      "sha256": "70a5483322ea70d5d2dc6b876e601e2bfd24bd0d99989a27234b8c9f7b83cc6b"
+      "bytes": 7412,
+      "sha256": "5c0ab4a7df9f41b71aa802cbaed06657c1dd8a10cd57165b821e498517c95027"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -285,8 +285,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 25850,
-      "sha256": "611f3b8e75ef512fc8a0d7fe6f0182b893a60827addff94ba0c17331e8f4a4f9"
+      "bytes": 26017,
+      "sha256": "06a5b49dac270ac91b811afb30295bedaa33f13aa5b311321b566ef20fdd5fd9"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -340,8 +340,8 @@
     },
     {
       "path": "Source/DSP/LearnGeneration.cpp",
-      "bytes": 17043,
-      "sha256": "fa112363c9691c1d2d43ea0e34bb9ce63fe05432cfb7715099d1897c7b6907d5"
+      "bytes": 17105,
+      "sha256": "f84c39e41522add781be034999db5bee61f145834a8b8f69d41722a0406989a0"
     },
     {
       "path": "Source/DSP/PreviewEngine.cpp",
@@ -355,13 +355,13 @@
     },
     {
       "path": "Source/DSP/ReverseConvolution.cpp",
-      "bytes": 9792,
-      "sha256": "beb36b7713c38c0d38ac4ee1b088c79fc9b36ec0b33e7db5703b61c7e08260c2"
+      "bytes": 10101,
+      "sha256": "aff765e6c7bdac80fd9671872a047555161f5b3b39b889a238c37ed5ca2e1c05"
     },
     {
       "path": "Source/DSP/ReverseConvolution.h",
-      "bytes": 1634,
-      "sha256": "d6e6f3332c2a533485af646f7a1eabc885d77eacbbfaf3708ba483c682a10d63"
+      "bytes": 1827,
+      "sha256": "aed05c998d07aa14dc161b7709d33b25cdf894af820a68d66c2ac51462dd6134"
     },
     {
       "path": "Source/DSP/SongExport.cpp",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 83730,
-      "sha256": "97e6c4b90012bcfc40d279e932209adf63bb054514fd77a2d100eaedbb48f8df"
+      "bytes": 85972,
+      "sha256": "63c8c2167b142daf564b9cc7a54f43ab83b2d8a67aa104d1f63bbc6cbaac482f"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22922,
-      "sha256": "5bc0776fe250af1603a184624f46ff9053e370f70184096a41620e03e5d43db9"
+      "bytes": 23380,
+      "sha256": "9c13ada0393c7cadf05f6cd102ebc2c1bb22708e9660636578ce9726789a79ba"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -520,18 +520,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 30792,
-      "sha256": "fb12ca9af2e21ea85df2e3fbf22327d24d9f5d4fb4a9eb342ae6d7c0a97cc0be"
+      "bytes": 37571,
+      "sha256": "756a001af5313f00617e1f4cc34b2a77ec46619c596dc1019a91f1988c3162d7"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 7049,
-      "sha256": "94589b907474cef631b14b1a457a1b5abbce14ca3549ae3d80c721f86b3105d9"
+      "bytes": 7924,
+      "sha256": "dcdad8d1bf0007206c062121889e3b9c0ad563ec38e0dc898be24db205f58af9"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 16137,
-      "sha256": "ebae37a2ab6035e11240332a97ae661d22deadfad921fdbdf85fc784c4474de8"
+      "bytes": 16091,
+      "sha256": "1dfe8d6b96d10edf7b2ae982c5a46dce85d6be7f11796d0ae330b6ba32889e90"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -545,13 +545,13 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 34901,
-      "sha256": "2a9e158ea61749f8a9febe2a49a9a87509a3ddd74d8b09d4be11afa60cbfd074"
+      "bytes": 38480,
+      "sha256": "548708923bc3bbc0a221d98d849f96b8d2aabcb116b00a5378bf3d9592a63131"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 3864,
-      "sha256": "8761f3e496d5d84bb673d2e642595350e3119a646049519dcc7a03ef1c062256"
+      "bytes": 4478,
+      "sha256": "e5b0f623770d1f111da25bcabf4d34ead90887a2c18c3eed87392c2c2ff54dee"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -745,8 +745,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 13585,
-      "sha256": "c0cacee94e46d72951333b2b87f3a4a4163e0e4a2274c18b35c17f50ef5c6457"
+      "bytes": 17073,
+      "sha256": "eb67e64e2d7e16aeb61037de16cbc8b99971410a163eea4e857db5436557923c"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -757,6 +757,11 @@
       "path": "Source/UI/PresentationPreferences.h",
       "bytes": 10648,
       "sha256": "a96c83f8deacbcb45d1ceb8a5a4de84b169619561b19bd9f0fb65b3293d94332"
+    },
+    {
+      "path": "Source/UI/RecoveryPanel.h",
+      "bytes": 8576,
+      "sha256": "65ac10d2ab87ca22adb44546f1dadea4f39830e2632a42f07f9282026bdee32a"
     },
     {
       "path": "Source/UI/ResponsivePresentation.h",
@@ -770,8 +775,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 6482,
-      "sha256": "508162638cbd9d5db68eb5e82fa2b7f0f73c89cb05b9ec257630242b8ca99c55"
+      "bytes": 7610,
+      "sha256": "dfddcbb127fbac5a7f036055cecb80e97ed90c7e12d4bf01a6a60c745c0e28df"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -860,8 +865,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 23310,
-      "sha256": "331ceeeda6bc1b65e81fc828d88f0ae1f13ba0461c99799a75ff92d2524f4344"
+      "bytes": 23402,
+      "sha256": "0886072f4177a77dddb85dc65c3de94a9c4da12fe7c6660919c030872564de08"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
