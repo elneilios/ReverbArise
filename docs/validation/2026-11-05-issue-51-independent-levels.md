@@ -168,3 +168,7 @@ Owner released the diagnostics hold. The supported elevated installer completed 
 - Native review window remains open. Final targeted owner FL acceptance is requested for no forced speech and continuous preset/fader changes at the advancing playhead. Earlier preset values/listening, alignment and save/reopen acceptance is retained; no repeated blanket host checklist. Actual DPI and screen-reader coverage remains unspecified.
 
 A subsequent #73 quiet-window request arrived after installation; no #51 native wrappers remain active and no further heavy job is planned. Owner review windows are preserved.
+
+## Final owner FL acceptance — 2026-11-06
+
+Owner answered “Both checks pass” to the targeted installed-build check for `18e96aa`: no forced spoken notices and smooth Mix Character/Dry/Wet edits while preview keeps advancing from its current playhead. This accepts the revised FL behavior. Earlier preset values/listening, export alignment and save/reopen acceptance remains retained. No additional DPI, screen-reader or other-host matrix is inferred. The installed bundle/backup and native 72/72 Debug/Release results above retain their exact scope. No production code changed after installation.
