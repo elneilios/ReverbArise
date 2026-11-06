@@ -6,7 +6,7 @@
 #include <UI/KnobValue.h>
 #include <UI/Controls/EllipsisLabel.h>
 #include <UI/Controls/TransportReadout.h>
-#include <UI/Controls/IrSelector.h>
+#include <UI/ConvolutionIrBinding.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
 #include <UI/Controls/InvocationSlider.h>
@@ -94,6 +94,7 @@ private:
     void setDiagnosticsOpen(bool);
     void setSettingsOpen(bool);
     void initialiseSettings();
+    void showRegenerationResult(const m3::RegenerationResult&);
     void layoutSettings();
     void refreshStorageScope(const CaptureSessionSnapshot&,uint64_t);
     void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
@@ -125,12 +126,9 @@ private:
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;
     uint64_t initialValueEpoch=0,valueResetRevision=0;
-    m3::ui::controls::IrSelector irBox;
-    struct IRInvocation {juce::String id;uint64_t input=0,epoch=0;std::vector<m3::IRChoice> choices;};
-    std::optional<IRInvocation> irInvocation;
-    std::vector<m3::IRChoice> irEntries;
+    m3::ui::controls::ConvolutionIrEditor irEditor;
+    m3::ui::ConvolutionIrBinding irBinding;
     juce::TextButton resetMenu{"v"};
-    juce::String irOwner,irChoice,irCatalogue;
     PreverbAudioProcessor& processor;
     m3::ui::LearnWorkspace learnWorkspace;
     m3::ui::ExportWorkspace exportWorkspace;
@@ -142,7 +140,7 @@ private:
     m3::SwellOverview songOverview{timeline};
     m3::ui::controls::SwellList list;
     juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
-    juce::TextButton addButton{"Add at playhead"},removeButton{"Delete"},loadIRButton{"Load IR..."},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet"},stopButton{"Stop"};
+    juce::TextButton addButton{"Add at playhead"},removeButton{"Delete"},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet"},stopButton{"Stop"};
     juce::TextButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
     m3::ui::controls::TimelineZoomControls performZoom;
     m3::ui::controls::LatchingActionButton snapButton{"Snap"};
@@ -165,7 +163,6 @@ private:
     std::array<juce::Label,fieldCount> fieldLabels;
     std::array<juce::TextEditor,fieldCount> fields;
     juce::TextEditor barStartEditor,barEndEditor;
-    std::unique_ptr<juce::FileChooser> chooser;
     uint64_t presentationSession=0;
     std::optional<int64_t> chosenCandidate;
     bool updating=false,destroying=false;
@@ -181,6 +178,8 @@ private:
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
     std::array<juce::Label,6> settingsHelp;
+    m3::ui::controls::EllipsisLabel regenerationFeedback;
+    uint64_t regenerationFeedbackSession=0;
     juce::Label aboutHeading;
     std::array<juce::Label,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
@@ -191,7 +190,7 @@ private:
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,helper;
     m3::ui::controls::EllipsisLabel monitorStatus;
-    m3::ui::controls::EllipsisLabel selectedStatus,irStatus;
+    m3::ui::controls::EllipsisLabel selectedStatus,performSoundScope;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};
     std::optional<std::pair<uint64_t,uint64_t>> auditionInvocation;

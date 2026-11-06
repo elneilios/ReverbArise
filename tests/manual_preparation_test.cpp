@@ -112,9 +112,9 @@ static void manualCreation(const char* extension,bool creationOnly)
     REQUIRE(engine.selectTargets({id},id));await([&]{return engine.snapshot().auditionReady;});verifyTiming(*editor,true);
     REQUIRE(engine.selectTargets({pending},pending));await([&]{return engine.snapshot().auditionReady;});verifyTiming(*editor,true);
     REQUIRE(find(engine.savedSession(),id)->render==neighbour.render);
-    // Hold an obsolete edit at publication, then delete its target.
+    // Hold an explicit All request at publication, then delete its target.
     engine.holdRenderPublicationForTesting(true);
-    REQUIRE(engine.edit(pending,[](auto& w,auto&){w.sourceEnd+=240;return true;}));
+    REQUIRE(engine.generate(true).queued==2);
     await([&]{return engine.renderPublicationWaitingForTesting();});
     REQUIRE(engine.removeTarget(pending,engine.assignmentEpoch()));engine.holdRenderPublicationForTesting(false);
     await([&]{return !engine.renderPublicationWaitingForTesting();});
@@ -152,7 +152,7 @@ static void manualFailures()
     await([&]{return engine.snapshot().auditionReady;});
     // Session replacement rejects a render completion held at publication.
     engine.holdRenderPublicationForTesting(true);
-    REQUIRE(engine.edit(id,[](auto& w,auto&){w.sourceEnd+=240;return true;}));
+    REQUIRE(engine.generate(true).queued==1);
     await([&]{return engine.renderPublicationWaitingForTesting();});const auto epoch=engine.assignmentEpoch();
     auto replacement=engine.savedSession();replacement.swells.clear();replacement.selected.clear();replacement.primary.clear();
     engine.restore(replacement);engine.holdRenderPublicationForTesting(false);

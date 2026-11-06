@@ -1,8 +1,11 @@
 #include "LearnGenerationSupport.h"
+#include "AudioTestFiles.h"
 #include "ControlLibraryCases.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/InitialPerformView.h>
 #include <Core/BuildInformation.h>
+#include <Capture/SourceRangeReader.h>
+#include <DSP/SwellShape.h>
 
 static juce::Component* named(juce::Component& root,const juce::String& name)
 {
@@ -14,6 +17,73 @@ static bool visible(juce::Component* value)
 {if(!value)return false;for(;value;value=value->getParentComponent())if(!value->isVisible())return false;return true;}
 static bool sameView(const SwellViewport& a,const SwellViewport& b)
 {return a.first==b.first && a.last==b.last;}
+static void sharedSoundBindings()
+{
+    GenerationFixture fixture;auto& engine=fixture.engine();
+    const auto fileA=fixture.root.file.getChildFile("shared-a.wav"),fileB=fixture.root.file.getChildFile("shared-b.wav");
+    writeTestWav(fileA,1,48000,{.5f,.1f,.03f});writeTestWav(fileB,1,48000,{.4f,-.1f,.02f,0});
+    REQUIRE(engine.assignDefaultIR(fileA));await([&]{return !engine.snapshot().defaultIRPending;});const auto irA=engine.savedSession().defaultIR;
+    REQUIRE(engine.assignDefaultIR(fileB));await([&]{return !engine.snapshot().defaultIRPending;});const auto irB=engine.savedSession().defaultIR;
+    fixture.record();fixture.ready();
+    PreverbAudioProcessorEditor editor(*fixture.processor);editor.setSize(900,600);editor.refresh();
+    auto* defaults=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"learnIrEditor"));
+    auto* selected=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"selectedIrEditor"));
+    REQUIRE(defaults && selected && defaults!=selected);
+    const auto choose=[&](auto& field,const Asset& ir)
+    {
+        editor.refresh();int id=0;const auto choices=engine.irChoices();
+        for(size_t i=0;i<choices.size();++i)if(choices[i].content==ir.content)id=static_cast<int>(i+1);
+        REQUIRE(id>0);field.selector.beforeInvocation();field.selector.setSelectedId(id,juce::sendNotificationSync);
+    };
+    choose(*defaults,irA);await([&]{return !engine.snapshot().defaultIRPending;});
+    REQUIRE(engine.savedSession().defaultIR==irA && engine.savedSession().swells.empty());
+    REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});
+    await([&]{const auto s=engine.savedSession();return s.swells.size()>2 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==Phase::ready;});});
+    const auto generated=engine.savedSession();for(const auto& w:generated.swells)REQUIRE(w.ir==irA && w.provenance==Provenance::automatic);
+    // Presentation alone must preserve accepted dry, raw wet and shaped wet
+    // exactly, as well as their durable references and render-job count.
+    const auto captured=fixture.processor->getCaptureSnapshot();CaptureAssetStore sourceStore(engine.assetDirectory());
+    SwellAssetStore renderStore(engine.assetDirectory());SourceInterval dryBefore,dryAfter;WetRender rawBefore,rawAfter,shapeBefore,shapeAfter;juce::String error;
+    REQUIRE(readSourceInterval(sourceStore,captured.manifest,0,72*4096,72*4096,dryBefore,error));
+    REQUIRE(renderStore.readRender(generated.swells.front().render,previewMemoryBudget,rawBefore,error));
+    REQUIRE(prepareShape(generated.swells.front(),rawBefore,previewMemoryBudget,shapeBefore,error));
+    const auto jobs=engine.snapshot().renderCount;
+    for(int i=0;i<5;++i)editor.refresh();
+    const auto inspected=engine.savedSession();
+    REQUIRE(engine.snapshot().renderCount==jobs && fixture.processor->getCaptureSnapshot().manifest.revision==captured.manifest.revision);
+    for(const auto& old:generated.swells)REQUIRE(sameSavedSwell(old,*find(inspected,old.id)));
+    REQUIRE(readSourceInterval(sourceStore,captured.manifest,0,72*4096,72*4096,dryAfter,error));
+    REQUIRE(renderStore.readRender(inspected.swells.front().render,previewMemoryBudget,rawAfter,error));
+    REQUIRE(prepareShape(inspected.swells.front(),rawAfter,previewMemoryBudget,shapeAfter,error));
+    REQUIRE(dryBefore.samples==dryAfter.samples && rawBefore.samples==rawAfter.samples && shapeBefore.samples==shapeAfter.samples);
+    std::cout<<"Shared IR inspection: exact dry/raw/shaped PCM equality ("<<dryBefore.samples.size()<<"/"<<rawBefore.samples.size()<<"/"<<shapeBefore.samples.size()<<" values); no extra renders.\n";
+    const auto frozen=generated.swells.front().id,edited=generated.swells[1].id;
+    REQUIRE(engine.setFrozen(frozen,true));REQUIRE(engine.addTarget(15000));const auto manual=engine.savedSession().primary;
+    await([&]{return find(engine.savedSession(),manual)->phase==Phase::ready;});
+    REQUIRE(find(engine.savedSession(),manual)->ir==irA && find(engine.savedSession(),manual)->provenance==Provenance::manualCreated);
+    REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();
+    const auto beforeDefault=engine.savedSession();choose(*defaults,irB);await([&]{return !engine.snapshot().defaultIRPending;});
+    const auto afterDefault=engine.savedSession();REQUIRE(afterDefault.defaultIR==irB);
+    for(const auto& old:beforeDefault.swells)REQUIRE(sameSavedSwell(old,*find(afterDefault,old.id)));
+    REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::live));REQUIRE(engine.selectTargets({edited},edited));editor.refresh();
+    choose(*selected,irB);await([&]{return find(engine.savedSession(),edited)->ir==irB && find(engine.savedSession(),edited)->phase==Phase::ready;});
+    REQUIRE(find(engine.savedSession(),edited)->provenance==Provenance::manualEdited && engine.savedSession().defaultIR==irB);
+    const auto protectedState=engine.savedSession();
+    REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();
+    REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});
+    const auto regenerated=engine.savedSession();
+    for(const auto& id:{frozen,edited,manual})REQUIRE(sameSavedSwell(*find(protectedState,id),*find(regenerated,id)));
+    for(const auto& w:regenerated.swells)if(w.provenance==Provenance::automatic)REQUIRE(w.ir==irB);
+    // The opted-in Stop path takes the next accepted default through the same
+    // control. Recapture makes this a genuinely eligible new source pass.
+    REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();choose(*defaults,irA);
+    await([&]{return !engine.snapshot().defaultIRPending;});
+    REQUIRE(engine.setAutoGenerateOnStop(true,engine.assignmentEpoch(),fixture.processor->getWorkflowSnapshot().pass));
+    REQUIRE(fixture.processor->setRecaptureExisting(true));fixture.record();
+    await([&]{const auto s=engine.savedSession();return !engine.snapshot().learnGeneration.generating && std::all_of(s.swells.begin(),s.swells.end(),[&](const auto& w){return w.provenance!=Provenance::automatic || w.ir==irA;});});
+    for(const auto& id:{frozen,edited,manual})
+    {const auto current=engine.savedSession();const auto* kept=find(current,id);const auto* old=find(protectedState,id);REQUIRE(kept && kept->ir==old->ir && kept->shape==old->shape && kept->provenance==old->provenance && kept->frozen==old->frozen);}
+}
 static void pendingProtectedFraming()
 {
     GenerationFixture fixture;const auto accepted=fixture.engine().savedSession();
@@ -55,7 +125,11 @@ static void controlBindings()
     REQUIRE(engine.savedSession().swells.empty() && !engine.snapshot().initialPerformHandoff);
     fixture.ready();editor.refresh();engine.holdLearnRendersForTesting(true);
     generate->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
-    await([&]{return fixture.processor->getWorkflowSnapshot().mode==workflow::Mode::live;});editor.refresh();
+    // Keyboard activation posts a click. Keep dispatching while waiting rather
+    // than relying on it having fired within the first 30 ms under native load.
+    try{await([&]{juce::MessageManager::getInstance()->runDispatchLoopUntil(10);return fixture.processor->getWorkflowSnapshot().mode==workflow::Mode::live;});}
+    catch(...){const auto view=engine.snapshot().learnGeneration;std::cerr<<"Keyboard Generate: "<<view.reason<<" | "<<view.notice<<'\n';throw;}
+    editor.refresh();
     REQUIRE(engine.savedSession().primary==m3::ui::firstChronologicalSwell(engine.savedSession()));
 }
 static void captureImage(juce::Component& editor,const juce::String& tag,float scale=1)
@@ -129,12 +203,12 @@ static void aboutBindings(bool review=false)
     if(!review)writer=[&](const juce::String& information){copiedInformation=information;};
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor,std::move(writer));editor->setVisible(true);editor->refresh();
     const auto showAbout=[&]{auto* action=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));REQUIRE(action);action->onClick();
-        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==6);tabs->setCurrentTabIndex(5);};
+        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);};
     if(review)
     {
         juce::Timer::callAfterDelay(200,[safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(editor.get())]{if(!safe)return;
             auto* action=dynamic_cast<juce::Button*>(named(*safe,"diagnostics"));REQUIRE(action);action->onClick();
-            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(5);});
+            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);});
         controlReview::run(std::move(editor));return;
     }
     juce::String before,after,error;REQUIRE(encode(engine.savedSession(),before,error));
@@ -201,6 +275,7 @@ int main(int argc,char** argv){return runTest([&]
     const bool review=argc>1 && juce::String(argv[1])=="--review";
     if(!review)aboutBindings();
     if(!review)controlBindings();
+    if(!review)sharedSoundBindings();
     if(!review)pendingProtectedFraming();
     for(bool automatic:{false,true})
     {

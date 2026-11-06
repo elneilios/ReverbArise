@@ -1,5 +1,5 @@
 #pragma once
-#include <UI/WorkspaceTheme.h>
+#include "ActionButton.h"
 
 namespace m3::ui::controls
 {
@@ -26,12 +26,9 @@ public:
     {return controlGeometry::insideStroke(getLocalBounds(),focused?controlGeometry::focusStroke:rule);}
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
-        const auto box=getLocalBounds().toFloat().reduced(.5f);
-        const auto enabled=isEnabled();const auto ink=(over || down?aqua:m3::ui::text).withMultipliedAlpha(enabled?1.0f:.35f);
-        g.setColour(background);g.fillRoundedRectangle(box,radius);
-        g.setColour((hasKeyboardFocus(true)?aqua:outline).withMultipliedAlpha(enabled?1.0f:.35f));
-        g.drawRoundedRectangle(outlineBounds(hasKeyboardFocus(true)),radius,hasKeyboardFocus(true)?controlGeometry::focusStroke:rule);
-        const auto c=box.getCentre();g.setColour(ink);
+        ActionButton::paintSurface(g,*this,over,down);
+        const auto c=getLocalBounds().toFloat().getCentre();
+        g.setColour(m3::ui::text.withMultipliedAlpha(isEnabled()?1.f:.35f));
         switch(icon)
         {
             case ActionIcon::openFile:

@@ -6,6 +6,7 @@
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
+#include "ConvolutionIrCases.h"
 #include "ExportLevelsCases.h"
 #include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
@@ -128,9 +129,20 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "ExportControlCases.h"
 #include "SwellListBindingCases.h"
 #include "SwellListCaptureCases.h"
+#include "RegenerationCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && (juce::String(argv[1])=="--test-ir-editor" || juce::String(argv[1])=="--review-ir-editor" || juce::String(argv[1])=="--review-ir-editor-failed"))
+    {
+        convolutionIrCases::cases();
+        if(juce::String(argv[1])!="--test-ir-editor")controlReview::run(std::make_unique<convolutionIrCases::Panel>(juce::String(argv[1])=="--review-ir-editor-failed"?5:1));
+        return;
+    }
+    convolutionIrCases::cases();
+    if(argc>1 && (juce::String(argv[1])=="--test-regeneration" || juce::String(argv[1])=="--review-regeneration"))
+    {regenerationCases(juce::String(argv[1])=="--review-regeneration");return;}
+    regenerationCases();
     if(argc>1 && juce::String(argv[1])=="--review-perform-warning"){noticeReview::run();return;}
     {m3::EditorSnapshot diagnosticState;
         REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
@@ -707,7 +719,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(sourceHeading && automaticHeading && sourceHeading->getFont().getHeight()==automaticHeading->getFont().getHeight());
         REQUIRE(sourceHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi") && automaticHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi"));
         for(const auto* labelName:{"learnRecaptureLabel","learnAutomaticLabel","learnIRLabel","learnSensitivityLabel"})
-        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize && label->getX()==sourceHeading->getX());
+        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize && learning->getLocalArea(label,label->getLocalBounds()).getX()==sourceHeading->getX());
             REQUIRE(label->getLookAndFeel().getLabelFont(*label).getTypefaceStyle().containsIgnoreCase("medium"));
             REQUIRE(label->findColour(juce::Label::textColourId)==m3::ui::text);}
         const auto recaptureSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"recaptureExisting")),automaticSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutomaticSwells"));
@@ -825,13 +837,13 @@ int main(int argc,char* argv[]){return runTest([&]
         automatic->setToggleState(true,juce::sendNotificationSync);editor.refresh();REQUIRE(visibleOffscreen(defaultIR) && visibleOffscreen(sensitivity));
         REQUIRE(sensitivity->getSliderStyle()==juce::Slider::LinearHorizontal && defaultIR->getNumItems()==7);
         sensitivity->onDragStart();sensitivity->setValue(37.5,juce::sendNotificationSync);if(sensitivity->onDragEnd)sensitivity->onDragEnd();editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f);
-        const auto irLabelBounds=named(editor,"learnIRLabel")->getBounds(),irStatusBounds=named(editor,"learnIRStatus")->getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
-        REQUIRE(defaultIR->getY()-irLabelBounds.getBottom()==m3::ui::spacing::tight);
-        REQUIRE(irStatusBounds.getY()-defaultIR->getBottom()==m3::ui::spacing::labelHelp);
-        const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds(),autoStopHelpBounds=named(editor,"learnAutoGenerateHelp")->getBounds();
+        auto* sharedIr=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"learnIrEditor"));REQUIRE(sharedIr);
+        const auto irLabelBounds=sharedIr->label.getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
+        REQUIRE(defaultIR->getY()-irLabelBounds.getBottom()==m3::ui::spacing::labelHelp);
+        const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds();
         REQUIRE(autoStopBounds.getY()-named(editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
-        REQUIRE(irLabelBounds.getY()-autoStopBounds.getBottom()==m3::ui::spacing::group);
-        REQUIRE(sensitivityLabelBounds.getY()-irStatusBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(sharedIr->getY()-autoStopBounds.getBottom()==m3::ui::spacing::group);
+        REQUIRE(sensitivityLabelBounds.getY()-sharedIr->getBottom()==m3::ui::spacing::group);
         REQUIRE(sensitivity->getY()-sensitivityLabelBounds.getBottom()==m3::ui::spacing::tight);
         REQUIRE(sensitivity->getPositionOfValue(0)>=5 && sensitivity->getPositionOfValue(100)+5<=sensitivity->getWidth()-m3::ui::controlGeometry::valueWidth);
         juce::Label* percentage=nullptr;for(auto* child:sensitivity->getChildren())if(auto* label=dynamic_cast<juce::Label*>(child))percentage=label;
@@ -850,7 +862,7 @@ int main(int argc,char* argv[]){return runTest([&]
         sensitivity->setValue(37.5,juce::sendNotificationSync);controlReview::pointerClick(numeric->incrementButton());editor.refresh();REQUIRE(sensitivity->getValue()==37.6 && engine.savedSession().sensitivity==.376f);
         controlReview::pointerClick(numeric->decrementButton());editor.refresh();REQUIRE(sensitivity->getValue()==37.5 && engine.savedSession().sensitivity==.375f);
         snapshotEditor(editor,"learn-on");largeWorkflowSnapshot("learn-on");uiStandardsLayoutCases(editor,"automatic-on");
-        const auto stableSensitivity=sensitivity->getBounds(),stableIRFeedback=named(editor,"learnIRStatus")->getBounds();
+        const auto stableSensitivity=sensitivity->getBounds(),stableIRFeedback=named(editor,"learnIrEditor")->getBounds();
         static_cast<juce::Component&>(numeric->incrementButton()).keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::live) && processor->requestWorkflowMode(workflow::Mode::capture));
         juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f && sensitivity->getValue()==37.5);
@@ -858,20 +870,20 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto savedDefault=engine.savedSession().defaultIR;const auto assigned=engine.savedSession().swells.front().ir;
         engine.holdDefaultImportsForTesting(true);defaultIR->setSelectedId(6,juce::sendNotificationSync);
         waitUI([&]{return engine.defaultImportWaitingForTesting();});editor.refresh();
-        auto irStatus=dynamic_cast<juce::Label*>(named(editor,"learnIRStatus"));REQUIRE(irStatus && irStatus->getText()=="Used by Generate." && defaultIR->getText()==baseline.defaultIRName);
+        auto irStatus=dynamic_cast<juce::Label*>(named(editor,"learnIRStatus"));REQUIRE(irStatus && irStatus->getText().contains("Requested: Whisper") && defaultIR->getText()==baseline.defaultIRName);
         auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice && !notice->currentMessage());
         juce::Thread::sleep(650);editor.refresh();REQUIRE(notice->currentMessage() && notice->currentMessage()->text=="Preparing IR: Whisper");
-        REQUIRE(irStatus->getText()=="Used by Generate.");snapshotEditor(editor,"learn-ir-preparing");
-        REQUIRE(sensitivity->getBounds()==stableSensitivity && irStatus->getBounds()==stableIRFeedback);
+        REQUIRE(irStatus->getText().contains("Requested: Whisper"));snapshotEditor(editor,"learn-ir-preparing");
+        REQUIRE(sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && sharedIr->getBounds().getPosition()==stableIRFeedback.getPosition());
         engine.holdDefaultImportsForTesting(false);waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
         REQUIRE(engine.savedSession().defaultIRName=="Whisper" && engine.savedSession().swells.front().ir==assigned);
-        REQUIRE(irStatus->getText()=="Used by Generate." && sensitivity->getBounds()==stableSensitivity && !notice->currentMessage());
+        REQUIRE(irStatus->getText().isEmpty() && sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && !notice->currentMessage());
         snapshotEditor(editor,"learn-default-picker");largeWorkflowSnapshot("learn-default-picker");
         REQUIRE(engine.assignDefaultIR(root.file.getChildFile("invalid-default.wav")));waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
-        REQUIRE(irStatus->getText()=="Used by Generate." && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
+        REQUIRE(irStatus->getText().contains("Couldn't load IR") && irStatus->findColour(juce::Label::textColourId)==m3::ui::danger && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
         REQUIRE(notice->currentMessage() && notice->currentMessage()->tone==m3::ui::controls::NoticeTone::error && notice->currentMessage()->text.contains("retry"));
         const auto irError=notice->currentMessage();juce::Thread::sleep(50);editor.refresh();REQUIRE(notice->currentMessage()==irError);snapshotEditor(editor,"learn-ir-error");
-        REQUIRE(sensitivity->getBounds()==stableSensitivity && irStatus->getBounds()==stableIRFeedback);
+        REQUIRE(sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && sharedIr->getBounds().getPosition()==stableIRFeedback.getPosition());
         REQUIRE(engine.assignDefaultBundledIR(m3::defaultImpulseId));waitUI([&]{return !engine.snapshot().defaultIRPending;});REQUIRE(engine.savedSession().defaultIR==savedDefault);
         automatic->setToggleState(false,juce::sendNotificationSync);editor.refresh();REQUIRE(!visibleOffscreen(defaultIR) && !visibleOffscreen(sensitivity));
         REQUIRE(engine.savedSession().sensitivity==.375f);snapshotEditor(editor,"learn-off");largeWorkflowSnapshot("learn-off");uiStandardsLayoutCases(editor,"automatic-off");

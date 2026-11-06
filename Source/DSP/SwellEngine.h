@@ -103,6 +103,12 @@ struct IRChoice
     juce::String id,name,description,presetId,content;
     Asset managed;
 };
+struct RegenerationResult
+{
+    bool accepted=false;
+    size_t queued=0,frozen=0,importing=0;
+    uint64_t sessionEpoch=0;
+};
 class SwellEngine final : private juce::Thread
 {
 public:
@@ -137,7 +143,7 @@ public:
     bool assignManagedIR(const juce::String& id,uint64_t expectedInput,const Asset&,const juce::String& name,uint64_t expectedSession=0);
     std::vector<IRChoice> irChoices() const;
     bool resetSwell(const juce::String& id,bool allSettings);
-    void generate(bool all=false);
+    RegenerationResult generate(bool all=false);
     void analyze(int64_t start,int64_t end);
     void setPreferences(float auditionDb,float sensitivity,double separation,bool autoRegenerate,uint64_t expectedWorkflowPass=UINT64_MAX);
     void setAutomaticProcessing(bool,uint64_t expectedWorkflowPass=UINT64_MAX);

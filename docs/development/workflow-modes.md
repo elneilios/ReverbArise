@@ -8,6 +8,15 @@ mix and delivery guards. Settings Appearance controls workspace size and optiona
 100%/125% user magnification; these are local presentation preferences, not
 musical session settings. See [editor presentation](editor-presentation.md).
 
+Learn Sound and Perform Sound share one context-agnostic IR field and command
+binding. Their hosting sections own scope explanations; only the binding knows
+future-default versus selected-swell targets. Accepted defaults enter explicit
+Generate, eligible Generate on Stop and manual creation through the existing
+snapshot transactions. Default edits never live-update existing swells. Explicit
+per-swell IR changes retain existing manual-edited provenance; manual/frozen
+ownership, asset identities and capture/render policy remain unchanged. Async
+imports and menus retain their original session/pass or swell/input ownership.
+
 Issue #10 introduced the foundation mode authority. Issue #16 adds the shared
 Learn / Perform / Export header; the dedicated Learn/Export layouts and WAV
 composition remain separate issues. This guide records the implemented contract;

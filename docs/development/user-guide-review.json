@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed production Storage scan retention and timestamps, pinned actions, scrollable measured content and copy-only scope. Updated those instructions. Candidate missing-asset Re-learn controls remain outside the shipped guide pending native approval.",
+  "summary": "Reviewed the merged production guide and bindings: retain current shared Learn/Perform IR editor, force regeneration and host-reactivation guidance alongside the issue-8 retained scans, pinned Storage actions and copy-only recovery limitations. No new engine behavior is implemented in this merge.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 30723,
-      "sha256": "d9eecf1d794949d60f14685b8c8c199a5446d29005cc9f6a7e1507c3aa47ab1a"
+      "bytes": 30975,
+      "sha256": "3fd60e0eede4f3b2848f18dbf95811bf23b09952a11fe05cddc01c5de0a7cce9"
     },
     {
       "path": "CMakePresets.json",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 85972,
-      "sha256": "63c8c2167b142daf564b9cc7a54f43ab83b2d8a67aa104d1f63bbc6cbaac482f"
+      "bytes": 86101,
+      "sha256": "69d2d488afcd86f1c149d5202b8f7d1e7225a118361e39d7d91cb529540b2aba"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 23380,
-      "sha256": "9c13ada0393c7cadf05f6cd102ebc2c1bb22708e9660636578ce9726789a79ba"
+      "bytes": 23521,
+      "sha256": "43cc572ee35fc53d00cb2b3821bbec86a492d738bd834a1898594f73656a6f7d"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89855,
-      "sha256": "8eaf200d81bf308e1d665c5a7be3f1ca6ba98490708911e53bf7c745210b60e5"
+      "bytes": 86474,
+      "sha256": "080c6c698becb3407ba1f58ad641e84047783140bb9fdef5a158e89d4ec41f22"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12573,
-      "sha256": "46475caf5b4a18210219d05cb18853d77c3f050877aae55ff5e79bef9e9681fc"
+      "bytes": 12493,
+      "sha256": "04ad16a70f4090dfd01c527f93771cc70e04552ff672f883e4cf672c3b29532d"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -520,18 +520,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 37571,
-      "sha256": "756a001af5313f00617e1f4cc34b2a77ec46619c596dc1019a91f1988c3162d7"
+      "bytes": 37869,
+      "sha256": "efedcd3c6397b43744c706cd0f0c451f3c0d2ec93649aecfc0b9cc3126de44a3"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 7924,
-      "sha256": "dcdad8d1bf0007206c062121889e3b9c0ad563ec38e0dc898be24db205f58af9"
+      "bytes": 7951,
+      "sha256": "6a9e8216d28ea8d72a62d1bb4f1ea17a551018ce3e6a57ccfc99e8bba8c28599"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 16091,
-      "sha256": "1dfe8d6b96d10edf7b2ae982c5a46dce85d6be7f11796d0ae330b6ba32889e90"
+      "bytes": 17681,
+      "sha256": "185efaf6be9d2818218744f4fa650cec23d1c9880dfb6cb1dfc2d6cf752b96ad"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -560,8 +560,13 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 3321,
-      "sha256": "5913082a49c3e71a8a952ae751680a2f00cb5b5b37f27760a4b6562b9e5e62ca"
+      "bytes": 3814,
+      "sha256": "f4f456d1375937bbe4421b32703477e5152659694e1778266dddb90dd267cab7"
+    },
+    {
+      "path": "Source/UI/Controls/ConvolutionIrEditor.h",
+      "bytes": 6359,
+      "sha256": "266253d1226e7ef8d7a0a617cd420ecc20e25ffbb6673bb0174edf1230896b19"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",
@@ -600,8 +605,8 @@
     },
     {
       "path": "Source/UI/Controls/IconActionButton.h",
-      "bytes": 2690,
-      "sha256": "ca517a007aa8aafcd4bf151a9f6e30f330e270e99103f1b55cc57e18c6756dc7"
+      "bytes": 2330,
+      "sha256": "51d4070b3661a28f37a45d376fa848b42b1e1633917d1e49438b460dec78ffa9"
     },
     {
       "path": "Source/UI/Controls/InvocationSlider.h",
@@ -689,6 +694,11 @@
       "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
     },
     {
+      "path": "Source/UI/ConvolutionIrBinding.h",
+      "bytes": 7390,
+      "sha256": "e07d3fed78cacac7950031887d3218cca5d0eb2da6bf771e98e7394d7d8707b5"
+    },
+    {
       "path": "Source/UI/EditorPresentationState.h",
       "bytes": 3026,
       "sha256": "4732f1e30f979bbdc6a29e749a9dd84a43482b9758f65ce9f3f2384ba493a966"
@@ -720,8 +730,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 38076,
-      "sha256": "2f64cb570d9f678bdb283a6528f5c41fe8775dd92dff1ca8674227184f786bc8"
+      "bytes": 35316,
+      "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -865,8 +875,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 23402,
-      "sha256": "0886072f4177a77dddb85dc65c3de94a9c4da12fe7c6660919c030872564de08"
+      "bytes": 24273,
+      "sha256": "56bb785688c1b9e725397579f3a808bae8fdf072ee2ad740761e51e0470ff9b5"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -955,8 +965,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 6917,
-      "sha256": "400d6afd3fb154cf2d764e01af6fbbe0b0c284135b697b4792ef823531af6d50"
+      "bytes": 8679,
+      "sha256": "0cbe5cce4639339f3a877d3cdde163d2300c11579d53ada1925a90d2a4827633"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
@@ -965,13 +975,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 104700,
-      "sha256": "fbcb901d3d28f98217a60e943d2bdff56da56bfa53c8498477c63c96fa0782ca"
+      "bytes": 110749,
+      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 40047,
-      "sha256": "53d904487bc553a0c9cd9199e5213bd5e5e9d51fed0e7443d9bea4b4d7595477"
+      "bytes": 42398,
+      "sha256": "e13a99da384a0c5dd5a3576247cb34a2382a974ee9cd0b3c60e0c736ccf2f521"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
@@ -1055,8 +1065,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 25608,
-      "sha256": "f950daf3436e0876727f3609beb8b95eb39beef917980e8f6f7517e7e3d2623e"
+      "bytes": 32658,
+      "sha256": "5d88b26910e0f8acc09822cbd99f6c8b87951b1480b2af3b694da3b1ea137085"
     }
   ]
 }

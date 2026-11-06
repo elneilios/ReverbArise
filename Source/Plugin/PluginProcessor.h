@@ -40,6 +40,7 @@ public:
 
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void releaseResources() override;
+    void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     HostPositionDiagnostics getHostPositionDiagnostics() const noexcept;

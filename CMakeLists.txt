@@ -287,6 +287,11 @@ if(BUILD_TESTING)
     add_executable(preverb_swell_ui_test tests/swell_ui_test.cpp)
     target_compile_definitions(preverb_swell_ui_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_swell_ui_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    if(MSVC)
+        # The broad Debug fixture alone uses ~746 KiB before nested native UI
+        # and graphics calls. Keep headroom beyond Windows' default 1 MiB.
+        target_link_options(preverb_swell_ui_test PRIVATE /STACK:8388608)
+    endif()
     add_test(NAME preverb_swell_ui_test COMMAND preverb_swell_ui_test)
     add_executable(preverb_transport_readout_test tests/transport_readout_test.cpp)
     target_compile_definitions(preverb_transport_readout_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)

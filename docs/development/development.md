@@ -66,6 +66,18 @@ After forcibly terminating a wrapper shell, confirm its child CMake/MSBuild
 processes have stopped before retrying; raw or orphaned processes do not hold
 the wrapper's file handle.
 
+The broad `preverb_swell_ui_test` target reserves an 8 MiB main-thread stack
+under MSVC. Its Debug fixture body alone uses 764,040 bytes (about 746 KiB), leaving
+insufficient headroom in Windows' default 1 MiB reserve for nested native UI and
+graphics calls. This test-only linker setting retains the normal renderer,
+driver and assertions; it does not change the VST3 stack or audio callback.
+See [issue #103 validation](../validation/2026-11-06-issue-103-host-reactivation.md)
+for the original stack-exhaustion evidence and validation.
+
+The native reset-popup fixture also activates its own Windows peer explicitly
+and asserts native focus before opening the menu. JUCE component keyboard focus
+alone does not satisfy the popup's foreground-process guard under CTest.
+
 For troubleshooting, the equivalent preset commands are below. Run them only when
 no wrapper or other build is active. They do not provide the wrapper's locking,
 logging or exit summary:

@@ -21,16 +21,24 @@ public:
     void focusGained(FocusChangeType)override{repaint();}
     void focusLost(FocusChangeType)override{repaint();}
     juce::Rectangle<float> focusInkBounds()const noexcept{return controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);}
+    // Shared surface for text and glyph-only command buttons. Content colour
+    // remains semantic; hover/press highlights the outline, not the glyph.
+    static void paintSurface(juce::Graphics& g,juce::Button& button,bool over,bool down,bool emphasized=false)
+    {
+        const auto alpha=button.isEnabled()?1.f:.35f;const auto box=controlGeometry::insideStroke(button.getLocalBounds(),rule);
+        const auto active=over || down;g.setColour((emphasized?(active?hover:aqua):background).withMultipliedAlpha(alpha));g.fillRoundedRectangle(box,radius);
+        const auto focused=button.hasKeyboardFocus(true);
+        g.setColour((focused || active?aqua:outline).withMultipliedAlpha(alpha));
+        g.drawRoundedRectangle(focused?controlGeometry::insideStroke(button.getLocalBounds(),controlGeometry::focusStroke):box,radius,focused?controlGeometry::focusStroke:rule);
+    }
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
-        const auto alpha=isEnabled()?1.f:.35f;const auto box=controlGeometry::insideStroke(getLocalBounds(),rule);
-        const auto active=over || down;g.setColour((emphasized?(active?hover:aqua):background).withMultipliedAlpha(alpha));g.fillRoundedRectangle(box,radius);
-        g.setColour((hasKeyboardFocus(true) || active?aqua:outline).withMultipliedAlpha(alpha));
-        g.drawRoundedRectangle(hasKeyboardFocus(true)?focusInkBounds():box,radius,hasKeyboardFocus(true)?controlGeometry::focusStroke:rule);
+        paintSurface(g,*this,over,down,emphasized);
+        const auto alpha=isEnabled()?1.f:.35f;
         g.setColour((emphasized?background:m3::ui::text).withMultipliedAlpha(alpha));
         auto area=getLocalBounds().toFloat().reduced(12,4);
         const bool iconOnly=icon==CommandIcon::play || icon==CommandIcon::stop;
-        if(icon!=CommandIcon::none){const auto centre=iconOnly?box.getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);}
+        if(icon!=CommandIcon::none){const auto centre=iconOnly?getLocalBounds().toFloat().getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);}
         if(!iconOnly){g.setFont(componentTextFont(*this,TextRole::controlLabel));g.drawText(getButtonText(),area,juce::Justification::centred);}
     }
     static void drawIcon(juce::Graphics& g,CommandIcon icon,juce::Point<float> c)

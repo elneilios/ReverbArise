@@ -5,6 +5,7 @@
 #include <UI/WorkflowPresentation.h>
 #include <Core/MonitoringSafety.h>
 #include "ProcessorCaptureFailureCases.h"
+#include "ProcessorReactivationCases.h"
 
 struct WorkflowHost:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -16,7 +17,10 @@ struct SavedStateListener final:juce::AudioProcessorListener
     {if(details.nonParameterStateChanged){++changes;wrongThread|=!juce::MessageManager::getInstance()->isThisTheMessageThread();}}
 };
 
-int main(){return runTest([]{
+int main(int argc,char* argv[]){return runTest([&]{
+    if(argc>1 && juce::String(argv[1])=="--test-reactivation"){
+        juce::ScopedJuceInitialiser_GUI gui;processorReactivationCases();return;
+    }
     {
         CaptureProgress progress;CaptureManifest committed;
         committed.ranges.push_back({16,16,CaptureCoverageKind::silence});
@@ -38,7 +42,7 @@ int main(){return runTest([]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     {
         REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);

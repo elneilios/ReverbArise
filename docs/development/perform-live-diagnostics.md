@@ -83,6 +83,23 @@ precision to inspect this distinction. Unsupported/nonfinite origins remain
 unavailable. The shared strict mapping helper and Capture, Audition, internal
 Export and host offline validation keep their existing contracts.
 
+## Host processing reactivation
+
+The JUCE VST3 wrapper calls `reset()` when host processing is turned off,
+independently of its release/prepare lifecycle. The processor forwards that
+explicit reset to the bounded live-clock reset request. Until a new callback
+publishes valid timing, worker clock authority is unavailable. The next valid
+playing callback validates a fresh run and joins eligible resident wet at the
+current absolute Song offset. Cold coverage follows the existing preparation
+and retry rules; skipped audio is never replayed. Accepted capture, renders,
+edits and saved Live preferences are retained.
+
+This reset performs only an atomic clock invalidation; it does not clear assets,
+relax rate/tempo/meter checks or reinterpret stored positions. A callback gap,
+seek, loop or internal Live toggle does not itself reset the established run.
+See [issue #103 evidence](../validation/2026-11-06-issue-103-host-reactivation.md)
+for the synthetic lifecycle regression and separate FL Studio coverage.
+
 Worker observations are separate from callback observations. Service and attempt
 sequences distinguish eligibility checks from actual preparation work. Monotonic
 service/attempt times are process-local milliseconds, not wall-clock timestamps.

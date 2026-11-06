@@ -27,6 +27,8 @@ This directory covers product identity, the existing implementation, development
 - [Read-only asset inventory](development/asset-inventory.md) — phase-1 dependency readers, protected storage accounting and automatic Settings scans; [Settings integration evidence](validation/2026-11-06-issue-8-settings-integration.md) and [backend verification](validation/2026-11-06-issue-8-inventory.md).
 
 - [Issue #8 measured storage audit](validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](development/asset-storage-contracts.md) — deterministic capture/IR/render growth, synchronized clone writers, version fixtures and preserved phase/owner-review gates.
+- [Shared Learn/Perform IR editor](validation/2026-11-06-issue-80-shared-ir.md) — shared field/binding ownership, owner-reviewed feedback and scope refinements, native isolation/persistence/audio evidence and completed native acceptance and remaining host acceptance.
+- [Host processing reactivation](development/perform-live-diagnostics.md#host-processing-reactivation) — explicit VST3 reset invalidates the live clock without changing saved source or swells; [issue #103 evidence](validation/2026-11-06-issue-103-host-reactivation.md) distinguishes native lifecycle coverage from pending FL Studio confirmation.
 
 - [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
 
