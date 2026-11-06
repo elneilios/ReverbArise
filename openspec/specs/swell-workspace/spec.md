@@ -1112,4 +1112,3 @@ Learn SHALL retain its dry canvas and left settings column while exposing Captur
 #### Scenario: Inspect defaults and return to capture
 - **WHEN** the user switches Learn tabs during allowed or locked workflow states
 - **THEN** the same accepted defaults and guards remain authoritative, Generate availability stays truthful, and switching presentation alone does not capture, generate or modify existing swells
-

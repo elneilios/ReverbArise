@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the issue 58 main-spec sync against the accepted 900x600 editor, 100%/125% scale controls, local preferences and host acceptance. The synced editor-presentation, swell-workspace and UI-design contracts match the already-updated guide; no guide prose or screenshot change is needed. Archive preserves completed planning artifacts. Physical OS-DPI coverage remains explicitly untested.",
+  "summary": "Reviewed synced issue 58 specifications against the accepted production guide; only canonical spec sync and EOF formatting changed. Guide behavior, screenshots and physical-DPI limitations remain accurate; no prose update required.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -865,8 +865,8 @@
     },
     {
       "path": "openspec/specs/editor-presentation/spec.md",
-      "bytes": 8946,
-      "sha256": "d8fb05d22a2b827fe42f15d691c8a51712556be9fa1ae45b97da123b1dee0804"
+      "bytes": 8945,
+      "sha256": "cdb23fcf22533ee30b845617e8282633f05a80b8969da22a0fd29acab384fded"
     },
     {
       "path": "openspec/specs/impulse-response-library/spec.md",
@@ -925,8 +925,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 104701,
-      "sha256": "4e6ede05fac4d17036ac70a4ffb0bdb3cbfdf7e73a63adc02045907949972b98"
+      "bytes": 104700,
+      "sha256": "fbcb901d3d28f98217a60e943d2bdff56da56bfa53c8498477c63c96fa0782ca"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

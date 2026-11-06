@@ -96,4 +96,3 @@ At the compact baseline the UI SHALL retain 12-pixel outer horizontal margins an
 #### Scenario: Perpendicular dividers remain separated
 - **WHEN** Learn, Perform or Export bands and columns are painted at compact or expanded sizes
 - **THEN** vertical dividers stop at least 8 logical pixels short of perpendicular horizontal rules, using the named divider-clearance policy, without touching T or cross junctions
-
