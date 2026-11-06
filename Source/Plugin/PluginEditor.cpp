@@ -556,6 +556,7 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
+    refreshStorageScope(capture,state.sessionEpoch);
     const auto mode=state.workflowState.mode;
     if(presentationSession!=state.sessionEpoch)presentationSession=state.sessionEpoch;
     bool initialFrame=false;

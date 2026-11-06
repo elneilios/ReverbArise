@@ -68,6 +68,7 @@ struct Request
     std::vector<ObservedSnapshot> snapshots;
     std::vector<Pin> activePins;
     bool priorIndexAvailable=false;
+    juce::String observationError;
     Limits limits;
 };
 Report inspect(const Request&,const std::function<bool()>& cancelled={});

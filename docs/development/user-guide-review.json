@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Owner-directed Storage preview scans once automatically on page open/reopen, with no manual refresh; hiding cancels work and Stop scan is temporary. Native lifecycle tests pass. Production Settings integration remains pending approval, so existing alpha guide backup/portability prose and production screenshots remain accurate and unchanged.",
+  "summary": "Reviewed actual Storage Settings integration and native bindings: documented scan-on-open/reopen, Stop scan, current-instance scope, incomplete coverage and unchanged backup protection. Existing Learn/Perform screenshots and workflows remain current.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 28377,
-      "sha256": "c2a5183f64c27feb586dab01d34abbd49f579da9501e3a80298946a1bbe1df14"
+      "bytes": 28835,
+      "sha256": "8a3bb7b95f93a13a523d5e4bf7743bd65ec457afab4028a1f9cd9538055172c6"
     },
     {
       "path": "CMakePresets.json",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89802,
-      "sha256": "b2232b674a494c09598d12cb43b23304b705a31bac7bd97f86e5faa6691a2fce"
+      "bytes": 89855,
+      "sha256": "8eaf200d81bf308e1d665c5a7be3f1ca6ba98490708911e53bf7c745210b60e5"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12311,
-      "sha256": "30d164ec3b89c4fe9633860ff18c954d5d0667fa27571c4d5a1fe9ec6992df60"
+      "bytes": 12574,
+      "sha256": "10dbea423c98e91f27b46f5df6d1a71d470704a554229053108cc3e7b3906109"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
-      "bytes": 8799,
-      "sha256": "ebe67ca8fbecc062b948cec75db57715ce5c6cdb2a7dbe0a999b56bc8a892e7d"
+      "bytes": 8801,
+      "sha256": "7839b62d1e6ec9f535bf1b887b9409ad2b569cdddb65a57152a282e12dbc9910"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -530,18 +530,18 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 14890,
-      "sha256": "d284b980ce45dcab923f6fd38619ed49ef5eca0f21ea373b5b8093db4627a257"
+      "bytes": 16943,
+      "sha256": "7ef2094f078cd9729e25f381c91591f57b30fc75bcc672f3154db891df85e755"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 22594,
-      "sha256": "8002515ccd7d883bf0e156ef6bc2f3eb8ef49515e31103fdb8c3319ade4bcc27"
+      "bytes": 23028,
+      "sha256": "c0c0ef6424feec72a09cfb57ae4818d5ceb90b1ed50fc50ee58c2a7b58ffc3a6"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
-      "bytes": 3153,
-      "sha256": "8e224ef2dc70a4e2a4cb241688df38b7f6bcf5c6058f5186b4b8455acb7f7798"
+      "bytes": 3188,
+      "sha256": "df5db970032ba4af301c88e72cb406344db431ad6aec124eb025979e0ab81de6"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -755,8 +755,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 6485,
-      "sha256": "5526abf9af42000e8b27d8dc486fe0e6f054485b3f819af3fa212c62cd06ab71"
+      "bytes": 6482,
+      "sha256": "508162638cbd9d5db68eb5e82fa2b7f0f73c89cb05b9ec257630242b8ca99c55"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -840,8 +840,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21094,
-      "sha256": "15016e9023e50fa4186729604efc9e3655fdff96c48028ac772c3a7686a38ecd"
+      "bytes": 21749,
+      "sha256": "1caeb85f7464c2e70c6278e53ef823790d39008e2aff5c70a5eefba7657bf1a0"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

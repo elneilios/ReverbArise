@@ -131,6 +131,7 @@ Report inspect(const Request& request,const std::function<bool()>& cancelled)
     const auto started=juce::Time::getMillisecondCounterHiRes();size_t entries=0;uint64_t remaining=request.limits.hashBytes;
     std::set<juce::String> physical;std::map<juce::String,juce::String> paths;uint64_t metadataBytes=0;size_t observedEdges=0;
     const auto issue=[&](const juce::String& text){report.inventoryComplete=false;if(report.issues.size()<128)report.issues.push_back(text);};
+    if(request.observationError.isNotEmpty())issue(request.observationError.substring(0,512));
     const auto stop=[&]{if(cancelled && cancelled()){report.cancelled=true;return true;}return entries>=request.limits.entries || juce::Time::getMillisecondCounterHiRes()-started>request.limits.milliseconds;};
     for(const auto& root:request.roots){
         if(stop()){issue("Scan cancelled or reached its entry/time limit.");break;}
@@ -207,14 +208,21 @@ Report inspect(const Request& request,const std::function<bool()>& cancelled)
     } catch(const std::exception& e){report.inventoryComplete=false;report.dependencyVerificationComplete=false;report.issues.push_back("Inventory failed: "+juce::String(e.what()));}
     return report;
 }
-InventoryService::InventoryService():Thread("Read-only asset inventory"){startThread();}
+InventoryService::InventoryService():Thread("Read-only asset inventory"){}
 InventoryService::~InventoryService(){signalThreadShouldExit();++epoch;notify();stopThread(-1);}
-uint64_t InventoryService::request(Request request){const juce::ScopedLock guard(lock);const auto id=++epoch;pending=std::move(request);result.store(nullptr);working=true;notify();return id;}
+uint64_t InventoryService::request(Request request)
+{
+    const juce::ScopedLock guard(lock);const auto id=++epoch;pending=std::move(request);result.store(nullptr);working=true;
+    if(!isThreadRunning() && !startThread()){
+        pending.reset();auto failed=std::make_shared<Report>();failed->inventoryComplete=false;failed->dependencyVerificationComplete=false;
+        failed->issues.push_back("The storage scan worker could not start. Reopen Storage to retry.");result.store(std::move(failed));working=false;
+    }else notify();return id;
+}
 void InventoryService::cancel(){const juce::ScopedLock guard(lock);++epoch;pending.reset();result.store(nullptr);working=false;notify();}
 void InventoryService::run()
 {
     while(!threadShouldExit()){std::optional<Request> next;uint64_t id=0;{const juce::ScopedLock guard(lock);next=std::move(pending);pending.reset();id=epoch.load();}
-        if(!next){wait(100);continue;}auto report=std::make_shared<Report>(inspect(*next,[&]{return threadShouldExit() || epoch.load()!=id;}));
+        if(!next){wait(-1);continue;}auto report=std::make_shared<Report>(inspect(*next,[&]{return threadShouldExit() || epoch.load()!=id;}));
         {const juce::ScopedLock guard(lock);if(epoch.load()==id && !threadShouldExit()){result.store(std::move(report));working=false;}}}
 }
 }

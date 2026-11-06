@@ -103,6 +103,8 @@ void PreverbAudioProcessorEditor::initialiseSettings()
         settingsHelp[i].setColour(juce::Label::textColourId,m3::ui::secondary);settingsHelp[i].setFont(juce::FontOptions(m3::ui::bodySize));
         settingsHelp[i].setJustificationType(juce::Justification::topLeft);
     }
+    storageInventory=std::make_unique<m3::ui::StorageInventoryPanel>([this]{return storageInventoryRequest();});
+    settingsTabs.addTab("Storage",m3::ui::background,storageInventory.get(),false);
     const auto move=[&](int page,std::initializer_list<juce::Component*> controls)
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
     move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
@@ -185,4 +187,27 @@ void PreverbAudioProcessorEditor::layoutSettings()
     }
     copyBuildInformation.setBounds(left,aboutY+spacing::related,width,controlGeometry::height);
     settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,2*learnTypography::secondaryLineHeight);
+}
+
+m3::storage::Request PreverbAudioProcessorEditor::storageInventoryRequest()
+{
+    m3::storage::Request request;
+    const auto before=processor.getCaptureSnapshot();request.roots={processor.swellEngine().assetDirectory()};
+    auto session=processor.swellEngine().savedSession();const auto after=processor.getCaptureSnapshot();
+    const auto& root=request.roots.front();
+    if(before.reference!=after.reference || before.manifest.revision!=after.manifest.revision
+        || before.manifest.projectId!=after.manifest.projectId || before.manifest.instanceId!=after.manifest.instanceId
+        || root.getFileName()!=juce::String(before.manifest.instanceId) || root.getParentDirectory().getFileName()!=juce::String(before.manifest.projectId))
+    {request.observationError="The accepted session changed while its references were read. Reopen Storage after it settles.";return request;}
+    m3::storage::ObservedSnapshot snapshot;snapshot.label="Current accepted session";
+    snapshot.project=juce::String(before.manifest.projectId);snapshot.instance=juce::String(before.manifest.instanceId);snapshot.reference=before.reference;
+    snapshot.capture=before.manifest;snapshot.session=std::move(session);juce::String error;
+    if(m3::storage::visitDependencies(snapshot,error))request.snapshots.push_back(std::move(snapshot));
+    else request.observationError="Accepted references could not be verified: "+error;
+    return request;
+}
+void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapshot& capture,uint64_t epoch)
+{
+    const auto identity=juce::String(capture.manifest.projectId)+"/"+juce::String(capture.manifest.instanceId)+"/"+juce::String(static_cast<juce::int64>(epoch));
+    if(storageInventory && identity!=storageIdentity){storageIdentity=identity;storageInventory->bind([this]{return storageInventoryRequest();});}
 }

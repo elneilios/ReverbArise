@@ -12,7 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [Read-only asset inventory](development/asset-inventory.md) — phase-1 dependency readers, protected storage accounting and staged native Settings preview; [verification/review scope](validation/2026-11-06-issue-8-inventory.md).
+- [Read-only asset inventory](development/asset-inventory.md) — phase-1 dependency readers, protected storage accounting and automatic Settings scans; [Settings integration evidence](validation/2026-11-06-issue-8-settings-integration.md) and [backend verification](validation/2026-11-06-issue-8-inventory.md).
 
 - [Issue #8 measured storage audit](validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](development/asset-storage-contracts.md) — deterministic capture/IR/render growth, synchronized clone writers, version fixtures and preserved phase/owner-review gates.
 

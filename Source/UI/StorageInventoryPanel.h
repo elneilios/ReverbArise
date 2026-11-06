@@ -6,7 +6,7 @@
 
 namespace m3::ui
 {
-// Settings composition staged for native review. No asset mutation controls.
+// Read-only Settings composition. No asset mutation controls.
 class StorageInventoryPanel final:public FlatSurface,private juce::Timer
 {
 public:
@@ -63,7 +63,7 @@ private:
         service.request(std::move(request));setValue(5,"Scanning this instance's storage...");cancelButton.setVisible(true);resized();
     }
     void timerCallback()override{poll();}
-    void setValue(size_t index,const juce::String& text){values[index].setText(text,juce::dontSendNotification);values[index].setDescription(text);values[index].setTooltip(text);}
+    void setValue(size_t index,const juce::String& content){values[index].setText(content,juce::dontSendNotification);values[index].setDescription(content);values[index].setTooltip(content);}
     Provider provider;storage::InventoryService service;std::shared_ptr<const storage::Report> shown;
     bool pageOpen=false;
     juce::Label heading,details,help;std::array<juce::Label,6> labels;std::array<controls::EllipsisLabel,6> values;
