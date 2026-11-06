@@ -389,7 +389,7 @@ void CaptureWorker::settleWorkflowPass()
 void CaptureWorker::handleBlock(const AudioCaptureBlock& block)
 {
     if (block.generation != generation.load() || loading.load() || rateStale
-        || session.snapshot().unavailable || block.frameCount == 0
+        || (session.snapshot().unavailable && !recoveryCaptureArmed.load()) || block.frameCount == 0
         || ! std::isfinite(block.sampleRate) || block.sampleRate <= 0) return;
     const auto& map = session.snapshot().manifest;
     if ((! map.ranges.empty() && std::abs(map.sampleRate - block.sampleRate) > 0.001)

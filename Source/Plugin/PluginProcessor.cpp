@@ -236,6 +236,22 @@ void PreverbAudioProcessor::requestClearCapture()
     persistentStateChanged();
 }
 
+bool PreverbAudioProcessor::setRecaptureExisting(bool enabled)
+{
+    const juce::ScopedLock guard(storageStateLock);
+    if(workflowState.snapshot().mode!=workflow::Mode::capture)return false;
+    if(enabled && captureWorker.snapshot().unavailable){
+        m3::storage::portable::Input current;juce::String error;
+        if(!pinPortableAssets(current,error,true) || !beginRelearning(current,error)){swells->diagnostic(error);return false;}
+    }else if(!enabled && recoveryIntent && captureWorker.recoveryArmed()){cancelRelearning();return true;}
+    return workflowState.arm(enabled);
+}
+void PreverbAudioProcessor::cancelCapturePass()
+{
+    const juce::ScopedLock guard(storageStateLock);const auto previous=workflowState.snapshot().mode;
+    if(recoveryIntent)cancelRelearning();else captureWorker.cancelWorkflowPass();
+    if(previous!=workflow::Mode::capture)persistentStateChanged();
+}
 bool PreverbAudioProcessor::armRecapture(int64_t start,int64_t end)
 {
     if(start>=end){swells->diagnostic("Invalid recapture interval; arm pass-wide Recapture in Learn mode");return false;}
@@ -629,34 +645,9 @@ bool PreverbAudioProcessor::beginRelearning(const m3::storage::portable::Input& 
     for(const auto& range:capture.manifest.ranges)intent.required.emplace_back(range.startSample,range.startSample+static_cast<int64_t>(range.frameCount));
     for(const auto& w:session.swells)intent.required.emplace_back(w.sourceStart,m3::renderInputEnd(w));
     if(intent.required.empty()){error="Saved source bounds are unavailable. Locate or restore assets before re-learning this empty arrangement.";return false;}
-    swells->holdRecoveryGeneration(true);
-    if(!captureWorker.armRecovery(intent.required)){swells->holdRecoveryGeneration(false);error="Re-learning could not be armed; previous source retained.";return false;}
+    swells->beginSourceReplacement();
+    if(!captureWorker.armRecovery(intent.required)){error="Re-learning could not be armed; previous source retained.";return false;}
     recoveryIntent=std::move(intent);persistentStateChanged();error.clear();return true;
 }
 void PreverbAudioProcessor::cancelRelearning()
-{const juce::ScopedLock guard(storageStateLock);if(!recoveryIntent)return;captureWorker.cancelWorkflowPass();swells->holdRecoveryGeneration(false);recoveryIntent.reset();}
-bool PreverbAudioProcessor::regenerateRecovered(bool frozenConsent,juce::String& error,bool validateOnly)
-{
-    m3::storage::portable::Input current;CaptureSessionSnapshot capture;m3::Session session;std::vector<std::pair<int64_t,int64_t>> required;
-    {const juce::ScopedLock guard(storageStateLock);
-        if(!recoveryIntent || isPlaying.load() || workflowState.snapshot().locked() || captureWorker.recoveryArmed() || !pinPortableAssets(current,error))
-        {if(error.isEmpty())error="Complete fresh source and stop the DAW before recovery generation.";return false;}
-        const auto old=juce::XmlDocument::parse(recoveryIntent->original.processorXml),now=juce::XmlDocument::parse(current.processorXml);
-        if(!old || !now || recoveryIntent->original.instanceRoot!=current.instanceRoot || recoveryIntent->original.controlEpoch!=current.controlEpoch
-            || old->getStringAttribute("manifestReference")==now->getStringAttribute("manifestReference"))
-        {error="A complete fresh source pass has not committed for this recovery.";return false;}
-        required=recoveryIntent->required;capture=captureWorker.snapshot();session=swells->savedSession();}
-    for(const auto [start,end]:required){auto covered=start;for(const auto& range:capture.manifest.ranges){const auto tail=range.startSample+static_cast<int64_t>(range.frameCount);if(tail<=covered)continue;if(range.startSample>covered)break;covered=tail;if(covered>=end)break;}
-        if(covered<end){error="Fresh source coverage is incomplete; previous assets retained.";return false;}}
-    m3::SwellAssetStore store(current.instanceRoot);std::vector<juce::String> targets;std::set<juce::String> verified;
-    for(const auto& w:session.swells){if(!w.ir.present()){error="Restore or explicitly assign the missing IR for "+w.name;return false;}
-        if(verified.insert(w.ir.path).second){ImpulseResponse ir;if(!store.readIR(w.ir,previewMemoryBudget,ir,error))return false;}
-        juce::String why;if(w.frozen && store.verify(w.render,why))continue;
-        if(w.frozen && !frozenConsent){error="Explicit consent is required to replace missing frozen results. Surviving frozen audio will be retained.";return false;}targets.push_back(w.id);}
-    const juce::ScopedLock guard(storageStateLock);m3::storage::portable::Input latest;
-    if(!pinPortableAssets(latest,error) || latest.instanceRoot!=current.instanceRoot || latest.controlEpoch!=current.controlEpoch || latest.processorXml!=current.processorXml)
-    {error="The arrangement changed during recovery checks; retry.";return false;}
-    if(validateOnly){error.clear();return true;}
-    if(!swells->generateRecovered(current.controlEpoch,capture.reference,targets,frozenConsent,error))return false;
-    error.clear();return true;
-}
+{const juce::ScopedLock guard(storageStateLock);if(!recoveryIntent)return;captureWorker.cancelWorkflowPass();recoveryIntent.reset();}

@@ -40,19 +40,19 @@ public:
         locateButton.setTooltip("Select a completed backup receipt, or verify the known backup folder. No files are copied or live settings changed.");
         cancelButton.setTooltip("Stop this operation. Originals remain intact; interrupted backup copies can be inspected and resumed.");
         for(auto* button:{&backupButton,&restoreButton,&locateButton,&cancelButton})addAndMakeVisible(button);
-        backupButton.onClick=[this]{choose(Action::backup);};restoreButton.onClick=[this]{choose(Action::restore);};locateButton.onClick=[this]{if(!onRestored){choose(Action::locate);return;}
-            juce::PopupMenu menu;menu.addItem(1,"Original asset folder (copy to user data)");menu.addItem(2,"Completed backup receipt");
-            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&locateButton),[safe=juce::Component::SafePointer<PortableStoragePanel>(this)](int choice){if(!safe)return;if(choice==1)safe->choose(Action::legacy);if(choice==2){safe->known={};safe->choose(Action::locate);}});};cancelButton.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. Originals and previous backups remain intact.");};
+        backupButton.onClick=[this]{choose(Action::backup);};restoreButton.onClick=[this]{choose(Action::restore);};locateButton.onClick=[this]{choose(onRestored?Action::legacy:Action::locate);};cancelButton.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. Originals and previous backups remain intact.");};
         setStatus("Save the DAW project and external audio separately.");refreshButtons();startTimerHz(10);
     }
     ~PortableStoragePanel()override{destroying=true;stopTimer();worker.cancel=true;}
+    static juce::String recoveryGuidance(){return "Some saved audio assets are unavailable. Your swell markers and edits are preserved.\n\nLocate their original folder or restore a backup. If that is not possible:\n\nIn Learn, turn Detect events off and Recapture audio on. Play the entire song, then stop. After complete audio and required IRs are verified, existing unfrozen swells rebuild automatically using their saved parameters.\n\nMissing custom IRs need restoring or replacing. Frozen audio stays protected; unfreeze missing frozen results to rebuild them. Re-learning may sound different and cannot recreate exported or Playlist files.";}
     std::function<bool(const Input&,juce::String&)> onRestored;
     void showRecoveryStatus(const juce::String& message){setStatus(message);resized();}
     void locateOriginalAssets(){choose(Action::legacy);}
+    void restoreBackup(){choose(Action::restore);}
     FolderPicker folderPicker,receiptPicker; // Tests inject selection; otherwise native choosers.
     void bind(Provider next)
     {
-        worker.cancel=true;waitingReload=false;provider=std::move(next);known={};shown.reset();selected={};
+        worker.cancel=true;waitingReload=false;guidanceEpoch=UINT64_MAX;provider=std::move(next);known={};shown.reset();selected={};
         inventory.bind([this]{return inventoryRequest();});
         setStatus("Save the DAW project and external audio separately.");refreshButtons();
     }
@@ -61,14 +61,21 @@ public:
 
     void setKnownBackup(Locator locator,juce::File folder){known=std::move(locator);selected=std::move(folder);Input input;juce::String error;if(provider(input,error)){knownRoot=input.instanceRoot;knownEpoch=input.controlEpoch;}refreshButtons();}
     bool busy()const{return worker.active.load();}
+    bool reloadPending()const{return waitingReload;}
+    bool consumeReloadEpoch(uint64_t epoch){if(adoptedReloadEpoch!=epoch)return false;adoptedReloadEpoch=UINT64_MAX;return true;}
     const Result* lastResult()const{return shown.get();}
     juce::String statusText()const{return status.getText();}
     void visibilityChanged()override{if(!isShowing())worker.cancel=true;}
     void poll()
     {
         inventory.poll();resized();
+        if(onRestored && !busy() && !waitingReload){Input input;juce::String error;
+            const auto report=inventory.displayedReport();
+            if(!provider(input,error)){if(error.contains("could not be decoded"))setStatus(error);}
+            else if((input.sourceUnavailable || (report && report->missingReferences>0)) && guidanceEpoch!=input.controlEpoch){guidanceEpoch=input.controlEpoch;setStatus(recoveryGuidance());}
+        }
         if(waitingReload){Input current;juce::String error;if(provider(current,error)){
-            waitingReload=false;if(current.instanceRoot!=operationRoot || !sameSource(current,operationInput)){setStatus("Session changed; previous recovery result was not adopted.");return;}inventory.refresh();setStatus(current.sourceUnavailable?"Assets copied, but source reload failed. Originals and edits are retained.":"Assets copied and source reloaded. Current edits are retained.");resized();}}
+            waitingReload=false;adoptedReloadEpoch=current.controlEpoch;if(current.instanceRoot!=operationRoot || !sameSource(current,operationInput)){setStatus("Session changed; previous recovery result was not adopted.");refreshButtons();return;}inventory.refresh();setStatus(current.sourceUnavailable?"Assets copied, but source reload failed. Originals and edits are retained.":"Assets copied and source reloaded. Current edits are retained.");refreshButtons();}}
         if(busy())return;const auto reply=worker.answer.load();if(!reply || reply==shown)return;shown=reply;
         Input current;juce::String currentError;const bool sameScope=provider(current,currentError) && current.instanceRoot==operationRoot && current.controlEpoch==operationEpoch;
         if(!sameScope){known={};setStatus("The operation finished for an earlier session. The current session and its folder were not changed.");refreshButtons();return;}
@@ -115,10 +122,10 @@ private:
         else request.observationError=error;return request;
     }
     void setStatus(const juce::String& value){status.setText(value,juce::dontSendNotification);status.setDescription(value);}
-    void refreshButtons(){const bool idle=!busy() && !choosing;backupButton.setEnabled(idle);restoreButton.setEnabled(idle);locateButton.setEnabled(idle);cancelButton.setVisible(busy());for(auto* button:{&backupButton,&restoreButton,&locateButton})button->setVisible(!busy());resized();}
+    void refreshButtons(){const bool idle=!busy() && !choosing && !waitingReload;backupButton.setEnabled(idle);restoreButton.setEnabled(idle);locateButton.setEnabled(idle);cancelButton.setVisible(busy());for(auto* button:{&backupButton,&restoreButton,&locateButton})button->setVisible(!busy());resized();}
     void choose(Action action)
     {
-        if(destroying || busy() || choosing)return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
+        if(destroying || busy() || choosing || waitingReload)return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
         if(knownRoot!=input.instanceRoot || knownEpoch!=input.controlEpoch)known={};
         const bool receiptSelection=(action==Action::restore || action==Action::locate) && known.snapshot.isEmpty();
         choosing=true;refreshButtons();const auto title=action==Action::legacy?"Choose the original project instance asset folder":action==Action::backup?"Choose an empty folder or an existing asset backup":receiptSelection?"Choose the exact completed backup receipt inside receipts":"Choose the folder containing this saved backup";
@@ -147,6 +154,7 @@ private:
         setStatus(started?(action==Action::backup?"Copying and verifying assets...":"Verifying backup..."):"The worker could not start. Try again.");refreshButtons();
     }
     void timerCallback()override{poll();}
+    uint64_t guidanceEpoch=UINT64_MAX,adoptedReloadEpoch=UINT64_MAX;
     Provider provider;juce::File restoreRoot,selected,operationRoot,knownRoot;Locator known;uint64_t operationEpoch=0,knownEpoch=0;bool choosing=false,destroying=false,waitingReload=false;Input operationInput;
     Worker worker;std::shared_ptr<const Result> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport contentViewport;

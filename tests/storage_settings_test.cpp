@@ -1,6 +1,7 @@
 #include "AudioTestFiles.h"
 #include <Plugin/PluginEditor.h>
 #include <Core/ContentHash.h>
+#include <DSP/DefaultImpulse.h>
 #include <UI/WorkflowHeader.h>
 static juce::Component* find(juce::Component& root,const juce::String& name)
 {if(root.getName()==name)return &root;for(auto* child:root.getChildren())if(auto* result=find(*child,name))return result;return nullptr;}
@@ -17,6 +18,8 @@ static juce::MemoryBlock stateFor(const CaptureSessionSnapshot& capture)
 int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTest([&]{
     TestDirectory root;CaptureSession source(root.file);std::vector<float> audio(96000,.125f);REQUIRE(source.commit(0,48000,audio.data(),48000));const auto captured=source.snapshot();
     auto processorOwner=std::make_unique<PreverbAudioProcessor>(root.file);auto& processor=*processorOwner;const auto bytes=stateFor(captured);processor.setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));REQUIRE(processor.flushCaptureForTesting());
+    REQUIRE(!processor.swellEngine().savedSession().defaultIR.present());
+    REQUIRE(processor.swellEngine().assignDefaultBundledIR(m3::defaultImpulseId));
     wait([&]{return processor.swellEngine().savedSession().defaultIR.present() && !processor.swellEngine().snapshot().defaultIRPending;});
     auto editorOwner=std::make_unique<PreverbAudioProcessorEditor>(processor);auto& editor=*editorOwner;auto& tabs=dynamic_cast<juce::TabbedComponent&>(*editor.settingsPanel());
     REQUIRE(tabs.getNumTabs()==7 && tabs.getTabNames()[5]=="About" && tabs.getTabNames()[6]=="Storage");
@@ -40,15 +43,16 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     REQUIRE(storage->getHeight()==viewport->getHeight());
     TestDirectory backup;REQUIRE(backup.file.createDirectory().wasOk());
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(backup.file);};
-    const auto operation=[&](const juce::String& name){action(name).onClick();wait([&]{storage->poll();return !storage->busy() && storage->lastResult()!=nullptr;});};
+    const auto operation=[&](const juce::String& name){storage->folderPicker=[&,name](const auto&,const auto&,auto complete){complete(name=="locateAssets"?processor.swellEngine().assetDirectory():backup.file);};action(name).onClick();wait([&]{storage->poll();return !storage->busy() && !storage->reloadPending() && storage->lastResult()!=nullptr;});};
     auto* contentViewport=dynamic_cast<m3::ui::controls::FocusViewport*>(find(*storage,"storageContentViewport"));REQUIRE(contentViewport);
     const auto buttonBounds=action("backupAssets").getBounds();contentViewport->setViewPosition(0,10000);
     REQUIRE(action("backupAssets").getBounds()==buttonBounds && storage->getLocalBounds().contains(buttonBounds));
     REQUIRE(buttonBounds.getY()>=contentViewport->getBottom());
     operation("backupAssets");if(!storage->lastResult()->success)std::cerr<<storage->lastResult()->error<<'\n';REQUIRE(storage->lastResult()->success);
     const auto locator=storage->lastResult()->receipt.locator;
+    storage->receiptPicker=[&](const auto&,const auto&,auto complete){complete(backup.file.getChildFile("receipts/"+locator.snapshot+".json"));};
     operation("locateAssets");REQUIRE(storage->lastResult()->success);
-    operation("restoreAssets");REQUIRE(storage->lastResult()->success);
+    operation("restoreAssets");REQUIRE(storage->lastResult()->success && action("backupAssets").isEnabled() && action("restoreAssets").isEnabled());
     processor.getStateInformation(after);REQUIRE(after==before && processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
     for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
     // Picker completion after a session switch must not initiate a copy.
@@ -69,7 +73,7 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     // Reopening without an in-memory locator selects the exact receipt, never a latest head.
     operation("locateAssets");REQUIRE(storage->lastResult()->success);
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(backup.file);};
-    operation("restoreAssets");REQUIRE(storage->lastResult()->success);
+    operation("restoreAssets");REQUIRE(storage->lastResult()->success && action("backupAssets").isEnabled() && action("restoreAssets").isEnabled());
     storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_STORAGE_SETTINGS_OUTPUT",{});
     const auto screenshot=[&](const juce::File& path){auto stream=path.createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(tabs.createComponentSnapshot(tabs.getLocalBounds()),*stream));};

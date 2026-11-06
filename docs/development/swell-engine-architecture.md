@@ -1,8 +1,8 @@
-# Proposed plugin architecture: source, markers and swell sounds
+# Plugin architecture: source, markers and swell sounds
 
-**For owner review — proposed behavior, not a claim about the current implementation.** 2026-11-06. This replaces the recovery-only rendering approach discussed for issue #8 / PR #31. [Proposal](../../openspec/changes/separate-learning-from-swell-rendering/proposal.md) and its delta specs/tasks track the change. Canonical specs remain unchanged until implementation and later sync.
+**Owner-approved architecture; implemented and verified on PR #31.** 2026-11-06. This replaces the recovery-only rendering approach discussed for issue #8 / PR #31. [Proposal](../../openspec/changes/separate-learning-from-swell-rendering/proposal.md) and its delta specs/tasks track the change. Canonical specs remain unchanged until implementation and later sync.
 
-## Ownership we are proposing
+## Ownership
 
 | Owner | Owns | Does not own |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ There is no recovery-to-render command arrow. Re-learning publishes ordinary acc
 5. **Guarded publication.** Before becoming Ready, the job must still match session, swell ID, material generation and dependency identity. Superseded work cannot overwrite a newer edit or recreate a deleted marker. Failed work retains prior files and reports its blocker.
 6. **Presentation and playback.** Fades, curves, level and pure wet placement derive shaped audio/pages from the full wet result. The audio callback consumes published snapshots and keeps old reader pins until safe retirement. Export pins its own coherent accepted inputs.
 
-Proposed interfaces are immutable snapshots/events: `AcceptedSourceSnapshot`, `SwellDefinition`, `RenderDependencyKey` and `RenderPublication`. Existing capture snapshots, dependency fingerprints and per-swell input/shape generations already provide most of these mechanisms. This is an ownership/scheduling correction, not a proposed replacement DSP engine.
+Conceptual interfaces are immutable snapshots/events: `AcceptedSourceSnapshot`, `SwellDefinition`, `RenderDependencyKey` and `RenderPublication`. Existing capture snapshots, dependency fingerprints and per-swell input/shape generations already provide most of these mechanisms. This is an ownership/scheduling correction, not a proposed replacement DSP engine.
 
 ## What changes a rendered sound
 
@@ -102,13 +102,19 @@ Freeze is an explicit hold on the accepted saved sound, outside automatic replac
 - If source cannot be recovered, normal Learn with event detection off preserves existing markers. Explicit Recapture stages replacement source. Once complete source and required IRs are accepted, the ordinary engine updates existing unfrozen sounds automatically, without a Generate click and regardless of new-marker Generate on Stop.
 - Partial/cancelled capture, missing custom IRs and incompatible timing remain explicit. Re-learning can sound different and cannot reconstruct missing Export/Playlist files.
 
-## Difference from today's code
+## Implementation call paths
 
-The current contracts deliberately make Learn with detection off dry-only, including no pass convolution. `AutomaticCoordinator::captureCommitted` also defers changed existing swells, and `dispatchAutomatic` returns in Capture mode. `LearnGeneration` owns marker application/Stop intent. Those fences currently combine marker policy with render maintenance.
+`CaptureWorker::settleWorkflowPass` accepts prepared source before invoking the processor commit/settlement handlers. Provisional chunks remain separate. `SwellEngine::captureCommitted` invalidates overlapping unfrozen material generations; `inspect` also compares accepted source-range revisions for restore/availability changes. Neither uses detection or legacy refresh policy for existing-render admission.
 
-The proposed correction routes accepted material changes to one reconciler without weakening capture or marker-application guards. The temporary recovery-only generation callback and duplicate Storage Learn/Generate controls are superseded experiments; they must not become the architecture.
+`reconcileRenders` in `AutomaticCoordinator.cpp` checks real coverage/assigned IR/compatible timing and moves eligible stale definitions into dependency checking. The serial engine worker calls it without an editor or workflow-screen requirement, including while a new pass stages against the previous immutable accepted source. Learn analysis and marker application still use their original workflow/configuration/transaction fences. Automatic extraction-window planning keeps its existing explicitly requested Perform rules.
 
-Source landmarks: [accepted-source scheduling](../../Source/DSP/AutomaticCoordinator.cpp), [render invalidation and jobs](../../Source/DSP/SwellEngine.cpp), [marker transaction](../../Source/DSP/LearnGeneration.cpp), [capture transactions](../../Source/Capture/CaptureSession.cpp), [capture worker](../../Source/Capture/CaptureWorker.cpp), and [current Learn policy](automatic-swell-workspace.md).
+`renderJob` pins the accepted source and assigned IR, fingerprints actual PCM, and compares source footprint, IR content and supported material timing against the saved render descriptor. Different chunk UUIDs/context-only changes do not imply different PCM. Unchanged supported legacy dependency keys reuse exact verified wet assets; explicit Regenerate bypasses reuse. Missing unfrozen wet files rebuild normally. A fresh instance can bootstrap the bundled default; restoring an explicitly empty Default IR does not synthesize a new assignment.
+
+`SwellEngine::edit` retains input versus shape generations. `shapeJob` and playback-page preparation derive envelope/level/pure placement from full wet audio; a real source-support extension changes the material footprint. `renderJob` retains session/ID/input-generation checks, latest capture generation/fingerprint checks, memory admission and cooperative page service. The callback still only queues capture/consumes published audio; the 256 MiB worker budget and reader retirement remain authoritative.
+
+`PreverbAudioProcessor::setRecaptureExisting` can explicitly arm complete-known-coverage source replacement only from Learn. `beginSourceReplacement` releases the obsolete expected-source-reference barrier; it does not request DSP. The normal accepted-source notifications then drive maintenance. `reloadRecoveredAssets` verifies session/closure and reloads dependencies without adopting backup creative edits. The editor's owned modal and Storage callbacks resolve files, not rendering policy. No recovery-specific renderer remains.
+
+Native owner interaction approval and full integration/profile verification are recorded in [dated evidence](../validation/2026-11-06-shared-swell-engine.md). Implementation does not waive later folder-association, cleanup or release gates.
 
 ## Guardrails and review decisions
 

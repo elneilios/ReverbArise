@@ -459,3 +459,7 @@ endif()
 if(BUILD_TESTING)
     add_test(NAME preverb_recovery_panel_test COMMAND preverb_portable_recovery_test --ui)
 endif()
+
+if(BUILD_TESTING)
+    add_test(NAME preverb_shared_swell_engine_test COMMAND preverb_workflow_processor_test --shared-engine)
+endif()

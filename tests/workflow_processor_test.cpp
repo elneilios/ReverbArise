@@ -17,7 +17,9 @@ struct SavedStateListener final:juce::AudioProcessorListener
     {if(details.nonParameterStateChanged){++changes;wrongThread|=!juce::MessageManager::getInstance()->isThisTheMessageThread();}}
 };
 
+#include "SharedSwellEngineCases.h"
 int main(int argc,char* argv[]){return runTest([&]{
+    if(argc==2 && juce::String(argv[1])=="--shared-engine"){juce::ScopedJuceInitialiser_GUI gui;commonEngineCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-reactivation"){
         juce::ScopedJuceInitialiser_GUI gui;processorReactivationCases();return;
     }

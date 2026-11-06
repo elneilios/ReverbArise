@@ -12,7 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
-- [Proposed swell-engine architecture](development/swell-engine-architecture.md) — owner-review ownership table, data-flow/lifecycle diagrams and Learn/Perform/render boundaries; planning only.
+- [Swell-engine architecture](development/swell-engine-architecture.md) — implemented ownership/call paths, data-flow/lifecycle diagrams and material regeneration boundaries; [native/profile verification](validation/2026-11-06-shared-swell-engine.md).
 
 - [Issue #8 fresh-profile validation](validation/2026-11-06-issue-8-fresh-profile.md) — passing destination-only restore in a separate Windows account, exact metadata/audio and zero generation/recapture work.
 - [Issue #8 Storage polish and recovery candidate](validation/2026-11-06-issue-8-storage-polish-recovery.md) — retained scans, pinned actions, native recovery tests and explicit remaining profile/rollout gates.

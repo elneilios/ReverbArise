@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the merged production guide and bindings: retain current shared Learn/Perform IR editor, force regeneration and host-reactivation guidance alongside the issue-8 retained scans, pinned Storage actions and copy-only recovery limitations. No new engine behavior is implemented in this merge.",
+  "summary": "Reviewed final common-engine and production recovery behavior, including replacing an earlier asset warning with the stricter metadata-decode warning in the same editor. The guide correctly distinguishes intact accepted edits from failed metadata, normal complete-only Recapture, automatic existing-swell rebuild, exact Locate/Restore, frozen/custom-IR/export limits and explicit forced upgrades; no further prose or screenshots needed after this binding guard. Native popup approved by owner.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 30975,
-      "sha256": "3fd60e0eede4f3b2848f18dbf95811bf23b09952a11fe05cddc01c5de0a7cce9"
+      "bytes": 31110,
+      "sha256": "b31c2cfe5aaf4a877f15e876e09ba218816bf242fc96ac79a3c340602e92f62b"
     },
     {
       "path": "CMakePresets.json",
@@ -135,8 +135,8 @@
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 26239,
-      "sha256": "245d9c394420aed80e77891540a20994385646215031ea3c1e1437f3657dc75a"
+      "bytes": 26273,
+      "sha256": "9a80aa0e29cddecf374d83073f0a591ed05353a2dd46b15b2fc68fade382254e"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
@@ -285,8 +285,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 26017,
-      "sha256": "06a5b49dac270ac91b811afb30295bedaa33f13aa5b311321b566ef20fdd5fd9"
+      "bytes": 24705,
+      "sha256": "5c4f2aa5b0b4c4b14f725aa53fac6a0c1ac200738d52b1bbea6ee12f29ad6e58"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -340,8 +340,8 @@
     },
     {
       "path": "Source/DSP/LearnGeneration.cpp",
-      "bytes": 17105,
-      "sha256": "f84c39e41522add781be034999db5bee61f145834a8b8f69d41722a0406989a0"
+      "bytes": 16971,
+      "sha256": "6abbb55c8b99f630e46aa08c95d59ae266333830eecdf07177d1db60e8c307b8"
     },
     {
       "path": "Source/DSP/PreviewEngine.cpp",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 86101,
-      "sha256": "69d2d488afcd86f1c149d5202b8f7d1e7225a118361e39d7d91cb529540b2aba"
+      "bytes": 82995,
+      "sha256": "496ffb13ed83580ac780a800e092fcd38472456399a8d511b5f1c0a929aa01cf"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 23521,
-      "sha256": "43cc572ee35fc53d00cb2b3821bbec86a492d738bd834a1898594f73656a6f7d"
+      "bytes": 23200,
+      "sha256": "b8e2a14e24b0eb4d057e6014abb701f0a1de968be7d14aa37755096a9a9dca69"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -435,8 +435,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38068,
-      "sha256": "0074f0bd5839f990d74637fe829208c20b6dc8c3ba7d39bd4104ef36c0b2534f"
+      "bytes": 38067,
+      "sha256": "dfefc3d5d72fe88dc954e3c29d834dcd27623fb1d57ab0267de81c1696e36f2b"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86474,
-      "sha256": "080c6c698becb3407ba1f58ad641e84047783140bb9fdef5a158e89d4ec41f22"
+      "bytes": 86614,
+      "sha256": "fa5686308d474133a4aa2b267780a449521d1fb964136fd299136ed3f5800fd7"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12493,
-      "sha256": "04ad16a70f4090dfd01c527f93771cc70e04552ff672f883e4cf672c3b29532d"
+      "bytes": 13055,
+      "sha256": "bfe50fa4968c9761aa254fcba5d4562c8ff313fd053b20b9d6f6dd054bf7e445"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -520,18 +520,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 37869,
-      "sha256": "efedcd3c6397b43744c706cd0f0c451f3c0d2ec93649aecfc0b9cc3126de44a3"
+      "bytes": 35913,
+      "sha256": "4006b8ed7d3677ada8dcdbf60f391e0f017722952404259c596a43ffeeaf5eb0"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 7951,
-      "sha256": "6a9e8216d28ea8d72a62d1bb4f1ea17a551018ce3e6a57ccfc99e8bba8c28599"
+      "bytes": 7672,
+      "sha256": "11db711f770d45ba16f9b0472396480b7101de23d4dc9add5a0c4f273bec116c"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 17681,
-      "sha256": "185efaf6be9d2818218744f4fa650cec23d1c9880dfb6cb1dfc2d6cf752b96ad"
+      "bytes": 21989,
+      "sha256": "a28fcc91bdace8e0f7095139abd7117b3c7d7f590b58f6612e5a1ced10b36663"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -755,8 +755,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 17073,
-      "sha256": "eb67e64e2d7e16aeb61037de16cbc8b99971410a163eea4e857db5436557923c"
+      "bytes": 18169,
+      "sha256": "078ea6ceea5c3b9081121e25326ae92ce656050b4ce3f2b90ade970a2f1aafb8"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -767,11 +767,6 @@
       "path": "Source/UI/PresentationPreferences.h",
       "bytes": 10648,
       "sha256": "a96c83f8deacbcb45d1ceb8a5a4de84b169619561b19bd9f0fb65b3293d94332"
-    },
-    {
-      "path": "Source/UI/RecoveryPanel.h",
-      "bytes": 8576,
-      "sha256": "65ac10d2ab87ca22adb44546f1dadea4f39830e2632a42f07f9282026bdee32a"
     },
     {
       "path": "Source/UI/ResponsivePresentation.h",
@@ -875,8 +870,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 24273,
-      "sha256": "56bb785688c1b9e725397579f3a808bae8fdf072ee2ad740761e51e0470ff9b5"
+      "bytes": 25093,
+      "sha256": "ad7a45dcf3827216f0c23e4ebbc747638d9831e332409fb75407faa3150a8120"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1065,8 +1060,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32658,
-      "sha256": "5d88b26910e0f8acc09822cbd99f6c8b87951b1480b2af3b694da3b1ea137085"
+      "bytes": 32785,
+      "sha256": "3c7e6b7b27189797451a467cec0eb4090c7cd331aa82f97273875c6456b86b7d"
     }
   ]
 }

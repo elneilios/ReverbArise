@@ -12,7 +12,7 @@ static void swellListCaptureCases(bool review=false)
     const auto listFor=[](PreverbAudioProcessorEditor& e)
     {auto* list=dynamic_cast<m3::ui::controls::SwellList*>(named(e,"swellList"));REQUIRE(list);return list;};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
-    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells,bool regenerateProtected=false)
+    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells,bool verifyProtected=false)
     {
         const auto previousAnalysis=engine.snapshot().analysisCount;
         // Re-requesting Learn clears its explicit recapture arm. Preserve an
@@ -27,12 +27,13 @@ static void swellListCaptureCases(bool review=false)
             head.position.setTimeInSamples(start+local);head.position.setPpqPosition((start+local)/24000.0);p->processBlock(buffer,midi);
         }
         finishCaptureFixture(*p,head.position,true);
-        if(regenerateProtected)
+        if(verifyProtected)
         {
             REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);
-            const auto stale=engine.savedSession();REQUIRE(std::any_of(stale.swells.begin(),stale.swells.end(),[](const auto& w)
-                {return w.provenance==m3::Provenance::manualEdited && w.phase==m3::Phase::stale && w.render.present();}));
-            engine.generate(true); // The supported explicit Perform action, not Learn replacement.
+            const auto accepted=engine.savedSession();REQUIRE(std::any_of(accepted.swells.begin(),accepted.swells.end(),[](const auto& w)
+                {return w.provenance==m3::Provenance::manualEdited && w.render.present();}));
+            // Existing protected definitions maintain their sound automatically;
+            // the shared Ready check and byte/parameter assertions below prove it.
         }
         // The previous pass can already be ready before the engine observes the
         // newly committed source. Wait for this pass, not that old idle snapshot.

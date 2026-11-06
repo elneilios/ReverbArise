@@ -19,22 +19,13 @@ Matched, manual, edited and frozen assignments and deletion suppression survive
 reconciliation. Context-only metadata is not an audio fingerprint or calibration
 input and cannot require reconvolution of unchanged accepted dependencies.
 
-Learn Automatic Swells off captures dry without automatic discovery or pass
-convolution, including explicit Recapture with legacy auto-refresh enabled.
-Changed unfrozen inputs become stale, retaining definitions and immutable assets;
-frozen results stay intact. Merely entering Perform or enabling future Learn
-defaults does not backfill Off capture. Accepted cached renders may still be
-verified/reused; that does not imply a new convolution. Recovery may reconstruct
-an already accepted non-frozen render whose file is missing only when its stored
-IR/source/timing dependency still matches verified inputs exactly. A changed
-Off-pass dependency or absent accepted render is not such a recovery. Previously admitted On
-work remains owned by its original accepted context; superseded source/session
-ownership cannot publish an obsolete result.
+Learn detection off captures source without discovering/applying new markers. Existing unfrozen swells still maintain verified sound through the shared engine when accepted source, assigned IR, material footprint/timing or asset availability changes. This holds in Learn/Perform/Export and without an editor; it does not grant recording, creative editing, wet output or transport permissions. Detection, marker Generate on Stop and legacy refresh values are preserved but no longer disable existing-swell maintenance.
 
-Perform retains explicit Generate, manual target/IR/source edits and permitted
-marker reanalysis. These are distinct user requests, not new learning passes.
-They respect the saved processing/refresh policy and never silently turn on dry
-replacement or a saved-off master. A new manual target inherits the currently
+Identical PCM with different chunking or context metadata reuses verified full wet audio. Fades/curves/gain/name/selection/pure placement do not convolve. Real source-support extension waits for complete input. Future Default IR changes preserve existing assignments. Frozen results keep exact bytes; missing frozen output waits for exact restoration or explicit unfreeze. Compatible older saved renders do not auto-upgrade.
+
+Perform retains explicit Regenerate and manual target/IR/source editing. Regenerate deliberately forces new eligible revisions; ordinary material maintenance needs no click. Marker reanalysis remains a separate permitted request and never silently enables source replacement. See [engine ownership/call paths](swell-engine-architecture.md).
+
+A new manual target inherits the currently
 accepted future IR. New targets from reanalysis retain arrival-context IR
 ownership; no missing accepted IR is substituted with the latest default.
 Transient manual suggestions remain separate until confirmed. Rapid permitted
@@ -69,9 +60,7 @@ deleted-target suppression, default IR identity and monitoring preferences.
 The existing 4096-swell/8 MiB limits remain; suppression also has a 4096-record
 limit. Invalid metadata is rejected transactionally.
 
-Automatic processing owns discovery and refresh when enabled. The old optional
-Auto-refresh after recapture switch controls the retained manual mode; leaving
-that switch off does not disable the new automatic pipeline. Diagnostic manual
+Automatic processing governs discovery. Legacy Auto-refresh after recapture remains serialized for compatibility; existing-render maintenance now follows material dependencies even when it is off. Diagnostic manual
 suggestions remain unconfirmed until explicitly accepted. This scopes the older
 M3 manual-only suggestion/refresh scenarios to the retained manual workflow.
 

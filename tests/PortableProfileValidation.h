@@ -23,10 +23,12 @@ static juce::String validationSid()
 }
 static juce::String validationProfile()
 {HANDLE token=nullptr;REQUIRE(OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&token));wchar_t path[32768]{};DWORD count=32768;REQUIRE(GetUserProfileDirectoryW(token,path,&count));CloseHandle(token);return juce::String(path);}
+struct ProfileHost:juce::AudioPlayHead
+{PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
 static void profilePrepare(const juce::File& bridge)
 {
     auto bootstrap=juce::var(new juce::DynamicObject);bootstrap.getDynamicObject()->setProperty("ownerSid",validationSid());juce::Array<juce::var> cases;
-    for(const auto name:{"full","context"}){
+    for(const auto name:{"full","context","unfrozen"}){
         Fixture fixture;
         if(juce::String(name)=="context"){fixture.session.swells.clear();fixture.session.defaultIR={};fixture.session.importedIRs.clear();}
         else{
@@ -36,17 +38,27 @@ static void profilePrepare(const juce::File& bridge)
             REQUIRE(fixture.root.getChildFile("exports/Swells-old.wav").copyFileTo(fixture.root.getChildFile(history.path)));
             fixture.session.exportState.history.push_back(history);fixture.session.exportState.completedPath=history.path;
         }
-        fixture.refresh();const auto folder=bridge.getChildFile(name);REQUIRE(folder.createDirectory().wasOk());const auto assets=folder.getChildFile("assets");REQUIRE(assets.createDirectory().wasOk());
+        fixture.refresh();
+        if(juce::String(name)=="unfrozen"){
+            auto& w=fixture.session.swells[0];w.frozen=false;w.shape.fadeIn=w.shape.fadeOut=0;
+            fixture.session.automaticProcessing=false;fixture.session.autoMarkersEnabled=false;fixture.session.autoGenerateOnStop=false;fixture.refresh();
+            auto owner=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);load(*owner,fixture.xml);
+            ProfileHost host;host.position.setTimeInSamples(0);host.position.setPpqPosition(0.0);host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});host.position.setIsPlaying(false);
+            owner->setPlayHead(&host);owner->prepareToPlay(48000,1);juce::AudioBuffer<float> audio(2,1);audio.clear();juce::MidiBuffer midi;owner->processBlock(audio,midi);
+            waitFor([&]{return owner->swellEngine().savedSession().swells[0].phase==m3::Phase::ready;});
+            REQUIRE(owner->swellEngine().snapshot().renderCount==1);fixture.session=owner->swellEngine().savedSession();owner->setPlayHead(nullptr);owner.reset();fixture.refresh();
+        }
+        const auto folder=bridge.getChildFile(name);REQUIRE(folder.createDirectory().wasOk());const auto assets=folder.getChildFile("assets");REQUIRE(assets.createDirectory().wasOk());
         std::shared_ptr<m3::storage::portable::Prepared> prepared;juce::String error;REQUIRE(m3::storage::portable::prepare({fixture.root,fixture.xml,fixture.manifest},prepared,error));
         const auto result=m3::storage::portable::backup(prepared,assets);if(!result.success)throw std::runtime_error(result.error.toStdString());
         REQUIRE(folder.getChildFile("state.xml").replaceWithText(fixture.xml));auto record=juce::var(new juce::DynamicObject);
         record.getDynamicObject()->setProperty("name",name);record.getDynamicObject()->setProperty("originalRoot",fixture.root.getFullPathName());
-        record.getDynamicObject()->setProperty("receipt",result.receipt.locator.snapshot+".json");cases.add(record);
+        record.getDynamicObject()->setProperty("receipt",result.receipt.locator.snapshot+".json");
+        if(!fixture.session.swells.empty()){m3::SwellAssetStore store(fixture.root);WetRender wet;REQUIRE(store.readRender(fixture.session.swells[0].render,previewMemoryBudget,wet,error));record.getDynamicObject()->setProperty("peak",wet.peak);record.getDynamicObject()->setProperty("start",static_cast<juce::int64>(wet.start));}
+        cases.add(record);
     }
     bootstrap.getDynamicObject()->setProperty("cases",cases);REQUIRE(bridge.getChildFile("bootstrap.json").replaceWithText(juce::JSON::toString(bootstrap,true)));
 }
-struct ProfileHost:juce::AudioPlayHead
-{PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
 static void profileValidate(const juce::File& bridge,const juce::String& expectedUser)
 {
     wchar_t username[256]{};DWORD chars=256;REQUIRE(GetUserNameW(username,&chars));REQUIRE(juce::String(username)==expectedUser);
@@ -71,7 +83,7 @@ static void profileValidate(const juce::File& bridge,const juce::String& expecte
         float a=0,b=0;REQUIRE(capture.readSample(0,a,b) && a==.1f && b==-.2f);REQUIRE(!capture.readSample(3,a,b));REQUIRE(capture.readSample(4,a,b) && a==0 && b==0);
         REQUIRE(processor.getCaptureSnapshot().manifest.contextSpans==saved.observed.capture.contextSpans);
         juce::String after;REQUIRE(m3::encode(processor.swellEngine().savedSession(),after,error));REQUIRE(after==before);
-        if(!saved.observed.session.swells.empty()){m3::SwellAssetStore store(instance);WetRender wet;REQUIRE(store.readRender(saved.observed.session.swells[0].render,previewMemoryBudget,wet,error));REQUIRE(wet.peak==.4f && wet.start==-1 && wet.sourceStart==0 && wet.sourceEnd==2);}
+        if(!saved.observed.session.swells.empty()){m3::SwellAssetStore store(instance);WetRender wet;REQUIRE(store.readRender(saved.observed.session.swells[0].render,previewMemoryBudget,wet,error));REQUIRE(wet.peak==static_cast<float>(static_cast<double>(record["peak"])) && wet.start==static_cast<juce::int64>(record["start"]) && wet.sourceStart==0 && wet.sourceEnd==2);}
         const auto done=renderWorkCounts();REQUIRE(done.convolutions==work.convolutions && done.resamplings==work.resamplings && processor.captureStageCountForTesting()==0 && processor.swellEngine().snapshot().renderCount==0);
         auto result=juce::var(new juce::DynamicObject);auto* o=result.getDynamicObject();o->setProperty("case",record["name"]);o->setProperty("files",static_cast<int>(saved.files.size()));o->setProperty("hashesExact",true);o->setProperty("metadataExact",true);o->setProperty("convolutions",0);o->setProperty("resamplings",0);o->setProperty("captureStages",0);reports.add(result);
         processor.setPlayHead(nullptr);

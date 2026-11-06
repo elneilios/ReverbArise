@@ -30,6 +30,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void refresh();
+    bool assetRecoveryWarningVisible()const{return recoveryWarning && recoveryWarning->isVisible();}
     void modifierKeysChanged(const juce::ModifierKeys&)override;
     void mouseEnter(const juce::MouseEvent& event)override{updateHoverHelp(event);}
     void mouseMove(const juce::MouseEvent& event)override{updateHoverHelp(event);}
@@ -97,6 +98,15 @@ private:
     void showRegenerationResult(const m3::RegenerationResult&);
     void layoutSettings();
     void refreshStorageScope(const CaptureSessionSnapshot&,uint64_t);
+    void serviceAssetRecovery();
+    void showAssetRecoveryWarning(const m3::storage::portable::Input&,bool metadataFailure=false);
+    m3::storage::InventoryService recoveryInspection;
+    juce::File recoveryInspectionRoot;
+    juce::String recoveryInspectionReference;
+    uint64_t recoveryInspectionEpoch=UINT64_MAX;
+    bool recoveryInspected=false,recoveryWarned=false,metadataRecoveryWarned=false;
+    std::unique_ptr<juce::AlertWindow> recoveryWarning;
+
     void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
     void curveChanged(bool);
     void setPreferences();

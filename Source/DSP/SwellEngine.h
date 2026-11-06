@@ -122,8 +122,7 @@ public:
     // Pure control-thread capture of one accepted source/creative pair.
     bool acceptedStorageSnapshot(CaptureSessionSnapshot&,Session&,juce::File&,uint64_t&,juce::String&,bool allowUnavailable=false) const;
     bool reloadStorageAssets(uint64_t expectedSession,juce::String expectedReference);
-    void holdRecoveryGeneration(bool);
-    bool generateRecovered(uint64_t expectedSession,const juce::String& sourceReference,const std::vector<juce::String>& targets,bool frozenConsent,juce::String& error);
+    void beginSourceReplacement();
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
@@ -237,7 +236,6 @@ private:
     std::optional<CandidateIdentity> learnAttempt;
     std::optional<LearnRequest> learnRequest;
     std::optional<StopIntent> stopIntent;
-    std::set<juce::String> deferredLearnDependencies;
     std::set<juce::String> protectedGenerationCalibration;
     uint64_t learnCandidateSerial=0,successfulGeneration=0,initialPerformOffer=0;
     bool performPositionEstablished=false,learnUpdating=true,learnGenerating=false,learnUsable=false,learnFailed=false;
@@ -295,7 +293,7 @@ private:
     bool automaticJob();
     void collectCompletedPass(const PreviewContext&,bool acceptedCapture=false);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
-    void dispatchAutomatic(const PreviewContext&);
+    void reconcileRenders(const PreviewContext&);
     void requestManualPreparationLocked(const Swell&,const PreviewContext&);
     void dirtyLocked(int64_t,int64_t,bool acceptedPass=false);
     void acceptedSourceLocked(const CaptureManifest&);
@@ -329,8 +327,7 @@ private:
     std::vector<Candidate> candidates;
     juce::String message="Capture source, add or confirm a target, then assign an IR";
     juce::String actionError;
-    std::atomic<bool> recoveryGenerationHold{false},recoveryReloadOnly{false};
-    std::set<juce::String> recoveryFrozenReplacements;
+    bool initialiseDefaultIfMissing=true;
     juce::String captureReference,captureScope,storageRestoreReference;
     juce::String awaitingCaptureReference;
     std::set<juce::String> forceRefresh;

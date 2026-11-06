@@ -63,7 +63,6 @@ public:
     bool beginRelearning(const m3::storage::portable::Input& expected,juce::String& error);
     void cancelRelearning();
     // Worker/control only: validates current source/IRs before queuing explicit recovery rendering.
-    bool regenerateRecovered(bool frozenConsent,juce::String& error,bool validateOnly=false);
     uint64_t captureStageCountForTesting()const{return captureWorker.metrics().stages;}
     bool isRelearning()const noexcept{return captureWorker.recoveryArmed();}
     bool reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error);
@@ -75,8 +74,8 @@ public:
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
     workflow::Readiness getWorkflowReadiness() const;
     bool requestWorkflowMode(workflow::Mode);
-    bool setRecaptureExisting(bool enabled) {return workflowState.arm(enabled);}
-    void cancelCapturePass() {const auto previous=workflowState.snapshot().mode;captureWorker.cancelWorkflowPass();if(previous!=workflow::Mode::capture)persistentStateChanged();}
+    bool setRecaptureExisting(bool enabled);
+    void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
     void holdCaptureWorkerForTesting(bool hold) noexcept {captureWorker.holdWorkerForTesting(hold);}
     PreviewSnapshot getPreviewSnapshot() const;

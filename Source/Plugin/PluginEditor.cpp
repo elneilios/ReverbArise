@@ -275,7 +275,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     if(responsivePresentation){g.fillAll(m3::ui::background);return;}
@@ -428,7 +428,7 @@ void PreverbAudioProcessorEditor::enableResponsivePresentation(std::shared_ptr<m
     inspectorViewport.setFocusRevealEnabled(true);diagnosticsViewport.setFocusRevealEnabled(true);
     const auto children=getChildren();
     for(auto* child:children)
-        if(dynamic_cast<juce::ResizableCornerComponent*>(child)==nullptr && dynamic_cast<juce::ResizableBorderComponent*>(child)==nullptr)
+        if(child!=recoveryWarning.get() && dynamic_cast<juce::ResizableCornerComponent*>(child)==nullptr && dynamic_cast<juce::ResizableBorderComponent*>(child)==nullptr)
             presentationSurface.contentRoot().addChildComponent(child);
     addAndMakeVisible(presentationSurface);presentationSurface.toBack();
     presentationSurface.setPainter([this](auto& drawing){paintWorkspace(drawing);});
@@ -536,6 +536,7 @@ void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
     refreshStorageScope(capture,state.sessionEpoch);
+    serviceAssetRecovery();
     if(regenerationFeedbackSession!=state.sessionEpoch)
     {regenerationFeedback.setText({},juce::dontSendNotification);regenerationFeedback.setDescription({});regenerationFeedbackSession=state.sessionEpoch;}
     const auto mode=state.workflowState.mode;
@@ -555,7 +556,7 @@ void PreverbAudioProcessorEditor::refresh()
     if(exportLayout && !nextExport)exportWorkspace.resetView();
     const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
     const auto leavingLearn=wasSpecial && !nextSpecial;
-    const auto isShared=[this](juce::Component* c){return c==&workflowHeader || c==&noticeBar || c==&hoverHelp || c==&learnWorkspace || c==&exportWorkspace
+    const auto isShared=[this](juce::Component* c){return c==recoveryWarning.get() || c==&workflowHeader || c==&noticeBar || c==&hoverHelp || c==&learnWorkspace || c==&exportWorkspace
         || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
     if(nextLearning!=learningLayout || nextExport!=exportLayout)
     {

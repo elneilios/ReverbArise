@@ -14,3 +14,7 @@ Both cases verified every source/wet/export/context dependency hash, exact encod
 Executable SHA-256: `4E50D375578D1ED353DCA2E6AD4882B3916AC3FF162C497BD5C5CDAD1CFFD12A`. Child exit **0**. Newly created account and exact SID-owned profile were both removed successfully. Random credentials stayed in memory; no persistent security-policy changes. Structured details: [launcher/profile results](2026-11-06-issue-8-fresh-profile.json). Redundant copied runner executable can be removed while preserving these reports and tiny fixtures.
 
 This is automated native validation on a separate Windows profile on the same PC, not an FL Studio/second-PC/DPI test. The earlier same-profile FL Studio smoke remains separate. Task 3.10 native recovery approval/production integration and all phase-4/later association, ownership, cleanup and compression gates remain unchanged.
+
+## Shared-engine revalidation
+
+The subsequent shared-engine implementation repeats the isolated standard-account proof and adds a genuinely generated unfrozen render. All full/context/unfrozen snapshots restore with exact hashes/metadata and zero capture/convolution/resampling; its distinct native binary, cleanup and results are recorded in [shared-engine evidence](2026-11-06-shared-swell-engine.md) and [structured result](2026-11-06-shared-swell-engine-profile.json). The earlier result above is retained unchanged.

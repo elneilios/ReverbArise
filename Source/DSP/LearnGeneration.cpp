@@ -101,7 +101,7 @@ bool SwellEngine::selectInitialPerform(uint64_t session,uint64_t handoff,const j
 }
 bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
 {
-    if(!workflowState || recoveryGenerationHold.load() || recoveryReloadOnly.load())return false;
+    if(!workflowState)return false;
     std::optional<LearnRequest> generation;
     {
         const juce::ScopedLock guard(lock);
@@ -231,9 +231,9 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
     for(const auto& id:plan.changed)
     {
         if(const auto old=find(plan.replacement,id))retainIRLocked(*old,latest,model.defaultIRName);
-        deferredLearnDependencies.erase(id);forceRefresh.insert(id);invalidateLiveLocked(id);
+        forceRefresh.insert(id);invalidateLiveLocked(id);
     }
-    for(const auto& id:plan.retired){runtime.erase(id);retainedIR.erase(id);deferredLearnDependencies.erase(id);forceRefresh.erase(id);invalidateLiveLocked(id);}
+    for(const auto& id:plan.retired){runtime.erase(id);retainedIR.erase(id);forceRefresh.erase(id);invalidateLiveLocked(id);}
     for(const auto& w:model.swells)if(w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
     dirty.clear();passDirty.clear();passRenderRequests.clear();analyzedContent.clear();automaticBoundsDirty=false;performWindowsRequested=false;
     ++successfulGeneration;if(!performPositionEstablished)initialPerformOffer=successfulGeneration;
