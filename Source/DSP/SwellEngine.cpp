@@ -284,19 +284,22 @@ void SwellEngine::loadIR(const juce::File& file,bool primaryOnly)
         {auto& w=*find(model,id);w.phase=Phase::error;w.status="IR import queue capacity reached; retry";}
     }
 }
-void SwellEngine::generate(bool all)
+RegenerationResult SwellEngine::generate(bool all)
 {
-    if(!permitCreative())return;
-    const auto context=contextProvider(); const juce::ScopedLock guard(lock); stopLocked();
+    const auto context=contextProvider(); const juce::ScopedLock guard(lock);
+    RegenerationResult result;result.sessionEpoch=sessionGeneration.load();
+    if(!permitCreative())return result;
+    result.accepted=true;stopLocked();
     if(context.time.valid && context.capture.manifest.sampleRate==context.time.rate && !sameMusicalMapping(model.timing,context.time)) model.timing=context.time;
     for(auto& w:model.swells)
     {
-        if(w.frozen || w.status=="Importing IR")continue;
-        if(all ? (w.phase==Phase::ready && w.render.dependency.startsWith(sourceEdgeRevision))
-               : std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end()) continue;
+        if(!all && std::find(model.selected.begin(),model.selected.end(),w.id)==model.selected.end())continue;
+        if(w.frozen){++result.frozen;continue;}
+        if(w.status=="Importing IR"){++result.importing;continue;}
         deferredLearnDependencies.erase(w.id);protectedGenerationCalibration.erase(w.id);forceRefresh.insert(w.id);
-        ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;
+        ++w.inputGeneration; w.phase=Phase::queued; w.status="Queued"; w.progress=0;++result.queued;
     }
+    notify();return result;
 }
 bool SwellEngine::assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled,uint64_t expectedSession)
 {return queueIR(id,expectedInput,file,bundled?juce::String(defaultImpulseId):juce::String{},expectedSession);}

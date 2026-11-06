@@ -93,6 +93,7 @@ private:
     void setDiagnosticsOpen(bool);
     void setSettingsOpen(bool);
     void initialiseSettings();
+    void showRegenerationResult(const m3::RegenerationResult&);
     void layoutSettings();
     void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
     void curveChanged(bool);
@@ -176,6 +177,8 @@ private:
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
     std::array<juce::Label,6> settingsHelp;
+    m3::ui::controls::EllipsisLabel regenerationFeedback;
+    uint64_t regenerationFeedbackSession=0;
     juce::Label aboutHeading;
     std::array<juce::Label,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;

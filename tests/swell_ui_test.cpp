@@ -128,9 +128,13 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "ExportControlCases.h"
 #include "SwellListBindingCases.h"
 #include "SwellListCaptureCases.h"
+#include "RegenerationCases.h"
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && (juce::String(argv[1])=="--test-regeneration" || juce::String(argv[1])=="--review-regeneration"))
+    {regenerationCases(juce::String(argv[1])=="--review-regeneration");return;}
+    regenerationCases();
     if(argc>1 && juce::String(argv[1])=="--review-perform-warning"){noticeReview::run();return;}
     {m3::EditorSnapshot diagnosticState;
         REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
