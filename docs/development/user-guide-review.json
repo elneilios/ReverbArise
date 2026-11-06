@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical swell-regeneration sync against the delivered force-all Recovery implementation and guide paragraph. The existing guide already describes current/disabled/muted forced renders, frozen/import skips, admission feedback and completion status; no additional prose change needed for archive.",
+  "summary": "Reviewed the canonical transport-swell-playback sync for approved issue #103 against the delivered atomic host-reset forwarding, passing native regression coverage and owner FL Studio acceptance. The added requirement and five scenarios document existing delivered recovery, timing/asset guards and retained source/edits. Existing Perform bypass, readiness and compatible-timing guidance remains accurate; no prose or screenshot change. Completed OpenSpec artifacts moved intact to the dated archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 27158,
-      "sha256": "177fde1d35fcb0a2ad15e9c588bcf69db55567e391eaa8241b754075008947bf"
+      "bytes": 27410,
+      "sha256": "8b814095ac7d3c4cdfc18b2e654b65a1ecb2d5374b27ef7c8d9cbc0b76cf5181"
     },
     {
       "path": "CMakePresets.json",
@@ -520,13 +520,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 28822,
-      "sha256": "d52b898b178881d5ad0f5152c5c7a7975d0491146268b918a7e0cca143e9f12f"
+      "bytes": 29120,
+      "sha256": "56be56ab9739dbdc61df9c6de69f3ccdddaf19b202e5ac36275a54113adcd9bf"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 6928,
-      "sha256": "738aaac50cca866a986f3ca2d379720371231dd11381a04e8de0bb6adc994c27"
+      "bytes": 6955,
+      "sha256": "80320d253a276c447cf8d72e0192990008918a393a1cd3f522ba7e93a2b848f3"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -930,8 +930,8 @@
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 40047,
-      "sha256": "53d904487bc553a0c9cd9199e5213bd5e5e9d51fed0e7443d9bea4b4d7595477"
+      "bytes": 42398,
+      "sha256": "e13a99da384a0c5dd5a3576247cb34a2382a974ee9cd0b3c60e0c736ccf2f521"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",

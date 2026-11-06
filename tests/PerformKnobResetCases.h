@@ -41,7 +41,22 @@ void Composition::verifyKnobResets()
     auto sourceOnly=baseline;*m3::find(sourceOnly,firstId)=replacement;engine.restore(sourceOnly);panel->refresh(); // Source-only epoch oracle; no wet readiness is implied.
     REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::setSource(w,w.sourceStart,w.sourceEnd+2400,error);}));panel->refresh();reset("sourceSampleEnd");REQUIRE(current().sourceEnd==replacement.sourceEnd);
     // The real asynchronous popup action, including focus loss to the menu.
-    load(original);panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);
+    load(original);panel->addToDesktop(0);panel->setVisible(true);panel->toFront(true);
+    // JUCE keyboard focus alone does not make this an active native window.
+    // PopupMenu dismisses itself when its owning process is in the background.
+    auto* peer=panel->getPeer();REQUIRE(peer);
+   #if JUCE_WINDOWS
+    // JUCE's Windows toFront/grabFocus use BringWindowToTop/SetFocus, which
+    // do not request foreground activation for a background CTest process.
+    ::SetForegroundWindow(static_cast<HWND>(peer->getNativeHandle()));
+   #endif
+    peer->grabFocus();
+    const auto focusDeadline=juce::Time::getMillisecondCounter()+1000;
+    while((!peer->isFocused() || !juce::Process::isForegroundProcess()) && juce::Time::getMillisecondCounter()<focusDeadline)
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+    if(!peer->isFocused() || !juce::Process::isForegroundProcess())
+        std::cerr<<"Reset fixture native focus unavailable: peer="<<peer->isFocused()<<" foreground="<<juce::Process::isForegroundProcess()<<"\n";
+    REQUIRE(peer->isFocused() && juce::Process::isForegroundProcess());
     auto& inspector=require<juce::Viewport>(*panel,"inspectorViewport");inspector.setViewPosition(0,inspector.getViewedComponent()->getHeight()-inspector.getHeight());
     auto& level=cell("swellLevel").valueKnob();panel->toFront(true);level.grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     REQUIRE(level.hasKeyboardFocus(false));const auto menuClick=event(level,juce::ModifierKeys::rightButtonModifier,1);level.mouseDown(menuClick);level.mouseUp(event(level,{},1));
