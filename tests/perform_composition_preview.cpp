@@ -11,6 +11,12 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
+#if JUCE_WINDOWS
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace preview46
 {
