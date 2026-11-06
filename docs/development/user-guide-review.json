@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed merged owner-approved #68 transport readout and #93 selection Fit with #51 quiet notices and continuous Export preview, including exact ramp endpoints. Combined guide preserves new Perform instructions and the independent Export controls, pending WAV and stopped/zero instructions. No pending #58 geometry or additional control variant is introduced.",
+  "summary": "Reviewed canonical song-export and ui-design-system sync for merged issue 51 against the already delivered guide and owner-approved behavior: independent levels, continuous preview, pending WAV readiness, stopped/zero behavior and quiet accessible notices. Existing guide instructions remain accurate; no prose or screenshot change is needed. Archive is a lifecycle/documentation-only operation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -855,8 +855,8 @@
     },
     {
       "path": "openspec/specs/song-export/spec.md",
-      "bytes": 12430,
-      "sha256": "718c21bf5bfcd9789c9c310d9dab3eb418e8285745af71adf9c29eba700c2b51"
+      "bytes": 19625,
+      "sha256": "2acc8e5fa551522cd2c8a3ca49acbb8917b53188e1894241037e54beac6b1ca8"
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
@@ -895,8 +895,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 6727,
-      "sha256": "0c7ba30d190b7f958c53202e6410a90ec32d09bc5a96baeb5d5d34a30cf7937f"
+      "bytes": 7797,
+      "sha256": "603f7d40e2d1b95d55b71697788c7407ff87dc499a2327908db6f1cdcf7a3666"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
