@@ -29,6 +29,14 @@ Main subsequently delivered #8 recovery/shared-engine work at `f98157e`. It is
 retained as the new verification baseline, with no changes to its runtime/storage
 source. The fixed 20-command migration and independent #108 scope remain unchanged.
 
+During integrated review the owner accepted the styling apart from the IR import
+button: its visible border had become shorter than its dropdown and crowded the
+folder glyph. The shared IR composition now reserves the button's focus frame
+around a full control-height body and aligns that body with the dropdown. This
+uses existing geometry, preserves glyphs and feedback spacing, and remains at the
+scoped integrated correction gate, now satisfied by explicit owner approval after
+85/85 native checks. No knob or interaction change is involved.
+
 ### Owner revision at family review — hover, held press and focus
 
 The first native candidate passed focused checks and 75/75 Release CTest, but

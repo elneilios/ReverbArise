@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reconciled merged main f98157e recovery/shared-engine guide content with the approved #107 command-button instructions. Preserved all delivered Storage, normal re-learning, asset recovery, automatic-render and host coverage guidance verbatim from merged main; added only button keyboard/focus/mouse/unavailable guidance. Production callbacks/recovery and engine source match main. Guide inputs now include this merged baseline; native integration results remain separately recorded.",
+  "summary": "Reviewed the #107 IR import correction against merged main. The dropdown keeps its original label and feedback spacing; the import body matches its top, bottom and height, and the larger action frame contains outside focus. Original glyph and import behavior are unchanged. Existing guide instructions and screenshots remain accurate; no additional prose is needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -565,8 +565,8 @@
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
-      "bytes": 6359,
-      "sha256": "266253d1226e7ef8d7a0a617cd420ecc20e25ffbb6673bb0174edf1230896b19"
+      "bytes": 6679,
+      "sha256": "7df2d339dc53e81d33e51afa5902ed6ecccccb32c6e9c548420e836266dcf91e"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",

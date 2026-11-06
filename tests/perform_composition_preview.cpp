@@ -11,6 +11,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
+#include <source_location>
 #if JUCE_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -29,12 +30,12 @@ static juce::Component* find(juce::Component& root,const juce::String& name)
 }
 template<class T>static T& require(juce::Component& root,const juce::String& name)
 {auto* result=dynamic_cast<T*>(find(root,name));if(!result)throw std::runtime_error("Missing native fixture control: "+name.toStdString());return *result;}
-template<class F>static void wait(F predicate)
+template<class F>static void wait(F predicate,const std::source_location location=std::source_location::current())
 {
     const auto end=juce::Time::getMillisecondCounter()+30000;
     while(!predicate() && juce::Time::getMillisecondCounter()<end)
         juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
-    REQUIRE(predicate());
+    if(!predicate())throw std::runtime_error("Native preview wait timed out at "+std::string(location.file_name())+":"+std::to_string(location.line()));
 }
 struct Head final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -472,7 +473,7 @@ int main(int argc,char** argv)
                 {setUsingNativeTitleBar(true);auto* review=new IntegratedReview(std::move(scope),slim,selection,compact,irReview);setContentOwned(review,true);setResizable(true,false);setResizeLimits(compact?900:1100,compact?644:894,2000,1444);centreWithSize(compact?900:1100,compact?644:924);if(compact)review->verifyCompactBaseline();setVisible(true);}
                 void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
             };
-            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-command-integrated",command=="--review-ir-integrated");
+            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-command-integrated",command=="--review-ir-integrated" || command=="--review-command-integrated");
             if(command=="--review-command-integrated")window.setName("ReverbArise - #107 integrated button review");
             juce::MessageManager::getInstance()->runDispatchLoop();return;
         }

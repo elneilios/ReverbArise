@@ -40,7 +40,7 @@ over mouse emphasis; focus remains independent. Reuse explicit variants and
 The 20 scoped legacy commands now use ActionButton; generic Rename OK/Cancel
 keeps the neutral theme fallback. FileDragTile and knobs retain their painters.
 [Button evidence](../validation/2026-11-06-issue-107-buttons.md) records the family
-approval, native checks and separately pending integrated acceptance.
+approval, 85/85 native checks and owner acceptance of the integrated IR alignment correction.
 
 Issue #80's owner-approved `Controls/ConvolutionIrEditor` family composes
 `IrSelector`, `IconActionButton` and `EllipsisLabel` using existing responsive

@@ -54,8 +54,9 @@ Implemented owners: [ActionButton](../../Source/UI/Controls/ActionButton.h),
 [LatchingActionButton](../../Source/UI/Controls/LatchingActionButton.h) and the
 neutral fallback in [WorkspaceTheme](../../Source/UI/WorkspaceTheme.h). All scoped
 commands share one resolver/painter; names no longer select appearance. The owner
-approved native family revision 4 on 6 November 2026; integrated review remains
-separate. See [button evidence](../validation/2026-11-06-issue-107-buttons.md).
+approved native family revision 4 on 6 November 2026; the integrated commands
+and IR alignment correction are also owner accepted. See
+[button evidence](../validation/2026-11-06-issue-107-buttons.md).
 
 Focus uses four aqua corner brackets with a 2-pixel stroke and a 3-pixel gap
 outside the body border, contained within the component. Neutral hover uses the
@@ -64,6 +65,12 @@ Destructive hover strengthens the red outline; held press fills red. Neutral
 icons retain off-white ink. Primary/on-latch surfaces retain dark content on
 aqua fill. Disabled body ink is dimmed and suppresses mouse emphasis; any focus
 brackets remain aqua. Knob focus and FileDragTile's specialized painter are unchanged.
+
+Compositions reserve the action frame around the intended visible body size.
+The shared IR field aligns the import button's visible body with the dropdown's
+top, bottom and height, with its focus margin outside that body. Feedback retains
+the existing tight gap below the dropdown/body; empty fields retain enough room
+for the complete focus frame. The folder glyph keeps its original geometry.
 
 Contract semantic variants: neutral command, primary command, destructive command
 and effective-state latch. Glyph-only and text actions are content forms of these
@@ -325,7 +332,7 @@ native review must use the actual prepared fixture and retain one review window.
 
 | Policy | Current authority / disposition |
 | --- | --- |
-| Neutral/primary/latching command state | Existing ActionButton/LatchingActionButton; shared icon correction scoped to #109; residual migration P1 pending |
+| Neutral/primary/destructive/latching command state | Shared command resolver, explicit roles, outside corner focus and paired IR body geometry; #107 family and integrated correction approved at revision 12; P1 complete |
 | No-wheel IR/deliberate selector | Existing DeliberateSelector and UI standards; plain Settings boxes remain P2 debt |
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |

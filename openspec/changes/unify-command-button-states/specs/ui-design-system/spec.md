@@ -16,6 +16,11 @@ Migrated text and glyph command actions SHALL share reviewed, distinguishable id
 - **AND** disabled state does not make the action appear eligible or permit invocation
 - **AND** focus uses aqua outer corner brackets with a small gap from the button border and does not mask hover or held-press feedback, including on destructive actions
 
+#### Scenario: Shared IR import button aligns with its selector
+- **WHEN** the shared IR field lays out its selector and import action
+- **THEN** the import button's visible body matches the selector's top, bottom and height
+- **AND** its original folder glyph fits within that body, the outside focus frame remains contained, and field feedback retains its existing gap below the inputs
+
 ### Requirement: Command activation preserves binding authority
 Migrated commands SHALL support pointer, Return, Space and applicable accessibility activation through the same eligible command path. One activation SHALL issue at most one command. Disabled, stale or destroyed targets SHALL NOT gain permission through a new input path. Existing command effects, target/session guards, persistent data and audio behavior SHALL remain unchanged.
 

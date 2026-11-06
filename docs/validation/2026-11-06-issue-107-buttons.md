@@ -353,3 +353,81 @@ running through `scripts/build.ps1 -Configuration Release -Test`, log directory
 `20261106-214634-7e53b2ca`; earlier 75/74 results above are pre-integration evidence.
 The old review snapshot still shows the identical scoped button family; it does
 not certify merged #8 runtime behavior or the newly present Storage page.
+
+## Integrated owner correction — IR import body alignment
+
+The owner accepted the styling apart from the folder/import button, providing a
+900x600 Learn Sound screenshot and clarifying: "button border is no longer matching
+in height with drop down". This is a composition error: both component frames had
+remained one control-height, but the command painter reserves focus margin inside
+its frame, shrinking the visible import body. The original folder glyph itself
+was unchanged. Scoped integration acceptance remains pending this correction;
+prior accepted colours, states, other commands and knobs are retained.
+
+The shared ConvolutionIrEditor now gives the import action a larger contained
+focus frame around a full control-height body. Its visible top, bottom and height
+match the neighboring selector. The selector keeps its original label and feedback
+spacing; the folder glyph and import binding are unchanged. Empty feedback leaves
+only the required lower focus margin, not a message line. This affects both Learn
+and selected-swell fields through the same existing composition, with no new
+style token, painter variant, overlay/native window or storage/engine change.
+
+The first attempted frame reservation moved both inputs below the label; the
+existing native label-gap assertion rejected it. The final arrangement preserves
+that original gap and lets the decorative frame use the surrounding field space.
+The empty-field layout oracle now checks the action-frame bottom and exactly the
+existing focus margin beyond the selector, while retaining the Level-to-field gap.
+
+Native results:
+- Merged-main run `20261106-214634-7e53b2ca`: 83/85 passed (266.98 s), with unchanged
+  knob foreground and readability wait failures. All newly merged Storage/engine
+  cases passed; those results are not a clean full-suite pass.
+- First IR candidate `20261106-222032-139a2623`: 82/85 passed (244.91 s). Failures
+  were the preserved label-gap assertion, the now-explicit empty focus-frame
+  expectation, and Windows foreground acquisition in readability. A diagnostic
+  caller location was added to the native wait helper; its timeout and predicate
+  remain unchanged. Knob foreground passed, without changing knob/test behavior.
+- Corrected warm build `20261106-222822-0ddfdbed`: native Release build passed.
+- Corrected `preverb_swell_ui_test --test-ir-editor` and full actual-editor
+  `preverb_swell_ui_test`: passed, exit 0; logs under ignored
+  `out/command-integrated-review-v2/` (`ir-cases.log`, `swell-ui.log`).
+- Corrected `preverb_perform_composition_preview --test-responsive`: passed,
+  including compact/larger actual bounds, divider clearance, mode routes and
+  source/render identity (`responsive.log` in the same directory).
+
+The old review PID 70824 was closed after the owner supplied its feedback, with
+exact executable/argument verification. The revised native review starts on
+Sound, ready for the single requested import/dropdown comparison. The final
+combined wrapper run is `20261106-223436-5e33b9b2`; its result is recorded below
+when complete. UI guard (65/59), guide currency, strict OpenSpec and whitespace
+pass. Guide semantics were reviewed; this geometry correction adds no musician
+instruction or screenshot requirement. Physical OS-DPI/FL Studio results remain
+separate and unclaimed.
+
+### Corrected final native result
+
+Supported Release wrapper 20261106-223436-5e33b9b2: configure/build and **85/85
+CTest passed**, exit 0, 295.16 s. This is current merged-main plus the corrected
+IR composition. Both foreground-sensitive cases passed with their original
+behavior/guards; the computer-use inventory did not find an owned active fixture
+before it completed, so no activation/input action was performed. No test was
+skipped or weakened. Prior partial-suite failures above remain historical evidence.
+
+The corrected actual-editor preview was copied from this passing build to
+out/command-integrated-review-v2/command-integrated-review.exe and directly launched
+with --review-command-integrated, PID 56488. It opens Sound and preserves
+one review window. Remaining task 3.2 is limited to the requested import/dropdown
+alignment correction; the owner's prior acceptance of the other styling is retained.
+Physical OS-DPI and FL Studio coverage remains unclaimed.
+
+### Final scoped owner acceptance
+
+The owner explicitly approved the corrected native comparison: "Looks right —
+approve correction". Together with the prior acceptance of the other integrated
+styling, this completes task 3.2 for the scoped command family and shared IR body
+alignment. The current passing native build covers merged main, all 85 CTest
+checks, original caption/feedback spacing, full-size folder glyph, supported
+layout/scale and protected binding/audio/persistence cases. Tasks are 10/10.
+This supersedes the pending-review/current-verification notes above. No separate
+knob, #108, Storage/recovery or physical DPI/FL Studio approval is inferred.
+The corrected review window is preserved until the owner finishes with it.

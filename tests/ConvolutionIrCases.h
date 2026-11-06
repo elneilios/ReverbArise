@@ -113,12 +113,15 @@ inline void componentCases()
     const auto narrowHeight=editor.preferredHeight(160);editor.setSize(160,narrowHeight);
     REQUIRE(editor.status.getHeight()==2*controlGeometry::feedbackHeight && editor.preferredHeight()==narrowHeight);
     view.status={};editor.display(view);editor.setSize(160,editor.preferredHeight(160));
-    REQUIRE(editor.getHeight()==editor.selector.getBottom() && !editor.status.isVisible());
+    REQUIRE(editor.getHeight()==editor.fileButton.getBottom() && !editor.status.isVisible());
     for(int width:{259,276,304})
     {
         editor.setSize(width,editor.preferredHeight(width));
         for(auto* child:editor.getChildren())REQUIRE(editor.getLocalBounds().contains(child->getBounds()));
         REQUIRE(!editor.selector.getBounds().intersects(editor.fileButton.getBounds()));
+        const auto body=commandBodyBounds(editor.fileButton.getLocalBounds()).translated(editor.fileButton.getX(),editor.fileButton.getY());
+        REQUIRE(body.getY()==editor.selector.getY() && body.getBottom()==editor.selector.getBottom());
+        REQUIRE(body.getHeight()==responsiveGeometry::controlHeight && body.getWidth()==body.getHeight());
     }
     editor.setLookAndFeel(nullptr);
 }
