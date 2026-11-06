@@ -25,6 +25,10 @@ and colours. The named production migration is implemented with unchanged
 callbacks; automated integration and actual-editor acceptance are tracked
 separately in tasks and dated evidence.
 
+Main subsequently delivered #8 recovery/shared-engine work at `f98157e`. It is
+retained as the new verification baseline, with no changes to its runtime/storage
+source. The fixed 20-command migration and independent #108 scope remain unchanged.
+
 ### Owner revision at family review — hover, held press and focus
 
 The first native candidate passed focused checks and 75/75 Release CTest, but

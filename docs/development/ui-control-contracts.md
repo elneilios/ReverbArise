@@ -4,7 +4,7 @@
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
-changes, tokens or variants. Active #108 Level and #8 recovery/engine work remain
+changes, tokens or variants. Independent #108 Level and #8 recovery/engine work remain
 outside this delivery. The
 [inventory](../design/ui-control-inventory.md) identifies exact consumers/debt,
 and [audit evidence](../validation/2026-11-06-issue-107-control-audit.md) distinguishes

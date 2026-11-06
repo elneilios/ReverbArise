@@ -7,7 +7,7 @@ source inspection. The separate command-button child now records native family
 revision-4 approval and production adoption at standards revision 12; its
 [evidence](../validation/2026-11-06-issue-107-buttons.md) separates integrated
 acceptance and automated results. Other production migrations remain
-separate child changes; #107 remains open. Active #108 Level and #8 recovery/engine
+separate child changes; #107 remains open. Independent #108 Level and #8 recovery/engine
 work are outside this delivery and the remaining-button proposal.
 
 ## How to read this inventory
@@ -189,6 +189,19 @@ Popup items, text-box editors, row hit regions, tabs and native windows are incl
 even when they have no persistent Button/Label member of their own.
 
 ## Family roadmap and delivery packets
+
+### Merged-main addendum
+
+Main `f98157e` subsequently delivered the independently owned #8 recovery/storage
+work. It is preserved when integrating this button child; the original 20-command
+migration boundary does not expand. The newly present shared commands are recorded
+here without claiming a new storage/recovery audit or repeating that delivery's approval.
+
+| ID / actual members | Owner / semantics | States and concrete differences | Disposition |
+| --- | --- | --- | --- |
+| X1 `PortableStoragePanel.backupButton`, `restoreButton`, `locateButton`, `cancelButton`; `StorageInventoryPanel.cancelButton` | C1 existing neutral ActionButton; #8 owns chooser, worker, reload and scan bindings | I/H/P/F/D/B; existing idle/busy/chooser/reload guards and conditional stop actions; inherits the reviewed common command painter | Retained main declarations/bindings, no migration in this child. Native storage regressions remain part of the combined suite; recovery semantics retain their separate #8 evidence |
+
+### Delivery packets
 
 The following packets are candidates for separate child OpenSpec changes. No
 packet is authorization to change production code or create a GitHub issue.

@@ -331,3 +331,25 @@ the owner finishes the review window. No knob or focus-test source was weakened.
 Task 3.2 remains pending scoped actual-editor acceptance. The native review stays
 open. Strict OpenSpec for both changes, UI standards, guide currency, changed
 Markdown links and whitespace checks pass. No debt inventory was regenerated.
+
+## Merged-main reconciliation and draft PR
+
+Draft PR: https://github.com/elneilios/ReverbArise/pull/114 (`Refs #107`, not closing
+that umbrella). Main had advanced to `f98157e`, including delivered #8 asset recovery
+and shared-engine work. Integration commit `041a131` preserves that runtime source
+and all its tests. Only README and guide-currency JSON conflicted: both README
+reference groups were retained, all merged guide prose was preserved, and the
+explicit guide review was refreshed. The guide diff from current main is only
+the button keyboard/focus/mouse paragraph. The production diff from current main
+remains the same five command/theme headers; no recovery, storage, processor, DSP,
+knob or value implementation differs from main. Neither other worktree was edited.
+
+The fixed 20-command migration does not expand into Storage. Inventory addendum
+X1 records the five existing shared storage ActionButtons from merged main;
+#8 retains their operation/chooser/worker/reload/scan authority. UI standards now
+passes **65 files/59 bounded occurrences**, without debt regeneration. GitHub
+reports the updated draft PR mergeable. New-baseline native verification is
+running through `scripts/build.ps1 -Configuration Release -Test`, log directory
+`20261106-214634-7e53b2ca`; earlier 75/74 results above are pre-integration evidence.
+The old review snapshot still shows the identical scoped button family; it does
+not certify merged #8 runtime behavior or the newly present Storage page.
