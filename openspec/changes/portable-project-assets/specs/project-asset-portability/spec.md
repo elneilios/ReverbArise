@@ -134,3 +134,29 @@ Inventory, hashing, copying, compression and maintenance SHALL run outside the a
 #### Scenario: Large pack during playback
 - **WHEN** asset administration encounters memory or storage limits during playback
 - **THEN** it fails or pauses explicitly without callback I/O, blocking or unbounded processing and without mutating accepted source
+
+### Requirement: Host discovery has a safe user-data fallback
+The system SHALL use project-location metadata only after its host-specific semantics are validated. Missing, ambiguous or stale metadata SHALL retain the user-data fallback. Storage SHALL expose the actual working folder and explicit selection. Discovery SHALL NOT silently relocate existing sessions or treat a preset path as a project path.
+
+#### Scenario: Unsaved or unsupported host
+- **WHEN** a fresh session has no verified project location
+- **THEN** learning remains available with user-data storage and a visible folder choice
+
+#### Scenario: Save As changes location
+- **WHEN** the host reports a changed project path for an existing session
+- **THEN** the plugin preserves the original association until an explicitly approved verified transfer succeeds
+
+### Requirement: Storage provides verified backup and restore
+Storage SHALL offer working-folder selection, Backup and Restore actions. Backup SHALL use complete accepted dependency closure and identify included instances. Restore or Locate SHALL verify immutable identities and bytes before explicit association. These actions SHALL preserve originals and disclose that the DAW project and external Playlist files require separate backup.
+
+#### Scenario: User-data assets need portability
+- **WHEN** the user backs up a session using the user-data folder
+- **THEN** the verified self-contained backup can travel with the separately saved DAW project and Restore can resolve it without the original user profile
+
+#### Scenario: Project folder moves
+- **WHEN** the DAW project and complete associated asset folder are copied together
+- **THEN** managed relative references remain usable after validated resolution or explicit Locate, without requiring the original absolute path
+
+#### Scenario: Restore is incomplete or cancelled
+- **WHEN** required dependencies fail verification or Restore is cancelled
+- **THEN** existing metadata, surviving assets and the prior association remain intact and no complete recovery is claimed

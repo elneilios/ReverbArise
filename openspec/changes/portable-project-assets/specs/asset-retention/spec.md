@@ -93,3 +93,28 @@ Recovery SHALL identify recoverable snapshots, missing dependencies and abandone
 #### Scenario: Unsaved committed capture survives shutdown
 - **WHEN** assets or snapshots newer than the FLP are discovered
 - **THEN** they are offered as separate recovery candidates without redirecting the FLP's exact saved references
+
+### Requirement: Missing assets expose explicit recovery choices
+The system SHALL identify unavailable dependencies and offer Locate assets, Restore backup and explicit Re-learn song. Decodable swell identities, positions and edits SHALL remain preserved, together with unaffected output and surviving assets. Metadata decode failure SHALL be reported separately rather than claiming the arrangement is intact.
+
+#### Scenario: Source folder is unavailable
+- **WHEN** valid saved swell metadata refers to missing or offline audio
+- **THEN** the message confirms the preserved arrangement and offers verified folder location or backup recovery before re-learning
+
+### Requirement: Re-learning is recovery rather than exact restoration
+Re-learn recovery SHALL require explicit user choice and DAW playback, preserve swell identities and edits, and regenerate only with verified required IRs and complete fresh source. It SHALL preserve surviving assets and saved auto-generation policy. Frozen results SHALL require explicit consent to replacement; changed-input/DSP and missing-export limitations SHALL be disclosed.
+
+#### Scenario: Re-learning succeeds
+- **WHEN** fresh source coverage commits and required IRs are available after explicit recovery authorization
+- **THEN** affected swells can regenerate with preserved arrangement and edits without a promise of bit-identical old output
+
+#### Scenario: Re-learning is partial or cancelled
+- **WHEN** capture is incomplete, cancelled or fails, or a custom IR remains unavailable
+- **THEN** existing arrangement and surviving dependencies remain preserved, missing requirements stay explicit and no successful full recovery is claimed
+
+### Requirement: Future cache limits cannot reclassify durable history
+A future rebuildable-cache policy SHALL require separate eligibility and reconstruction review before eviction is enabled. Current source, IRs, immutable saved renders, exports and unknown old-project dependencies SHALL remain protected. Swell deletion, regeneration or lack of a current reference SHALL NOT establish garbage-collection eligibility.
+
+#### Scenario: A deleted swell has an older saved project
+- **WHEN** current metadata drops its render reference but older FLPs cannot be enumerated
+- **THEN** the render remains protected rather than being classified as disposable cache

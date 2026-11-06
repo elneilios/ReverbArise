@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for motivation and [audit](../../../docs/development/asset-storage-audit.md) for pinned evidence. Existing immutable chunks/snapshots and full-render metadata are useful mechanisms to extend. Current project/instance UUIDs do not identify host file paths. Unknown external FLP snapshots prevent complete reference enumeration. The portability, inventory and maintenance services below remain proposed; the existing contracts in the following reconciliation are implemented behavior, established here by source inspection only.
+See proposal.md for motivation and [audit](../../../docs/development/asset-storage-audit.md) for pinned evidence. Existing immutable chunks/snapshots and full-render metadata are useful mechanisms to extend. Current project/instance UUIDs do not identify host file paths. Unknown external FLP snapshots prevent complete reference enumeration. The read-only phase-1 inventory is delivered; portability and maintenance below remain proposed; the existing contracts in the following reconciliation are implemented behavior, established here by source inspection only.
 
 ### Contract reconciliation — 2026-11-06
 
@@ -35,7 +35,9 @@ Planning validation for this reconciliation: `openspec validate portable-project
 
 ### 1. Explicit association with a portable store
 
-Keep legacy storage readable and initially writable. Offer a user-selected Project Asset Folder, suggested beside the FLP as `ReverbArise Assets`, through future settings/asset administration. Do not infer the FLP path from process CWD, a preset filename or directory names. Optional supported host metadata can suggest a location only after a targeted FL Studio/JUCE spike establishes semantics; explicit selection always works. Association is optional until a user asks to pack/migrate, so existing learning is not blocked.
+Keep legacy storage readable and initially writable. The owner-approved direction (2026-11-06) prefers `ReverbArise Assets/` inside the DAW project folder where reliable host metadata supports it, with today's user-data root as the fallback for unsaved projects or unsupported hosts. First perform the FL Studio/JUCE discovery spike: record exact host/JUCE versions and observations for fresh unsaved instances, first save, reopen, Save As and moved disposable projects. Distinguish actual project metadata from preset/state filenames; do not infer from CWD, window titles or directory names. Absent, stale, contradictory or ambiguous signals mean unknown, never authority to write or move assets. The spike performs no association or migration.
+
+Future Storage exposes the actual working-folder location and picker, Backup and Restore actions; missing-asset recovery also exposes Locate assets. Discovery may supply a proposed default after runtime evidence and subsequent implementation review; explicit selection always works. Existing sessions never silently move on discovery, Save As or reopen. Changing a populated working folder uses verified copy-before-switch, preserves originals and rollback, and requests a DAW save. Folder choice alone cannot override writer ownership or path/identity verification. New/revised controls require native preview approval and binding tests before rollout.
 
 A proposed folder contains:
 
@@ -50,7 +52,7 @@ ReverbArise Assets/
   quarantine/<operation-id>/       # only proven transient candidates
 ```
 
-Content paths are relative to the selected store, never relative to an unknown FLP path. Snapshot locators contain store ID, snapshot ID and legacy fallback; absolute local hints live in a non-authoritative registry. On a second PC, user selects the moved folder once with Relink; no automatic FLP-parent discovery is promised. A locally registered identical snapshot can resolve automatically only after identity/hash validation. Same store ID at diverged locations is not sufficient authority. Conflicting candidates require explicit selection, never silent latest-head substitution.
+Content paths are relative to the selected store, never relative to an unknown FLP path. Snapshot locators contain store ID, snapshot ID and legacy fallback; absolute local hints live in a non-authoritative registry. Copying the complete DAW project directory and its self-contained asset folder is the intended project-local portability workflow. On a second PC, validated project-relative location can help resolution only where discovery is proven; otherwise the user selects the moved folder once with Locate/Restore. No cross-DAW discovery promise is made. A locally registered identical snapshot can resolve automatically only after identity/hash validation. Same store ID at diverged locations is not sufficient authority. Conflicting candidates require explicit selection, never silent latest-head substitution.
 
 Alternatives: embedding all PCM bloats host state and changes save behavior; hardlinks/external shared global blobs undermine self-containment; automatically moving the cache endangers old FLPs. A folder bundle makes dependencies inspectable and needs no archive extraction engine initially. Pack is a ReverbArise asset operation, not an FLP writer or a full backup of unrelated instruments.
 
@@ -70,11 +72,11 @@ Descriptors preserve rate, channel layout, frame length, format, original checks
 
 Put-if-absent publishing uses unique staged files and atomic no-replace rename. On collision/existing hash, verify stored bytes/dimensions rather than overwrite. Pin source and dependencies while copying and while a job/export/pack runs. Dedup within the selected store/pack only; no mandatory machine-global object pool, cross-volume hardlinks or cross-project deletion authority. This trades some inter-project duplication for independent backups.
 
-### 4. Pack pins one accepted snapshot and verifies its closure
+### 4. Backup pins one accepted snapshot and verifies its closure
 
 A version-aware visitor enumerates the accepted capture manifest/chunks, metadata-only silence/gaps, session definitions/edits/selection/freeze, default IR even with zero swells, per-swell IR and completed renders, timing/calibration and accepted #11 provenance. Include the exact managed bundled IR used, not just an ID whose shipped version can later change. Include stale/frozen retained references as saved, with their honest statuses. No loss of disabled/muted dependencies. Current supported Export state already contains durable history references under `exports/`; the visitor must include all saved history dependencies, preserving Dry/Wet/gain-law provenance and copying required bytes without moving originals or assuming collector ownership. Accepted schema-2 contexts independently pin managed IR dependencies even when absent from the current Default IR and swell assignments. Unknown dependency-bearing state versions stop a complete-pack claim.
 
-Capture manifests alone cannot discover historical IR/renders in offline FLPs. Default Pack includes the selected accepted session only and says so explicitly. An optional archive mode can copy all retained files/snapshots in chosen stores plus user-provided session snapshots, but cannot claim arbitrary historical FLP closure without their state. Do not present Pack as permission to delete originals.
+Capture manifests alone cannot discover historical IR/renders in offline FLPs. The Storage Backup action uses the exact-byte Pack mechanism; its default includes the selected accepted session only and says so explicitly. This is the portability fallback for user-data storage, not an accepted non-portability limitation. Restore validates backup identity and closure before explicit association; Locate validates an existing folder without copying by default. The user must also save/copy the DAW project and any external Playlist files; a plugin backup is not a whole-DAW archive. An optional archive mode can copy all retained files/snapshots in chosen stores plus user-provided session snapshots, but cannot claim arbitrary historical FLP closure without their state. Do not present Pack as permission to delete originals.
 
 Transaction sequence:
 
@@ -88,6 +90,12 @@ Transaction sequence:
 Multi-instance scope: an instance can pack only its own available accepted state. A project-wide pack requires explicitly collecting accepted snapshots from every instance (register/import receipts); report participating instance IDs and do not claim discovery/completeness for absent instances. User transfers the FLP plus all relevant receipts/folders. No parsing or rewriting closed FLPs is required initially.
 
 Alternative: regenerate renders on destination. Rejected as default because engine updates, frozen output, missing originals and CPU cost threaten exact immediate recovery. Complete compatible packs include them; incompatible timing/engine remains an honest unavailable condition under existing readiness rules, not a license to resample.
+
+### 4a. Missing-asset disaster recovery preserves the arrangement
+
+When accepted references cannot resolve, report which source, IR, render or export assets are missing, offline, corrupt or incompatible. Preserve the decodable swell arrangement, unaffected audio, surviving files and saved metadata. Offer Locate assets first, Restore backup second, and explicit Re-learn song when neither recovery route is available. Never claim metadata is intact if its own decode failed. Recovery must remain cancellable and must not turn a missing file into silence or a successful complete restore.
+
+Suggested message: "Some project audio is unavailable. Your swell positions and edits are preserved. Locate the original asset folder or restore a backup. If neither is available, you can re-learn the song." Explain that once source audio and required IRs are available, affected swells can be regenerated. Re-learn requires explicit arming and DAW playback under existing capture transaction rules, preserving swell IDs, positions, shapes, enabled state and edits; it must not Clear the arrangement. Retain prior accepted references/surviving data on cancel, partial capture or failure. Regeneration is an explicit recovery choice after complete fresh coverage and required IR verification, not silent historical-context replay or a change to the saved auto-generation policy. Frozen results require explicit owner choice before unfreezing/regeneration; missing custom IRs need restore or explicit replacement. Re-learning may sound different due to changed input/DSP and cannot recreate missing exported/Playlist files or certify exact saved/frozen output.
 
 ### 5. Reference tracking reports uncertainty rather than inventing reachability
 
@@ -113,6 +121,10 @@ Initial collector is disabled by default and limited to scratch produced by jour
 Preview lists exact files/counts/bytes, operation and affected scopes, reason, unknown-reference exclusions and recovery deadline. On explicit approval move proven scratch into same-volume quarantine and write a durable reversible journal; nothing outside reviewed candidates moves. Default proposed grace is at least 30 days, configurable longer, with no automatic final erase. After grace, a second explicit permanent-delete review rechecks all eligibility/leases. Expired grace alone grants no permission. Restore reverses journaled moves and verifies hash, refusing overwrite conflicts. Crash during move is reconciled using source/destination identity; journal failure keeps/reports files rather than destroying them.
 
 Captured source accidentally staged but never committed can still be the only recording. Therefore even new capture staging is excluded from ordinary scratch cleanup unless the owner explicitly classifies it as discarded recording after recovery inspection; phase 3 initially targets pack-copy scratch only. Recovery shows abandoned capture namespaces and available snapshots without adopting them automatically. Legacy durable purge is outside this plan; a later expert operation would need explicit scope, a verified independently readable backup and an honest permanent-loss warning, not an inferred safe GC label.
+
+### 6a. Reduce writes before considering durable reclamation
+
+The owner requested better running storage management. Prioritize measured duplicate-write avoidance and reporting; separate essential source/imported IRs, exact saved/frozen render history and exports from genuinely disposable work. A future bounded rebuildable-cache policy requires a separate reviewed format/classification, proof of reconstruction under supported engine versions, durable inputs, old-snapshot/reader/job ownership and recovery tests. Existing immutable renders are durable assets, not retroactively evictable cache. Deleting/regenerating a swell or absence from today's session never proves older FLPs do not need a file. No automatic garbage collector, disk cap, durable-history purge or changed retention is authorized now. Initial cleanup remains separately approved journaled pack-copy scratch with preview, quarantine/undo and separate final removal review.
 
 ### 7. Failure and path policy
 
@@ -152,3 +164,7 @@ Rollback at every phase: disable new association/services, reopen pre-upgrade FL
 ## Open Questions
 
 Deferrable tuning only: which supported Windows path lengths/volumes qualify initially; benchmark thresholds and codec effort; inventory progress/cancel cadence and a longer grace default. These do not weaken completeness, explicit association or indefinite durable retention. Host project-path support is an optional optimization. The source/context and Export contracts above replace the earlier assumption that those features were still pending; verified adapters, measured evidence and owner approval remain phase-0 implementation gates.
+
+## Authorization update — 2026-11-06
+
+The owner explicitly requested reconciling these existing artifacts and PR #31, then starting task 1.4's diagnostic FL Studio project-folder discovery spike. This supersedes only the earlier optional/unstarted spike status. It does not authorize later storage writers, default-root cutover, Backup/Restore UI, re-learn recovery, cache eviction or cleanup implementation. Preserve phase 0/1 evidence and completed tasks; unknown host capability is an acceptable spike result and explicit-folder/user-data fallback remains mandatory.
