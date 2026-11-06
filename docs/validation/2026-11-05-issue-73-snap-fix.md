@@ -64,8 +64,15 @@ retires the old run. The old automatic grid-anchor overwrite had masked the
 missing current authority. The fixture now explicitly verifies the retired clock
 is unavailable and supplies a real callback before continuing its playback/IR
 scenario. Every retained-IR/audio assertion and timeout is preserved; no audio
-admission code or drift guard was changed to pass the test. Three consecutive
-focused native Release handover runs passed after this lifecycle correction.
+admission code or drift guard was changed to pass the test. Two consecutive
+focused native Release handover runs passed after this lifecycle correction;
+the third reached a separate later timeout at line 118 (33.50 s total), which
+was traced to deleting a dependency while its verified prepared window remained
+warm at the same position. Stop alone does not require an asset reopen. The
+fault fixture now seeks beyond that window to force fresh dependency validation
+under a confirmed stopped clock, retaining the original invalidation assertion
+and timeout. This is a fixture correction, not a passing repeat gate or a new
+production cache/admission policy.
 
 Focused final core/UI/transport/processor Release passed **4/4** in **23.19 s**
 (`out/issue-73/snap-focused-release-4.log`), including shifted-context render
@@ -73,7 +80,15 @@ restore and the captured-anchor overwrite regression. The source was proposal
 `949ba4d` plus dirty implementation before its `eed71ff` commit. These focused
 results supplement, rather than replace, the final full gates below.
 
-Pending final native Debug/Release wrapper gates and verified system installation.
+Full native Release on clean `bad5bec` passed **71/71** in **197.87 s**
+(`out/build-logs/Release/20261105-235653-a0f108f4`). Production code is unchanged
+from `eed71ff`; the later fault-fixture correction only forces the missing-asset
+case to perform a fresh read. Its final focused repeats and native Debug gate
+remain required below. Valid full Release coverage of unchanged production and
+other tests is retained rather than rerunning the whole suite for a test-only
+precondition correction.
+
+Pending final native Debug gate, corrected-fixture repeats and verified system installation.
 The completed results below will identify source revision, dirty state, logs,
 installed identity/hash and retained prior bundle. Canonical specs are not synced;
 the approved delta governs this local repair. Issue #71 remains separate, with

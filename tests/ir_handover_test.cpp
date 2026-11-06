@@ -115,7 +115,11 @@ int main(){return runTest([]
     waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(assets.directory().getChildFile(find(engine.savedSession(),a)->ir.path).deleteFile());
-    time=position(950,false);engine.processTransportAudio(l,r,16,time);waitFor([&]{return engine.snapshot().retainedIRName.isEmpty();});
+    // A warm verified window need not reopen its assets just because Play
+    // stops. Seek beyond that window to require fresh dependency validation.
+    time=position(4500,false);engine.processTransportAudio(l,r,16,time);
+    REQUIRE(engine.transportClockSnapshot()->gate==LiveGate::stopped);
+    waitFor([&]{return engine.snapshot().retainedIRName.isEmpty();});
     engine.restore(original);waitFor([&]{return find(engine.savedSession(),b)->phase==Phase::ready;});REQUIRE(engine.snapshot().retainedIRName.isEmpty());
     REQUIRE(engine.selectTargets({b},b));REQUIRE(engine.setFrozen(b,true));REQUIRE(!engine.assignIR(b,find(engine.savedSession(),b)->inputGeneration,next));
     REQUIRE(engine.snapshot().retainedIRName.isEmpty() && engine.residentBytes()<previewMemoryBudget);
