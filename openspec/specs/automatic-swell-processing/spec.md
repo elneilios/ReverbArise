@@ -6,14 +6,14 @@ Progressively turn committed dry Song captures into stable editable swells and v
 ## Requirements
 
 ### Requirement: Legacy manual processing remains available
-Perform SHALL retain manual suggestions and supported explicit generation/refresh policy without resetting manual edits. Learn with Automatic Swells off SHALL admit dry capture but no automatic pass analysis/convolution, regardless of legacy refresh or forced-Recapture policy. Auto markers off in Perform SHALL preserve existing targets and its enabled render-refresh policy; no control SHALL silently enable a saved-off master.
+Perform SHALL retain manual editing and explicit regeneration commands. Learn detection and marker-application controls SHALL govern new or reconciled marker definitions only. Existing unfrozen swells SHALL maintain current verified renders independently of those controls and legacy refresh preferences. No control SHALL silently enable detection or source replacement.
 
 #### Scenario: Manual mode with refresh disabled
 - **WHEN** changed source reaches a Perform swell while automatic processing and legacy auto-refresh are disabled
-- **THEN** it becomes stale and waits for an explicit generation/edit request instead of starting automatic convolution
+- **THEN** its changed material dependency queues bounded render maintenance while identities, edits and saved detection/legacy preferences remain unchanged
 
 #### Scenario: Automatic mode takes responsibility for refresh
-- **WHEN** permitted automatic processing is enabled and source changes with the legacy manual auto-refresh switch off
+- **WHEN** accepted source changes with legacy manual auto-refresh off
 - **THEN** affected eligible swells refresh through the automatic pipeline while unrelated swells remain unchanged
 
 #### Scenario: Diagnostic suggestions remain distinct
@@ -22,7 +22,7 @@ Perform SHALL retain manual suggestions and supported explicit generation/refres
 
 #### Scenario: Dry-only Recapture does not force generation
 - **WHEN** Learn commits changed source with Automatic Swells off and a legacy refresh/forced-work preference was enabled
-- **THEN** source commits normally, changed unfrozen dependencies become honestly stale, and that preference does not start automatic pass convolution
+- **THEN** source commits normally, no new marker analysis/application is admitted, and affected existing unfrozen swells reconcile through the common render pipeline
 - **AND** saved definitions/edits and valid frozen results remain preserved for permitted later manual use
 
 ### Requirement: New instances process captured Song audio automatically
@@ -214,16 +214,16 @@ At capture admission the system SHALL freeze effective Automatic Swells policy, 
 - **THEN** its capture provenance remains attributable to the arrival context, while Generate uses its explicitly frozen current default with normal full-source-coverage checks retained
 
 ### Requirement: Automatic Swells off provides dry-only learning
-Learn with Automatic Swells off SHALL admit original dry source under independent Recapture rules, without admitting automatic analysis, new targets or convolution for that pass. Obsolete automatic publication SHALL be fenced/cancelled. Hidden preferences, existing definitions and immutable assets SHALL survive. Entering Perform SHALL NOT itself start new discovery from a disabled pass; explicit later Generate from accepted coverage uses the then-current effective Automatic Swells policy.
+Learn with detection off SHALL capture source under independent Recapture rules without detecting or applying new markers. Accepted source changes SHALL still trigger material-dependency maintenance for existing unfrozen swells. Detection changes SHALL fence obsolete marker work without cancelling valid existing-swell render work. Saved definitions, edits and assets SHALL survive.
 
 #### Scenario: All four capture-policy combinations
 - **WHEN** Recapture and Automatic Swells independently take each on/off combination
-- **THEN** only Recapture grants mapped replacement and effective Automatic Swells permits candidate analysis and Generate, while only enabled Auto-generate on Stop admits automatic generation after useful Stop
-- **AND** useful accepted dry can enable Perform in every combination without requiring a wet render
+- **THEN** only Recapture grants mapped replacement; detection controls permit candidate analysis and marker application, and Auto-generate on Stop permits automatic marker application after useful Stop
+- **AND** useful accepted dry can enable Perform in every combination without waiting for wet renders; existing unfrozen swells reconcile changed dependencies independently in all combinations
 
 #### Scenario: Turn automatic generation off with older work pending
 - **WHEN** the idle Learn user disables Automatic Swells before another pass while automatic work remains pending
-- **THEN** no new automatic detection or Generate work is admitted under Off, obsolete publication is cancelled/fenced and accepted definitions/assets are not deleted
+- **THEN** no new detection or marker-application work is admitted under Off; obsolete marker publication is fenced while valid existing-swell maintenance remains eligible and definitions/assets are preserved
 
 #### Scenario: Manual work after dry-only learning
 - **WHEN** dry-only capture has committed and the user explicitly creates/edits a swell in Perform
@@ -231,7 +231,7 @@ Learn with Automatic Swells off SHALL admit original dry source under independen
 
 #### Scenario: Learn preferences target future passes
 - **WHEN** the user changes Learn defaults after a dry-only pass
-- **THEN** those future settings do not implicitly backfill/reassign old pass work; current Learn settings can preview all committed coverage and explicit Generate can use it without recapture; no setting edit itself commits definitions
+- **THEN** future detection/default settings do not implicitly reassign existing IRs or commit marker definitions; current Learn settings can preview accepted coverage and explicit Generate can apply markers without recapture, independently of render maintenance
 
 ### Requirement: Generation assignment preserves protected work
 Shared generation SHALL preserve stable matched identities, manual/edited/frozen IR choices, deletion suppression and accepted transition/gain edits. Additive capture SHALL NOT replace protected source-context assignments. New default or context metadata alone SHALL NOT change audio fingerprints or reconvolve existing unchanged dependencies; only a successful Generate can assign the current default to eligible automatic definitions.
@@ -304,7 +304,7 @@ An admitted Generate SHALL cooperatively cancel superseded unfrozen automatic re
 - **THEN** its completed render and calibration remain in the replacement, the request proceeds if musical authority is unchanged, and a genuine newer edit still cancels the request
 
 ### Requirement: Explicit manual preparation is independent of automatic policy
-Accepted manual creation and render-affecting edits in Perform SHALL request background preparation of the affected unfrozen swell even when automatic processing, markers and legacy auto-refresh are off. Automatic preferences SHALL remain unchanged. Capture commits alone SHALL retain dry-only policy; manual preparation SHALL preserve source, identity, edits, immutable renders and publication guards.
+Manual creation and render-affecting edits in Perform SHALL feed the same existing-swell dependency pipeline as accepted source and IR changes. Work SHALL remain independent of marker controls and legacy refresh preferences. Source, identity, edits, immutable assets and latest-request publication guards SHALL be preserved.
 
 #### Scenario: Manual creation after dry-only capture
 - **WHEN** short non-silent captured audio is committed with automatic processing and markers off and the user adds a manual target with complete source and a valid accepted IR
@@ -322,7 +322,7 @@ Accepted manual creation and render-affecting edits in Perform SHALL request bac
 
 #### Scenario: Capture alone remains dry-only
 - **WHEN** dry-only Learn capture commits or Perform is entered without an explicit manual request
-- **THEN** those events do not authorize automatic discovery or disabled-pass convolution, and saved automatic preferences remain off
+- **THEN** those events do not authorize marker discovery/application or change saved detection preferences; existing unfrozen swells still refresh only when verified material dependencies require it
 
 #### Scenario: Imported WavPack IR
 - **WHEN** a valid imported .wv IR is accepted as the manual target's assigned or future-default IR with sufficient source

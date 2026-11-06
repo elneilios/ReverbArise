@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed final common-engine and production recovery behavior, including replacing an earlier asset warning with the stricter metadata-decode warning in the same editor. The guide correctly distinguishes intact accepted edits from failed metadata, normal complete-only Recapture, automatic existing-swell rebuild, exact Locate/Restore, frozen/custom-IR/export limits and explicit forced upgrades; no further prose or screenshots needed after this binding guard. Native popup approved by owner.",
+  "summary": "Reviewed synchronized canonical automatic-swell-processing and swell-regeneration against delivered common-engine/normal recovery bindings and prior approved native/profile evidence. The guide already describes automatic existing-swell maintenance with detection/Stop off, complete-only Recapture, exact Locate/Restore, frozen/custom-IR/metadata/export limits and forced upgrades accurately; no prose/screenshots change needed. Archive only the completed shared-engine change; portability and later safety gates remain active.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -905,8 +905,8 @@
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
-      "bytes": 33045,
-      "sha256": "bfe99145a0d992c08e7816c5ff5287c5f73c841658f0776a392380873194d16a"
+      "bytes": 33021,
+      "sha256": "d5c9a39d2c514ab9e4c15ebc3bab0f6b7405ad702e24fa217e329b6d6a6cae38"
     },
     {
       "path": "openspec/specs/editor-presentation/spec.md",
@@ -960,8 +960,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 8679,
-      "sha256": "0cbe5cce4639339f3a877d3cdde163d2300c11579d53ada1925a90d2a4827633"
+      "bytes": 12882,
+      "sha256": "1370c2b1474e4266dc6aa280fa9dab3388b1a36bc354cda9e2fb9a183f9f6264"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",

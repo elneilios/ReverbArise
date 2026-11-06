@@ -1,6 +1,6 @@
 # Plugin architecture: source, markers and swell sounds
 
-**Owner-approved architecture; implemented and verified on PR #31.** 2026-11-06. This replaces the recovery-only rendering approach discussed for issue #8 / PR #31. [Proposal](../../openspec/changes/separate-learning-from-swell-rendering/proposal.md) and its delta specs/tasks track the change. Canonical specs remain unchanged until implementation and later sync.
+**Owner-approved architecture; implemented and verified on PR #31.** 2026-11-06. This replaces the recovery-only rendering approach discussed for issue #8 / PR #31. [Proposal](../../openspec/changes/archive/2026-11-06-separate-learning-from-swell-rendering/proposal.md) records the completed change. Canonical automatic-swell-processing and swell-regeneration specs are synchronized; the completed change is archived.
 
 ## Ownership
 

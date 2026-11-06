@@ -39,3 +39,11 @@ Architecture tasks 1.1–1.3, 2.1–2.4 and 3.1–3.4 are verified; final valida
 Git confirms `717c890` is an ancestor of merge `4defc2e`; GitHub reports PR #31 mergeable/clean after conflict resolution. No system VST3 install, new FL Studio run, Debug suite, second-PC or physical DPI matrix is claimed. Preserve original projects/assets and the superseded prototype stash for rollback. No canonical sync/archive, PR merge or issue closure.
 
 Implementation is committed as `ace4a22`; PR #31 is updated for owner review. Refreshed Apply reports **all_done, 13/13 architecture tasks complete**. Portable recovery task 3.10 is guarded/verified complete and `portable-project-assets` is **20/36**, retaining its later storage gates. Final tracking/evidence edits do not alter tested implementation inputs.
+
+## Owner-approved spec closeout
+
+The owner approved PR #31 and explicitly requested sync, archive, PR update and merge, while keeping issue #8 and portable-project-assets open. Synced exactly four existing requirement blocks and four new shared-engine requirements into automatic-swell-processing/swell-regeneration. All existing scenarios, titles/Purpose and unmentioned requirement blocks are preserved. Both declared deltas are verified fully synchronized before archive.
+
+Archived the completed 13/13 change, including its original metadata, at `openspec/changes/archive/2026-11-06-separate-learning-from-swell-rendering/`. Repaired the moved design link and living documentation references. Portable-project-assets remains active at 20/36; bound-waveform-paint-work is outside this closeout and is untouched. Association, writer migration, durable cleanup/eviction, compression and release gates stay intact.
+
+Canonical validation: 18 specs pass; pre-existing long-description warnings remain. Swell-regeneration passes strict validation; the active delta passed strict validation before archive. Semantic guide review confirms its existing automatic-maintenance/recovery instructions match the synchronized contracts; no musician-facing prose or screenshot change is required. This closeout changes specifications, links, review/evidence and archive placement only. Retain the passing 85/85 native Release and separate-profile results above; no binary rebuild, installation or release is performed for documentation-only changes.

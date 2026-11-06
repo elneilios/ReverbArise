@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for motivation and [the architecture review](../../../docs/development/swell-engine-architecture.md) for ownership tables, component/data-flow and lifecycle diagrams. Current `AutomaticCoordinator::captureCommitted` defers existing work and `dispatchAutomatic` blocks Capture-mode maintenance; current canonical dry-only Learn requirements intentionally enforce that behavior. Existing immutable assets, fingerprints, input/shape generations and job publication guards should be reused.
+See proposal.md for motivation and [the architecture review](../../../../docs/development/swell-engine-architecture.md) for ownership tables, component/data-flow and lifecycle diagrams. Current `AutomaticCoordinator::captureCommitted` defers existing work and `dispatchAutomatic` blocks Capture-mode maintenance; current canonical dry-only Learn requirements intentionally enforce that behavior. Existing immutable assets, fingerprints, input/shape generations and job publication guards should be reused.
 
 ## Goals / Non-Goals
 
