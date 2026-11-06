@@ -12,7 +12,7 @@
 
 ## 3. Integration verification
 
-- [ ] 3.1 Run the focused native engine/component tests, supported Release build/test gate through `scripts/build.ps1`, UI standards checker, strict OpenSpec validation and diff checks. Record revision, results and any untested host coverage in dated validation evidence and prepare an owner-reviewable PR.
+- [x] 3.1 Run the focused native engine/component tests, supported Release build/test gate through `scripts/build.ps1`, UI standards checker, strict OpenSpec validation and diff checks. Record revision, results and any untested host coverage in dated validation evidence and prepare an owner-reviewable PR.
 
 ## Workflow follow-up
 
