@@ -173,3 +173,33 @@ identity preservation, popup transforms, active exact text and Escape, actual
 factory persistence, fit recovery and owned-window lifetime/focus. Tasks 1.2,
 2.2–2.5, 3.1, 3.4–3.6 and 4.1 use these complementary checks. Physical DPI/host
 acceptance and scoped scale-family review remain separate owner gates.
+
+## Owner acceptance and FL Studio test installation
+
+The owner confirmed: "The preview looks good at 100% and 125%. Go ahead and
+install the test build for the FL Studio smoke test." This accepts the final
+combined #51/#68/#73/#93 composition and supported 100%/125% scale family.
+Sub-100% choices remain unvalidated/unavailable; no 90% or 75% option ships.
+Draft [PR #101](https://github.com/elneilios/ReverbArise/pull/101) uses `Refs #58`
+until host acceptance completes. Guide text, actual production captures,
+self-contained assembly and the explicit currency record are complete.
+
+`scripts/install-test-vst3.ps1` built Release plugin-only at clean `37b7430`.
+CTest was not repeated during installation; the preceding combined full gate
+passed 75/75. The first install attempt was blocked by the system-folder lock
+ACL before any bundle replacement. The same script then passed under Windows
+administrator elevation. FL Studio/known hosts were closed throughout.
+
+- Installed: `C:/Program Files/Common Files/VST3/ReverbArise.vst3`.
+- Retained previous bundle:
+  `out/vst3-install-backups/20261106-014917-2fa708effd554d459ea43b669d85bcf3/ReverbArise.vst3`.
+- Installed binary SHA256:
+  `2F5E332F719881A2B49FE9E7585C3B092176AB24365561A92AEC506D43D69358`.
+- Post-install `Assert-TestBundleMatch` passed for the complete bundle.
+- Elevated build logs: `out/build-logs/Release/20261106-014909-847f0fd9`;
+  launcher output/exit: `out/issue58-elevated-test-install.log` / `.exit` (0).
+
+Tasks 3.2, 4.3 and 4.5 are complete with that scoped owner acceptance and the
+reviewable draft PR. Task 4.4 remains open: one actual FL Studio size/scale,
+Reset, mode-journey, audio and reopen smoke test with actual display scaling
+recorded. Installation is not host acceptance. No release or merge occurred.
