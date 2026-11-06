@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the shared IR picker and host-owned scope, collapsed empty feedback and retained error recovery guidance, together with current main host-reset recovery and transport spec. Existing musician-facing guidance remains accurate; no further prose or screenshot changes are required.",
+  "summary": "Reviewed the approved issue 80 swell-workspace spec sync: four shared Sound requirements and detection-independent Learn Default IR access match the implemented bindings, owner approvals and existing guide prose. Archived all 13 completed tasks and planning artifacts intact. No new runtime behavior or guide prose change; the owner chose to retain the tested installed build.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -935,8 +935,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 104700,
-      "sha256": "fbcb901d3d28f98217a60e943d2bdff56da56bfa53c8498477c63c96fa0782ca"
+      "bytes": 110749,
+      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

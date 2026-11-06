@@ -414,3 +414,29 @@ This does not invalidate the completed #80 host smoke or feature acceptance.
 The existing installed bundle and its backup remain as recorded above.
 All 13 implementation/delivery tasks are complete; any pending install refresh
 remains explicitly separate from the passing host acceptance.
+
+### Owner-approved spec sync and archive
+
+The owner approved PR #109 and explicitly requested spec sync/archive followed
+by merge. Applied the four ADDED Sound requirements and the one MODIFIED Learn
+requirement to `openspec/specs/swell-workspace/spec.md`, preserving its Purpose,
+unmentioned requirements and both existing Learn scenarios. Verified all five
+delta blocks match the canonical spec and no delta headings remain there.
+`openspec validate --specs` passed **18/18**; requirement-length warnings remain
+in established requirements, including the complete modified Learn block retained
+under the sync policy. No unrelated requirement rewrite was made.
+
+All planning artifacts were done and CLI task counts were 13/13 before moving
+the change intact, including verified `.openspec.yaml`, to
+`openspec/changes/archive/2026-11-06-shared-convolution-ir-editor/`. The active
+change list confirms its removal. Refreshed semantic user-guide review for the
+canonical spec update; guide currency, UI standards and whitespace checks passed.
+No runtime/test source changed, so the existing 75/75 integrated Release result
+remains applicable; no native rebuild or repeat owner smoke was needed.
+
+The owner explicitly chose to keep the existing installed build. Installation
+refresh is therefore deferred by preference, rather than awaiting host closure;
+no further installer was run and the passing host acceptance remains recorded.
+The final documentation/spec commit is included in the approved issue PR before
+the explicitly authorized merge. GitHub reported no workflow runs or commit
+statuses for its pre-sync head; merge checks will be rechecked on the final head.
