@@ -13,6 +13,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 - The skill orchestrates **vanilla** OpenSpec explore/propose/apply; it does not replace their generated instructions, approval gates or task tracking. Explicit requests for individual OpenSpec operations may use those workflows directly.
 - Follow the specialist [Apply policy](.agents/skills/deliver-issue/references/apply-policy.md) for risk-based verification and task completion. Efficiency advice never waives mandatory OpenSpec instruction refreshes, owner approvals, required tests or final validation gates.
 - Do not change generated OpenSpec skills or `openspec/config.yaml` to customise this delivery workflow.
+- **Completed-work cleanup:** Automatically remove regenerable build output owned by the completed task once validation and delivery are finished, following the [cleanup procedure](.agents/skills/deliver-issue/references/completed-work-cleanup.md). Preserve active builds and reviews, local changes, releases, rollback bundles, durable assets and validation evidence. Do not delete a checkout or clean other chats' worktrees as routine task cleanup; report anything retained and why.
 
 ## Contribution workflow
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.
@@ -35,7 +36,7 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 
 ## Token and cost discipline
 - **Bound discovery:** Use targeted searches and file sections. Follow references for concrete dependencies or uncertainty; once affected call paths and acceptance criteria are clear, stop broad scans and record unresolved questions. Avoid wholesale archive or backlog reads.
-- **Reuse warm environments:** Consult existing toolchain guidance and valid caches before probing or downloading. Preserve usable build trees and caches; avoid unexplained cache clearing or repeated cold setup. Respect the build lock described above.
+- **Reuse warm environments:** Consult existing toolchain guidance and valid caches before probing or downloading. Preserve usable build trees and caches while work, debugging or acceptance is ongoing; avoid unexplained cache clearing or repeated cold setup. At completed delivery, apply the cleanup rule above. Respect the build lock described above.
 - **Batch independent reads:** Group bounded read-only searches, status checks and file reads when practical. Keep mutations sequential and check exit codes.
 - **Keep evidence proportionate:** Prefer diffs and focused result summaries over full logs. Record commands, revision, environment, results and limitations once; link to canonical docs and dated evidence elsewhere instead of duplicating narratives.
 - **Report efficiency honestly:** Distinguish warm/cached from cold runs and record skipped checks explicitly. Claim speedups only with comparable measurements; preserve the validation distinctions above.
