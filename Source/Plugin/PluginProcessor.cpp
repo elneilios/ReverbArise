@@ -64,6 +64,14 @@ void PreverbAudioProcessor::releaseResources()
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
+void PreverbAudioProcessor::reset()
+{
+    // JUCE VST3 setProcessing(false) can reset without release/prepare.
+    // Invalidate only ephemeral clock authority; the next valid callback
+    // validates a fresh run and reuses eligible PCM at current Song time.
+    swells->resetTransportClock();
+}
+
 bool PreverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     return layouts.getMainInputChannelSet() == juce::AudioChannelSet::stereo()
