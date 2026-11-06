@@ -20,20 +20,13 @@ bool decimal(const juce::String& text,double& value)
     value=s.getDoubleValue();return std::isfinite(value);
 }
 }
-void PreverbAudioProcessorEditor::enableFocusedLevelReview()
-{
-    for(auto& cell:valueControls)cell.cancel();focusedLevelReview=true;
-    auto& cell=valueControls[levelValue];
-    cell.valueKnob().setTooltip(m3::ui::levelAdjustment::help);cell.valueField().setTooltip(m3::ui::levelAdjustment::help);
-    cell.onAbsolute=[this](double db){commitValueEdit(levelValue,m3::ui::preciseValue(db));};refresh();
-}
 void PreverbAudioProcessorEditor::beginValueEdit(int index)
 {
     ++valueResetRevision;
     valueWorkflowTokens[index]=processor.getWorkflowSnapshot().pass;
     const auto current=processor.swellEngine().snapshot();const auto w=m3::find(current.session,current.session.primary);
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;
-    if(index==levelValue)levelGestureMinimum=focusedLevelReview && w?m3::ui::levelAdjustment::gestureMinimum(w->shape.gainDb):m3::minimumSwellLevelDb;
+    if(index==levelValue)levelGestureMinimum=w?m3::ui::levelAdjustment::gestureMinimum(w->shape.gainDb):m3::minimumSwellLevelDb;
     valueInvocations[index]={current.sessionEpoch,current.session.selected,processor.getSongTime(),current.session.timing,
         processor.getCaptureSnapshot().manifest.sampleRate,processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
     valueInvocations[index].clock=m3::gridClockContext(current.gridClock,processor.getHostPositionDiagnostics().isPlaying);
@@ -237,8 +230,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 exactText=text;fraction=static_cast<double>((static_cast<long double>(sample)-timeline.viewport().first)/span);
             }
             else if(index==levelValue){text=juce::String(w->shape.gainDb,2);exactText=m3::ui::preciseValue(w->shape.gainDb);
-                domain=focusedLevelReview?m3::ui::levelAdjustment::spanDb:m3::maximumSwellLevelDb-m3::minimumSwellLevelDb;
-                fraction=focusedLevelReview?m3::ui::levelAdjustment::fraction(w->shape.gainDb):(w->shape.gainDb-m3::minimumSwellLevelDb)/domain;}
+                domain=m3::ui::levelAdjustment::spanDb;fraction=m3::ui::levelAdjustment::fraction(w->shape.gainDb);}
             else if(index==inCurveValue || index==outCurveValue)
             {const auto tension=index==inCurveValue?w->shape.inTension:w->shape.outTension;text=juce::String(tension,3);exactText=m3::ui::preciseValue(tension);fraction=(tension+1)/2;domain=2;}
             else

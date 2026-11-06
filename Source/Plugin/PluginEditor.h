@@ -38,8 +38,6 @@ public:
     // Native review harnesses may own polling after borrowing these components.
     // Normal plugin construction retains its existing automatic refresh.
     void stopAutomaticRefreshForReview() {stopTimer();}
-    // Issue #108 candidate only; production retains its accepted mapping until review.
-    void enableFocusedLevelReview();
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
@@ -54,7 +52,6 @@ public:
     void setPresentationDisplayForReview(m3::ui::PresentationFitContext);
     const m3::ui::EditorPresentationState* presentationState()const noexcept{return presentation.get();}
 private:
-    bool focusedLevelReview=false;
     double levelGestureMinimum=m3::minimumSwellLevelDb;
     bool responsivePresentation=false;
     bool applyingPresentation=false,updatingPresentationControls=false;

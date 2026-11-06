@@ -8,8 +8,11 @@ normal timing/fade defaults without accumulating gain or recalibrating edits.
 Level's durable domain is finite -60 to +12 dB, including fractional saved values
 that are not multiples of the editor's 1 dB coarse / 0.1 dB fine steps. The
 semantic constants live with `Shape`; a dial's display/gesture range is separate
-and must never constrain loading or rewrite actual dB values. Issue #108's
-focused -12 to +12 dB dial remains a native review candidate until owner approval.
+and must never constrain loading or rewrite actual dB values. The owner-approved
+main dial spans -12 to +12 dB with 0 dB centered. Type a value down to -60 dB for
+extended attenuation; an extended value remains visible even though the dial
+rests at its lower endpoint. Relative edits from an extended value start at its
+actual dB value, without jumping to -12 dB. Double-click resets only Level to 0.
 Legacy/Musical and frozen values retain their calibration and raw assets; no
 state-schema conversion is needed, and the previous UI can read the same values.
 Level is non-parameter plugin state, without a normalized host automation mapping.

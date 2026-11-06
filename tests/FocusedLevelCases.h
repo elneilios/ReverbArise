@@ -3,7 +3,7 @@ void Composition::verifyFocusedLevel()
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
     auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();
-    panel->enableFocusedLevelReview();panel->setSize(1100,850);
+    panel->setSize(1100,850);
     panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);
     auto& cell=require<KnobValue>(*panel,"swellLevelCell");auto& dial=cell.valueKnob();auto& field=cell.valueField();
     const auto current=[&]{return *m3::find(engine.savedSession(),firstId);};
@@ -20,6 +20,23 @@ void Composition::verifyFocusedLevel()
             && current().shapeGeneration==before.shapeGeneration && engine.snapshot().renderCount==count);
     }
     load(0);dial.onDragStart();dial.setValue(.75,juce::sendNotificationSync);dial.onDragEnd();REQUIRE(current().shape.gainDb==6);
+    {
+        load(0);const auto before=current();const auto defaults=engine.savedSession().defaultIR;
+        const auto neighbour=*m3::find(engine.savedSession(),secondId);const auto renders=engine.snapshot().renderCount;
+        TestDirectory otherRoot;auto other=std::make_unique<PreverbAudioProcessor>(otherRoot.file);
+        wait([&]{return other->swellEngine().savedSession().defaultIR.present();});
+        const auto otherDefault=other->swellEngine().savedSession().defaultIR;
+        enter("-30");wait([&]{return engine.snapshot().auditionReady;});
+        REQUIRE(current().shapeGeneration>before.shapeGeneration && current().inputGeneration==before.inputGeneration
+            && current().render==before.render && current().calibration==before.calibration && engine.snapshot().renderCount==renders);
+        REQUIRE(engine.savedSession().defaultIR==defaults && m3::sameSavedSwell(*m3::find(engine.savedSession(),secondId),neighbour));
+        REQUIRE(other->swellEngine().savedSession().swells.empty() && other->swellEngine().savedSession().defaultIR==otherDefault);
+        REQUIRE(engine.setFrozen(firstId,true));panel->refresh();enter("-24");
+        REQUIRE(current().frozen && current().shape.gainDb==-24 && current().render==before.render);
+        // Creating a later swell still snapshots the IR default with neutral Level.
+        REQUIRE(engine.addTarget(96000));const auto created=engine.savedSession();
+        REQUIRE(m3::find(created,created.primary)->shape.gainDb==0 && created.defaultIR==defaults);
+    }
     load(-12);key(false);REQUIRE(current().shape.gainDb==-12);load(12);key(true);REQUIRE(current().shape.gainDb==12);
     load(0);key(true);key(true,true);REQUIRE(std::abs(current().shape.gainDb-1.1f)<1.e-6);
     load(0);juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;

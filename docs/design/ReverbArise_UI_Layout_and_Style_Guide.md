@@ -1,14 +1,15 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.10 · **Production standards revision:** 10 · **Purpose:** Production UI authority and design reference. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
+**Version:** 1.11 · **Production standards revision:** 11 · **Purpose:** Production UI authority and design reference. Revision 11 adopts the owner-approved focused Level interaction with full-range exact/accessibility entry. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
 
 ## Responsive composition — issue #58
 
-Pending revision 11 candidate: issue #108 focuses Level's dial sweep while keeping
-extended exact entry. Existing tokens and control geometry are reused. This is
-opt-in native review only; accepted production standards remain revision 10
-until scoped owner approval. See the UI development standards for its binding
-and accessibility contract and native test/review commands.
+Revision 11: the owner approved issue #108's focused Level dial and -12/-24 dB
+listening comparison on 2026-11-06. Production uses a linear -12 to +12 dB dial,
+0 dB midpoint/default/reset, 1/0.1 dB coarse/fine steps and exact/absolute
+accessibility entry down to -60 dB. Extended saved values remain accurate while
+the dial rests at its lower endpoint. Existing tokens and geometry are reused.
+See the UI development standards for its binding/accessibility contract.
 
 This section takes precedence over the older fixed-size Learn/header values
 below for the main editor. The owner approved Option A revision 4, its interim

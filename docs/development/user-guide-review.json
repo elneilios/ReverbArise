@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the approved issue 80 swell-workspace spec sync: four shared Sound requirements and detection-independent Learn Default IR access match the implemented bindings, owner approvals and existing guide prose. Archived all 13 completed tasks and planning artifacts intact. No new runtime behavior or guide prose change; the owner chose to retain the tested installed build.",
+  "summary": "Reviewed approved #108 production Level bindings, durable Shape domain and gain-path policies: documented -12/+12 main dial, 0 dB midpoint/reset, 1/0.1 dB steps, exact entry to -60, extended saved values and source-relative quietness; preserved separate Learn IR default, Live wet and Export Dry/Wet, existing unclipped float-WAV Export and host limitations.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 27410,
-      "sha256": "8b814095ac7d3c4cdfc18b2e654b65a1ecb2d5374b27ef7c8d9cbc0b76cf5181"
+      "bytes": 27606,
+      "sha256": "8ed8b611efbb6c9699406bbda5242bf57d4605f0461e1d7f517d4702f7435c9d"
     },
     {
       "path": "CMakePresets.json",
@@ -255,13 +255,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 32957,
-      "sha256": "497347d3e63bdc8c7524ae75ea288544dc9cbf59f543c12e6f54d242cbaaea70"
+      "bytes": 32990,
+      "sha256": "d4940c876e36b88d52879091dccfa1c21d1a5dc9ff6aec8f81311d7f5cbc23b8"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 8923,
-      "sha256": "13f092253ed2018e1525d10f0bc0d0dcf79a33e1677ba3dabae8291dcb590842"
+      "bytes": 9192,
+      "sha256": "383a878451de7304403b944d587c2974a900204c2a72559844dc910ea8392639"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -500,18 +500,18 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86421,
-      "sha256": "27455c80781c5b92d6c2b531b9290c5337231c02ba32460849a320df4f89bb20"
+      "bytes": 86737,
+      "sha256": "a718cdef910c23d78546ce19f95ed8659b41b63569c0a9a6d2aaaa5e484a7424"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12231,
-      "sha256": "2cae5ab832d05d9a143842a9c5a09d8e6a44d13fe03ee354270882bdbfeb6d0d"
+      "bytes": 12287,
+      "sha256": "87633fa90f512ff09883290fa9a4021b12f8120e4758966a4bfaa00c4d877d43"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 22546,
-      "sha256": "897c09ce188bfea620df92d71c9dcb3f40bf66f9f8e0e98b5ded3a88c11b1a79"
+      "bytes": 23037,
+      "sha256": "4ab538b8aaaa29496cb1111e7d37474ad2b15645d74fac9b5bc702930643166e"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -700,8 +700,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 14240,
-      "sha256": "71c7858d069eb250242096cfd6f1236cedb4f417371fbc54db48141911f6cf5e"
+      "bytes": 14505,
+      "sha256": "5ce6841b8e6ca20267378aca4cab4c389b3a743d9a68c5f0efd6e586380694c4"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -712,6 +712,11 @@
       "path": "Source/UI/LearnWorkspace.h",
       "bytes": 35316,
       "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+    },
+    {
+      "path": "Source/UI/LevelAdjustment.h",
+      "bytes": 738,
+      "sha256": "eaf60829c8948366a590e71b7518773e5c8a0b3905af3f9d6d4de8c5b09869fa"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -835,8 +840,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21965,
-      "sha256": "ed242a7be19f5893ae773730eea37b107f74fd7f2ee89f079fb2291b866f7f72"
+      "bytes": 22670,
+      "sha256": "8e9c6d0055f20da4222a3b1434142359e9e6b71befc81028e2b30fc71015e768"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

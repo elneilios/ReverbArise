@@ -409,7 +409,6 @@ public:
     explicit IntegratedReview(std::unique_ptr<Review> scope,bool slimAudition=false,bool selectionReview=false,bool compact=false,bool irReview=false,bool levelReview=false):fixture(std::move(scope))
     {
         editor=fixture->composition.productionEditor();addAndMakeVisible(*editor);
-        if(levelReview)editor->enableFocusedLevelReview();
         if(compact)editor->enableResponsiveReview();
         if(irReview || levelReview){require<controls::SegmentedSelector>(*editor,"learnSections").onRequest(2);require<controls::SegmentedSelector>(*editor,"inspectorSections").onRequest(3);}
         addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);

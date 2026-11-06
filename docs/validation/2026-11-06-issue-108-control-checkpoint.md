@@ -65,3 +65,15 @@ Local output: `out/issue-108-level-listening/index.html`. The page was opened di
 ## Review boundary
 
 Owner review is required by [task 2.2](../../openspec/changes/focus-swell-level-adjustment/tasks.md) before task 3.1 rollout. Review the dial's ordinary and extended feel, exact entry/reset and a brief -12/-24 listening comparison. The native automated edge cases do not need repeating manually. If the feel/range needs revision, change only the candidate and its tests until accepted. Continue on PR #110; no merge, canonical spec sync or archive is authorized by this checkpoint.
+
+## Subsequent owner approval — 2026-11-06
+
+The owner approved the native dial's look/feel and the new -12/-24 dB comparison,
+and explicitly requested integration and remaining validation. They reported that
+-24 dB was inaudible with the quiet chord but audible with the strong chord.
+This is listening feedback at their monitoring level, not a digital-silence or
+universal audibility threshold; source-relative Level preserves source dynamics.
+The approval covers this revised Level family and bounded listening comparison.
+It releases task 2.2's gate without reapproving or changing calibration, default
+gain, other controls or host/DPI coverage. The checkpoint results above remain
+the original candidate results; [final integration evidence](2026-11-06-issue-108-integration.md) is recorded separately.
