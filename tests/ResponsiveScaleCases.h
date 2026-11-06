@@ -34,7 +34,7 @@ void Composition::verifyResponsiveScale()
     auto panel=open(),other=open();
     REQUIRE(juce::Point<int>(panel->getWidth(),panel->getHeight())==juce::Point<int>(900,600));
     auto& root=require<juce::Component>(*panel,"presentationContent");
-    auto& reset=require<juce::TextButton>(*panel,"resetWetShape");
+    auto& reset=require<m3::ui::controls::ActionButton>(*panel,"resetWetShape");
     auto& footer=require<controls::TransportReadout>(*panel,"hostInfo");
     auto& cell=require<KnobValue>(*panel,"endOffsetCell");auto& field=cell.valueField();
     auto& tabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
@@ -136,7 +136,7 @@ void Composition::verifyResponsiveScale()
     REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
     settingsWindow->setVisible(false);
     ownedTabs.setCurrentTabIndex(4);
-    require<juce::TextButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
+    require<m3::ui::controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
     auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
     diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());
     REQUIRE(panel->setPresentationScale(125));panel->refresh();

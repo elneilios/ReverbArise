@@ -16,6 +16,51 @@ This is a cross-cutting family extraction spanning shared controls and main/auxi
 
 ## Decisions
 
+### Current implementation status
+
+The owner approved native family revision 4: “this is perfect and looks good”.
+This satisfies the family gate and supersedes the pending-review wording in the
+historical iterations below. Standards revision 12 records the accepted anatomy
+and colours. The named production migration is implemented with unchanged
+callbacks; automated integration and actual-editor acceptance are tracked
+separately in tasks and dated evidence.
+
+### Owner revision at family review — hover, held press and focus
+
+The first native candidate passed focused checks and 75/75 Release CTest, but
+the owner requested clearer click feedback, destructive hover/press feedback,
+and suggested tinting icons with the ring states. The revised candidate uses
+existing tokens: muted `hover` outer outline, held neutral `separator` fill with
+strong `aqua` outline, held destructive `danger` fill, and an independent inset
+focus stroke. Primary/on-latch hover and press remain visibly distinct; focus
+uses contrasting ink on filled surfaces. Neutral glyphs follow hover/press/focus
+accent, while filled primary glyphs retain dark contrast. This supersedes the
+initial candidate's stable-icon and combined single-ring choices, pending
+owner approval of the revised native preview. It introduces no new token or
+command behavior. FileDragTile's specialized painter is unchanged.
+
+### Owner anatomy refinement — outer corner brackets
+
+The owner subsequently selected thin aqua corner brackets, separated by a small
+outside gap from the button border. The candidate reuses the knob's four-open-
+corner visual pattern and existing 2-pixel focus stroke, but does not edit knobs.
+The button component reserves stroke plus gap around its body so all focus ink
+stays contained; preview frames reserve that space without shrinking the shown
+34-pixel body height. Brackets are always aqua, independent of primary/destructive/
+latched fill. Hover and held feedback remain on body border/background. This
+supersedes the inset focus treatment above and remains at the native family gate.
+
+### Owner colour refinement — retained focus, semantic body and stable glyphs
+
+The owner explicitly liked the outer corner-bracket focus. Retain it unchanged.
+They rejected aqua destructive hover and aqua icon hover. The current candidate
+keeps the destructive outline red, increases its stroke on hover and uses the
+existing red fill while held. Neutral icon glyphs stay off-white across hover,
+press and focus; primary/filled semantic content retains contrasting ink. Mouse
+feedback belongs to border/background, independent of the accepted aqua focus
+brackets. This supersedes revision 2's suggested icon accents. No new token or
+knob change is involved; full-family approval is still pending this preview.
+
 ### 1. Fix the consumer boundary before coding
 
 The 20 persistent `juce::TextButton` members at this baseline are:
@@ -41,10 +86,10 @@ Candidate state matrix uses existing tokens and contained geometry:
 
 | Role | Idle / hover / pressed | Focus / disabled |
 | --- | --- | --- |
-| Neutral text or glyph | Existing #80 neutral surface, stable text/glyph ink, aqua outline on hover/press | Existing contained focus; disabled alpha and eligibility take precedence over transient emphasis |
-| Primary | Existing aqua fill / hover fill, dark content | Preserve shared contained focus and disabled policy |
-| Destructive | Existing danger ink/outline for Reset and Reset All, dark background | Add family-consistent contained focus with danger content; candidate combined focus/hover treatment must be reviewed before consumer rollout |
-| Latch off/on | Off neutral; on uses existing aqua fill/dark content and active hover policy | Same shared focus/disabled resolver; accepted effective state remains supplied by binding |
+| Neutral text or glyph | Neutral idle; muted aqua hover outline; held separator fill and strong aqua outline. Neutral glyph/text ink stays steady and readable | Independent outer aqua corner brackets with a clear gap; disabled body eligibility takes precedence over transients |
+| Primary | Aqua idle / muted aqua hover / aqua held fill with stronger outline; dark content retains contrast | Outer aqua corner brackets independent of fill; dimmed disabled body |
+| Destructive | Danger idle ink/outline, stronger red hover outline, held danger fill/strong outline with dark content | Unchanged outer aqua corner brackets; revised body feedback remains at owner review |
+| Latch off/on | Off neutral; on aqua/dark content, with separate hover and held feedback | Same independent focus/disabled resolver; binding still owns accepted effective state |
 
 No numerical color/spacing/alpha token is invented here. The destructive focus and corrected disabled-combination treatment are scoped family revisions, not already-approved appearance. Obtain owner native acceptance of the prepared candidate before production consumers adopt it. Do not rename Delete/Clear/Reset deleted targets into destructive variants based on visible text.
 

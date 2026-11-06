@@ -28,16 +28,19 @@ governance, not certification of legacy widgets or approval of new native varian
 [Audit evidence](../validation/2026-11-06-issue-107-control-audit.md) records scope
 and validation; #108 Level and #8 recovery/engine work remain independent.
 
-`ActionButton::paintSurface` owns the common command-button surface for text and
-glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
-neutral surface, stable off-white content, aqua hover/pressed outline, contained
-two-pixel focus and the same disabled treatment. Do not recolour an icon instead
-of applying the shared surface state. Primary and latched variants retain their
-existing explicit fill policies. Native parity cases compare both icon roles
-against an ordinary ActionButton across idle/hover/pressed/disabled states.
-The #80 owner requested this correction during integrated review; broader
-legacy/name-based button migration is tracked separately in
-[#107](https://github.com/elneilios/ReverbArise/issues/107).
+Production standards revision 12 records the owner-approved #107 command family
+revision 4. `ActionButton::paintSurface`, icon actions, latches and the generic
+theme fallback delegate to one semantic resolver/painter. Focus uses four aqua
+corner brackets, 2-pixel stroke, with a 3-pixel gap outside the body border;
+component bounds contain all ink. Body border/background own hover and held-press
+feedback. Destructive hover/press stays red; neutral icons remain off-white.
+Primary/on-latch fills keep contrasting dark content. Disabled body state wins
+over mouse emphasis; focus remains independent. Reuse explicit variants and
+`CommandButton` invocation hooks, never names or labels to select appearance.
+The 20 scoped legacy commands now use ActionButton; generic Rename OK/Cancel
+keeps the neutral theme fallback. FileDragTile and knobs retain their painters.
+[Button evidence](../validation/2026-11-06-issue-107-buttons.md) records the family
+approval, native checks and separately pending integrated acceptance.
 
 Issue #80's owner-approved `Controls/ConvolutionIrEditor` family composes
 `IrSelector`, `IconActionButton` and `EllipsisLabel` using existing responsive
@@ -97,7 +100,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 11; scoped knob focus review below). Its responsive composition section
+numerical authority (production standards revision 12; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

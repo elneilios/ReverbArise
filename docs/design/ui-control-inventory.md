@@ -3,7 +3,10 @@
 Initial audit: `24cd287`; reconciled baseline: merged #80 at `717c890`,
 6 November 2026. Status: **owner-approved audit and contracts**, integrated as
 production standards revision 11 after #80's revisions 8–10. This document records
-source inspection, not new native acceptance. Production migrations remain
+source inspection. The separate command-button child now records native family
+revision-4 approval and production adoption at standards revision 12; its
+[evidence](../validation/2026-11-06-issue-107-buttons.md) separates integrated
+acceptance and automated results. Other production migrations remain
 separate child changes; #107 remains open. Active #108 Level and #8 recovery/engine
 work are outside this delivery and the remaining-button proposal.
 
@@ -21,6 +24,12 @@ S selected/latched, E editing, V invalid/rejected, B busy/unavailable.
 Noninteractive text has I/D/overflow, not press or activation states. Graphs have
 their own hover/drag/selection semantics. "Legacy" means explicit remaining debt;
 "retained" means reuse existing policy, not newly certified compliance.
+
+All shared C1 command consumers now inherit the revision-12 painter/input policy,
+including previously shared header, Learn, IR, timeline and Export references.
+Their earlier approvals continue to describe their command/binding scope; the
+button evidence covers the revised common states. FileDragTile retains its
+specialized painter, and generic Rename buttons retain the neutral fallback.
 
 ## Header and shared workspace feedback
 
@@ -63,8 +72,8 @@ Approval: scoped #46/#49/#4/#68/#93/#58 evidence, not blanket legacy compliance.
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
-| P1 `addButton`, `auditionButton`, `stopButton`, `resetButton`, `resetMenu`; `irEditor.fileButton` retained shared reference | C1 legacy TextButton/theme plus shared icon command | I/H/P/D/B for legacy, F explicit in shared icon; `audition`, `stopAudition`, `resetWetShape`, `resetSwellMenu` still select appearance by name; old theme `loadIR` branch is orphaned, shared icon merely retains that discovery name | P1 residual migration; preserve reset guards; remove orphaned name styling without changing shared IR binding |
-| P2 `snapButton`, `auditionWetOnly` | C1 LatchingActionButton, accepted effective latch | I/H/P/F/D/S; off delegates ActionButton, on duplicates active painter; .35 disabled alpha; requested/effective Snap and audition session/pass remain distinct | P1; retain #46/audition acceptance, consolidate painter only in child |
+| P1 `addButton`, `auditionButton`, `stopButton`, `resetButton`, `resetMenu`; `irEditor.fileButton` retained shared reference | C1 ActionButton plus shared icon command | I/H/P/F/D/B; explicit add/play/stop glyphs and primary/destructive roles; shared outer corner focus and semantic mouse states; names are metadata | P1 implemented; native family revision 4 approved, integrated acceptance pending; unchanged callbacks/reset guards and IR binding |
+| P2 `snapButton`, `auditionWetOnly` | C1 LatchingActionButton, accepted effective latch | I/H/P/F/D/S; shared semantic painter for off/on; requested/effective Snap and audition session/pass remain distinct | P1 implemented; silent accepted-state refresh and existing bindings retained; family approved, integrated acceptance pending |
 | P3 `gridBox`, `irEditor.selector`, `irEditor`, `irBinding` | C2 DeliberateSelector and shared ConvolutionIrEditor/binding | I/F/D/B, popup H/S; grid changes rebase/cancel gestures; IR uses accepted catalogue and selected ID/input/epoch in the same field as Learn | P2 retain merged #80 and grid guards |
 | P4 `enabledButton`, `soloButton`, `freezeButton` | C6 legacy ToggleButton | I/H/D/S; theme checkbox square/tick, no explicit focus painter and ignores pressed parameter; unlike Learn switches | P6, selected-swell guarded bindings retained |
 | P5 `inspectorSections` and generated segments | C7 SegmentedSelector, Timing/Envelope/Sound | I/H/P/F/D/S; shares navigation mechanism, composition owns section choice and visible content | P7; retain #58 navigation |
@@ -106,7 +115,7 @@ as recorded in #58 evidence. Legacy other-page controls remain explicit debt.
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | S1 `gainPolicyBox`, `liveRoutingBox` (Playback); `inCurveBox`, `outCurveBox` (Swell); `candidateBox` (Recovery) | C2 plain ComboBox/theme | I/F/D/B, popup H/S; lacks shared no-wheel/invocation policy; gain prototype choice explicitly unavailable | P2 legacy; specify intended wheel/commit policy before replacing |
-| S2 `defaultIRButton` (Processing); `fullButton`, `setBarsButton`, `removeButton` (Swell); `generateButton`, `allButton`, `analyzeButton`, `confirmButton`, `recaptureButton`, `cancelButton`, `clearButton`, `suppressionButton`, `openDiagnosticsButton` (Recovery) | C1 legacy TextButton/theme | I/H/P/D/B; generic border hover, name-based exceptions apply only to names P1 lists; semantically destructive Delete/Clear not automatically same explicit danger variant as Reset | P1; classify semantics with owner, preserve all command guards; default import routes through the merged shared binding |
+| S2 `defaultIRButton` (Processing); `fullButton`, `setBarsButton`, `removeButton` (Swell); `generateButton`, `allButton`, `analyzeButton`, `confirmButton`, `recaptureButton`, `cancelButton`, `clearButton`, `suppressionButton`, `openDiagnosticsButton` (Recovery) | C1 neutral ActionButton | I/H/P/F/D/B; shared mouse/focus states and eligible keyboard/accessibility path; Delete/Clear retain neutral classification | P1 implemented; callbacks and guards retained; default import retains shared binding; integrated acceptance pending |
 | S3 `copyBuildInformation` (About) | C1 primary ActionButton | I/H/P/F/D; intentionally primary copy action already explicit, success feedback accessible event | P1 retain #59 scope |
 | S4 `liveButton` (Playback), `mappingButton` (Processing), `muteButton` (Swell), `isolateButton`, `isolateDryButton` (Audition), `toneButton` (Recovery) | C6 plain ToggleButton/theme | I/H/D/S; checkbox presentation; model meanings differ from action latches | P6 legacy, no command or tone policy changes |
 | S5 `automaticButton`, `autoButton` (Processing) | C6 InvocationToggle/theme | I/H/D/S; checkbox drawing plus captured pass; pre-invocation runs for keys before enabled check | P6 preserve tokens, test disabled hooks separately from mutation |
@@ -129,7 +138,7 @@ treated as production primary controls.
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
-| D1 `timingButton`, `assetInfoButton` | C1 legacy TextButton/theme; timing disclosure/copy assets | I/H/P/D; no explicit shared command focus painter; timing command changes diagnostic layout | P1 legacy; preserve clipboard and disclosure actions |
+| D1 `timingButton`, `assetInfoButton` | C1 neutral ActionButton; timing disclosure/copy assets | I/H/P/F/D; shared semantic painter and activation; existing clipboard/disclosure callbacks | P1 implemented; family approved, integrated acceptance pending |
 | D2 `copyDiagnosticsButton` | C1 ActionButton | I/H/P/F/D; shared neutral surface, explicit title/help | P1 retained reference |
 | D3 `sampleUnitsButton`, `markerButton`, `recaptureExisting` | C6 retained checkbox/invocation seams | I/H/D/S if exposed; exact sample seam and old header controls hidden/zero bounds in current layout | P6 explicit legacy/hidden, no silent deletion or certification |
 
@@ -188,7 +197,7 @@ would otherwise create an oversized review, without fragmenting contract ownersh
 
 | Packet / proposed order | Exact scope and reusable ownership | Dependencies, guards and disposition |
 | --- | --- | --- |
-| P1 Commands, glyph actions and latches | H1, L1/L2, P1/P2/P6 command children, E1/E4 command children, S2/S3, D1/D2; C1 existing action families/theme | First recommended migration. Reuse merged #109 shared surface; migrate residual theme branches through explicit semantic roles, preserve primary/destructive/latch distinctions. Reuse unchanged accepted actions as references; no duplicate icon fix. Preserve invocation/session and all command effects; P2 latch effective state is not a stored preference rewrite. Candidate exception: explicit destructive classification for legacy actions requires owner decision. |
+| P1 Commands, glyph actions and latches | H1, L1/L2, P1/P2/P6 command children, E1/E4 command children, S2/S3, D1/D2; C1 shared command family | Implemented by `unify-command-button-states`; native family revision 4 approved. Explicit roles replace all 20 persistent legacy TextButtons; generic Rename fallback remains neutral. Callbacks, captured ownership and effective latch state retained. Integrated acceptance and final delivery remain separately tracked. |
 | P2 Selectors and menus | L3, P3, E3, S1/S6, N1 popup, N2 reset popup; C2 deliberate/invocation policy | Reuse #109 IR field/binding; migrate only residual plain selectors and menu ownership. Preserve catalogue/ID/epoch/input/pass, reset closures and native popup behavior. Compare intentional no-wheel policy with legacy behavior before review. Rename dialog input stays P4. |
 | P3 Text, context help and feedback | H3, L7/L8 text, P8, E5 labels/E6 painted text, S9 labels/S10/S11/S12, D4/D5 labels/D6 labels, N4 labels; C3 semantic roles/EllipsisLabel/NoticeBar/HeaderInformation/readout | First shared caption/help/validation composition; reuse scoped #109 feedback and screen-owned context prose. Preserve notice precedence/no speech, transport fixed geometry and full diagnostic copy. No new color or shrinking exception. Contract-level accessibility associations need concrete child component tests. |
 | P4 Numeric and text fields | L6 numeric subtree, P7 Entry, E5 numeric subtrees, S8 text-box subtrees/S9 input, D5 read-only input, N1 rename input/OK/Cancel; C4 existing numeric/editor lifecycles | Depends on accepted C3 feedback contract/P3 reusable presentation when needed. Preserve per-subtype Return/Escape/focus-loss, parsing/clamping, exact precision, session/selection guards and explicit bar-range pair commit. Read-only/hidden seams remain explicit; no forced deletion. No universal new editor. |

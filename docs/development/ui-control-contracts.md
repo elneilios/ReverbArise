@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, 6 November 2026; production standards revision 11.**
+**Owner-approved contracts, 6 November 2026; production standards revision 12.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -49,12 +49,21 @@ not authorize a new visual treatment before review.
 
 ## C1 — Commands, icon actions and latches
 
-Observed owners: [ActionButton](../../Source/UI/Controls/ActionButton.h),
+Implemented owners: [ActionButton](../../Source/UI/Controls/ActionButton.h),
 [IconActionButton](../../Source/UI/Controls/IconActionButton.h),
-[LatchingActionButton](../../Source/UI/Controls/LatchingActionButton.h), legacy
-name branches in [WorkspaceTheme](../../Source/UI/WorkspaceTheme.h). Main command
-focus/keyboard policy is already shared, but icon and latched painters differ.
-Merged PR #109 supplies the shared icon surface correction; see inventory reconciliation.
+[LatchingActionButton](../../Source/UI/Controls/LatchingActionButton.h) and the
+neutral fallback in [WorkspaceTheme](../../Source/UI/WorkspaceTheme.h). All scoped
+commands share one resolver/painter; names no longer select appearance. The owner
+approved native family revision 4 on 6 November 2026; integrated review remains
+separate. See [button evidence](../validation/2026-11-06-issue-107-buttons.md).
+
+Focus uses four aqua corner brackets with a 2-pixel stroke and a 3-pixel gap
+outside the body border, contained within the component. Neutral hover uses the
+muted aqua outline; held press uses separator fill and a stronger aqua outline.
+Destructive hover strengthens the red outline; held press fills red. Neutral
+icons retain off-white ink. Primary/on-latch surfaces retain dark content on
+aqua fill. Disabled body ink is dimmed and suppresses mouse emphasis; any focus
+brackets remain aqua. Knob focus and FileDragTile's specialized painter are unchanged.
 
 Contract semantic variants: neutral command, primary command, destructive command
 and effective-state latch. Glyph-only and text actions are content forms of these

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the approved issue 80 swell-workspace spec sync: four shared Sound requirements and detection-independent Learn Default IR access match the implemented bindings, owner approvals and existing guide prose. Archived all 13 completed tasks and planning artifacts intact. No new runtime behavior or guide prose change; the owner chose to retain the tested installed build.",
+  "summary": "Reviewed approved #107 command anatomy, semantic states, accessible text/glyph names, invocation and unchanged production bindings against canonical UI requirements and active delta. Guide adds keyboard/focus/mouse/unavailable guidance. Generic Rename OK/Cancel retains normal-size text at JUCE native dialog height. Capture, Perform DAW rendering and optional Export remain accurate; native/host coverage stays separate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12231,
-      "sha256": "2cae5ab832d05d9a143842a9c5a09d8e6a44d13fe03ee354270882bdbfeb6d0d"
+      "bytes": 12619,
+      "sha256": "46ea5edfc2debf2d4e7196bd46e885280ae40a85597d251ae89302cda85f5f1a"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -540,8 +540,8 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 3814,
-      "sha256": "f4f456d1375937bbe4421b32703477e5152659694e1778266dddb90dd267cab7"
+      "bytes": 7076,
+      "sha256": "6f95d4f0627792a7a99e6d6d86afb0855d41f6794af5dcb792804d17d1b0538a"
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/UI/Controls/IconActionButton.h",
-      "bytes": 2330,
-      "sha256": "51d4070b3661a28f37a45d376fa848b42b1e1633917d1e49438b460dec78ffa9"
+      "bytes": 1923,
+      "sha256": "55503ced644f7dbe356fe3fce2ece16edcad02852cf4b10f553cd82ae9b5c86b"
     },
     {
       "path": "Source/UI/Controls/InvocationSlider.h",
@@ -605,8 +605,8 @@
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
-      "bytes": 1413,
-      "sha256": "6b6d0b0699a477fb38a9320ed9852f4d8c2db244188ec4887864151d763a5186"
+      "bytes": 593,
+      "sha256": "bbbe1a07550ddf523e2ddf8ed14584c2b67cc5069ea62c4d328fa077b636a7a2"
     },
     {
       "path": "Source/UI/Controls/ModeIcon.h",
@@ -810,8 +810,8 @@
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 15898,
-      "sha256": "c8a0af484b1b0aa3cc8110eee243a1143d8a7e4641cce1b4d71b6574533270b8"
+      "bytes": 17034,
+      "sha256": "f9cb6a568756e21fcf451caeccfebba1bff118dda3aa338af66ad959b83f9ae1"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -835,8 +835,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21965,
-      "sha256": "ed242a7be19f5893ae773730eea37b107f74fd7f2ee89f079fb2291b866f7f72"
+      "bytes": 22317,
+      "sha256": "3d0595898054b84909e65e87f7ea5c3de4b522d6379d470b6d4e552d237f280c"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1025,8 +1025,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32658,
-      "sha256": "5d88b26910e0f8acc09822cbd99f6c8b87951b1480b2af3b694da3b1ea137085"
+      "bytes": 32657,
+      "sha256": "9c8acf5ec62f7cf3428abb94284477871b7dcd91f68b7d36bba6d01a8b6b774f"
     }
   ]
 }

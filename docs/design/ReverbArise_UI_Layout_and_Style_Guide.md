@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.11 · **Production standards revision:** 11 · **Purpose:** Production UI authority and design reference. Revision 11 adopts the owner-approved #107 control inventory and shared contracts after merged #80's revisions 8–10. This documentation revision changes no production token or native control appearance.
+**Version:** 1.12 · **Production standards revision:** 12 · **Purpose:** Production UI authority and design reference. Revision 12 records the owner-approved #107 button family: independent outer aqua corner focus, semantic border/background mouse feedback and stable neutral glyph ink. Existing tokens are reused; knobs remain unchanged. Integrated composition acceptance is recorded separately.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -167,6 +167,7 @@ production standards revision; this revision does not change plugin/state versio
 
 | 10 | #80 owner identified idle IR-to-Level gap on 2026-11-06; revised native spacing approved | Empty IR feedback collapses; present feedback uses one or two helper lines and adjacent fields reflow using existing spacing. Reset remains fixed. No new token |
 | 11 | #107 audit and shared contracts explicitly approved 2026-11-06 | Full consumer ownership/state inventory, C1–C8 contracts and separate P1–P8 delivery packets, reconciled against merged #80. Documentation/governance only; all numerical roles and native approvals unchanged; #108 and #8 remain independent |
+| 12 | #107 native button family revision 4 approved 2026-11-06 | Four aqua corner brackets, 2-pixel stroke with 3-pixel outside gap inside component bounds; body border/background owns hover/press. Destructive mouse feedback stays red; neutral icons stay off-white. Explicit neutral/primary/destructive/latch roles share one painter. No new token, knob or FileDragTile redesign; integrated acceptance remains separate |
 
 ### Stable Perform transport information
 

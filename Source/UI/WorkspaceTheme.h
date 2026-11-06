@@ -15,6 +15,51 @@ inline constexpr float navigationSize=18, modeDescriptionSize=16;
 inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},
     rawWet{0xff63716e}, otherWet{0xff80938f}, warning{0xffe6bb72}, staleWet{0xffdba66f}, previewCursor{0xffffb4e9};
 
+namespace controls
+{
+enum class CommandVariant { neutral, primary, destructive };
+struct CommandState {bool enabled=true,hovered=false,pressed=false,focused=false,latched=false;};
+struct CommandInk {juce::Colour fill,border,content,glyph,focus;float stroke;};
+// One resolver for command content and surface. Names and labels are metadata.
+inline CommandInk commandInk(CommandVariant variant,CommandState state)
+{
+    const auto alpha=state.enabled?1.f:.35f;
+    const auto over=state.enabled && state.hovered;
+    const auto down=state.enabled && state.pressed;
+    const auto emphasized=variant==CommandVariant::primary || state.latched;
+    const auto destructive=variant==CommandVariant::destructive;
+    const auto filled=emphasized || (destructive && down);
+    const auto border=destructive?danger:down?aqua:over?hover:outline;
+    const auto content=filled?background:destructive?danger:text;
+    return {(down?(destructive?danger:emphasized?aqua:separator):emphasized?(over?hover:aqua):background).withMultipliedAlpha(alpha),
+            border.withMultipliedAlpha(alpha),content.withMultipliedAlpha(alpha),
+            content.withMultipliedAlpha(alpha),
+            aqua,
+            down || (destructive && over)?controlGeometry::focusStroke:rule};
+}
+// Reserve the bracket stroke and gap inside the component, outside its body.
+inline juce::Rectangle<int> commandBodyBounds(juce::Rectangle<int> bounds)
+{return bounds.reduced(static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke));}
+inline void paintCommandSurface(juce::Graphics& g,juce::Rectangle<int> bounds,CommandVariant variant,CommandState state)
+{
+    const auto ink=commandInk(variant,state);
+    const auto body=commandBodyBounds(bounds);
+    g.setColour(ink.fill);g.fillRoundedRectangle(controlGeometry::insideStroke(body,rule),radius);
+    g.setColour(ink.border);g.drawRoundedRectangle(controlGeometry::insideStroke(body,ink.stroke),radius,ink.stroke);
+    if(state.focused)
+    {
+        const auto focus=controlGeometry::insideStroke(bounds,controlGeometry::focusStroke);
+        const auto leg=std::min(focus.getWidth(),focus.getHeight())*.2f;juce::Path brackets;
+        for(const auto corner:std::array<juce::Point<float>,4>{{focus.getTopLeft(),focus.getTopRight(),focus.getBottomLeft(),focus.getBottomRight()}})
+        {
+            const auto dx=corner.x==focus.getX()?1.f:-1.f,dy=corner.y==focus.getY()?1.f:-1.f;
+            brackets.startNewSubPath(corner.x+dx*leg,corner.y);brackets.lineTo(corner);brackets.lineTo(corner.x,corner.y+dy*leg);
+        }
+        g.setColour(ink.focus);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
+    }
+}
+}
+
 inline const char* resource(const juce::String& filename,int& bytes)
 {
     for(int i=0;i<PreverbUIResources::namedResourceListSize;++i)
@@ -150,42 +195,12 @@ public:
     }
     juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(responsive?bodySize:controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
-    {
-        const auto active=b.getName()=="audition" || b.getToggleState();
-        const auto bounds=b.getLocalBounds().toFloat().reduced(.5f);
-        g.setColour(active?aqua.withMultipliedAlpha(b.isEnabled()?1.0f:.25f):background);
-        g.fillRoundedRectangle(bounds,radius);
-        const auto destructive=b.getName()=="resetWetShape" || b.getName()=="resetSwellMenu";
-        g.setColour(destructive?danger.withMultipliedAlpha(b.isEnabled()?1.0f:.35f)
-                                :(over || down)?aqua:outline.withMultipliedAlpha(b.isEnabled()?1.0f:.35f));
-        g.drawRoundedRectangle(bounds,radius,rule);
-    }
+    {controls::paintCommandSurface(g,b.getLocalBounds(),controls::CommandVariant::neutral,{b.isEnabled(),over,down,b.hasKeyboardFocus(true),false});}
     void drawButtonText(juce::Graphics& g,juce::TextButton& b,bool over,bool down) override
     {
-        const auto box=b.getLocalBounds().toFloat();const auto c=box.getCentre();
-        g.setColour((b.getName()=="audition"?background:text).withMultipliedAlpha(b.isEnabled()?1.0f:.35f));
-        if(b.getName()=="audition")
-        {juce::Path p;p.addTriangle(c.x-5,c.y-8,c.x-5,c.y+8,c.x+8,c.y);g.fillPath(p);return;}
-        if(b.getName()=="stopAudition"){g.fillRect(juce::Rectangle<float>(12,12).withCentre(c));return;}
-        if(b.getName()=="resetWetShape" || b.getName()=="resetSwellMenu")
-        {
-            g.setColour(danger.withMultipliedAlpha(b.isEnabled()?1.0f:.35f));
-            g.setFont(getTextButtonFont(b,0));
-            g.drawFittedText(b.getButtonText(),b.getLocalBounds(),juce::Justification::centred,1);
-            return;
-        }
-        if(b.getName()=="loadIR")
-        {
-            // File-open glyph: folder tab plus base with a centred opening.
-            g.setColour((over?aqua:text).withMultipliedAlpha(b.isEnabled()?1.0f:.35f));
-            const auto left=c.x-8,top=c.y-6,right=c.x+8,bottom=c.y+6;
-            juce::Path folder;
-            folder.startNewSubPath(left,top);folder.lineTo(left-1+5,top);folder.lineTo(left+7,top+3);
-            folder.lineTo(right,top+3);folder.lineTo(right,bottom);folder.lineTo(left,bottom);folder.closeSubPath();
-            g.strokePath(folder,juce::PathStrokeType(1.5f));
-            return;
-        }
-        juce::LookAndFeel_V4::drawButtonText(g,b,over,down);
+        g.setColour(controls::commandInk(controls::CommandVariant::neutral,{b.isEnabled(),over,down,b.hasKeyboardFocus(true),false}).content);
+        g.setFont(getTextButtonFont(b,b.getHeight()));
+        g.drawText(b.getButtonText(),b.getLocalBounds().reduced(spacing::related,spacing::tight),juce::Justification::centred);
     }
     void drawToggleButton(juce::Graphics& g,juce::ToggleButton& b,bool over,bool) override
     {

@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Migrated command states follow explicit semantics
-Migrated text and glyph command actions SHALL share reviewed idle, hover, pressed, focus and disabled feedback for equivalent semantic roles. Primary, destructive and latched variants SHALL remain explicit. Component discovery names and visible labels SHALL NOT select appearance. Existing approved icon surfaces and specialized file-drag presentation SHALL retain their scoped behavior.
+Migrated text and glyph command actions SHALL share reviewed, distinguishable idle, hover, pressed, focus and disabled feedback for equivalent semantic roles. Primary, destructive and latched variants SHALL remain explicit. Names and labels SHALL NOT select appearance. Neutral glyphs SHALL retain steady ink while border/background provide mouse feedback; semantic filled variants SHALL retain readable contrast. Specialized file-drag presentation SHALL retain its scoped behavior.
 
 #### Scenario: Command metadata changes
 - **WHEN** a migrated action is renamed or relabeled without changing its explicit semantic role
@@ -14,6 +14,7 @@ Migrated text and glyph command actions SHALL share reviewed idle, hover, presse
 - **WHEN** a migrated command is hovered, pressed, keyboard-focused or disabled, including applicable combined states
 - **THEN** its reviewed state matrix provides contained focus and consistent semantic content/surface feedback
 - **AND** disabled state does not make the action appear eligible or permit invocation
+- **AND** focus uses aqua outer corner brackets with a small gap from the button border and does not mask hover or held-press feedback, including on destructive actions
 
 ### Requirement: Command activation preserves binding authority
 Migrated commands SHALL support pointer, Return, Space and applicable accessibility activation through the same eligible command path. One activation SHALL issue at most one command. Disabled, stale or destroyed targets SHALL NOT gain permission through a new input path. Existing command effects, target/session guards, persistent data and audio behavior SHALL remain unchanged.

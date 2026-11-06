@@ -47,6 +47,7 @@ inline void buttonSurfaceCases()
         const auto render=[&](auto& button)
         {juce::Image image(juce::Image::RGB,button.getWidth(),button.getHeight(),true);juce::Graphics g(image);g.fillAll(background);button.paintButton(g,state.first,state.second);return image;};
         const auto actual=render(icon),expected=render(reference);
+        const auto contentBounds=commandBodyBounds(icon.getLocalBounds()).reduced(static_cast<int>(controlGeometry::focusOutset));
         for(int y=0;y<actual.getHeight();++y)for(int x=0;x<actual.getWidth();++x)
         {
             // State colours are sampled on straight edges, away from curved
@@ -57,10 +58,12 @@ inline void buttonSurfaceCases()
                 if(actual.getPixelAt(x,y)!=expected.getPixelAt(x,y))
                     throw std::runtime_error("Button surface mismatch role="+std::to_string(static_cast<int>(role))+" enabled="+std::to_string(enabled)+" hover="+std::to_string(state.first)+" down="+std::to_string(state.second)+" at "+std::to_string(x)+","+std::to_string(y)+" actual="+actual.getPixelAt(x,y).toDisplayString(true).toStdString()+" expected="+expected.getPixelAt(x,y).toDisplayString(true).toStdString());
             }
-            else if(x>=4 && y>=4 && x<actual.getWidth()-4 && y<actual.getHeight()-4)
+            else if(contentBounds.contains(x,y))
             {
                 const auto pixel=actual.getPixelAt(x,y);
-                REQUIRE(!(pixel.getGreen()>pixel.getRed()+40 && pixel.getBlue()>pixel.getRed()+40));
+                const auto accent=pixel.getGreen()>pixel.getRed()+40 && pixel.getBlue()>pixel.getRed()+40;
+                // The owner retained neutral glyph ink; body feedback is separate.
+                REQUIRE(!accent);
             }
         }
     }
