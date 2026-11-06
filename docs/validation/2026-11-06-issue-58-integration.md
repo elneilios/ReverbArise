@@ -203,3 +203,25 @@ Tasks 3.2, 4.3 and 4.5 are complete with that scoped owner acceptance and the
 reviewable draft PR. Task 4.4 remains open: one actual FL Studio size/scale,
 Reset, mode-journey, audio and reopen smoke test with actual display scaling
 recorded. Installation is not host acceptance. No release or merge occurred.
+
+## Final FL Studio acceptance — 6 November 2026
+
+The owner confirmed: "All looks good in FL Studio at 100% and 125%, including
+playback and reopening. Go ahead and close the remaining task and mark PR #101
+ready for review." This completes the consolidated host smoke and task 4.4 on
+the installed `37b7430` Release bundle, following the accepted native preview.
+All 23 implementation/acceptance tasks are complete. PR #101 is ready for owner
+review and uses `Closes #58`; no merge, release or OpenSpec archive is authorised.
+
+| Coverage | Result |
+| --- | --- |
+| Owner's 1920x1080 FL Studio workspace, 100% UI scale | Owner accepted |
+| Same workspace, 125% UI scale | Owner accepted |
+| Playback and editor reopening | Owner accepted |
+| Windows OS scaling setting during that smoke | Not separately supplied |
+| Separate physical Windows 100% / 125% / 150% / 200% matrix | Untested; UI-scale acceptance is not relabelled as physical DPI testing |
+
+No product code changed after the installed build. The final closeout changes
+only task tracking and validation/PR records; the existing 75/75 full Release
+pass remains applicable. Guide currency and strict OpenSpec validation are
+checked again without repeating unchanged native suites or owner UAT.
