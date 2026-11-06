@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed integration of issue 73 with accepted main 329e73d: retained the current additive Export levels and continuous preview guide, stable TransportReadout and selection/Fit guidance, plus captured-grid Snap and independent offline timing troubleshooting. Resolved the editor conflict by retaining both current transport presentation and dedicated Snap clock input. No new control styling, map support or host acceptance is claimed; archive sync review will follow separately.",
+  "summary": "Reviewed issue 73 after accepted-main integration and canonical spec sync: captured-grid Snap with validated run offsets, independent offline bounce clocks, causal diagnostics and all existing Export levels/continuous-preview, TransportReadout and selection/Fit guidance remain coherent. Historical source-only diagnostic rejection is scoped explicitly; current run admission stays separate. Three completed changes archived with Purpose/unrelated requirements preserved. No new host acceptance, UI styling or tempo-map implementation is claimed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -885,13 +885,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 94209,
-      "sha256": "7ea462dcfca684072e7c9c55ac8a55cd6ca1030e5b9947e5505de747055e7c44"
+      "bytes": 99946,
+      "sha256": "af75381cfcd01264358179548a14c36c3da33ed078c4db015349c7055e264925"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 34763,
-      "sha256": "019ab598337e830061f1af816b6f64f80dfce740dec03c9d650f87ebb8a7beeb"
+      "bytes": 40047,
+      "sha256": "53d904487bc553a0c9cd9199e5213bd5e5e9d51fed0e7443d9bea4b4d7595477"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
