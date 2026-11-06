@@ -2,6 +2,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <PreverbUIResources.h>
 #include "UiGeometry.h"
+#include "ResponsivePresentation.h"
 #include <array>
 
 namespace m3::ui
@@ -96,6 +97,17 @@ public:void paint(juce::Graphics& g)override{g.fillAll(background);}
 class WorkspaceTheme:public juce::LookAndFeel_V4
 {
 public:
+    void setResponsiveViewport(int width,int height)noexcept{responsive=true;responsiveType=ResponsiveTypography::at(width,height);}
+    bool usesResponsiveTypography()const noexcept{return responsive;}
+    float resolvedHeight(float height)const noexcept
+    {
+        if(!responsive)return height;
+        if(height==headingSize)return responsiveType.heading;
+        if(height==navigationSize)return responsiveType.navigation;
+        if(height==bodySize)return responsiveType.body;
+        if(height==controlSize || height==smallSize || height==captionSize)return responsiveType.value;
+        return height;
+    }
     WorkspaceTheme()
     {
         for(const int id:std::initializer_list<int>{juce::Label::textColourId,juce::TextEditor::textColourId,
@@ -122,9 +134,9 @@ public:
     std::unique_ptr<juce::DropShadower> createDropShadowerForComponent(juce::Component&)override{return {};}
     juce::Font font(float height,int flags=0)const
     {
-        return interFont(height,flags);
+        return interFont(resolvedHeight(height),flags);
     }
-    juce::Font getLabelFont(juce::Label& label)override{return interFont(label.getFont().getHeight(),interStyle(label.getFont().getTypefaceStyle()));}
+    juce::Font getLabelFont(juce::Label& label)override{return interFont(resolvedHeight(label.getFont().getHeight()),interStyle(label.getFont().getTypefaceStyle()));}
     juce::Font getComboBoxFont(juce::ComboBox&)override{return font(controlSize);}
     juce::Font getPopupMenuFont()override{return font(bodySize);}
     juce::Font getSliderPopupFont(juce::Slider&)override{return font(controlSize);}
@@ -136,7 +148,7 @@ public:
     {
         return interTypeface(interStyle(f.getTypefaceStyle()));
     }
-    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(controlSize);}
+    juce::Font getTextButtonFont(juce::TextButton&,int) override{return font(responsive?bodySize:controlSize);}
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool over,bool down) override
     {
         const auto active=b.getName()=="audition" || b.getToggleState();
@@ -206,6 +218,9 @@ public:
         g.setColour(aqua.withMultipliedAlpha(s.isEnabled()?1.0f:.3f));g.drawLine(static_cast<float>(x),cy,pos,cy,3);
         g.fillEllipse(pos-5,cy-5,10,10);
     }
+private:
+    bool responsive=false;
+    ResponsiveTypography responsiveType;
 };
 
 // Custom Graphics painting does not automatically use the component's font
@@ -218,6 +233,15 @@ inline juce::Font fontFor(juce::Component& component,float height,int flags=0)
 inline juce::Font navigationFont()
 {return interFont(navigationSize,InterFace::semibold);}
 
+inline juce::Font componentTextFont(juce::Component& component,TextRole role)
+{
+    const auto style=textStyle(role);
+    const auto* theme=dynamic_cast<const WorkspaceTheme*>(&component.getLookAndFeel());
+    return interFont(theme?theme->resolvedHeight(style.height):style.height,style.face);
+}
+inline void applyTextRole(juce::Graphics& graphics,juce::Component& component,TextRole role)
+{const auto style=textStyle(role);graphics.setFont(componentTextFont(component,role));graphics.setColour(style.ink);}
+
 class Wordmark final:public juce::Component
 {
 public:
@@ -225,8 +249,17 @@ public:
     {int size=0;const auto* bytes=resource("reverbarise-wordmark-dark.svg",size);
         if(bytes)image=juce::Drawable::createFromImageData(bytes,static_cast<size_t>(size));setInterceptsMouseClicks(false,false);}
     bool loaded()const noexcept{return image!=nullptr;}
+    void setOpticalAlignment(bool enabled){optical=enabled;repaint();}
     void paint(juce::Graphics& g)override
-    {if(image)image->drawWithin(g,getLocalBounds().toFloat(),juce::RectanglePlacement::centred,1);}
-private:std::unique_ptr<juce::Drawable> image;
+    {
+        if(!image)return;
+        if(optical)
+        {
+            const auto ink=image->getOutlineAsPath().getBounds();
+            if(!ink.isEmpty()){image->draw(g,1.0f,juce::RectanglePlacement(juce::RectanglePlacement::xLeft|juce::RectanglePlacement::yMid).getTransformToFit(ink,getLocalBounds().toFloat()));return;}
+        }
+        image->drawWithin(g,getLocalBounds().toFloat(),juce::RectanglePlacement::centred,1);
+    }
+private:std::unique_ptr<juce::Drawable> image;bool optical=false;
 };
 }

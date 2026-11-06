@@ -53,12 +53,13 @@ inline std::vector<MusicalRulerTick> musicalTimelineTicks(const SwellViewport& v
 // A composable painter; accepted fixed timing and sample bounds belong to the caller.
 // Reuses the existing bar authority and sample/pixel transform. No transport or grid.
 inline void paintMusicalTimelineRuler(juce::Graphics& g,juce::Rectangle<int> bounds,
-                                     const SwellViewport& view,const SongTime& timing)
+                                     const SwellViewport& view,const SongTime& timing,juce::Component* owner=nullptr)
 {
     if(bounds.isEmpty() || !timing.valid)return;
     const juce::Graphics::ScopedSaveState saved(g);g.reduceClipRegion(bounds);
     const auto ticks=musicalTimelineTicks(view,bounds.getWidth(),timing);
-    applyTextRole(g,TextRole::ruler);
+    const auto font=owner?componentTextFont(*owner,TextRole::ruler):textFont(TextRole::ruler);
+    g.setFont(font);g.setColour(textStyle(TextRole::ruler).ink);
     int labelRight=bounds.getX()-spacing::tight;
     for(const auto& tick:ticks)
     {
@@ -67,7 +68,7 @@ inline void paintMusicalTimelineRuler(juce::Graphics& g,juce::Rectangle<int> bou
         g.drawLine(x,bottom-(tick.bar?spacing::labelHelp:spacing::tight),x,bottom,rule);
         const auto& label=tick.label;if(label.isEmpty())continue;
         const auto width=std::max(controlGeometry::rulerLabelWidth,
-            static_cast<int>(juce::GlyphArrangement::getStringWidth(textFont(TextRole::ruler),label))+spacing::tight);
+            static_cast<int>(juce::GlyphArrangement::getStringWidth(font,label))+spacing::tight);
         const auto left=std::clamp(juce::roundToInt(x),bounds.getX(),std::max(bounds.getX(),bounds.getRight()-width));
         if(left<labelRight+spacing::tight)continue;
         g.drawText(label,juce::Rectangle<int>{left,bounds.getY(),width,std::max(0,bounds.getHeight()-spacing::labelHelp)},juce::Justification::centredLeft);

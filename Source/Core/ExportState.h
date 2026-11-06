@@ -10,12 +10,15 @@ struct ExportFile
     double rate=0;
     int64_t origin=0,frames=0;
     float wet=1;
+    float dry=0;
+    int gainLaw=2;
     bool operator==(const ExportFile&)const=default;
 };
 struct ExportState
 {
     bool initialized=false;
     float wet=1;
+    float dry=0;
     juce::String desiredIdentity,completedPath;
     std::vector<ExportFile> history;
     bool operator==(const ExportState&)const=default;

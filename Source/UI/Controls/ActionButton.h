@@ -31,7 +31,7 @@ public:
         auto area=getLocalBounds().toFloat().reduced(12,4);
         const bool iconOnly=icon==CommandIcon::play || icon==CommandIcon::stop;
         if(icon!=CommandIcon::none){const auto centre=iconOnly?box.getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);}
-        if(!iconOnly){g.setFont(textFont(TextRole::controlLabel));g.drawText(getButtonText(),area,juce::Justification::centred);}
+        if(!iconOnly){g.setFont(componentTextFont(*this,TextRole::controlLabel));g.drawText(getButtonText(),area,juce::Justification::centred);}
     }
     static void drawIcon(juce::Graphics& g,CommandIcon icon,juce::Point<float> c)
     {

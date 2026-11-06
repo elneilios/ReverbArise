@@ -1,0 +1,45 @@
+/* Review-only responsive type and explicit clearance policy. */
+.v-a.type-responsive{font-size:var(--ui-body)}
+.v-a.type-responsive .heading,.v-a.type-responsive .list .list-head .heading,.v-a.type-responsive .inspector-head .heading,.v-a.type-responsive .overview-top .heading,.v-a.type-responsive .export-right .heading{font-size:var(--ui-heading);font-weight:600}
+.v-a.type-responsive .nav button{font-size:var(--ui-nav)}
+.v-a.type-responsive .wordmark{left:0;top:6px;width:201px;height:25px;object-position:left center}
+.v-a.type-responsive .description{left:220px;right:auto;top:2px;height:32px;line-height:16px;font-size:var(--ui-body);white-space:normal;text-overflow:clip;overflow:visible;display:flex;align-items:center}
+.v-a.type-responsive .notice{top:40px;left:0;width:100%;height:24px;line-height:16px;font-size:var(--ui-notice);white-space:normal;text-overflow:clip;overflow:visible;display:flex;align-items:center;padding:0 8px}
+.v-a.type-responsive .notice .warn{flex:none}
+.v-a.type-responsive .helper,.v-a.type-responsive .help,.v-a.type-responsive .learn-sub,.v-a.type-responsive .sound-context,.v-a.type-responsive .learn-sound-note,.v-a.type-responsive .learn-current-body .helper{font-size:var(--ui-body)}
+.v-a.type-responsive .section-tabs button,.v-a.type-responsive .learn-tabs button,.v-a.type-responsive .btn,.v-a.type-responsive .flags button,.v-a.type-responsive .learn-control,.v-a.type-responsive .learn-left .label,.v-a.type-responsive .export-field-label,.v-a.type-responsive .minor{font-size:var(--ui-body)}
+.v-a.type-responsive .learn-current-body .heading{font-size:var(--ui-subheading)}
+.v-a.type-responsive .caption,.v-a.type-responsive .sound-module label,.v-a.type-responsive .sound-module .caption,.v-a.type-responsive .sound-module .engine-caption{font-size:var(--ui-label)}
+.v-a.type-responsive .entry,.v-a.type-responsive .select,.v-a.type-responsive .character-select{font-size:var(--ui-value);padding-left:6px;padding-right:6px}
+.v-a.type-responsive .ruler,.v-a.type-responsive .lane label,.v-a.type-responsive .host,.v-a.type-responsive .readout,.v-a.type-responsive .export-legend{font-size:var(--ui-value)}
+.v-a.type-responsive .audition .helper{font-size:var(--ui-body)}
+.v-a.type-responsive .swell-name{font-size:var(--ui-body)}
+.v-a.type-responsive .swell-ir,.v-a.type-responsive .swell-ready,.v-a.type-responsive .list .count,.v-a.type-responsive .scrollhint{font-size:var(--ui-value)}
+.v-a.type-responsive .cells{column-gap:12px}
+.v-a.type-responsive .inspector{padding-left:8px;padding-right:8px}
+.v-a.type-responsive .inspector-head{height:24px}.v-a.type-responsive .flags{height:32px}
+.v-a.type-responsive .flags button{height:32px}
+.v-a.type-responsive .settings{font-size:20px}
+.v-a.type-responsive .inspector .section-tabs{height:32px}
+.v-a.type-responsive .section-content{top:96px;left:8px;right:8px}
+.v-a.type-responsive .reset-footer{left:8px;right:8px;bottom:8px}
+.v-a.type-responsive .sound-module{height:236px}
+.v-a.type-responsive .sound-module .character-row{height:32px}
+.v-a.type-responsive .sound-module .engine-area{height:48px}
+.v-a.type-responsive .sound-module .engine-caption{height:16px;line-height:16px}
+.v-a.type-responsive .sound-module .cells{height:156px}
+.v-a.type-responsive .sound-module .cell{height:52px}
+.v-a.type-responsive .sound-module .caption{height:16px;line-height:16px}
+.v-a.type-responsive .sound-module .filter-bypass{height:16px;line-height:14px;font-size:11px}
+.v-a.type-responsive .learn-left>.heading{height:24px;line-height:24px}
+.v-a.type-responsive .learn-current-body{top:72px}
+.v-a.type-responsive .learn-sound-module{width:259px}
+.v-a.type-responsive .learn-actions .generate{padding-left:8px;padding-right:8px}
+.v-a.type-responsive .overview-top{height:24px}.v-a.type-responsive .overview-top .heading{line-height:24px}
+.v-a.type-responsive .audition{height:48px}
+.v-a.type-responsive .drag-tile strong{font-size:var(--ui-subheading)}
+.v-a.type-responsive .plugin-resize-note{font-size:12px;color:#c4ccd4}
+/* Divider endpoints retain the same eight-pixel clearance as production policy. */
+.v-a.type-responsive .list,.v-a.type-responsive .inspector,.v-a.type-responsive .learn-left,.v-a.type-responsive .export-right{border-color:transparent}
+.v-a.type-responsive .list:after,.v-a.type-responsive .learn-left:after{content:'';position:absolute;top:8px;bottom:8px;right:0;width:1px;background:#4a5058;pointer-events:none}
+.v-a.type-responsive .inspector:before,.v-a.type-responsive .export-right:before{content:'';position:absolute;top:8px;bottom:8px;left:0;width:1px;background:#4a5058;pointer-events:none}

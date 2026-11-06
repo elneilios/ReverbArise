@@ -50,7 +50,7 @@ private:
     class Caption final:public juce::Label
     {
     public:void paint(juce::Graphics& g)override
-        {applyTextRole(g,TextRole::controlLabel);g.drawText(getText(),getLocalBounds(),juce::Justification::centredLeft);}
+        {g.setColour(text);g.setFont(getLookAndFeel().getLabelFont(*this));g.drawText(getText(),getLocalBounds(),juce::Justification::centredLeft);}
     };
     class Entry final:public juce::TextEditor
     {
@@ -137,16 +137,27 @@ public:
     }
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
-    void lookAndFeelChanged()override{entry.setFont(textFont(TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);}
+    void setCompactPresentation(bool enabled)
+    {compactPresentation=enabled;if(enabled)entry.setIndents(responsiveGeometry::entryInset,0);lookAndFeelChanged();resized();}
+    void lookAndFeelChanged()override
+    {entry.setFont(componentTextFont(*this,TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));}
     void resized()override
     {
         auto bounds=getLocalBounds();
+        if(compactPresentation)
+        {
+            label.setBounds(bounds.removeFromTop(responsiveGeometry::captionHeight));
+            auto row=bounds.removeFromTop(responsiveGeometry::dialSize);
+            knob.setBounds(row.removeFromLeft(responsiveGeometry::dialSize));row.removeFromLeft(spacing::tight);
+            entry.setBounds(row.withSizeKeepingCentre(row.getWidth(),responsiveGeometry::entryHeight));return;
+        }
         knob.setBounds(bounds.removeFromLeft(42).withSizeKeepingCentre(42,42));
         bounds.removeFromLeft(spacing::labelHelp);
         label.setBounds(bounds.removeFromTop(controlGeometry::labelHeight));
         entry.setBounds(bounds.removeFromTop(controlGeometry::valueHeight));
     }
 private:
+    bool compactPresentation=false;
     void showResetMenu(const juce::MouseEvent& event)
     {
         if(!isEnabled())return;auto reset=prepareResetAction();juce::PopupMenu menu;menu.setLookAndFeel(&getLookAndFeel());

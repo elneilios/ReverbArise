@@ -1,0 +1,362 @@
+# Issue #73: fixed-tempo clock investigation
+
+## Scope and attribution
+
+Local branch `codex/73-live-grid-clock-investigation`, planning commit `5390da5`,
+based on main `84894ee`. [Issue #73](https://github.com/elneilios/ReverbArise/issues/73)
+tracks grid/live rejection separately from the existing offline repair.
+Implementation results below will identify their tested revision and dirty state.
+The original investigation phase did not include new host observation,
+installation or an accepted repair. Subsequent authorized integration and owner
+capture are recorded in the final section below.
+
+Supplied owner observations use 48000 Hz, 122 BPM, 4/4:
+
+| Observation | Reference | Host | Established fact |
+| --- | --- | --- | --- |
+| Offline rejection | sample 3399344, PPQ 144 | sample 3399344, PPQ 143.999322222222219 | Source/host origin difference +16 samples |
+| Later historical live rejection | run sample 3399344, PPQ 143.999322222222219 | sample 3795967, PPQ 160.801390972220531 | Run/host origin difference approximately -16 samples |
+| Same live report | publication origin -0.262295081746 | host origin -0.262295041699 | Near-zero publication delta is a different comparison |
+
+Original Snap-only loaded binary/revision and its exact contemporaneous tuple are
+unavailable. The later offline build is attributable to implementation `1532f37`,
+binary SHA256 `0A96FCCD07633CBAE7D00FB9A445E762A97C59F59AB6C3A2E7783F00B1605BD3`.
+The report identifies committed capture revision 2, 61 swells in the earlier
+instance, and later publication revision 14/live run 1/session 3/reset 3.
+It includes source range [3752880,3776487), IR Large Wide Echo Hall.wav and
+215819 rendered frames for the selected swell. Complete source/render content
+fingerprints for those host observations are unavailable here; do not infer them
+from names or a later installed build. No project/assets are modified to recover
+that information. Injected native fixtures use synthetic audio and own identities.
+
+Recoverable identities from the **later successful export/audio-analysis corpus**
+are retained in `a5b36d2:docs/validation/2026-11-05-swell-source-boundaries.json`:
+
+- Project `e0b58807-34a6-4f2d-8875-d09940a821a2`, instance
+  `258e886e-e054-48d4-897c-a37aacf4f039`.
+- Managed IR content
+  `074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4`;
+  supplied IR file SHA256
+  `1189c7079d065a999ae4d3f2041d18508b0263ddeb233fe600e395ecffd845d4`.
+- Direct wet export SHA256
+  `d557064ce88f308b8e57111c49163788615e7e4344c6eea734102d87791f2790`;
+  DAW processed bounce SHA256
+  `8e6609272fb8e6263aa58c30f2bcaf647ee6afdb1a6dc3660445f1433bd5879a`.
+
+That analysis matched four managed renders to source-window convolution, including
+the [3752880,3776487) window, without changing assets. These identities identify
+the later corpus, not the original Snap-only callback or a complete manifest of
+source/render fingerprints at that earlier instant. Its 28-sample comparison
+registration is not proof of absolute Song alignment or plugin latency and is
+not used as this investigation's live/offline sample oracle. Clipping/source-edge
+analysis and processing remain separate.
+
+## Existing offline repair and integration status
+
+Local branch `codex/fix-offline-export-clock` retains implementation `1532f37`,
+installation `09b5696` and subsequent owner result `a5b36d2`.
+Inspect with `git show codex/fix-offline-export-clock:<path>`:
+
+- `openspec/changes/fix-offline-export-clock/proposal.md`
+- `openspec/changes/fix-offline-export-clock/tasks.md`
+- `docs/validation/2026-11-05-offline-export-clock.md`
+- `docs/validation/2026-11-05-offline-export-clock-installation.json`
+- `tests/MultipleExportCases.h`
+
+At investigation entry, `origin/main` is `84894ee`; a subsequent read-only
+`git ls-remote origin refs/heads/main` confirmed remote head
+`84894ee96f2d978886fceb0c3c09980de6457fa3`. `git branch --contains
+1532f37` lists only the local offline/source-edge branches, not main or this
+branch. The offline implementation is not integrated here. Its native results
+were 68/68 Debug and Release, with independent zero/+16/-31-offset bounce arrays,
+different block sizes/Playing flags and concurrent instances. The owner reported
+"Export worked!", 7414 offline blocks and completed wet with host tail timing
+reset. These are retained historical results, not new tests on current main.
+
+| Surface | Existing evidence | Remaining work |
+| --- | --- | --- |
+| Offline missing wet | Local fix and accepted owner bounce | Separate main integration/review path; no repeat host bounce requested |
+| Snap unavailable during Play | Current code compares accepted origin to UI host timing | Expose precise reason/input provenance; current warning's actual host sequence unresolved |
+| Live historical rejection | Run origin differs by -16 despite near-zero publication delta | Retain first rejecting and preceding admitted callbacks; reproduce predicate independently |
+| Actual alignment | Existing fixed-time native contracts | New independent supported-clock sample/audio assertions and preservation checks |
+
+This change must not port offline code, output protection, tempo maps or unrelated
+source-edge changes. Snap evidence cannot certify live admission; a historical
+live rejection cannot invalidate the accepted offline bounce.
+
+## Execution map
+
+- 1.1/1.2: low-risk evidence/branch inspection; independent of code.
+- 2.1: medium-risk equivalent grid result reporting; unit/integer oracle checks.
+- 2.2: medium-risk UI binding; depends on 2.1, component/state/accessibility checks.
+- 3.1: high-risk callback-owned observation/concurrency; fixed work, allocation
+  guards, coherent-reader and lifecycle tests; no admission policy changes.
+- 3.2: medium-risk UI formatting; depends on 3.1, native text/component checks.
+- 4.1/4.2: high-risk transport/audio regression evidence; depends on observations,
+  independent sample oracle, actual output and source/render/persistence checks.
+- 5.1: cross-change native Debug/Release/UI/OpenSpec gates, after source stabilizes.
+- 5.2: guide semantic review/currency after delivered behavior stabilizes.
+- 5.3: final causal assessment and one unresolved-host collection procedure.
+
+## Grid result semantics and focused verification
+
+`HostGrid::make` still evaluates the original capture-rate and
+`transportMappingMatches` predicates, then the same division/conversion math.
+An optional value-only evidence output records accepted/observed inputs and the
+first rejected prerequisite: absent sample position, capture rate, invalid
+timing/origin, host rate, tempo, meter, accepted-grid origin, division or grid
+conversion. Existing callers keep the optional grid API. The editor's evidence
+uses the same timeline inputs; outside Perform it explicitly does not evaluate a
+current grid. Unrepresentable individual snap candidates still return empty.
+
+Early focused native Release `preverb_host_grid_test.exe` exited 0 on
+`5390da5 (dirty)`, while the wrapper continued building other independent
+targets. The integer/meter/tie oracle, +16/-31/zero offsets, exactly one versus
+two samples, absent/nonfinite inputs, separate rate/tempo/meter reasons,
+invalid division and overflow checks passed. This is an MSVC-built executable,
+not a PowerShell fixture. The complete wrapper/CTest results are recorded below
+after completion; this focused pass does not replace those gates.
+
+Early focused native Release `preverb_processor_test.exe multiple-export`
+exited 0. It exercises both zero-input instances, variable real-time partitions,
+the independently declared five-sample admission ramp, unchanged captured-source
+reference and existing save/restore/parallel-bounce safeguards. A later assertion
+adds explicit before/after saved swell equality; the final gate must build/run
+that assertion too. Stable-clock parity here is distinct from the historical
+offline branch's nonzero-offset cases.
+
+Focused Release `preverb_transport_playback_test.exe` exited 0. The two injected
+owner-tuple sequences retain the correct first rejecting callback and admitted
+predecessor despite later failures/loop flags, invalid timing and Stop. New Play,
+clock reset and session replacement produce a new associated bundle. A clock
+failure without a publication retains no fabricated admitted predecessor.
+Existing rate/tempo/meter/range, seek/loop, retirement and recovery tests remain
+active. The added asymmetric two-channel integer-sample oracle matches live and
+offline mixing across partitions including exact five-sample joins/tails.
+
+Native payload measurement: causal bundle **1192 bytes / 149 atomic words**.
+Publication uses 149 payload stores plus two sequence stores, once per observed
+positive-frame callback with a live clock. A bounded read makes at most eight
+attempts, each at most 149 payload loads plus two sequence loads. There is no
+dynamic trace or reader spin. Concurrent callback publication/control reads and
+publication retirement pressure passed with no watched audio allocations or
+deallocations. State contains values only, no publication/asset pointers. These
+bounds and stress checks do not assert an FL Studio callback deadline.
+
+Early focused Release `preverb_swell_ui_test.exe` exited 0. Native binding checks
+exercise available -> +16-sample grid rejection -> compatible stopped grid,
+Ctrl bypass, full accessible diagnostic text, normal helper font, glyph width,
+scroll containment, unchanged serialized session/capture/render count and the
+existing canvas/inspector exact-entry/stale-gesture suites. Existing minimum and
+larger-size component checks run in that suite. This is native component evidence,
+not Windows DPI or FL Studio acceptance. Later format precision/state assertions
+and final source edits require the final wrapper gates recorded below.
+
+The final-source Release CTest UI case passed in **10.02 s** in run
+`20261105-203735-6a2951f5`, built from implementation `2e9bc9d`. It includes the
+explicit parsed negative-16 run delta alongside displayed near-zero publication
+delta, first/predecessor block identities, unavailable evidence, full accessible
+text and serialized-state invariance. The formatter's new shadowing warning was
+removed before this final-source build. No new style/control family was added.
+
+## Causal interpretation and remaining host question
+
+The recorded +16-sample source-to-host difference explains why the accepted
+source grid rejects that tuple. It does not imply live audio is rejected: live
+uses a separately pinned playing reference. Conversely, the later approximately
+-16-sample run-reference delta explains the historical live rejection even when
+the publication delta is nearly zero. Existing requirements intentionally reject
+that within-run change. These comparisons reproduce the rejecting predicates;
+they do not establish why FL supplied different observations or when it first
+changed. The original Snap-only report has no same-callback provenance.
+
+The native sequence fixtures deliberately inject both a shifted first callback
+followed immediately by source-origin timing and a stable shifted prefix followed
+later by source-origin timing. Either can explain a later snapshot. The retained
+first rejection and admitted predecessor distinguish them in an actual future
+host run; no invented drift tolerance or hard-coded offset is justified here.
+
+Recommended follow-up: keep the accepted offline repair on its own integration
+and review path; obtain the missing live transition evidence before approving a
+Snap mapping or live admission change. A successful offline bounce should not be
+repeated solely because a live history row exists. If a repair is proposed, name
+its exact triggering sequence, safety invariants and independent sample oracle,
+revise the planning artifacts and obtain owner approval before implementation.
+Issue #73 remains open; this investigation does not deliver that repair.
+
+## One future FL Studio evidence check
+
+No installation or host operation was performed for this change. After a
+separately authorized test-build installation, use a preserved FLP copy and keep
+all captured/rendered assets; no recapture, clearing or regeneration is needed.
+
+1. Confirm the loaded plugin's Settings > About build information and identify
+   one known ready wet interval. Open Settings > Recovery > Open Diagnostics
+   while stopped and retain the source/grid timing and current run state.
+2. Start Song playback before that interval. When the warning/silence occurs,
+   retain fixed-grid inputs/reason, run start, preceding admitted callback, first
+   timing rejection, current/latest historical rows and worker coverage. Record
+   the affected swell/source/render identity if available. These rows may have
+   different provenance; preserve their block/run/session/reset labels.
+3. Stop and retain the restored current grid versus retained run evidence. Use
+   Copy diagnostics only if the separate offline change's existing action is
+   integrated; otherwise retain the displayed/accessibility detail. No additional
+   host bounce or automated edge-case repetition is requested without a specific
+   new regression.
+
+This checks the one unresolved host sequence. It is not a request to repeat the
+accepted #53 playback, accepted offline repair, source-edge listening test or
+unrelated host/DPI coverage. Original/current host attribution, actual transition
+cause, Windows DPI and new host audio acceptance remain unverified.
+
+## Native integration gates
+
+Windows x64, Visual Studio 2026/MSVC 14.51.36231. Reused clean pinned source
+caches: JUCE `3fb5cbc0340758596dac39f7c8de47d562b4896e` (9.0.4), WavPack
+`5803634a030e2a11dba602ba057b89cc34486c67` (5.9.0). This worktree started with a
+fresh binary tree, not copied binaries or a copied CMake cache. The source-only
+cache seed initially lacked wrapper-required generator/home metadata; preflight
+failed before configure/build/tests. Adding this tree's own matching metadata
+resolved that setup error without deleting a cache or bypassing the build lock.
+Build parallelism is four; CTest is serial for native UI focus ownership.
+
+First `scripts/build.ps1 -Configuration Release -Test`: configure/build/test
+exited 0, **71/71 passed**, CTest **250.35 s**, at `5390da5 (dirty)`.
+Logs: `out/build-logs/Release/20261105-201423-1b2f9991/`.
+This was a fresh Release binary build with warm dependency sources. Some late
+diagnostic/verification refinements occurred during compilation; final incremental
+Release and fresh Debug gates on the settled source are still required below.
+No speed comparison is claimed. The full CTest matrix includes native C++ tests
+and separately named PowerShell/CMake fixture/check gates; those fixture checks
+do not substitute for the native grid, transport, processor and UI regressions.
+Specifically, 65 registered checks invoke native C++ executables; six invoke
+PowerShell/CMake: UI standards check, UI lint fixtures, version-contract fixtures,
+build-information fixtures, guide-currency fixtures and built-version verification.
+All six passed in the final Release gate; unchanged build/installer mock scripts
+outside this registered matrix were not additionally rerun.
+
+Final `scripts/build.ps1 -Configuration Release -Test`: configure/build/test
+exited 0, **71/71 passed**, CTest **204.71 s**, from clean implementation
+`2e9bc9ded95d6142adc9228b72dcad3390b9879f` at configure time. Later task/evidence
+updates do not change that implementation. This was an incremental warm Release
+build; logs `out/build-logs/Release/20261105-203735-6a2951f5/`. Object timestamps
+confirmed final processor/UI/editor sources were rebuilt after their last edits.
+The native processor case passed in 11.70 s, transport in 0.03 s and UI in 10.02 s.
+Explicit saved-swell equality now passes alongside positioned nonzero audio,
+source identity, irregular partitions, existing restore/seek/loop and instance
+isolation checks. No failing test was waived or hidden with a tolerance change.
+
+Final `scripts/build.ps1 -Configuration Debug -Test`: configure/build/test
+exited 0, **71/71 passed**, CTest **506.60 s**, implementation `2e9bc9d` with
+documentation/task-only dirty state. Logs:
+`out/build-logs/Debug/20261105-204207-1e50fb7d/`. Dependency/configure caches were
+warm, while Debug binaries were freshly compiled. The same 65 native executable
+invocations and six separate script/check invocations passed. These timings are
+configuration/scope-specific measurements, not a speedup claim.
+
+Final source audit: `git diff 2e9bc9d -- Source tests CMakeLists.txt` is empty.
+Compared with planning baseline `5390da5`, the shared mapping helper, live clock,
+offline transport, convolution, saved-session implementation, OpenSpec config
+and generated skills remain unchanged. Production changes are the equivalent
+grid result/explanation path and bounded diagnostic observations/bindings. No
+host assets were cleared, recaptured, regenerated or migrated; no installation,
+push, PR, canonical-spec sync or archive was performed. All tracked investigation
+tasks are ready for local review; #73's actual host transition and any behavioral
+repair remain separate follow-up work.
+
+## Requirement evidence matrix
+
+All passes below are final-source native Release checks, not new host acceptance.
+
+| Delta scenario | Evidence |
+| --- | --- |
+| Stable source/playing origin offset | Transport replay admits resident wet using its own run; informational source delta remains distinct |
+| Recorded run origin changes | Exact supplied tuples reject with approximately -16 run delta; UI parses signed text despite near-zero publication delta |
+| Later symptoms cannot replace first cause | Repeated rejection, loop context, invalid timing and Stop preserve first/predecessor block IDs |
+| New run and unavailable predecessor | Stop/Play, reset/session transitions, no-publication failure and independent history verify identity/availability |
+| Inspect without changing project | UI serialized session/capture/render checks, processor saved-swell/source checks and allocation/retirement stress |
+| Playback offset disables accepted grid | Grid reason tests +16/-31/zero and unchanged one-sample guard; native editor moves to grid-origin rejection |
+| Stop restores grid compatibility | Editor returns to available grid with separate stopped callback evidence |
+| Other grid prerequisites | Integer-oracle grid tests cover absent/nonfinite input, capture/host rate, tempo/meter, division and overflow |
+| UI/callback provenance differs | Exact timeline evidence binding and explicit UI/independent-callback labels; no simultaneous-callback claim |
+| Read grid detail without editing | Native full accessible text, normal font, glyph width/scroll bounds and existing exact-entry/bypass/stale-gesture suites |
+
+`maintain-user-guide` semantic review added timing troubleshooting without changing
+workspace screenshots or controls. Explicit review was recorded with
+`scripts/review-user-guide.ps1`; `scripts/check-user-guide.ps1` passed read-only.
+UI standards passed **51 files / 61 existing bounded occurrences**, with debt
+inventory unchanged. Strict OpenSpec and whitespace checks passed. Canonical
+specs were not synced; approved deltas govern the delivered diagnostic additions.
+
+## Subsequent owner capture: audible wet with unavailable Snap
+
+On 5 November 2026, after the [combined local test installation](2026-11-05-issue-73-combined-test-install.md),
+the owner supplied About, asset identity, BEFORE PLAY text and two full attached
+reports (DURING PLAY / AFTER STOP). About identifies clean
+`02a3a1739765c346251af956eaea91336cfb439d`, `v0.1.0-local`.
+The owner explicitly confirmed **"Wet audible; Snap warning visible"**.
+This is host evidence for working audible playback plus a grid availability
+failure; it is not a reproduced live timing rejection or sample-alignment test.
+
+The project/instance are `e0b58807-34a6-4f2d-8875-d09940a821a2` /
+`258e886e-e054-48d4-897c-a37aacf4f039`. Selected swell is
+`Swell Bar 40.2.967644444`, source `[3729072,3752679)`, full wet
+`[3536860,3752679)`, verified saved render and committed capture revision 2.
+Managed IR filename is
+`074407e1dd15fb9933543cf3522e4d54b481dcf470f162817804753cbf5df8b4-db5b6aa7.wav`;
+render filename is
+`a2d6e0640628567e2555adb89528096c8052a8d00ee566de3ac86f4f912c9d6e-123ef36e.wav`.
+These are supplied managed identities, not new filesystem/content verification.
+
+All tuples use 48000 Hz, 122 BPM, 4/4, valid timing and available sample position:
+
+| Observation | Sample / PPQ | Grid or run result |
+| --- | --- | --- |
+| BEFORE PLAY accepted/observed | 3399344 / 144.000000000000000 | Grid available; origin delta 0; callback 12153, run 0 |
+| Run 2 start, callback 15598 | 3683360 / 156.030555555560028 | Admitted; source-origin delta +15.999999894295 samples |
+| DURING PLAY, callback 18737 | 4205600 / 178.153222222234945 | Grid origin mismatch +15.999999699648 samples; live admitted, run delta -0.000000194646 samples |
+| Last admitted, callback 19322 | 4302787 / 182.270171527792058 | Run delta -0.000000230968 samples |
+| AFTER STOP, callback 19627 | 3399344 / 144.000000000000000 | Grid available; origin delta 0; stopped; run 2 history retained |
+
+Session/reset are 3/3 and publication revision is 14 throughout. Playing reports
+`running=1`, `missing=0`, Dry + Wet routing and linear wet gain 1. Host looping is
+reported with bounds `[3399360,5004606)` during the retained run; stopped reports
+looping off. The historical rejection, first timing rejection and its predecessor
+are all unavailable in both reports. No offline callbacks occurred.
+
+Independent rational replay of the pasted decimal tuples uses
+`origin = sample - PPQ * 1440000/61`: accepted origin is
+`-0.26229508196721313`; run-start origin `15.73770481245377`; during-Play origin
+`15.737704617691803`. It independently gives grid delta
+`+15.999999699659016` and run delta approximately `-1.94762e-7` samples.
+Small last-digit differences from the native text reflect representation and
+arithmetic; the approximately 16-sample versus sub-micro-sample distinction is
+unambiguous. The existing one-sample grid guard therefore explains this warning;
+tempo, meter, rate, missing sample position and live-run drift do not explain it.
+
+The after-Stop capture confirms that the run-start and last-admitted values
+survive Stop while the stopped grid becomes compatible again. It does not prove
+every intermediate callback was admitted, but no timing rejection was latched
+for retained run 2. This history retains only the current/latest run: run 1 is
+not supplied, and the transition to run 2 cannot be attributed to a manual
+restart, transient host Playing state or another cause from these reports.
+Run 2 starts inside the selected wet interval; the DURING PLAY snapshot itself
+is after that interval. Audibility is the owner's report, not a waveform or
+sample-position measurement. The older reported -16-sample live rejection
+therefore remains a separate unresolved sequence.
+
+Attachment provenance (original filenames are both `Pasted text.txt`):
+
+- DURING PLAY: attachment `5cf31428-c082-4aca-9eca-f7c62d591deb`, SHA256
+  `e26777c680bf37a82e6dbf8d1b93032430e064ef6da7aed5c2d385dc725ff29d`.
+- AFTER STOP: attachment `5d0d26a0-32cd-470a-aa64-665a6bad8bfa`, SHA256
+  `ea02f93f6f34a07ab16659fa70eed38661809ef73f479e211a1e4e67ccb58de7`.
+
+Minimal follow-up: plan a scoped grid repair for stable, validated playback-origin
+offsets while preserving saved sample positions and genuine within-run drift
+rejection. Do not globally widen the one-sample guard or infer a timing repair
+from audible wet. This capture needs no repeat; request a new DURING PLAY /
+AFTER STOP pair only if the distinct live silence/rejection recurs. No production
+behavior, proposal approval, canonical specs or task completion claims changed
+while recording this evidence. The change's explicit approval boundary still
+applies before any behavioral repair.

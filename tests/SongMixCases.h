@@ -16,14 +16,43 @@ inline void songMixCases()
     Swell swell;swell.arrival=swell.sourceStart=100;swell.sourceEnd=200;swell.shape.endOffset=100;swell.phase=Phase::ready;
     REQUIRE(assets.writeRender(raw,{},"fixture",session.timing,swell.render,error));session.swells={swell};
     auto neighbour=swell;neighbour.id=juce::Uuid().toDashedString();neighbour.placement=20;session.swells.push_back(neighbour);
-    const auto original=fileHash(directory.file.getChildFile(swell.render.path));
+    const auto original=fileHash(directory.file.getChildFile(swell.render.path)),originalSource=fileHash(directory.file.getChildFile(range.assetPath));
+    {
+        const auto readPair=[&](float dryLevel,float wetLevel){
+            std::shared_ptr<const SongExportPlan> plan;REQUIRE(prepareSongExportPlan(session,source,"independent",session.timing,dryLevel,wetLevel,plan,error));
+            SongMix mix(directory.file);REQUIRE(mix.prepare(plan,previewMemoryBudget,error) && mix.measure(error));
+            REQUIRE(mix.metrics().wetGain==1 && mix.metrics().sumGain==1);
+            std::vector<float> samples(600);for(int at=0;at<300;){const auto frames=std::min(127,300-at);REQUIRE(mix.read(at,{samples.data()+at*2,static_cast<size_t>(frames)*2},error));at+=frames;}
+            if(dryLevel==0 && wetLevel==0)REQUIRE(!mix.metrics().audibleStart && mix.metrics().peak==0);
+            return samples;
+        };
+        const auto dryLayer=readPair(1,0),wetLayer=readPair(0,1);
+        std::shared_ptr<const SongExportPlan> layersPlan;
+        REQUIRE(prepareSongExportPlan(session,source,"layers",session.timing,1,1,layersPlan,error));
+        auto layers=std::make_unique<SongMix>(directory.file);std::array<float,26> d{},w{};
+        REQUIRE(!layers->readLayers(0,d,w,error));
+        REQUIRE(!layers->prepare(layersPlan,previewMemoryBudget,error,[]{return true;}));
+        REQUIRE(!layers->readLayers(0,d,w,error));
+        REQUIRE(layers->prepare(layersPlan,previewMemoryBudget,error));
+        for(int at=0;at<287;at+=13){REQUIRE(layers->readLayers(at,d,w,error));
+            for(int n=0;n<26;++n){REQUIRE(std::abs(d[n]-dryLayer[at*2+n])<1e-6f);REQUIRE(std::abs(w[n]-wetLayer[at*2+n])<1e-6f);}}
+        REQUIRE(!layers->readLayers(-1,d,w,error) && !layers->readLayers(299,d,w,error));
+        REQUIRE(!layers->readLayers(0,d,{w.data(),24},error));
+        REQUIRE(layers->workingBytes()<2*1024*1024 && fileHash(directory.file.getChildFile(swell.render.path))==original);
+        REQUIRE(fileHash(directory.file.getChildFile(range.assetPath))==originalSource);
+
+        for(const auto pair:std::array<std::pair<float,float>,4>{{{1,1},{.35f,.65f},{1,.25f},{0,0}}}){
+            const auto sum=readPair(pair.first,pair.second);
+            for(size_t n=0;n<sum.size();++n)REQUIRE(std::abs(sum[n]-(dryLayer[n]*pair.first+wetLayer[n]*pair.second))<2e-6f);
+        }
+    }
     for(const float blend:{0.f,.5f,.65f,1.f}){
         std::shared_ptr<const SongExportPlan> plan;REQUIRE(prepareSongExportPlan(session,source,"source",session.timing,blend,plan,error));
         SongMix mix(directory.file);REQUIRE(mix.prepare(plan,previewMemoryBudget,error) && mix.measure(error));const auto metrics=mix.metrics();
         REQUIRE(metrics.audibleStart && *metrics.audibleStart==(blend==0?100:1));REQUIRE(metrics.audibleEnd && *metrics.audibleEnd==(blend==1?219:300));
         float peak=0;std::vector<float> oracle(600);
         for(int n=0;n<300;++n)for(int c=0;c<2;++c){float wet=0;for(int move:{0,20}){const auto at=n-move;if(at>=0 && at<200){const auto edge=std::min({1.,at/2.,(199-at)/2.});wet+=static_cast<float>(raw.samples[at*2+c]*edge);}}peak=std::max(peak,std::abs(wet));oracle[n*2+c]=wet;}
-        const auto guard=peak>juce::Decibels::decibelsToGain(-1.f)?juce::Decibels::decibelsToGain(-1.f)/peak:1.f;
+        const auto guard=1.f;
         REQUIRE(std::abs(metrics.wetGain-(blend==0?1:guard))<1e-6f);
         for(int n=0;n<300;++n)for(int c=0;c<2;++c)oracle[n*2+c]=(n>=100?dry[(n-100)*2+c]*(1-blend):0)+oracle[n*2+c]*guard*blend;
         for(int pageSize:{1,13,127,4096}){std::vector<float> actual(600);for(int at=0;at<300;){const auto count=std::min(pageSize,300-at);REQUIRE(mix.read(at,{actual.data()+at*2,static_cast<size_t>(count)*2},error));at+=count;}
@@ -60,7 +89,7 @@ inline void songMixCases()
         REQUIRE(captures.writeAudioChunk(hotRange,1000,hot.data(),error));hotSource.ranges={hotRange};
         std::shared_ptr<const SongExportPlan> input;REQUIRE(prepareSongExportPlan(session,hotSource,"hot",session.timing,.5f,input,error));
         SongMix mixed(directory.file);REQUIRE(mixed.prepare(input,previewMemoryBudget,error) && mixed.measure(error));
-        REQUIRE(mixed.metrics().sumGain<1 && mixed.metrics().peak<=juce::Decibels::decibelsToGain(-1.f)+1e-6f);
+        REQUIRE(mixed.metrics().sumGain==1 && mixed.metrics().wetGain==1 && mixed.metrics().peak>2);
         std::array<float,2> sample;REQUIRE(mixed.read(150,sample,error));
         float wet=raw.samples[150*2]+raw.samples[130*2];
         REQUIRE(std::abs(sample[0]-(2.f+wet*mixed.metrics().wetGain*.5f)*mixed.metrics().sumGain)<1e-6f);
@@ -128,7 +157,7 @@ inline void songMixCases()
         for(size_t i=0;i<maximumSwells;++i){auto member=swell;member.id=juce::Uuid().toDashedString();maximum.swells.push_back(member);}
         std::shared_ptr<const SongExportPlan> input;REQUIRE(prepareSongExportPlan(maximum,source,"maximum",maximum.timing,1,input,error));
         SongMix overlap(directory.file);REQUIRE(overlap.prepare(input,128*1024*1024,error) && overlap.measure(error));
-        REQUIRE(overlap.metrics().wetPeak>100 && overlap.metrics().peak<=juce::Decibels::decibelsToGain(-1.f)+1e-6f && overlap.workingBytes()<128*1024*1024);
+        REQUIRE(overlap.metrics().wetPeak>100 && overlap.metrics().peak==overlap.metrics().wetPeak && overlap.workingBytes()<128*1024*1024);
         auto sparse=session;sparse.swells.resize(1);sparse.swells[0].placement=3600000;auto absent=source;absent.ranges.clear();
         REQUIRE(prepareSongExportPlan(sparse,absent,"hour-sparse",sparse.timing,1,input,error));
         SongMix hour(directory.file);REQUIRE(hour.prepare(input,8*1024*1024,error) && hour.measure(error));

@@ -1,4 +1,5 @@
 #pragma once
+#include <UI/ResponsivePresentation.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <DSP/SwellEngine.h>
 #include "SwellViewport.h"
@@ -11,7 +12,7 @@ class SwellTimeline final : public juce::Component,public juce::SettableTooltipC
 {
 public:
     explicit SwellTimeline(SwellEngine& engine);
-    void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true);
+    void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true,bool hostPlaying=false);
     void paint(juce::Graphics&) override;
     void resized() override;
     void lookAndFeelChanged()override{invalidateWaveforms();}
@@ -44,13 +45,17 @@ public:
     void focusLost(FocusChangeType)override{drag=Drag::none;fineDrag=false;snapBypassed=false;}
     void setGridDivision(GridDivision division);
     GridDivision selectedGrid()const noexcept{return gridDivision;}
-    bool gridAvailable()const{return playheadAvailable && HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision).has_value();}
+    std::optional<HostGrid> makeGrid(GridEvidence* evidence=nullptr)const{return HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision,evidence,playheadAvailable,&clockContext);}
+    bool gridAvailable()const{return makeGrid().has_value();}
+    GridEvidence gridEvidence()const{GridEvidence result;makeGrid(&result);return result;}
+    const SongTime& acceptedGridTiming()const{return gridTiming();}
     const juce::String& interactionStatus()const noexcept{return gestureStatus;}
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
     const SwellViewport& viewport() const noexcept {return view;}
     void setViewport(SwellViewport v) {if(!std::isfinite(v.first) || !std::isfinite(v.last) || !std::isfinite(v.span()) || v.span()<=0)return;if(v.first!=view.first || v.last!=view.last)drag=Drag::none;view=v;updateScroll();repaint();}
     void setInlineOverview(bool enabled){inlineOverview=enabled;resized();repaint();}
+    void setResponsivePresentation(bool enabled){if(responsivePresentation!=enabled){responsivePresentation=enabled;resized();repaint();}}
     void navigateOverview(double fraction);
     juce::Rectangle<float> sourceLane() const noexcept {return source;}
     juce::Rectangle<float> wetLane() const noexcept {return wet;}
@@ -88,6 +93,7 @@ private:
     Shape initialEnvelope;
     SwellViewport dragView;
     SongTime dragTime,dragAcceptedTime;
+    GridClockContext clockContext,dragClock;
     std::optional<HostGrid> dragGrid;
     uint64_t dragEpoch=0,dragInput=0;
     std::vector<juce::String> dragSelection;
@@ -99,7 +105,7 @@ private:
     bool snapEnabled=true,snapBypassed=false,updatingScroll=false;
     GridDivision gridDivision=GridDivision::quarterBeat;
     bool playheadAvailable=false;
-    bool inlineOverview=true;
+    bool inlineOverview=true,responsivePresentation=false;
     bool editingEnabled=true;
     ui::WaveformLayer waveformLayer,wetWaveformLayer;
     uint64_t waveformRevision=0;
@@ -112,7 +118,8 @@ public:
     void lookAndFeelChanged()override{waveformLayer.invalidate();}
     void colourChanged()override{waveformLayer.invalidate();}
     const ui::WaveformPaintMetrics& waveformPaintMetrics()const noexcept{return waveformLayer.metrics();}
-    juce::Rectangle<float> waveformBounds()const noexcept{return getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
+    juce::Rectangle<float> waveformBounds()const noexcept
+    {return timeline.responsivePresentation?getLocalBounds().toFloat().withTrimmedLeft(ui::responsiveGeometry::overviewHeadingWidth+ui::responsiveGeometry::contentPadding).reduced(1):getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
     juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}

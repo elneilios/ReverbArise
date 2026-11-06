@@ -53,13 +53,14 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
     waveZoom.onValueChange=[this]{invalidateWaveforms();repaint();};addAndMakeVisible(waveZoom);
     waveZoomLabel.setTooltip(waveZoom.getTooltip());waveZoomLabel.setText("Height",juce::dontSendNotification);ui::applyTextRole(waveZoomLabel,ui::TextRole::controlLabel);addAndMakeVisible(waveZoomLabel);
 }
-void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available)
+void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available,bool hostPlaying)
 {
+    const auto nextClock=gridClockContext(s.gridClock,hostPlaying);
     if(drag!=Drag::none && drag!=Drag::overview)
     {
         const bool wetDrag=drag!=Drag::arrival && drag!=Drag::sourceStart && drag!=Drag::sourceEnd;
         const auto owner=find(s.session,dragId);
-        const bool timingChanged=t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
+        const bool timingChanged=!dragClock.sameAuthority(nextClock) || t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
             || s.session.timing.valid!=dragAcceptedTime.valid || (s.session.timing.valid && !transportMappingMatches(dragAcceptedTime,s.session.timing));
         if(s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
             || available!=dragSampleAvailable || (wetDrag && (owner->inputGeneration!=dragInput || owner->render.content!=dragRender
@@ -68,7 +69,7 @@ void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t
     }
     if(!sameCaptureDisplay(capture,c) || !sameWetDisplay(data,s) || time.valid!=t.valid || time.rate!=t.rate
         || time.bpm!=t.bpm || time.numerator!=t.numerator || time.denominator!=t.denominator)invalidateWaveforms();
-    capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;
+    capture=std::move(c);data=std::move(s);time=t;playheadAvailable=available;clockContext=nextClock;
     scrollbar.setVisible(!capture.manifest.ranges.empty() || !data.session.swells.empty());updateScroll();repaint();
 }
 void SwellTimeline::setSnap(bool enabled){if(enabled!=snapEnabled){snapEnabled=enabled;rebaseDrag();}}
@@ -100,8 +101,9 @@ bool SwellTimeline::prepareDrag(juce::Point<float> point)
     if(data.sessionEpoch!=engine.assignmentEpoch()){drag=Drag::none;gestureMessage("Session changed; start a new gesture");return false;}
     const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return false;}
     dragEpoch=data.sessionEpoch;dragSelection=data.session.selected;dragTime=time;dragAcceptedTime=data.session.timing;
+    dragClock=clockContext;
     dragRaw=data.raw;dragInput=w->inputGeneration;dragRender=w->render.content;dragSampleAvailable=playheadAvailable;dragFrozen=w->frozen;
-    dragGrid=playheadAvailable?HostGrid::make(dragAcceptedTime,dragTime,capture.manifest.sampleRate,gridDivision):std::optional<HostGrid>{};
+    dragGrid=makeGrid();
     dragView=view;lastPointer=point;rebaseDrag();gestureMessage({});return drag!=Drag::none;
 }
 std::pair<double,double> SwellTimeline::globalBounds() const
@@ -207,9 +209,10 @@ void SwellTimeline::resized()
     else overview={-10000,-10000,0,0};
     auto waveControls=area.removeFromTop(24);waveZoomLabel.setBounds(waveControls.removeFromLeft(76).toNearestInt());
     waveZoom.setBounds(waveControls.removeFromLeft(std::min(240.0f,waveControls.getWidth())).toNearestInt());
-    ruler=area.removeFromTop(ui::controlGeometry::headingHeight).toNearestInt();
-    area.removeFromTop(ui::controlGeometry::feedbackHeight+ui::spacing::tight);
-    source=area.removeFromTop(std::max(40.0f,(area.getHeight()-32)/2));area.removeFromTop(32);wet=area;
+    ruler=area.removeFromTop(responsivePresentation?ui::responsiveGeometry::footerHeight:ui::controlGeometry::headingHeight).toNearestInt();
+    area.removeFromTop(responsivePresentation?ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap:ui::controlGeometry::feedbackHeight+ui::spacing::tight);
+    const auto laneGap=responsivePresentation?float(ui::responsiveGeometry::laneCaptionBand):32.f;
+    source=area.removeFromTop(std::max(40.0f,(area.getHeight()-laneGap)/2));area.removeFromTop(laneGap);wet=area;
     updateScroll();
 }
 void SwellTimeline::drawWave(juce::Graphics& g,const std::vector<CapturePeak>& peaks,juce::Rectangle<float> lane,juce::Colour colour,float gain,ui::WaveformPaintMetrics& metrics,int64_t placement)
@@ -283,8 +286,8 @@ void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& m
 void SwellTimeline::paint(juce::Graphics& g)
 {
     g.fillAll(ui::background);g.setFont(ui::fontFor(*this,ui::smallSize));
-    ui::controls::paintMusicalTimelineRuler(g,ruler,view,time);
-    if(!time.valid){ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
+    ui::controls::paintMusicalTimelineRuler(g,ruler,view,gridTiming(),this);
+    if(!time.valid){ui::applyTextRole(g,*this,ui::TextRole::helper);g.drawText("Musical timing unavailable",ruler,juce::Justification::centredLeft);}
     if(capture.manifest.ranges.empty() && data.session.swells.empty())
     {
         const auto area=source.getUnion(wet);auto headline=area.withHeight(64).withCentre(area.getCentre().translated(0,-30));
@@ -305,8 +308,8 @@ void SwellTimeline::paint(juce::Graphics& g)
     for(const auto& swell:data.session.swells)
     {const auto at=mini(static_cast<double>(swell.arrival));g.setColour(swell.id==data.session.primary?ui::aqua:ui::secondary);g.drawVerticalLine(static_cast<int>(at),overview.getBottom()-13,overview.getBottom());}
     }
-    ui::applyTextRole(g,ui::TextRole::helper);g.drawText("Dry",source.translated(0,-24).withHeight(20),juce::Justification::centredLeft);
-    const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),time);
+    ui::applyTextRole(g,*this,ui::TextRole::helper);g.drawText("Dry",source.translated(0,responsivePresentation?-(ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap):-24).withHeight(20),juce::Justification::centredLeft);
+    const auto ticks=ui::controls::musicalTimelineTicks(view,ruler.getWidth(),gridTiming());
     for(const auto& tick:ticks)
     {
         const auto at=static_cast<float>(view.pixel(tick.sample,source.getX(),source.getWidth()));
@@ -338,7 +341,7 @@ void SwellTimeline::paint(juce::Graphics& g)
     {
         const auto current=primary && primary->phase==Phase::ready;
         const auto colour=current?ui::aqua:ui::staleWet;
-        ui::applyTextRole(g,ui::TextRole::helper);g.setColour(colour);g.drawText(current?(data.shaped?"Wet":"Wet - preparing"):"Wet - stale",wet.translated(0,-25).withHeight(20),juce::Justification::left);
+        ui::applyTextRole(g,*this,ui::TextRole::helper);g.setColour(colour);g.drawText(current?(data.shaped?"Wet":"Wet - preparing"):"Wet - stale",wet.translated(0,responsivePresentation?-(ui::responsiveGeometry::laneCaptionHeight+ui::responsiveGeometry::laneCaptionGap):-25).withHeight(20),juce::Justification::left);
     }
     else{g.setColour(ui::secondary);g.drawText(primary?primary->status:juce::String("Select a swell to inspect its wet audio"),wet,juce::Justification::centred);}
     if(data.dryAvailable && data.session.auditionMode==AuditionMode::dryWet){
@@ -360,7 +363,7 @@ void SwellTimeline::paint(juce::Graphics& g)
             g.setColour(ui::background);g.fillEllipse(handle);g.setColour(ui::secondary);g.drawEllipse(handle,1.5f);
         }
         const auto hint=gestureStatus.isNotEmpty()?gestureStatus:effectiveSnap() && !gridAvailable()?juce::String("Snap unavailable: fixed timing required; hold Ctrl or turn Snap off"):juce::String{};
-        if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
+        if(hint.isNotEmpty()){const juce::Graphics::ScopedSaveState saved(g);ui::applyTextRole(g,*this,ui::TextRole::helper);g.setColour(hint==sourceHover?ui::text:ui::warning);g.drawText(hint,source.reduced(8).withHeight(ui::textStyle(ui::TextRole::helper).lineHeight).translated(0,22),juce::Justification::left);}
         if(data.raw)
         {
             int64_t a,b;juce::String error;
@@ -468,6 +471,9 @@ void SwellTimeline::dragTo(juce::Point<float> point)
     const auto changed=engine.edit(dragId,[&](Swell& w,juce::String& error)
     {
         invoked=true;
+        if(dragClock.playing){const auto latest=engine.transportClockSnapshot();
+            if(!dragClock.sameAuthority(gridClockContext(latest,true)) || (snapping && (!latest || !HostGrid::make(dragAcceptedTime,latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,true,&dragClock))))
+            {stale=true;error=failure="Playback clock changed; start a new gesture";return false;}}
         // edit(expected epoch) owns the engine's recursive UI lock. Recheck the
         // current selection inside that same transaction, including secondary IDs.
         const auto current=engine.savedSession();
@@ -528,14 +534,18 @@ void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(t
 void SwellTimeline::mouseDrag(const juce::MouseEvent& e){setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
 void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
 {
-    if(!editingEnabled)return;
+    if(!editingEnabled || data.sessionEpoch!=engine.assignmentEpoch())return;
     setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(!source.contains(e.position))return;
     for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}
     const auto candidate=view.sample(e.position.x,source.getX(),source.getWidth());
     if(effectiveSnap())
-    {const auto at=playheadAvailable?view.snapToGrid(candidate,gridTiming(),time,capture.manifest.sampleRate,gridDivision):std::optional<int64_t>{};
+    {auto grid=makeGrid();
+        if(clockContext.playing){const auto latest=engine.transportClockSnapshot();
+            if(!clockContext.sameAuthority(gridClockContext(latest,true)) || !latest
+                || !HostGrid::make(gridTiming(),latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,playheadAvailable,&clockContext))grid.reset();}
+        const auto at=grid?grid->snap(candidate):std::optional<int64_t>{};
         if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at);}
     else engine.addTarget(candidate);
 }
@@ -549,7 +559,11 @@ SwellOverview::SwellOverview(SwellTimeline& value):timeline(value)
     setName("songOverview");addAndMakeVisible(heading);heading.setName("overviewHeading");heading.setText("Overview",juce::dontSendNotification);
     ui::applyTextRole(heading,ui::TextRole::sectionHeading);heading.setInterceptsMouseClicks(false,false);
 }
-void SwellOverview::resized(){heading.setBounds(getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight));}
+void SwellOverview::resized()
+{
+    if(timeline.responsivePresentation){heading.setBounds(getLocalBounds().removeFromLeft(ui::responsiveGeometry::overviewHeadingWidth).withSizeKeepingCentre(ui::responsiveGeometry::overviewHeadingWidth,ui::responsiveGeometry::headingHeight));return;}
+    heading.setBounds(getLocalBounds().removeFromTop(ui::controlGeometry::headingHeight));
+}
 juce::Rectangle<float> SwellOverview::detailBounds()const
 {
     const auto lane=waveformBounds();const auto [a,b]=timeline.globalBounds();
@@ -615,10 +629,10 @@ void SwellOverview::paint(juce::Graphics& g)
     {g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::bodySize));g.drawText("No audio mapped yet",lane,juce::Justification::centred);return;}
     if(timeline.time.valid)
     {
-        const auto& t=timeline.time;
+        const auto& t=timeline.gridTiming();
         for(const auto& tick:makeSongBarRuler(a,b,lane.getWidth(),t.rate,t.bpm,t.numerator,t.denominator,t.sample,t.ppq))
         {const auto at=lane.getX()+static_cast<float>((tick.samplePosition-a)/(b-a))*lane.getWidth();
-            g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),27,48,17,juce::Justification::left);
+            g.setColour(ui::secondary);g.setFont(ui::fontFor(*this,ui::smallSize));g.drawText(juce::String(tick.bar)+".1",static_cast<int>(std::clamp(at+2,lane.getX(),lane.getRight()-48)),timeline.responsivePresentation?2:27,48,timeline.responsivePresentation?14:17,juce::Justification::left);
             g.drawVerticalLine(static_cast<int>(at),43,49);}
     }
     const auto x=[&](double position){return lane.getX()+static_cast<float>((position-a)/(b-a))*lane.getWidth();};

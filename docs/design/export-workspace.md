@@ -1,5 +1,15 @@
 # Export workspace implementation reference
 
+Issue #51 replaces the right-column crossfade with the owner-reviewed Mix Character
+selector and two shared editable Dry/Wet rows. Each level ranges from 0–100%;
+100% is unity for that branch. Presets modify only the pair; unmatched pairs show
+Custom. The white dry/aqua wet waveform, legend, retained-preview caption, status
+and immutable filenames describe the accepted independent pair. The original left
+waveform/ruler, Zoom/Fit, transport and right delivery actions retain their layout.
+At 0/0 the canvas reports Silent and preview/seek/Save/drag are disabled. Overload
+uses the existing warning role; Float32 samples are not attenuated automatically.
+Earlier single-crossfade descriptions below record the #6 reference baseline.
+
 Issue #6 is implemented and its current native presentation is owner approved.
 This document records the references, control ownership and deferred integration.
 Final Release/FL Studio acceptance remains distinct from native visual approval.
@@ -85,7 +95,7 @@ Fit restores all audible contributions with margins. Wheel zoom anchors at the
 pointer, Right-drag pans, horizontal/Shift-wheel pans, +/- zooms, arrows pan and
 Home/F or left-double-click restores Fit. The view remains read-only. New accepted
 mixes fit once; ordinary refresh does not reset inspection. The transport readout
-separates audible Preview duration from WAV duration at song origin.
+shows Preview position and WAV duration on the song timeline.
 
 Pending/error retains the last completed plot with scoped dimming and an explicit
 previous-percentage label. The tile reports Preparing, Ready or Error; stale
@@ -143,3 +153,13 @@ Pending/failed previous plots are not seekable. No DAW seeking or audio editing
 is introduced. The revised interaction has native owner approval; prior
 composition, file-delivery and FL Studio acceptance remain valid for unchanged
 behavior. Coordinate shared control integration with Agent 2 against this seam.
+
+
+Issue #51 follow-up: Mix Character and Dry/Wet edits keep a running preview at
+its advancing song playhead with a 5 ms monitoring-only gain transition. The
+caption reports the callback-accepted pair independently of WAV readiness.
+Previous waveform data is labelled; current peak measurement is pending until
+the corresponding measured summary arrives. Save/Drag remain disabled until the
+current WAV is verified. Playing edits preserve zoom/pan. Stop and 0/0 revoke
+playback; subsequent nonzero edits never start it. Shared notices retain normal
+accessibility metadata and changed-value events without requesting speech.

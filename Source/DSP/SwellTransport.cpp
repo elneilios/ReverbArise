@@ -6,6 +6,16 @@ namespace m3
 {
 namespace
 {
+juce::String offlineTimingEvidence(const SongTime& prepared,const SongTime& reference,const SongTime& host)
+{
+    const auto describe=[](const SongTime& t){return "sample="+juce::String(t.sample)+" PPQ="+juce::String(t.ppq,15)
+        +" Hz="+juce::String(t.rate,6)+" BPM="+juce::String(t.bpm,12)
+        +" meter="+juce::String(t.numerator)+"/"+juce::String(t.denominator)+" valid="+juce::String(t.valid?1:0);};
+    const auto delta=[&](const SongTime& from){long double a=0,b=0;return songOrigin(from,a) && songOrigin(host,b)
+        ?juce::String(static_cast<double>(b-a),9):juce::String("unavailable");};
+    return " | Prepared: "+describe(prepared)+" | Reference: "+describe(reference)+" | Host: "+describe(host)
+        +" | source origin delta="+delta(prepared)+" samples | run origin delta="+delta(reference)+" samples";
+}
 juce::String memberKey(const Swell& w)
 {return w.render.content+"/"+juce::String(w.inputGeneration)+"/"+juce::String(w.shapeGeneration)+"/"+juce::String(w.placement)
     +"/"+juce::String(w.arrival)+"/"+juce::String(static_cast<int>(w.shape.automaticStart))+"/"+juce::String(w.shape.startOffset)+"/"+juce::String(w.shape.endOffset)
@@ -157,11 +167,15 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
     if(frames<=0)return;
     offlineBlockCount.fetch_add(1,std::memory_order_relaxed);
     const auto starting=!offlineActive.exchange(true);
+    // Offline callbacks need not set Playing. Pin their own clock separately
+    // from parked/source PPQ, while preserving the accepted sample schedule.
+    LiveClockSnapshot entryClock;entryClock.reference=entryClock.observed=hostTime.song;
+    entryClock.playing=true;entryClock.gate=LiveGate::admitted;
     // Capture accepted IR-only fallbacks before waiting for an in-flight worker
     // render. Its completion must not silently change this export's composition.
     std::map<juce::String,Swell> acceptedAtEntry;juce::StringArray pendingAtEntry;
     if(starting){const auto context=contextProvider();const juce::ScopedLock guard(lock);
-        for(const auto& [id,kept]:retainedIR)if(const auto* current=find(model,id);current && retainedCompatible(kept,*current,context)){
+        for(const auto& [id,kept]:retainedIR)if(const auto* current=find(model,id);current && retainedCompatible(kept,*current,context,&entryClock)){
             auto audible=kept.accepted;audible.phase=Phase::ready;audible.enabled=current->enabled;audible.muted=current->muted;audible.solo=current->solo;
             acceptedAtEntry.emplace(id,std::move(audible));pendingAtEntry.add(current->name+": "+kept.accepted.irName+" (requested "+kept.requestedName+")");}}
     const juce::ScopedLock work(workLock);
@@ -171,13 +185,13 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
         if(offlineSession.liveEnabled && offlineSession.liveRouting==LiveRouting::wetOnly){std::fill_n(left,frames,0.0f);std::fill_n(right,frames,0.0f);}};
     try{
         if(starting || hostTime.song.sample<offlineLastPosition){const juce::ScopedLock guard(lock);
-            offlinePlayer.reset();offlineEntries.clear();offlineMembers.clear();offlineError.clear();offlineWarning.clear();offlineStatus="Preparing offline export";offlineWindowStart=offlineWindowEnd=0;offlineSession=model;}
+            offlinePlayer.reset();offlineEntries.clear();offlineMembers.clear();offlineError.clear();offlineWarning.clear();offlineStatus="Preparing offline export";offlineWindowStart=offlineWindowEnd=0;offlineSession=model;offlineClock=entryClock;}
         offlineLastPosition=hostTime.song.sample;
         if(offlineError.isNotEmpty()){if(offlineSession.liveEnabled && offlineSession.liveRouting==LiveRouting::wetOnly){std::fill_n(left,frames,0.0f);std::fill_n(right,frames,0.0f);}return;}
         if(!offlinePlayer){
             offlineEntries.clear();offlineMembers.clear();
             const auto context=contextProvider();long double origin;
-            if(!songOrigin(hostTime.song,origin)){fail("valid absolute Song timing is required");return;}
+            if(!songOrigin(hostTime.song,origin)){fail("valid absolute Song timing is required"+offlineTimingEvidence(offlineSession.timing,offlineClock.reference,hostTime.song));return;}
             collectCompletedPass(context);inspect(context);prepareDefault(context);dispatchAutomatic(context);
             Session pending;uint64_t generation;
             {const juce::ScopedLock guard(lock);pending=model;generation=sessionGeneration.load();}
@@ -186,8 +200,8 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
             {const juce::ScopedLock guard(lock);offlineSession=model;offlineRoot=instanceRoot(context.capture.manifest);
                 for(const auto& [id,accepted]:offlineAccepted)if(auto target=find(offlineSession,id))*target=accepted;}
             if(offlineSession.gainPolicy==GainPolicy::legacy)for(auto& w:offlineSession.swells)w.calibration={};
-            if(offlineSession.liveEnabled && !transportMappingMatches(offlineSession.timing,hostTime.song) && !offlineSession.swells.empty()){
-                fail("prepared assets have incompatible timing");return;}
+            if(offlineSession.liveEnabled && offlineClock.accepts(offlineSession.timing,hostTime.song)!=LiveGate::admitted && !offlineSession.swells.empty()){
+                fail("prepared assets have incompatible timing"+offlineTimingEvidence(offlineSession.timing,offlineClock.reference,hostTime.song));return;}
             SwellAssetStore store(offlineRoot);juce::String error;juce::StringArray skipped;
             const auto skip=[&](const Swell& w,const juce::String& reason){if(skipped.size()<8)skipped.add(w.name+": "+reason);};int skippedCount=0;
             if(offlineSession.liveEnabled)for(const auto& w:offlineSession.swells)if(w.enabled && !w.muted && (!solo || w.solo)){
@@ -214,7 +228,7 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                 offlinePlayer->primeForOffline();
                 for(const auto& entry:offlineEntries)offlinePlayer->invalidate(entry.slot,1);}
         }
-        if(!transportMappingMatches(offlineSession.timing,hostTime.song) && !offlineEntries.empty()){
+        if(offlineClock.accepts(offlineSession.timing,hostTime.song)!=LiveGate::admitted && !offlineEntries.empty()){
             int64_t lastWetEnd=INT64_MIN;for(const auto& entry:offlineEntries)lastWetEnd=std::max(lastWetEnd,entry.end);
             // Hosts may advance absolute samples through an offline dry/tail
             // while freezing/resetting PPQ after playback has stopped. There
@@ -225,11 +239,11 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                 liveStatus=offlineWarning.isNotEmpty()?offlineWarning:juce::String("Offline export: wet complete | host tail timing reset");offlineStatus=liveStatus;
                 return;
             }
-            const auto expectedPpq=offlineSession.timing.ppq+(static_cast<long double>(hostTime.song.sample)-offlineSession.timing.sample)
-                *offlineSession.timing.bpm/(60*offlineSession.timing.rate);
+            const auto expectedPpq=offlineClock.reference.ppq+(static_cast<long double>(hostTime.song.sample)-offlineClock.reference.sample)
+                *offlineClock.reference.bpm/(60*offlineClock.reference.rate);
             fail("Song mapping changed during export | sample="+juce::String(hostTime.song.sample)
                 +" PPQ="+juce::String(hostTime.song.ppq,6)+" expected="+juce::String(static_cast<double>(expectedPpq),6)
-                +" last wet end="+juce::String(lastWetEnd));return;
+                +" last wet end="+juce::String(lastWetEnd)+offlineTimingEvidence(offlineSession.timing,offlineClock.reference,hostTime.song));return;
         }
         auto time=hostTime;time.playing=true;
         SwellAssetStore store(offlineRoot);juce::String error;
@@ -261,7 +275,7 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                 offlineWindowStart=pageStart;offlineWindowEnd=pageEnd;
             }
             time.song.sample=at;time.song.ppq=hostTime.song.ppq+offset*hostTime.song.bpm/(60*hostTime.song.rate);
-            offlinePlayer->process(left+offset,right+offset,count,time);
+            offlinePlayer->process(left+offset,right+offset,count,time,true,&offlineClock);
             if(offlinePlayer->missing() || offlinePlayer->incompatible()){fail("required prepared wet was unavailable");return;}
             offset+=count;
         }

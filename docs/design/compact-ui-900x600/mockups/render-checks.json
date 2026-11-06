@@ -1,0 +1,103 @@
+{
+  "renderer": "Chromium, deviceScaleFactor 1; browser layout checks only",
+  "cases": [
+    {
+      "name": "a-learn",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "a-perform-timing",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "a-perform-envelope",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "a-perform-sound",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "a-export",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "b-learn",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "b-perform",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    },
+    {
+      "name": "b-export",
+      "width": 900,
+      "height": 600,
+      "regionOverflow": [],
+      "brokenImages": [],
+      "controlClipping": []
+    }
+  ],
+  "tabChecks": [
+    {
+      "section": "Timing",
+      "controls": [
+        "Target (bars)",
+        "Move Wet (ms)",
+        "Source start (bars)",
+        "Source end (bars)"
+      ],
+      "count": 4,
+      "resetVisible": true
+    },
+    {
+      "section": "Envelope",
+      "controls": [
+        "Pre-roll (s)",
+        "End Offset (s)",
+        "Fade In (ms)",
+        "Fade Out (ms)",
+        "Curve In",
+        "Curve Out"
+      ],
+      "count": 6,
+      "resetVisible": true
+    },
+    {
+      "section": "Sound",
+      "controls": [
+        "Level (dB)"
+      ],
+      "count": 1,
+      "resetVisible": true
+    }
+  ]
+}

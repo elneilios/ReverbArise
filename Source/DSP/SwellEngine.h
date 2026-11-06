@@ -44,6 +44,8 @@ struct ExportSnapshot
     std::optional<int64_t> previewPosition;
     uint64_t session=0,pass=0;
     bool previewRequested=false;
+    std::optional<ExportVoice::AcceptedLevels> previewLevels;
+    std::shared_ptr<const PreparedExport> preview;
     uint64_t delivery=0;bool delivering=false,dragReady=false;juce::String deliveryPath,deliveryMessage;
 };
 struct LivePreparationObservation
@@ -63,6 +65,7 @@ struct EditorSnapshot
     ExportSnapshot songExport;
     Session session;
     uint64_t sessionEpoch=0; // Coherent UI ownership token; never persisted.
+    std::optional<LiveClockSnapshot> gridClock; // Dedicated control authority, not telemetry.
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
@@ -85,6 +88,7 @@ struct EditorSnapshot
     std::vector<juce::String> auditionMembers;
     LivePreparationObservation livePreparation;
     std::optional<LiveCallbackObservation> liveObservation,liveLastRejection;
+    std::optional<LiveCausalObservation> liveCausal;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;
@@ -170,6 +174,7 @@ public:
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
     void resetTransportClock() noexcept {liveClock.reset();}
+    std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
     void failNextLivePublicationForTesting() noexcept {livePublicationFail.store(true);notify();}
@@ -178,6 +183,7 @@ public:
     bool hasExportableWet(const SongTime&)const;
     bool initializeExport();
     bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
+    bool setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool playExport(uint64_t expectedSession);
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
@@ -323,8 +329,11 @@ private:
     struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;};
     uint64_t exportDeliverySerial=0;std::optional<ExportDelivery> exportDelivery;
     std::unique_ptr<ExportVoice> exportVoice=std::make_unique<ExportVoice>();
-    std::unique_ptr<juce::AudioFormatReader> exportPreviewReader;
+    std::unique_ptr<SongMix> exportPreviewReader;
     std::shared_ptr<const PreparedExport> exportPreviewPin;
+    uint64_t exportPreviewSession=0,exportPreviewPass=0,exportPreviewRevision=0;
+    bool exportPreviewWetAvailable=true;
+    std::atomic<uint64_t> exportPreviewBytes{0};
     uint64_t exportPreviewTicket=0;
     int64_t exportPreviewNext=0,exportPreviewStart=0;
     juce::String exportAttempt;
@@ -344,6 +353,7 @@ private:
     std::atomic<float> regeneration{.5f};
     std::unique_ptr<TransportPlayback> offlinePlayer;
     Session offlineSession;
+    LiveClockSnapshot offlineClock;
     juce::File offlineRoot;
     std::vector<LiveEntry> offlineEntries;
     std::vector<Swell> offlineMembers;

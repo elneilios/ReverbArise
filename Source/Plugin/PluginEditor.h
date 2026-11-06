@@ -16,6 +16,10 @@
 #include <UI/PerformLayout.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
+#include <UI/Controls/ActionButton.h>
+#include <UI/Controls/PresentationSurface.h>
+#include <UI/EditorPresentationState.h>
+#include <UI/Controls/FocusViewport.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
 {
@@ -38,7 +42,41 @@ public:
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
     juce::Component* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
+    // The host factory supplies user-local storage; fixtures inject isolated storage.
+    void enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage>,std::optional<m3::ui::PresentationFitContext> display={});
+    // Native review defaults never write the user's real presentation profile.
+    void enableResponsiveReview(std::shared_ptr<m3::ui::PresentationStorage> storage={},std::optional<m3::ui::PresentationFitContext> display={});
+    bool responsiveReviewEnabled()const noexcept{return responsivePresentation;}
+    bool setPresentationScale(int);
+    bool setPresentationSize(int,int);
+    void setPresentationDisplayForReview(m3::ui::PresentationFitContext);
+    const m3::ui::EditorPresentationState* presentationState()const noexcept{return presentation.get();}
 private:
+    bool responsivePresentation=false;
+    bool applyingPresentation=false,updatingPresentationControls=false;
+    m3::ui::controls::PresentationSurface presentationSurface;
+    std::shared_ptr<m3::ui::PresentationStorage> presentationStorage;
+    std::unique_ptr<m3::ui::EditorPresentationState> presentation;
+    std::optional<m3::ui::PresentationFitContext> reviewDisplay;
+    std::optional<m3::ui::PresentationFitContext> appliedPresentationDisplay;
+    juce::Point<int> appliedPresentationSize;
+    m3::ui::controls::DeliberateSelector presentationSizeBox,presentationScaleBox;
+    juce::Label presentationSizeLabel,presentationScaleLabel,presentationHelp;
+    void initialisePresentation();
+    void applyPresentation();
+    void resizePresentation();
+    void servicePresentation();
+    void updatePresentationControls();
+    void layoutPresentationSettings();
+    void updateAuxiliaryPresentation();
+    void paintWorkspace(juce::Graphics&);
+    m3::ui::PresentationFitContext presentationDisplay()const;
+    juce::Component& workspaceRoot()noexcept{return responsivePresentation?presentationSurface.contentRoot():*this;}
+    juce::Rectangle<int> workspaceBounds()const noexcept{return responsivePresentation?presentationSurface.contentRoot().getLocalBounds():getLocalBounds();}
+    int inspectorSection=1;
+    m3::ui::controls::SegmentedSelector inspectorSections;
+    void layoutResponsive();
+    void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::controls::EllipsisLabel hoverHelp;
     juce::Component::SafePointer<juce::Component> hoverHelpSource;
@@ -51,7 +89,7 @@ private:
     juce::Label inspectorHeading,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
     std::array<juce::Label,3> inspectorGroups;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
-    void timerCallback() override {modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
+    void timerCallback() override {servicePresentation();modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
     void setDiagnosticsOpen(bool);
     void setSettingsOpen(bool);
     void initialiseSettings();
@@ -80,7 +118,7 @@ private:
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
-    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;};
+    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;m3::GridClockContext clock;};
     std::array<ValueInvocation,valueCount> valueInvocations;
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;
@@ -115,6 +153,7 @@ private:
     uint64_t navigationEpoch=0;
     juce::TextButton recaptureButton{"Recapture & regenerate"},cancelButton{"Cancel recapture"},fullButton{"Full response"},resetButton{"Reset shape"},setBarsButton{"Set source from bars"},clearButton{"Clear map"};
     juce::TextButton assetInfoButton{"Copy asset info"};
+    m3::ui::controls::ActionButton copyDiagnosticsButton{"Copy diagnostics"};
     juce::ToggleButton enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
     m3::ui::controls::InvocationToggle autoButton{"Auto-refresh after recapture"};
     juce::Slider auditionSlider,toneStartSlider,toneEndSlider;
@@ -128,12 +167,12 @@ private:
     uint64_t presentationSession=0;
     std::optional<int64_t> chosenCandidate;
     bool updating=false,destroying=false;
-    m3::ui::FlatViewport inspectorViewport,diagnosticsViewport;
+    m3::ui::controls::FocusViewport inspectorViewport,diagnosticsViewport;
     juce::Component inspectorContent;
     m3::ui::FlatSurface diagnosticsContent;
     void layoutLiveDiagnostics();
     juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
-    std::array<juce::Component,6> settingsPages;
+    std::array<juce::Component,7> settingsPages;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;
     std::array<juce::Label,6> settingsHelp;

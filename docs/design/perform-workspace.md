@@ -1,5 +1,20 @@
 # Perform workspace
 
+Issue #58 now supplies the responsive main-editor composition (standards
+revision 7), superseding the fixed geometry described in the earlier history
+below. Fresh content is 900x600/100%; text grows with useful workspace.
+Timing / Envelope / Sound sections expose all existing primary-swell controls.
+Enabled/Solo/Freeze and Reset/Reset All stay outside inspector scrolling.
+Zoom/Fit and Snap/Grid reflow into separate rows when required. Named content
+padding and divider-end gaps protect the 8-pixel clearance; outer side margins
+are 12 pixels. See the [production guide](ReverbArise_UI_Layout_and_Style_Guide.md)
+and [presentation policy](../development/editor-presentation.md).
+
+Sound retains selected-swell IR/import/status and Level. Learn's Sound tab
+retains its existing Default IR; the shared module remains #80 work and a Learn
+Level default remains a separate extension. Neither is part of #58, and no future
+DSP controls are implied by these tabs.
+
 Current: the owner approved the complete revised native presentation on 4 November 2026.
 Production now adopts the 52-pixel audition strip, grouped/full Source inspector,
 compact readouts with exact editing, shared ruler, aligned headings and normal-font

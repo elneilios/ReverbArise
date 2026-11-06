@@ -20,7 +20,7 @@ public:
         g.setColour((hasKeyboardFocus(true) || over || down?aqua:outline).withMultipliedAlpha(alpha));
         g.drawRoundedRectangle(hasKeyboardFocus(true)?focusInkBounds():box,radius,
                                hasKeyboardFocus(true)?controlGeometry::focusStroke:rule);
-        g.setColour(background.withMultipliedAlpha(alpha));g.setFont(textFont(TextRole::controlLabel));
+        g.setColour(background.withMultipliedAlpha(alpha));g.setFont(componentTextFont(*this,TextRole::controlLabel));
         g.drawText(getButtonText(),getLocalBounds().reduced(spacing::related,spacing::tight),juce::Justification::centred);
     }
 };

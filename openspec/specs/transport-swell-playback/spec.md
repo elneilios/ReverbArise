@@ -395,3 +395,60 @@ Recoverable preparation or publication rejection SHALL remain eligible for bound
 - **WHEN** preparation spans a confirmed Stop/Play, restore or live admission transition
 - **THEN** publication revalidates current run identity, timing, source/render dependencies and coverage or remains retryable
 - **AND** a matching render revision or resident window alone does not certify a superseded clock validation, while still-valid resident PCM can be reused without changing its positions
+
+### Requirement: Offline bounces validate their own runtime mapping
+Each fresh host offline bounce SHALL establish a valid fixed-tempo runtime mapping independently of parked/source PPQ origin. Assets SHALL retain compatible rate, tempo and meter. Subsequent wet-required callbacks SHALL match the established bounce mapping within one sample. Stored source/render positions and identities SHALL remain unchanged.
+
+#### Scenario: Export origin differs from prepared origin
+- **GIVEN** compatible ready wet at absolute sample positions
+- **WHEN** a fresh offline run supplies a valid origin offset, including the observed 16-sample difference at 48 kHz and 122 BPM
+- **THEN** available swells render at their original absolute sample offsets with either Playing flag value and irregular blocks
+- **AND** unchanged source/render assets, calibration and gain plans are retained without compensating sample shifts
+
+#### Scenario: Genuine drift during required wet
+- **WHEN** an established offline run changes origin beyond one sample, rate, tempo or meter while wet remains current or due
+- **THEN** export fails visibly with precise failing timing and does not silently replace the baseline
+- **AND** the existing completed-wet tail exception remains in force
+
+#### Scenario: Lifecycle and separate instances
+- **WHEN** offline processing is entered anew, preparation restarts, or an existing supported backward export restart occurs
+- **THEN** the instance establishes a fresh mapping independently of other instances
+- **AND** zero-length/invalid callbacks cannot admit wet, while accepted pending IR contributions retain their original snapshot rules
+
+### Requirement: Offline timing failures are shareable
+Offline timing errors SHALL retain the prepared, bounce-reference and failing host timing values. Diagnostics SHALL offer a keyboard-accessible Copy diagnostics action that copies the full current report and retained error without changing saved session state.
+
+#### Scenario: Copy a failed bounce report
+- **WHEN** the owner invokes Copy diagnostics after offline timing failure
+- **THEN** the clipboard includes precise timing/error information, current capture/gain observations, Snap/grid availability and live/worker observations
+- **AND** the action changes no source, swell, routing, transport or saved preference
+
+### Requirement: Live timing rejection retains its causal observations
+Diagnostics SHALL retain bounded ephemeral evidence of a live run's initial observation, last admitted callback before its first timing rejection, and that first rejection. Each SHALL identify its run/session/reset, callback range, timing and admission result. Run-reference-to-host origin deltas SHALL be explicit and distinct from source/publication deltas. Missing or incoherent evidence SHALL remain unavailable. Collection SHALL preserve existing timing admission and real-time safety.
+
+#### Scenario: Source offset remains stable during playback
+- **GIVEN** valid fixed rate, tempo and meter with a playing origin different from accepted source timing
+- **WHEN** callbacks remain compatible with the established run
+- **THEN** diagnostics distinguishes the informational source offset from the validated run origin without claiming a live rejection
+- **AND** available prepared wet retains its existing absolute-position admission and output
+
+#### Scenario: Recorded run origin changes
+- **GIVEN** a run starts at sample 3399344 and PPQ 143.999322222222219 at 48000 Hz, 122 BPM and 4/4
+- **WHEN** that same run observes sample 3795967 and PPQ 160.801390972220531
+- **THEN** evidence identifies the approximately minus-16-sample run-origin delta, the first rejecting callback and the last preceding admitted observation if one exists
+- **AND** a near-zero source/publication-to-host delta cannot be presented as successful run validation or permission to replace the reference
+
+#### Scenario: Later symptoms cannot replace the first cause
+- **WHEN** additional rejected callbacks, seeks, loops, window publications or preparation misses follow a run's first timing rejection
+- **THEN** the run's first rejection and its preceding admitted observation remain retained separately from the existing latest historical rejection
+- **AND** neither evidence collection nor those events silently create a new run baseline
+
+#### Scenario: New run and unavailable preceding evidence
+- **WHEN** a confirmed Stop/Play, session replacement or explicit audio reset establishes a new run under the existing lifecycle
+- **THEN** evidence is associated with the new identity and prior observations cannot be labelled as its causal sequence
+- **AND** if no callback was admitted before its rejection, or a coherent snapshot cannot be read, the preceding evidence is explicitly unavailable
+
+#### Scenario: Inspect evidence without changing the project
+- **WHEN** diagnostics is opened, refreshed or closed while playback continues, or the project is saved and reopened
+- **THEN** observation does not change admission, routing, wet samples, source/render identities, saved definitions or host transport, and diagnostic history is not persisted in the project
+- **AND** callback evidence uses bounded work without allocation, deallocation, locks, blocking, file access, text formatting or logging
