@@ -72,8 +72,9 @@ When actionable findings remain, number them with stable IDs such as F1 and F2 a
 1. **Add all**: publish all confirmed findings shown in this review.
 2. **Add high only**: publish only P0 and P1 findings; show the matching IDs and count. If none qualify, say so and do not post anything for this choice.
 3. **Choose from list**: let the user select finding IDs from the numbered list, then publish only those selections. Choosing this option alone does not authorize posting an unspecified subset.
+4. **Add none / Skip**: finish the review without posting comments. Keep the findings in the local review report and do not ask again unless the user reopens publication.
 
-The user can also decline or defer. Wait for an explicit selection before posting unless prior authorization already clearly covers the specific findings and scope. Do not offer to publish an empty findings list or include unresolved questions as confirmed defects.
+The user can also defer. Wait for an explicit selection before posting unless prior authorization already clearly covers the specific findings and scope. Do not offer to publish an empty findings list or include unresolved questions as confirmed defects.
 
 Before posting, verify the PR head and selected findings' locations are still current and check for existing equivalent review comments. Revalidate findings affected by new commits; if their substance changes, show the revised comments for selection again. Skip duplicates and findings already fixed. Prefer inline review comments anchored to the verified diff and a neutral COMMENT review event; do not submit APPROVE or REQUEST_CHANGES without explicit authorization. If inline comments are unavailable, explain the limitation and obtain agreement before substituting a top-level PR comment.
 
