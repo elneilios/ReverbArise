@@ -357,3 +357,15 @@ The owner was asked for one final FL Studio smoke: verify/rescan the system
 bundle, inspect both Sound contexts, play audio and save/reopen a test project.
 This host acceptance is pending, so task 3.4 stays open. No extra automated
 edge-case or native layout acceptance was requested again.
+
+### Current-main integration before PR
+
+A final fetch found `main` advanced to `e088d24`, including approved #103 host
+reactivation recovery and PR review skill additions. Committed the validated
+issue diff as `68e7499`, then merged current main without rewriting history
+(`f27c3fb`). The native review implementation was unchanged. Documentation merge
+conflicts were resolved by preserving both README references and semantically
+refreshing guide currency for both changes. The preview harness auto-merged.
+The original final 75/75 result remains valid pre-merge evidence; task 3.3 was
+reopened for the integrated build/test gate, and the owner was asked to hold the
+host smoke until an updated installation is confirmed. No host pass is inferred.
