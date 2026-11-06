@@ -32,7 +32,7 @@ m3::ui::PresentationFitContext PreverbAudioProcessorEditor::presentationDisplay(
 void PreverbAudioProcessorEditor::initialisePresentation()
 {
     using namespace m3::ui;
-    auto& page=settingsPages[6];page.setName("settingsAppearance");settingsTabs.addTab("Appearance",background,&page,false);
+    auto& page=settingsPages[6];page.setName("settingsAppearance");settingsTabs.addTab("Appearance",background,&page,false,6);
     for(auto* child:std::initializer_list<juce::Component*>{&presentationSizeLabel,&presentationScaleLabel,&presentationSizeBox,&presentationScaleBox,&presentationHelp})page.addAndMakeVisible(child);
     presentationSizeLabel.setText("Window size",juce::dontSendNotification);presentationScaleLabel.setText("UI scale",juce::dontSendNotification);
     applyTextRole(presentationSizeLabel,TextRole::controlLabel);applyTextRole(presentationScaleLabel,TextRole::controlLabel);

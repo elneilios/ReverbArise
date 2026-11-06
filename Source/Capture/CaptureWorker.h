@@ -25,6 +25,8 @@ public:
     void throwNextStageForTesting() noexcept {stageThrow.store(true);}
     // Non-RT cancellation fences the actual source publication as well as mode.
     void cancelWorkflowPass();
+    bool armRecovery(std::vector<std::pair<int64_t,int64_t>> required);
+    bool recoveryArmed()const noexcept{return recoveryCaptureArmed.load();}
     void holdValidationForTesting(bool hold) noexcept {validationHold.store(hold);}
     void holdWorkerForTesting(bool hold) noexcept {workerHold.store(hold);}
     bool workerHeldForTesting() const noexcept {return workerHeld.load(std::memory_order_acquire);}
@@ -46,7 +48,7 @@ public:
     {const juce::ScopedLock guard(commandLock);passContextProvider=std::move(provider);}
     uint64_t captureGeneration() const noexcept { return generation.load(); }
     void requestRestore(const std::string& project, const std::string& instance,
-                        const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture);
+                        const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture,bool preserveOnFailure=false);
     CaptureSessionSnapshot snapshot() const;
     CaptureProgress progressSnapshot() const;
     std::optional<ProvisionalCaptureSnapshot> provisionalSnapshot() const;
@@ -87,7 +89,9 @@ private:
     bool progressDirty=false;
     void publishProgress();
     mutable juce::CriticalSection commandLock;
-    struct Restore { std::string project, instance; juce::String reference; uint64_t revision = 0; };
+    struct Restore { std::string project, instance; juce::String reference; uint64_t revision = 0; bool preserveOnFailure=false; };
+    std::vector<std::pair<int64_t,int64_t>> recoveryRequired;
+    std::atomic<bool> recoveryCaptureArmed{false},refreshAdmission{false};
     Restore restore;
     std::atomic<bool> restoreRequested{false}, clearRequested{false}, loading{false};
     std::atomic<bool> mappingAllowed{true}, flushRequested{false};

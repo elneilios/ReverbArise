@@ -1,0 +1,37 @@
+Test project C:/Users/neila/.codex/worktrees/issue-8-portable-assets/k7ma-preverb/out/build/windows-msvc
+      Start 14: preverb_workflow_processor_test
+ 1/16 Test #14: preverb_workflow_processor_test .........   Passed    0.98 sec
+      Start 15: preverb_capture_transaction_test
+ 2/16 Test #15: preverb_capture_transaction_test ........   Passed    0.25 sec
+      Start 18: preverb_capture_context_test
+ 3/16 Test #18: preverb_capture_context_test ............   Passed    1.86 sec
+      Start 24: preverb_generation_configuration_test
+ 4/16 Test #24: preverb_generation_configuration_test ...   Passed    0.10 sec
+      Start 30: preverb_song_export_test
+ 5/16 Test #30: preverb_song_export_test ................   Passed    5.35 sec
+      Start 39: preverb_swell_ui_test
+ 6/16 Test #39: preverb_swell_ui_test ...................   Passed    9.92 sec
+      Start 58: preverb_swell_engine_test
+ 7/16 Test #58: preverb_swell_engine_test ...............   Passed   14.40 sec
+      Start 61: preverb_swell_asset_test
+ 8/16 Test #61: preverb_swell_asset_test ................   Passed    0.59 sec
+      Start 62: preverb_swell_session_test
+ 9/16 Test #62: preverb_swell_session_test ..............   Passed    0.04 sec
+      Start 71: preverb_processor_test
+10/16 Test #71: preverb_processor_test ..................   Passed   16.07 sec
+      Start 77: preverb_asset_inventory_test
+11/16 Test #77: preverb_asset_inventory_test ............   Passed    0.20 sec
+      Start 78: preverb_storage_inventory_panel_test
+12/16 Test #78: preverb_storage_inventory_panel_test ....   Passed    0.52 sec
+      Start 79: preverb_storage_settings_test
+13/16 Test #79: preverb_storage_settings_test ...........   Passed    1.00 sec
+      Start 80: preverb_portable_assets_test
+14/16 Test #80: preverb_portable_assets_test ............   Passed    4.71 sec
+      Start 81: preverb_portable_snapshot_test
+15/16 Test #81: preverb_portable_snapshot_test ..........   Passed    0.31 sec
+      Start 82: preverb_portable_storage_panel_test
+16/16 Test #82: preverb_portable_storage_panel_test .....   Passed    0.72 sec
+
+100% tests passed, 0 tests failed out of 16
+
+Total Test time (real) =  57.32 sec

@@ -38,7 +38,7 @@ void Composition::verifyResponsiveScale()
     auto& footer=require<controls::TransportReadout>(*panel,"hostInfo");
     auto& cell=require<KnobValue>(*panel,"endOffsetCell");auto& field=cell.valueField();
     auto& tabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
-    REQUIRE(tabs.getNumTabs()==7);
+    REQUIRE(tabs.getNumTabs()==8);
     auto& appearance=*tabs.getTabContentComponent(6);
     auto& scaleChoice=require<controls::DeliberateSelector>(appearance,"presentationScale");
     auto& sizeChoice=require<controls::DeliberateSelector>(appearance,"presentationSize");

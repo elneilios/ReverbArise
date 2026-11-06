@@ -117,10 +117,10 @@ int main() { return runTest([]
     REQUIRE(capture.commit(0,1000,source.data(),250)); update(); juce::Thread::sleep(100);
     waitFor([&]{return engine.snapshot().auditionReady;}); REQUIRE(engine.snapshot().renderCount==count);
     float replacement[]{0.25f,-0.25f}; REQUIRE(capture.commit(0,1000,replacement,1)); update();
-    waitFor([&]{return engine.savedSession().swells[0].phase==Phase::stale;});
+    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+1;});
     engine.setPreferences(-24,0.7f,0.1,true);
     replacement[0]=0.3f; REQUIRE(capture.commit(0,1000,replacement,1)); update();
-    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+1;});
+    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+2;});
     // A bad batch member cannot prevent independent valid results.
     REQUIRE(engine.edit(second,[](auto& w,auto&){w.sourceEnd=4000;return true;}));
     engine.generate(true); waitFor([&]{return engine.savedSession().swells[1].phase==Phase::error;});

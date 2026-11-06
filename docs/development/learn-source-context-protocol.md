@@ -206,8 +206,7 @@ An empty/protected-only/unchanged/failed/cancelled plan never retires old work.
 
 A nonempty viable replacement with new/regenerated definitions or eligible retirements can publish the full replacement and
 guarded Perform transition. A low/high/low sensitivity loop can therefore remove extra unedited automatic swells while retaining unchanged survivors and their renders. Wet jobs queue afterward only for changed definitions. Last-good immutable render
-references remain; affected source-dependent work is deferred through Learn
-instead of being silently re-rendered by preview. Protected manual calibration
+references remain; accepted source-dependent work is maintained by the shared engine independently of preview/marker policy. Protected manual calibration
 also retains its saved reference through automatic collection replacement;
 explicit later source/IR/arrangement edits retain their normal editing policy.
 Restore rebuilds preview and permitted committed-render recovery, never pending
@@ -223,11 +222,7 @@ selection are unchanged. Render output still notifies persistence, but does not
 invalidate musical authority; real edits and workflow/dependency changes retain
 their original publication fences.
 
-After actual Recapture, a protected manually edited swell can remain stale while
-Learn Generate reports protected-only. The supported explicit Perform Regenerate
-action clears that work's deferred dependency/calibration guard before queuing
-its accepted definition against the new source. Frozen work is skipped and
-last-good render assets remain until a verified replacement commits.
+After complete accepted Recapture, changed existing unfrozen swells rebuild through ordinary material reconciliation, including protected manually edited definitions and detection/marker Generate on Stop off. Saved marker parameters and assignments persist. Provisional/cancelled/rejected source cannot become render authority. Frozen work is held; exact compatible saved wet audio is reused. Explicit Perform Regenerate is still available to force a revision, not required for successful normal recovery. See [shared engine ownership](swell-engine-architecture.md).
 
 Learn accepts completed-pass boundaries through successful source settlement,
 including on a fresh instance whose previous empty manifest is still schema 1.

@@ -1,0 +1,21 @@
+Test project C:/Users/neila/.codex/worktrees/issue-8-portable-assets/k7ma-preverb/out/build/windows-msvc
+    Start  1: preverb_presentation_policy_test
+1/8 Test  #1: preverb_presentation_policy_test .......   Passed    0.47 sec
+    Start 39: preverb_swell_ui_test
+2/8 Test #39: preverb_swell_ui_test ..................   Passed    9.86 sec
+    Start 77: preverb_asset_inventory_test
+3/8 Test #77: preverb_asset_inventory_test ...........   Passed    0.22 sec
+    Start 78: preverb_storage_inventory_panel_test
+4/8 Test #78: preverb_storage_inventory_panel_test ...   Passed    0.50 sec
+    Start 79: preverb_storage_settings_test
+5/8 Test #79: preverb_storage_settings_test ..........   Passed    1.11 sec
+    Start 80: preverb_portable_assets_test
+6/8 Test #80: preverb_portable_assets_test ...........   Passed    4.84 sec
+    Start 81: preverb_portable_snapshot_test
+7/8 Test #81: preverb_portable_snapshot_test .........   Passed    0.34 sec
+    Start 82: preverb_portable_storage_panel_test
+8/8 Test #82: preverb_portable_storage_panel_test ....   Passed    0.80 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Total Test time (real) =  18.36 sec
