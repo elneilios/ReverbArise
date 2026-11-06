@@ -27,7 +27,7 @@ No disk work belongs in the callback or host-state serializer.
    destination fails without adopting the candidate or deleting originals.
 5. The future production binding must recheck admission and atomically hand off
    capture/render/export roots before accepting. It requests a DAW save; it
-   cannot claim the host saved. That binding and native acceptance are pending.
+   cannot claim the host saved. That binding is pending; native control approval is recorded below.
 
 `WorkingFolderPanel` composes existing ActionButton, EllipsisLabel, FocusViewport,
 text roles and spacing tokens. Content scrolls above pinned Choose/Use actions;
@@ -83,8 +83,8 @@ Rolling back means using the retained original binary and pre-upgrade FLP with
 the original store, never rewriting the only upgraded or rollback project.
 The original-binary rollback exercise is still required before task 4.4 closes.
 
-Native approval is required before exposing this revised control composition in
-Settings, as specified in the active design's “Explicit association” decision.
+Native approval was received for this revised control composition, as recorded below. Production integration in
+Settings must still satisfy the active design's “Explicit association” decision.
 Production root handoff, actual host-state compatibility, missing-store recovery,
 two-process capture/render/export publication, fresh-profile association proof
 and consolidated host validation remain required. All phase-4 tasks stay unchecked
@@ -95,3 +95,38 @@ gates. The issue and active change remain open.
 See [backup contracts](portable-asset-backups.md),
 [version/rollback matrix](asset-storage-contracts.md) and
 [dated evidence](../validation/2026-11-06-issue-8-working-folder.md).
+
+
+## Owner native approval — 2026-11-06
+
+The owner explicitly approved the working-folder layout and Choose folder →
+verified copy → Use This Folder interaction: “Approve layout and interaction”.
+This clears the scoped native control gate, not the remaining production root,
+writer, state, recovery, rollback or validation gates. The owner closed the
+disposable preview. Both unchanged native-focus tests passed on retry after that
+review ended. No foreground-focus assertion was removed or weakened.
+
+
+## Open integration decision: an irrecoverable whole working folder
+
+The portability delta requires a verified copy before association, while the
+retention/recovery delta promises normal Learn when original assets cannot be
+recovered. Missing individual files in an available working folder can follow
+the existing recovery path. If the entire associated folder is lost or offline,
+its writer root is unavailable and a complete verified transfer is impossible.
+The present plan does not authorize an incomplete transfer as a successful pack.
+
+Proposed explicit exception for owner review: create a new recovery workspace
+only after a deliberate user choice. Keep the original store/snapshot locator,
+all decodable swell identities/settings and unresolved references for later
+Locate/Restore. Clearly label the workspace incomplete; never publish a complete
+copy/backup receipt. The user then uses normal Learn with detection off; existing
+complete-source and IR checks, automatic unfrozen regeneration, frozen consent
+and missing-export disclosures remain unchanged. No Learn/Generate controls are
+added to Storage, no original data is deleted, and no fallback migration occurs
+silently. Host association changes still request an explicit DAW save.
+
+Alternative: require locating/restoring the original folder before permitting
+capture, explicitly limiting re-learning when the whole folder is irrecoverable.
+This is a requirements decision, not cleared by the native layout approval. No
+recovery exception or corresponding production state format is implemented yet.

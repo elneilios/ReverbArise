@@ -2,6 +2,7 @@
 // until upstream UI integration and final combined acceptance are complete.
 #include "AudioTestFiles.h"
 #include "WorkflowTestSupport.h"
+#include "NativeEditorPeer.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/PerformLayout.h>

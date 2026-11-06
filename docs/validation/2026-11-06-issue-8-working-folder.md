@@ -14,7 +14,7 @@ the existing native control review remains required before integration.
 
 | Task | Result at this checkpoint |
 | --- | --- |
-| 4.1 | Verified preparation and revised control composition with binding tests; live processor-root handoff, host-save notification integration and native approval remain pending. |
+| 4.1 | Verified preparation and revised control composition with binding tests; live processor-root handoff, host-save notification integration remain pending; native control approval is recorded below. |
 | 4.2 | New exclusive branch lease on each backend reopen; two real processes hold different leases simultaneously. Actual capture/render/export publication across processes remains pending. |
 | 4.3 | Backend physical copy into another store preserves original dependency hashes. Production Fork command and independent future-write validation remain pending. |
 | 4.4 | Candidate version/rollback guidance published. Original-binary/pre-upgrade-FLP rollback exercise remains pending. |
@@ -84,3 +84,51 @@ verify coherent host-state saves without callback disk I/O, preserve exact old
 FLP aliases and test failure-safe root handoff, missing-store recovery, physical
 Fork and rollback. No cleanup, eviction, quarantine, compression, dedup adoption,
 release or merge approval is granted by this checkpoint.
+
+
+## Owner native approval — 2026-11-06
+
+The owner explicitly approved the working-folder layout and Choose folder →
+verified copy → Use This Folder interaction: “Approve layout and interaction”.
+This clears the scoped native control gate, not the remaining production root,
+writer, state, recovery, rollback or validation gates. The owner closed the
+disposable preview. Both unchanged native-focus tests passed on retry after that
+review ended. No foreground-focus assertion was removed or weakened.
+
+
+### Approval follow-up validation
+
+The three original failures all passed unchanged once after the owner closed
+the review window (focused CTest: 3/3, 16.23 s). The engine assertion was still
+race-sensitive: it waited for an intermediate stale phase and required manual
+Generate even though the implemented common worker immediately maintains changed
+material. The fixture now publishes coherent tempo to both provider and callback,
+requires both new verified 241-BPM renders without Generate, retains identities,
+shape/IR metadata and original byte hashes, and checks a superseded request yields
+the current source-bound render while preserving its predecessor. The original
+single-target selection before later removal is retained.
+
+The two focus fixtures now use a titled native DocumentWindow owner that the
+desktop runner can discover. The knob fixture allows up to 30 seconds for the
+foreground precondition, matching the existing precision fixture; actual OS/JUCE
+focus, popup dispatch, exact-value and notification assertions remain mandatory.
+The titled knob fixture passed in 11.49 s, precision fixture in 8.17 s; no
+successful external activation was needed in those runs. Desktop activation was
+attempted only after observing one returned native window; that test had already
+completed by the subsequent lookup, so no injected focus success is claimed.
+
+Supported complete wrapper: **86/87 passed, 310.60 s**, native Release build
+passed; `out/build-logs/Release/20261106-212351-92d99eed/`. The sole failure was
+the knob fixture's OS foreground precondition. Its subsequent focused CTest run
+passed **1/1, 2.32 s** (`out/phase4-approved-knob-final.log`). All 87 cases thus
+have passing native results across these runs; **no uninterrupted 87/87 wrapper
+pass is claimed**. A stable complete native run remains required before cutover.
+
+UI standards (66 files/59 bounded occurrences), guide currency, strict active
+OpenSpec validation, eight changed-document relative links and whitespace pass.
+No production DSP, capture, editor, root binding or serializer changed in this
+follow-up. No new FL Studio/profile, release, merge or cleanup operation occurred.
+
+The recovery-workspace requirements question in the development guide remains
+open. Layout approval is recorded; no exception to complete-copy association is
+implemented or inferred. Tasks stay 20/36 complete and PR #112 remains a draft.
