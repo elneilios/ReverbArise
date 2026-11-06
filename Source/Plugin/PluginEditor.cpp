@@ -107,7 +107,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),id,generation,epoch](const juce::FileChooser& dialog)
             {if(safe && dialog.getResult()!=juce::File{})safe->processor.swellEngine().assignIR(id,generation,dialog.getResult(),false,epoch);});
     };
-    generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{processor.swellEngine().generate(true);refresh();};
+    generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
     auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
     separationSlider.beforeInvocation=[this]{separationPass=processor.getWorkflowSnapshot().pass;};
@@ -556,6 +556,8 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 void PreverbAudioProcessorEditor::refresh()
 {
     if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
+    if(regenerationFeedbackSession!=state.sessionEpoch)
+    {regenerationFeedback.setText({},juce::dontSendNotification);regenerationFeedback.setDescription({});regenerationFeedbackSession=state.sessionEpoch;}
     const auto mode=state.workflowState.mode;
     if(presentationSession!=state.sessionEpoch)presentationSession=state.sessionEpoch;
     bool initialFrame=false;
@@ -709,14 +711,13 @@ void PreverbAudioProcessorEditor::refresh()
     if(selectedCandidate)candidateBox.setSelectedId(selectedCandidate,juce::dontSendNotification);else chosenCandidate.reset();
     candidateBox.setTextWhenNothingSelected("Click a suggestion in the source lane");
     confirmButton.setEnabled(chosenCandidate.has_value());analyzeButton.setEnabled(!capture.manifest.ranges.empty() && !state.analyzing);
-    const auto hasSelection=!state.session.selected.empty();bool selectedIR=false,selectedImport=false,anyIR=false;
+    const auto hasSelection=!state.session.selected.empty();bool selectedIR=false,selectedImport=false;
     for(const auto& swell:state.session.swells)
     {
-        anyIR=anyIR || swell.ir.present();
         if(std::find(state.session.selected.begin(),state.session.selected.end(),swell.id)!=state.session.selected.end())
         {selectedIR=selectedIR || swell.ir.present();selectedImport=selectedImport || swell.status=="Importing IR";}
     }
-    loadIRButton.setEnabled(hasSelection && w && !w->frozen);removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(anyIR && !selectedImport);
+    loadIRButton.setEnabled(hasSelection && w && !w->frozen);removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
     auditionButton.setEnabled(state.auditionReady && !(state.session.liveEnabled && diagnostics.isPlaying));stopButton.setEnabled(state.playing || state.auditionReady);fullButton.setEnabled(w && state.raw);
     freezeButton.setEnabled(w && (w->frozen || w->phase==m3::Phase::ready));
     for(auto* control:std::array<juce::Component*,6>{&enabledButton,&muteButton,&soloButton,&inCurveBox,&outCurveBox,&setBarsButton})control->setEnabled(w!=nullptr);

@@ -26,9 +26,13 @@ fingerprint strips the known processing prefix before comparing source content;
 unchanged capture does not become a spurious regeneration request.
 
 Opening an existing project preserves its verified saved wet sound. Use
-**Regenerate All** once to upgrade older unfrozen swells using captured source;
-no recapture is needed. Current ready renders are skipped by All. Regenerate
-Selected explicitly rerenders selected unfrozen swells. Frozen swells retain
+**Regenerate all** in Settings > Recovery to force fresh renders for every
+eligible swell, including current Ready, disabled and muted definitions, using
+captured source; no recapture is needed. Frozen and importing-IR swells are
+skipped. Regenerate selected explicitly rerenders selected unfrozen swells.
+The adjacent feedback reports queued and skipped counts, or why nothing was
+queued; admission is not successful completion. Per-swell status remains
+authoritative for progress and failures. Frozen swells retain
 their saved audio until explicitly unfrozen and regenerated. Shape, placement,
 identity and user gain edits survive regeneration; musical calibration uses
 original dry samples against the new wet render. Previous complete assets are

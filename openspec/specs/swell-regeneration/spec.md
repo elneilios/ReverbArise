@@ -6,7 +6,7 @@ Keep each edited swell tied to its captured source and IR while supporting selec
 ## Requirements
 
 ### Requirement: Source-edge upgrades require explicit regeneration
-Verified saved renders from before source-edge conditioning SHALL remain usable on restore with unchanged inputs. Regenerate Selected SHALL upgrade selected unfrozen renders; Regenerate All SHALL include older unfrozen ready renders while skipping ready renders already using current conditioning. Frozen renders SHALL remain unchanged. Upgrades SHALL preserve capture, swell identities and edits and SHALL not require recapture.
+Verified saved renders from before source-edge conditioning SHALL remain usable on restore with unchanged inputs. Regenerate Selected SHALL upgrade selected unfrozen renders. Regenerate All SHALL force fresh renders for eligible older and current Ready swells; frozen renders SHALL remain unchanged. Explicit regeneration SHALL preserve capture, swell identities and edits and SHALL not require recapture.
 
 #### Scenario: Reopen an older saved project
 - **WHEN** a project with verified unchanged older renders is restored
@@ -14,7 +14,7 @@ Verified saved renders from before source-edge conditioning SHALL remain usable 
 
 #### Scenario: Upgrade existing overlapping swells
 - **WHEN** Regenerate All is requested with older, current and frozen ready swells
-- **THEN** older unfrozen renders are regenerated with new processing identities, current and frozen ready renders retain their assets, and capture samples and swell edits remain unchanged
+- **THEN** eligible older and current unfrozen swells receive fresh render requests, frozen renders retain their assets, and capture samples and swell edits remain unchanged
 
 #### Scenario: Failed upgrade
 - **WHEN** regeneration fails or is superseded
@@ -32,7 +32,7 @@ The system SHALL identify each render by swell identity, source interval/content
 - **THEN** the unchanged content does not invalidate or regenerate that swell merely because capture revisions or chunk boundaries changed
 
 ### Requirement: Regeneration operates on the requested set
-The plugin SHALL provide Regenerate Selected and Regenerate All using committed capture without host playback. Selected SHALL process only selected confirmed swells; All SHALL process confirmed swells needing a current result, including disabled or muted definitions. Jobs SHALL freeze source/IR inputs, report progress, and publish only complete results matching the latest request for each swell.
+The plugin SHALL provide Regenerate Selected and Regenerate All using committed capture without host playback. Selected SHALL process only selected confirmed swells. All SHALL force fresh work for eligible confirmed swells regardless of current readiness, including disabled or muted definitions, while skipping frozen or importing-IR targets. Jobs SHALL freeze source/IR inputs, report progress, and publish only complete results matching the latest request for each swell.
 
 #### Scenario: Generate selected targets
 - **WHEN** the user regenerates one selected swell while another is already current
@@ -45,6 +45,11 @@ The plugin SHALL provide Regenerate Selected and Regenerate All using committed 
 #### Scenario: Edit while queued or rendering
 - **WHEN** a swell is deleted or its source/IR changes before its job finishes
 - **THEN** that completion cannot recreate the deleted swell or replace the newly requested result
+
+#### Scenario: Repeat Regenerate All on current results
+- **WHEN** eligible swells are Ready using current processing and the user explicitly invokes Regenerate All again
+- **THEN** each eligible target receives a fresh render request through bounded background work, even though its inputs and processing version are unchanged
+- **AND** the action does not recapture source, alter edits or override frozen/importing ownership
 
 ### Requirement: Recapture and regenerate has an explicit armed interval
 Recapture & Regenerate SHALL arm one finite absolute source interval and identify dependent swells. The plugin SHALL instruct the user where to move the FL Studio playhead and press Play, admit dry input only inside that interval, and preserve all outside capture. It SHALL not command transport. Regeneration SHALL wait for committed complete fresh coverage of the armed interval; previous coverage SHALL not conceal missing fresh input.
@@ -78,3 +83,19 @@ The plugin SHALL keep analysis, asset I/O, preparation, convolution, and wavefor
 #### Scenario: Many stored swells exceed resident capacity
 - **WHEN** the session contains more full-render audio than the working budget permits in RAM
 - **THEN** metadata remains editable, inactive render audio can be unloaded, and selecting or regenerating a swell either fits the budget or reports a specific error without damaging stored assets
+
+### Requirement: Explicit bulk regeneration provides visible command feedback
+Regenerate All SHALL promptly show visible, accessible feedback on its action surface stating whether work was queued, skipped or rejected. Feedback SHALL distinguish admission from completed rendering and explain requests with no eligible targets. It SHALL preserve existing higher-priority errors and SHALL not become saved musical state.
+
+#### Scenario: Work was accepted
+- **WHEN** Regenerate All queues eligible targets and skips frozen or importing targets
+- **THEN** the action surface shows the queued count and applicable skipped counts even if rendering finishes before the next routine UI refresh
+- **AND** per-swell progress/readiness remains authoritative for completion and failures
+
+#### Scenario: Nothing can be queued
+- **WHEN** the batch is empty, all targets are frozen/importing, or workflow admission rejects the command
+- **THEN** visible feedback explains why no work was queued without suggesting successful regeneration
+
+#### Scenario: Feedback ownership changes
+- **WHEN** another bulk request is made or the owning session is replaced
+- **THEN** feedback is replaced by the new command outcome or cleared for the new session, without modifying source, saved edits or higher-priority notices

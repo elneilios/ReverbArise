@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Preserved main accepted compact responsive UI, Export levels, Snap and offline-clock guide review. Reviewed PR98 notes validation, escaped offline HTML, ZIP inventory and README pointer against integrated source; plugin behavior and guide prose unchanged.",
+  "summary": "Reviewed canonical swell-regeneration sync against the delivered force-all Recovery implementation and guide paragraph. The existing guide already describes current/disabled/muted forced renders, frozen/import skips, admission feedback and completion status; no additional prose change needed for archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -405,13 +405,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 82194,
-      "sha256": "e053fe615e263908afdd253f975ffc88fa5e99a864e02fb3af9e6f63c905fe17"
+      "bytes": 82323,
+      "sha256": "c76816f95d21fbeda135e057dac7fe5c8f74f5d9471e7359102c6f2812189f52"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 22715,
-      "sha256": "ba21316bb8943b509247357b0ebad38bddcbdd2cf62d357b340bdaad147abc57"
+      "bytes": 22856,
+      "sha256": "50f8b503c475504fd271fc9f47ec9d6bbaa20b990901d5ef807c7b44bcdb3028"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89802,
-      "sha256": "b2232b674a494c09598d12cb43b23304b705a31bac7bd97f86e5faa6691a2fce"
+      "bytes": 89961,
+      "sha256": "07d77b9ceb207dbc5ca86f59f347c9e176ec03fe93b47cd8b326185def823fec"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12311,
-      "sha256": "30d164ec3b89c4fe9633860ff18c954d5d0667fa27571c4d5a1fe9ec6992df60"
+      "bytes": 12477,
+      "sha256": "2a76b1371ca192a76c387dc1a672aa5bf8f39fcfe33093671edb5a1de2f27f5f"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -530,8 +530,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 14890,
-      "sha256": "d284b980ce45dcab923f6fd38619ed49ef5eca0f21ea373b5b8093db4627a257"
+      "bytes": 16480,
+      "sha256": "4726088d344c5bdca8edc35e1fc9633b1b2fce96af8de333585eaba10e5674e9"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -825,8 +825,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21094,
-      "sha256": "15016e9023e50fa4186729604efc9e3655fdff96c48028ac772c3a7686a38ecd"
+      "bytes": 21392,
+      "sha256": "81531bc8d8857dd501926145596cc8cc63db2f2717a80452a71e2468c965e41a"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -915,8 +915,8 @@
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
-      "bytes": 6917,
-      "sha256": "400d6afd3fb154cf2d764e01af6fbbe0b0c284135b697b4792ef823531af6d50"
+      "bytes": 8679,
+      "sha256": "0cbe5cce4639339f3a877d3cdde163d2300c11579d53ada1925a90d2a4827633"
     },
     {
       "path": "openspec/specs/swell-session/spec.md",

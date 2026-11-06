@@ -88,6 +88,20 @@ void PreverbAudioProcessorEditor::updateAuxiliaryPresentation()
     for(auto* window:{settingsWindow.get(),diagnosticsWindow.get()})
         if(auto* workspace=dynamic_cast<WorkspaceWindow*>(window))workspace->setPresentationScale(scale);
 }
+void PreverbAudioProcessorEditor::showRegenerationResult(const m3::RegenerationResult& result)
+{
+    regenerationFeedbackSession=result.sessionEpoch;
+    juce::String text;
+    if(!result.accepted)text="Not queued: regeneration requires Perform mode.";
+    else
+    {
+        text=result.queued ? "Queued "+juce::String(static_cast<int>(result.queued))+" for regeneration." : "No eligible swells to queue.";
+        if(result.frozen)text+=" Skipped "+juce::String(static_cast<int>(result.frozen))+" frozen.";
+        if(result.importing)text+=" Skipped "+juce::String(static_cast<int>(result.importing))+" importing IR.";
+    }
+    regenerationFeedback.setText(text,juce::dontSendNotification);
+    regenerationFeedback.setDescription(text);
+}
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
     settingsTabs.getProperties().set("contextHelp","Choose a settings tab. These settings apply to this plugin instance.");
@@ -110,6 +124,11 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     move(2,{&muteButton,&fullButton,&inCurveBox,&outCurveBox,&sampleUnitsButton,&barStartLabel,&barStartEditor,&barEndLabel,&barEndEditor,&setBarsButton,&removeButton});
     move(3,{&isolateButton,&isolateDryButton,&tailLabel,&tailSlider,&auditionLabel,&auditionSlider});
     move(4,{&generateButton,&allButton,&analyzeButton,&confirmButton,&candidateBox,&recaptureButton,&cancelButton,&recaptureStatus,&clearButton,&suppressionButton,&toneButton,&toneStartLabel,&toneStartSlider,&toneEndLabel,&toneEndSlider,&openDiagnosticsButton});
+    allButton.setName("regenerateAll");
+    allButton.setTooltip("Force fresh renders for all eligible swells, including current, disabled and muted swells. Frozen and importing-IR swells are skipped.");
+    regenerationFeedback.setName("regenerationFeedback");
+    m3::ui::applyTextRole(regenerationFeedback,m3::ui::TextRole::helper);
+    settingsPages[4].addAndMakeVisible(regenerationFeedback);
     const juce::StringArray captions{"Routing","Default IR","Fade-in curve","Fade-out curve","Source range (bars)","Audition scope","Manual preparation","Onset suggestions","Fresh capture","Test tone range","Details",""};
     const int labelPages[]{0,1,2,2,2,3,4,4,4,4,4,4};
     for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);settingsLabels[i].setFont(juce::FontOptions(m3::ui::bodySize));settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
@@ -164,16 +183,18 @@ void PreverbAudioProcessorEditor::layoutSettings()
     settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,30);isolateDryButton.setBounds(left+265,56,300,30);
     row(tailLabel,tailSlider,106);row(auditionLabel,auditionSlider,152);
     settingsLabels[6].setBounds(left,12,160,26);generateButton.setBounds(left+175,12,200,30);allButton.setBounds(left+390,12,200,30);
-    settingsLabels[7].setBounds(left,52,160,26);analyzeButton.setBounds(left+175,52,200,30);confirmButton.setBounds(left+390,52,200,30);
-    candidateBox.setBounds(left+175,90,415,30);
-    settingsLabels[8].setBounds(left,132,160,26);recaptureButton.setBounds(left+175,132,200,30);cancelButton.setBounds(left+390,132,200,30);
-    recaptureStatus.setBounds(left,170,width,38);
-    clearButton.setBounds(left,214,220,30);suppressionButton.setBounds(left+240,214,350,30);
-    toneButton.setBounds(left,258,width,30);
-    toneStartLabel.setBounds(left,300,90,30);toneStartSlider.setBounds(left+95,300,190,30);toneEndLabel.setBounds(left+300,300,100,30);toneEndSlider.setBounds(left+405,300,185,30);
-    openDiagnosticsButton.setBounds(left,346,220,32);
+    const auto feedbackBand=m3::ui::controlGeometry::feedbackHeight+m3::ui::spacing::related;
+    regenerationFeedback.setBounds(left,allButton.getBottom()+m3::ui::spacing::tight,width,m3::ui::controlGeometry::feedbackHeight);
+    settingsLabels[7].setBounds(left,52+feedbackBand,160,26);analyzeButton.setBounds(left+175,52+feedbackBand,200,30);confirmButton.setBounds(left+390,52+feedbackBand,200,30);
+    candidateBox.setBounds(left+175,90+feedbackBand,415,30);
+    settingsLabels[8].setBounds(left,132+feedbackBand,160,26);recaptureButton.setBounds(left+175,132+feedbackBand,200,30);cancelButton.setBounds(left+390,132+feedbackBand,200,30);
+    recaptureStatus.setBounds(left,170+feedbackBand,width,38);
+    clearButton.setBounds(left,214+feedbackBand,220,30);suppressionButton.setBounds(left+240,214+feedbackBand,350,30);
+    toneButton.setBounds(left,258+feedbackBand,width,30);
+    toneStartLabel.setBounds(left,300+feedbackBand,90,30);toneStartSlider.setBounds(left+95,300+feedbackBand,190,30);toneEndLabel.setBounds(left+300,300+feedbackBand,100,30);toneEndSlider.setBounds(left+405,300+feedbackBand,185,30);
+    openDiagnosticsButton.setBounds(left,346+feedbackBand,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
-    for(int i=0;i<5;++i)settingsHelp[i].setBounds(left,i==4?394:310,width,70);
+    for(int i=0;i<5;++i)settingsHelp[i].setBounds(left,i==4?394+feedbackBand:310,width,70);
     using namespace m3::ui;
     aboutHeading.setBounds(left,spacing::section,width,controlGeometry::headingHeight);
     auto aboutY=aboutHeading.getBottom()+spacing::section;

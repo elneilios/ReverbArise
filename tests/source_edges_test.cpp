@@ -81,7 +81,7 @@ static void checkEngine()
     for(int i=0;i<4;++i)
     {
         Swell w;w.name="Preserved "+juce::String(i);w.sourceStart=w.arrival=100+i*700;w.sourceEnd=w.sourceStart+512;
-        w.ir=irAsset;w.irName="fixture";w.placement=7;w.shape.gainDb=-3;w.frozen=i==2;w.enabled=i!=3;
+        w.ir=irAsset;w.irName="fixture";w.placement=7;w.shape.gainDb=-3;w.frozen=i==2;w.enabled=i!=3;w.muted=i==1;
         SourceInterval source;REQUIRE(readSourceInterval(sourceStore,context.capture.manifest,w.sourceStart,w.sourceEnd,512,source,error));
         juce::String dependency;REQUIRE(sourceFingerprint(sourceStore,context.capture.manifest,w.sourceStart,w.sourceEnd,dependency,error));
         if(i==1){REQUIRE(conditionWetSourceEdges(source.samples,48000,error));dependency=juce::String(sourceEdgeRevision)+dependency;}
@@ -93,33 +93,52 @@ static void checkEngine()
     const auto ready=[&]{const auto s=engine.savedSession();return s.swells.size()==4 && std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==Phase::ready;});};
     waitFor(ready);REQUIRE(engine.snapshot().renderCount==0);
     for(size_t i=0;i<4;++i)REQUIRE(engine.savedSession().swells[i].render==saved.swells[i].render);
-    engine.generate(true);waitFor([&]{return ready() && engine.snapshot().renderCount==2;});
+    const auto first=engine.generate(true);
+    REQUIRE(first.accepted && first.queued==3 && first.frozen==1 && first.importing==0 && first.sessionEpoch==engine.assignmentEpoch());
+    waitFor([&]{return ready() && engine.snapshot().renderCount==3;});
     const auto upgraded=engine.savedSession();
     for(size_t i=0;i<4;++i)
     {
         const auto& old=saved.swells[i];const auto& now=upgraded.swells[i];
         REQUIRE(now.id==old.id && now.name==old.name && now.sourceStart==old.sourceStart && now.sourceEnd==old.sourceEnd);
-        REQUIRE(now.shape==old.shape && now.placement==old.placement && now.enabled==old.enabled && now.frozen==old.frozen);
+        REQUIRE(now.shape==old.shape && now.placement==old.placement && now.enabled==old.enabled && now.muted==old.muted && now.frozen==old.frozen);
         REQUIRE(assets.verify(old.render,error)); // Previous complete audio retained.
-        if(i==1 || i==2){REQUIRE(now.render==old.render);continue;}
-        REQUIRE(now.render!=old.render && now.render.dependency.startsWith(sourceEdgeRevision));
+        if(i==2){REQUIRE(now.render==old.render);continue;}
+        REQUIRE(now.inputGeneration>old.inputGeneration && now.render.dependency.startsWith(sourceEdgeRevision));
+        if(i!=1)REQUIRE(now.render!=old.render); // Identical current content may reuse its content-addressed asset.
         SourceInterval source;REQUIRE(readSourceInterval(sourceStore,context.capture.manifest,now.sourceStart,now.sourceEnd,512,source,error));
         REQUIRE(conditionWetSourceEdges(source.samples,48000,error));
         WetRender expected,actual;REQUIRE(renderReverseConvolution(source.samples,now.sourceStart,48000,ir,0,expected,error));
         REQUIRE(assets.readRender(now.render,previewMemoryBudget,actual,error));
         REQUIRE(actual.start==expected.start && actual.samples==expected.samples);
     }
-    engine.generate(true);juce::Thread::sleep(300);REQUIRE(ready() && engine.snapshot().renderCount==2);
+    const auto repeated=engine.generate(true);REQUIRE(repeated.accepted && repeated.queued==3 && repeated.frozen==1);
+    waitFor([&]{return ready() && engine.snapshot().renderCount==6;});
+    const auto beforeSelected=engine.savedSession();
     REQUIRE(engine.selectTargets({saved.swells[1].id},saved.swells[1].id));engine.generate();
-    waitFor([&]{return ready() && engine.snapshot().renderCount==3;});
+    waitFor([&]{return ready() && engine.snapshot().renderCount==7;});
+    for(size_t i=0;i<4;++i)if(i!=1)REQUIRE(engine.savedSession().swells[i].inputGeneration==beforeSelected.swells[i].inputGeneration);
     // New processing identity survives the existing session codec and restore without rerender.
-    juce::String json;REQUIRE(encode(engine.savedSession(),json,error));Session decoded;REQUIRE(decode(json,decoded,error));
-    engine.restore(decoded);waitFor(ready);REQUIRE(engine.snapshot().renderCount==3);
-    REQUIRE(engine.savedSession().swells[0].render==upgraded.swells[0].render);
+    const auto beforeRestore=engine.savedSession();
+    juce::String json;REQUIRE(encode(beforeRestore,json,error));Session decoded;REQUIRE(decode(json,decoded,error));
+    engine.restore(decoded);waitFor(ready);REQUIRE(engine.snapshot().renderCount==7);
+    REQUIRE(engine.savedSession().swells[0].render==beforeRestore.swells[0].render);
+    // An import in flight retains ownership while All queues the other eligible targets.
+    engine.holdRenderPublicationForTesting(true);engine.generate();
+    waitFor([&]{return engine.renderPublicationWaitingForTesting();});
+    const auto importing=engine.savedSession().swells[1];
+    REQUIRE(engine.assignManagedIR(importing.id,importing.inputGeneration,irAsset,"pending fixture",engine.assignmentEpoch()));
+    const auto importGeneration=engine.savedSession().swells[1].inputGeneration;
+    const auto duringImport=engine.generate(true);
+    REQUIRE(duringImport.queued==2 && duringImport.frozen==1 && duringImport.importing==1);
+    REQUIRE(engine.savedSession().swells[1].inputGeneration==importGeneration && engine.savedSession().swells[1].status=="Importing IR");
+    engine.holdRenderPublicationForTesting(false);waitFor(ready);
     // A failed explicit request keeps both old audio and immutable capture.
+    const auto retained=engine.savedSession().swells[0].render;const auto failureCount=engine.snapshot().renderCount;
     REQUIRE(engine.edit(saved.swells[0].id,[](auto& w,auto&){w.sourceEnd=5000;return true;}));engine.generate(true);
-    waitFor([&]{return engine.savedSession().swells[0].phase==Phase::error;});
-    REQUIRE(engine.savedSession().swells[0].render==upgraded.swells[0].render && assets.verify(upgraded.swells[0].render,error));
+    waitFor([&]{const auto session=engine.savedSession();return session.swells[0].phase==Phase::error && session.swells[1].phase==Phase::ready && session.swells[3].phase==Phase::ready;});
+    REQUIRE(engine.snapshot().renderCount==failureCount+2);
+    REQUIRE(engine.savedSession().swells[0].render==retained && assets.verify(retained,error));
     SourceInterval after;REQUIRE(readSourceInterval(sourceStore,capture.snapshot().manifest,0,4096,4096,after,error));
     REQUIRE(after.samples==before.samples && sampleHash(after.samples,48000,2)==captureIdentity);
     REQUIRE(capture.snapshot().manifest.revision==context.capture.manifest.revision);
