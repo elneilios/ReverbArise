@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #8 FL Studio Storage smoke](validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) — successful installation retry, Backup/Save As/project-copy/reopen/Locate/Restore results and explicit same-profile/default-IR limits.
+
 - [Issue #8 approved Storage actions](validation/2026-11-06-issue-8-storage-actions.md) — production Backup/Restore/Locate bindings, explicit receipt selection, native tests and remaining profile/host/recovery gates.
 
 - [Portable backup backend](development/portable-asset-backups.md) — exact-byte phase-2 backend and approved production Backup/Restore/Locate controls; [dated verification and remaining gates](validation/2026-11-06-issue-8-portable-backend.md).

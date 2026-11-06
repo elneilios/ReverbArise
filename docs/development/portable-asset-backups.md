@@ -1,6 +1,6 @@
 # Portable asset backup backend — issue #8
 
-Phase 2 supplies a native exact-byte backup backend and the owner-approved Storage Backup/Restore/Locate composition. The owner accepted the native preview on 2026-11-06 ("looks fine, carry on"); it is now integrated into production Settings with the existing comfortable focus-revealing viewport. Isolated-profile restoration and the consolidated host smoke test remain gates. Existing user-data storage remains authoritative. No automatic DAW-folder discovery or live working-folder switch is implemented.
+Phase 2 supplies a native exact-byte backup backend and the owner-approved Storage Backup/Restore/Locate composition. The owner accepted the native preview on 2026-11-06 ("looks fine, carry on"); it is now integrated into production Settings with the existing comfortable focus-revealing viewport. The [scoped FL Studio smoke](../validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) now passes; isolated-profile restoration remains a gate. Existing user-data storage remains authoritative. No automatic DAW-folder discovery or live working-folder switch is implemented.
 
 ## Scope and formats
 
@@ -36,7 +36,7 @@ Open Settings → Storage; the inventory scans on page opening. Scroll to Backup
 
 Open the matching DAW project before Locate/Restore. With no in-memory backup locator, explicitly select `receipts/<snapshot-hash>.json` inside the copied folder. Subsequent actions in the same page may select the known backup folder instead. Locate validates only; Restore copies exact aliases into the displayed current projects root. It never changes the accepted arrangement, source reference, workflow mode or generation policy. Existing conflicting bytes fail without overwrite. Stop operation cancels cooperatively and incomplete transactions remain available to backend inspection/resume; no UI resume/cleanup command is delivered.
 
-The controls currently require a coherent available accepted source to establish their session scope. They do not provide task 3.10's missing-source admission, automatic asset reload, arrangement recovery or Re-learn flow. Consequently this integration alone does not establish fresh-profile end-to-end portability. Do not describe restore-copy completion as live recovery. Keep this limitation and tasks 3.8–3.10 explicit until verified recovery is delivered.
+The controls currently require a coherent available accepted source to establish their session scope. They do not provide task 3.10's missing-source admission, automatic asset reload, arrangement recovery or Re-learn flow. Consequently this integration alone does not establish fresh-profile end-to-end portability. Do not describe restore-copy completion as live recovery. Keep this limitation and tasks 3.8/3.10 explicit until verified recovery is delivered; task 3.9 records only the scoped same-profile host smoke.
 
 ## Native review
 
