@@ -369,3 +369,48 @@ refreshing guide currency for both changes. The preview harness auto-merged.
 The original final 75/75 result remains valid pre-merge evidence; task 3.3 was
 reopened for the integrated build/test gate, and the owner was asked to hold the
 host smoke until an updated installation is confirmed. No host pass is inferred.
+
+The owner explicitly reported **Pass - host smoke completed** for the installed
+issue #80 bundle: system-path/rescan confirmation, Learn/Perform Sound, playback
+and test-project save/reopen. Task 3.4 is complete. This acceptance covers the
+pre-main-merge installed binary SHA256 recorded above; physical Windows-DPI
+combinations were not specified and are not inferred. Current-main integration
+retains the exact approved shared IR code, adding already-approved #103 recovery.
+Per the no-repeat-UAT policy, retain this passing host check; refresh the
+installation after integrated automated validation without requesting the same
+smoke again absent a failure or concrete unresolved host behavior. FL Studio was
+not running at the post-reply process check.
+
+### Final integrated result
+
+Current-main merge `f27c3fb` passed the supported warm
+`./scripts/build.ps1 -Configuration Release -Test`: **75/75 tests passed**, zero
+failures, 219.88 seconds CTest. Logs:
+`out/build-logs/Release/20261106-164029-b3bf2010/`. Documentation-only task/evidence
+commits during this run do not change the tested production/test sources. The
+post-merge UI standards, guide currency, strict OpenSpec and whitespace checks
+also passed. Task 3.3 is complete again. No further native owner review was
+needed: the reviewed shared field/button implementation is identical.
+
+Draft PR [#109](https://github.com/elneilios/ReverbArise/pull/109) was opened with
+remaining gates explicitly recorded, and GitHub confirmed it mergeable against
+`e088d24`. It is the only issue PR; no merge or issue closure was performed.
+
+### Delivery
+
+Reviewed the final diff against current main: production changes are limited to
+the shared UI/binding, its consumers and the owner-requested shared button
+surface. There is no new DSP, host parameter, persisted schema, default Level,
+asset migration or unapproved visual exception. Documentation links and PR base/
+head were verified. [PR #109](https://github.com/elneilios/ReverbArise/pull/109)
+is open, mergeable and ready for owner review, with `Closes #80`, the selected
+change, final 75/75 results, scoped approvals and honest coverage limits. No
+self-merge, independent issue closure, spec sync or archive was performed.
+
+The optional post-main-merge installation refresh was safely refused because
+FL Studio was open (`out/issue-80-main-vst3-install.log`); no files changed. The
+owner was asked to save/close FL Studio or keep the already tested installation.
+This does not invalidate the completed #80 host smoke or feature acceptance.
+The existing installed bundle and its backup remain as recorded above.
+All 13 implementation/delivery tasks are complete; any pending install refresh
+remains explicitly separate from the passing host acceptance.
