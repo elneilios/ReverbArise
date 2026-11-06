@@ -490,3 +490,22 @@ IR geometry reuse their existing acceptance. The owner's explicit visibility
 instruction is the scoped approval for this follow-up; no repeated whole-plugin
 UAT or new host check is required. Other family renderers retain their staged jobs.
 Focus-policy delivery is complete: PR #114 updated and ready for owner review, implementation commit 84101ba, 13/13 tasks verified by refreshed Apply instructions. Canonical sync/archive, umbrella closure and PR merge remain separate owner actions. The working source for the follow-up has no changes to other family renderers or runtime model/storage/audio implementation.
+
+## Owner-approved spec closeout — 2026-11-06
+
+The owner approved PR #114 and explicitly requested sync, archive and merge.
+Both completed changes (13/13 tasks each) were synced into the canonical
+ui-design-system spec: four audit/contract requirements and three command-button
+requirements. Existing requirements and Purpose were preserved unchanged, and
+all added requirement/scenario blocks were compared with their deltas before
+archiving. Archives preserve all artifacts and .openspec.yaml:
+
+- openspec/changes/archive/2026-11-06-audit-ui-control-contracts/
+- openspec/changes/archive/2026-11-06-unify-command-button-states/
+
+Canonical validation passed all 18 specs, with existing long-requirement warnings
+(including the unchanged density requirement). This closeout changes only specs,
+archive placement, links and review evidence; the native 85/85 result above still
+covers the unchanged runtime. No native rerun or new host/DPI coverage is claimed.
+Issue #107 remains the umbrella for outstanding family migrations. Unrelated
+active changes and #108/#8 worktrees were left alone.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the owner-approved #107 keyboard/accessibility-only command focus policy. Updated the guide to distinguish visible command brackets from retained focus after mouse clicks; hover/held ink, IR alignment, bindings and capture/Perform/Export/Storage behavior remain unchanged. Other control-family renderers are deferred to their own jobs; no screenshot change is needed for this input-visibility clarification.",
+  "summary": "Reviewed synced audit/contracts and approved command-button requirements against the implemented shared controls and existing guide focus/activation guidance. Archive-only closeout; no guide prose changes needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -985,8 +985,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 9242,
-      "sha256": "b17ef520092016e35dfe5e69b32d356ba40225dea6f5b2d9b2a2c29b1a16f8c9"
+      "bytes": 18971,
+      "sha256": "73a6f278d6d6346145d9c36b205f7f24d9bcd0811aebe14aaf27fc5521711cef"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

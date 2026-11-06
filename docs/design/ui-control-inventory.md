@@ -302,8 +302,8 @@ Remaining name-based theme consumers and other legacy families stay explicit deb
 No production code is changed by this audit.
 
 The first child is proposed as
-[`unify-command-button-states`](../../openspec/changes/unify-command-button-states/proposal.md).
-Its [design](../../openspec/changes/unify-command-button-states/design.md) fixes the
+[`unify-command-button-states`](../../openspec/changes/archive/2026-11-06-unify-command-button-states/proposal.md).
+Its [design](../../openspec/changes/archive/2026-11-06-unify-command-button-states/design.md) fixes the
 20 remaining persistent legacy command consumers and two latch consumers, reuses
 merged #80 and retains scoped native approval before migration. It does not start
 P2–P8 or modify active #108/#8 work.
