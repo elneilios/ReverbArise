@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Preserved main accepted compact responsive UI, Export levels, Snap and offline-clock guide review. Reviewed PR98 notes validation, escaped offline HTML, ZIP inventory and README pointer against integrated source; plugin behavior and guide prose unchanged.",
+  "summary": "Reviewed final issue 8 read-only adapters/inventory and staged Storage native preview, including stale-scope count clearing and readable protected-history copy. No production Settings entry, capture/DSP/state or asset writer changed. Existing guide backup/portability cautions remain correct; production guide prose/screenshots stay unchanged pending task 2.4 review and integration.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 27158,
-      "sha256": "177fde1d35fcb0a2ad15e9c588bcf69db55567e391eaa8241b754075008947bf"
+      "bytes": 28377,
+      "sha256": "c2a5183f64c27feb586dab01d34abbd49f579da9501e3a80298946a1bbe1df14"
     },
     {
       "path": "CMakePresets.json",
@@ -534,6 +534,16 @@
       "sha256": "d284b980ce45dcab923f6fd38619ed49ef5eca0f21ea373b5b8093db4627a257"
     },
     {
+      "path": "Source/Storage/AssetInventory.cpp",
+      "bytes": 22594,
+      "sha256": "8002515ccd7d883bf0e156ef6bc2f3eb8ef49515e31103fdb8c3319ade4bcc27"
+    },
+    {
+      "path": "Source/Storage/AssetInventory.h",
+      "bytes": 3153,
+      "sha256": "8e224ef2dc70a4e2a4cb241688df38b7f6bcf5c6058f5186b4b8455acb7f7798"
+    },
+    {
       "path": "Source/UI/CaptureFailureText.h",
       "bytes": 1914,
       "sha256": "6843116197c7dab90ed7aeaa9ee4d38e0194ad268c753f57940a2c732a28dd94"
@@ -742,6 +752,11 @@
       "path": "Source/UI/SongBarRuler.h",
       "bytes": 1908,
       "sha256": "2d6a7060929d1cb4cc18323778723b3eb5d534d9b3d139e64b8c264c6a1d0ab5"
+    },
+    {
+      "path": "Source/UI/StorageInventoryPanel.h",
+      "bytes": 6380,
+      "sha256": "10dee2ad02455f23e367522fb78de24acdefb5c90722379f85923c5a7d3b318e"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
