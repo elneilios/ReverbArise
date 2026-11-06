@@ -1,6 +1,6 @@
 # Portable asset backup backend — issue #8
 
-Phase 2 supplies a native exact-byte backup backend and the owner-approved Storage Backup/Restore/Locate composition. The owner accepted the native preview on 2026-11-06 ("looks fine, carry on"); it is now integrated into production Settings with the existing comfortable focus-revealing viewport. The [scoped FL Studio smoke](../validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) now passes; isolated-profile restoration remains a gate. Existing user-data storage remains authoritative. No automatic DAW-folder discovery or live working-folder switch is implemented.
+Phase 2 supplies a native exact-byte backup backend and the owner-approved Storage Backup/Restore/Locate composition. The owner accepted the native preview on 2026-11-06 ("looks fine, carry on"); it is now integrated into production Settings with the existing comfortable focus-revealing viewport. The [scoped FL Studio smoke](../validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) now passes, and [destination-only restoration in a separate Windows profile](../validation/2026-11-06-issue-8-fresh-profile.md) also passes. Missing-asset production recovery remains a separate gate. Existing user-data storage remains authoritative. No automatic DAW-folder discovery or live working-folder switch is implemented.
 
 ## Scope and formats
 
@@ -36,7 +36,7 @@ Open Settings → Storage; the inventory scans on page opening. Scroll to Backup
 
 Open the matching DAW project before Locate/Restore. With no in-memory backup locator, explicitly select `receipts/<snapshot-hash>.json` inside the copied folder. Subsequent actions in the same page may select the known backup folder instead. Locate validates only; Restore copies exact aliases into the displayed current projects root. It never changes the accepted arrangement, source reference, workflow mode or generation policy. Existing conflicting bytes fail without overwrite. Stop operation cancels cooperatively and incomplete transactions remain available to backend inspection/resume; no UI resume/cleanup command is delivered.
 
-The controls currently require a coherent available accepted source to establish their session scope. They do not provide task 3.10's missing-source admission, automatic asset reload, arrangement recovery or Re-learn flow. Consequently this integration alone does not establish fresh-profile end-to-end portability. Do not describe restore-copy completion as live recovery. Keep this limitation and tasks 3.8/3.10 explicit until verified recovery is delivered; task 3.9 records only the scoped same-profile host smoke.
+Production controls still require coherent available source to establish their scope and do not yet provide automatic missing-source recovery. Separate worker/control validation proves destination-only restore and transactional reload; it does not claim the complete production user flow. Task 3.8 is verified complete, task 3.9 retains the earlier scoped host smoke, and task 3.10 remains open for integration through the shared-engine architecture below. Restore-copy completion alone is not live recovery.
 
 ## Native review
 
@@ -44,10 +44,16 @@ The controls currently require a coherent available accepted source to establish
 
 See [dated phase-2 evidence](../validation/2026-11-06-issue-8-portable-backend.md), [version/rollback matrix](asset-storage-contracts.md) and the active `portable-project-assets` tasks for remaining approval gates.
 
-## Missing-asset recovery validation candidate
+## Recovery checkpoint and shared-engine handoff
 
-The current branch adds worker/control APIs for admitting decodable metadata when source is unavailable, validating a backup against the current arrangement, copying original legacy instance folders, and reloading the current arrangement transactionally. A failed reload retains the previously accepted capture map/reference. It never adopts older backup edits or changes the working-folder association.
+The verified checkpoint is committed on PR #31: exact-byte file backup/restore, Storage polish, preserved-arrangement backend/reload checks, the scoped FL Studio smoke and a passing separate Windows-profile transfer. `portable-project-assets` is **19/36 complete**, including tasks 3.8 and 3.9. The worktree is clean at this checkpoint; no prototype is installed or released.
 
-`preverb_portable_recovery_test --review` composes the candidate recovery screen with disposable fixtures. It offers explicit original-folder/receipt selection and reviewed re-learning. Re-learning stages fresh source without Clear, preserves accepted history until required saved source/swell coverage is complete, and suppresses automatic generation without changing the saved policy. Explicit generation checks fresh coverage and assigned IRs; missing frozen results require consent, while surviving frozen results remain unchanged. Unknown song bounds and missing Export/Playlist audio cannot be reconstructed from swell metadata alone.
+The earlier `preverb_portable_recovery_test --review` duplicate-control candidate is superseded. A later local popup/normal-Learn experiment is preserved separately, not shipped. Its useful findings include missing-source worker admission, modal ownership/visibility and reload-scope race coverage. Do not reapply the whole experiment or keep a recovery-only renderer: reuse relevant fixes/tests selectively under the reviewed design.
 
-This composition remains behind task 3.10's native owner review and production integration gate. The production Settings binding still uses the previously approved Backup/Restore/Locate flow; the new recovery actions are not yet shipped there. Phase 4 association/writer ownership, cleanup and compression retain their separate gates.
+The next implementation target is [`separate-learning-from-swell-rendering`](../../openspec/changes/separate-learning-from-swell-rendering/proposal.md), with all planning artifacts ready and **0/13 implementation tasks complete**. The [architecture review](swell-engine-architecture.md) assigns capture/detection to Learn, sound interaction to Perform and material render maintenance to one shared background engine. Recovery supplies ordinary verified assets or freshly captured source; it does not own generation.
+
+Task 3.10 remains the completion gate for the modal opening warning, Locate/Restore bindings, normal re-learning with detection off, automatic regeneration through the shared engine, failure preservation and native owner review. Missing custom IRs, frozen-output consent, unknown song bounds and missing Export/Playlist limitations remain explicit. Keep this task open until that end-to-end behavior passes; do not call recovery complete merely because exact file transfer passes.
+
+Before the shared-engine implementation starts, reconcile PR #31's reported merge conflicts against main and revalidate the affected baseline. Then apply the new architecture through its normal workflow, finish task 3.10 against the resulting implementation, and update the user guide/evidence together. PR #31 stays open for review; no self-merge, canonical sync/archive or issue closure is part of the checkpoint.
+
+Existing user-data storage remains authoritative. Phase-4 folder association/writer ownership, durable cleanup, eviction and compression retain their separate gates. Existing identities, accepted references, immutable history, frozen audio and rollback assets remain protected.
