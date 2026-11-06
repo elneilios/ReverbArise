@@ -1,4 +1,5 @@
 #include "AssetInventory.h"
+#include <Core/AssetAssociation.h>
 #include <Core/ContentHash.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #define NOMINMAX
@@ -97,7 +98,13 @@ bool readLegacySnapshot(const juce::String& xml,const juce::String& manifestJson
     if(!bounded(xml,maximumMetadataBytes*6+1024*1024) || !bounded(manifestJson,maximumMetadataBytes))return fail(error,"Oversized observed state");
     if(xml.containsIgnoreCase("<!DOCTYPE") || xml.containsIgnoreCase("<!ENTITY"))return fail(error,"External/entity XML is not supported by the read-only adapter");
     const auto envelope=juce::XmlDocument::parse(xml);if(!envelope || !envelope->hasTagName("PreverbState"))return fail(error,"Malformed processor envelope");
-    const auto version=envelope->getIntAttribute("stateVersion",0);if(version<1 || version>8 || envelope->getStringAttribute("stateVersion")!=juce::String(version))return fail(error,"Unsupported processor envelope version");
+    const auto version=envelope->getIntAttribute("stateVersion",0);
+    if(version==associatedEnvelopeVersion){
+        Association association;juce::String legacy,captured;
+        if(!decodeAssociatedState(xml,association,legacy,captured,error) || captured!=manifestJson)return fail(error,"Associated metadata does not match the supplied capture manifest");
+        return readLegacySnapshot(legacy,captured,output,error);
+    }
+    if(version<1 || version>8 || envelope->getStringAttribute("stateVersion")!=juce::String(version))return fail(error,"Unsupported processor envelope version");
     ObservedSnapshot next;next.label=output.label;
     if(version>=2){next.project=envelope->getStringAttribute("projectId");next.instance=envelope->getStringAttribute("instanceId");next.reference=envelope->getStringAttribute("manifestReference");
         const auto revision=envelope->getStringAttribute("manifestRevision");const auto n=revision.getLargeIntValue();

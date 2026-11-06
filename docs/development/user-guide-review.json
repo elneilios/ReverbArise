@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed synchronized canonical automatic-swell-processing and swell-regeneration against delivered common-engine/normal recovery bindings and prior approved native/profile evidence. The guide already describes automatic existing-swell maintenance with detection/Stop off, complete-only Recapture, exact Locate/Restore, frozen/custom-IR/metadata/export limits and forced upgrades accurately; no prose/screenshots change needed. Archive only the completed shared-engine change; portability and later safety gates remain active.",
+  "summary": "Reviewed the final phase-4 working-folder transaction backend, bounded candidate metadata codec and disposable native panel against current Storage/recovery behavior. Production Settings, processor envelope v8 and user-data roots are unchanged; no musician-facing guide prose changes are needed before the gated production integration.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31110,
-      "sha256": "b31c2cfe5aaf4a877f15e876e09ba218816bf242fc96ac79a3c340602e92f62b"
+      "bytes": 31322,
+      "sha256": "a2f0534324b2d817c469d772b1206a6e68365b7fe9fc236cc60b7be0025f58eb"
     },
     {
       "path": "CMakePresets.json",
@@ -187,6 +187,11 @@
       "path": "Source/Capture/SparseSongMap.h",
       "bytes": 592,
       "sha256": "dbb03ef6a093e02397b914c590105f8b55c0a6980a24809c01c61cb4c4c640c1"
+    },
+    {
+      "path": "Source/Core/AssetAssociation.h",
+      "bytes": 5397,
+      "sha256": "586ec1e2c3a6c08447440a4d73078e8cac29cac0e1bc267e72ac04147da21646"
     },
     {
       "path": "Source/Core/BuildInformation.h",
@@ -535,8 +540,8 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 23028,
-      "sha256": "c0c0ef6424feec72a09cfb57ae4818d5ceb90b1ed50fc50ee58c2a7b58ffc3a6"
+      "bytes": 23431,
+      "sha256": "c587b00c6b79c56e47ba4ea8809004d3d5a07816410ee8f78a47fa654b53cd98"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
@@ -545,13 +550,18 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 38480,
-      "sha256": "548708923bc3bbc0a221d98d849f96b8d2aabcb116b00a5378bf3d9592a63131"
+      "bytes": 47550,
+      "sha256": "db5ab55772c765b95bd19b053c28a93433eb5d4252967b8a0748c51619627e88"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
       "bytes": 4478,
       "sha256": "e5b0f623770d1f111da25bcabf4d34ead90887a2c18c3eed87392c2c2ff54dee"
+    },
+    {
+      "path": "Source/Storage/WorkingFolder.h",
+      "bytes": 1508,
+      "sha256": "ceb8d2688f38959a5bbb90ac86d684226a4cb6687e156365a61874caaee4f31b"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -827,6 +837,11 @@
       "path": "Source/UI/WorkflowPresentation.h",
       "bytes": 3188,
       "sha256": "dfdb1ba32bb2a60cbe301db713e95cba6958ef88b5d91a58bb0eb2c9bd4f11ce"
+    },
+    {
+      "path": "Source/UI/WorkingFolderPanel.h",
+      "bytes": 10915,
+      "sha256": "f2f100a109661800d5706b2218474ce6f9236325f51021552961e25131276d5f"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",

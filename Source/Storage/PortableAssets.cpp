@@ -1,4 +1,4 @@
-#include "PortableAssets.h"
+#include "WorkingFolder.h"
 #include <Core/ContentHash.h>
 #define NOMINMAX
 #include <Windows.h>
@@ -390,6 +390,126 @@ Result restoreLegacyCopy(const std::shared_ptr<Prepared>& prepared,const juce::F
     const auto expected=destination.getChildFile(prepared->state.observed.project).getChildFile(prepared->state.observed.instance);
     if(expected==prepared->root->directory){failed.success=true;failed.receipt=verified->receipt;return failed;}
     return restoreCopy(verified,destination,hooks);
+}
+
+
+
+class WorkingFolder
+{
+public:
+    WorkingFolderInfo info;
+    std::shared_ptr<Root> pinned;
+    Held lease;
+    Snapshot closure;
+};
+const WorkingFolderInfo& workingFolderInfo(const WorkingFolder& folder){return folder.info;}
+namespace
+{
+void pinWorkingDirectories(WorkingFolder& folder,const ObservedSnapshot& observed)
+{
+    const auto prefix="working/"+observed.project+"/"+observed.instance+"/";
+    for(const auto* category:{"segments","manifests","irs","renders","exports"})folder.pinned->path(prefix+category+"/directory-pin",true);
+    folder.info.projectsRoot=folder.info.folder.getChildFile("working");
+    folder.info.association.writer=juce::Uuid().toDashedString();
+    const auto branch="instances/"+observed.instance+"/branches/"+folder.info.association.writer+"/lease";
+    const auto leaseFile=folder.pinned->path(branch,true);
+    folder.lease=relativeOpen(folder.pinned->parentOf(leaseFile)->h,leaseFile.getFileName(),GENERIC_READ|GENERIC_WRITE,false,2,0);
+    ordinary(folder.lease->h,false);
+    // Immutable data aliases are published with UUID/no-replace semantics by
+    // the existing stores. Each runtime has its own exclusive publication lease;
+    // no mutable common head is introduced or consulted on restore.
+}
+void registerWorkingHint(WorkingFolder& folder,const juce::File& registryRoot,const Hooks& hooks)
+{
+    Root registry(registryRoot);folder.info.association.registration=juce::Uuid().toDashedString();
+    auto record=object();set(record,"version",1);set(record,"store",folder.info.association.store);set(record,"folder",folder.info.folder.getFullPathName());
+    writeText(registry,"locations/"+folder.info.association.registration+".json",json(record),hooks);
+}
+void verifyWorkingAliases(WorkingFolder& folder,const Input& expected,const Hooks& hooks)
+{
+    std::shared_ptr<Prepared> exact;juce::String error;
+    require(prepare(expected,exact,error,hooks),error);
+    folder.closure=exact->state;folder.info.files=folder.closure.files.size();folder.info.bytes=0;
+    for(const auto& entry:folder.closure.files)folder.info.bytes+=entry.bytes;
+    // All exact byte hashes/descriptors are verified before writer admission.
+}
+std::shared_ptr<WorkingFolder> openWorking(const juce::File& selected,const Association& saved,const juce::String& xml,
+                                         const juce::String& manifest,const Hooks& hooks)
+{
+    require(associationValid(saved),"Invalid saved working-folder locator");
+    require(associationSnapshot(xml,manifest)==saved.snapshot,"Saved working metadata snapshot mismatch");
+    auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->pinned=std::make_shared<Root>(selected);
+    require(storeId(*folder->pinned,false,hooks)==saved.store,"Selected folder has a different store identity");
+    folder->info.association=saved;ObservedSnapshot observed;juce::String error;require(legacy(xml,manifest,observed,error),error);
+    Input input{selected.getChildFile("working").getChildFile(observed.project).getChildFile(observed.instance),xml,manifest};
+    verifyWorkingAliases(*folder,input,hooks);folder->info.expected=std::move(input);return folder;
+}
+}
+bool prepareWorkingFolder(const Input& input,const juce::File& selected,const juce::File& registryRoot,
+                          std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        std::shared_ptr<Prepared> source;require(prepare(input,source,error,hooks),error);
+        const auto copied=backup(source,selected,hooks);require(copied.success,copied.error);
+        std::shared_ptr<Verified> verified;require(locate(selected,copied.receipt.locator,verified,error,hooks),error);
+        auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->pinned=std::make_shared<Root>(selected);
+        folder->info.association.store=copied.receipt.locator.store;folder->info.expected=input;
+        require(storeId(*folder->pinned,false,hooks)==folder->info.association.store,"Working store identity changed during preparation");
+        const auto prefix="working/"+source->state.observed.project+"/"+source->state.observed.instance+"/";
+        for(size_t i=0;i<verified->state.files.size();++i)copy(*folder->pinned,prefix+verified->state.files[i].path,verified->files[i]->h,verified->state.files[i],hooks);
+        Input destination=input;destination.instanceRoot=selected.getChildFile("working").getChildFile(source->state.observed.project).getChildFile(source->state.observed.instance);
+        verifyWorkingAliases(*folder,destination,hooks);
+        pinWorkingDirectories(*folder,folder->closure.observed);
+        // Association metadata is distinct from a Pack receipt: the exact host
+        // state remains authority for later accepted revisions and their aliases.
+        juce::String xml=input.processorXml,manifest=input.manifestJson;
+        if(auto tree=juce::XmlDocument::parse(xml);tree && tree->getIntAttribute("stateVersion")==associatedEnvelopeVersion){Association previous;require(decodeAssociatedState(xml,previous,xml,manifest,error),error);}
+        folder->info.association.snapshot=associationSnapshot(xml,manifest);registerWorkingHint(*folder,registryRoot,hooks);
+        checkpoint(hooks,"working-folder-ready");output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool revalidateWorkingFolder(const WorkingFolder& folder,const Input& current,juce::String& error,const Hooks& hooks)
+{
+    try{
+        const auto& expected=folder.info.expected;
+        require(storeId(*folder.pinned,false,hooks)==folder.info.association.store,"Working store identity changed");
+        require(current.instanceRoot==expected.instanceRoot && current.controlEpoch==expected.controlEpoch
+            && current.processorXml==expected.processorXml && current.manifestJson==expected.manifestJson && !current.sourceUnavailable,
+            "Session changed after folder preparation. Prepare the folder again; originals are retained.");
+        const auto prefix="working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/";
+        for(const auto& entry:folder.closure.files)verify(*folder.pinned,prefix+entry.path,entry.sha256,entry.bytes,hooks);
+        checkpoint(hooks,"working-folder-revalidated");error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool locateWorkingFolder(const juce::File& selected,const Association& saved,const juce::String& xml,const juce::String& manifest,
+                         const juce::File& registryRoot,std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{auto folder=openWorking(selected,saved,xml,manifest,hooks);pinWorkingDirectories(*folder,folder->closure.observed);registerWorkingHint(*folder,registryRoot,hooks);output=std::move(folder);error.clear();return true;}
+    catch(const std::exception& e){return fail(error,e.what());}
+}
+bool resolveWorkingFolder(const Association& saved,const juce::String& xml,const juce::String& manifest,
+                          const juce::File& registryRoot,std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(associationValid(saved),"Invalid saved folder locator");Root registry(registryRoot);
+        const auto readHint=[&](const juce::String& name)->juce::File{
+            const auto value=boundedJson(readText(registry,"locations/"+name,8192));
+            require(version(value,1) && only(value,{"version","store","folder"}) && value["store"].toString()==saved.store,"Invalid or mismatched local folder hint");
+            return juce::File(value["folder"].toString());};
+        try{auto folder=openWorking(readHint(saved.registration+".json"),saved,xml,manifest,hooks);pinWorkingDirectories(*folder,folder->closure.observed);output=std::move(folder);error.clear();return true;}catch(const Failure&){}
+        registry.path("locations/placeholder",false);
+        const auto records=registryRoot.getChildFile("locations").findChildFiles(juce::File::findFiles,false,"*.json");
+        require(records.size()<=128,"Too many local folder hints; explicitly locate the folder");
+        std::shared_ptr<WorkingFolder> match;
+        for(const auto& record:records){checkpoint(hooks,"folder-hint");try{
+            const auto path=readHint(record.getFileName());if(match && path==match->info.folder)continue;
+            auto candidate=openWorking(path,saved,xml,manifest,hooks);
+            require(!match,"Several verified store copies match; explicitly select the working folder");match=std::move(candidate);
+        }catch(const Failure& e){if(juce::String(e.what()).startsWith("Several verified"))throw;}}
+        require(match!=nullptr,"Associated assets are unavailable. Locate their working folder or restore a backup.");
+        pinWorkingDirectories(*match,match->closure.observed);
+        output=std::move(match);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
 }
 
 }
