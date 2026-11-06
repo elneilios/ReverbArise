@@ -118,7 +118,7 @@ set(PREVERB_RELEASE_CANDIDATE "" CACHE STRING "Explicit packaging candidate; emp
 include(cmake/BuildInformation.cmake)
 get_target_property(preverb_product_name preverb_plugin JUCE_PRODUCT_NAME)
 reverbarise_build_information("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" "${PROJECT_VERSION}" "${preverb_product_name}")
-set_source_files_properties(Source/Plugin/PluginSettings.cpp tests/learn_generation_ui_test.cpp
+set_source_files_properties(Source/Plugin/PluginSettings.cpp Source/Plugin/PluginProcessor.cpp tests/learn_generation_ui_test.cpp
     PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/generated")
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-identity.json" CONTENT
 "{\n  \"version\": \"${PROJECT_VERSION}\",\n  \"manufacturerCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_MANUFACTURER_CODE>\",\n  \"pluginCode\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PLUGIN_CODE>\",\n  \"bundleId\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_BUNDLE_ID>\",\n  \"productName\": \"$<TARGET_PROPERTY:preverb_plugin,JUCE_PRODUCT_NAME>\"\n}\n")
@@ -398,7 +398,7 @@ if(BUILD_TESTING)
     add_test(NAME preverb_storage_audit_compatibility COMMAND preverb_storage_audit)
 endif()
 
-add_library(preverb_storage STATIC Source/Storage/AssetInventory.cpp)
+add_library(preverb_storage STATIC Source/Storage/AssetInventory.cpp Source/Storage/PortableAssets.cpp)
 target_include_directories(preverb_storage PUBLIC Source)
 target_link_libraries(preverb_storage PUBLIC preverb_assets)
 target_link_libraries(preverb_plugin PUBLIC preverb_storage)
@@ -423,4 +423,23 @@ endif()
 option(PREVERB_PROJECT_FOLDER_PROBE "Enable diagnostic task 1.4 VST3 state-stream metadata logging" OFF)
 if(PREVERB_PROJECT_FOLDER_PROBE)
     include(cmake/ProjectFolderProbe.cmake)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(preverb_portable_assets_test tests/portable_assets_test.cpp)
+    target_link_libraries(preverb_portable_assets_test PRIVATE preverb_storage)
+    add_test(NAME preverb_portable_assets_test COMMAND preverb_portable_assets_test)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(preverb_portable_snapshot_test tests/portable_snapshot_test.cpp)
+    target_link_libraries(preverb_portable_snapshot_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_portable_snapshot_test COMMAND preverb_portable_snapshot_test)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(preverb_portable_storage_preview tests/portable_storage_preview.cpp)
+    target_compile_definitions(preverb_portable_storage_preview PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_link_libraries(preverb_portable_storage_preview PRIVATE preverb_storage preverb_ui_resources juce::juce_audio_utils)
+    add_test(NAME preverb_portable_storage_panel_test COMMAND preverb_portable_storage_preview)
 endif()

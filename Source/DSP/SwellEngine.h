@@ -113,6 +113,8 @@ public:
     std::optional<GenerationConfiguration> passConfiguration(uint64_t pass) const;
     EditorSnapshot snapshot() const;
     Session savedSession() const;
+    // Pure control-thread capture of one accepted source/creative pair.
+    bool acceptedStorageSnapshot(CaptureSessionSnapshot&,Session&,juce::File&,uint64_t&,juce::String&) const;
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
@@ -318,7 +320,7 @@ private:
     std::vector<Candidate> candidates;
     juce::String message="Capture source, add or confirm a target, then assign an IR";
     juce::String actionError;
-    juce::String captureReference,captureScope;
+    juce::String captureReference,captureScope,storageRestoreReference;
     juce::String awaitingCaptureReference;
     std::set<juce::String> forceRefresh;
     uint64_t captureGeneration=0,renderCount=0,useSerial=0;

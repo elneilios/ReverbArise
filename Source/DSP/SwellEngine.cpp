@@ -23,6 +23,22 @@ void SwellEngine::setExpected(const SongTime& time)
 juce::File SwellEngine::instanceRoot(const CaptureManifest& map) const
 { return root.getChildFile(map.projectId).getChildFile(map.instanceId); }
 Session SwellEngine::savedSession() const { const juce::ScopedLock guard(lock); return model; }
+bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Session& session,juce::File& directory,uint64_t& epoch,juce::String& error) const
+{
+    const juce::ScopedLock guard(lock);
+    const auto before=contextProvider();
+    const bool knownSource=(before.capture.reference==captureReference && before.captureGeneration==captureGeneration)
+        || (storageRestoreReference.isNotEmpty() && before.capture.reference==storageRestoreReference)
+        || (storageRestoreReference.isEmpty() && before.capture.reference.isEmpty() && before.capture.manifest.revision==0 && before.capture.manifest.ranges.empty());
+    if(before.capture.unavailable || before.capture.status.startsWith("Loading") || !knownSource)
+    {error="Accepted source is unavailable or still settling. Retry after it settles.";return false;}
+    auto accepted=model;const auto after=contextProvider();
+    if(before.captureGeneration!=after.captureGeneration || before.capture.reference!=after.capture.reference
+        || before.capture.manifest.revision!=after.capture.manifest.revision || before.capture.manifest.projectId!=after.capture.manifest.projectId
+        || before.capture.manifest.instanceId!=after.capture.manifest.instanceId)
+    {error="Accepted source changed while its creative state was pinned. Retry.";return false;}
+    capture=before.capture;session=std::move(accepted);directory=instanceRoot(before.capture.manifest);epoch=sessionGeneration.load();error.clear();return true;
+}
 void SwellEngine::useWorkflow(workflow::State& state,std::function<uint64_t()> epoch)
 {
     const juce::ScopedLock guard(lock);workflowState=&state;captureEpochProvider=std::move(epoch);
@@ -115,7 +131,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=true;
     liveEnabled=model.liveEnabled;live.configure(model.liveEnabled,model.liveRouting,model.liveWetDb);
-    awaitingCaptureReference=std::move(expectedCaptureReference);
+    storageRestoreReference=expectedCaptureReference;awaitingCaptureReference=std::move(expectedCaptureReference);
     captureReference.clear(); captureScope.clear(); voice.setLevel(juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb));
     message="Restoring saved swell session; audition stopped";
 }

@@ -10,6 +10,7 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
+#include <Storage/PortableAssets.h>
 
 struct HostPositionDiagnostics
 {
@@ -57,6 +58,7 @@ public:
     void setToneEndBar(int bar) noexcept;
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
+    bool pinPortableAssets(m3::storage::portable::Input&,juce::String& error) const;
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
     CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
     bool flushCaptureForTesting() { return captureWorker.flush(); }

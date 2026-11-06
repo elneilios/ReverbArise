@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Portable backup backend](development/portable-asset-backups.md) — exact-byte phase-2 backend and functional native candidate; [dated verification and remaining gates](validation/2026-11-06-issue-8-portable-backend.md).
+
 - [Issue #8 FL Studio folder-discovery spike](validation/2026-11-06-issue-8-project-folder-spike.md) — native state-stream observations, tested host/JUCE versions, explicit-folder fallback and restored test installation.
 
 - [Read-only asset inventory](development/asset-inventory.md) — phase-1 dependency readers, protected storage accounting and automatic Settings scans; [Settings integration evidence](validation/2026-11-06-issue-8-settings-integration.md) and [backend verification](validation/2026-11-06-issue-8-inventory.md).

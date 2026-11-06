@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include <Core/BuildInformation.h>
 
 #include "PluginEditor.h"
 #include <Playback/ScheduledTestTone.h>
@@ -564,4 +565,23 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new PreverbAudioProcessor();
+}
+
+bool PreverbAudioProcessor::pinPortableAssets(m3::storage::portable::Input& output,juce::String& error) const
+{
+    const auto generation=captureWorker.captureGeneration();const auto flow=workflowState.snapshot();const auto mapping=isMappingEnabled();
+    if(captureWorker.isLoading()){error="Capture state is loading. Retry after it settles.";return false;}
+    CaptureSessionSnapshot capture;m3::Session session;juce::File root;uint64_t epoch=0;
+    if(!swells->acceptedStorageSnapshot(capture,session,root,epoch,error))return false;
+    if(captureWorker.isLoading() || captureWorker.captureGeneration()!=generation || swells->assignmentEpoch()!=epoch
+        || workflowState.snapshot().mode!=flow.mode || isMappingEnabled()!=mapping)
+    {error="Accepted session changed while its backup metadata was pinned. Retry.";return false;}
+    session.mappingEnabled=mapping;juce::String creative,manifest;
+    if(!m3::encode(session,creative,error) || !serializeCaptureManifest(capture.manifest,manifest,error))return false;
+    juce::XmlElement state("PreverbState");state.setAttribute("stateVersion",8);state.setAttribute("workflowMode",workflow::modeName(flow.mode));
+    state.setAttribute("toneEnabled",isTestToneEnabled());state.setAttribute("toneStartBar",getToneStartBar());state.setAttribute("toneEndBar",getToneEndBar());
+    state.setAttribute("projectId",juce::String(capture.manifest.projectId));state.setAttribute("instanceId",juce::String(capture.manifest.instanceId));
+    state.setAttribute("manifestReference",capture.reference);state.setAttribute("manifestRevision",juce::String(static_cast<juce::int64>(capture.manifest.revision)));
+    state.createNewChildElement("SwellSession")->addTextElement(creative);
+    m3::storage::portable::Input accepted{root,state.toString(),manifest};accepted.producer=juce::String(m3::build::report());accepted.controlEpoch=epoch;output=std::move(accepted);error.clear();return true;
 }
