@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the canonical transport-swell-playback sync for approved issue #103 against the delivered atomic host-reset forwarding, passing native regression coverage and owner FL Studio acceptance. The added requirement and five scenarios document existing delivered recovery, timing/asset guards and retained source/edits. Existing Perform bypass, readiness and compatible-timing guidance remains accurate; no prose or screenshot change. Completed OpenSpec artifacts moved intact to the dated archive.",
+  "summary": "Reviewed the approved issue 80 swell-workspace spec sync: four shared Sound requirements and detection-independent Learn Default IR access match the implemented bindings, owner approvals and existing guide prose. Archived all 13 completed tasks and planning artifacts intact. No new runtime behavior or guide prose change; the owner chose to retain the tested installed build.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89961,
-      "sha256": "07d77b9ceb207dbc5ca86f59f347c9e176ec03fe93b47cd8b326185def823fec"
+      "bytes": 86421,
+      "sha256": "27455c80781c5b92d6c2b531b9290c5337231c02ba32460849a320df4f89bb20"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12477,
-      "sha256": "2a76b1371ca192a76c387dc1a672aa5bf8f39fcfe33093671edb5a1de2f27f5f"
+      "bytes": 12231,
+      "sha256": "2cae5ab832d05d9a143842a9c5a09d8e6a44d13fe03ee354270882bdbfeb6d0d"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -540,8 +540,13 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 3321,
-      "sha256": "5913082a49c3e71a8a952ae751680a2f00cb5b5b37f27760a4b6562b9e5e62ca"
+      "bytes": 3814,
+      "sha256": "f4f456d1375937bbe4421b32703477e5152659694e1778266dddb90dd267cab7"
+    },
+    {
+      "path": "Source/UI/Controls/ConvolutionIrEditor.h",
+      "bytes": 6359,
+      "sha256": "266253d1226e7ef8d7a0a617cd420ecc20e25ffbb6673bb0174edf1230896b19"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",
@@ -580,8 +585,8 @@
     },
     {
       "path": "Source/UI/Controls/IconActionButton.h",
-      "bytes": 2690,
-      "sha256": "ca517a007aa8aafcd4bf151a9f6e30f330e270e99103f1b55cc57e18c6756dc7"
+      "bytes": 2330,
+      "sha256": "51d4070b3661a28f37a45d376fa848b42b1e1633917d1e49438b460dec78ffa9"
     },
     {
       "path": "Source/UI/Controls/InvocationSlider.h",
@@ -669,6 +674,11 @@
       "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
     },
     {
+      "path": "Source/UI/ConvolutionIrBinding.h",
+      "bytes": 7390,
+      "sha256": "e07d3fed78cacac7950031887d3218cca5d0eb2da6bf771e98e7394d7d8707b5"
+    },
+    {
       "path": "Source/UI/EditorPresentationState.h",
       "bytes": 3026,
       "sha256": "4732f1e30f979bbdc6a29e749a9dd84a43482b9758f65ce9f3f2384ba493a966"
@@ -700,8 +710,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 38076,
-      "sha256": "2f64cb570d9f678bdb283a6528f5c41fe8775dd92dff1ca8674227184f786bc8"
+      "bytes": 35316,
+      "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -825,8 +835,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21392,
-      "sha256": "81531bc8d8857dd501926145596cc8cc63db2f2717a80452a71e2468c965e41a"
+      "bytes": 21965,
+      "sha256": "ed242a7be19f5893ae773730eea37b107f74fd7f2ee89f079fb2291b866f7f72"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -925,8 +935,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 104700,
-      "sha256": "fbcb901d3d28f98217a60e943d2bdff56da56bfa53c8498477c63c96fa0782ca"
+      "bytes": 110749,
+      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -1015,8 +1025,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 25608,
-      "sha256": "f950daf3436e0876727f3609beb8b95eb39beef917980e8f6f7517e7e3d2623e"
+      "bytes": 32658,
+      "sha256": "5d88b26910e0f8acc09822cbd99f6c8b87951b1480b2af3b694da3b1ea137085"
     }
   ]
 }

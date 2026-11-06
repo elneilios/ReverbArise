@@ -1,5 +1,15 @@
 # Learn workspace
 
+## Shared Sound field — issue #80
+
+Learn Sound and Perform Sound use the same IR editor and guarded binding path.
+Learn edits only the accepted default for future Generate/manual creation; it
+does not rewrite existing swells. The hosting Sound section explains that scope,
+outside the context-agnostic field. Sound remains reachable with detection off.
+The field retains the accepted IR during pending/failed imports, places feedback
+closely below the input and uses existing red error ink for actionable failures.
+Pass/mode/session guards still apply beneath disabled controls and async choosers.
+
 Issue #11's first native composition passed checkpoint A on 2026-11-03.
 It reuses the approved static-Inter header and reserved message row.
 At 1100 × 850 and larger sizes, a 304-pixel left column holds Source Capture /

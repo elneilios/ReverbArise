@@ -4,8 +4,7 @@
 #include "LearnTimelineModel.h"
 #include "Controls/Switch.h"
 #include "Controls/SliderControl.h"
-#include "Controls/IconActionButton.h"
-#include "Controls/IrSelector.h"
+#include "ConvolutionIrBinding.h"
 #include "Controls/ActionButton.h"
 #include "Controls/SegmentedSelector.h"
 #include <DSP/SwellEngine.h>
@@ -18,31 +17,29 @@ namespace m3::ui
 class LearnWorkspace final:public juce::Component,public juce::SettableTooltipClient
 {
 public:
-    LearnWorkspace(SwellEngine& source,std::function<workflow::Snapshot()> readFlow):engine(source),flowNow(std::move(readFlow))
+    LearnWorkspace(SwellEngine& source,std::function<workflow::Snapshot()> readFlow):engine(source),flowNow(std::move(readFlow)),irBinding(irEditor,source)
     {
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
         setTooltip(inspectionHelp);setName("learnWorkspace");setTitle("Learn: source capture and generation preferences");
-        for(auto* c:std::array<juce::Component*,20>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
-            &autoStopLabel,&autoStopHelp,&autoStop,&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
+        for(auto* c:std::array<juce::Component*,17>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
+            &autoStopLabel,&autoStopHelp,&autoStop,&irEditor,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
         captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
         recaptureLabel.setText("Recapture audio",juce::dontSendNotification);
         automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
         automaticToggleLabel.setText("Detect events",juce::dontSendNotification);
-        irLabel.setText("Default IR",juce::dontSendNotification);sensitivityLabel.setText("Event sensitivity",juce::dontSendNotification);
+        sensitivityLabel.setText("Event sensitivity",juce::dontSendNotification);
         autoStopLabel.setText("Generate on Stop",juce::dontSendNotification);
-        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel,&autoStopLabel})applyTextRole(*label,TextRole::controlLabel);
-        for(auto* label:{&recaptureHelp,&automaticHelp,&irStatus,&autoStopHelp,&manualHelp,&generateReason})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
-        irStatus.setMinimumHorizontalScale(1.f);
-        irStatus.setText("Used by Generate.",juce::dontSendNotification);
-        irStatus.setTooltip(irStatus.getText());
-        for(auto* label:{&captureTitle,&recaptureLabel,&automaticLabel,&automaticToggleLabel,&irLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&irStatus,&autoStopLabel,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
+        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&sensitivityLabel,&autoStopLabel})applyTextRole(*label,TextRole::controlLabel);
+        for(auto* label:{&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+        for(auto* label:{&captureTitle,&recaptureLabel,&automaticLabel,&automaticToggleLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&autoStopLabel,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
         automaticHelp.setText({},juce::dontSendNotification);
         autoStopHelp.setText({},juce::dontSendNotification);
         manualHelp.setText(wrappedHelper("Want to place swells yourself? Add manual swells in Perform."),juce::dontSendNotification);
         manualHelp.setTooltip(manualHelp.getText().replace("\n"," "));
         captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");recaptureLabel.setName("learnRecaptureLabel");automaticToggleLabel.setName("learnAutomaticLabel");
-        irLabel.setName("learnIRLabel");sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
-        recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");irBox.setName("learnDefaultIR");fileButton.setName("learnImportIR");irStatus.setName("learnIRStatus");sensitivity.setName("learnMarkerSensitivity");
+        irEditor.setName("learnIrEditor");irEditor.label.setName("learnIRLabel");irEditor.selector.setName("learnDefaultIR");irEditor.fileButton.setName("learnImportIR");irEditor.status.setName("learnIRStatus");
+        sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
+        recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");sensitivity.setName("learnMarkerSensitivity");
         autoStop.setName("learnAutoGenerateOnStop");autoStopLabel.setName("learnAutoGenerateLabel");autoStopHelp.setName("learnAutoGenerateHelp");
         generate.setName("learnGenerateSwells");manualHelp.setName("learnManualSwellsHelp");generateReason.setName("learnGenerateReason");
         autoStop.beforeInvocation=[this]{autoStopIntent=GenerationIntent{displaySession,displayPass,0};};
@@ -59,14 +56,7 @@ public:
         sensitivity.setTooltip("Low: fewer, stronger attacks. High: finer event detail. Updates the marker preview asynchronously.");
         sensitivity.beforeInvocation=[this]{sensitivityPass=flowNow().pass;};
         sensitivity.onValueChange=[this]{if(!refreshing){const auto s=engine.savedSession();engine.setPreferences(s.auditionDb,static_cast<float>(sensitivity.getValue()/100),s.separationSeconds,s.autoRegenerate,sensitivityPass.value_or(flowNow().pass));}};
-        irBox.beforeInvocation=[this]{irIntent=Intent{engine.assignmentEpoch(),flowNow().pass,choices};};
-        irBox.onChange=[this]{if(refreshing)return;const auto intent=irIntent.value_or(Intent{engine.assignmentEpoch(),flowNow().pass,choices});irIntent.reset();
-            const auto at=irBox.getSelectedId()-1;if(at<0 || static_cast<size_t>(at)>=intent.choices.size())return;const auto& c=intent.choices[static_cast<size_t>(at)];
-            if(c.presetId.isNotEmpty())engine.assignDefaultBundledIR(c.presetId,intent.session,intent.pass);else engine.assignDefaultManagedIR(c.managed,c.name,intent.session,intent.pass);if(onRefresh)onRefresh();};
-        fileButton.onClick=[this]{const auto session=engine.assignmentEpoch(),pass=flowNow().pass;
-            chooser=std::make_unique<juce::FileChooser>("Import default impulse response",juce::File{},"*.wav;*.wv");
-            chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-                [safe=juce::Component::SafePointer<LearnWorkspace>(this),session,pass](const auto& dialog){if(safe && dialog.getResult()!=juce::File{})safe->engine.assignDefaultIR(dialog.getResult(),session,pass);});};
+        irBinding.onRefresh=[this]{if(onRefresh)onRefresh();};
     }
     std::function<void(bool)> onRecapture;
     std::function<void()> onRefresh;
@@ -83,14 +73,12 @@ public:
         generateReason.setTooltip(generationView.reason);
         phase=flow.phase;progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
         recapture.setToggleState(flow.recapture,juce::dontSendNotification);automatic.setToggleState(automaticOn,juce::dontSendNotification);
-        recapture.setEnabled(!flow.locked());automatic.setEnabled(!flow.locked());irBox.setEnabled(!flow.locked());fileButton.setEnabled(!flow.locked());sensitivity.setEnabled(!flow.locked());
+        recapture.setEnabled(!flow.locked());automatic.setEnabled(!flow.locked());sensitivity.setEnabled(!flow.locked());
         if(!sensitivity.isMouseButtonDown() && !sensitivity.hasKeyboardFocus(true))sensitivity.setValue(editor.session.sensitivity*100,juce::dontSendNotification);
         recaptureHelp.setText(flow.recapture?"Replace audio next pass.":"Keep captured audio.",juce::dontSendNotification);
-        const auto list=engine.irChoices();juce::String key;for(const auto& c:list)key<<c.id<<"|"<<c.name<<"\n";
-        if(key!=catalogue){irBox.hidePopup();catalogue=key;choices=list;irBox.clear(juce::dontSendNotification);int index=0;for(const auto& c:choices)irBox.addItem(c.name,++index);}
-        int selected=0;for(size_t i=0;i<choices.size();++i)if(choices[i].content==editor.session.defaultIR.content){selected=static_cast<int>(i+1);break;}
-        irBox.setSelectedId(selected,juce::dontSendNotification);if(!selected)irBox.setTextWhenNothingSelected("Default IR not ready");
-        for(auto* c:std::array<juce::Component*,11>{&irLabel,&irBox,&fileButton,&irStatus,&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
+        irBinding.displayDefault(editor);
+        if(!responsive)irEditor.setVisible(automaticOn);
+        for(auto* c:std::array<juce::Component*,7>{&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
         const auto scope=juce::String(source.manifest.projectId)+"/"+source.manifest.instanceId;
         const auto session=engine.assignmentEpoch();
         // A mode roundtrip/reset may complete between paints. A recording pass
@@ -115,6 +103,7 @@ public:
         refreshing=false;resized();repaint();
     }
     void visibilityChanged()override{if(isVisible()){view.reset();clearInspection();}}
+    void openDefaultIrFile(){irBinding.displayDefault(engine.snapshot());irBinding.openFile();}
     void fitDrySource(){view.reset();view.update(capture,progress,clock);first=view.first;last=view.last;repaint();}
     std::pair<double,double> dryViewport()const noexcept{return {first,last};}
     const juce::String& coverageTotalsText()const noexcept{return totalsText;}
@@ -197,9 +186,7 @@ public:
         automaticLabel.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
         toggleGroup(automatic,automaticToggleLabel,automaticHelp);
         if(automaticOn){controls.removeFromTop(spacing::related);toggleGroup(autoStop,autoStopLabel,autoStopHelp);controls.removeFromTop(spacing::group);
-            irLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);
-            auto row=controls.removeFromTop(controlGeometry::height);fileButton.setBounds(row.removeFromRight(controlGeometry::height));row.removeFromRight(spacing::tight);irBox.setBounds(row);
-            controls.removeFromTop(spacing::labelHelp);irStatus.setBounds(controls.removeFromTop(controlGeometry::feedbackHeight));controls.removeFromTop(spacing::group);
+            irEditor.setBounds(controls.removeFromTop(irEditor.preferredHeight(controls.getWidth())));controls.removeFromTop(spacing::group);
             sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::related);generate.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
@@ -322,10 +309,8 @@ private:
         for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible);
         for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
         auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
-        irLabel.setBounds(sound.removeFromTop(24));auto choice=sound.removeFromTop(controlHeight);fileButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(spacing::tight);irBox.setBounds(choice);
-        sound.removeFromTop(contentPadding);irStatus.setBounds(sound.removeFromTop(20));
-        sound.removeFromTop(contentPadding);soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);
-        for(auto* c:std::initializer_list<juce::Component*>{&irLabel,&irBox,&fileButton,&irStatus})c->setVisible(soundVisible);
+        soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
+        irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
         timelineRuler=canvas.removeFromTop(20);canvas.removeFromTop(spacing::tight);chart=canvas.removeFromTop(std::max(0,std::min(canvas.getHeight()-32,canvas.getWidth()/2)));
@@ -365,19 +350,18 @@ private:
     inline static const juce::String inspectionHelp="Left-click to pin/relocate inspection. The pin survives focus changes. Home/End and left/right inspect regions; Escape clears with waveform focus.";
     inline static const juce::String coverageKey="Audio | Silence | Gap: uncaptured | Unavailable | Recording";
     LearnDryView view;uint64_t inspectionSession=0,inspectionWorkflow=0;bool inspectionPinned=false;std::optional<int64_t> inspection,hoverEvent;juce::String totalsText,viewScope;
-    struct Intent{uint64_t session,pass;std::vector<IRChoice> choices;};
     struct GenerationIntent{uint64_t session,pass,serial;};
     SwellEngine& engine;std::function<workflow::Snapshot()> flowNow;
     controls::Switch recapture{"Recapture existing audio"},automatic{"Enable automatic swells"};
     controls::Switch autoStop{"Auto-generate on Stop"};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
-    controls::IconActionButton fileButton{controls::ActionIcon::openFile};controls::IrSelector irBox;controls::SliderControl sensitivity;
-    juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,irLabel,irStatus,sensitivityLabel;
+    controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;controls::SliderControl sensitivity;
+    juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,sensitivityLabel;
     juce::Label autoStopLabel,autoStopHelp,manualHelp,generateReason;
     LearnGenerationView generationView;uint64_t displaySession=0,displayPass=0;
     std::optional<GenerationIntent> autoStopIntent,generateIntent;
-    std::unique_ptr<juce::FileChooser> chooser;std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;std::optional<Intent> irIntent;
+    std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;
     bool hasSource()const noexcept{return !capture.manifest.ranges.empty() || !capture.overview.empty() || !progress.ranges.empty();}
-    std::vector<IRChoice> choices;juce::String catalogue,statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
+    juce::String statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
     juce::Rectangle<int> left,right,chart,timelineHeading,timelineCaption,timelineRuler,timelineStatus;int divider=0;double first=0,last=1;bool automaticOn=true,refreshing=false,playhead=false;
 };
 }

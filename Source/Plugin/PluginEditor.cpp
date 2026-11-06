@@ -22,7 +22,7 @@ juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gai
 
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p,std::function<void(const juce::String&)> writer)
-    :AudioProcessorEditor(p),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
+    :AudioProcessorEditor(p),irBinding(irEditor,p.swellEngine()),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
 {
     buildInformationWriter=writer?std::move(writer):[](const juce::String& text){juce::SystemClipboard::copyTextToClipboard(text);};
     setLookAndFeel(&workspaceTheme);addMouseListener(this,true);
@@ -44,7 +44,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     spanLabel.setText("Bars",juce::dontSendNotification);
     barStartLabel.setText("Bar start",juce::dontSendNotification);barEndLabel.setText("End excl.",juce::dontSendNotification);
     toneStartLabel.setText("Tone start bar",juce::dontSendNotification);toneEndLabel.setText("End exclusive",juce::dontSendNotification);
-    for(auto* button:{&addButton,&removeButton,&loadIRButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
+    for(auto* button:{&addButton,&removeButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
     addAndMakeVisible(assetInfoButton);assetInfoButton.setTooltip("Copy the selected swell's managed asset paths for backup or validation.");
     assetInfoButton.onClick=[this]
     {
@@ -60,7 +60,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addAndMakeVisible(performZoom);addAndMakeVisible(snapButton);addAndMakeVisible(gridBox);addAndMakeVisible(listCount);
     performZoom.setName("performZoom");snapButton.setName("performSnap");gridBox.setName("performGrid");
     m3::ui::applyTextRole(listCount,m3::ui::TextRole::helper,juce::Justification::centredRight);
-    loadIRButton.setName("loadIR");generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
+    generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
     list.getProperties().set("contextHelp","Select a swell to edit. Use its checkbox to enable or disable it, and its three-dot menu for more actions.");
     list.onSelection=[this](auto ids,auto primary)
     {if(updating || destroying)return;processor.swellEngine().selectTargets(ids,primary,state.sessionEpoch);refresh();};
@@ -98,15 +98,6 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addButton.onClick=[this]{processor.swellEngine().addTarget(processor.getSongTime().sample);refresh();};
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
     removeButton.onClick=[this]{processor.swellEngine().removeSelected();refresh();};
-    loadIRButton.onClick=[this]
-    {
-        const auto w=m3::find(state.session,state.session.primary);if(!w || w->frozen)return;
-        const auto id=w->id;const auto generation=w->inputGeneration;const auto epoch=processor.swellEngine().assignmentEpoch();
-        chooser=std::make_unique<juce::FileChooser>("Load mono/stereo WAV or WavPack IR",juce::File{},"*.wav;*.wv");
-        chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),id,generation,epoch](const juce::FileChooser& dialog)
-            {if(safe && dialog.getResult()!=juce::File{})safe->processor.swellEngine().assignIR(id,generation,dialog.getResult(),false,epoch);});
-    };
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
     auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
@@ -144,9 +135,9 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneButton.onClick=[this]{processor.setTestToneEnabled(toneButton.getToggleState());};
     toneStartSlider.onValueChange=[this]{if(!updating)processor.setToneStartBar(static_cast<int>(toneStartSlider.getValue()));};
     toneEndSlider.onValueChange=[this]{if(!updating)processor.setToneEndBar(static_cast<int>(toneEndSlider.getValue()));};
-    for(auto* label:std::initializer_list<juce::Label*>{&headerStatus,&selectedStatus,&irStatus,&monitorStatus,&helper})
+    for(auto* label:std::initializer_list<juce::Label*>{&headerStatus,&selectedStatus,&monitorStatus,&helper})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
-    headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");irStatus.setName("irAssignmentStatus");
+    headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");
     headerStatus.setBorderSize(juce::BorderSize<int>(0,24,0,8));
     helper.setText("Live playback: awaiting prepared Song audio",juce::dontSendNotification);
     liveButton.setName("livePlayback");liveRoutingBox.setName("liveRouting");liveLevel.setName("liveWetLevel");liveLevel.setTooltip("Adjust the live wet level. New audition monitoring uses this gain too; captured and live dry stay unchanged.");
@@ -172,14 +163,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),automaticPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
     sampleUnitsButton.onClick=[this]{refresh();};
     suppressionButton.onClick=[this]{processor.swellEngine().resetSuppression();refresh();};
-    defaultIRButton.onClick=[this]
-    {
-        const auto epoch=processor.swellEngine().assignmentEpoch();const auto pass=processor.getWorkflowSnapshot().pass;
-        chooser=std::make_unique<juce::FileChooser>("Default IR for future swells",juce::File{},"*.wav;*.wv");
-        chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),epoch,pass](const juce::FileChooser& file)
-            {if(safe && file.getResult()!=juce::File{})safe->processor.swellEngine().assignDefaultIR(file.getResult(),epoch,pass);});
-    };
+    defaultIRButton.onClick=[this]{learnWorkspace.openDefaultIrFile();};
     auditionWetOnly.beforeInvocation=[this]{auditionInvocation=std::pair{state.sessionEpoch,processor.getWorkflowSnapshot().pass};};
     auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
     auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop; safety protection remains active.");
@@ -189,7 +173,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     inspectorViewport.setName("inspectorViewport");diagnosticsViewport.setName("diagnosticsViewport");
     inspectorViewport.setScrollBarsShown(true,false);diagnosticsViewport.setScrollBarsShown(true,false);
     addAndMakeVisible(inspectorViewport);diagnosticsViewport.setVisible(true);
-    for(auto* control:std::array<juce::Component*,10>{&selectedStatus,&irStatus,&loadIRButton,&enabledButton,&muteButton,&soloButton,&fullButton,&resetButton,&inCurveBox,&outCurveBox,})inspectorContent.addAndMakeVisible(control);
+    for(auto* control:std::array<juce::Component*,8>{&selectedStatus,&enabledButton,&muteButton,&soloButton,&fullButton,&resetButton,&inCurveBox,&outCurveBox,})inspectorContent.addAndMakeVisible(control);
     slider(tailSlider,0,5,.01," s");tailSlider.setName("auditionTail");tailSlider.setTooltip("Captured Dry + Wet context after the later of the original arrival and wet endpoint. Dry audio is unchanged.");
     tailSlider.onValueChange=[this]{if(!updating)processor.swellEngine().setPostRoll(tailSlider.getValue());};
     addAndMakeVisible(tailLabel);tailLabel.setText("Listen after",juce::dontSendNotification);
@@ -268,18 +252,11 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         cell.onModifierInput=[this](const juce::ModifierKeys& mods){modifierKeysChanged(mods);};
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
     }
-    irBox.setName("selectedIR");inspectorContent.addAndMakeVisible(irBox);
-    irBox.setTooltip("Choose a bundled response, or load WAV/WavPack for this swell only. Monumental is deliberately intense; Shimmer is static coloration.");
-    irBox.beforeInvocation=[this]{const auto session=processor.swellEngine().savedSession();if(const auto w=m3::find(session,session.primary))irInvocation=IRInvocation{w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch(),irEntries};else irInvocation.reset();};
-    irBox.onChange=[this]{if(updating)return;const auto invocation=std::exchange(irInvocation,std::nullopt);
-        const auto index=irBox.getSelectedId()-1;const auto& choices=invocation?invocation->choices:irEntries;
-        if(index<0 || static_cast<size_t>(index)>=choices.size())return;const auto& entry=choices[static_cast<size_t>(index)];
-        const auto assign=[&](const auto& id,uint64_t input,uint64_t epoch){
-            if(entry.presetId.isNotEmpty())processor.swellEngine().assignBundledIR(id,input,entry.presetId,epoch);
-            else processor.swellEngine().assignManagedIR(id,input,entry.managed,entry.name,epoch);};
-        if(invocation)assign(invocation->id,invocation->input,invocation->epoch);
-        else if(const auto w=m3::find(state.session,irOwner))assign(w->id,w->inputGeneration,processor.swellEngine().assignmentEpoch());};
-    loadIRButton.setButtonText({});loadIRButton.setTooltip("Load a mono/stereo WAV or WavPack IR file for this swell");
+    irEditor.setName("selectedIrEditor");irEditor.selector.setName("selectedIR");irEditor.fileButton.setName("loadIR");irEditor.status.setName("irAssignmentStatus");
+    inspectorContent.addAndMakeVisible(irEditor);inspectorContent.addAndMakeVisible(performSoundScope);
+    performSoundScope.setName("performSoundScope");performSoundScope.setText("Selected swell only",juce::dontSendNotification);
+    m3::ui::applyTextRole(performSoundScope,m3::ui::TextRole::helper);performSoundScope.setTooltip(performSoundScope.getText());
+    irBinding.onRefresh=[this]{if(!destroying)refresh();};
     resetButton.setButtonText("Reset");resetButton.setName("resetWetShape");
     resetButton.setTooltip("Reset only the wet shape: start/end, fades, curves, level and placement return to defaults. Source points, IR and activity stay unchanged.");
     inspectorContent.addAndMakeVisible(resetMenu);resetMenu.setName("resetSwellMenu");resetMenu.setButtonText("Reset All");
@@ -293,7 +270,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneButton.setName("scheduledTone");
     initialiseSettings();
     for(auto* heading:{&listLabel,&inspectorHeading,&auditionHeading})m3::ui::applyTextRole(*heading,m3::ui::TextRole::sectionHeading);
-    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&irStatus,&monitorStatus,&editorReadout,&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
+    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&monitorStatus,&editorReadout,&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
@@ -412,8 +389,8 @@ void PreverbAudioProcessorEditor::resized()
     selectedStatus.setBounds(inspector.removeFromTop(24));
     fields[name].setBounds({});fieldLabels[name].setBounds({});
     auto row=inspector.removeFromTop(36);enabledButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));soloButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));freezeButton.setBounds(row);
-    irStatus.setBounds(inspector.removeFromTop(24));
-    row=inspector.removeFromTop(34);loadIRButton.setBounds(row.removeFromRight(34));row.removeFromRight(6);irBox.setBounds(row);
+    performSoundScope.setBounds(inspector.removeFromTop(controlGeometry::feedbackHeight));
+    irEditor.setBounds(inspector.removeFromTop(irEditor.preferredHeight(inspector.getWidth())));
     inspector.removeFromTop(12);
     for(auto& group:inspectorGroups)group.setVisible(true);
     {
@@ -472,7 +449,7 @@ void PreverbAudioProcessorEditor::refreshResponsiveSections()
         const auto section=i==levelValue?3:(i==targetValue || i==placementValue || i==sourceStartValue || i==sourceEndValue)?1:2;
         valueControls[i].setVisible(selected && section==inspectorSection);
     }
-    for(auto* child:std::initializer_list<juce::Component*>{&irBox,&irStatus,&loadIRButton})child->setVisible(selected && inspectorSection==3);
+    for(auto* child:std::initializer_list<juce::Component*>{&irEditor,&performSoundScope})child->setVisible(selected && inspectorSection==3);
     // Mute/full response/curve presets are owned by Settings, not this inspector.
     // Section refresh must not hide their existing access route.
     const bool editable=inspectorContent.isEnabled();
@@ -517,10 +494,12 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     pair(targetValue,placementValue,0);
     valueControls[sourceStartValue].setBounds(0,valueRowHeight,width,valueRowHeight);valueControls[sourceEndValue].setBounds(0,2*valueRowHeight,width,valueRowHeight);
     pair(preRollValue,endOffsetValue,0);pair(fadeInValue,fadeOutValue,valueRowHeight);pair(inCurveValue,outCurveValue,2*valueRowHeight);
-    irStatus.setBounds(0,0,width,24);auto choice=juce::Rectangle<int>(0,24,width,controlHeight);
-    loadIRButton.setBounds(choice.removeFromRight(controlHeight));choice.removeFromRight(contentPadding);irBox.setBounds(choice);
-    valueControls[levelValue].setBounds(0,24+controlHeight+contentPadding,width,valueRowHeight);
-    inspectorContent.setSize(width,std::max(layout.fields.getHeight(),3*valueRowHeight));
+    performSoundScope.setBounds(0,0,width,controlGeometry::feedbackHeight);
+    const auto soundTop=controlGeometry::feedbackHeight+contentPadding;
+    irEditor.setBounds(0,soundTop,width,irEditor.preferredHeight(width));
+    const auto levelTop=irEditor.getBottom()+contentPadding;
+    valueControls[levelValue].setBounds(0,levelTop,width,valueRowHeight);
+    inspectorContent.setSize(width,std::max({layout.fields.getHeight(),3*valueRowHeight,levelTop+valueRowHeight}));
     timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
     performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setBounds(layout.grid.reduced(0,3));
     auto audition=layout.audition.reduced(0,contentPadding);auditionHeading.setBounds(audition.removeFromLeft(88));
@@ -661,24 +640,9 @@ void PreverbAudioProcessorEditor::refresh()
         selectedStatus.setTooltip(w->status+"\n"+calibrationText+" | Requested Level "+juce::String(w->shape.gainDb,1)+" dB");
         if(w->phase==m3::Phase::ready && (g.state==m3::CalibrationState::unavailable || g.state==m3::CalibrationState::capped))
             selectedStatus.setText(phaseName(w->phase)+" | "+(g.state==m3::CalibrationState::unavailable?"Calibration unavailable":"Calibration capped"),juce::dontSendNotification);}
-    irStatus.setText("Impulse Response (IR)",juce::dontSendNotification);
-    irStatus.setTooltip("Impulse Response (IR)");
-    if(state.retainedIRName.isNotEmpty()){
-        const auto text=(state.liveActive?juce::String("Playing "):juce::String("Retained "))+state.retainedIRName+" | Requested "+state.requestedIRName;
-        irStatus.setText(text,juce::dontSendNotification);irStatus.setTooltip(text+" | "+(w?w->status:state.message));}
     selectedStatus.setTooltip(selectedStatus.getText()+"\n"+selectedStatus.getTooltip());
-    const auto choice=w?w->ir.content+"|"+w->irName:juce::String{};
-    auto entries=processor.swellEngine().irChoices();juce::String catalogue;
-    for(const auto& entry:entries)catalogue<<entry.id<<"|"<<entry.name<<"\n";
-    if(irOwner!=(w?w->id:juce::String{}) || irChoice!=choice || irCatalogue!=catalogue)
-    {
-        irBox.hidePopup();irOwner=w?w->id:juce::String{};irChoice=choice;irBox.clear(juce::dontSendNotification);int selected=0,index=0;
-        irCatalogue=catalogue;irEntries=std::move(entries);
-        for(const auto& entry:irEntries){irBox.addItem(entry.name,++index);
-            if(w && w->ir.present() && w->ir.content==entry.content){selected=index;irBox.setTooltip(entry.description);}}
-        if(selected)irBox.setSelectedId(selected,juce::dontSendNotification);else irBox.setTextWhenNothingSelected("Choose an IR");
-    }
-    irBox.setEnabled(w && !w->frozen);loadIRButton.setEnabled(w && !w->frozen);
+    irBinding.displaySelected(state);
+    if(responsivePresentation && !learningLayout && !exportLayout && irEditor.getHeight()!=irEditor.preferredHeight())layoutResponsive();
     resetButton.setEnabled(w && time.valid && capture.manifest.sampleRate==time.rate);resetMenu.setEnabled(w && time.valid);
     const std::array<juce::String,5> timingLabels{"Arrival","Source start","Source end","Wet start","Wet end"};
     for(int field=arrival;field<=audibleB;++field)fieldLabels[field].setText(timingLabels[static_cast<size_t>(field-arrival)]+(sampleUnitsButton.getToggleState()?" sample":""),juce::dontSendNotification);
@@ -717,7 +681,7 @@ void PreverbAudioProcessorEditor::refresh()
         if(std::find(state.session.selected.begin(),state.session.selected.end(),swell.id)!=state.session.selected.end())
         {selectedIR=selectedIR || swell.ir.present();selectedImport=selectedImport || swell.status=="Importing IR";}
     }
-    loadIRButton.setEnabled(hasSelection && w && !w->frozen);removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
+    removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
     auditionButton.setEnabled(state.auditionReady && !(state.session.liveEnabled && diagnostics.isPlaying));stopButton.setEnabled(state.playing || state.auditionReady);fullButton.setEnabled(w && state.raw);
     freezeButton.setEnabled(w && (w->frozen || w->phase==m3::Phase::ready));
     for(auto* control:std::array<juce::Component*,6>{&enabledButton,&muteButton,&soloButton,&inCurveBox,&outCurveBox,&setBarsButton})control->setEnabled(w!=nullptr);
