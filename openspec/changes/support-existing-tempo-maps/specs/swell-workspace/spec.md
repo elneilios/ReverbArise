@@ -33,6 +33,11 @@ Snap SHALL offer explicit 1/16 beat, 1/8 beat, 1/4 beat, 1 beat and 1/2/4 bar di
 - **THEN** each division quantizes to its absolute host grid with deterministic half ties away from PPQ zero and at most integer-sample rounding error
 - **AND** unchanged-origin seeks/loops retain that mapping without changing captured positions
 
+#### Scenario: Fresh constant-tempo capture preserves editing
+- **WHEN** a new fixed-tempo capture uses new evidence storage and an edit falls between its callback observations
+- **THEN** the established affine Snap/ruler/musical-entry policy remains available with the same captured coordinates, integer rounding, modifiers and stable-run-offset checks
+- **AND** observation-based storage alone does not demote ordinary fixed-tempo editing to exact-anchor-only behavior
+
 #### Scenario: Missing or changed mapping
 - **WHEN** host timing is absent, non-finite, overflowing, capture-rate incompatible, has incompatible meter or demonstrated mapping conflict, lacks sufficient local precision, or its fixed-tempo origin matches neither the accepted mapping nor an independently validated current fixed-tempo playback run
 - **THEN** effective Snap On prevents horizontal snapped publication and explains unavailable timing rather than guessing

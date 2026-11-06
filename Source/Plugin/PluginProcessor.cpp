@@ -18,6 +18,7 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       captureWorker(captureQueue, projectsRoot)
 {
+    timingTrace=diagnostic::TimingTrace::fromEnvironment();
     captureWorker.useWorkflow(workflowState);
     swells = std::make_unique<m3::SwellEngine>(std::move(projectsRoot), [this]
     {
@@ -54,6 +55,7 @@ PreverbAudioProcessor::~PreverbAudioProcessor()
 
 void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 {
+    traceReset.fetch_add(1,std::memory_order_relaxed);
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
     sampleRate.store(newSampleRate, std::memory_order_relaxed);
     captureWorker.setHostRate(newSampleRate);
@@ -61,6 +63,7 @@ void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 
 void PreverbAudioProcessor::releaseResources()
 {
+    traceReset.fetch_add(1,std::memory_order_relaxed);
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
@@ -364,6 +367,8 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
 
     auto* hostPlayHead = getPlayHead();
     const auto position = hostPlayHead != nullptr ? hostPlayHead->getPosition() : juce::Optional<juce::AudioPlayHead::PositionInfo>{};
+    if(timingTrace)timingTrace->observe(position,sampleRate.load(std::memory_order_relaxed),currentBlockSize,
+        isNonRealtime(),traceReset.load(std::memory_order_relaxed),captureWorker.captureGeneration(),workflowState.snapshot().pass);
     // Host queries may be relatively slow. Keep the prior complete snapshot
     // readable until the tiny atomic publication below, rather than making
     // worker/UI readers report unavailable timing throughout getPosition().

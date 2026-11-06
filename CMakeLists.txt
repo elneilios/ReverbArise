@@ -128,6 +128,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginInspector.cpp
     Source/Plugin/PluginSettings.cpp
     Source/Plugin/PluginProcessor.cpp
+    Source/Diagnostics/TimingTrace.cpp
     Source/UI/SwellTimeline.cpp
 )
 
@@ -157,6 +158,9 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_timing_trace_test tests/timing_trace_test.cpp)
+    target_link_libraries(preverb_timing_trace_test PRIVATE preverb_plugin juce::juce_audio_utils)
+    add_test(NAME preverb_timing_trace_test COMMAND preverb_timing_trace_test)
     add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
     target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
     add_test(NAME preverb_source_edges_test COMMAND preverb_source_edges_test)

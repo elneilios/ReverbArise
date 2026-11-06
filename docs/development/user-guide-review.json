@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed issue 73 after accepted-main integration and canonical spec sync: captured-grid Snap with validated run offsets, independent offline bounce clocks, causal diagnostics and all existing Export levels/continuous-preview, TransportReadout and selection/Fit guidance remain coherent. Historical source-only diagnostic rejection is scoped explicitly; current run admission stays separate. Three completed changes archived with Purpose/unrelated requirements preserved. No new host acceptance, UI styling or tempo-map implementation is claimed.",
+  "summary": "Reviewed the issue 71 opt-in raw trace instrumentation and test target, including diagnostic allocation-error handling. Normal launches, production timing admission, sample scheduling, state and musician controls remain unchanged. The measured scratch-host protocol is in development/validation docs; no future tempo-map feature is described as delivered in the musician guide.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 26525,
-      "sha256": "b4479f53971b6cb6d61e5e7ce57161fea52a33c0fa11a2c67401be34e406ca28"
+      "bytes": 26816,
+      "sha256": "2f7efe91fb91b473c48d2d3c8324c6adbe12cb004f0d35edca1ba7717956477a"
     },
     {
       "path": "CMakePresets.json",
@@ -449,6 +449,16 @@
       "sha256": "bc1b9585eba85b26fc834e12dafac3e76b6af09b7e748481d0453cd1ec861305"
     },
     {
+      "path": "Source/Diagnostics/TimingTrace.cpp",
+      "bytes": 5844,
+      "sha256": "291a84e30aeeb403d0143157f684e9640ffffec29cd6ecd824be66308b83bb88"
+    },
+    {
+      "path": "Source/Diagnostics/TimingTrace.h",
+      "bytes": 2798,
+      "sha256": "5b60f18de5d9778f94a11301a6da9c7aa108d6f26ace9ea28dbb5858a642c318"
+    },
+    {
       "path": "Source/Playback/AuditionVoice.cpp",
       "bytes": 7099,
       "sha256": "71b4716916da0424a6d60a44facd675a30c623bea96b4d2db8def1de98c4d476"
@@ -515,13 +525,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 28636,
-      "sha256": "ad9b645d4bb04b71dfd843a8e56dde11c4c838d3f58804aee63a6a78a9efbaf2"
+      "bytes": 29049,
+      "sha256": "b07564d072c7a1e4e3afd34e49b5f36c3f56722513a010023ed1e0db3a65fbe2"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 6928,
-      "sha256": "738aaac50cca866a986f3ca2d379720371231dd11381a04e8de0bb6adc994c27"
+      "bytes": 7064,
+      "sha256": "8ce81cb2c64b02ed18aefcf47918ba73b4dd3935f031ab531b108a48c6bbcb22"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",

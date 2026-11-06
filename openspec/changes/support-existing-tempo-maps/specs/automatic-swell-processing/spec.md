@@ -26,6 +26,11 @@ Detection, Generate, manual preparation and render reuse SHALL validate accepted
 - **WHEN** new evidence improves a musical conversion without changing an existing explicit sample window or source/render inputs
 - **THEN** conversion-dependent pending work revalidates its own scope, while unrelated candidates, renders and calibration are reused
 
+#### Scenario: Source window spans legacy and new evidence
+- **WHEN** an explicit source window crosses a verified compatible join from legacy affine source into newly captured ramp evidence
+- **THEN** generation verifies the two source/authority spans independently, keeps sample bounds and identity, and applies the duration policy without inventing a ramp interior
+- **AND** an unavailable/conflicting join blocks the spanning target without retiring independently valid neighbors
+
 ## MODIFIED Requirements
 
 ### Requirement: Marker-control changes invalidate obsolete analysis

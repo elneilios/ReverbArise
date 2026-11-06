@@ -25,8 +25,17 @@ musical precision or compulsory recapture at every BPM change.
 - Make shared rulers, bar/range entry and Snap consume verified local evidence.
   Unsupported ramp interiors and gaps show unavailable musical conversion;
   sample/time edits and safely aligned audio remain usable.
+- Preserve fresh constant-tempo capture's existing affine Snap, ruler and musical
+  entry behavior, including #73 stable-run offsets. Evidence collection is not
+  itself a reason to demote a working fixed-tempo grid.
 - Detect only demonstrable later-map conflicts, disclose unverified coverage,
   and retain original audio/renders. No silent retiming or automatic recapture.
+- Compare different callback partitions only through supported local authority;
+  calibrate stable run offsets on affine evidence without shifting PCM. Persist
+  scoped conflict fences and require explicit recovery, including after seeks.
+- Preserve both authorities in mixed legacy/new source; require compatible
+  boundary evidence for a swell spanning them. Reject evidence-capacity overflow
+  atomically and disclose the worst-case recording duration for its limits.
 - Gate production implementation on a bounded JUCE/VST3/FL Studio precision
   experiment and owner review of the resulting map-revision/admission policy.
 
@@ -35,6 +44,12 @@ time-signature automation, rhythmic bias (#70), Song/Pattern detection (#1),
 UI redesign, new control families and changes to Export's gain law. No
 implementation, installation, publication or new host-acceptance claim is made
 by this planning change.
+
+Review follow-up: the owner authorized only the bounded diagnostic harness and
+host investigation in tasks 1.1–1.2. Those findings are presented in the
+[checkpoint packet](../../../docs/validation/2026-11-06-issue-71-checkpoint.md).
+Production timing changes and tasks 2 onward remain gated by task 1.3 approval;
+the draft PR is not approved for merge or issue closure.
 
 ## Capabilities
 

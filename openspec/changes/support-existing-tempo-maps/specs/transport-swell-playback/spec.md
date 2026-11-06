@@ -50,6 +50,16 @@ Live wet SHALL require valid absolute sample timing and compatible accepted asse
 - **THEN** each path joins at the same absolute offset, without global BPM extrapolation or replay of elapsed lead-in
 - **AND** unverified musical loop bounds are not converted using the current BPM as a whole-song mapping
 
+#### Scenario: Different partitions and stable comparison offset
+- **WHEN** capture/playback/bounce block boundaries differ and a map run independently calibrates a stable observation offset on accepted affine evidence
+- **THEN** comparable queries validate at their corresponding accepted coordinate, wet remains at unchanged absolute samples and unsupported ramp comparisons report unverified
+- **AND** no ramp interpolation or baseline reset is used to conceal a mismatch
+
+#### Scenario: Seek into a known conflicted contribution
+- **WHEN** a later map edit has fenced a swell's source, musical authority or positioned wet dependency and transport seeks into any part of that swell
+- **THEN** its complete contribution stays unavailable, including lead-in/tail, until explicit fully validated recovery; valid neighbors retain independent admission
+- **AND** Stop/Play, new bounce or save/reopen does not clear the fence
+
 ### Requirement: Adjustable regeneration and per-swell render freeze
 The system SHALL save independent Regeneration sensitivity and per-swell Freeze render preferences. Freeze SHALL require ready committed wet and retain verified audio across source changes, capture clear and reopen, at its saved sample rate and constant meter under accepted timing evidence. Frozen shape/gain/placement/activity SHALL remain editable. Source/IR/support changes SHALL require unfreeze and current dependency validation.
 

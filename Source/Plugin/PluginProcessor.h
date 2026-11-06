@@ -10,6 +10,7 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
+#include <Diagnostics/TimingTrace.h>
 
 struct HostPositionDiagnostics
 {
@@ -103,6 +104,8 @@ private:
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     std::atomic<bool> hostNotificationsEnabled{false};
+    std::unique_ptr<diagnostic::TimingTrace> timingTrace;
+    std::atomic<uint64_t> traceReset{0};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;

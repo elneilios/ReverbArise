@@ -26,3 +26,8 @@ Restoration SHALL verify source/IR/render identities, bounds, engine version, sa
 - **WHEN** a supported fixed-tempo project lacks new evidence, or new-format timing evidence is missing/corrupt or unsupported
 - **THEN** legacy state preserves its original fixed mapping without invented ramp history; new evidence failures are identified and restore cannot publish a partial or falsely verified state
 - **AND** old asset bytes, swell identities and prior accepted state are preserved without autoplay
+
+#### Scenario: Mixed authorities and persisted conflict
+- **WHEN** a saved swell spans legacy/new timing authorities and an accepted revision has a conflict fence
+- **THEN** restore preserves both authorities and join provenance; affected contribution admission remains fenced through later seeks until explicit complete recovery
+- **AND** missing join evidence cannot be replaced by the host's current BPM or by relabelling old assets

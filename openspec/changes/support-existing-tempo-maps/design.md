@@ -3,8 +3,9 @@
 ## Context
 
 See [proposal.md](proposal.md) for scope and [issue #71](https://github.com/elneilios/ReverbArise/issues/71)
-for acceptance. Investigation performed 6 November 2026 on merged main
-`80a12f0`; this is a source/API investigation, not a new host experiment.
+for acceptance. Original source/API investigation performed 6 November 2026
+on merged main `80a12f0`; the authorized diagnostic follow-up below now includes
+actual host measurements, while production timing policy remains unchanged.
 There is no existing active tempo-map change or issue discussion to reuse.
 The issue's named planning change is scaffolded here for the first time.
 
@@ -42,7 +43,24 @@ this proposal does not reopen that completed investigation.
   [tempo automation](https://cluster.image-line.com/fl-studio-learning/fl-studio-online-manual/html/toolbar_panels.htm),
   but this establishes the musician workflow, not the precision delivered to a
   VST3. No new FL Studio step/ramp trace, plugin-delay comparison or automated
-  bounce has been captured in this planning turn.
+  bounce was captured in the original proposal turn. The subsequently authorized
+  diagnostic-only investigation is now recorded in the
+  [task 1.3 evidence packet](../../../docs/validation/2026-11-06-issue-71-checkpoint.md),
+  with compressed raw numeric trace and metrics: 51,013 loss-free records in
+  FL Studio 26.1.7.5654 at 48 kHz, nominal ASIO 512/256, step/linear/curved cases
+  and offline bounces. It establishes observed boundary values, not exact ramp
+  precision. In particular, reported step BPM changed before the configured
+  PPQ boundary, and identical absolute samples across partitions had small raw
+  PPQ differences. Do not infer exact transition boundaries from BPM changes or
+  treat raw-anchor equality as a guaranteed host contract.
+
+Where a ramp's host-coordinate uncertainty has no justified bound, even an
+exact-sample anchor comparison with a small PPQ difference remains unverified;
+the measured differences do not define a new drift tolerance. Automatic later
+edit detection in such regions is consequently limited. Prove conflicts through
+an established authority/bounded comparison or retain the unknown state; do not
+claim detection of every upstream edit from these traces. This is an explicit
+task 1.3 owner trade-off alongside retaining absolute-sample playback.
 
 Consequently two sample/PPQ points, even with matching BPMs, do not prove the
 curve between them. A numerical fit or repeated successful test does not by
@@ -118,6 +136,16 @@ unavailable locally. The fixed-tempo affine path retains its current rounding
 and meter-denominator semantics. Nearest-grid ties remain away from PPQ zero;
 inverse lookup must reject multiple possible locations or unsupported coverage.
 
+Fresh constant-tempo capture retains the existing affine authority and today's
+Snap/ruler/bar-entry behavior under the unchanged fixed-tempo consistency policy,
+not the stricter ramp exact-anchor-only fallback. New-format storage records the
+authority kind explicitly. On demonstrated variation, split affected authority
+at observed boundaries; do not retrospectively certify the interval containing
+an unobserved transition. Unaffected affine regions remain usable. This preserves
+the existing fixed-tempo operating assumption; it does not turn repeated equal
+BPM observations into a guarantee of an arbitrary automation curve. Any proposal
+to demote fresh fixed-tempo editing requires a separate owner decision.
+
 Initially do not enable fitted linear-ramp or piecewise-constant extrapolation
 for new map intervals without a documented host guarantee/precision basis.
 Synthetic fixtures with an exact model test conversion arithmetic; they do not
@@ -187,13 +215,47 @@ intervals, preserving old snapshots/exports. Overlapping conflicting observation
 are not silently averaged or used to overwrite protected evidence.
 
 Proposed initial evidence budget: at most 1,048,576 compact records and 64 MiB
-per accepted evidence snapshot, plus explicitly accounted bounded staging and
+per accepted evidence snapshot (64-byte records), plus explicitly accounted bounded staging and
 publication overhead. Keep PCM's existing 256 MiB budget unchanged and report
 metadata separately. The implementation must pin/test the actual record size,
 bounded lookup steps and total coexistence before enabling collection. Reject
 an over-cap pass atomically with an actionable reason; do not drop arbitrary
 anchors and claim full precision. Storage/index work runs on the worker; no
 full-history scan, file I/O, allocation, deallocation or locks on the callback.
+
+Capacity failure has one production rule: lost required records, queue overflow,
+record/byte exhaustion or evidence-write failure abort the entire pending
+source/evidence transaction. Ordinary host fields reported unavailable are valid
+records with missing flags, not capacity failure, and may commit a musical gap.
+No capacity-triggered precision downgrade may accept new PCM. Earlier accepted
+state stays intact. An optional diagnostic trace is different: it retains a
+bounded prefix, explicitly records overflow/omissions and never controls capture
+acceptance. Its measurements are unusable as a complete trace after any loss.
+
+Worst case, one unique record per callback, empty snapshot, no compaction, 48 kHz:
+
+| Frames/block | Source duration at 1,048,576 records |
+| ---: | ---: |
+| 32 | 11 min 39 s |
+| 64 | 23 min 18 s |
+| 128 | 46 min 36 s |
+| 256 | 1 h 33 min 12 s |
+| 512 | 3 h 6 min 25 s |
+| 1024 | 6 h 12 min 50 s |
+
+At 96 kHz these durations halve; at 44.1 kHz multiply by 48000/44100.
+The table assumes a future packed production record no larger than 64 bytes;
+that layout is not implemented by this diagnostic stage. The diagnostic's richer
+raw record is 112 bytes and has its separate 65,536-record/7 MiB queue. If the
+production record exceeds 64 bytes, the 64 MiB byte limit reduces these durations
+and must be recalculated for review, not increased silently.
+Mixed/variable blocks consume actual records, not nominal duration. Existing
+accepted records reduce remaining capacity. Affine compaction, if added later,
+must preserve the declared authority/provenance; no longer capacity is promised
+here. Before production enablement, account for old/new snapshots coexisting,
+indexes, queue and staging in a measured total; 64 MiB is a snapshot cap, not a
+whole-process memory claim. The short tiny-buffer duration is an explicit owner
+trade-off at checkpoint 1.3, not an approved unlimited-song promise.
 
 Unsupported or malformed new-format evidence cannot replace valid state.
 Missing referenced evidence reports unavailable provenance without deleting
@@ -203,18 +265,82 @@ autoplay, arm Recapture, choose a new mode or resume pending Generate.
 
 ### 7. Recognize conflicts without claiming unobservable map edits
 
-Compare only exact or sufficiently bounded corresponding positions with
-validated run provenance. Keep evidence conflicts separate from grid gaps and
-preparation misses. Demonstrated conflicts suppress affected live scheduling
-and musical operations while retaining render bytes and permitting inspection
-of the original sample-domain result. Recovery uses explicit existing source
-selection/Recapture and regeneration commands; no new automatic recovery mode.
+Use this deterministic comparison/admission table for each callback range and
+each contribution's dependencies, independently in realtime and bounce:
+
+| Situation | Comparison and admission |
+| --- | --- |
+| Fixed/affine authority, different block boundaries | Evaluate the accepted affine mapping at the actual callback start; validate the unchanged one-sample run residual. Never require identical capture block boundaries. |
+| Map authority, zero or calibrated offset | Query accepted evidence at the corresponding sample. Only an exact anchor or justified interval with adequate error bounds is comparable. Do not integrate BPM to manufacture a matching ramp anchor. |
+| Ramp callback has no comparable anchor at this partition | `sample-aligned / musical-unverified`; permit verified sample-positioned PCM if no known fence/rate/session failure, disclose lack of comparison and disable unsupported musical conversions. Neither success nor conflict of the entire map is inferred. |
+| Comparable evidence contradicts accepted alignment beyond its declared uncertainty | Fence dependent material before admission and report a demonstrated conflict. An arbitrary tolerance cannot force a match. |
+| Existing conflict fence intersects a contribution | Reject that whole contribution, including a seek into its wet lead-in/tail; retain other independently safe contributions. A new run/bounce cannot erase the fence. |
+
+A map run can calibrate a **sample-domain observation offset** only using two
+distinct comparable observations inside an accepted affine region, with matching
+rate/BPM/meter and the same offset within the existing one-sample residual.
+For signed offset `d = runtime origin - accepted origin`, comparisons query
+accepted musical evidence at `runtime sample - d`; playback still addresses
+wet at `runtime sample`. No PCM, source bounds or saved grid is translated.
+Each playback or bounce run calibrates independently; capture's offset is not
+blindly reused. An offset uncalibrated at a ramp start remains unknown. Do not
+infer it from one ramp BPM/PPQ pair or choose a fitted offset to hide a mismatch.
+If no calibration exists, an incompatible observation is ambiguous between host
+phase and a changed map; classify it unverified unless independent comparable
+evidence proves a conflict. Fixed-tempo #73 validation remains unchanged.
+
+Conflict ownership is project/instance + accepted evidence revision, not a
+callback/run. Record the contradictory observations, provenance and affected
+half-open source interval as durable bounded metadata via the worker. Until
+durable publication completes an in-memory fence already suppresses affected
+contributions. If worker-side conflict storage fails, retain an instance-wide
+admission latch, report the failure and serialize that bounded fail-closed latch
+inline in plugin state with the prior accepted references. Host Save is not
+blocked or silently treated as clean; reopen must restore the latch before
+admission. Never delete or rewrite the original timing evidence or audio.
+
+Scope a contradiction to its established conflicting interval; when either
+boundary cannot be established, conservatively extend to the nearest verified
+unchanged anchors, or to the end of the accepted contiguous source run. A tempo
+edit upstream can shift all later musical positions: fence the suffix until a
+verified convergence anchor rather than just the single callback. Do not cross
+sparse gaps and certify later independent regions unchanged. A contribution is
+affected if its extraction/support interval, target/placement musical authority
+or positioned wet interval depends on the fenced region; retain its full stored
+PCM but suppress the entire contribution. This includes wet before its source
+arrival. For sparse downstream coverage with no evidence of convergence, mark
+the downstream comparison unverified and retain a conservative conflict fence
+where the demonstrated edit's effect cannot be bounded safely.
+
+Recovery is an explicit user command, not Play/Stop, seek, reopen or new bounce:
+Recapture/reselect source and regenerate affected definitions against newly
+accepted evidence, or explicitly restore the prior DAW map and validate the
+whole fenced dependency before clearing it. Validate recovery atomically; a
+failed/cancelled/partial recovery retains the fence and all originals. Acknowledge
+must not mean ignore-and-admit. Persist fences across save/reopen and clones
+with their accepted revision; subsequent changes in one instance stay isolated.
 
 Do not treat a seek, new bounce block partition, PPQ-origin variation or unknown
 region as proof of a map edit. Nor may a seek/conflict create a replacement
 baseline to conceal actual drift. New/unverified regions may play independently
 safe absolute PCM with the mapping limitation disclosed. Exact identification
 of arbitrary later edits cannot be promised without additional host evidence.
+
+### 7a. Mixed legacy and new evidence
+
+Keep authority spans, not a global map-enabled flag that weakens legacy checks.
+For a swell extracting across legacy affine source into newly accepted map
+source, verify both source spans and their boundary compatibility independently.
+An affine boundary provides a musical comparison anchor only where that authority
+was valid; it cannot certify the new ramp interior. With compatible sample rate,
+constant meter, boundary evidence and no fence, explicit sample-defined source
+and wet can span both authorities. Musical edits spanning them require a valid
+conversion at each endpoint plus compatible authority at the join. Missing or
+contradictory join provenance blocks that spanning contribution/operation with a
+specific reason, while wholly verified neighbors remain usable. An implicit
+authority upgrade cannot resolve the mismatch. Save/reopen retains both authority
+kinds, original references and the boundary decision without relabelling legacy
+assets as newly captured evidence.
 
 ### 8. Gate production integration on measured host behavior
 

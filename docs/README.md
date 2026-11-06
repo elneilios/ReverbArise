@@ -12,6 +12,9 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Issue #71 diagnostic timing trace](development/tempo-timing-trace.md) — opt-in raw host observations for the tempo-map planning checkpoint; production timing policy remains unchanged.
+- [Issue #71 owner checkpoint](validation/2026-11-06-issue-71-checkpoint.md) — measured FL Studio step/ramp/bounce observations, raw trace, revised admission/conflict proposals and resource trade-offs awaiting approval.
+
 - [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
 
 - [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.
