@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed final issue 8 read-only adapters/inventory and staged Storage native preview, including stale-scope count clearing and readable protected-history copy. No production Settings entry, capture/DSP/state or asset writer changed. Existing guide backup/portability cautions remain correct; production guide prose/screenshots stay unchanged pending task 2.4 review and integration.",
+  "summary": "Owner-directed Storage preview scans once automatically on page open/reopen, with no manual refresh; hiding cancels work and Stop scan is temporary. Native lifecycle tests pass. Production Settings integration remains pending approval, so existing alpha guide backup/portability prose and production screenshots remain accurate and unchanged.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -755,8 +755,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 6380,
-      "sha256": "10dee2ad02455f23e367522fb78de24acdefb5c90722379f85923c5a7d3b318e"
+      "bytes": 6485,
+      "sha256": "5526abf9af42000e8b27d8dc486fe0e6f054485b3f819af3fa212c62cd06ab71"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
