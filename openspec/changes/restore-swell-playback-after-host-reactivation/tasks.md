@@ -16,7 +16,7 @@
 
 - [x] 3.1 Run `scripts/build.ps1 -Configuration Debug -Test` and `scripts/build.ps1 -Configuration Release -Test` sequentially under the wrapper's build lock, plus applicable repository validation gates and strict OpenSpec validation. Verify all required checks pass and record native results separately from fixture checks, with warm/cache state and skipped host coverage explicit.
 - [ ] 3.2 Consolidate final host verification into one brief FL Studio smoke of the actual enable/disable control: audible running playback, disable while transport advances, re-enable inside a swell and hear later swells before wrap, including a repeated cycle. Use install-test-vst3 if a test installation is needed, record exact build/control and owner outcome, and avoid asking the owner to repeat automated edge cases. If host coverage is unavailable, record it as unresolved rather than claiming acceptance.
-- [ ] 3.3 Review the final scoped diff and evidence, commit on the issue branch and open or update one owner-review PR using `Closes #103` only if fully resolved, otherwise `Refs #103`. Verify the PR links this change and accurately states root cause, validation and remaining limits; do not merge or close the issue independently.
+- [x] 3.3 Review the final scoped diff and evidence, commit on the issue branch and open or update one owner-review PR using `Closes #103` only if fully resolved, otherwise `Refs #103`. Verify the PR links this change and accurately states root cause, validation and remaining limits; do not merge or close the issue independently.
 
 ## Workflow follow-up
 

@@ -10,7 +10,8 @@
 - Read-only guide currency, UI standards, strict OpenSpec change validation,
   affected documentation link targets and `git diff --check` pass.
 - Release identity: `v0.1.0-test.issue103`; numeric plugin version remains 0.1.0.
-- System installation and the owner's exact FL Studio green-slot smoke remain pending.
+- System installation succeeds from clean code commit `87240d5`; the owner's
+  exact FL Studio green-slot smoke remains pending. Draft PR: [#105](https://github.com/elneilios/ReverbArise/pull/105).
 
 ## Scope and environment
 
@@ -203,3 +204,38 @@ passes (1.73 s), and all lifecycle/audio/asset/persistence coverage remains acti
 This is native MSVC/CTest evidence, not simulated orchestration fixtures or
 FL Studio acceptance. Unmodified packaging/installer fixture suites were not
 rerun; no package, release, driver update or system focus-policy change is made.
+
+## Local test installation and review delivery
+
+Committed reviewed code/planning/evidence as
+`87240d58653ed43fa8f291a816740ec1660b669f` on
+`codex/103-host-reactivation`, based on current main `dbfdb18`.
+The stock `scripts/install-test-vst3.ps1 -ReleaseTag v0.1.0 -Candidate test.issue103`
+rebuilds the Release VST3 from that clean commit. Its normal-permissions attempt
+successfully builds but encounters a Windows ACL denial opening the system
+installation lock before replacing anything. The documented UAC retry runs the
+same installer with a hidden launcher, captures its transcript/exit status and
+succeeds (exit 0); no folder ACL is changed.
+
+- Installed bundle: `C:\Program Files\Common Files\VST3\ReverbArise.vst3`.
+- Binary SHA256, independently checked against the installer receipt:
+  `2F0C596EE1D38D5D52862F8380D78D07199F1D7344A2F63C89547480F49EF4A1`.
+- Retained previous bundle:
+  `out/vst3-install-backups/20261106-153946-41449f80760a41249af4c99e7c81eede/ReverbArise.vst3`.
+- Clean installed build identity: `v0.1.0-test.issue103`, Git `87240d5`,
+  `worktreeDirty=false`. Later evidence/task-only commits do not change that binary.
+- Elevated installer transcript/result: `out/issue103-stack-probe/install-elevated.log`
+  and `install-elevated-result.json`; native plugin-only build logs:
+  `out/build-logs/Release/20261106-153940-f597cb3a/`.
+- Installer rebuild passes; it does not rerun CTest. The full Release CTest pass
+  above covers the same code before committing, with its earlier build identity
+  recorded separately. Installer inventory/version/hash checks cover the installed artifact.
+
+[Draft PR #105](https://github.com/elneilios/ReverbArise/pull/105) targets main,
+uses `Refs #103`, links this change and evidence, and is left open for owner
+review. It is not merged; the issue and OpenSpec change remain open/unarchived.
+The owner was asked for one consolidated smoke after rescan with Verify plugins
+and Rescan previously verified plugins, confirming the system bundle and About
+identity, then two green-slot disable/re-enable cycles during running transport.
+Actual FL Studio reactivation, its exact callback sequence and physical host/DPI
+coverage remain unverified pending that response.
