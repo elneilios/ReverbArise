@@ -1,5 +1,15 @@
 # Perform workspace
 
+## Shared Sound field — issue #80
+
+The Sound section hosts the same IR editor used by Learn, bound only to the
+invocation's selected swell. Its scope explanation belongs to the inspector,
+outside the field. Existing Level knob/exact editing and fixed Reset actions
+remain separate. Delayed choices/imports retain session/ID/input ownership and
+honour mode/freeze guards. Pending and failed replacements distinguish requested
+IR from retained audible output; errors use close red inline feedback. The
+Diagnostics future-default import action uses the shared default binding too.
+
 Issue #58 now supplies the responsive main-editor composition (standards
 revision 7), superseding the fixed geometry described in the earlier history
 below. Fresh content is 900x600/100%; text grows with useful workspace.

@@ -73,16 +73,6 @@
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
     },
     {
-      "id": "ui37-008",
-      "path": "Source/UI/LearnWorkspace.h",
-      "rule": "literal-style",
-      "occurrence": "setMinimumHorizontalScale(1.f)",
-      "count": 1,
-      "scope": "retained legacy consumer",
-      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
-      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
-    },
-    {
       "id": "ui37-013",
       "path": "Source/UI/SwellTimeline.cpp",
       "rule": "literal-style",

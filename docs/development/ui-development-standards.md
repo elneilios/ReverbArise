@@ -19,6 +19,55 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+`ActionButton::paintSurface` owns the common command-button surface for text and
+glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
+neutral surface, stable off-white content, aqua hover/pressed outline, contained
+two-pixel focus and the same disabled treatment. Do not recolour an icon instead
+of applying the shared surface state. Primary and latched variants retain their
+existing explicit fill policies. Native parity cases compare both icon roles
+against an ordinary ActionButton across idle/hover/pressed/disabled states.
+The #80 owner requested this correction during integrated review; broader
+legacy/name-based button migration is tracked separately in
+[#107](https://github.com/elneilios/ReverbArise/issues/107).
+
+Issue #80's owner-approved `Controls/ConvolutionIrEditor` family composes
+`IrSelector`, `IconActionButton` and `EllipsisLabel` using existing responsive
+geometry and text roles. It owns catalogue presentation, captured menu choices,
+deliberate selection, notification-free accepted-state refresh, focus, accessible
+field status and footer-help metadata. It has no scope-message property or child.
+Hosting screens own context explanations such as future-default versus selected-
+swell scope; these belong with their Sound section, outside the shared field.
+Overflow retains full help/description;
+requested feedback never becomes an optimistic accepted assignment.
+`ConvolutionIrBinding` outside the control library owns two explicit target types:
+future default (session/pass) and selected swell (session/ID/input revision).
+One dispatch path calls the existing engine/importer validation authority. Its
+file chooser uses the same captured weak-lifetime completion tested without an
+OS dialog; a newer choice/import invalidates an older unsubmitted file result.
+Engine pass/mode/freeze/revision guards still decide publication. These files
+are consumed by Learn Sound and Perform Sound through the same command path;
+the Diagnostics default-import entry also uses that binding. The owner approved
+the revised family and integrated composition, including corrected hover and
+collapsed empty feedback spacing. Host acceptance remains separate.
+Existing visual tokens are reused (production standards revision 10).
+The focused test/review entry points are `--test-ir-editor` and
+`--review-ir-editor` on `preverb_swell_ui_test`.
+
+The #80 owner requested a closer field/feedback relationship and red failed
+states. The revised candidate treats label, input/action row and supporting text
+as one field: `spacing::tight` below the input, at most two ordinary helper-font
+message lines. Idle accepted/ready messages that repeat the selected value are
+omitted. Empty feedback occupies no space; hosts use the width-dependent preferred
+height to reflow adjacent fields when messages appear, wrap or clear. Perform Level
+follows the field with the existing content padding; Reset stays fixed outside the
+scrolling fields. Hosting-screen scope notes are separate from field feedback. Error text
+uses the existing `danger` semantic ink, includes a recovery action, and retains
+full accessible diagnostic detail. Labels/messages stay readable when the input
+is disabled; colour supplements the message. Bottom hover help remains available.
+This is a scoped owner-approved IR-family policy, informed by
+[Fluent Field guidance](https://fluent2.microsoft.design/components/web/react/core/field/usage).
+It does not require a general field framework or a whole-plugin migration.
+
 Shared NoticeBar updates visible severity, accessible title/description/help and
 standard accessibility change events without explicitly synthesizing speech.
 Do not call postAnnouncement for notice refreshes: on Windows JUCE can invoke
@@ -39,7 +88,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 7; scoped knob focus review below). Its responsive composition section
+numerical authority (production standards revision 10; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

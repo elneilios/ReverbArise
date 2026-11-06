@@ -51,6 +51,14 @@ void Composition::verifyResponsive(const juce::File& output)
             tabs.onRequest(section);panel->refresh();
             checkSettingsRoutes();
             checkVisible("resetWetShape");
+            if(section==3)
+            {
+                auto& ir=require<controls::ConvolutionIrEditor>(*panel,"selectedIrEditor");
+                auto& level=require<KnobValue>(*panel,"swellLevelCell");
+                REQUIRE(ir.getHeight()==ir.preferredHeight());
+                REQUIRE(level.getY()==ir.getBottom()+responsiveGeometry::contentPadding);
+                if(ir.status.getText().isEmpty())REQUIRE(ir.getHeight()==ir.selector.getBottom());
+            }
             for(const auto& cellName:std::vector<juce::String>{"arrivalSampleCell","sourceSampleStartCell","sourceSampleEndCell","preRollCell","endOffsetCell","fadeInMsCell","fadeOutMsCell","swellLevelCell","curveInTensionCell","curveOutTensionCell","wetPlacementCell"})
             {
                 auto& cell=require<KnobValue>(*panel,cellName);
@@ -84,17 +92,18 @@ void Composition::verifyResponsive(const juce::File& output)
             REQUIRE(sourceHeading.getBorderSize().getLeft()==0);
             REQUIRE(sourceHeading.getX()==require<juce::Label>(learn,"learnRecaptureLabel").getX());
             auto& scope=require<juce::Label>(learn,"learnSoundScope");
-            auto& irLabel=require<juce::Label>(learn,"learnIRLabel");
-            auto& irStatus=require<juce::Label>(learn,"learnIRStatus");
-            REQUIRE(irLabel.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);
-            REQUIRE(scope.getY()==irStatus.getBottom()+responsiveGeometry::contentPadding);
-            REQUIRE(scope.getX()==irLabel.getX() && scope.getBorderSize().getLeft()==0);
+            auto& ir=require<controls::ConvolutionIrEditor>(learn,"learnIrEditor");
+            REQUIRE(scope.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);
+            REQUIRE(ir.getY()==scope.getBottom()+responsiveGeometry::contentPadding);
+            REQUIRE(scope.getX()==ir.getX() && scope.getBorderSize().getLeft()==0);
+            REQUIRE(scope.getParentComponent()!=&ir);
             auto manualView=enabledView;manualView.session.automaticProcessing=false;manualView.session.autoMarkersEnabled=false;
             learn.display(processor->getCaptureSnapshot(),manualView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
-            for(const auto* name:{"learnIRLabel","learnDefaultIR","learnImportIR","learnIRStatus"})
+            for(const auto* name:{"learnIRLabel","learnDefaultIR","learnImportIR"})
             {
                 auto& control=require<juce::Component>(learn,name);
-                REQUIRE(control.isVisible()==(section==2));
+                bool shown=true;for(auto* ancestor=&control;ancestor && ancestor!=&learn;ancestor=ancestor->getParentComponent())shown=shown && ancestor->isVisible();
+                REQUIRE(shown==(section==2));
                 if(section==2)checkVisible(name);
             }
             REQUIRE(!require<juce::Component>(learn,"learnMarkerSensitivity").isVisible());
@@ -109,7 +118,7 @@ void Composition::verifyResponsive(const juce::File& output)
             for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","learnImportIR"})
             {
                 auto& control=require<juce::Component>(learn,name);
-                if(control.isVisible())REQUIRE(control.getBottom()+responsiveGeometry::contentPadding<=generate.getY());
+                if(control.isVisible()){const auto bounds=learn.getLocalArea(&control,control.getLocalBounds());REQUIRE(bounds.getBottom()+responsiveGeometry::contentPadding<=generate.getY());}
             }
         }
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));panel->refresh();

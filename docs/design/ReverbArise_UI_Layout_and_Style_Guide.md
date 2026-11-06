@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.7 · **Production standards revision:** 7 · **Purpose:** Production UI authority and design reference. Revision 7 adopts the owner-reviewed responsive composition for issue #58, retaining revision 6's stable transport readout.
+**Version:** 1.10 · **Production standards revision:** 10 · **Purpose:** Production UI authority and design reference. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
 
 ## Responsive composition — issue #58
 
@@ -39,8 +39,8 @@ The transport readout retains its independently approved fixed 15-height font.
 Learn uses Capture & Generate / Sound tabs, with Generate/readiness/manual help
 below the content. Sound's current Default IR/import controls stay available
 with automatic detection off. Its scope note follows the controls. Shared Sound
-remains #80 work; a Learn Level default is a separate extension. Both are outside
-#58 by explicit owner decision.
+uses the same IR field family as Perform; a Learn Level default remains a separate
+extension. The hosting Sound section owns context explanations outside that field.
 Perform uses Timing / Envelope / Sound; Enabled/Solo/Freeze and Reset actions
 stay outside inspector scrolling. Export retains its dominant preview, accepted
 Character/Dry/Wet family and protected file/return actions. No future DSP slots ship.
@@ -156,6 +156,10 @@ production standards revision; this revision does not change plugin/state versio
 | 5 | #46 owner approved revised presentation on 2026-11-04 | Perform 52-pixel single-row audition strip, grouped inspector/full Source labels, compact values with exact editing, shared ruler and aligned headings; normal-font bottom context help across modes. Existing typography/control families reused; no popup tooltips |
 | 6 | #68 native readout look/feel approved 2026-11-05 | Perform-only stable Bar, Beat, BPM and meter slots; existing footer 15-pixel Inter Regular/primary ink and tight/related spacing retained. No highlight decoration or host behavior change |
 | 7 | #58 Option A revision 4 and interim/combined native composition reviewed 2026-11-05/06 | Responsive main-editor roles, named 900x600 composition, persistent Reset, Learn/Perform sections and delivered Export family. Appearance/auxiliary interaction and host/DPI acceptance remain separately recorded; no DSP/default Level extension |
+| 8 | #80 revised native IR family approved 2026-11-06 | Shared IR label/selector/import and closely grouped feedback using existing tokens; red actionable failures remain readable with disabled inputs, text wraps without shrinking, and hosts own scope explanations. Family approval permits integration; integrated composition and host/DPI acceptance remain separate |
+| 9 | #80 integrated-review correction requested 2026-11-06 | Folder/import and Settings glyph buttons reuse ActionButton's surface: stable off-white content and aqua hover/pressed outline, existing contained focus/disabled treatment. No new token; wider legacy button-state audit remains #107. Corrected native interaction approved 2026-11-06; evidence is separately recorded |
+
+| 10 | #80 owner identified idle IR-to-Level gap on 2026-11-06; revised native spacing approved | Empty IR feedback collapses; present feedback uses one or two helper lines and adjacent fields reflow using existing spacing. Reset remains fixed. No new token |
 
 ### Stable Perform transport information
 

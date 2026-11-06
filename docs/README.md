@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Shared Learn/Perform IR editor](validation/2026-11-06-issue-80-shared-ir.md) — shared field/binding ownership, owner-reviewed feedback and scope refinements, native isolation/persistence/audio evidence and remaining integrated/host acceptance.
+
 - [Issue #73 PR and archive record](validation/2026-11-06-issue-73-pr.md) — current-main integration, canonical spec sync, completed archives and preserved owner acceptance.
 
 - [Stable playback Snap repair](validation/2026-11-05-issue-73-snap-fix.md) — captured-grid coordinates with independently validated playback offsets, native evidence and local test installation.
