@@ -19,7 +19,7 @@
 #include <UI/Controls/ActionButton.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
-#include <UI/StorageInventoryPanel.h>
+#include <UI/PortableStoragePanel.h>
 #include <UI/Controls/FocusViewport.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
@@ -95,7 +95,6 @@ private:
     void setSettingsOpen(bool);
     void initialiseSettings();
     void layoutSettings();
-    m3::storage::Request storageInventoryRequest();
     void refreshStorageScope(const CaptureSessionSnapshot&,uint64_t);
     void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
     void curveChanged(bool);
@@ -176,7 +175,8 @@ private:
     void layoutLiveDiagnostics();
     juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
     std::array<juce::Component,7> settingsPages;
-    std::unique_ptr<m3::ui::StorageInventoryPanel> storageInventory;
+    std::unique_ptr<m3::ui::PortableStoragePanel> storageInventory;
+    m3::ui::controls::FocusViewport storageViewport;
     juce::String storageIdentity;
     juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
     std::array<juce::Label,12> settingsLabels;

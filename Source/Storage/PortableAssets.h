@@ -67,6 +67,10 @@ bool inspectInterrupted(const juce::File& selectedFolder,const juce::String& ope
 class Verified;
 bool locate(const juce::File& selectedFolder,const Locator& expected,
             std::shared_ptr<Verified>&,juce::String& error,const Hooks& = {});
+// Explicit completion-receipt selection supports reopening without a local registry.
+// The selected receipt is read through the same pinned-root policy, then the
+// exact store/snapshot and complete closure are verified; no head inference.
+bool locateReceipt(const juce::File& selectedReceipt,std::shared_ptr<Verified>&,juce::String& error,const Hooks& = {});
 const Snapshot& snapshot(const Verified&);
 const Receipt& receipt(const Verified&);
 // An explicit recovery copy into a selected existing root, recreating legacy

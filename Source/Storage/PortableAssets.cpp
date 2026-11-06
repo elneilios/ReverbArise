@@ -338,6 +338,15 @@ bool locate(const juce::File& selected,const Locator& expected,std::shared_ptr<V
         out=std::move(v);error.clear();return true;
     }catch(const std::exception& e){return fail(error,e.what());}
 }
+bool locateReceipt(const juce::File& selectedReceipt,std::shared_ptr<Verified>& out,juce::String& error,const Hooks& hooks)
+{
+    try{require(selectedReceipt.getParentDirectory().getFileName()=="receipts","Select a completion receipt inside the backup receipts folder");
+        const auto folder=selectedReceipt.getParentDirectory().getParentDirectory();Root root(folder);Receipt receipt;
+        require(decodeReceipt(readText(root,"receipts/"+selectedReceipt.getFileName(),8192),receipt,error),error);
+        require(selectedReceipt.getFileName()==receipt.locator.snapshot+".json","Completion receipt filename differs from its immutable snapshot");
+        return locate(folder,receipt.locator,out,error,hooks);
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
 Result restoreCopy(const std::shared_ptr<Verified>& v,const juce::File& selected,const Hooks& hooks)
 {
     Result result;try{require(v!=nullptr,"Select and verify a complete backup first");Root target(selected);require(!target.canonical.equalsIgnoreCase(v->root->canonical) && !target.canonical.startsWithIgnoreCase(v->root->canonical+"/") && !v->root->canonical.startsWithIgnoreCase(target.canonical+"/"),"Restore destination must be separate from the backup tree");const auto prefix=v->state.observed.project+"/"+v->state.observed.instance+"/";

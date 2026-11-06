@@ -135,6 +135,11 @@ int main(){return runTest([]{
     TestDirectory corrupt;REQUIRE(corrupt.file.createDirectory().wasOk());REQUIRE(destination.file.copyDirectoryTo(corrupt.file));auto corruptPack=packed;
     const auto first=corrupt.file.getChildFile(saved.files[0].object);REQUIRE(first.replaceWithText("corrupt"));auto held=verified;REQUIRE(!locate(corrupt.file,corruptPack.receipt.locator,verified,error) && verified==held);
     REQUIRE(!backup(prepared,corrupt.file).success && first.loadFileAsString()=="corrupt");
+    // Explicit receipt selection resolves an exact backup after process-local hints are lost.
+    REQUIRE(locateReceipt(destination.file.getChildFile("receipts/"+packed.receipt.locator.snapshot+".json"),verified,error));
+    const auto receiptHeld=verified;
+    REQUIRE(!locateReceipt(destination.file.getChildFile("snapshots/"+packed.receipt.locator.snapshot+".json"),verified,error) && verified==receiptHeld);
+    REQUIRE(!locateReceipt(corrupt.file.getChildFile("receipts/"+packed.receipt.locator.snapshot+".json"),verified,error) && verified==receiptHeld);
     // Pinning blocks replacing source dependencies while copy/verification proceeds.
     const auto source=f.root.getChildFile(saved.files[0].path);const auto before=fileHash(source);REQUIRE(!source.replaceWithText("must fail"));REQUIRE(fileHash(source)==before);
     // Exact destination-only legacy restore with source tree unavailable.

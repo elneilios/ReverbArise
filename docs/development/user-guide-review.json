@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed phase-2 portable backend, accepted-state getter and standalone native Backup/Restore/Locate candidate against production Settings bindings and active portability decisions. Production Settings remains the phase-1 automatic inventory; new actions are native-review only, so the alpha guide must not describe them as shipped. Existing backup/retention warnings remain accurate; no HTML prose or screenshot changes needed.",
+  "summary": "Reviewed approved phase-2 production Storage controls and actual native bindings. Updated the guide for scrolling to Backup/Restore/Locate, exact receipt selection after reopening, per-instance exclusions, separate FLP/external audio backup, conflict preservation and the still-pending missing-source/reload/association/Re-learn limits. No prototype screenshot is presented as production UI.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12574,
-      "sha256": "10dbea423c98e91f27b46f5df6d1a71d470704a554229053108cc3e7b3906109"
+      "bytes": 12573,
+      "sha256": "46475caf5b4a18210219d05cb18853d77c3f050877aae55ff5e79bef9e9681fc"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -530,8 +530,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 16943,
-      "sha256": "7ef2094f078cd9729e25f381c91591f57b30fc75bcc672f3154db891df85e755"
+      "bytes": 16137,
+      "sha256": "ebae37a2ab6035e11240332a97ae661d22deadfad921fdbdf85fc784c4474de8"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -545,13 +545,13 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 34117,
-      "sha256": "5906264c74c4a1b9eeddd0d8dc8cc5474993e69bd4cea7a1ac7c48b576107cae"
+      "bytes": 34901,
+      "sha256": "2a9e158ea61749f8a9febe2a49a9a87509a3ddd74d8b09d4be11afa60cbfd074"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 3502,
-      "sha256": "519232810e51cfdd0c43cf4b0e1cb40fc8d93a2a9f461da2d272728dd040eff0"
+      "bytes": 3864,
+      "sha256": "8761f3e496d5d84bb673d2e642595350e3119a646049519dcc7a03ef1c062256"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -745,8 +745,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 11998,
-      "sha256": "e91c1dd1ace4a370bc8496e06a24d96084559043a4406d12bd56a21f555e24d1"
+      "bytes": 13585,
+      "sha256": "c0cacee94e46d72951333b2b87f3a4a4163e0e4a2274c18b35c17f50ef5c6457"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -860,8 +860,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 21749,
-      "sha256": "1caeb85f7464c2e70c6278e53ef823790d39008e2aff5c70a5eefba7657bf1a0"
+      "bytes": 23310,
+      "sha256": "331ceeeda6bc1b65e81fc828d88f0ae1f13ba0461c99799a75ff92d2524f4344"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
