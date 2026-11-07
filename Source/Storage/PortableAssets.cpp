@@ -578,7 +578,8 @@ void requireNoQuarantineHistory(Root& destination,const juce::String& operation)
 {
     const auto prefix="quarantine/"+operation+"/";
     require(!existingFile(destination,prefix+"undo.json") && !existingFile(destination,prefix+"restored.json")
-        && !existingFile(destination,prefix+"moved.json"),"This copy already has a quarantine or undo history");
+        && !existingFile(destination,prefix+"moved.json") && !existingFile(destination,prefix+"remove.json")
+        && !existingFile(destination,prefix+"removed.json"),"This copy already has a quarantine, undo or removal history");
 }
 
 struct ScratchInspection
@@ -707,6 +708,8 @@ struct QuarantinePaths
     juce::String moved()const{return prefix+"moved.json";}
     juce::String undo()const{return prefix+"undo.json";}
     juce::String restored()const{return prefix+"restored.json";}
+    juce::String remove()const{return prefix+"remove.json";}
+    juce::String removed()const{return prefix+"removed.json";}
 };
 
 void requireNtfs(HANDLE lease)
@@ -804,11 +807,11 @@ struct QuarantineObservation
     ScratchQuarantineInfo info;
     ScratchProof proof;
     juce::String intent;
-    Held record,moved,undo,restored,original,payload;
+    Held record,moved,undo,restored,remove,removed,original,payload;
 };
 
 QuarantineObservation observeQuarantine(Root& root,const juce::String& store,const juce::String& operation,
-                                        const QuarantinePaths& paths,bool forUndo,const Hooks& hooks)
+                                        const QuarantinePaths& paths,bool forMutation,const Hooks& hooks)
 {
     QuarantineObservation observed;
     auto& info=observed.info;
@@ -817,7 +820,9 @@ QuarantineObservation observeQuarantine(Root& root,const juce::String& store,con
     observed.record=existingFile(root,paths.move());
     if(!observed.record){
         require(!existingFile(root,paths.payload()) && !existingFile(root,paths.moved())
-            && !existingFile(root,paths.undo()) && !existingFile(root,paths.restored()),"Quarantine data has no verified move journal. Files retained.");
+            && !existingFile(root,paths.undo()) && !existingFile(root,paths.restored())
+            && !existingFile(root,paths.remove()) && !existingFile(root,paths.removed()),
+            "Quarantine data has no verified move journal. Files retained.");
         info.error="No committed quarantine journal for this operation";
         return observed;
     }
@@ -835,8 +840,18 @@ QuarantineObservation observeQuarantine(Root& root,const juce::String& store,con
     if(observed.restored)checkRecord(observed.restored,phaseRecord(observed.intent,"restored"));
 
     observed.original=existingFile(root,proof.path);
-    observed.payload=existingFile(root,paths.payload(),forUndo?GENERIC_READ|DELETE:GENERIC_READ,forUndo);
-    require(static_cast<bool>(observed.original)!=static_cast<bool>(observed.payload),"Both or neither quarantine locations exist. Files retained for inspection.");
+    observed.payload=existingFile(root,paths.payload(),forMutation?GENERIC_READ|DELETE:GENERIC_READ,forMutation);
+    observed.remove=existingFile(root,paths.remove());
+    observed.removed=existingFile(root,paths.removed());
+    if(observed.remove)checkRecord(observed.remove,phaseRecord(observed.intent,"remove"));
+    if(observed.removed){
+        checkRecord(observed.removed,phaseRecord(observed.intent,"removed"));
+        require(observed.remove && observed.moved && !observed.original && !observed.payload
+            && !observed.undo && !observed.restored,"Removal journal conflicts with retained paths. Files retained.");
+        info.state=ScratchQuarantineState::removed;
+        return observed;
+    }
+    require(static_cast<bool>(observed.original)!=static_cast<bool>(observed.payload),"Both or neither quarantine locations exist. Inspect the journal before taking action.");
     if(observed.original){
         verifyQuarantineFile(root,observed.original,proof.path,proof,hooks);
         require((!observed.moved && !observed.restored) || observed.undo,"Original staging file conflicts with quarantine journal. Files retained.");
@@ -915,7 +930,8 @@ bool undoScratchQuarantine(const juce::File& selectedStore,const juce::String& o
         const auto undo=observed.undo?observed.undo:writeJournalRecord(root,paths.undo(),phaseRecord(intent,"undo"),"undo-intent",hooks);
         checkpoint(hooks,"undo-before-move",paths.payload());
         verifyQuarantineFile(root,observed.payload,paths.payload(),proof,hooks);
-        require(!existingFile(root,paths.restored()),"Undo history changed. Files retained.");
+        require(!existingFile(root,paths.restored()) && !existingFile(root,paths.removed()),
+            "Undo or removal history changed. Files retained.");
         moveQuarantineFile(root,observed.payload,proof.path);
         checkpoint(hooks,"undo-after-move",proof.path);
         verifyQuarantineFile(root,observed.payload,proof.path,proof,hooks);
@@ -923,6 +939,152 @@ bool undoScratchQuarantine(const juce::File& selectedStore,const juce::String& o
         error.clear();
         return true;
     }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+namespace
+{
+juce::int64 removalDeadline(const Held& moved)
+{
+    constexpr juce::int64 graceMs=30LL*24*60*60*1000;
+    constexpr uint64_t windowsEpochMs=11644473600000ULL;
+    FILETIME creation{},lastWrite{};
+    require(moved && GetFileTime(moved->h,&creation,nullptr,&lastWrite)!=0,
+        "Verified quarantine completion time is unavailable. Keep this file or undo quarantine.");
+    const auto ticks=[](FILETIME time){return (uint64_t{time.dwHighDateTime}<<32)|time.dwLowDateTime;};
+    // Round up so a sub-millisecond timestamp cannot shorten the grace period.
+    const auto time=ticks(creation)>ticks(lastWrite)?ticks(creation):ticks(lastWrite);
+    const auto ms=time/10000+(time%10000!=0);
+    require(ms>windowsEpochMs,"Invalid quarantine completion time. Files retained.");
+    return static_cast<juce::int64>(ms-windowsEpochMs)+graceMs;
+}
+
+ScratchRemovalReview verifyRemoval(Root& root,Root& source,const QuarantinePaths& paths,
+                                   const QuarantineObservation& observed,const Hooks& hooks,Held& surviving)
+{
+    require(observed.info.state==ScratchQuarantineState::quarantined && !observed.undo,
+        "Only verified quarantine without pending undo can be reviewed for removal.");
+    const auto deadline=removalDeadline(observed.moved);
+    require(juce::Time::currentTimeMillis()>=deadline,"The 30-day quarantine grace period has not elapsed.");
+    const auto& proof=observed.proof;
+    require(proof.sourceRoot==rootIdentity(source) && source.directory.getFileName()==proof.instance
+        && source.directory.getParentDirectory().getFileName()==proof.project,
+        "Select the original instance folder for this Backup to verify the surviving copy.");
+    requireNoRecoveryReference(root,proof.snapshot);
+    surviving=source.openRead(proof.alias);
+    const auto survivingId=identity(surviving->h);
+    require(survivingId!=proof.fileId && size(surviving->h)==proof.bytes && hash(surviving->h,hooks)==proof.sha
+        && resolved(surviving->h).equalsIgnoreCase(source.canonical+"/"+proof.alias),"No distinct verified surviving copy.");
+    const auto evidence=digest(observed.intent+identity(observed.moved->h)+survivingId);
+    return {observed.info.operation,paths.payload(),evidence,proof.bytes,deadline};
+}
+}
+
+bool reviewScratchRemoval(const juce::File& selectedStore,const juce::File& originalInstance,
+                          const juce::String& operation,ScratchRemovalReview& review,juce::String& error,const Hooks& hooks)
+{
+    review={};
+    try{
+        require(uuid(operation),"Select an exact quarantine operation to review.");
+        Root root(selectedStore),source(originalInstance);
+        requireSeparateRoots(root,source);
+        const auto lease=reserveScratchStore(root);
+        requireNtfs(lease->h);
+        const QuarantinePaths paths(operation);
+        const auto observed=observeQuarantine(root,decodeStoreId(lease),operation,paths,false,hooks);
+        Held surviving;
+        review=verifyRemoval(root,source,paths,observed,hooks,surviving);
+        error.clear();
+        return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+bool removeReviewedScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                           const ScratchRemovalReview& review,juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(uuid(review.operation) && hex(review.evidence),"Review an exact quarantined file before approving removal.");
+        Root root(selectedStore),source(originalInstance);
+        requireSeparateRoots(root,source);
+        const auto lease=reserveScratchStore(root);
+        requireNtfs(lease->h);
+        const QuarantinePaths paths(review.operation);
+        auto observed=observeQuarantine(root,decodeStoreId(lease),review.operation,paths,true,hooks);
+        Held surviving;
+        const auto fresh=verifyRemoval(root,source,paths,observed,hooks,surviving);
+        require(fresh==review,"Removal evidence changed. Review the exact file again.");
+
+        const auto intent=observed.remove?observed.remove:writeJournalRecord(
+            root,paths.remove(),phaseRecord(observed.intent,"remove"),"removal-intent",hooks);
+        checkpoint(hooks,"removal-before-delete",paths.payload());
+        verifyQuarantineFile(root,observed.payload,paths.payload(),observed.proof,hooks);
+        requireNoRecoveryReference(root,observed.proof.snapshot);
+        require(!existingFile(root,observed.proof.path) && !existingFile(root,paths.undo())
+            && !existingFile(root,paths.restored()) && !existingFile(root,paths.removed()),
+            "Quarantine state changed after review. Files retained.");
+        require(removalDeadline(observed.moved)==review.eligibleAfterUtcMs
+            && juce::Time::currentTimeMillis()>=review.eligibleAfterUtcMs,"Quarantine time changed. Files retained.");
+
+        FILE_DISPOSITION_INFO disposition{TRUE};
+        require(SetFileInformationByHandle(observed.payload->h,FileDispositionInfo,&disposition,sizeof(disposition))!=0,
+            "Could not remove the pinned quarantine payload. Files retained.");
+        observed.payload.reset();
+        checkpoint(hooks,"removal-after-delete",paths.payload());
+        require(!existingFile(root,paths.payload()) && !existingFile(root,observed.proof.path),
+            "Quarantine paths changed during removal. Inspect the journal.");
+        writeJournalRecord(root,paths.removed(),phaseRecord(observed.intent,"removed"),"removal-complete",hooks);
+        error.clear();
+        return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+Result recoverCaptureSnapshotCopy(const juce::File& originalInstance,const CaptureRecoveryCandidate& candidate,
+                                  const juce::File& selectedProjectsRoot,const Hooks& hooks)
+{
+    Result result;
+    try{
+        require(candidate.unavailable.isEmpty() && hex(candidate.sha256)
+            && candidate.reference.startsWith("manifests/") && candidate.reference.endsWith(".json")
+            && !candidate.reference.substring(10).containsChar('/'),"Select an exact reviewed capture snapshot.");
+        Root source(originalInstance),target(selectedProjectsRoot);
+        requireSeparateRoots(target,source);
+        ObservedSnapshot observed;
+        observed.reference=candidate.reference;
+        const auto text=readText(source,observed.reference,maximumMetadataBytes);
+        juce::String error;
+        require(digest(text)==candidate.sha256 && jsonShape(text) && parseCaptureManifest(text,observed.capture,error),
+            "Capture snapshot changed or is unreadable: "+error);
+        const juce::String project(observed.capture.projectId),instance(observed.capture.instanceId);
+        require(uuid(project) && uuid(instance) && originalInstance.getFileName()==instance
+            && originalInstance.getParentDirectory().getFileName()==project
+            && observed.capture.revision==candidate.revision,"Capture snapshot does not match the reviewed instance or revision.");
+        require(visitDependencies(observed,error) && observed.dependencies.size()<=maxFiles,error);
+
+        std::vector<std::pair<Entry,Held>> dependencies;
+        uint64_t total=0;
+        for(const auto& dependency:observed.dependencies){
+            if(dependency.path==candidate.reference)continue;
+            const auto file=source.openRead(dependency.path);
+            const auto bytes=size(file->h);
+            require(bytes<=16ull*1024*1024*1024 && (total+=bytes)<=64ull*1024*1024*1024,
+                "Capture recovery byte limit exceeded.");
+            const auto sha=hash(file->h,hooks);
+            require(dependency.checksum.isEmpty() || dependency.checksum==sha,
+                "Capture dependency changed: "+dependency.path);
+            if(dependency.descriptor.isNotEmpty()){
+                rewind(file->h);
+                require(sameMetadata(readText(file,maximumMetadataBytes),dependency.descriptor),
+                    "Capture descriptor changed: "+dependency.path);
+            }
+            dependencies.emplace_back(Entry{dependency.path,{},sha,bytes},file);
+        }
+        const auto prefix=project+"/"+instance+"/";
+        for(const auto& [entry,file]:dependencies)copy(target,prefix+entry.path,file->h,entry,hooks);
+        for(const auto& [entry,file]:dependencies)verify(target,prefix+entry.path,entry.sha256,entry.bytes,hooks);
+        writeText(target,prefix+observed.reference,text,hooks);
+        result.success=true;
+    }catch(const Cancelled& e){result.cancelled=true;result.error=e.what();}
+    catch(const std::exception& e){result.error=e.what();}
+    return result;
 }
 
 bool locate(const juce::File& selected,const Locator& expected,std::shared_ptr<Verified>& out,juce::String& error,const Hooks& hooks)

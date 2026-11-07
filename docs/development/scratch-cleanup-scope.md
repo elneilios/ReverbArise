@@ -1,6 +1,6 @@
 # Phase 5 scratch cleanup scope
 
-The owner approved this scope under task 5.1 of `portable-project-assets` on 7 November 2026. The first phase 5 increment offers an opt-in, read-only native review preview for proven leftovers from a cancelled Backup in one explicitly selected managed backup store. Quarantine, undo, permanent removal and production enablement have later gates. The current Storage inventory continues to report zero reclaimable bytes. [Issue #8](https://github.com/elneilios/ReverbArise/issues/8)
+The owner approved this scope under task 5.1 of `portable-project-assets` on 7 November 2026. The first phase 5 increment offers an opt-in, read-only native review preview for proven leftovers from a cancelled Backup in one explicitly selected managed backup store. The worker implements quarantine, undo, permanent removal and independent capture recovery. The optional production workflow requires separate owner review. The current Storage inventory continues to report zero reclaimable bytes. [Issue #8](https://github.com/elneilios/ReverbArise/issues/8)
 
 ## What current backups can prove
 
@@ -40,7 +40,18 @@ Inspection opens the selected operation under the same store reservation. It ver
 | Valid undo intent and only the verified staging file exists | Restored. A repeated undo can complete the interrupted journal record without moving the file again. |
 | Both locations exist, neither exists, a directory changed, or proof is unreadable or contradictory | Ambiguous. Preserve all files and require inspection. |
 
-Inspection never moves files. Undo reopens and verifies the payload, commits its intent and refuses any occupied original destination. It restores the staged copy even if the separate original audio later becomes unavailable, because undo preserves the copy rather than removing it. Completed or interrupted undo history retires the prior quarantine review. This increment supports one reversible quarantine cycle per cancelled Backup copy. Any failure can occur after a rename, so callers must inspect the operation again before reporting its state. Later work owns grace accounting, permanent removal and production controls.
+Inspection never moves files. Undo reopens and verifies the payload, commits its intent and refuses any occupied original destination. It restores the staged copy even if the separate original audio later becomes unavailable, because undo preserves the copy rather than removing it. Completed or interrupted undo history retires the prior quarantine review. This increment supports one reversible quarantine cycle per cancelled Backup copy. Any failure can occur after a rename, so callers must inspect the operation again before reporting its state. Production controls retain their separate review gate.
+
+## Grace and permanent removal
+
+Verified completion starts the 30-day grace period. The deadline uses the later of creation and last-write UTC on the verified completion record. Missing, unreadable or inconsistent completion evidence blocks removal. The deadline uses the workstation clock. Inspection and expiry leave the bytes in place, and undo remains available after expiry until explicit final removal.
+
+A separate read-only review returns the exact payload, byte count, deadline and evidence for user confirmation. The worker reserves the store again, verifies the exact quarantine journal, file identity and SHA-256, checks for undo and recovery references, and pins the distinct original copy. A changed deadline, new reference, conflicting file or active reader skips removal. It records the removal intent before deleting the exclusive payload by handle. If deletion succeeds but final journal publication is interrupted, inspection reports ambiguity. It never resumes removal automatically. The remaining journal and original are retained. [Windows handle disposition](https://learn.microsoft.com/windows/win32/api/winbase/ns-winbase-file_disposition_info)
+## Historical capture recovery
+
+The read-only report scopes observed manifests to the selected instance. It lists other captured revisions with missing, changed or unsupported dependencies and lists recorded audio absent from the observed indexes. That audio can include an active writer's work or an older project's recording. It stays protected and requires original timing and coverage metadata for automatic map reconstruction.
+
+Explicit recovery of a reviewed immutable capture snapshot pins its source, exact manifest hash and dependencies. It copies the source WAVs and historical context IRs and descriptors to a separate selected projects root. It verifies the destination dependencies before publishing the capture manifest. The open session and its saved reference remain in place. A failed operation may leave verified files in the selected recovery destination, which can be reused by an exact retry. To recover complete session edits, renders and export history, use the existing exact Backup/Restore flow.
 
 ## Eligibility matrix
 
@@ -82,7 +93,7 @@ All checks must pass for the same file. A missing or stale proof excludes it. Th
 
 The preview reports logical bytes in eligible scratch. Physical or allocated bytes, where measured, stay separate. Quarantine does not free disk space. Excluded or unknown bytes and quarantined files are never presented as immediately reclaimable.
 
-## Acceptance fixtures for later implementation
+## Acceptance fixtures
 
 Run against disposable roots, with exact before and after path, hash and accepted-state checks. Use focused native tests for each acceptance case and separate any later UI review from backend verification.
 
@@ -93,6 +104,6 @@ Run against disposable roots, with exact before and after path, hash and accepte
 | Candidate loses its counterpart, gains a recovery reference or lease, changes contents or path, is replaced with a link, or is locked after preview | Revalidation skips the changed candidate. Exercise independent processes and pathname replacement without blocking the callback. |
 | Crash before and after each journal and move boundary, interrupted undo, and a conflicting original destination | Restart preserves recoverable files, verifies identity before undo and refuses overwrite or ambiguous adoption. |
 | Grace not elapsed, grace elapsed without review, explicit review with newly missing evidence, and explicit valid review | The first three retain bytes. Only the last removes the specifically approved quarantined copy after fresh checks. |
-| Abandoned capture and prior accepted snapshot, including interrupted recovery | Both remain protected. Only an explicit, verified recovery may change the accepted reference. |
+| Abandoned capture and prior accepted snapshot, including interrupted recovery | Both remain protected. An explicit, verified recovery can publish an independent capture copy. The open project retains its accepted reference. |
 
 Phase 5 excludes durable asset collection, automatic eviction, deduplication, compression, retention changes and any default-folder cutover. Issue #8 remains open for later work. [OpenSpec tasks](../../openspec/changes/portable-project-assets/tasks.md) · [Retention requirements](../../openspec/changes/portable-project-assets/specs/asset-retention/spec.md)

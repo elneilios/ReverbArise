@@ -39,14 +39,72 @@ struct ReadOnlyFixture
 #include "ScratchPreviewCases.h"
 #include "ScratchMaintenanceCases.h"
 #include "ScratchQuarantineCases.h"
+#include "ScratchRemovalCases.h"
+#include "CaptureRecoveryCases.h"
+static void portableByteIdentityCases()
+{
+    Fixture f;
+    SwellAssetStore store(f.root);
+    WetRender wet;
+    wet.rate=48000;
+    wet.start=-1;
+    wet.sourceStart=0;
+    wet.sourceEnd=2;
+    wet.samples={0.0f,0.0f,.1f,-.2f,.3f,-.4f};
+    const auto a=f.session.swells.front().render;
+    auto second=f.session.swells.front();
+    second.id=juce::Uuid().toDashedString();
+    REQUIRE(store.writeRender(wet,second.ir,"distinct-dependency",f.session.timing,second.render,f.error));
+    f.session.swells.push_back(second);
+    auto third=second;
+    third.id=juce::Uuid().toDashedString();
+    wet.samples.front()=-0.0f;
+    REQUIRE(store.writeRender(wet,third.ir,"distinct-dependency",f.session.timing,third.render,f.error));
+    f.session.swells.push_back(third);
+    f.refresh();
+    REQUIRE(a.path!=second.render.path && a.checksum==second.render.checksum);
+    REQUIRE(third.render.content==second.render.content && third.render.checksum!=second.render.checksum);
+
+    std::shared_ptr<Prepared> prepared;
+    REQUIRE(prepare({f.root,f.xml,f.manifest},prepared,f.error));
+    const auto& manifest=snapshot(*prepared);
+    const auto object=[&](const juce::String& path){
+        const auto found=std::find_if(manifest.files.begin(),manifest.files.end(),
+            [&](const auto& file){return file.path==path;});
+        REQUIRE(found!=manifest.files.end());
+        return found->object;
+    };
+    REQUIRE(object(a.path)==object(second.render.path));
+    REQUIRE(object(a.path)!=object(third.render.path));
+    const auto descriptor=[](const Asset& asset){return asset.path.upToLastOccurrenceOf(".",false,false)+".json";};
+    REQUIRE(object(descriptor(a))!=object(descriptor(second.render)));
+
+    TestDirectory packed,destination;
+    REQUIRE(packed.file.createDirectory().wasOk() && destination.file.createDirectory().wasOk());
+    const auto result=backup(prepared,packed.file);
+    REQUIRE(result.success);
+    std::shared_ptr<Verified> verified;
+    REQUIRE(locate(packed.file,result.receipt.locator,verified,f.error));
+    REQUIRE(restoreCopy(verified,destination.file).success);
+    const auto restored=destination.file.getChildFile(f.observed.project).getChildFile(f.observed.instance);
+    for(const auto& asset:{a,second.render,third.render}){
+        REQUIRE(m3::fileHash(restored.getChildFile(asset.path))==asset.checksum);
+        REQUIRE(m3::fileHash(f.root.getChildFile(asset.path))==asset.checksum);
+        REQUIRE(m3::fileHash(restored.getChildFile(descriptor(asset)))==m3::fileHash(f.root.getChildFile(descriptor(asset))));
+    }
+}
+
 int main(int argc,char** argv){
     if(argc==7 && juce::String(argv[1])=="--scratch-quarantine-child")return runTest([&]{scratchQuarantineChild(argv[2],juce::File(argv[3]),juce::File(argv[4]),argv[5],argv[6]);});
     if(argc==2 && juce::String(argv[1])=="--scratch-quarantine")return runTest(scratchQuarantineCases);
+    if(argc==2 && juce::String(argv[1])=="--scratch-removal")return runTest(scratchRemovalCases);
+    if(argc==2 && juce::String(argv[1])=="--capture-recovery")return runTest(captureRecoveryCases);
     if(argc==7 && juce::String(argv[1])=="--scratch-lease-child")return runTest([&]{scratchLeaseChild(argv[2],juce::File(argv[3]),juce::File(argv[4]),argv[5],juce::File(argv[6]));});
     if(argc==2 && juce::String(argv[1])=="--scratch-maintenance")return runTest(scratchMaintenanceCases);
     if(argc==2 && juce::String(argv[1])=="--scratch")return runTest(scratchPreviewCases);
     if(argc>1)return workingFolderTest(argc,argv);
     return runTest([]{
+    portableByteIdentityCases();
     Fixture f;juce::String error;Input input{f.root,f.xml,f.manifest};std::shared_ptr<Prepared> prepared;
     if(!prepare(input,prepared,error))throw std::runtime_error(error.toStdString());const auto saved=snapshot(*prepared);REQUIRE(saved.files.size()==f.observed.dependencies.size());
     REQUIRE(saved.observed.session.swells[0].frozen && !saved.observed.session.swells[0].enabled && saved.observed.capture.schemaVersion==2);

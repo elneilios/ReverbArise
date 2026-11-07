@@ -81,6 +81,19 @@ static void scratchPreviewCases()
     REQUIRE(CreateHardLinkW(link.getFullPathName().toWideCharPointer(),candidate.getFullPathName().toWideCharPointer(),nullptr));
     excluded(previewScratch(store,f.original.root));
     REQUIRE(link.deleteFile());
+    const auto stream=candidate.getFullPathName()+":foreign";
+    const auto alternate=CreateFileW(stream.toWideCharPointer(),GENERIC_WRITE,0,nullptr,CREATE_NEW,0,nullptr);
+    REQUIRE(alternate!=INVALID_HANDLE_VALUE);
+    const char data='x';
+    DWORD written=0;
+    const auto hasStream=WriteFile(alternate,&data,1,&written,nullptr)!=0 && written==1;
+    CloseHandle(alternate);
+    REQUIRE(hasStream);
+    excluded(previewScratch(store,f.original.root));
+    REQUIRE(DeleteFileW(stream.toWideCharPointer()));
+    REQUIRE(f.journal().replaceWithText("{corrupt"));
+    excluded(previewScratch(store,f.original.root));
+    REQUIRE(f.journal().replaceWithText(journal));
     verify(previewScratch(store,f.original.root));
 
     bool stop=false;

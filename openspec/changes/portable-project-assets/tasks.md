@@ -45,18 +45,18 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 - [x] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
 - [x] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
 - [x] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
-- [ ] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
-- [ ] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
-- [ ] 5.7 Update retention/recovery documentation and dated fault-injection evidence; verify every cleanup eligibility condition and rollback operation has a passing focused fixture before enabling this optional phase.
+- [x] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
+- [x] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
+- [x] 5.7 Update retention/recovery documentation and dated fault-injection evidence; verify every cleanup eligibility condition and rollback operation has a passing focused fixture before enabling this optional phase.
 
 ## 6. Separately reviewed efficiency experiments
 
-- [ ] 6.1 Measure store-local exact-byte dedup candidates separately from normalized decoded identities; verify any approved object reuse retains distinct dependency descriptors, legacy aliases and signed-zero-distinct data without deleting legacy files.
-- [ ] 6.2 Benchmark independent lossless WavPack and byte-compression prototypes outside production storage using dense/sparse/low-level/>unity/subnormal/signed-zero fixtures at 44.1/48/96 kHz; deliver ratio, CPU/wall, peak memory, seek/open latency and exact bitwise round-trip results.
-- [ ] 6.3 Verify corrupt/truncated/hybrid-with-missing-correction inputs fail without lossy fallback and resource limits hold off callback; retain WAV as the default unless a later codec adoption review authorizes a versioned reader/writer change.
-- [ ] 6.4 Document measured trade-offs and adoption/rollback recommendation; verify no claim of compression benefit rests on arithmetic estimates, integer conversion or content hashes that normalize sample bits.
+- [x] 6.1 Measure store-local exact-byte dedup candidates separately from normalized decoded identities; verify any approved object reuse retains distinct dependency descriptors, legacy aliases and signed-zero-distinct data without deleting legacy files.
+- [x] 6.2 Benchmark independent lossless WavPack and byte-compression prototypes outside production storage using dense/sparse/low-level/>unity/subnormal/signed-zero fixtures at 44.1/48/96 kHz; deliver ratio, CPU/wall, peak memory, seek/open latency and exact bitwise round-trip results.
+- [x] 6.3 Verify corrupt/truncated/hybrid-with-missing-correction inputs fail without lossy fallback and resource limits hold off callback; retain WAV as the default unless a later codec adoption review authorizes a versioned reader/writer change.
+- [x] 6.4 Document measured trade-offs and adoption/rollback recommendation; verify no claim of compression benefit rests on arithmetic estimates, integer conversion or content hashes that normalize sample bits.
 
-- [ ] 6.5 Propose measured duplicate-write reduction and a bounded rebuildable-cache eligibility/reconstruction matrix under separate review; verify no legacy saved render, sole source, imported IR, frozen output, export or unknown old-FLP dependency becomes evictable merely through deletion/regeneration/current-reference absence. No collector or eviction rollout without later approval.
+- [x] 6.5 Propose measured duplicate-write reduction and a bounded rebuildable-cache eligibility/reconstruction matrix under separate review; verify no legacy saved render, sole source, imported IR, frozen output, export or unknown old-FLP dependency becomes evictable merely through deletion/regeneration/current-reference absence. No collector or eviction rollout without later approval.
 
 ## Workflow follow-up
 
@@ -128,3 +128,19 @@ The worker backend passed the process-exit, restart, hash and conflict fixtures.
 See the [quarantine evidence](../../../docs/validation/2026-11-07-issue-8-scratch-quarantine.md).
 Grace and permanent removal, recovery reporting and production enablement retain
 their separate gates.
+
+## Phase 5 and 6 verification — 2026-11-07
+
+The owner authorized working through the remaining tasks. The worker-level
+cleanup and recovery sequence passed its focused native gates. The 30-day
+grace, distinct final review, retention guidance and independent recovery copy
+are documented in the [combined evidence](../../../docs/validation/2026-11-07-issue-8-scratch-recovery.md).
+Production cleanup enablement retains separate owner review and exact user
+confirmation before any file move or permanent removal.
+
+The separately bounded experiments measured exact-byte candidates and codec
+trade-offs, then proposed duplicate-write avoidance and a future cache
+eligibility matrix. See the [efficiency evidence](../../../docs/validation/2026-11-07-issue-8-storage-efficiency.md).
+WAV remains the baseline. Codec adoption, duplicate-write changes and cache
+eviction retain their separate decisions. PR #118 and issue #8 remain open for
+owner review. No archive or merge occurred.
