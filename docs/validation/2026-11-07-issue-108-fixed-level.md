@@ -69,3 +69,59 @@ saved value below range. A valid typed value applies directly.
 The owner approved the standard-knob candidate on 2026-11-07 and asked to
 finish integration. This approval covers the existing knob appearance and
 the first-touch Level behavior.
+
+## Final integration
+
+Tested clean source revision `305927fb26df421b07cb398bac892cedad626b1a`, which
+includes `main` at `ca9f7df`. The merge retained the current selector and
+Storage workflows and shared native reset fixture. Production UI standards
+revision 15 records the approved Level behavior alongside those changes.
+
+The focused native test saves and reopens a frozen swell after an actual
+first press changes its old fractional gain to -12 dB. Shape, calibration,
+render identity and frozen status survive the round trip. The processor
+regression also reopens older values before any Level edit. The audio-path
+fixture checks audition, live Song, plugin WAV and host offline processing
+against the gain oracle, including -12, 0 and +12 dB, and exercises the existing
+path-specific protection and raw-asset reuse.
+
+| Check | Result |
+| --- | --- |
+| Supported Debug and Release wrappers | Passed on Windows x64 with Visual Studio 2026 MSVC and pinned JUCE 9.0.4. Incremental on this worktree after merging main, with cold compilation for newly introduced targets. Logs: `out/build-logs/Debug/20261107-123354-0f80b914` and `out/build-logs/Release/20261107-123815-7ecec06f`. |
+| Debug focused CTest | 7/8 in 49.39 s. The full processor suite timed out in the existing Learn recapture wait at `LearnPassPolicyCases.h:52`. The identical binary passed its isolated retry in 42.33 s. Logs: `out/issue-108-merged-debug.log` and `out/issue-108-merged-debug-processor-retry.log`. |
+| Release focused CTest | 14/14 in 46.54 s, including the full processor test. The separate native knob reset test passed in 2.13 s. Logs: `out/issue-108-merged-release.log` and `out/issue-108-merged-release-reset.log`. |
+| UI standards, strict OpenSpec, whitespace and links | Passed. UI guard covered 73 files and 59 bounded occurrences with the existing debt inventory. |
+| Offline guide | Explicit review and read-only currency passed. Native Release capture and static assembly passed with four 1400×1000 production screenshots and the embedded logo. Inspected the Perform capture. Working QA output: `out/issue-108-final-guide/preview/User-Guide.html`. |
+
+The first pre-merge Release build compiled cold objects from cached
+dependencies. The final tests ran with compilation idle. The current pointer
+checks use native `mouseDown`, `mouseDrag` and `mouseUp` in both directions
+and assert the first press before any movement. Earlier extended-editing
+checks used synthetic value changes for part of that coverage.
+
+```powershell
+$env:CMAKE_BUILD_PARALLEL_LEVEL='4'
+./scripts/build.ps1 -Configuration Debug
+./scripts/build.ps1 -Configuration Release
+# $ctest resolves to the Visual Studio CMake CTest executable.
+& $ctest --test-dir out/build/windows-msvc -C Debug -R '^preverb_(focused_level|perform_binding|perform_knob|level_audio_paths|swell_session|processor|ir_handover|gain_staging)_test$' --output-on-failure --timeout 240
+& $ctest --test-dir out/build/windows-msvc -C Debug -R '^preverb_processor_test$' --output-on-failure --timeout 240
+& $ctest --test-dir out/build/windows-msvc -C Release -R '^preverb_(focused_level|perform_binding|perform_knob|level_audio_paths|swell_session|swell_engine|processor|ir_handover|gain_staging|selector_binding|responsive_scale|working_folder|storage_settings|song_export)_test$' --output-on-failure --timeout 240
+& $ctest --test-dir out/build/windows-msvc -C Release -R '^preverb_perform_knob_reset_test$' --output-on-failure --timeout 240
+./scripts/check-ui-standards.ps1
+./scripts/check-user-guide.ps1
+openspec validate focus-swell-level-adjustment --strict
+git diff --check origin/main HEAD
+```
+
+| Tested artifact | SHA-256 |
+| --- | --- |
+| Debug native Level executable | `c1531d7884e0ad274c38137afd0d9289be80902378e6eedf8b0b1302a40c9823` |
+| Release native Level executable | `022563e67bb38a15694589cf9056bf68f940dbc636addab965e14ec12fed7435` |
+| Release processor test | `06b323cea1da687de1269eb38cce86f3c8fd13cdfede85fcc1936af67f216a5e` |
+| Release VST3 binary | `36641fb243e019663bd9b961c3943a1352f7cf3b23023bd135a7e99cc3843432` |
+| Assembled offline guide | `bda80dec845364ef0218b2aab1a1dd9023bf17f20ed462a63b042888119e5d71` |
+
+Coverage includes native 100% and 125% user scale and simulated host
+processing. Physical OS DPI, an FL Studio run and full CTest suites were
+outside this focused validation.
