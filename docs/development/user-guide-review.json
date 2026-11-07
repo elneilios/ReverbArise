@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced selector requirements against the approved implementation and the offline dropdown instructions. Existing guide prose remains accurate after the spec sync and archive.",
+  "summary": "Reviewed the selector guidance from main and the Storage and rollback instructions. Recovery saves now retain the accepted folder and Export protects the legacy asset folder after a switch. The guide already covers both workflows.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31579,
-      "sha256": "8f29c94a778e9b185cac3daec0d96cdc935c3afa848ae1bc2ece94a0bddc21c8"
+      "bytes": 31791,
+      "sha256": "4d83d8c9317ae125c834abfe2c52e277952abee9cbf669d345fe8c2551d82dae"
     },
     {
       "path": "CMakePresets.json",
@@ -75,8 +75,8 @@
     },
     {
       "path": "Source/Capture/CaptureChunkStore.cpp",
-      "bytes": 8750,
-      "sha256": "0917b6677a8ce3d3aadf70468e64fc9522b0bb6255e43b76fcb15999da512686"
+      "bytes": 8934,
+      "sha256": "008d31ee16fb200edb0c6c6106f4c63c8c9e1a111ca81067482f67aa14689806"
     },
     {
       "path": "Source/Capture/CaptureChunkStore.h",
@@ -125,23 +125,23 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 19017,
-      "sha256": "fc5e133bf725a7afd4ee6f95683fc3ba87ade467ce52f1a3bcaab3c8c0642367"
+      "bytes": 20742,
+      "sha256": "584c37cd9fcd7b94fb76cbd5d00d1c378e8fe76cc211daf4b692eb0b8be01954"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 4077,
-      "sha256": "4c3d0e96099e6bfdca305cbfab51335d3cce9ec6e8cf311015011c1d86ed9713"
+      "bytes": 4786,
+      "sha256": "fa5b7134d7cf29157aaf00bb2b55870720d0f776a1a8c48f8f1df204bfb85fcc"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 26273,
-      "sha256": "9a80aa0e29cddecf374d83073f0a591ed05353a2dd46b15b2fc68fade382254e"
+      "bytes": 29942,
+      "sha256": "98007ec6aa1975fe235b76971e7e73444e5cee1cfa13882a4464c59bce1b28ed"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 7412,
-      "sha256": "5c0ab4a7df9f41b71aa802cbaed06657c1dd8a10cd57165b821e498517c95027"
+      "bytes": 8674,
+      "sha256": "22eeec19e4944aa408022b21bdb61f6abb67075d5b140770347a6288dbc70d3d"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -187,6 +187,11 @@
       "path": "Source/Capture/SparseSongMap.h",
       "bytes": 592,
       "sha256": "dbb03ef6a093e02397b914c590105f8b55c0a6980a24809c01c61cb4c4c640c1"
+    },
+    {
+      "path": "Source/Core/AssetAssociation.h",
+      "bytes": 9929,
+      "sha256": "e9a1ff4217f1f022cf887b8286a9666cd732d7c7d93a7442362ce946b2668661"
     },
     {
       "path": "Source/Core/BuildInformation.h",
@@ -285,8 +290,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 24705,
-      "sha256": "5c4f2aa5b0b4c4b14f725aa53fac6a0c1ac200738d52b1bbea6ee12f29ad6e58"
+      "bytes": 24876,
+      "sha256": "788ff0330ae0bea96fcae165c21b12f5efab841b1b1a0880a45de09832c1992d"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -405,18 +410,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 82995,
-      "sha256": "496ffb13ed83580ac780a800e092fcd38472456399a8d511b5f1c0a929aa01cf"
+      "bytes": 84379,
+      "sha256": "3709441d419193c9cd481320875ab98b9ff5f247b9590cb8f60d706fcdefb69c"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 23200,
-      "sha256": "b8e2a14e24b0eb4d057e6014abb701f0a1de968be7d14aa37755096a9a9dca69"
+      "bytes": 24178,
+      "sha256": "40618a8d7abe58170e51c9cef8acb9bd866b42cdaa6ec428ff040607cb6a75aa"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 23901,
-      "sha256": "24b64b477d588de68855aa5dd0b57c38ee676aea7ad86105e723bfe13fab2870"
+      "bytes": 24822,
+      "sha256": "c7500ab8da3f959a9feaf1be60d3c063e46432ab72550479ef2c2b27a984cff8"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -435,8 +440,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38067,
-      "sha256": "dfefc3d5d72fe88dc954e3c29d834dcd27623fb1d57ab0267de81c1696e36f2b"
+      "bytes": 38173,
+      "sha256": "1ac4503b8d27c940b304d574431b0aff008f99d5d2a13dbc497cc77493e8d3a8"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -520,23 +525,23 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 35913,
-      "sha256": "4006b8ed7d3677ada8dcdbf60f391e0f017722952404259c596a43ffeeaf5eb0"
+      "bytes": 45439,
+      "sha256": "235dd0576c86e0b0fbff64074a8111688e89a18b91d41518104f6b6766a80181"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 7672,
-      "sha256": "11db711f770d45ba16f9b0472396480b7101de23d4dc9add5a0c4f273bec116c"
+      "bytes": 8166,
+      "sha256": "ae54098ec70dda5efbd6830b03b1c5b72b974f0972b9ce5b34ab3b950e90510d"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 22144,
-      "sha256": "cedb4b1c6d28c8db82ab856e3eeb75803703190eeb5ad013f99d4e9604714e6d"
+      "bytes": 22489,
+      "sha256": "1d84b4ba16fffe9deb44e10fb3c7be0481bbdf0c994ede05cf2a0a539ed91ee2"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 23028,
-      "sha256": "c0c0ef6424feec72a09cfb57ae4818d5ceb90b1ed50fc50ee58c2a7b58ffc3a6"
+      "bytes": 24052,
+      "sha256": "44d178f6298451fc089e19b8394d69b3f1b3c3b1f43bff268e0e5652dc1ec945"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
@@ -545,13 +550,18 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 38480,
-      "sha256": "548708923bc3bbc0a221d98d849f96b8d2aabcb116b00a5378bf3d9592a63131"
+      "bytes": 64033,
+      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4478,
-      "sha256": "e5b0f623770d1f111da25bcabf4d34ead90887a2c18c3eed87392c2c2ff54dee"
+      "bytes": 4502,
+      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
+    },
+    {
+      "path": "Source/Storage/WorkingFolder.h",
+      "bytes": 2699,
+      "sha256": "98fa2d1ae9f571731149142b474614965084d32a9ede384ee8bc6fa36011cd86"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -785,8 +795,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 18169,
-      "sha256": "078ea6ceea5c3b9081121e25326ae92ce656050b4ce3f2b90ade970a2f1aafb8"
+      "bytes": 22043,
+      "sha256": "6b4fcea596912f5c8a437b204ac0fa54861cef6624a450f2e0816acf65b72bdb"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -810,8 +820,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 7610,
-      "sha256": "dfddcbb127fbac5a7f036055cecb80e97ed90c7e12d4bf01a6a60c745c0e28df"
+      "bytes": 7654,
+      "sha256": "7ff9609be454ba7263f2940d84db4c868540a2983ee34e41cdbbf42fbdbda465"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -859,6 +869,11 @@
       "sha256": "dfdb1ba32bb2a60cbe301db713e95cba6958ef88b5d91a58bb0eb2c9bd4f11ce"
     },
     {
+      "path": "Source/UI/WorkingFolderPanel.h",
+      "bytes": 15900,
+      "sha256": "e17c9f2f66cc9c1f1e3d88465321bcdd06d51b662c9a7d9a3341725d7415602b"
+    },
+    {
       "path": "Source/UI/WorkspaceLayout.h",
       "bytes": 983,
       "sha256": "d6e0215747f1c5f5a2680dd5cc770daabe5b10ae9a461f23635a6722ea9cf2f4"
@@ -900,8 +915,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 26332,
-      "sha256": "5b23a8eb3d4e442852ad7153c752a8a3c0a29c3bb04ab4493f13a03edce25dea"
+      "bytes": 27785,
+      "sha256": "7510d45e74f096a2d7967eb14697a456255b11ccd38c13e39e1e79435aa6b7f2"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

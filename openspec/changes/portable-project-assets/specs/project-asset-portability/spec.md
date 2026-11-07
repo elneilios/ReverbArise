@@ -7,7 +7,7 @@ Allow accepted ReverbArise sessions and their exact audio dependencies to travel
 ## ADDED Requirements
 
 ### Requirement: Asset folder association is explicit and host independent
-The system SHALL support a user-selected asset folder without requiring the host project path. Association SHALL preserve existing identities and legacy references until a verified copy and explicit switch succeed. Relative references SHALL resolve against the selected store rather than an inferred host working directory.
+The system SHALL support a user-selected asset folder without requiring the host project path. Ordinary association SHALL preserve existing identities and legacy references until a verified copy and explicit switch succeed. The explicitly approved incomplete recovery workspace defined below is a distinct operation, not verified migration. Relative references SHALL resolve against the selected store rather than an inferred host working directory.
 
 #### Scenario: Host provides no project path
 - **WHEN** the user associates a folder without available host project-location metadata
@@ -96,7 +96,7 @@ Restored copies and duplicated instances SHALL share readable immutable history 
 - **THEN** existing immutable references remain readable and future publication remains independently owned without requiring filename-based inference
 
 ### Requirement: Pack publication is cancellable and recoverable
-Packing SHALL publish complete verified output before reporting success or offering association. Interrupted, cancelled, disk-full, locked, read-only or offline operations SHALL preserve originals and the previous successful snapshot. Incomplete destinations SHALL be identifiable and recoverable without being presented as complete.
+Packing SHALL publish complete verified output before reporting success or offering pack-driven association. Incomplete recovery workspace creation SHALL NOT be presented as successful packing or a complete backup. Interrupted, cancelled, disk-full, locked, read-only or offline operations SHALL preserve originals and the previous successful snapshot. Incomplete destinations SHALL be identifiable and recoverable without being presented as complete.
 
 #### Scenario: Interruption during publication
 - **WHEN** a process stops between audio, descriptor and snapshot publication
@@ -160,3 +160,21 @@ Storage SHALL offer working-folder selection, Backup and Restore actions. Backup
 #### Scenario: Restore is incomplete or cancelled
 - **WHEN** required dependencies fail verification or Restore is cancelled
 - **THEN** existing metadata, surviving assets and the prior association remain intact and no complete recovery is claimed
+
+### Requirement: Explicit recovery workspace preserves unresolved history
+Recovery SHALL require explicit choice of a writable workspace when the original folder or required assets cannot be recovered. It SHALL preserve decodable swell metadata, original locators and verified surviving dependencies, and report missing assets or unknown source history. It SHALL NOT silently change the root or overwrite originals. Existing independent-writer and host-save notification rules SHALL apply.
+
+#### Scenario: Whole associated folder is irrecoverable
+- **WHEN** the user explicitly creates and adopts a new recovery workspace after the original folder cannot be located or restored
+- **THEN** the original locator and swell metadata remain available, missing requirements remain explicit, and normal Learn can capture fresh source in the writable workspace without a complete-copy/backup claim
+
+#### Scenario: Recovery workspace creation fails or is cancelled
+- **WHEN** selection, metadata validation, survivor verification, publication or final adoption fails or is cancelled
+- **THEN** the current association, decodable arrangement and all originals remain authoritative, no partial workspace is adopted automatically and no full recovery is claimed
+
+### Requirement: Recovery workspace is not complete-pack certification
+Creating an incomplete recovery workspace SHALL NOT publish a complete-pack receipt or claim a complete copy/backup. Missing required dependencies or unknown required source coverage SHALL retain explicit incomplete status and block complete-pack verification; recovery SHALL NOT invent assets or omit declared history to pass that gate.
+
+#### Scenario: Incomplete recovery is not a complete backup
+- **WHEN** a recovery workspace still has missing required dependencies or unknown required source coverage
+- **THEN** its incomplete status remains explicit and complete-pack verification still fails rather than inventing assets or omitting declared history

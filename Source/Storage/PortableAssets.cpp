@@ -1,4 +1,4 @@
-#include "PortableAssets.h"
+#include "WorkingFolder.h"
 #include <Core/ContentHash.h>
 #define NOMINMAX
 #include <Windows.h>
@@ -45,13 +45,13 @@ bool xmlShape(const juce::String& text)
             if(*p=='?'){bool ended=false;while(!p.isEmpty()){const auto q=p.getAndAdvance();if(q=='?' && *p=='>'){++p;ended=true;break;}}if(!ended)return false;continue;}
             inTag=true;closing=*p=='/';previous=0;continue;}
         if(quote){if(c==quote)quote=0;continue;}if(c=='"' || c=='\''){quote=c;continue;}
-        if(c=='=' && ++attributes>128)return false;if(c=='<')return false;if(c=='>'){if(++tags>128)return false;if(closing){if(--depth<0)return false;}else{if(++depth>16)return false;if(previous=='/')--depth;}inTag=false;}
+        if(c=='=' && ++attributes>256)return false;if(c=='<')return false;if(c=='>'){if(++tags>128)return false;if(closing){if(--depth<0)return false;}else{if(++depth>16)return false;if(previous=='/')--depth;}inTag=false;}
         else if(!juce::CharacterFunctions::isWhitespace(c))previous=c;}
     return !inTag && !quote && depth==0;
 }
 bool legacy(const juce::String& xml,const juce::String& manifest,ObservedSnapshot& out,juce::String& error)
 {
-    if(static_cast<size_t>(xml.getNumBytesAsUTF8())>maximumMetadataBytes*6+1024*1024 || static_cast<size_t>(manifest.getNumBytesAsUTF8())>maximumMetadataBytes
+    if(static_cast<size_t>(xml.getNumBytesAsUTF8())>97*1024*1024 || static_cast<size_t>(manifest.getNumBytesAsUTF8())>maximumMetadataBytes
         || !xmlShape(xml) || (!manifest.isEmpty() && !jsonShape(manifest)))return fail(error,"Oversized, declared or excessively nested accepted metadata");
     const auto doc=juce::XmlDocument::parse(xml);if(!doc)return fail(error,"Malformed accepted processor state");
     if(const auto* creative=doc->getChildByName("SwellSession"))if(!jsonShape(creative->getAllSubText()))return fail(error,"Excessively nested creative metadata");
@@ -390,6 +390,303 @@ Result restoreLegacyCopy(const std::shared_ptr<Prepared>& prepared,const juce::F
     const auto expected=destination.getChildFile(prepared->state.observed.project).getChildFile(prepared->state.observed.instance);
     if(expected==prepared->root->directory){failed.success=true;failed.receipt=verified->receipt;return failed;}
     return restoreCopy(verified,destination,hooks);
+}
+
+
+
+class WorkingFolder
+{
+public:
+    WorkingFolderInfo info;
+    std::shared_ptr<Root> pinned;
+    Held lease;
+    Snapshot closure;uint64_t recoveryRecordBytes=0;
+};
+const WorkingFolderInfo& workingFolderInfo(const WorkingFolder& folder){return folder.info;}
+namespace
+{
+void pinWorkingDirectories(WorkingFolder& folder,const ObservedSnapshot& observed)
+{
+    const auto prefix="working/"+observed.project+"/"+observed.instance+"/";
+    for(const auto* category:{"segments","manifests","irs","renders","exports"})writeText(*folder.pinned,prefix+category+"/.directory-pin","ReverbArise directory guard v1\n",{});
+    folder.info.projectsRoot=folder.info.folder.getChildFile("working");
+    folder.info.association.writer=juce::Uuid().toDashedString();
+    const auto branch="instances/"+observed.instance+"/branches/"+folder.info.association.writer+"/lease";
+    const auto leaseFile=folder.pinned->path(branch,true);
+    folder.lease=relativeOpen(folder.pinned->parentOf(leaseFile)->h,leaseFile.getFileName(),GENERIC_READ|GENERIC_WRITE,false,2,0);
+    ordinary(folder.lease->h,false);
+    // Pinned marker files keep managed categories nonempty. Together with
+    // pinned directory ancestry this prevents directory replacement and
+    // in-place junction conversion without blocking ordinary child publication.
+    // Immutable data aliases are published with UUID/no-replace semantics by
+    // the existing stores. Each runtime has its own exclusive publication lease;
+    // no mutable common head is introduced or consulted on restore.
+}
+void registerWorkingHint(WorkingFolder& folder,const juce::File& registryRoot,const Hooks& hooks)
+{
+    if(!registryRoot.isDirectory()){
+        auto ancestor=registryRoot;juce::String relative;
+        for(int depth=0;depth<64 && !ancestor.isDirectory();++depth){relative=ancestor.getFileName()+"/"+relative;ancestor=ancestor.getParentDirectory();}
+        require(ancestor.isDirectory() && relative.isNotEmpty(),"Could not resolve the local registry directory");
+        Root owned(ancestor);writeText(owned,relative+".registry-pin","ReverbArise location registry v1\n",hooks);
+    }
+    Root registry(registryRoot);folder.info.association.registration=juce::Uuid().toDashedString();
+    auto record=object();set(record,"version",1);set(record,"store",folder.info.association.store);set(record,"folder",folder.info.folder.getFullPathName());
+    writeText(registry,"locations/"+folder.info.association.registration+".json",json(record),hooks);
+}
+void verifyWorkingAliases(WorkingFolder& folder,const Input& expected,const Hooks& hooks)
+{
+    std::shared_ptr<Prepared> exact;juce::String error;
+    require(prepare(expected,exact,error,hooks),error);
+    folder.closure=exact->state;folder.info.files=folder.closure.files.size();folder.info.bytes=0;
+    for(const auto& entry:folder.closure.files)folder.info.bytes+=entry.bytes;
+    // All exact byte hashes/descriptors are verified before writer admission.
+}
+ObservedSnapshot recoveryMetadata(const Input&,juce::String&,juce::String&,Association&);
+void requireEmptyRecoveryRoot(Root&);
+std::shared_ptr<WorkingFolder> openWorking(const juce::File& selected,const Association& saved,const juce::String& xml,
+                                         const juce::String& manifest,const Hooks& hooks,bool allowMissing=false)
+{
+    require(associationValid(saved),"Invalid saved working-folder locator");
+    require(associationSnapshot(xml,manifest)==saved.snapshot,"Saved working metadata snapshot mismatch");
+    auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->pinned=std::make_shared<Root>(selected);
+    require(storeId(*folder->pinned,false,hooks)==saved.store,"Selected folder has a different store identity");
+    folder->info.association=saved;ObservedSnapshot observed;juce::String error;
+    if(!legacy(xml,manifest,observed,error)){
+        require(allowMissing && manifest.isEmpty(),error);juce::String base=xml,captured;Association ignored;
+        const auto tree=juce::XmlDocument::parse(xml);require(tree!=nullptr,"Missing recovery metadata");
+        Input partial{selected.getChildFile("working").getChildFile(tree->getStringAttribute("projectId")).getChildFile(tree->getStringAttribute("instanceId")),xml,{}};
+        observed=recoveryMetadata(partial,base,captured,ignored);
+    }
+    require(observed.dependencies.size()<=maxFiles,"Too many associated dependencies");
+    const auto prefix="working/"+observed.project+"/"+observed.instance+"/";
+    for(const auto& dependency:observed.dependencies)require(std::wcslen(selected.getChildFile(prefix+dependency.path).getFullPathName().toWideCharPointer())<=240,
+        "Selected path exceeds the supported Windows path length; choose a shorter working-folder path");
+    auto association=saved;juce::String associated;require(encodeAssociatedState(xml,manifest,association,associated,error),error);
+    Input input{selected.getChildFile("working").getChildFile(observed.project).getChildFile(observed.instance),associated,manifest};
+    try{verifyWorkingAliases(*folder,input,hooks);}catch(const Failure& failure){
+        require(allowMissing,"Associated dependencies could not be verified: "+juce::String(failure.what()));folder->info.incompleteRecovery=true;folder->closure.observed=observed;
+        folder->info.captureMetadataKnown=manifest.isNotEmpty() || observed.reference.isEmpty();
+    }
+    folder->info.restoreManifest=manifest;folder->info.expected=std::move(input);return folder;
+}
+}
+bool prepareWorkingFolder(const Input& input,const juce::File& selected,const juce::File& registryRoot,
+                          std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        std::shared_ptr<Prepared> source;require(prepare(input,source,error,hooks),error);
+        const auto copied=backup(source,selected,hooks);require(copied.success,copied.error);
+        std::shared_ptr<Verified> verified;require(locate(selected,copied.receipt.locator,verified,error,hooks),error);
+        auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->pinned=std::make_shared<Root>(selected);
+        folder->info.association.store=copied.receipt.locator.store;folder->info.expected=input;
+        require(storeId(*folder->pinned,false,hooks)==folder->info.association.store,"Working store identity changed during preparation");
+        const auto prefix="working/"+source->state.observed.project+"/"+source->state.observed.instance+"/";
+        for(size_t i=0;i<verified->state.files.size();++i)copy(*folder->pinned,prefix+verified->state.files[i].path,verified->files[i]->h,verified->state.files[i],hooks);
+        Input destination=input;destination.instanceRoot=selected.getChildFile("working").getChildFile(source->state.observed.project).getChildFile(source->state.observed.instance);
+        verifyWorkingAliases(*folder,destination,hooks);
+        pinWorkingDirectories(*folder,folder->closure.observed);
+        // Association metadata is distinct from a Pack receipt: the exact host
+        // state remains authority for later accepted revisions and their aliases.
+        juce::String xml=input.processorXml,manifest=input.manifestJson;
+        if(auto tree=juce::XmlDocument::parse(xml);tree && tree->getIntAttribute("stateVersion")==associatedEnvelopeVersion){Association previous;require(decodeAssociatedState(xml,previous,xml,manifest,error),error);folder->info.association.recoveryRecord=previous.recoveryRecord;folder->info.association.recoveryOrigins=previous.recoveryOrigins;}
+        folder->info.association.snapshot=associationSnapshot(xml,manifest);registerWorkingHint(*folder,registryRoot,hooks);
+        checkpoint(hooks,"working-folder-ready");output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool revalidateWorkingFolder(const WorkingFolder& folder,const Input& current,juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(!folder.info.incompleteRecovery,"Incomplete recovery is not verified folder migration");
+        const auto& expected=folder.info.expected;
+        require(storeId(*folder.pinned,false,hooks)==folder.info.association.store,"Working store identity changed");
+        require(current.instanceRoot==expected.instanceRoot && current.controlEpoch==expected.controlEpoch
+            && current.processorXml==expected.processorXml && current.manifestJson==expected.manifestJson && current.sourceUnavailable==expected.sourceUnavailable && (!current.sourceUnavailable || folder.info.located),
+            "Session changed after folder preparation. Prepare the folder again; originals are retained.");
+        const auto prefix="working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/";
+        for(const auto& entry:folder.closure.files)verify(*folder.pinned,prefix+entry.path,entry.sha256,entry.bytes,hooks);
+        checkpoint(hooks,"working-folder-revalidated");error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool locateWorkingFolder(const juce::File& selected,const Association& saved,const juce::String& xml,const juce::String& manifest,
+                         const juce::File& registryRoot,std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{auto folder=openWorking(selected,saved,xml,manifest,hooks);pinWorkingDirectories(*folder,folder->closure.observed);registerWorkingHint(*folder,registryRoot,hooks);output=std::move(folder);error.clear();return true;}
+    catch(const std::exception& e){return fail(error,e.what());}
+}
+bool prepareRestoredWorkingFolder(const Input& input,const juce::File& receiptFile,const juce::File& selected,
+                                 const juce::File& registryRoot,std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        std::shared_ptr<Verified> verified;require(locateReceipt(receiptFile,verified,error,hooks),error);
+        require(matchesRecoveryTarget(*verified,input,error),error);
+        auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->info.expected=input;folder->info.located=true;
+        folder->pinned=std::make_shared<Root>(selected);requireEmptyRecoveryRoot(*folder->pinned);
+        folder->info.association.store=storeId(*folder->pinned,true,hooks);
+        writeText(*folder->pinned,"working/.directory-pin","ReverbArise directory guard v1\n",hooks);
+        const auto restored=restoreCopy(verified,selected.getChildFile("working"),hooks);require(restored.success,restored.error);
+        auto base=input.processorXml,manifest=input.manifestJson;Association previous;
+        if(const auto state=juce::XmlDocument::parse(base);state && state->getIntAttribute("stateVersion")==associatedEnvelopeVersion)
+            require(decodeAssociatedState(base,previous,base,manifest,error),error);
+        Input restoredInput=input;restoredInput.instanceRoot=selected.getChildFile("working").getChildFile(verified->state.observed.project).getChildFile(verified->state.observed.instance);
+        restoredInput.sourceUnavailable=false;restoredInput.folderUnavailable=false;verifyWorkingAliases(*folder,restoredInput,hooks);
+        folder->info.restoreManifest=manifest;folder->info.association.snapshot=associationSnapshot(base,manifest);
+        folder->info.association.recoveryRecord=previous.recoveryRecord;folder->info.association.recoveryOrigins=previous.recoveryOrigins;
+        pinWorkingDirectories(*folder,folder->closure.observed);registerWorkingHint(*folder,registryRoot,hooks);
+        output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool prepareAssociatedLocation(const Input& input,const juce::File& selected,const juce::File& registryRoot,
+                              std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        Association saved;juce::String base,manifest;require(decodeAssociatedState(input.processorXml,saved,base,manifest,error),error);
+        require(input.manifestJson==manifest,"Conflicting current source metadata");
+        auto folder=openWorking(selected,saved,base,manifest,hooks);folder->info.expected=input;folder->info.located=true;
+        pinWorkingDirectories(*folder,folder->closure.observed);registerWorkingHint(*folder,registryRoot,hooks);
+        output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool resolveWorkingFolder(const Association& saved,const juce::String& xml,const juce::String& manifest,
+                          const juce::File& registryRoot,std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(associationValid(saved),"Invalid saved folder locator");Root registry(registryRoot);
+        const auto readHint=[&](const juce::String& name)->juce::File{
+            const auto value=boundedJson(readText(registry,"locations/"+name,8192));
+            require(version(value,1) && only(value,{"version","store","folder"}) && value["store"].toString()==saved.store,"Invalid or mismatched local folder hint");
+            const auto path=value["folder"].toString();
+            require(path.length()>=3 && juce::CharacterFunctions::isLetter(path[0]) && path[1]==':' && (path[2]=='\\' || path[2]=='/'),"Local folder hints must be absolute; no working-directory inference is permitted");
+            return juce::File(path);};
+        try{auto folder=openWorking(readHint(saved.registration+".json"),saved,xml,manifest,hooks,true);pinWorkingDirectories(*folder,folder->closure.observed);output=std::move(folder);error.clear();return true;}catch(const Failure&){}
+        registry.path("locations/placeholder",false);
+        const auto records=registryRoot.getChildFile("locations").findChildFiles(juce::File::findFiles,false,"*.json");
+        require(records.size()<=128,"Too many local folder hints; explicitly locate the folder");
+        std::shared_ptr<WorkingFolder> match;
+        for(const auto& record:records){checkpoint(hooks,"folder-hint");try{
+            const auto path=readHint(record.getFileName());if(match && path==match->info.folder)continue;
+            auto candidate=openWorking(path,saved,xml,manifest,hooks,true);
+            require(!match,"Several verified store copies match; explicitly select the working folder");match=std::move(candidate);
+        }catch(const Failure& e){if(juce::String(e.what()).startsWith("Several verified"))throw;}}
+        require(match!=nullptr,"Associated assets are unavailable. Locate their working folder or restore a backup.");
+        pinWorkingDirectories(*match,match->closure.observed);
+        output=std::move(match);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+
+namespace
+{
+ObservedSnapshot recoveryMetadata(const Input& input,juce::String& legacyXml,juce::String& manifest,Association& origin)
+{
+    require(associationXmlShape(input.processorXml),"Malformed or oversized recovery metadata");
+    auto xml=juce::XmlDocument::parse(input.processorXml);require(xml && xml->hasTagName("PreverbState"),"Missing recovery processor metadata");
+    legacyXml=input.processorXml;manifest=input.manifestJson;juce::String error;
+    if(xml->getStringAttribute("stateVersion")==juce::String(associatedEnvelopeVersion)){
+        juce::String embedded;require(decodeAssociatedState(input.processorXml,origin,legacyXml,embedded,error),error);
+        require(manifest.isEmpty() || manifest==embedded,"Conflicting saved recovery capture metadata");manifest=embedded;xml=juce::XmlDocument::parse(legacyXml);
+    }
+    require(xml->getStringAttribute("stateVersion")=="8","Recovery requires a supported accepted envelope");
+    const auto project=xml->getStringAttribute("projectId"),instance=xml->getStringAttribute("instanceId");
+    const auto reference=xml->getStringAttribute("manifestReference"),revision=xml->getStringAttribute("manifestRevision");
+    require(uuid(project) && uuid(instance) && revision.getLargeIntValue()>=0 && juce::String(revision.getLargeIntValue())==revision
+        && (reference.isEmpty()?revision=="0":safeRelativePath(reference) && reference.startsWith("manifests/") && reference.endsWith(".json")),"Invalid saved recovery identity");
+    require(input.instanceRoot.getFileName()==instance && input.instanceRoot.getParentDirectory().getFileName()==project,"Recovery source namespace does not match saved identities");
+    ObservedSnapshot observed;
+    if(manifest.isNotEmpty() || reference.isEmpty())require(legacy(legacyXml,manifest,observed,error),error);
+    else{
+        // Decode only known creative references. No synthetic source manifest,
+        // invented chunk list or inferred capture coverage is published.
+        auto known=std::make_unique<juce::XmlElement>(*xml);known->setAttribute("manifestReference",juce::String{});known->setAttribute("manifestRevision","0");
+        require(legacy(known->toString(),{},observed,error),error);
+        observed.reference=reference;observed.capture.revision=static_cast<uint64_t>(revision.getLargeIntValue());
+        observed.dependencies.push_back({reference,{},{},{}});
+    }
+    legacyXml=xml->toString();return observed;
+}
+void requireEmptyRecoveryRoot(Root& target)
+{
+    WIN32_FIND_DATAW data{};const auto search=target.directory.getChildFile("*").getFullPathName();
+    const auto handle=FindFirstFileW(search.toWideCharPointer(),&data);
+    if(handle==INVALID_HANDLE_VALUE){require(GetLastError()==ERROR_FILE_NOT_FOUND,"Could not inspect recovery destination");return;}
+    struct FindGuard{HANDLE h;~FindGuard(){FindClose(h);}} guard{handle};
+    do{const juce::String name(data.cFileName);require(name=="." || name=="..","Choose an empty, separate recovery workspace folder");}while(FindNextFileW(handle,&data));
+    require(GetLastError()==ERROR_NO_MORE_FILES,"Could not finish recovery destination inspection");
+}
+}
+bool prepareRecoveryWorkspace(const Input& input,const juce::File& selected,const juce::File& registryRoot,
+                              std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        checkpoint(hooks,"recovery-workspace-start");juce::String xml,manifest;Association origin;
+        auto observed=recoveryMetadata(input,xml,manifest,origin);
+        auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->info.expected=input;
+        folder->info.incompleteRecovery=true;folder->info.originalAssociation=origin;
+        folder->info.captureMetadataKnown=manifest.isNotEmpty() || observed.reference.isEmpty();
+        require(selected!=input.instanceRoot && !selected.isAChildOf(input.instanceRoot) && !input.instanceRoot.isAChildOf(selected),"Recovery workspace must be separate from the original source tree");
+        folder->pinned=std::make_shared<Root>(selected);requireEmptyRecoveryRoot(*folder->pinned);
+        std::shared_ptr<Root> source;
+        try{source=std::make_shared<Root>(input.instanceRoot);}catch(const Failure&){folder->info.originalFolderUnavailable=true;}
+        // A readable original manifest can recover known coverage even when the
+        // live pin had no available-source JSON. It must match the saved identity.
+        if(source && !folder->info.captureMetadataKnown){try{
+            const auto captured=readText(*source,observed.reference,maximumMetadataBytes);ObservedSnapshot full;juce::String detail;
+            require(legacy(xml,captured,full,detail),detail);observed=std::move(full);manifest=captured;folder->info.captureMetadataKnown=true;
+        }catch(const Failure&){} }
+        require(observed.dependencies.size()<=maxFiles,"Too many recovery dependencies");
+        folder->info.association.store=storeId(*folder->pinned,true,hooks);
+        folder->info.association.snapshot=associationSnapshot(xml,manifest);folder->closure.observed=observed;folder->info.restoreManifest=manifest;
+        const auto revision=juce::XmlDocument::parse(xml)->getStringAttribute("manifestRevision").getLargeIntValue();
+        RecoveryLocator previous{origin.store,origin.snapshot,origin.writer,origin.registration,observed.project,observed.instance,observed.reference,static_cast<uint64_t>(revision)};
+        require(recoveryLocatorValid(previous),"Invalid original recovery locator");folder->info.association.recoveryOrigins.push_back(previous);
+        for(const auto& older:origin.recoveryOrigins)if(std::find(folder->info.association.recoveryOrigins.begin(),folder->info.association.recoveryOrigins.end(),older)==folder->info.association.recoveryOrigins.end())folder->info.association.recoveryOrigins.push_back(older);
+        require(folder->info.association.recoveryOrigins.size()<=16,"Too many recovery origins; history cannot be discarded");
+        const auto prefix="working/"+observed.project+"/"+observed.instance+"/";uint64_t total=0;
+        for(const auto& dependency:observed.dependencies){
+            checkpoint(hooks,"recovery-survivor",dependency.path);Held file;Entry entry;entry.path=dependency.path;
+            if(source){try{
+                file=source->read(entry.path);entry.bytes=size(file->h);
+                require(entry.bytes<=16ull*1024*1024*1024 && (!entry.path.endsWith(".json") || entry.bytes<=maximumMetadataBytes),"Oversized surviving dependency");
+                entry.sha256=hash(file->h,hooks);entry.object=objectPath(entry);
+                require(dependency.checksum.isEmpty() || dependency.checksum==entry.sha256,"Surviving dependency checksum differs");
+                if(dependency.descriptor.isNotEmpty())require(sameMetadata(readText(*source,entry.path),dependency.descriptor),"Surviving descriptor differs");
+            }catch(const Failure&){file.reset();}}
+            if(!file){folder->info.missing.push_back(entry.path);continue;}
+            total+=entry.bytes;require(total<=64ull*1024*1024*1024,"Recovery byte limit exceeded");
+            // Destination failures are not mistaken for missing source files.
+            copy(*folder->pinned,prefix+entry.path,file->h,entry,hooks);folder->closure.files.push_back(entry);
+        }
+        if(folder->info.captureMetadataKnown && observed.reference.isNotEmpty()
+            && std::find(folder->info.missing.begin(),folder->info.missing.end(),observed.reference)!=folder->info.missing.end()){
+            writeText(*folder->pinned,prefix+observed.reference,manifest,hooks);
+            Entry entry{observed.reference,{},digest(manifest),static_cast<uint64_t>(manifest.getNumBytesAsUTF8())};entry.object=objectPath(entry);folder->closure.files.push_back(entry);total+=entry.bytes;
+            require(total<=64ull*1024*1024*1024,"Recovery byte limit exceeded");folder->info.recreatedCaptureMetadata=true;
+        }
+        require(input.sourceUnavailable || folder->info.originalFolderUnavailable || !folder->info.missing.empty(),"All declared assets are available; prepare a verified folder copy instead");
+        folder->info.files=folder->closure.files.size();folder->info.bytes=total;
+        auto record=object();set(record,"version",1);set(record,"kind","incomplete-recovery-workspace");set(record,"complete",false);
+        set(record,"originalProcessorXml",input.processorXml);set(record,"originalCaptureManifest",manifest);set(record,"captureMetadataKnown",folder->info.captureMetadataKnown);
+        juce::Array<juce::var> missing;for(const auto& path:folder->info.missing)missing.add(path);set(record,"missing",missing);
+        const auto metadata=json(record);folder->info.recoveryRecord=digest(metadata);
+        folder->info.association.recoveryRecord=folder->info.recoveryRecord;
+        writeText(*folder->pinned,prefix+"recovery/"+folder->info.recoveryRecord+".json",metadata,hooks);
+        folder->recoveryRecordBytes=static_cast<uint64_t>(metadata.getNumBytesAsUTF8());
+        pinWorkingDirectories(*folder,observed);registerWorkingHint(*folder,registryRoot,hooks);
+        checkpoint(hooks,"recovery-workspace-ready");output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool revalidateRecoveryWorkspace(const WorkingFolder& folder,const Input& current,juce::String& error,const Hooks& hooks)
+{
+    try{
+        const auto& expected=folder.info.expected;require(folder.info.incompleteRecovery,"Not an incomplete recovery workspace");
+        require(current.instanceRoot==expected.instanceRoot && current.controlEpoch==expected.controlEpoch && current.processorXml==expected.processorXml
+            && current.manifestJson==expected.manifestJson && current.sourceUnavailable==expected.sourceUnavailable,"Recovery session changed; keep the current association and prepare again");
+        require(storeId(*folder.pinned,false,hooks)==folder.info.association.store,"Recovery store identity changed");
+        verify(*folder.pinned,"working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/recovery/"+folder.info.recoveryRecord+".json",folder.info.recoveryRecord,folder.recoveryRecordBytes,hooks);
+        const auto prefix="working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/";
+        for(const auto& entry:folder.closure.files)verify(*folder.pinned,prefix+entry.path,entry.sha256,entry.bytes,hooks);
+        checkpoint(hooks,"recovery-workspace-revalidated");error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
 }
 
 }

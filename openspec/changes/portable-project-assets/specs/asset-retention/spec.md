@@ -112,6 +112,10 @@ Re-learn recovery SHALL require explicit user choice and DAW playback, preserve 
 - **WHEN** capture is incomplete, cancelled or fails, or a custom IR remains unavailable
 - **THEN** existing arrangement and surviving dependencies remain preserved, missing requirements stay explicit and no successful full recovery is claimed
 
+#### Scenario: Re-learning after explicit workspace recovery
+- **WHEN** the user has explicitly adopted an incomplete recovery workspace because the original folder cannot be recovered
+- **THEN** normal Learn captures fresh source without duplicate Storage Learn/Generate actions; swell metadata and the original locator persist, and existing unfrozen swells regenerate automatically only after complete fresh source and verified required IRs are available
+
 ### Requirement: Future cache limits cannot reclassify durable history
 A future rebuildable-cache policy SHALL require separate eligibility and reconstruction review before eviction is enabled. Current source, IRs, immutable saved renders, exports and unknown old-project dependencies SHALL remain protected. Swell deletion, regeneration or lack of a current reference SHALL NOT establish garbage-collection eligibility.
 

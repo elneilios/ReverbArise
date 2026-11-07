@@ -60,6 +60,7 @@ bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& pres
     if((expectedSession && expectedSession!=sessionGeneration.load()) || (expectedWorkflowPass!=UINT64_MAX && expectedWorkflowPass!=flow.pass))
     {message="Default IR request superseded";if(!defaultPending)defaultStatus=message;return false;}
     if(workflowState && (flow.mode==workflow::Mode::finalise || flow.locked())){message="Default IR is locked for this pass";return false;}
+    if(!storageLocation.load()->writable){message=defaultError=defaultStatus="Asset working folder unavailable; choose a recovery workspace first";notify();return false;}
     std::erase_if(imports,[](const auto& job){return job.futureDefault;});
     if(imports.size()>=32){message="IR import queue full";return false;}
     Import job;job.file=file;job.presetId=presetId;job.managed=asset;job.label=label;job.session=sessionGeneration.load();job.futureDefault=true;

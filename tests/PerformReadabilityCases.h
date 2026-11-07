@@ -46,7 +46,7 @@ void Composition::verifyReadability()
         {juce::Graphics graphics(expected);graphics.fillAll(background);controls::paintMusicalTimelineRuler(graphics,expected.getBounds(),timeline.viewport(),processor->getSongTime());}
         for(int y=0;y<ruler.getHeight();++y)for(int x=0;x<ruler.getWidth();++x)REQUIRE(actual.getPixelAt(x,y)==expected.getPixelAt(x,y));
     }
-    viewport.setViewPosition(0,0);panel->addToDesktop(0);panel->setVisible(true);panel->toFront(true);
+    viewport.setViewPosition(0,0);NativeEditorPeer nativePeer(*panel,"ReverbArise - PerformReadabilityCases native validation");panel->setVisible(true);panel->toFront(true);
     // Exact-value editing is a real native focus test. A temporary/no-activate
     // peer can lose focus after its delayed activation, restoring rounded text.
     auto* peer=panel->getPeer();REQUIRE(peer);
@@ -68,7 +68,7 @@ void Composition::verifyReadability()
     REQUIRE(m3::find(engine.savedSession(),saved.primary)->shape.inTension==.123456789 && curve.valueField().getText()=="0.12");
     viewport.setViewPosition(0,curve.getY());curve.valueField().grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     wait([&]{return curve.valueField().hasKeyboardFocus(false);});
-    REQUIRE(curve.valueField().getText().getDoubleValue()==.123456789);curve.valueField().onEscapeKey();panel->removeFromDesktop();
+    REQUIRE(curve.valueField().getText().getDoubleValue()==.123456789);curve.valueField().onEscapeKey();nativePeer.setVisible(false);
     const auto point=timeline.wetLane().getCentre();const auto now=juce::Time::getCurrentTime();
     timeline.mouseMove(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&timeline,&timeline,now,point,now,0,false));
     REQUIRE(timeline.getTooltip().contains("raw reference") && timeline.getTooltip().contains("Ctrl"));

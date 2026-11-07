@@ -144,4 +144,5 @@ bool workerTests()
     return true;
 }
 
-int main() { return sessionTests() && workerTests() ? 0 : 1; }
+#include "CaptureStorageLocationCases.h"
+int main() { return sessionTests() && workerTests() && storageLocationTests() ? 0 : 1; }

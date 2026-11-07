@@ -176,3 +176,19 @@ Discovery spike result: task 1.4 completed on FL Studio 26.1.7 build 5654 / JUCE
 The owner subsequently authorized phase 2 with explicit folder selection and the user-data fallback. This supersedes the spike-only scope above. The exact-byte backend and standalone native Backup/Restore/Locate candidate are implemented; see [living backend guide](../../../docs/development/portable-asset-backups.md) and [dated evidence](../../../docs/validation/2026-11-06-issue-8-portable-backend.md). Production control integration still requires task 3.7 native approval. Isolated-profile restore, host transfer, live association/writer branches and missing-asset recovery retain their existing gates. No current-root cutover, cleanup or compression is authorized by this checkpoint.
 
 Owner approved the phase-2 native composition on 2026-11-06: "looks fine, carry on". Task 3.7 production integration may proceed with existing shared controls/comfortable geometry. An explicit completion-receipt chooser supports reopening without an inferred latest snapshot or new saved-state format. This approval does not waive isolated-profile/host validation or authorize task 3.10 recovery, phase-4 association/writer cutover, cleanup or compression.
+
+
+## Phase-4 explicit recovery-workspace approval — 2026-11-06
+
+The owner approved an explicit recovery workspace when the entire original asset
+folder is irrecoverable or offline. This is a distinct recovery operation, not
+a successful pack, verified migration or complete backup. It requires deliberate
+folder selection/confirmation, preserves decodable swell metadata, original
+locators and surviving assets, and exposes missing/unknown dependencies. It must
+never silently fall back, overwrite originals or claim all assets were copied.
+After adoption, use normal Learn with detection off and existing complete-source,
+IR, automatic unfrozen regeneration, frozen-consent and export-loss protections.
+No Learn/Generate controls are added to Storage. Ordinary association and Fork
+retain complete verified-copy gates, host-save requests and rollback. Phase-4
+implementation remains authorized; cleanup, compression, default cutover and
+release/merge gates are unchanged. This approval completes no task checkbox.

@@ -1,12 +1,15 @@
 #include "AudioTestFiles.h"
+#include <source_location>
 #include <Plugin/PluginEditor.h>
 #include <Core/ContentHash.h>
 #include <DSP/DefaultImpulse.h>
 #include <UI/WorkflowHeader.h>
 static juce::Component* find(juce::Component& root,const juce::String& name)
 {if(root.getName()==name)return &root;for(auto* child:root.getChildren())if(auto* result=find(*child,name))return result;return nullptr;}
-template<class F>static void wait(F predicate)
-{const auto end=juce::Time::getMillisecondCounterHiRes()+30000;while(!predicate()){REQUIRE(juce::Time::getMillisecondCounterHiRes()<end);juce::MessageManager::getInstance()->runDispatchLoopUntil(10);}}
+template<class F>static void wait(F predicate,const std::source_location where=std::source_location::current())
+{const auto end=juce::Time::getMillisecondCounterHiRes()+30000;while(!predicate()){
+    if(juce::Time::getMillisecondCounterHiRes()>=end)throw std::runtime_error("Storage Settings wait at "+std::string(where.file_name())+":"+std::to_string(where.line()));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);}}
 static juce::MemoryBlock stateFor(const CaptureSessionSnapshot& capture)
 {
     juce::XmlElement xml("PreverbState");xml.setAttribute("stateVersion",8);xml.setAttribute("workflowMode","Capture");
@@ -74,7 +77,29 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     operation("locateAssets");REQUIRE(storage->lastResult()->success);
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(backup.file);};
     operation("restoreAssets");REQUIRE(storage->lastResult()->success && action("backupAssets").isEnabled() && action("restoreAssets").isEnabled());
-    storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);
+    // The approved folder family is bound to the real processor, with its two
+    // actions pinned above Backup/Restore/Locate in the production page.
+    auto* working=storage->workingFolderControls();REQUIRE(working);
+    TestDirectory associated;REQUIRE(associated.file.createDirectory().wasOk());
+    working->picker=[&](auto complete){complete(associated.file);};
+    const auto chooseBounds=action("chooseWorkingFolder").getBounds();
+    contentViewport->setViewPosition(0,10000);
+    REQUIRE(action("chooseWorkingFolder").getBounds()==chooseBounds && chooseBounds.getY()>=contentViewport->getBottom()
+        && chooseBounds.getBottom()<=action("backupAssets").getY());
+    REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});
+    if(!working->ready())throw std::runtime_error("Working-folder preparation: "+working->statusText().toStdString());
+    REQUIRE(processor.swellEngine().assetDirectory()==firstRoot && action("useWorkingFolder").isEnabled());
+    action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});storage->poll();
+    const auto associatedRoot=associated.file.getChildFile("working").getChildFile(beforeCapture.manifest.projectId).getChildFile(beforeCapture.manifest.instanceId);
+    REQUIRE(processor.swellEngine().assetDirectory()==associatedRoot && working->statusText().contains("Save your DAW project"));
+    REQUIRE(processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
+    processor.getStateInformation(after);auto associatedState=juce::AudioProcessor::getXmlFromBinary(after.getData(),static_cast<int>(after.getSize()));
+    REQUIRE(associatedState && associatedState->getStringAttribute("stateVersion")=="9");
+    editor.refresh();wait([&]{editor.refresh();const auto* current=storage->displayedReport();return current && !current->files.empty() && current->files.front().root==associatedRoot.getFullPathName();});
+    for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
+    storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);contentViewport->setViewPosition(0,0);
+    REQUIRE(working->statusText().contains("Save your DAW project"));
+    storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);contentViewport->setViewPosition(0,0);
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_STORAGE_SETTINGS_OUTPUT",{});
     const auto screenshot=[&](const juce::File& path){auto stream=path.createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(tabs.createComponentSnapshot(tabs.getLocalBounds()),*stream));};
     if(output.isNotEmpty())screenshot(juce::File(output));

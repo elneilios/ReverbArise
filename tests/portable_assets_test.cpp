@@ -35,7 +35,8 @@ struct ReadOnlyFixture
     ~ReadOnlyFixture(){if(original){SetNamedSecurityInfoW(const_cast<wchar_t*>(folder.getFullPathName().toWideCharPointer()),SE_FILE_OBJECT,DACL_SECURITY_INFORMATION,nullptr,nullptr,oldAcl,nullptr);LocalFree(original);}if(newAcl)LocalFree(newAcl);}
 };
 
-int main(){return runTest([]{
+#include "working_folder_test.h"
+int main(int argc,char** argv){if(argc>1)return workingFolderTest(argc,argv);return runTest([]{
     Fixture f;juce::String error;Input input{f.root,f.xml,f.manifest};std::shared_ptr<Prepared> prepared;
     if(!prepare(input,prepared,error))throw std::runtime_error(error.toStdString());const auto saved=snapshot(*prepared);REQUIRE(saved.files.size()==f.observed.dependencies.size());
     REQUIRE(saved.observed.session.swells[0].frozen && !saved.observed.session.swells[0].enabled && saved.observed.capture.schemaVersion==2);

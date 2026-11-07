@@ -7,8 +7,11 @@ template<class F>static void waitFor(F predicate,const std::source_location loca
 static void load(PreverbAudioProcessor& p,const juce::String& xml){auto tree=juce::XmlDocument::parse(xml);REQUIRE(tree);juce::MemoryBlock block;juce::AudioProcessor::copyXmlToBinary(*tree,block);p.setStateInformation(block.getData(),static_cast<int>(block.getSize()));REQUIRE(p.flushCaptureForTesting());}
 #include "PortableProfileValidation.h"
 #include "RecoveryDependencyCases.h"
+#include "AssociationProcessCases.h"
+#include "WorkingFolderProcessorCases.h"
 #include "RecoveryPreview.h"
-int main(int argc,char** argv){if(argc==4 && juce::String(argv[1])=="--fresh-profile")initialiseProfileEnvironment();juce::ScopedJuceInitialiser_GUI gui;if(argc==2 && juce::String(argv[1])=="--review")return runTest([&]{recoveryPreview(true);});if(argc==2 && juce::String(argv[1])=="--ui")return runTest([&]{recoveryPreview(false,false);recoveryPreview(false,true);});if(argc==3 && juce::String(argv[1])=="--prepare-profile")return runTest([&]{profilePrepare(juce::File(argv[2]));});if(argc==4 && juce::String(argv[1])=="--fresh-profile")return runTest([&]{profileValidate(juce::File(argv[2]),argv[3]);});return runTest([]{
+int main(int argc,char** argv){if(argc==4 && juce::String(argv[1])=="--fresh-profile")initialiseProfileEnvironment();juce::ScopedJuceInitialiser_GUI gui;if(argc==7 && juce::String(argv[1])=="--association-child")return runTest([&]{associationChild(juce::File(argv[2]),juce::File(argv[3]),juce::File(argv[4]),juce::File(argv[5]),juce::String(argv[6]).getIntValue());});if(argc==2 && juce::String(argv[1])=="--review")return runTest([&]{recoveryPreview(true);});if(argc==2 && juce::String(argv[1])=="--ui")return runTest([&]{recoveryPreview(false,false);recoveryPreview(false,true);});if(argc==3 && juce::String(argv[1])=="--prepare-profile")return runTest([&]{profilePrepare(juce::File(argv[2]));});if(argc==4 && juce::String(argv[1])=="--fresh-profile")return runTest([&]{profileValidate(juce::File(argv[2]),argv[3]);});return runTest([]{
+    workingFolderProcessorCases();
     recoveryDependencyCases();
     Fixture fixture;juce::String error;std::shared_ptr<Prepared> pin;
     REQUIRE(prepare({fixture.root,fixture.xml,fixture.manifest},pin,error));
