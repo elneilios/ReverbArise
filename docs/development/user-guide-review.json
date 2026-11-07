@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the opt-in action-row preview against the shipped selector behavior. Production dropdown and menu consumers retain their documented behavior at this checkpoint.",
+  "summary": "Reviewed the Swells Rename/Delete binding, approved native menu, and selector/action-menu contracts. Added the two pointer entry points, keyboard inspection, activation, and dismissal to the Perform guide.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 88471,
-      "sha256": "fba249c2bb241fc5f7d7c14139bd281169aee6713fc8e3f4adf0abaf4c2ebdef"
+      "bytes": 89976,
+      "sha256": "5fb13c406f7bc540b75e305886eb6b98bcc389451137b85a99b7464be2178e83"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13509,
-      "sha256": "0e491d32e693ac032d1b385118fc71f0dc2197601b7830a6dd52117d5576ed15"
+      "bytes": 13608,
+      "sha256": "a80ab892349ea5ae1a8ecd85959340f1e7f0547354697fbb84c23da590ddf7a4"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -900,8 +900,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 26332,
-      "sha256": "5b23a8eb3d4e442852ad7153c752a8a3c0a29c3bb04ab4493f13a03edce25dea"
+      "bytes": 26602,
+      "sha256": "b9b29e922092528f70f34e9dbb52dfa72c32edc203cbbb149d376ecb9fa95a31"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

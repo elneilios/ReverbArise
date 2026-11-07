@@ -26,5 +26,6 @@ also passed. Full CTest, physical Windows DPI and FL Studio coverage remain
 separate from these focused checks.
 
 The native `ReverbArise - #107 action menu review` window was launched directly
-for owner review. Tasks 1.1 through 1.3 are complete. Task 2.1 awaits the owner's
-approval of the native preview before editor adoption.
+for owner review. The owner approved it on 7 November 2026, including the
+popup-only 14% hover and 24% held destructive blends in the preview. The
+approval covers the fixture's action-row treatment and interaction.

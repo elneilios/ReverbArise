@@ -8,7 +8,7 @@
 
 ## 2. Native family checkpoint
 
-- [ ] 2.1 Prepare and directly launch the native action/reset menu preview with long/unavailable rows, keyboard/pointer transitions and screen-edge anchors at supported sizes/user scales from design.md; record scoped owner approval and approved popup-only token/metric changes before adopting consumers, distinguishing Windows DPI/FL Studio coverage.
+- [x] 2.1 Prepare and directly launch the native action/reset menu preview with long/unavailable rows, keyboard/pointer transitions and screen-edge anchors at supported sizes/user scales from design.md; record scoped owner approval and approved popup-only token/metric changes before adopting consumers, distinguishing Windows DPI/FL Studio coverage.
 
 ## 3. Bounded action-menu adoption
 

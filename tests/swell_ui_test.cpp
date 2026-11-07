@@ -1456,6 +1456,8 @@ int main(int argc,char* argv[]){return runTest([&]
         {editor.setSize(size.x,size.y);editor.refresh();snapshotEditor(editor,"many-"+juce::String(size.x)+"x"+juce::String(size.y));}
         editor.setSize(old.getWidth(),old.getHeight());editor.refresh();}
     {
+        nativeInputPeer(editor);
+        const juce::ScopeGuard removePeer{[&editor]{editor.removeFromDesktop();}};
         auto rows=const_cast<juce::ListBox*>(list);rows->scrollToEnsureRowIsOnscreen(250);
         const auto position=juce::Point<float>(static_cast<float>(rows->getWidth()-15),45);
         const juce::MouseEvent click(juce::Desktop::getInstance().getMainMouseSource(),position,juce::ModifierKeys::rightButtonModifier,
@@ -1464,11 +1466,10 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(anchor.getPosition()==click.getScreenPosition() && anchor.getWidth()==1 && anchor.getHeight()==1);
         REQUIRE(anchor!=rows->getScreenBounds());
         rows->getModel()->listBoxItemClicked(250,click);
-        juce::Component* popup=nullptr;auto& desktop=juce::Desktop::getInstance();
-        for(int i=0;i<desktop.getNumComponents();++i)if(desktop.getComponent(i)->getName()=="menu")popup=desktop.getComponent(i);
+        auto* popup=dynamic_cast<m3::ui::controls::ChoicePopup*>(juce::Component::getCurrentlyModalComponent());
         REQUIRE(popup);const auto menuBounds=popup->getScreenBounds();
         REQUIRE(menuBounds.expanded(12).contains(anchor.getPosition()));snapshotPanel(*popup,"swell-context-menu");
-        juce::PopupMenu::dismissAllActiveMenus();rows->scrollToEnsureRowIsOnscreen(0);
+        popup->dismiss();juce::MessageManager::getInstance()->runDispatchLoopUntil(40);rows->scrollToEnsureRowIsOnscreen(0);
     }
 
     engine.restore(saved);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();

@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.14 · **Production standards revision:** 14 · **Purpose:** Production UI authority and design reference. Revision 14 records the native-approved C2 selector family and small local field help/red error-message-and-border policy. Named selector consumers are adopted; remaining families retain their own changes. Keyboard/accessibility focus uses aqua outer brackets; pointer clicks retain focus without decoration. Revision-12 command geometry/colours and other families' scoped migration boundaries remain intact.
+**Version:** 1.15 · **Production standards revision:** 15 · **Purpose:** Production UI authority and design reference. Revision 15 records the native-approved Swells action menu. Revision 14 defines C2 selector feedback and local field help and validation. Keyboard and accessibility focus use aqua outer brackets, and pointer clicks retain focus without decoration.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -38,16 +38,17 @@ input typography. `SelectorPresentation::valueFont` is the authority for closed
 selectors and their popup values. Visible selector/import bodies remain aligned;
 outside focus is reserved in the component frame and existing row gaps are retained.
 
-## Action-menu preview — issue #107
+## Action menus — issue #107
 
-The [C2 action-menu contract](../development/ui-control-contracts.md#c2-action-menu-preview--issue-107)
-defines explicit neutral and destructive rows. The candidate reuses the
-selector popup geometry and Inter text. Neutral actions use quiet dark fills.
+The [C2 action-menu contract](../development/ui-control-contracts.md#c2-action-menus--issue-107)
+defines explicit neutral and destructive rows. The menu reuses the selector
+popup geometry and Inter text. Neutral actions use quiet dark fills.
 Destructive actions use `danger` ink and edge emphasis with a 14% hover blend
-and 24% held blend from `background` toward `danger`. These mixes are scoped
-to the popup preview until native approval. Action menus clear pointer emphasis
-on departure and retain active keyboard inspection. Selection marks belong to
-choice menus.
+and 24% held blend from `background` toward `danger`. The owner approved those
+popup roles in the native fixture on 7 November 2026. Action menus clear
+pointer emphasis on departure and retain active keyboard inspection. Selection
+marks belong to choice menus. Revision 15 adopts this policy for Swells
+Rename/Delete. The per-knob Reset hookup awaits #108 coordination.
 
 ## Responsive composition — issue #58
 
@@ -211,6 +212,7 @@ production standards revision; this revision does not change plugin/state versio
 | 12 | #107 native button family revision 4 approved 2026-11-06 | Four aqua corner brackets, 2-pixel stroke with 3-pixel outside gap inside component bounds; body border/background owns hover/press. Destructive mouse feedback stays red; neutral icons stay off-white. Explicit neutral/primary/destructive/latch roles share one painter. No new token, knob or FileDragTile redesign; integrated acceptance remains separate |
 | 13 | #107 owner approved input-dependent focus visibility 2026-11-06 | Shared commands show brackets for keyboard/accessibility focus and hide them after pointer clicks while retaining actual focus/activation. Hover/held ink and geometry stay unchanged. Other families adopt the policy during their own jobs; caret/editing/selection feedback remains separate. See the shared focus visibility contract |
 | 14 | #107 revised native selector family approved 2026-11-07 | Quiet transient pointer highlight, persistent keyboard inspection, independent accepted checkmark and explicit commit; aqua outside focus, steady glyphs. Scoped popup metrics and minimum 13 value type; local help uses 12-height Inter, 17-height lines and 4-unit gap, with red error text/body border. Adopted consumers are listed in the C2 contract; action menus, #108 and #8 stay separate. |
+| 15 | #107 native action-menu family approved 2026-11-07 | Swells Rename/Delete opens from the row or its three dots. Explicit neutral and destructive roles use transient hover, held feedback and separate keyboard inspection. The per-knob Reset hookup awaits #108 coordination. |
 
 ### Stable Perform transport information
 

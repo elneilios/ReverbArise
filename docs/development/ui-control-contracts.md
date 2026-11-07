@@ -146,7 +146,7 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
-### C2 action-menu preview — issue #107
+### C2 action menus — issue #107
 
 `ChoicePopup` accepts `PopupChoice` descriptors with `PopupRowRole::choice`,
 `action`, or `destructiveAction`. The choice role owns selection marks and
@@ -159,11 +159,12 @@ from the action provider. Unavailable rows remain inspectable. The binding
 captures the original action and target before opening and checks eligibility
 again on one-shot delivery. Outside dismissal preserves the focus recipient.
 
-The fixture is the native review gate for these popup roles. Its Swells item
-opens via right-click or its three-dot icon. Reset and screen-edge samples share
-the same adapter. Production adoption awaits the scoped native approval.
-The C1 command roles and deferred #8 popup ownership are documented separately
-in the [control inventory](../design/ui-control-inventory.md).
+The owner approved the native fixture on 7 November 2026. In production, the
+Swells menu opens via right-click or the row's three-dot icon. The list owns
+the popup across row recycling, and Rename/Delete use the clicked item's
+captured ID and epoch. The Reset fixture uses the same presentation. Its
+production hookup remains pending coordination with #108. The
+[control inventory](../design/ui-control-inventory.md) records the exact scope.
 
 ### C2 approved implementation — 2026-11-07
 

@@ -61,7 +61,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     performZoom.setName("performZoom");snapButton.setName("performSnap");gridBox.setName("performGrid");
     m3::ui::applyTextRole(listCount,m3::ui::TextRole::helper,juce::Justification::centredRight);
     generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
-    list.getProperties().set("contextHelp","Select a swell to edit. Use its checkbox to enable or disable it, and its three-dot menu for more actions.");
+    list.getProperties().set("contextHelp","Select a swell to edit. Use its checkbox to enable or disable it. Right-click the row or use its three dots for more actions.");
     list.onSelection=[this](auto ids,auto primary)
     {if(updating || destroying)return;processor.swellEngine().selectTargets(ids,primary,state.sessionEpoch);refresh();};
     list.onReveal=[this](auto id,uint64_t epoch)
@@ -299,7 +299,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     if(responsivePresentation){g.fillAll(m3::ui::background);return;}
@@ -329,14 +329,48 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
 }
 void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellListRow& w,const juce::MouseEvent& event)
 {
-        const auto epoch=state.sessionEpoch;
-        juce::PopupMenu menu;menu.addItem(1,"Rename...");menu.addItem(2,"Delete");
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(event.eventComponent).withTargetScreenArea(swellMenuAnchor(event)),
-            [safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),id=w.id,name=w.name,epoch](int result)
+    using namespace m3::ui::controls;
+    if (swellMenu || event.eventComponent == nullptr || !list.isShowing() || !list.isEnabled())
+        return;
+
+    const auto anchor = swellMenuAnchor(event);
+    const auto epoch = state.sessionEpoch;
+    const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+    std::vector<PopupChoice> actions{{1, "Rename...", {}, true, false, PopupRowRole::action},
+                                     {2, "Delete", {}, true, false, PopupRowRole::destructiveAction}};
+    // The list owns the popup across row recycling. The action still owns the
+    // clicked row's ID and epoch, regardless of later selection or reorder.
+    swellMenu = std::make_unique<ChoicePopup>(list, std::move(actions),
+        [safe, id = w.id, name = w.name, epoch](int result, PopupDismissal why)
         {
-            if(!safe || safe->processor.swellEngine().assignmentEpoch()!=epoch)return;
-            if(result==2){safe->processor.swellEngine().removeTarget(id,epoch);safe->refresh();return;}
-            if(result!=1)return;
+            if (!safe || safe->destroying)
+                return;
+            safe->swellMenu.reset();
+            if (!safe || why == PopupDismissal::outside || why == PopupDismissal::ownerGone
+                || !safe->list.isShowing() || !safe->list.isEnabled())
+                return;
+
+            safe->list.grabKeyboardFocus();
+            if (!safe || safe->destroying)
+                return;
+            if (why == PopupDismissal::tabForward || why == PopupDismissal::tabBackward)
+            {
+                safe->list.moveKeyboardFocusToSibling(why == PopupDismissal::tabForward);
+                return;
+            }
+
+            auto& engine = safe->processor.swellEngine();
+            if (engine.assignmentEpoch() != epoch)
+                return;
+            if (result == 2)
+            {
+                engine.removeTarget(id, epoch);
+                if (safe) safe->refresh();
+                return;
+            }
+            if (result != 1 || !m3::find(engine.savedSession(), id))
+                return;
+
             auto* dialog=new juce::AlertWindow("Rename swell","",juce::MessageBoxIconType::NoIcon);
             dialog->addTextEditor("name",name);dialog->getTextEditor("name")->selectAll();
             dialog->addButton("OK",1,juce::KeyPress(juce::KeyPress::returnKey));dialog->addButton("Cancel",0,juce::KeyPress(juce::KeyPress::escapeKey));
@@ -348,6 +382,11 @@ void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellLis
                 safe->refresh();
             }),true);
         });
+    swellMenu->setName("swellActionMenu");
+    swellMenu->setTitle("Actions for " + w.name);
+    juce::SharedResourcePointer<FocusVisibility> visibility;
+    visibility->pointerInput();
+    swellMenu->show(anchor, false);
 }
 void PreverbAudioProcessorEditor::setPreferences()
 {const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(static_cast<float>(auditionSlider.getValue()),s.sensitivity,s.separationSeconds,s.autoRegenerate);}

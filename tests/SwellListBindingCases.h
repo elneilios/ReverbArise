@@ -58,37 +58,96 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
     editor.refresh();verify();REQUIRE(list->rowAt(2)->id==first && engine.savedSession().primary==first);
     REQUIRE(engine.savedSession().swells[0].id==first); // Presentation never sorts definitions.
 
-    const auto rowEvent=[&](int row)
+    using namespace m3::ui::controls;
+    nativeInputPeer(editor);
+    const juce::ScopeGuard removePeer{[&editor]{editor.removeFromDesktop();}};
+    const auto pump = [] { juce::MessageManager::getInstance()->runDispatchLoopUntil(40); };
+    const auto openMenu = [&](SwellList& targetList, const juce::String& id, bool rightClick)
     {
-        list->scrollToEnsureRowIsOnscreen(row);const auto p=juce::Point<float>{static_cast<float>(list->getWidth()-12),static_cast<float>(list->getRowPosition(row,true).getCentreY())};
-        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),p,juce::ModifierKeys::rightButtonModifier,0,0,0,0,0,list,list,juce::Time::getCurrentTime(),p,juce::Time::getCurrentTime(),1,false);
+        const auto index = targetList.rowFor(id);
+        REQUIRE(index >= 0);
+        targetList.scrollToEnsureRowIsOnscreen(index);
+        const auto row = targetList.getRowPosition(index, true);
+        const juce::Point<int> point{rightClick ? row.getX() + 70 : row.getRight() - 12, row.getCentreY()};
+        auto* surface = targetList.getComponentAt(point);
+        REQUIRE(surface != nullptr && surface != &targetList);
+        const juce::Component::SafePointer<juce::Component> pressed(surface);
+        const auto position = surface->getLocalPoint(&targetList, point).toFloat();
+        const auto now = juce::Time::getCurrentTime();
+        const juce::ModifierKeys mods(rightClick ? juce::ModifierKeys::rightButtonModifier : juce::ModifierKeys::leftButtonModifier);
+        const juce::MouseEvent click(juce::Desktop::getInstance().getMainMouseSource(), position, mods,
+                                     0, 0, 0, 0, 0, surface, surface, now, position, now, 1, false);
+        const auto anchor = SwellList::menuAnchor(click);
+        surface->mouseDown(click);
+        if (pressed) pressed->mouseUp(click);
+
+        auto* menu = dynamic_cast<ChoicePopup*>(juce::Component::getCurrentlyModalComponent());
+        REQUIRE(menu && menu->getName() == "swellActionMenu");
+        REQUIRE(menu->getTitle() == "Actions for " + targetList.rowAt(targetList.rowFor(id))->name);
+        REQUIRE(menu->state().items()[0].role == PopupRowRole::action && menu->state().items()[1].role == PopupRowRole::destructiveAction);
+        const auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForRect(anchor);
+        REQUIRE(display && menu->getScreenBounds() == ChoicePopup::placedBounds(anchor, display->userArea, menu->getWidth(), menu->getHeight()));
+        return menu;
     };
-    const auto popup=[]()->juce::Component*
+    const auto renameDialog=[&](const juce::String& id, bool rightClick)
     {
-        auto& desktop=juce::Desktop::getInstance();for(int i=desktop.getNumComponents();--i>=0;)if(desktop.getComponent(i)->getName()=="menu")return desktop.getComponent(i);
-        return nullptr;
-    };
-    const auto renameDialog=[&](const juce::String& id)
-    {
-        const auto row=list->rowFor(id);list->getModel()->listBoxItemClicked(row,rowEvent(row));auto* menu=popup();REQUIRE(menu);
+        auto* menu = openMenu(*list, id, rightClick);
         menu->keyPressed(juce::KeyPress(juce::KeyPress::downKey));menu->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
-        juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+        pump();
         auto* dialog=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());REQUIRE(dialog && dialog->getTextEditor("name"));return dialog;
     };
+    const auto originalName = m3::find(engine.savedSession(), first)->name;
+    auto* cancelledRename = renameDialog(first, false);
+    cancelledRename->getTextEditor("name")->setText("Cancelled edit");
+    cancelledRename->exitModalState(0);
+    pump();
+    REQUIRE(m3::find(engine.savedSession(), first)->name == originalName);
+
+    auto* cancelledMenu = openMenu(*list, second, true);
+    cancelledMenu->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+    pump();
+    REQUIRE(juce::Component::getCurrentlyModalComponent() == nullptr);
+    REQUIRE(m3::find(engine.savedSession(), second));
+
     // Rename remains pinned while its original row moves.
-    auto* rename=renameDialog(first);rename->getTextEditor("name")->setText("Pending rename follows ID");
+    auto* rename=renameDialog(first, true);rename->getTextEditor("name")->setText("Pending rename follows ID");
     REQUIRE(engine.edit(first,[](auto& w,auto& e){return m3::moveArrival(w,0,e);}));editor.refresh();
     rename->exitModalState(1);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();verify();
     REQUIRE(m3::find(engine.savedSession(),first)->name=="Pending rename follows ID" && m3::find(engine.savedSession(),earlier)->name=="ZZZ arbitrary earlier");
 
     // A menu opened before a reorder deletes its original ID, not its old row.
-    const auto row=list->rowFor(earlier);list->getModel()->listBoxItemClicked(row,rowEvent(row));auto* menu=popup();REQUIRE(menu);
+    auto* menu = openMenu(*list, earlier, false);
     REQUIRE(engine.edit(earlier,[](auto& w,auto& e){return m3::moveArrival(w,80000,e);}));editor.refresh();
+    REQUIRE(engine.selectTargets({second}, second));editor.refresh();
     menu->keyPressed(juce::KeyPress(juce::KeyPress::upKey));menu->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+    menu->activate(1);
     juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();verify();REQUIRE(!m3::find(engine.savedSession(),earlier));
+    REQUIRE(m3::find(engine.savedSession(), second));
+
+    // Replace the session after queuing Delete and before the binding receives it.
+    menu = openMenu(*list, first, true);
+    const auto beforeDelete = engine.savedSession();
+    menu->activate(1);
+    engine.restore(beforeDelete);
+    pump();
+    editor.refresh();
+    REQUIRE(m3::find(engine.savedSession(), first));
+
+    {
+        auto temporary = std::make_unique<PreverbAudioProcessorEditor>(processor);
+        nativeInputPeer(*temporary);
+        temporary->refresh();
+        auto* temporaryList = dynamic_cast<SwellList*>(named(*temporary, "swellList"));
+        REQUIRE(temporaryList);
+        openMenu(*temporaryList, second, false)->activate(1);
+        temporary.reset();
+        pump();
+        REQUIRE(juce::Component::getCurrentlyModalComponent() == nullptr);
+        REQUIRE(m3::find(engine.savedSession(), second));
+    }
 
     // Same ID, new session: stale rename/select/delete are all rejected.
-    rename=renameDialog(first);rename->getTextEditor("name")->setText("Must not cross restore");
+    rename=renameDialog(first, false);rename->getTextEditor("name")->setText("Must not cross restore");
     const auto oldEpoch=engine.snapshot().sessionEpoch;auto replacement=engine.savedSession();
     engine.restore(replacement);rename->exitModalState(1);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();
     REQUIRE(engine.snapshot().sessionEpoch!=oldEpoch && m3::find(engine.savedSession(),first)->name==m3::find(replacement,first)->name);

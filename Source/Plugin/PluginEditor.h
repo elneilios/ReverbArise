@@ -13,6 +13,7 @@
 #include <UI/LearnWorkspace.h>
 #include <UI/ExportWorkspace.h>
 #include <UI/Controls/SwellList.h>
+#include <UI/Controls/ChoicePopup.h>
 #include <UI/PerformLayout.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
@@ -149,6 +150,7 @@ private:
     m3::SwellTimeline timeline;
     m3::SwellOverview songOverview{timeline};
     m3::ui::controls::SwellList list;
+    std::unique_ptr<m3::ui::controls::ChoicePopup> swellMenu;
     juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
     m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},removeButton{"Delete"},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
