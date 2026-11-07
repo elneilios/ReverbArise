@@ -23,7 +23,7 @@
 ## 4. Combined integration and review delivery
 
 - [x] 4.1 Integrate current merged main without importing active #108/#8 work, run scripts/build.ps1 -Configuration Release -Test, scripts/check-ui-standards.ps1, strict validation of this change, guide currency and whitespace/link checks; record revision/environment/results and honest host/DPI gaps, with protected command/audio/persistence regressions passing.
-- [ ] 4.2 Deliver a focused review-ready selector PR using Refs #107 and the recorded native approval/evidence; verify its diff contains only the named selector/shared-popup scope and prepare the separate action-menu handoff without marking its implementation delivered.
+- [x] 4.2 Deliver a focused review-ready selector PR using Refs #107 and the recorded native approval/evidence; verify its diff contains only the named selector/shared-popup scope and prepare the separate action-menu handoff without marking its implementation delivered.
 
 ## Workflow follow-up
 

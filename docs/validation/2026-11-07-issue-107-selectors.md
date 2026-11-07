@@ -207,3 +207,10 @@ extend ChoicePopup/PopupInteraction with action-row semantics rather than
 replacing captured list/reset commands. Its native checkpoint and separate PR
 remain required. Resolve the #108 KnobValue hookup overlap against that work's
 delivered baseline; do not import active #108/#8 work. The umbrella #107 stays open.
+
+The selector implementation is review-ready in
+[PR #117](https://github.com/elneilios/ReverbArise/pull/117), targeting main with
+Refs #107. The remote diff was checked against the named selector/shared-popup
+scope; it contains no protected engine/audio/persistence, KnobValue, storage or
+#108 implementation changes. The PR is open for owner review; spec sync/archive
+and merge remain later delivery steps, not inferred from native family approval.
