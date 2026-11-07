@@ -48,8 +48,10 @@ bool CaptureSession::restore(const std::string& project, const std::string& inst
     if (reference.isEmpty() && revision == 0)
     {state.manifestKnown=true;state.unavailable=!location->writable;return !state.unavailable;}
     CaptureManifest loaded;
-    const bool fromDisk=location->writable && store().loadSnapshot(reference,loaded,error);
-    const bool fromState=!fromDisk && reference.startsWith("manifests/") && reference.endsWith(".json") && isSafeCaptureAssetPath(reference.toStdString())
+    const bool fromDisk=savedManifest.isEmpty() && location->writable && store().loadSnapshot(reference,loaded,error);
+    // Associated host metadata is authoritative. A changed local manifest must
+    // not silently substitute another map with the same IDs/revision.
+    const bool fromState=reference.startsWith("manifests/") && reference.endsWith(".json") && isSafeCaptureAssetPath(reference.toStdString())
         && savedManifest.getNumBytesAsUTF8()<=8*1024*1024 && savedManifest.isNotEmpty() && parseCaptureManifest(savedManifest,loaded,error);
     if ((!fromDisk && !fromState)
         || loaded.projectId != project || loaded.instanceId != instance || loaded.revision != revision)
@@ -64,6 +66,11 @@ bool CaptureSession::restore(const std::string& project, const std::string& inst
     return ! state.unavailable;
 }
 
+bool CaptureSession::relocateVerified(std::shared_ptr<const CaptureStorageLocation> next)
+{
+    if(staged || state.unavailable || !next || !next->writable)return false;
+    root=next->projectsRoot;location=std::move(next);state.location=location;assets.reset();assetScope.clear();return true;
+}
 bool CaptureSession::reload(const std::string& project,const std::string& instance,const juce::String& reference,uint64_t revision)
 {
     CaptureSession candidate(root,location);

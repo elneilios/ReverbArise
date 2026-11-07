@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CaptureAssetStore.h"
+#include <Core/AssetAssociation.h>
 #include "CaptureFailureRecord.h"
 #include <optional>
 
@@ -25,6 +26,7 @@ struct CaptureStorageLocation
     juce::File projectsRoot,managedRoot;
     std::shared_ptr<void> lease;
     bool writable=true;
+    m3::storage::Association association;
 };
 struct CaptureSessionSnapshot
 {
@@ -50,6 +52,7 @@ public:
     explicit CaptureSession(juce::File projectsRoot,std::shared_ptr<const CaptureStorageLocation> location={});
     bool restore(const std::string& projectId, const std::string& instanceId,
                  const juce::String& reference, uint64_t revision,const juce::String& savedManifest={});
+    bool relocateVerified(std::shared_ptr<const CaptureStorageLocation>);
     bool reload(const std::string& projectId,const std::string& instanceId,const juce::String& reference,uint64_t revision);
     bool commit(int64_t start, double rate, const float* samples, uint32_t frames,double tolerance=0,const CaptureGenerationContext* context=nullptr);
     bool clear(double rate);

@@ -1,0 +1,117 @@
+#pragma once
+#include <Storage/WorkingFolder.h>
+#include <future>
+static void workingFolderProcessorCases()
+{
+    Fixture fixture;TestDirectory destination,forkDestination;juce::String error;
+    REQUIRE(destination.file.createDirectory().wasOk() && forkDestination.file.createDirectory().wasOk());
+    auto processor=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);load(*processor,fixture.xml);
+    ProfileHost host;host.position.setTimeInSamples(0);host.position.setPpqPosition(0.0);host.position.setBpm(120);
+    host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});host.position.setIsPlaying(false);
+    processor->setPlayHead(&host);processor->prepareToPlay(48000,6);juce::AudioBuffer<float> audio(2,6);audio.clear();juce::MidiBuffer midi;processor->processBlock(audio,midi);
+    Input input;waitFor([&]{return processor->pinPortableAssets(input,error);});const auto before=processor->getCaptureSnapshot();const auto flow=processor->getWorkflowSnapshot();
+    std::shared_ptr<WorkingFolder> folder;REQUIRE(prepareWorkingFolder(input,destination.file,processor->assetRegistryRoot(),folder,error));
+    const auto newRoot=workingFolderInfo(*folder).projectsRoot.getChildFile(fixture.observed.project).getChildFile(fixture.observed.instance);
+    TestDirectory backupFolder;REQUIRE(backupFolder.file.createDirectory().wasOk());std::shared_ptr<Prepared> backupInput;
+    REQUIRE(prepare(input,backupInput,error));const auto backupResult=backup(backupInput,backupFolder.file);REQUIRE(backupResult.success);backupInput.reset();
+    const auto receiptFile=backupFolder.file.getChildFile("receipts/"+backupResult.receipt.locator.snapshot+".json");
+    const auto apply=[&](auto& owner,const auto& prepared,const auto& expected){
+        auto task=std::async(std::launch::async,[&]{return owner.useWorkingFolder(prepared,expected,error);});
+        REQUIRE(task.wait_for(std::chrono::seconds(15))==std::future_status::ready);
+        if(!task.get())throw std::runtime_error(error.toStdString());
+    };
+    Hooks cancel;cancel.cancelled=[]{return true;};REQUIRE(!processor->useWorkingFolder(folder,input,error,cancel));
+    REQUIRE(processor->swellEngine().assetDirectory()==input.instanceRoot && processor->getCaptureSnapshot().reference==before.reference);
+    auto stale=input;++stale.controlEpoch;REQUIRE(!processor->useWorkingFolder(folder,stale,error));
+    REQUIRE(processor->swellEngine().assetDirectory()==input.instanceRoot);
+    apply(*processor,folder,input);
+    REQUIRE(processor->swellEngine().assetDirectory()==newRoot && processor->getCaptureSnapshot().reference==before.reference);
+    REQUIRE(processor->getWorkflowSnapshot().mode==flow.mode && processor->getWorkflowSnapshot().pass==flow.pass
+        && processor->getWorkflowSnapshot().phase==flow.phase && processor->getWorkflowSnapshot().recapture==flow.recapture);
+    juce::MemoryBlock saved;processor->getStateInformation(saved);const auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(xml && xml->getStringAttribute("stateVersion")=="9");
+    m3::storage::Association association;juce::String base,manifest;
+    REQUIRE(m3::storage::decodeAssociatedState(xml->toString(),association,base,manifest,error));
+    REQUIRE(association.store==workingFolderInfo(*folder).association.store && association.writer==workingFolderInfo(*folder).association.writer);
+    {CaptureSession verified(workingFolderInfo(*folder).projectsRoot);REQUIRE(verified.restore(before.manifest.projectId,before.manifest.instanceId,before.reference,before.manifest.revision));
+    float left=0,right=0;REQUIRE(verified.readSample(0,left,right));}
+    {TestDirectory unsafeRegistry;REQUIRE(unsafeRegistry.file.getChildFile("locations").createDirectory().wasOk());
+        auto hint=juce::var(new juce::DynamicObject);hint.getDynamicObject()->setProperty("version",1);hint.getDynamicObject()->setProperty("store",association.store);
+        hint.getDynamicObject()->setProperty("folder",destination.file.getFileName());
+        REQUIRE(unsafeRegistry.file.getChildFile("locations/"+association.registration+".json").replaceWithText(juce::JSON::toString(hint)));
+        struct CwdGuard{juce::File prior=juce::File::getCurrentWorkingDirectory();~CwdGuard(){prior.setAsCurrentWorkingDirectory();}} cwd;
+        REQUIRE(destination.file.getParentDirectory().setAsCurrentWorkingDirectory());std::shared_ptr<WorkingFolder> inferred;
+        REQUIRE(!resolveWorkingFolder(association,base,manifest,unsafeRegistry.file,inferred,error) && !inferred);
+    }
+    auto reopened=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);reopened->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(reopened->flushCaptureForTesting());waitFor([&]{return reopened->swellEngine().assetDirectory()==newRoot;});
+    REQUIRE(reopened->getCaptureSnapshot().location->association.writer!=association.writer && !reopened->getCaptureSnapshot().unavailable);
+    Input forkInput;waitFor([&]{return reopened->pinPortableAssets(forkInput,error);});std::shared_ptr<WorkingFolder> fork;
+    REQUIRE(prepareWorkingFolder(forkInput,forkDestination.file,reopened->assetRegistryRoot(),fork,error));apply(*reopened,fork,forkInput);
+    REQUIRE(reopened->getCaptureSnapshot().location->association.store!=association.store && processor->swellEngine().assetDirectory()==newRoot);
+    // A legacy save still selects its original tree after an associated load.
+    load(*reopened,fixture.xml);waitFor([&]{return reopened->swellEngine().assetDirectory()==fixture.root;});
+    REQUIRE(!reopened->getCaptureSnapshot().location->association.present() && !reopened->getCaptureSnapshot().unavailable);
+    for(const auto& dependency:fixture.observed.dependencies)REQUIRE(fileHash(fixture.root.getChildFile(dependency.path))==fileHash(newRoot.getChildFile(dependency.path)));
+    // A host save while associated resolution is pending retains exact metadata.
+    reopened->holdCaptureWorkerForTesting(true);waitFor([&]{return reopened->captureWorkerHeldForTesting();});
+    reopened->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));juce::MemoryBlock pending;reopened->getStateInformation(pending);
+    const auto pendingXml=juce::AudioProcessor::getXmlFromBinary(pending.getData(),static_cast<int>(pending.getSize()));
+    REQUIRE(pendingXml && pendingXml->getStringAttribute("manifestReference")==before.reference && pendingXml->getStringAttribute("stateVersion")=="9");
+    reopened->holdCaptureWorkerForTesting(false);REQUIRE(reopened->flushCaptureForTesting());
+    const auto processState=fixture.directory.file.getChildFile("association-process-state.xml");REQUIRE(processState.replaceWithText(xml->toString()));
+    associationProcessCases(processState,fixture.directory.file,newRoot);
+    REQUIRE(processor->getCaptureSnapshot().reference==before.reference && processor->swellEngine().savedSession().swells.front().render==fixture.session.swells.front().render);
+    for(const auto& dependency:fixture.observed.dependencies)REQUIRE(fileHash(fixture.root.getChildFile(dependency.path))==fileHash(newRoot.getChildFile(dependency.path)));
+    reopened.reset();processor.reset();folder.reset();fork.reset();
+    const auto offline=destination.file.getSiblingFile("Lost-"+juce::Uuid().toString());
+    const auto renameDeadline=juce::Time::getMillisecondCounterHiRes()+5000;
+    while(!destination.file.moveFileTo(offline) && juce::Time::getMillisecondCounterHiRes()<renameDeadline)juce::Thread::sleep(10);
+    REQUIRE(offline.isDirectory() && !destination.file.exists());destination.file=offline;
+    auto missing=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);missing->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(missing->flushCaptureForTesting());missing->setPlayHead(&host);missing->prepareToPlay(48000,6);missing->processBlock(audio,midi);
+    Input unavailable;waitFor([&]{return missing->pinPortableAssets(unavailable,error,true);});
+    REQUIRE(unavailable.sourceUnavailable && missing->getCaptureSnapshot().manifestKnown && !missing->getCaptureSnapshot().location->writable);
+    REQUIRE(!missing->setRecaptureExisting(true));
+    TestDirectory recovery;REQUIRE(recovery.file.createDirectory().wasOk());std::shared_ptr<WorkingFolder> workspace;
+    REQUIRE(prepareRecoveryWorkspace(unavailable,recovery.file,missing->assetRegistryRoot(),workspace,error));apply(*missing,workspace,unavailable);
+    REQUIRE(missing->getCaptureSnapshot().unavailable && missing->getCaptureSnapshot().location->writable && missing->getCaptureSnapshot().reference==before.reference);
+    juce::MemoryBlock recoveryState;missing->getStateInformation(recoveryState);const auto recoveryXml=juce::AudioProcessor::getXmlFromBinary(recoveryState.getData(),static_cast<int>(recoveryState.getSize()));
+    m3::storage::Association recoveryAssociation;REQUIRE(recoveryXml && m3::storage::decodeAssociatedState(recoveryXml->toString(),recoveryAssociation,base,manifest,error));
+    REQUIRE(recoveryAssociation.recoveryOrigins.size()==1 && recoveryAssociation.recoveryOrigins[0].store==association.store
+        && !recovery.file.getChildFile("receipts").exists());
+    REQUIRE(missing->setRecaptureExisting(true));missing->cancelCapturePass();
+    auto recoveryReopen=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);recoveryReopen->setStateInformation(recoveryState.getData(),static_cast<int>(recoveryState.getSize()));
+    REQUIRE(recoveryReopen->flushCaptureForTesting());
+    REQUIRE(recoveryReopen->getCaptureSnapshot().location->writable && recoveryReopen->getCaptureSnapshot().location->association.store==recoveryAssociation.store);
+    for(const auto& dependency:fixture.observed.dependencies)REQUIRE(fileHash(fixture.root.getChildFile(dependency.path))==fileHash(offline.getChildFile("working").getChildFile(fixture.observed.project).getChildFile(fixture.observed.instance).getChildFile(dependency.path)));
+    auto relocated=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);relocated->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(relocated->flushCaptureForTesting());Input locateInput;waitFor([&]{return relocated->pinPortableAssets(locateInput,error,true);});
+    REQUIRE(locateInput.folderUnavailable);std::shared_ptr<WorkingFolder> located;
+    if(!prepareAssociatedLocation(locateInput,offline,relocated->assetRegistryRoot(),located,error))throw std::runtime_error("Exact Locate: "+error.toStdString());apply(*relocated,located,locateInput);
+    REQUIRE(!relocated->getCaptureSnapshot().unavailable && relocated->getCaptureSnapshot().location->association.store==association.store);
+    REQUIRE(relocated->swellEngine().snapshot().renderCount==0);
+    TestDirectory cleanRegistry,restoredStore;REQUIRE(cleanRegistry.file.createDirectory().wasOk() && restoredStore.file.createDirectory().wasOk());
+    auto restored=std::make_unique<PreverbAudioProcessor>(cleanRegistry.file);restored->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(restored->flushCaptureForTesting());Input restoreInput;waitFor([&]{return restored->pinPortableAssets(restoreInput,error,true);});
+    REQUIRE(restoreInput.folderUnavailable);std::shared_ptr<WorkingFolder> restoredFolder;
+    if(!prepareRestoredWorkingFolder(restoreInput,receiptFile,restoredStore.file,restored->assetRegistryRoot(),restoredFolder,error))throw std::runtime_error("Associated Restore: "+error.toStdString());apply(*restored,restoredFolder,restoreInput);
+    REQUIRE(!restored->getCaptureSnapshot().unavailable && restored->getCaptureSnapshot().location->association.store!=association.store);
+    REQUIRE(restored->swellEngine().snapshot().renderCount==0 && restored->getCaptureSnapshot().reference==before.reference);
+    for(const auto& dependency:fixture.observed.dependencies)REQUIRE(fileHash(fixture.root.getChildFile(dependency.path))==fileHash(restored->swellEngine().assetDirectory().getChildFile(dependency.path)));
+    juce::MemoryBlock accepted;restored->getStateInformation(accepted);
+    const auto acceptedXml=juce::AudioProcessor::getXmlFromBinary(accepted.getData(),static_cast<int>(accepted.getSize()));REQUIRE(acceptedXml);
+    const auto declared=juce::String("<!DOCTYPE PreverbState [<!ENTITY ignored 'must not expand'>]>")+acceptedXml->toString();
+    const auto declaredBytes=static_cast<uint32_t>(declared.getNumBytesAsUTF8());const auto littleLength=juce::ByteOrder::swapIfBigEndian(declaredBytes);
+    juce::MemoryBlock rejected(static_cast<size_t>(declaredBytes)+9,true);rejected.copyFrom(accepted.getData(),0,4);rejected.copyFrom(&littleLength,4,4);rejected.copyFrom(declared.toRawUTF8(),8,declaredBytes);
+    restored->setStateInformation(rejected.getData(),static_cast<int>(rejected.getSize()));juce::MemoryBlock retained;restored->getStateInformation(retained);
+    REQUIRE(retained==accepted && restored->swellEngine().snapshot().message.contains("declarations"));
+    auto deep=std::make_unique<juce::XmlElement>(*acceptedXml);deep->getChildByName("SwellSession")->deleteAllTextElements();
+    deep->getChildByName("SwellSession")->addTextElement(juce::String::repeatedString("[",32)+"0"+juce::String::repeatedString("]",32));
+    // Use a legacy envelope here so the creative-depth guard itself is tested,
+    // independently of association snapshot-integrity rejection.
+    deep->removeChildElement(deep->getChildByName("WorkingFolder"),true);deep->setAttribute("stateVersion",8);
+    juce::MemoryBlock nested;juce::AudioProcessor::copyXmlToBinary(*deep,nested);restored->setStateInformation(nested.getData(),static_cast<int>(nested.getSize()));
+    restored->getStateInformation(retained);REQUIRE(retained==accepted && restored->swellEngine().snapshot().message.contains("nested"));
+    std::cout<<"Production folder association: verified handoff, unchanged Learn state/source, v9 memory-only save, independent reopen lease, physical fork, legacy reopen and pending-restore save passed.\n";
+}

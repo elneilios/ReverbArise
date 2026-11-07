@@ -95,14 +95,17 @@ bool visitDependencies(ObservedSnapshot& source,juce::String& error)
 }
 bool readLegacySnapshot(const juce::String& xml,const juce::String& manifestJson,ObservedSnapshot& output,juce::String& error)
 {
-    if(!bounded(xml,maximumMetadataBytes*6+1024*1024) || !bounded(manifestJson,maximumMetadataBytes))return fail(error,"Oversized observed state");
+    if(!bounded(xml,97*1024*1024) || !bounded(manifestJson,maximumMetadataBytes))return fail(error,"Oversized observed state");
     if(xml.containsIgnoreCase("<!DOCTYPE") || xml.containsIgnoreCase("<!ENTITY"))return fail(error,"External/entity XML is not supported by the read-only adapter");
     const auto envelope=juce::XmlDocument::parse(xml);if(!envelope || !envelope->hasTagName("PreverbState"))return fail(error,"Malformed processor envelope");
     const auto version=envelope->getIntAttribute("stateVersion",0);
+    if(version!=associatedEnvelopeVersion && !bounded(xml,maximumMetadataBytes*6+1024*1024))return fail(error,"Oversized legacy state");
     if(version==associatedEnvelopeVersion){
         Association association;juce::String legacy,captured;
         if(!decodeAssociatedState(xml,association,legacy,captured,error) || captured!=manifestJson)return fail(error,"Associated metadata does not match the supplied capture manifest");
-        return readLegacySnapshot(legacy,captured,output,error);
+        ObservedSnapshot next;next.label=output.label;if(!readLegacySnapshot(legacy,captured,next,error))return false;
+        if(association.recoveryRecord.isNotEmpty())next.dependencies.push_back({"recovery/"+association.recoveryRecord+".json",association.recoveryRecord,{},{}});
+        output=std::move(next);return true;
     }
     if(version<1 || version>8 || envelope->getStringAttribute("stateVersion")!=juce::String(version))return fail(error,"Unsupported processor envelope version");
     ObservedSnapshot next;next.label=output.label;
@@ -132,6 +135,9 @@ void Catalog::rebuild(const std::vector<ObservedSnapshot>& snapshots,const std::
 Report inspect(const Request& request,const std::function<bool()>& cancelled)
 {
     Report report;report.scannedAt=juce::Time::getCurrentTime();try {
+    if(request.roots.empty() && request.observationError.isNotEmpty()){
+        report.inventoryComplete=false;report.dependencyVerificationComplete=false;report.issues.push_back(request.observationError.substring(0,512));return report;
+    }
     if(request.roots.empty() || request.roots.size()>128 || request.snapshots.size()>128 || request.activePins.size()>4096 || request.limits.entries>20000 || request.limits.depth>12
         || request.limits.decodeBytes>32ull*1024*1024 || request.limits.milliseconds>30000 || request.limits.milliseconds<=0){report.inventoryComplete=false;report.dependencyVerificationComplete=false;report.issues.push_back("Invalid or excessive inventory limits.");return report;}
     report.catalog.rebuild(request.snapshots,request.activePins,request.priorIndexAvailable);

@@ -1,164 +1,132 @@
 # Working-folder association — issue #8
 
-Phase 4 continues `portable-project-assets` on `codex/8-working-folder-association`,
-from merged main `f98157e`. The owner authorized this phase on 2026-11-06. This
-first increment prepares the storage transaction and a disposable native control
-preview. **Production still reads processor envelopes 1–8, writes v8, and uses
-the existing user-data root. The new panel is not in production Settings.**
+Phase 4 of `portable-project-assets` continues on PR #112 from merged PR #31.
+The owner approved the native Choose folder → verified copy → Use This Folder
+family and separately approved explicit incomplete recovery workspaces.
+Production Settings now integrates that family. The processor reads envelopes
+1–9, retains v8 for sessions using the legacy default, and writes v9 after an
+explicit association. Capture schemas, creative state and Export versions are
+independent and unchanged. Full phase-4 acceptance remains subject to the gates
+below; this is not authorization to release, merge or clean up assets.
 
-## Ownership and transaction
+## User flow and scope
 
-`Storage/WorkingFolder.h` is a worker/control-only API. It extends the existing
-pinned-handle, exact-byte backup backend; it neither calls Learn/rendering nor
-changes a live processor. The processor binding will own the eventual atomic
-association change, worker-root handoff and coalesced host-change notification.
-No disk work belongs in the callback or host-state serializer.
+- Fresh/unsupported hosts keep the existing user-data working directory. No
+  project path is inferred from CWD, project names, presets or Save As.
+- In Storage, Choose folder copies and verifies the accepted dependency closure
+  without changing the live folder. Use This Folder rechecks the prepared copy,
+  then conditionally changes the source/engine location and requests a DAW save.
+  It does not claim the host has saved anything. Originals stay untouched.
+- Choosing a new empty folder for an already associated instance is an explicit
+  physical Fork: verified independent bytes and a distinct store identity.
+  Reopen/duplication uses a fresh writer lease without automatically moving assets
+  or renaming durable project, instance, swell or legacy asset identities.
+- Locate selects the associated store folder. Identity, exact current metadata
+  and all required bytes are verified before adoption; a mutable newer head is
+  never substituted. A moved folder must remain within the supported path limit.
+- Restore selects an exact completed receipt. If the associated folder is lost,
+  the user also chooses an empty destination; verified assets are copied into a
+  new store before adoption. With an available working folder, the existing
+  verified same-root restore behavior remains available.
+- When assets cannot be recovered, Choose recovery folder prepares a deliberately
+  incomplete workspace. It retains original locators, decodable arrangement and
+  verified survivors; missing/unknown requirements stay explicit. Creation emits
+  no complete snapshot or backup receipt. Use This Folder is still explicit.
+  Then use normal Learn with Detect events off and Recapture audio on. Existing
+  unfrozen swells rebuild only after complete required fresh source and verified
+  IRs are available. Frozen consent and lost-export limitations are unchanged.
 
-1. Choose an explicit existing empty dedicated folder, or a supported store.
-   No host path is inferred. Unsupported/unsaved hosts keep the user-data default.
-2. Pin the accepted source/creative metadata and every declared dependency.
-   Publish and verify a complete v1 backup before materializing working aliases.
-3. Materialize `working/<project>/<instance>/<legacy-alias>` through the same
-   no-replace, hash-verified copy mechanism. This deliberately duplicates the
-   initial backup objects rather than introducing hardlinks or changing codecs.
-4. Keep a prepared candidate; the live root remains unchanged. `Use This Folder`
-   rechecks the exact root, epoch, XML, manifest, availability and destination
-   hashes on a worker. A changed session, cancellation, corruption or conflicting
-   destination fails without adopting the candidate or deleting originals.
-5. The future production binding must recheck admission and atomically hand off
-   capture/render/export roots before accepting. It requests a DAW save; it
-   cannot claim the host saved. That binding is pending; native control approval is recorded below.
+Working-folder actions and Backup/Restore/Locate occupy two pinned action rows.
+Details above them scroll, using the approved shared ActionButton, EllipsisLabel,
+FocusViewport, helper roles and comfortable spacing. No new style token, visual
+variant or Storage Learn/Generate control is introduced. Scan retention remains
+unchanged when returning to the same page; a changed session/root gets its own
+inventory scope.
 
-`WorkingFolderPanel` composes existing ActionButton, EllipsisLabel, FocusViewport,
-text roles and spacing tokens. Content scrolls above pinned Choose/Use actions;
-Stop replaces the actions during work. Picker completion uses a weak component
-reference and accepted-state checks. The preview has a real disposable binding,
-verified copying, rejection and explicit activation; it cannot alter a real FLP
-or the installed plugin. No new style token or exception is introduced.
+## Ownership and publication
 
-## Candidate metadata and writer ownership
+`Storage/WorkingFolder.h` owns worker-only exact-byte preparation, verification,
+selected-root pins, registry hints and exclusive runtime writer leases. Complete
+packing includes source/context IRs, retained library/default/swell IRs, exact wet
+results, metadata and every saved Export-history dependency. A recovery record
+is also a protected dependency. Missing required files prevent complete packing.
+There is no garbage collector or automatic durable-file removal.
 
-The backend-only candidate codec reserves processor envelope **v9**, association
-metadata **v1**. It embeds the canonical v8 accepted envelope and exact capture
-manifest metadata (not PCM), plus store/snapshot/writer/registration identities.
-The snapshot hash is domain-separated from the v1 pack snapshot/receipt hash.
-Store identity plus complete saved closure must validate; a backup receipt for
-an older revision is never substituted for current host edits. The production
-processor does not yet read or write this candidate envelope.
+`CaptureSessionSnapshot` retains an immutable `CaptureStorageLocation`, including
+the selected projects root, managed-store boundary, lease and association metadata.
+Old accepted snapshots/readers keep their original location alive. An unresolved
+association retains known source metadata with a non-writable location; opening
+it never redirects writes into user data. The UI reports the unavailable store
+instead of exposing the internal non-writable placeholder.
 
-This keeps a host save free of asynchronous filesystem publication: exact
-accepted metadata can be serialized from memory even while a separate store
-checkpoint is pending. The production implementation still needs coherent
-source/creative publication tests, bounded v9 host decoding and the normal
-missing-folder recovery binding. No claim of those behaviors is made here.
+The production binding runs off the message/audio threads. It pauses engine file
+jobs, verifies the prepared closure and prepares any restored source frame. The
+capture actor then acquires the processor/model publication guards in the defined
+order, rechecks current metadata/admission and adopts the location without resetting
+Learn state, advancing source generation or draining callback packets. Capture
+that has already begun rejects the handoff. Packets admitted after a successful
+swap use the same source generation and the new directory. Host save serialization
+is fenced with the final publication and the coalesced dirty notification.
 
-Absolute paths exist only in immutable local
-`<user-data Projects>/locations/<registration-uuid>.json` hints. Hints grant no
-authority. Resolve the explicitly registered candidate by store identity and
-complete current closure. If it is unavailable, examine at most 128 explicit
-registrations; multiple verified locations require explicit selection. Locate
-verifies the selected folder and writes a fresh registration. It never chooses
-the newest head, rewrites creative edits or infers a Save As operation.
+Material fingerprints exclude directory location. The common swell engine owns
+sound maintenance; association adds no special recovery renderer. Engine/offline
+jobs use the accepted source location. Retained Export preview/detail/delivery
+readers use their pinned preparation location, and external Save is blocked inside
+both the active and retained managed stores. No new disk work or locks enter the
+real-time callback. Offline rendering retains its existing non-real-time contract.
 
-Every admitted runtime gets a new UUID branch and an exclusively held native
-lease under `instances/<instance>/branches/<writer>/lease`. A serialized writer
-is provenance, never reusable ownership. Probe candidates are verified before
-acquiring a lease. Closed lease files remain as evidence; no collector is added.
-Existing immutable UUID/suffix filenames and no-replace publication preserve
-historical aliases. Integration must keep a root/lease pin alive for every
-admitted job; backend lease tests alone do not complete task 4.2.
+## Host state, resolution and compatibility
 
-Preparing from an associated working root into a different store performs a
-physical copy with a distinct store identity. This is the backend for explicit
-Fork. The production Fork command and end-to-end independent-write tests remain
-pending; Save As never triggers it automatically.
+V9 stores exact accepted v8-domain metadata plus bounded association and source
+metadata. Saving is memory-only; it neither hashes files nor publishes filesystem
+snapshots. A save during asynchronous host restore retains the loaded IDs,
+reference/revision and association rather than serializing an empty loading frame.
+Embedded accepted source metadata takes precedence over a locally changed manifest.
+Dependency-bearing unknown versions fail transactionally.
 
-## Compatibility, rollback and remaining gates
+Store/snapshot UUIDs and hashes identify metadata; the snapshot hash is not a
+complete-pack receipt. Absolute paths exist only in local registry hints under
+the original user-data Projects root. Saved writer IDs grant no ownership: every
+associated runtime acquires a new UUID writer branch and exclusive lease. Registry fallback
+examines at most 128 records; ambiguous candidates require explicit Locate.
+An explicit operation can create the registry through pinned directory ancestry.
 
-Current production formats and user-data paths are unchanged. Old FLPs continue
-to name their exact original dependencies. Keep the original plugin binary,
-pre-upgrade FLP and untouched legacy store. After future association activation,
-save a new FLP copy: an upgraded envelope need not open in an older binary.
-Rolling back means using the retained original binary and pre-upgrade FLP with
-the original store, never rewriting the only upgraded or rollback project.
-The original-binary rollback exercise is still required before task 4.4 closes.
+An existing associated store with missing files retains writable recovery access
+after identity/metadata validation, without claiming complete closure. A wholly
+unavailable store stays non-writable until explicit Locate, Restore or workspace
+adoption. Recovery origins are bounded, retained inline in v9, and accompanied by
+a pinned hash-verified recovery record. History is never silently truncated to fit.
 
-Native approval was received for this revised control composition, as recorded below. Production integration in
-Settings must still satisfy the active design's “Explicit association” decision.
-Production root handoff, actual host-state compatibility, missing-store recovery,
-two-process capture/render/export publication, fresh-profile association proof
-and consolidated host validation remain required. All phase-4 tasks stay unchecked
-until their complete acceptance criteria pass. Durable cleanup, scratch removal,
-eviction, dedup experiments, compression, release and merge retain their separate
-gates. The issue and active change remain open.
+Managed categories contain pinned `.directory-pin` files. Together with pinned
+ancestry this prevents replacing an emptied category with a junction while allowing
+the existing immutable UUID/no-replace publishers to work. Administrative markers
+remain protected. The backend supports local Windows paths up to its measured
+240 UTF-16-unit boundary; unsupported paths produce a specific error. No claim is
+made for UNC, device paths or cloud-sync transactional guarantees.
+
+Keep pre-upgrade FLPs, the original binary and the untouched legacy store. Loading
+a legacy state after an associated session explicitly selects the legacy root.
+An old binary may reject v9; rollback does not promise it can read an upgraded FLP.
+Do not overwrite the only pre-upgrade project or delete original assets.
+
+## Validation and remaining gates
+
+Native component/processor coverage includes production Settings bindings and
+pinned rows, stale/cancel/failure handling, unchanged Learn state, v9 saves during
+restore, independent reopen leases, physical copies, legacy reopen, whole-store
+loss, explicit workspace recovery and verified Locate/Restore. Two native processor
+processes simultaneously publish actual captures, imported IRs, renders and exports,
+then reopen their exact states while original hashes remain intact. This is native
+MSVC coverage, not FL Studio or second-profile evidence.
+
+Required before phase-4 acceptance: stable full native regression; associated
+destination-only fresh Windows-profile validation; retained original-binary/
+pre-upgrade FLP rollback; and one consolidated scoped FL Studio smoke test. Do not
+archive the active change, close issue #8 or merge PR #112 from these component
+results. Phases 5/6 cleanup, eviction, compression and default-storage cutover remain
+separately gated.
 
 See [backup contracts](portable-asset-backups.md),
-[version/rollback matrix](asset-storage-contracts.md) and
-[dated evidence](../validation/2026-11-06-issue-8-working-folder.md).
-
-
-## Owner native approval — 2026-11-06
-
-The owner explicitly approved the working-folder layout and Choose folder →
-verified copy → Use This Folder interaction: “Approve layout and interaction”.
-This clears the scoped native control gate, not the remaining production root,
-writer, state, recovery, rollback or validation gates. The owner closed the
-disposable preview. Both unchanged native-focus tests passed on retry after that
-review ended. No foreground-focus assertion was removed or weakened.
-
-
-## Approved integration decision: an irrecoverable whole working folder
-
-The portability delta requires a verified copy before association, while the
-retention/recovery delta promises normal Learn when original assets cannot be
-recovered. Missing individual files in an available working folder can follow
-the existing recovery path. If the entire associated folder is lost or offline,
-its writer root is unavailable and a complete verified transfer is impossible.
-The present plan does not authorize an incomplete transfer as a successful pack.
-
-The owner approved this explicit exception on 2026-11-06: create a new recovery workspace
-only after a deliberate user choice. Keep the original store/snapshot locator,
-all decodable swell identities/settings and unresolved references for later
-Locate/Restore. Clearly label the workspace incomplete; never publish a complete
-copy/backup receipt. The user then uses normal Learn with detection off; existing
-complete-source and IR checks, automatic unfrozen regeneration, frozen consent
-and missing-export disclosures remain unchanged. No Learn/Generate controls are
-added to Storage, no original data is deleted, and no fallback migration occurs
-silently. Host association changes still request an explicit DAW save.
-
-The owner chose the explicit recovery workspace. Native layout approval and this recovery exception are recorded separately; all remaining validation and rollout gates still apply. Worker/backend primitives are implemented and covered by native tests; production Settings, coherent host saves and atomic live-root handoff remain pending.
-
-
-## Recovery and location primitives — 2026-11-06
-
-`prepareRecoveryWorkspace` requires a deliberate, empty, separate destination.
-It preserves the accepted processor/source metadata, original locator and
-verified surviving dependencies, records missing dependencies and unknown source
-history, and never publishes a complete snapshot or receipt. A known missing
-capture manifest can be reconstructed from its exact accepted metadata; missing
-audio remains unavailable. Unknown capture coverage is never invented. Native
-tests then use the ordinary complete Learn capture transaction in this workspace.
-
-The candidate v9 codec carries bounded original recovery locators alongside the
-new working association. Unsupported locator versions/identities are rejected
-transactionally. The recovery record lives under the instance namespace and is
-hash-verified and pinned. Production continues to write v8 until host binding and
-rollback checks are complete.
-
-Capture snapshots now own an immutable location/lease. Host-restore commands can
-resolve a location off the callback, retain accepted source on failed handoff,
-and retain known metadata while blocking writes when a folder is unavailable.
-Old snapshots keep their original lease. The engine, offline rendering and
-export use the accepted source location; a Loading source defers file work and
-an unavailable location blocks it. A mere directory change keeps material
-fingerprints unchanged, and the focused engine fixture verifies no unnecessary
-convolution. These primitives are not the final user-association transaction:
-production must quiesce engine file work and conditionally adopt the prepared
-source without resetting workflow or dropping queued capture audio.
-
-Managed category directories contain pinned `.directory-pin` files. Together
-with pinned directory ancestry this prevents replacing an emptied category with
-a junction. Native probes confirm nonempty-category junction conversion is
-rejected and ordinary immutable capture publication still succeeds. No broader
-drive/profile directories are write-locked; marker files are administrative
-protected files, not assets eligible for cleanup.
+[version/rollback matrix](asset-storage-contracts.md),
+[earlier native evidence](../validation/2026-11-06-issue-8-working-folder.md) and
+[production integration evidence](../validation/2026-11-07-issue-8-phase4-settings.md).

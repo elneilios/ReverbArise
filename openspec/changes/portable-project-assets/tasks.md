@@ -35,7 +35,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 ## 4. Optional association and independent future writes
 
 - [ ] 4.1 Add the Storage asset working-folder picker and explicit Use This Folder only after copy/pack verification, with current user-data fallback and existing host-change notification. Use validated host project location as a proposed default only after separate runtime-evidence/rollout review; verify unsaved/unsupported hosts, cancellation, read-only destinations and Save As never silently move existing assets and successful switch requests a host save without claiming it happened. Add the owner-approved explicit incomplete recovery-workspace path for irrecoverable assets; preserve original locators, swell metadata and verified survivors, report missing/unknown history, never publish a complete-pack claim, and verify failure/cancellation retains the current association and originals before normal Learn recovery.
-- [ ] 4.2 Add independent writer branch/lease ownership while preserving legacy UUID provenance; verify reopened/copied/duplicated snapshots across two processes cannot overwrite history or publish into one another.
+- [x] 4.2 Add independent writer branch/lease ownership while preserving legacy UUID provenance; verify reopened/copied/duplicated snapshots across two processes cannot overwrite history or publish into one another.
 - [ ] 4.3 Add explicit physical Fork via verified copy, never automatic Save As migration; verify old FLPs still resolve exact legacy dependencies and both store copies remain independently usable.
 - [ ] 4.4 Publish association/version/rollback guidance and run supported old-state fixtures; verify rollback with the retained pre-upgrade FLP, original binary and untouched legacy store, documenting that upgraded states need not open in old binaries.
 
@@ -84,3 +84,19 @@ No Learn/Generate controls are added to Storage. Ordinary association and Fork
 retain complete verified-copy gates, host-save requests and rollback. Phase-4
 implementation remains authorized; cleanup, compression, default cutover and
 release/merge gates are unchanged. This approval completes no task checkbox.
+
+
+## Production phase-4 checkpoint — 2026-11-07
+
+The owner authorized completing phase 4 in PR #112, starting with production
+Settings integration. The approved folder family is integrated with worker-side
+copy/verification, conditional source/engine handoff, v9 associated host saves,
+exact Locate/Restore and explicit incomplete recovery workspaces. Existing
+user-data defaults, immutable identities, normal Learn/common-engine maintenance
+and host-save notification remain intact. See the updated ownership guide and
+[production evidence](../../../docs/validation/2026-11-07-issue-8-phase4-settings.md).
+Task 4.2 has passing real two-process capture/IR/render/export publication and
+reopen evidence and was checked through the required guarded Apply refresh.
+Remaining tasks/gates are not waived: stable full native regression, associated
+fresh-profile proof, actual pre-upgrade FLP/original-binary rollback and final
+scoped host acceptance. Keep issue #8 and the active change open; do not merge.

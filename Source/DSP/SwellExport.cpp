@@ -28,7 +28,7 @@ void SwellEngine::serviceExportDetail()
     if(budget<=scratch){error="Waveform detail working budget unavailable";fail();return;}
     struct Reservation{SwellEngine& engine;~Reservation(){const juce::ScopedLock guard(engine.lock);engine.activeJobBytes=0;}} reservation{*this};
     {const juce::ScopedLock guard(lock);activeJobBytes=budget;}
-    SongMix mix(instanceRoot(job->accepted->plan->source));auto detail=std::make_shared<SongMixDetail>();
+    SongMix mix(job->accepted->storage?job->accepted->storage->projectsRoot.getChildFile(job->accepted->plan->source.projectId).getChildFile(job->accepted->plan->source.instanceId):instanceRoot(job->accepted->plan->source));auto detail=std::make_shared<SongMixDetail>();
     const auto service=[&]{serviceExportPreview();return cancelled();};
     if(!mix.prepare(job->accepted->plan,budget-scratch,error,service)
         || !mix.adoptMeasurements(job->accepted->metrics,job->accepted->plan->identity,error)
@@ -55,12 +55,12 @@ uint64_t SwellEngine::deliverExport(uint64_t expectedSession,const ExportFile& f
         || exportState.pass!=workflowState->snapshot().pass || exportState.session!=sessionGeneration.load()
         || exportState.phase!=ExportPhase::ready || !exportState.prepared || exportState.prepared->file!=file || (!drag && destination==juce::File{}))return 0;
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return 0;
-    const auto location=storageLocation.load();
-    if(!location->writable){exportState.deliveryMessage="Asset working folder unavailable";return 0;}
-    if(!drag && (destination==location->managedRoot || destination.isAChildOf(location->managedRoot))){exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
+    const auto activeLocation=storageLocation.load();const auto location=exportState.prepared->storage?exportState.prepared->storage:activeLocation;
+    if(!activeLocation->writable || !location->writable){exportState.deliveryMessage="Asset working folder unavailable";return 0;}
+    if(!drag && (destination==location->managedRoot || destination.isAChildOf(location->managedRoot) || destination==activeLocation->managedRoot || destination.isAChildOf(activeLocation->managedRoot))){exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
     const auto id=++exportDeliverySerial;exportVoice->stop();
     exportDelivery=ExportDelivery{id,expectedSession,exportRequest.load(),workflowState->snapshot().pass,file,
-        instanceRoot(exportState.prepared->plan->source),destination,overwrite,drag,location};
+        location->projectsRoot.getChildFile(exportState.prepared->plan->source.projectId).getChildFile(exportState.prepared->plan->source.instanceId),destination,overwrite,drag,location};
     exportState.delivery=id;exportState.delivering=true;exportState.dragReady=false;exportState.deliveryPath.clear();
     exportState.deliveryMessage=drag?"Checking WAV for dragging":"Saving WAV; preview stopped";notify();return id;
 }
@@ -152,7 +152,7 @@ void SwellEngine::serviceExportPreview()
         uint64_t largestChunk=0;for(const auto& range:layerPlan->source.ranges)largestChunk=std::max(largestChunk,range.frameCount);
         const auto budget=uint64_t{1024*1024}+layerPlan->members.size()*16384+largestChunk*4*sizeof(float);
         if(budget>available()){if(activeJobBytes)return;error="Preview layer working budget unavailable";fail();return;}
-        exportPreviewBytes=budget;auto reader=std::make_unique<SongMix>(instanceRoot(layerPlan->source));
+        exportPreviewBytes=budget;auto reader=std::make_unique<SongMix>(pin->storage?pin->storage->projectsRoot.getChildFile(layerPlan->source.projectId).getChildFile(layerPlan->source.instanceId):instanceRoot(layerPlan->source));
         if(!reader->prepare(layerPlan,budget,error,cancelled)){
             // A dry-only preview has no wet-file dependency. Keep that path usable,
             // but revoke playback if a later edit requires the unavailable layer.

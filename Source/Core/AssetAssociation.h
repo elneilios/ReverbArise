@@ -55,6 +55,16 @@ inline bool associationXmlShape(const juce::String& value)
     }
     return depth==0;
 }
+inline bool associationJsonShape(const juce::String& value)
+{
+    if(value.getNumBytesAsUTF8()>8*1024*1024)return false;
+    int depth=0;bool quoted=false,escaped=false;
+    for(auto cursor=value.getCharPointer();!cursor.isEmpty();){const auto c=cursor.getAndAdvance();
+        if(quoted){if(escaped)escaped=false;else if(c=='\\')escaped=true;else if(c=='"')quoted=false;continue;}
+        if(c=='"')quoted=true;else if(c=='{' || c=='['){if(++depth>16)return false;}else if(c=='}' || c==']'){if(--depth<0)return false;}
+    }
+    return depth==0 && !quoted;
+}
 inline juce::String associationSnapshot(const juce::String& legacy,const juce::String& manifest)
 {
     ContentHash hash;const auto domain=juce::String("ReverbArise working metadata v1\n");
@@ -112,7 +122,7 @@ inline bool decodeAssociatedState(const juce::String& text,Association& associat
         }
     }
     const auto captured=node->getChildByName("CaptureManifest")->getAllSubText();
-    if(!associationValid(next) || captured.getNumBytesAsUTF8()>8*1024*1024)
+    if(!associationValid(next) || !associationJsonShape(captured))
     {error="Unsupported or oversized working-folder identity";return false;}
     xml->removeChildElement(node,true);xml->setAttribute("stateVersion",8);const auto base=xml->toString();
     if(associationSnapshot(base,captured)!=next.snapshot){error="Working snapshot does not match accepted metadata";return false;}

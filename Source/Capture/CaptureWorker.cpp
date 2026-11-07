@@ -159,7 +159,7 @@ void CaptureWorker::requestRestore(const std::string& project, const std::string
     if(workflowState)workflowState->reset(mode);
     mappingAllowed.store(false);
     generation.fetch_add(1);
-    loading.store(true);
+    loading.store(true);restoring=true;
     recoveryCaptureArmed=false;recoveryRequired.clear();
     restore = {project, instance, reference, revision,preserveOnFailure,std::move(storage)};
     restoreRequested.store(true, std::memory_order_release);
@@ -169,7 +169,7 @@ void CaptureWorker::requestClear()
 {
     const juce::ScopedLock guard(commandLock);recapture.cancel();
     if(workflowState)workflowState->reset();
-    mappingAllowed=false;usefulSource=false;generation.fetch_add(1);clearRequested=true;
+    mappingAllowed=false;usefulSource=false;generation.fetch_add(1);clearRequested=true;restoring=false;
 }
 
 bool CaptureWorker::flush(int timeout)
@@ -203,6 +203,43 @@ void CaptureWorker::updateSnapshot()
     if (rateStale) published.status = "Stale: host sample rate changed; mapping paused. Clear and recapture.";
 }
 
+bool CaptureWorker::relocateStorage(const CaptureSessionSnapshot& expected,uint64_t expectedGeneration,
+    std::shared_ptr<const CaptureStorageLocation> location,std::unique_ptr<CaptureSession> recovered,
+    std::function<bool(const std::function<bool()>&)> publication,juce::String& error)
+{
+    auto command=std::make_shared<Relocation>();command->expected=expected;command->generation=expectedGeneration;
+    command->location=std::move(location);command->recovered=std::move(recovered);command->publication=std::move(publication);
+    {const juce::ScopedLock guard(commandLock);if(relocation || isLoading() || !isThreadRunning()){error="Storage handoff is unavailable";return false;}relocation=command;}
+    notify();
+    while(!command->finished.wait(20))if(!isThreadRunning()){command->cancelled=true;error="Capture worker stopped before storage handoff";return false;}
+    error=command->error;return command->accepted;
+}
+void CaptureWorker::applyStorageRelocation()
+{
+    std::shared_ptr<Relocation> command;
+    {const juce::ScopedLock guard(commandLock);command=std::move(relocation);}
+    if(!command)return;
+    try{
+        const auto adopt=[&]{
+        const juce::ScopedLock guard(commandLock);const auto& current=session.snapshot();const auto& expected=command->expected;
+        const bool matching=current.location==expected.location && current.reference==expected.reference
+            && current.manifest.projectId==expected.manifest.projectId && current.manifest.instanceId==expected.manifest.instanceId
+            && current.manifest.revision==expected.manifest.revision && current.unavailable==expected.unavailable;
+        if(command->cancelled || generation.load()!=command->generation || isLoading() || !matching
+            || session.passActive() || activePass || !pending.empty() || queue.depth()!=0
+            || (workflowState && workflowState->snapshot().locked()))
+            command->error="The session or playback changed; the current working folder is retained";
+        else if(command->recovered){session=std::move(*command->recovered);command->accepted=true;}
+        else command->accepted=session.relocateVerified(command->location);
+        if(command->accepted)updateSnapshot();return command->accepted;
+        };
+        if(!command->publication || !command->publication(adopt)){
+            command->accepted=false;if(command->error.isEmpty())command->error="The source could not change folders; current source retained";
+        }
+    }catch(const std::exception& e){command->error=e.what();}
+    command->finished.signal();
+}
+
 void CaptureWorker::run()
 {
     AudioCaptureBlock block;
@@ -212,6 +249,7 @@ void CaptureWorker::run()
         if(workerHold.load()){workerHeld.store(true,std::memory_order_release);wait(2);continue;}
         workerHeld.store(false,std::memory_order_release);
         if(refreshAdmission.exchange(false))updateSnapshot();
+        applyStorageRelocation();
         if (restoreRequested.exchange(false, std::memory_order_acq_rel))
         {
             Restore command;
@@ -233,7 +271,7 @@ void CaptureWorker::run()
             }else if(command.preserveOnFailure)session.reload(command.project,command.instance,command.reference,command.revision);
             else session.restore(command.project, command.instance, command.reference, command.revision);
             { const juce::ScopedLock lock(commandLock);
-              if (generation.load() == commandGeneration) loading.store(false); }
+              if (generation.load() == commandGeneration) {updateSnapshot();loading.store(false);restoring=false;} }
             updateSnapshot();
         }
         if (clearRequested.exchange(false))

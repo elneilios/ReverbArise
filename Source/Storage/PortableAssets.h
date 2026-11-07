@@ -14,7 +14,7 @@ struct Input
     juce::String processorXml,manifestJson;
     juce::String producer="Synthetic/control input";
     juce::String exclusions=scopeExclusions;
-    bool sourceUnavailable=false; // Runtime admission only; never a complete-pack certificate.
+    bool sourceUnavailable=false,folderUnavailable=false; // Runtime admission only; never a complete-pack certificate.
     uint64_t controlEpoch=0; // Runtime binding token only; never serialized into a backup.
 };
 struct Entry {juce::String path,object,sha256;uint64_t bytes=0;};

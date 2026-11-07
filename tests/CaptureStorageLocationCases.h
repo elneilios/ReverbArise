@@ -39,6 +39,15 @@ static bool storageLocationTests()
     CaptureSession blocked({},unresolved.location);CHECK(!blocked.restore(saved.manifest.projectId,saved.manifest.instanceId,saved.reference,saved.manifest.revision,manifest));
     CHECK(!blocked.clear(1000) && !blocked.beginRecoveryPass(8,9,{{0,2}}) && !blocked.commit(0,1000,audio,2));
     CHECK(source.snapshot().reference==saved.reference && source.readSample(0,left,right) && left==.1f && right==-.2f);
+    // An associated host manifest remains authoritative even if a local file
+    // with the same IDs/revision has been replaced with a different valid map.
+    TemporaryRoot tampered;CHECK(original.file.copyDirectoryTo(tampered.file));
+    auto other=saved.manifest;other.ranges.clear();juce::String changedJson;CHECK(serializeCaptureManifest(other,changedJson,error));
+    const auto local=tampered.file.getChildFile(saved.manifest.projectId).getChildFile(saved.manifest.instanceId).getChildFile(saved.reference);
+    CHECK(local.replaceWithText(changedJson));auto owned=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{tampered.file,tampered.file,{}});
+    CaptureSession authoritative(tampered.file,owned);CHECK(authoritative.restore(saved.manifest.projectId,saved.manifest.instanceId,saved.reference,saved.manifest.revision,manifest));
+    CHECK(authoritative.snapshot().manifest.ranges.size()==saved.manifest.ranges.size() && authoritative.readSample(0,left,right) && left==.1f && right==-.2f);
+    CHECK(local.loadFileAsString()==changedJson); // No silent filesystem repair.
     worker->stopThread(-1);
     std::cout<<"Capture storage: pinned reader locations, verified root restore, failure rollback, generation fencing and blocked unavailable-folder writes passed.\n";
     return true;

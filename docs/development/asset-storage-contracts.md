@@ -60,3 +60,18 @@ Inspected JUCE **9.0.4**, `modules/juce_audio_plugin_client/juce_audio_plugin_cl
 Owner approval recorded 2026-11-06: "I approve the compatibility and backup rules. Proceed with phase 1 of portable-project-assets, preserve the safety gates, and update PR #31." This closes tasks 1.1/1.5 and authorizes read-only inventory/adapters and the phase-1 Settings preview. The later diagnostic host-path spike is recorded above; its negative result preserves explicit-folder/user-data fallback and grants no storage cutover authority. Pack/Relink, association, migration, cleanup and later phases remain separately gated.
 
 Phase-2 authorization: the owner requested explicit-folder Pack/Relink with the user-data fallback. The [backend and native candidate](portable-asset-backups.md) are implemented; the approved controls are integrated, while association, missing-asset recovery and cleanup remain subject to their recorded gates. This supersedes the earlier spike-only implementation scope without changing compatibility or rollback rules.
+
+
+## Phase-4 production association — 2026-11-07
+
+PR #112 adds optional processor envelope v9 for explicitly associated stores.
+Readers retain envelopes 1–8; legacy/default sessions still write v8. V9 embeds
+exact accepted source metadata and a versioned store/snapshot/writer/registration
+locator, with bounded recovery origins when applicable. It changes no creative,
+capture or Export schema. Absolute locations remain local hints; writer ownership
+is reacquired independently on every reopen. Host saves perform no filesystem I/O.
+See [working-folder ownership](working-folder-association.md) for implemented
+bindings and [integration evidence](../validation/2026-11-07-issue-8-phase4-settings.md)
+for remaining native/profile/host/rollback gates. Old-binary rollback still requires
+the retained pre-upgrade FLP and untouched legacy store; no v9 downconversion or
+old-binary compatibility claim is made. Issue #8 and phases 5/6 remain open.

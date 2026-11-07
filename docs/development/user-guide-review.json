@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed phase-4 recovery workspace, bounded original-locator codec and pinned capture/engine/offline/export locations, including coherent initial source ownership, against production bindings and approved decisions. Production remains envelope v8 with existing Storage and modal recovery; folder association is not exposed yet. Existing normal Learn and automatic unfrozen material regeneration guidance remains accurate; no prose changes required.",
+  "summary": "Reviewed production Settings working-folder selection, verified copy and explicit adoption, coherent v9 saves and legacy fallback, Locate/Restore and incomplete recovery workspace with normal Learn; checked bounded host parsing, registry hints, pinned export ownership and retained originals. Updated affected Storage and rollback guidance; profile/host coverage remains explicitly pending.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -125,23 +125,23 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 20282,
-      "sha256": "7fe1ceae0de0c8d893e9ad295430a01583c0b0ac7cb6fb1a1a43be771e7aec70"
+      "bytes": 20742,
+      "sha256": "584c37cd9fcd7b94fb76cbd5d00d1c378e8fe76cc211daf4b692eb0b8be01954"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 4635,
-      "sha256": "a89d9f220ca03432dd2d542bfc78fb0e7c3c0d950d256c441c1a1ad45328a94e"
+      "bytes": 4786,
+      "sha256": "fa5b7134d7cf29157aaf00bb2b55870720d0f776a1a8c48f8f1df204bfb85fcc"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 27262,
-      "sha256": "bdd7260197f41e68719635a1828a7c3be8cb6c95b31bfeb5cd1c647bc55f3ab3"
+      "bytes": 29942,
+      "sha256": "98007ec6aa1975fe235b76971e7e73444e5cee1cfa13882a4464c59bce1b28ed"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 7759,
-      "sha256": "b4c1ae7c7dfeaf2fe802d95c3f16d2e5d3ff653c2b69d7b705ae3a631d458e2a"
+      "bytes": 8674,
+      "sha256": "22eeec19e4944aa408022b21bdb61f6abb67075d5b140770347a6288dbc70d3d"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -190,8 +190,8 @@
     },
     {
       "path": "Source/Core/AssetAssociation.h",
-      "bytes": 9378,
-      "sha256": "c0198d3f8d8836483f6a93623325c7c23aa7747ea6a7a8624b4f2e33321aa983"
+      "bytes": 9929,
+      "sha256": "e9a1ff4217f1f022cf887b8286a9666cd732d7c7d93a7442362ce946b2668661"
     },
     {
       "path": "Source/Core/BuildInformation.h",
@@ -415,13 +415,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 23472,
-      "sha256": "74a5d1e0b72eefddbc9eff6eddc29d903a70c802ec26643e457daa4f551c16ce"
+      "bytes": 24137,
+      "sha256": "563a5830a36913482ae6e8aded6f8abcd172576e49a0cd43e8d8e11bab3cca21"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 24179,
-      "sha256": "6b8b53346f92606adabd276120917a51c5f03622a652c5b174cecbabb0ceefe2"
+      "bytes": 24791,
+      "sha256": "f06643d0f9c5eec8ee5fbd50306a3489caf6872f1b2684a935132da16ee9a3c3"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -525,23 +525,23 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 35913,
-      "sha256": "4006b8ed7d3677ada8dcdbf60f391e0f017722952404259c596a43ffeeaf5eb0"
+      "bytes": 44593,
+      "sha256": "0b7c7f9e83dedfede4c73e21356bd5414ca036632ac96d8dba2a5f176618fc7c"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 7672,
-      "sha256": "11db711f770d45ba16f9b0472396480b7101de23d4dc9add5a0c4f273bec116c"
+      "bytes": 8166,
+      "sha256": "ae54098ec70dda5efbd6830b03b1c5b72b974f0972b9ce5b34ab3b950e90510d"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 21989,
-      "sha256": "a28fcc91bdace8e0f7095139abd7117b3c7d7f590b58f6612e5a1ced10b36663"
+      "bytes": 22334,
+      "sha256": "0c421b9e11d3d910902005b51c6d21de4525be3a884dc43a6994ee45352e3f3f"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 23431,
-      "sha256": "c587b00c6b79c56e47ba4ea8809004d3d5a07816410ee8f78a47fa654b53cd98"
+      "bytes": 24052,
+      "sha256": "44d178f6298451fc089e19b8394d69b3f1b3c3b1f43bff268e0e5652dc1ec945"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
@@ -550,18 +550,18 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 58621,
-      "sha256": "38c60080658ada440ab35c612b13ab39f378b8af43e120e036e33f7096fcf8c7"
+      "bytes": 64033,
+      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4478,
-      "sha256": "e5b0f623770d1f111da25bcabf4d34ead90887a2c18c3eed87392c2c2ff54dee"
+      "bytes": 4502,
+      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
-      "bytes": 2226,
-      "sha256": "5afb841710c159740f819fa1997432983d8ab1a4cfaeb2676e76ccd90de00793"
+      "bytes": 2699,
+      "sha256": "98fa2d1ae9f571731149142b474614965084d32a9ede384ee8bc6fa36011cd86"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",
@@ -765,8 +765,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 18169,
-      "sha256": "078ea6ceea5c3b9081121e25326ae92ce656050b4ce3f2b90ade970a2f1aafb8"
+      "bytes": 22043,
+      "sha256": "6b4fcea596912f5c8a437b204ac0fa54861cef6624a450f2e0816acf65b72bdb"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -790,8 +790,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 7610,
-      "sha256": "dfddcbb127fbac5a7f036055cecb80e97ed90c7e12d4bf01a6a60c745c0e28df"
+      "bytes": 7654,
+      "sha256": "7ff9609be454ba7263f2940d84db4c868540a2983ee34e41cdbbf42fbdbda465"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -840,8 +840,8 @@
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
-      "bytes": 10915,
-      "sha256": "f2f100a109661800d5706b2218474ce6f9236325f51021552961e25131276d5f"
+      "bytes": 15900,
+      "sha256": "e17c9f2f66cc9c1f1e3d88465321bcdd06d51b662c9a7d9a3341725d7415602b"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",
@@ -885,8 +885,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 25093,
-      "sha256": "ad7a45dcf3827216f0c23e4ebbc747638d9831e332409fb75407faa3150a8120"
+      "bytes": 26546,
+      "sha256": "95ed4195dea8beb30504ebce82b134491c095173459e22186fdbe2084b1638d4"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

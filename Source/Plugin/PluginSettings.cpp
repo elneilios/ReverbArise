@@ -119,6 +119,8 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     }
     const auto recoveryRoot=processor.swellEngine().assetDirectory().getParentDirectory().getParentDirectory();
     storageInventory=std::make_unique<m3::ui::PortableStoragePanel>([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);},recoveryRoot);
+    auto* storageOwner=&processor;
+    storageInventory->enableWorkingFolder(processor.assetRegistryRoot(),[storageOwner](const auto& folder,const auto& input,auto& error,const auto& hooks){return storageOwner->useWorkingFolder(folder,input,error,hooks);});
     storageInventory->onRestored=[this](const auto& input,auto& error){return processor.reloadRecoveredAssets(input,error);};
     storageViewport.setName("storageViewport");storageViewport.setFocusRevealEnabled(true);
     storageViewport.setViewedComponent(storageInventory.get(),false);
@@ -216,7 +218,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
 
 void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapshot& capture,uint64_t epoch)
 {
-    const auto identity=juce::String(capture.manifest.projectId)+"/"+juce::String(capture.manifest.instanceId)+"/"+juce::String(static_cast<juce::int64>(epoch));
+    const auto identity=(capture.location?capture.location->projectsRoot.getFullPathName():juce::String{})+"/"+juce::String(capture.manifest.projectId)+"/"+juce::String(capture.manifest.instanceId)+"/"+juce::String(static_cast<juce::int64>(epoch));
     if(storageInventory)
     {
         if(identity!=storageIdentity){storageIdentity=identity;if(!storageInventory->reloadPending() && !storageInventory->consumeReloadEpoch(epoch))storageInventory->bind([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);});}

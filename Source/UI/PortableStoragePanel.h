@@ -1,5 +1,6 @@
 #pragma once
 #include <Storage/PortableAssets.h>
+#include <UI/WorkingFolderPanel.h>
 #include <UI/StorageInventoryPanel.h>
 #include <UI/Controls/FocusViewport.h>
 
@@ -40,19 +41,41 @@ public:
         locateButton.setTooltip("Select a completed backup receipt, or verify the known backup folder. No files are copied or live settings changed.");
         cancelButton.setTooltip("Stop this operation. Originals remain intact; interrupted backup copies can be inspected and resumed.");
         for(auto* button:{&backupButton,&restoreButton,&locateButton,&cancelButton})addAndMakeVisible(button);
-        backupButton.onClick=[this]{choose(Action::backup);};restoreButton.onClick=[this]{choose(Action::restore);};locateButton.onClick=[this]{choose(onRestored?Action::legacy:Action::locate);};cancelButton.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. Originals and previous backups remain intact.");};
+        backupButton.onClick=[this]{choose(Action::backup);};restoreButton.onClick=[this]{restoreBackup();};locateButton.onClick=[this]{if(onRestored)locateOriginalAssets();else choose(Action::locate);};cancelButton.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. Originals and previous backups remain intact.");};
         setStatus("Save the DAW project and external audio separately.");refreshButtons();startTimerHz(10);
     }
     ~PortableStoragePanel()override{destroying=true;stopTimer();worker.cancel=true;}
     static juce::String recoveryGuidance(){return "Some saved audio assets are unavailable. Your swell markers and edits are preserved.\n\nLocate their original folder or restore a backup. If that is not possible:\n\nIn Learn, turn Detect events off and Recapture audio on. Play the entire song, then stop. After complete audio and required IRs are verified, existing unfrozen swells rebuild automatically using their saved parameters.\n\nMissing custom IRs need restoring or replacing. Frozen audio stays protected; unfreeze missing frozen results to rebuild them. Re-learning may sound different and cannot recreate exported or Playlist files.";}
+    void enableWorkingFolder(juce::File registry,WorkingFolderPanel::WorkerCommit publish){
+        workingFolder=std::make_unique<WorkingFolderPanel>(provider,std::move(registry),WorkingFolderPanel::Commit{});
+        workingFolder->publishOnWorker=std::move(publish);content.addAndMakeVisible(*workingFolder);workingFolder->setFooterHost(*this);resized();
+    }
+    WorkingFolderPanel* workingFolderControls()const{return workingFolder.get();}
     std::function<bool(const Input&,juce::String&)> onRestored;
     void showRecoveryStatus(const juce::String& message){setStatus(message);resized();}
-    void locateOriginalAssets(){choose(Action::legacy);}
-    void restoreBackup(){choose(Action::restore);}
+    void locateOriginalAssets(){Input input;juce::String error;
+        if(workingFolder && provider(input,error))if(const auto state=juce::XmlDocument::parse(input.processorXml);state && state->getIntAttribute("stateVersion")==9){workingFolder->locateExisting();return;}
+        choose(Action::legacy);
+    }
+    void restoreBackup(){Input input;juce::String error;
+        if(!workingFolder || !provider(input,error) || !input.folderUnavailable){choose(Action::restore);return;}
+        if(busy() || choosing || waitingReload || workingFolder->occupied())return;
+        choosing=true;refreshButtons();
+        auto complete=[safe=juce::Component::SafePointer<PortableStoragePanel>(this),input](juce::File receipt){
+            if(!safe)return;safe->choosing=false;safe->refreshButtons();if(receipt==juce::File{} || !safe->isShowing())return;
+            Input current;juce::String error;if(!safe->provider(current,error) || current.processorXml!=input.processorXml || current.controlEpoch!=input.controlEpoch || current.instanceRoot!=input.instanceRoot){safe->setStatus("Session changed; choose the backup again");return;}
+            safe->workingFolder->setAvailable(true);safe->workingFolder->restoreFromBackup(receipt);
+        };
+        const juce::String title="Choose the exact completed backup receipt inside receipts";
+        if(receiptPicker)receiptPicker(title,{},std::move(complete));else{
+            chooser=std::make_unique<juce::FileChooser>(title,juce::File{},"*.json");chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
+                [complete=std::move(complete)](const auto& dialog){complete(dialog.getResult());});}
+    }
     FolderPicker folderPicker,receiptPicker; // Tests inject selection; otherwise native choosers.
     void bind(Provider next)
     {
         worker.cancel=true;waitingReload=false;guidanceEpoch=UINT64_MAX;provider=std::move(next);known={};shown.reset();selected={};
+        if(workingFolder)workingFolder->resetForSession();
         inventory.bind([this]{return inventoryRequest();});
         setStatus("Save the DAW project and external audio separately.");refreshButtons();
     }
@@ -68,7 +91,15 @@ public:
     void visibilityChanged()override{if(!isShowing())worker.cancel=true;}
     void poll()
     {
-        inventory.poll();resized();
+        inventory.poll();
+        if(onRestored){Input current;juce::String error;if(provider(current,error)){
+            recoveryDestination.setText(current.folderUnavailable?"Restore: select a backup, then choose a new asset folder.":"Restore destination: current asset working folder.",juce::dontSendNotification);
+            recoveryDestination.setDescription(current.folderUnavailable?"A writable restore folder will be chosen explicitly.":current.instanceRoot.getParentDirectory().getParentDirectory().getFullPathName());
+        }}
+        if(workingFolder){Input input;juce::String error;const auto report=inventory.displayedReport();
+            workingFolder->setRecoveryNeeded((provider(input,error) && input.sourceUnavailable) || (report && report->missingReferences>0));
+            workingFolder->setAvailable(!busy() && !choosing && !waitingReload);workingFolder->poll();}
+        resized();
         if(onRestored && !busy() && !waitingReload){Input input;juce::String error;
             const auto report=inventory.displayedReport();
             if(!provider(input,error)){if(error.contains("could not be decoded"))setStatus(error);}
@@ -90,20 +121,22 @@ public:
     void resized()override
     {
         auto bounds=getLocalBounds();auto footer=bounds.removeFromBottom(controlGeometry::height+2*spacing::related);
+        if(workingFolder){auto actions=bounds.removeFromBottom(controlGeometry::height+2*spacing::related).reduced(spacing::section,spacing::related);workingFolder->layoutFooter(actions);}
         contentViewport.setBounds(bounds);footer=footer.reduced(spacing::section,spacing::related);
         const auto width=(footer.getWidth()-2*spacing::related)/3;
         backupButton.setBounds(footer.removeFromLeft(width));footer.removeFromLeft(spacing::related);
         restoreButton.setBounds(footer.removeFromLeft(width));footer.removeFromLeft(spacing::related);locateButton.setBounds(footer);
-        cancelButton.setBounds(getLocalBounds().withTrimmedTop(bounds.getHeight()).reduced(spacing::section,spacing::related));
+        cancelButton.setBounds(backupButton.getBounds().getUnion(locateButton.getBounds()));
         const auto contentWidth=std::max(1,contentViewport.getWidth()-contentViewport.getScrollBarThickness());
+        const auto folderHeight=workingFolder?workingFolder->preferredHeight(contentWidth):0;
         const auto inventoryHeight=inventory.preferredHeight(contentWidth);
         juce::AttributedString statusText(status.getText());statusText.setFont(status.getFont());juce::TextLayout layout;layout.createLayout(statusText,static_cast<float>(std::max(1,contentWidth-2*spacing::section)));
         const auto statusHeight=std::max(learnTypography::secondaryLineHeight,static_cast<int>(std::ceil(layout.getHeight())))+spacing::tight;
         const auto destinationHeight=selected==juce::File{}?0:controlGeometry::labelHeight+spacing::tight;destination.setVisible(destinationHeight!=0);
-        const auto contentHeight=inventoryHeight+spacing::related+controlGeometry::headingHeight+spacing::related
+        const auto contentHeight=folderHeight+inventoryHeight+spacing::related+controlGeometry::headingHeight+spacing::related
             +destinationHeight+controlGeometry::labelHeight+spacing::tight+statusHeight+spacing::related;
-        content.setSize(contentWidth,contentHeight);inventory.setBounds(0,0,contentWidth,inventoryHeight);
-        auto area=content.getLocalBounds().withTrimmedTop(inventoryHeight+spacing::related).reduced(spacing::section,0);
+        content.setSize(contentWidth,contentHeight);if(workingFolder)workingFolder->setBounds(0,0,contentWidth,folderHeight);inventory.setBounds(0,folderHeight,contentWidth,inventoryHeight);
+        auto area=content.getLocalBounds().withTrimmedTop(folderHeight+inventoryHeight+spacing::related).reduced(spacing::section,0);
         heading.setBounds(area.removeFromTop(controlGeometry::headingHeight));area.removeFromTop(spacing::related);
         if(destinationHeight){destination.setBounds(area.removeFromTop(controlGeometry::labelHeight));area.removeFromTop(spacing::tight);}
         recoveryDestination.setBounds(area.removeFromTop(controlGeometry::labelHeight));area.removeFromTop(spacing::tight);
@@ -117,15 +150,16 @@ private:
     {
         storage::Request request;Input input;juce::String error;
         if(!provider(input,error)){request.observationError=error;return request;}
+        if(input.folderUnavailable){request.observationError="The associated asset folder is unavailable. Locate its folder, restore a backup or choose a recovery workspace.";return request;}
         request.roots={input.instanceRoot};storage::ObservedSnapshot observed;
         if(storage::readLegacySnapshot(input.processorXml,input.manifestJson,observed,error)){observed.label="Current accepted instance";request.snapshots.push_back(std::move(observed));}
         else request.observationError=error;return request;
     }
     void setStatus(const juce::String& value){status.setText(value,juce::dontSendNotification);status.setDescription(value);}
-    void refreshButtons(){const bool idle=!busy() && !choosing && !waitingReload;backupButton.setEnabled(idle);restoreButton.setEnabled(idle);locateButton.setEnabled(idle);cancelButton.setVisible(busy());for(auto* button:{&backupButton,&restoreButton,&locateButton})button->setVisible(!busy());resized();}
+    void refreshButtons(){if(workingFolder)workingFolder->setAvailable(!busy() && !choosing && !waitingReload);const bool idle=!busy() && !choosing && !waitingReload && (!workingFolder || !workingFolder->occupied());backupButton.setEnabled(idle);restoreButton.setEnabled(idle);locateButton.setEnabled(idle);cancelButton.setVisible(busy());for(auto* button:{&backupButton,&restoreButton,&locateButton})button->setVisible(!busy());resized();}
     void choose(Action action)
     {
-        if(destroying || busy() || choosing || waitingReload)return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
+        if(destroying || busy() || choosing || waitingReload || (workingFolder && workingFolder->occupied()))return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
         if(knownRoot!=input.instanceRoot || knownEpoch!=input.controlEpoch)known={};
         const bool receiptSelection=(action==Action::restore || action==Action::locate) && known.snapshot.isEmpty();
         choosing=true;refreshButtons();const auto title=action==Action::legacy?"Choose the original project instance asset folder":action==Action::backup?"Choose an empty folder or an existing asset backup":receiptSelection?"Choose the exact completed backup receipt inside receipts":"Choose the folder containing this saved backup";
@@ -140,7 +174,7 @@ private:
     }
     void start(Action action,const juce::File& folder,const Input& input,bool receiptSelection)
     {
-        currentAction=action;operationInput=input;selected=receiptSelection?folder.getParentDirectory().getParentDirectory():folder;operationRoot=input.instanceRoot;operationEpoch=input.controlEpoch;shown.reset();const auto expected=known;const auto fallback=restoreRoot;
+        currentAction=action;operationInput=input;selected=receiptSelection?folder.getParentDirectory().getParentDirectory():folder;operationRoot=input.instanceRoot;operationEpoch=input.controlEpoch;shown.reset();const auto expected=known;const auto fallback=onRestored?input.instanceRoot.getParentDirectory().getParentDirectory():restoreRoot;
         destination.setText("Backup folder: "+selected.getFullPathName(),juce::dontSendNotification);destination.setDescription(selected.getFullPathName());destination.setTooltip(selected.getFullPathName());
         const bool started=worker.begin([action,input,folder,expected,fallback,receiptSelection](const storage::portable::Hooks& hooks){Result result;juce::String error;
             if(action==Action::backup){std::shared_ptr<storage::portable::Prepared> prepared;if(!storage::portable::prepare(input,prepared,error,hooks)){result.error=error;result.cancelled=hooks.cancelled && hooks.cancelled();return result;}return storage::portable::backup(prepared,folder,hooks);}
@@ -158,6 +192,7 @@ private:
     Provider provider;juce::File restoreRoot,selected,operationRoot,knownRoot;Locator known;uint64_t operationEpoch=0,knownEpoch=0;bool choosing=false,destroying=false,waitingReload=false;Input operationInput;
     Worker worker;std::shared_ptr<const Result> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport contentViewport;
+    std::unique_ptr<WorkingFolderPanel> workingFolder;
     StorageInventoryPanel inventory;juce::Label heading,status;controls::EllipsisLabel destination,recoveryDestination;
     controls::ActionButton backupButton{"Back up assets..."},restoreButton{"Restore backup..."},locateButton{"Locate assets..."},cancelButton{"Stop operation"};
 };

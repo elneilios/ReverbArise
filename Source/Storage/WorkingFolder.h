@@ -13,7 +13,7 @@ struct WorkingFolderInfo
     Association association;
     Input expected;
     uint64_t files=0,bytes=0;
-    bool incompleteRecovery=false,captureMetadataKnown=true,originalFolderUnavailable=false,recreatedCaptureMetadata=false;
+    bool located=false,incompleteRecovery=false,captureMetadataKnown=true,originalFolderUnavailable=false,recreatedCaptureMetadata=false;
     Association originalAssociation;
     juce::String recoveryRecord,restoreManifest;
     std::vector<juce::String> missing;
@@ -29,6 +29,10 @@ bool locateWorkingFolder(const juce::File& selectedFolder,const Association&,con
                          std::shared_ptr<WorkingFolder>&,juce::String& error,const Hooks& = {});
 bool resolveWorkingFolder(const Association&,const juce::String& legacyXml,const juce::String& manifest,
                           const juce::File& registryRoot,std::shared_ptr<WorkingFolder>&,juce::String& error,const Hooks& = {});
+bool prepareRestoredWorkingFolder(const Input&,const juce::File& receiptFile,const juce::File& selectedFolder,
+                                 const juce::File& registryRoot,std::shared_ptr<WorkingFolder>&,juce::String& error,const Hooks& = {});
+bool prepareAssociatedLocation(const Input&,const juce::File& selectedFolder,const juce::File& registryRoot,
+                               std::shared_ptr<WorkingFolder>&,juce::String& error,const Hooks& = {});
 // Explicit incomplete recovery only: preserves original metadata and verified
 // surviving aliases. Never emits a complete snapshot or backup receipt.
 bool prepareRecoveryWorkspace(const Input&,const juce::File& selectedFolder,const juce::File& registryRoot,

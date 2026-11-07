@@ -210,6 +210,14 @@ public:
     void endOffline() noexcept {offlineActive.store(false);}
     void recaptureCompleted(int64_t start,int64_t end);
     uint64_t residentBytes() const;
+    // Control worker only: fence file jobs, then reserve model state only for
+    // the final no-I/O capture actor swap. The audio callback takes neither lock.
+    bool withStorageJobsPaused(const std::function<bool()>& operation)
+    {const juce::ScopedLock work(workLock);return operation();}
+    bool withStorageModelLocked(const std::function<bool()>& operation)
+    {const juce::ScopedLock guard(lock);return operation();}
+    void acceptStorageLocation(std::shared_ptr<const CaptureStorageLocation> location)
+    {const juce::ScopedLock guard(lock);storageLocation.store(std::move(location));invalidateLiveLocked();liveCache.clear();stopLocked();notify();}
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
     std::function<void()> persistentChange;
