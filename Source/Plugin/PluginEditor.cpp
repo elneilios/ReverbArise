@@ -31,6 +31,9 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
+    learnWorkspace.onEnableLoop=[this](bool enabled){return processor.setLoopCaptureEnabled(enabled);};
+    learnWorkspace.onArmLoop=[this]{return processor.armLoopCapture();};
+    learnWorkspace.onCancelLoop=[this]{processor.cancelLoopCapture();};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
     recaptureExisting.setName("legacyRecaptureExisting");
@@ -829,7 +832,18 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureStatus.setText(recapture,juce::dontSendNotification);recaptureStatus.setTooltip(recapture);
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
-    workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),capture.status);
+    const auto loop=processor.getLoopCaptureView();
+    auto journey=m3::ui::presentWorkflow(flow,workflowReady);
+    if(loop.enabled)
+        journey.choices[static_cast<size_t>(workflow::Mode::capture)].subtitle="Next capture: Loop";
+    if(loop.acceptedLoop || loop.busy())
+        for(auto& choice:journey.choices)
+            if(choice.mode!=workflow::Mode::capture)
+            {
+                choice.available=false;
+                choice.reason=loop.busy()?"Finish or cancel Loop capture in Learn.":"The Loop take is available as a WAV in Learn.";
+            }
+    workflowHeader.display(journey,capture.status);
     noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
         processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes())));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
@@ -868,7 +882,7 @@ void PreverbAudioProcessorEditor::refresh()
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
-    if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
+    if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress(),loop);
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);

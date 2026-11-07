@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced action-menu requirements against the approved Swells and per-knob Reset bindings and the offline guide. The existing Perform instructions remain accurate after the spec archive.",
+  "summary": "Reviewed the preserved Song workflow and integrated Learn Loop Source Capture controls, note gate wiring, arming, waveform and verified WAV access, time limit, local storage and rollback.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 32743,
-      "sha256": "ddd279b65f305c2085a64300fccc1224c8fd064ac3faab1e5bfc49e41221ea0b"
+      "bytes": 33050,
+      "sha256": "70e1e96c2cdbf826a10200269039e80a998858120c9e5e51763e13847bb83a16"
     },
     {
       "path": "CMakePresets.json",
@@ -142,6 +142,16 @@
       "path": "Source/Capture/CaptureWorker.h",
       "bytes": 8674,
       "sha256": "22eeec19e4944aa408022b21bdb61f6abb67075d5b140770347a6288dbc70d3d"
+    },
+    {
+      "path": "Source/Capture/LoopCapture.cpp",
+      "bytes": 14649,
+      "sha256": "5e559aa971cce848353f3b2d6a09b6e0fa83933a91060beb0ddd5e29c7eafa99"
+    },
+    {
+      "path": "Source/Capture/LoopCapture.h",
+      "bytes": 3659,
+      "sha256": "0c416d13643507905f5a065711f031c0ffeba41f8c0703069ec0e14ecd9f76d6"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -505,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 90924,
-      "sha256": "59bce1c81fac981aa77645f66e8a43d59e895e3f65cb5ca2795920cd9e882179"
+      "bytes": 91715,
+      "sha256": "a0312e9a827011435e3c1da7497e265abcdd38e01f1cbceae0e4135feab248d7"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -525,13 +535,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 45439,
-      "sha256": "235dd0576c86e0b0fbff64074a8111688e89a18b91d41518104f6b6766a80181"
+      "bytes": 48458,
+      "sha256": "1d6f39a048fd3a83c28be10b8b22802f718fb49e85102dd561bd1c1e8d7a0360"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8166,
-      "sha256": "ae54098ec70dda5efbd6830b03b1c5b72b974f0972b9ce5b34ab3b950e90510d"
+      "bytes": 8575,
+      "sha256": "398fea1645f4cb63fc853c484699d3d9e6afb72558fbea2d18cddd29efbf078c"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -770,8 +780,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 35316,
-      "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+      "bytes": 44375,
+      "sha256": "117d1f015de31ce1b6487b46c7803c79f79f06cf69859f25a67587b22d1dac5e"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -865,8 +875,8 @@
     },
     {
       "path": "Source/UI/WorkflowHeader.h",
-      "bytes": 3779,
-      "sha256": "9e196d2eecc207992d65d2e5ed103000d8c671af739a644185a621addcdb267d"
+      "bytes": 3817,
+      "sha256": "1ba8486f419a4f8a31320f89ed72b1e39197f5e3a1602491c1176dcac06da02b"
     },
     {
       "path": "Source/UI/WorkflowPresentation.h",
@@ -920,8 +930,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 28981,
-      "sha256": "6113523990ce1e10f16accf27ac7dab4fd62d5bb2a18ed4be648476c1500c19f"
+      "bytes": 29955,
+      "sha256": "5ed490e0af608868dfdf77d5764aad478a0c8df45d485723b1c55d787df75c4d"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1120,8 +1130,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32784,
-      "sha256": "83153e866cb9d740d7ba6a4e3c0b1d3bc9892aba7c3a49299684d8e9f20f2205"
+      "bytes": 35814,
+      "sha256": "180f7c85c21db7a931b7e1bd6751b8ff157060a5f9bae7e23bfee84281ed0297"
     }
   ]
 }

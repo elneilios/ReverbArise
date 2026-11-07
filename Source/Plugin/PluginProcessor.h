@@ -7,6 +7,7 @@
 
 #include <Capture/AudioCaptureQueue.h>
 #include <Capture/CaptureWorker.h>
+#include <Capture/LoopCapture.h>
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
@@ -43,6 +44,7 @@ public:
     void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     HostPositionDiagnostics getHostPositionDiagnostics() const noexcept;
     void setMappingEnabled(bool enabled);
     bool isMappingEnabled() const noexcept;
@@ -77,6 +79,10 @@ public:
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
     workflow::Readiness getWorkflowReadiness() const;
     bool requestWorkflowMode(workflow::Mode);
+    LoopCapture::View getLoopCaptureView() const { return loopCapture.view(); }
+    bool setLoopCaptureEnabled(bool);
+    bool armLoopCapture();
+    void cancelLoopCapture() { loopCapture.cancel(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
@@ -159,6 +165,8 @@ private:
     std::atomic<int> toneStartBar{8};
     std::atomic<int> toneEndBar{10};
     CaptureWorker captureWorker;
+    std::optional<LoopCapture::Session> loopSession() const;
+    LoopCapture loopCapture;
     std::unique_ptr<m3::SwellEngine> swells;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PreverbAudioProcessor)

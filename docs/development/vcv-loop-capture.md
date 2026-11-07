@@ -1,0 +1,9 @@
+# Follow capture gate in VCV Rack
+
+Open ReverbArise in Host-FX and connect stereo audio plus one gate mapped to **Note Gate D0** (MIDI note 14). This route uses VST3 MIDI note events with sample offsets. Use a dedicated gate for capture so its high interval matches the full phrase. In Learn, enable Loop and select **Arm capture**. When the gate's initial state is unknown or high, Learn waits for an observed fall and then the next rise. The recording includes the rise sample and stops before the fall sample. The gate can be high for at most 15 seconds. Keep the cable connected until the take finishes.
+
+Learn shows the last accepted take in the Audio area. A Loop take has a waveform and duration in seconds and exposes the verified stereo float WAV through **Show captured WAV**. Cancel, an invalid or silent take, and interruption leave the last accepted take in place. A closed editor leaves the processor's arm and accepted take intact. A host state reload clears the arm and rechecks the WAV by its saved checksum. A missing file leaves the accepted Loop identity visible as unavailable. Copy the WAV separately for transfer between machines. The candidate keeps Loop WAVs under the current instance's managed asset root and keeps Song source and swell edits in their existing format.
+
+Enable Loop sets the next capture type in Learn. To switch back, turn it off and capture a Song pass with the DAW transport. Perform and Export become available for Song according to their existing readiness rules after a successful Song pass. The Loop take itself is available as dry WAV only. Portable storage actions apply to Song takes.
+
+To roll back the test, close the host and restore the previously installed VST3 bundle. Reopen the backup of the Rack patch or DAW project made before testing. Retain the new copy of the patch and any captured WAVs separately.

@@ -34,7 +34,7 @@ public:
             choices.push_back({static_cast<int>(choice.mode)+1,choice.label,choice.subtitle,choice.available,choice.reason,icon});
         }
         selector.display(std::move(choices),static_cast<int>(presentation.selected)+1);
-        const auto subtitle=modeSubtitle(presentation.selected);role.display(subtitle);
+        const auto subtitle=presentation.choices[static_cast<size_t>(presentation.selected)].subtitle;role.display(subtitle);
         setDescription(juce::String(modeLabel(presentation.selected))+": "+subtitle);setHelpText(detail);
     }
     controls::SegmentedSelector& modeSelector()noexcept{return selector;}

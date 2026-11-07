@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-vcv.gate.1",
+  "previousRelease": "v0.1.0-compatibility.111.rate-recheck.2",
+  "previousGitSha": "be002a399ffc0550c511614583234e885663b564",
+  "changes": [
+    "Learn can record one stereo phrase between the rise and fall of a VCV Rack Host-FX gate, even when Rack supplies no time signature.",
+    "The Source Capture controls show whether the gate is armed, waiting, recording or saving. The Audio area shows the last accepted waveform and duration. Show captured WAV reveals the verified stereo file."
+  ],
+  "fixes": [],
+  "upgradeSteps": [
+    "Save a copy of your Rack patch and keep the previous VST3 bundle. Close the host and replace the full ReverbArise.vst3 bundle with the one in the ZIP.",
+    "In Host-FX, connect your stereo audio and assign a gate to Note Gate D0 (MIDI note 14). In Learn, turn on Enable Loop, click Arm capture, and let the gate fall once if Learn is waiting for gate low.",
+    "After the next rise and fall, select Show captured WAV and listen to both channels. For rollback, close the host, restore the previous bundle and open the saved copy of the patch."
+  ],
+  "knownLimitations": [
+    "This candidate captures up to 15 seconds per gate. It provides the dry WAV in Learn. Loop swell playback, Export and portable storage are outside this candidate.",
+    "Cancel capture before powering off Host-FX or unplugging the gate. Keep a separate copy of your WAV if moving a patch.",
+    "Local Rack tests used two fixtures. Stuart's full patch and FL Studio project rollback still need host testing."
+  ]
+}

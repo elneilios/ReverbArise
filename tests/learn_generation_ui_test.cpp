@@ -139,6 +139,54 @@ static void captureImage(juce::Component& editor,const juce::String& tag,float s
     auto output=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(output);
     REQUIRE(juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,scale),*output));
 }
+static void loopBindings(bool review)
+{
+    TestDirectory root;
+    auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    processor->prepareToPlay(48000,64);
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);
+    editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{4000,3000},{0,0}});
+    REQUIRE(editor->setPresentationSize(900,600));
+    editor->setVisible(true);editor->refresh();
+    auto* enable=dynamic_cast<m3::ui::controls::Switch*>(named(*editor,"learnEnableLoop"));
+    auto* arm=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"learnArmLoop"));
+    auto* show=named(*editor,"learnShowLoopWav");
+    REQUIRE(enable && arm && show && visible(enable) && !visible(arm) && !visible(show));
+    REQUIRE(visible(named(*editor,"recaptureExisting")));
+    controlReview::pointerClick(*enable);editor->refresh();
+    REQUIRE(processor->getLoopCaptureView().enabled && visible(arm) && !visible(named(*editor,"recaptureExisting")));
+    for(int scale:{100,125})
+    {
+        REQUIRE(editor->setPresentationScale(scale));editor->refresh();
+        for(const auto* component:{static_cast<juce::Component*>(enable),static_cast<juce::Component*>(arm)})
+            REQUIRE(!component->getBounds().isEmpty() && component->getParentComponent()->getLocalBounds().contains(component->getBounds()));
+        captureImage(*editor,"issue116-loop-"+juce::String(scale));
+    }
+    REQUIRE(editor->setPresentationScale(100));
+    if(review){controlReview::run(std::move(editor));return;}
+    controlReview::pointerClick(*arm);editor->refresh();
+    REQUIRE(arm->getButtonText()=="Cancel capture" && !enable->isEnabled());
+    controlReview::pointerClick(*arm);editor->refresh();
+    REQUIRE(arm->getButtonText()=="Arm capture" && enable->isEnabled());
+    controlReview::pointerClick(*arm);
+    juce::AudioBuffer<float> input(2,64);
+    for(int frame=0;frame<input.getNumSamples();++frame)
+    {
+        input.setSample(0,frame,.25f);
+        input.setSample(1,frame,-.5f);
+    }
+    juce::MidiBuffer gate;
+    gate.addEvent(juce::MidiMessage::noteOff(1,LoopCapture::gateNote),0);
+    gate.addEvent(juce::MidiMessage::noteOn(1,LoopCapture::gateNote,static_cast<juce::uint8>(100)),5);
+    gate.addEvent(juce::MidiMessage::noteOff(1,LoopCapture::gateNote),47);
+    processor->processBlock(input,gate);
+    await([&]{return processor->getLoopCaptureView().phase==LoopCapture::Phase::ready;});
+    editor->refresh();
+    REQUIRE(visible(show) && show->getParentComponent()->getLocalBounds().contains(show->getBounds()));
+    captureImage(*editor,"issue116-loop-accepted-100");
+    controlReview::pointerClick(*enable);editor->refresh();
+    REQUIRE(!processor->getLoopCaptureView().enabled && !visible(arm) && visible(named(*editor,"recaptureExisting")) && visible(show));
+}
 static void candidateOverlay(PreverbAudioProcessorEditor& editor,GenerationFixture& fixture)
 {
     auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));REQUIRE(workspace);
@@ -272,9 +320,12 @@ int main(int argc,char** argv){return runTest([&]
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();aboutBindings();return;}
     if(argc>1 && juce::String(argv[1])=="--review-about"){aboutBindings(true);return;}
+    if(argc>1 && juce::String(argv[1])=="--review-loop"){loopBindings(true);return;}
+    if(argc>1 && juce::String(argv[1])=="--test-loop"){loopBindings(false);return;}
     const bool review=argc>1 && juce::String(argv[1])=="--review";
     if(!review)aboutBindings();
     if(!review)controlBindings();
+    if(!review)loopBindings(false);
     if(!review)sharedSoundBindings();
     if(!review)pendingProtectedFraming();
     for(bool automatic:{false,true})

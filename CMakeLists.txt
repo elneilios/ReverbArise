@@ -108,7 +108,7 @@ juce_add_plugin(preverb_plugin
     PRODUCT_NAME "ReverbArise"
     FORMATS VST3
     IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_INPUT TRUE
     VST3_CATEGORIES Fx Stereo
 )
 
@@ -129,10 +129,11 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginSettings.cpp
     Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
+    Source/Capture/LoopCapture.cpp
     Source/UI/SwellTimeline.cpp
 )
 
-target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
+target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_VST3_EMULATE_MIDI_CC_WITH_PARAMETERS=0)
 
 target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)
 target_link_libraries(preverb_plugin PRIVATE
@@ -206,6 +207,9 @@ if(BUILD_TESTING)
     add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
     target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
     add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
+    add_executable(preverb_loop_capture_test tests/loop_capture_test.cpp)
+    target_link_libraries(preverb_loop_capture_test PRIVATE preverb_plugin)
+    add_test(NAME preverb_loop_capture_test COMMAND preverb_loop_capture_test)
     add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
     target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
     add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)
