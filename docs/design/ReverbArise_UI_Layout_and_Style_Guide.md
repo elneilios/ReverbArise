@@ -1,15 +1,15 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.11 · **Production standards revision:** 11 · **Purpose:** Production UI authority and design reference. Revision 11 adopts the owner-approved focused Level interaction with full-range exact/accessibility entry. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
+**Version:** 1.12 · **Production standards revision:** 12 · **Purpose:** Production UI authority and design reference. Revision 12 sets the approved Level edit limits in the standard knob. Revision 10 collapses empty IR feedback space. Revision 9 aligns shared icon-button states with the existing command-button surface. Revision 8 adds the shared IR field family.
 
 ## Responsive composition — issue #58
 
-Revision 11: the owner approved issue #108's focused Level dial and -12/-24 dB
-listening comparison on 2026-11-06. Production uses a linear -12 to +12 dB dial,
-0 dB midpoint/default/reset, 1/0.1 dB coarse/fine steps and exact/absolute
-accessibility entry down to -60 dB. Extended saved values remain accurate while
-the dial rests at its lower endpoint. Existing tokens and geometry are reused.
-See the UI development standards for its binding/accessibility contract.
+The owner approved issue #108's standard Level knob on 2026-11-07. All new
+edits use -12 to +12 dB, with 0 dB at 12 o'clock and as the default and reset.
+Wheel and key steps are 1 dB or 0.1 dB with Shift. Older saved gains below
+-12 dB appear in the ordinary input and stay applied until a Level edit.
+Pressing the dial brings an older gain to -12 dB. The UI development standards
+describe the shared binding and accessibility behavior.
 
 This section takes precedence over the older fixed-size Learn/header values
 below for the main editor. The owner approved Option A revision 4, its interim
@@ -167,6 +167,8 @@ production standards revision; this revision does not change plugin/state versio
 | 9 | #80 integrated-review correction requested 2026-11-06 | Folder/import and Settings glyph buttons reuse ActionButton's surface: stable off-white content and aqua hover/pressed outline, existing contained focus/disabled treatment. No new token; wider legacy button-state audit remains #107. Corrected native interaction approved 2026-11-06; evidence is separately recorded |
 
 | 10 | #80 owner identified idle IR-to-Level gap on 2026-11-06; revised native spacing approved | Empty IR feedback collapses; present feedback uses one or two helper lines and adjacent fields reflow using existing spacing. Reset remains fixed. No new token |
+| 11 | #108 original native feel and listening comparison approved 2026-11-06 | Focused sweep and extended entry in the preceding candidate |
+| 12 | #108 standard Level knob approved 2026-11-07 | Fixed -12 to +12 dB edits and 0 dB at 12 o'clock. The ordinary input preserves older gains until Level is operated |
 
 ### Stable Perform transport information
 

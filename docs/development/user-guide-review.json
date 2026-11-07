@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed approved #108 production Level bindings, durable Shape domain and gain-path policies: documented -12/+12 main dial, 0 dB midpoint/reset, 1/0.1 dB steps, exact entry to -60, extended saved values and source-relative quietness; preserved separate Learn IR default, Live wet and Export Dry/Wet, existing unclipped float-WAV Export and host limitations.",
+  "summary": "Reviewed standard Perform Level layout, fixed editing limits, saved value display and first-touch behavior against the approved native candidate and production binding. Updated Level prose and preserved the capture, playback and Export flows.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -500,18 +500,18 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86737,
-      "sha256": "a718cdef910c23d78546ce19f95ed8659b41b63569c0a9a6d2aaaa5e484a7424"
+      "bytes": 87369,
+      "sha256": "f6664c1c7b5d53048c8e90aec7aea643c6a74a2bffd9b42e9415a13e5b9cb87b"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 12287,
-      "sha256": "87633fa90f512ff09883290fa9a4021b12f8120e4758966a4bfaa00c4d877d43"
+      "bytes": 12231,
+      "sha256": "2cae5ab832d05d9a143842a9c5a09d8e6a44d13fe03ee354270882bdbfeb6d0d"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 23037,
-      "sha256": "4ab538b8aaaa29496cb1111e7d37474ad2b15645d74fac9b5bc702930643166e"
+      "bytes": 23901,
+      "sha256": "2922f0d245590ed342443c8de23f41045b90258e812b7b86c49950c3d5a5d225"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -700,8 +700,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 14505,
-      "sha256": "5ce6841b8e6ca20267378aca4cab4c389b3a743d9a68c5f0efd6e586380694c4"
+      "bytes": 14749,
+      "sha256": "2fbbe3d40845c14fdfd88bc9dcfe15fe9a1056c9d36a5a3ab305d67261a908f3"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -715,8 +715,8 @@
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
-      "bytes": 738,
-      "sha256": "eaf60829c8948366a590e71b7518773e5c8a0b3905af3f9d6d4de8c5b09869fa"
+      "bytes": 715,
+      "sha256": "656a4685da2c48ce1d0e8006129853a45b57c5857e9107820f80170cda2c2a9d"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -840,8 +840,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 22670,
-      "sha256": "8e9c6d0055f20da4222a3b1434142359e9e6b71befc81028e2b30fc71015e768"
+      "bytes": 22620,
+      "sha256": "dd42fd55645cda113b27c1b683fad9c56da29de6944f52400c3b116200967628"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

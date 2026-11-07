@@ -19,24 +19,15 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
-Issue #108 (owner-approved production standards revision 11): the existing `KnobValue`
-family can accept explicit absolute numeric accessibility intent via `onAbsolute`;
-other consumers retain their current delta path. The focused Level binding keeps
-its [-60,+12] exact/accessible domain separate from its [-12,+12] dial sweep and
-pins extended relative edits to their actual initial value. Actual numeric text
-and full-range help remain truthful at the saturated lower indicator. No new
-visual token or variant is introduced. `--test-level` checks the production
-binding and isolation; `--review-level` launches the same accepted interaction.
-The owner approved the revised family's native feel and bounded -12/-24 dB
-listening comparison on 2026-11-06. No calibration/default gain change follows.
-
-Issue #108 fixed-limit review candidate: Level uses the standard KnobValue
+Issue #108, production standards revision 12. Level uses the standard `KnobValue`
 appearance and drag response with one -12 to +12 dB edit range. The normal
 field shows an older value below -12 dB. A primary press on the dial brings
 that value to -12 dB and starts any subsequent drag at that limit. The
 accessibility slider reports the bounded position and edit limits, with the
-actual saved gain in its text readback and help. `--test-level` checks native
-input, neutral paint and standard layout at supported sizes and user scales.
+actual saved gain in its text readback and help. The Level binding uses
+`onDialPress` for first touch and `onAbsolute` for numeric accessibility writes.
+`--test-level` checks native input, neutral paint, layout and project reopen.
+The owner approved this interaction on 2026-11-07.
 
 `ActionButton::paintSurface` owns the common command-button surface for text and
 glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:

@@ -65,3 +65,7 @@ saved value below range. A valid typed value applies directly.
   working-tree changes. Its SHA-256 is
   `333d57e2e5f6996719d3fdad5cdb24f26468f6e0552c006a9b05cc6f4e621980`.
   The standard-knob preview was opened for the owner checkpoint.
+
+The owner approved the standard-knob candidate on 2026-11-07 and asked to
+finish integration. This approval covers the existing knob appearance and
+the first-touch Level behavior.

@@ -159,5 +159,19 @@ void Composition::verifyFocusedLevel()
                 hasStandardCaption=label->isVisible() && local.contains(label->getBounds());
         REQUIRE(hasStandardCaption && field.getText()=="-30");
     }
+    load(-30.12345f);
+    REQUIRE(engine.setFrozen(firstId,true));
+    panel->refresh();
+    const auto beforeTouch=current();
+    drag(0);
+    const auto edited=current();
+    auto expectedShape=beforeTouch.shape;expectedShape.gainDb=-12;
+    REQUIRE(edited.frozen && edited.shape==expectedShape && edited.render==beforeTouch.render
+        && edited.calibration==beforeTouch.calibration);
     panel->removeFromDesktop();
+    juce::MemoryBlock project;
+    processor->getStateInformation(project);
+    processor->setStateInformation(project.getData(),static_cast<int>(project.getSize()));
+    REQUIRE(processor->flushCaptureForTesting());
+    REQUIRE(m3::sameSavedSwell(current(),edited) && !engine.snapshot().playing);
 }
