@@ -101,6 +101,34 @@ inline void m3ProcessorCases()
     REQUIRE(state.swells[0].name=="First arrival" && state.swells[0].shape.gainDb==-3 && state.swells[0].irName=="m3-ir.wav");
     REQUIRE(state.swells[0].render.path==savedModel.swells[0].render.path && !restored->swellEngine().snapshot().playing && !restored->isMappingEnabled());
     const auto storeRoot=root.file.getChildFile(capture.manifest.projectId).getChildFile(capture.manifest.instanceId);
+    // Level is non-parameter state: preserve its full domain through the real wrapper.
+    REQUIRE(processor->getParameters().isEmpty() && restored->getParameters().isEmpty());
+    for(const auto policy:{m3::GainPolicy::legacy,m3::GainPolicy::musical})for(const auto level:{-60.f,-30.f,-30.12345f})
+    {
+        auto definition=savedModel;definition.gainPolicy=policy;
+        definition.gainRevision=policy==m3::GainPolicy::legacy?m3::legacyGainRevision:m3::approvedGainRevision;
+        definition.swells[0].shape.gainDb=level;definition.swells[0].frozen=true;
+        juce::String encoded;REQUIRE(m3::encode(definition,encoded,error));
+        auto envelope=std::make_unique<juce::XmlElement>(*xml);auto* payload=envelope->getChildByName("SwellSession");
+        payload->deleteAllChildElements();payload->addTextElement(encoded);juce::MemoryBlock bytes;
+        juce::AudioProcessor::copyXmlToBinary(*envelope,bytes);restored->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
+        REQUIRE(restored->flushCaptureForTesting());
+        REQUIRE(!restored->swellEngine().snapshot().playing && !restored->getRecaptureSnapshot().active);
+        auto accepted=restored->swellEngine().savedSession();
+        REQUIRE(accepted.swells[0].shape==definition.swells[0].shape && accepted.swells[0].frozen
+            && accepted.swells[0].ir==definition.swells[0].ir && accepted.swells[0].render==definition.swells[0].render
+            && accepted.swells[0].calibration==definition.swells[0].calibration && accepted.gainPolicy==policy
+            && accepted.swells[1].shape==definition.swells[1].shape);
+        REQUIRE(restored->swellEngine().edit(first,[](auto& w,auto&){w.name="Frozen swell renamed";return true;}));
+        restored->getStateInformation(bytes);auto reopened=juce::AudioProcessor::getXmlFromBinary(bytes.getData(),static_cast<int>(bytes.getSize()));
+        m3::Session decoded;REQUIRE(reopened && m3::decode(reopened->getChildByName("SwellSession")->getAllSubText(),decoded,error));
+        REQUIRE(decoded.swells[0].name=="Frozen swell renamed" && decoded.swells[0].shape.gainDb==level
+            && decoded.swells[0].render==definition.swells[0].render);
+        restored->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
+        REQUIRE(restored->flushCaptureForTesting());
+        accepted=restored->swellEngine().savedSession();
+        REQUIRE(m3::sameSavedSwell(accepted.swells[0],decoded.swells[0]) && accepted.gainPolicy==policy);
+    }
     REQUIRE(storeRoot.getChildFile(savedModel.swells[0].render.path).deleteFile());
     restored->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(restored->flushCaptureForTesting());restored->processBlock(buffer,midi);
     waitM3([&]{return restored->swellEngine().snapshot().auditionReady;});

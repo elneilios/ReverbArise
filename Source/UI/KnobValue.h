@@ -28,7 +28,14 @@ private:
                 g.setColour(aqua);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
             }
         }
-        void mouseDown(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}juce::Slider::mouseDown(e);}
+        void mouseDown(const juce::MouseEvent& e)override
+        {
+            owner.inputModifiers(e.mods);
+            if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}
+            juce::Slider::mouseDown(e);
+            if(isEnabled() && e.mods.isLeftButtonDown() && owner.active && !owner.typing && owner.onDialPress)
+                owner.onDialPress();
+        }
         void mouseDoubleClick(const juce::MouseEvent& e)override{if(e.mods.isLeftButtonDown() && !e.mods.isPopupMenu()){auto reset=owner.prepareResetAction();if(reset.apply)reset.apply();}}
         void mouseDrag(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);juce::Slider::mouseDrag(e);}
         void mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)override
@@ -86,6 +93,7 @@ public:
         applyTextRole(label,TextRole::controlLabel);
     }
     std::function<void()> onBegin,onEnd;
+    std::function<void()> onDialPress;
     std::function<void()> onRebase;
     std::function<void(const juce::ModifierKeys&)> onModifierInput;
     std::function<void(double)> onDelta;
@@ -137,6 +145,9 @@ public:
     }
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
+    // Optional domain intent: absolute accessible writes must not inherit a
+    // focused relative gesture clamp. Other consumers keep their delta path.
+    std::function<void(double)> onAbsolute;
     void setCompactPresentation(bool enabled)
     {compactPresentation=enabled;if(enabled)entry.setIndents(responsiveGeometry::entryInset,0);lookAndFeelChanged();resized();}
     void lookAndFeelChanged()override
@@ -177,7 +188,8 @@ private:
             double getCurrentValue()const override{return owner.domain.value;}
             juce::String getCurrentValueAsString()const override{return owner.domain.text.isNotEmpty()?owner.domain.text:owner.canonical;}
             void setValue(double value)override
-            {if(isReadOnly() || !std::isfinite(value))return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
+            {if(isReadOnly() || !std::isfinite(value))return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);
+                if(owner.onAbsolute)owner.onAbsolute(value);else if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
             void setValueAsString(const juce::String& value)override
             {if(isReadOnly())return;owner.begin(true);if(owner.onCommit)owner.onCommit(value);owner.finish(false);}
             AccessibleValueRange getRange()const override{return owner.domainValid && owner.domain.minimum<owner.domain.maximum?AccessibleValueRange{{owner.domain.minimum,owner.domain.maximum},owner.domain.step}:AccessibleValueRange{};}

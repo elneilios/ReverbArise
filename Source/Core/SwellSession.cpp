@@ -152,7 +152,7 @@ bool setSource(Swell& w, int64_t start, int64_t end, juce::String& error)
 static bool validShape(const Shape& v)
 {
     return std::isfinite(v.inTension) && std::abs(v.inTension)<=1 && std::isfinite(v.outTension) && std::abs(v.outTension)<=1
-        && std::isfinite(v.gainDb) && v.gainDb >= -60 && v.gainDb <= 12 && v.fadeIn >= 0 && v.fadeOut >= 0
+        && std::isfinite(v.gainDb) && v.gainDb >= minimumSwellLevelDb && v.gainDb <= maximumSwellLevelDb && v.fadeIn >= 0 && v.fadeOut >= 0
         && static_cast<int>(v.inCurve) >= 0 && static_cast<int>(v.inCurve) <= 2
         && static_cast<int>(v.outCurve) >= 0 && static_cast<int>(v.outCurve) <= 2
         && (v.automaticStart || v.startOffset < v.endOffset);

@@ -23,6 +23,7 @@ public:
 #include "LoopCaptureCases.h"
 #include "PerformanceExportCases.h"
 #include "MultipleExportCases.h"
+#include "LevelAudioPathsCases.h"
 
 int main(int argc,char** argv)
 {
@@ -32,6 +33,7 @@ int main(int argc,char** argv)
     if(argc==2 && juce::String(argv[1])=="loop-capture")return runTest([]{coherentHostTimingCases();loopCaptureCases();});
     if(argc==2 && juce::String(argv[1])=="performance-export")return runTest([]{performanceExportCases();});
     if(argc==2 && juce::String(argv[1])=="learn-policy")return runTest([]{learnPassPolicyCases();});
+    if(argc==2 && juce::String(argv[1])=="level-paths")return runTest([]{levelAudioPathsCases();});
     const auto root = juce::File::getSpecialLocation(juce::File::tempDirectory)
         .getChildFile("PreverbProcessorTest-" + juce::Uuid().toDashedString());
     struct Cleanup { juce::File directory; ~Cleanup() { directory.deleteRecursively(); } } cleanup{root};
@@ -196,5 +198,6 @@ int main(int argc,char** argv)
 
     if(runTest([]{performanceExportCases();})!=0)return 35;
     if(runTest([]{multipleExportCases();})!=0)return 36;
+    if(runTest([]{levelAudioPathsCases();})!=0)return 37;
     return 0;
 }

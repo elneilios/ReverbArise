@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.14 · **Production standards revision:** 14 · **Purpose:** Production UI authority and design reference. Revision 14 records the native-approved C2 selector family and small local field help/red error-message-and-border policy. Named selector consumers are adopted; remaining families retain their own changes. Keyboard/accessibility focus uses aqua outer brackets; pointer clicks retain focus without decoration. Revision-12 command geometry/colours and other families' scoped migration boundaries remain intact.
+**Version:** 1.15 · **Production standards revision:** 15 · **Purpose:** Production UI authority and design reference. Revision 15 sets the approved Level edit limits in the standard knob. Revision 14 records the native-approved C2 selector family and small local field help/red error-message-and-border policy. Named selector consumers are adopted; remaining families retain their own changes. Keyboard/accessibility focus uses aqua outer brackets; pointer clicks retain focus without decoration. Revision-12 command geometry/colours and other families' scoped migration boundaries remain intact.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -37,6 +37,15 @@ while larger responsive roles can grow it. This scoped selector role keeps the
 input typography. `SelectorPresentation::valueFont` is the authority for closed
 selectors and their popup values. Visible selector/import bodies remain aligned;
 outside focus is reserved in the component frame and existing row gaps are retained.
+
+## Level — issue #108
+
+The owner approved issue #108's standard Level knob on 2026-11-07. All new
+edits use -12 to +12 dB, with 0 dB at 12 o'clock and as the default and reset.
+Wheel and key steps are 1 dB or 0.1 dB with Shift. Older saved gains below
+-12 dB appear in the ordinary input and stay applied until a Level edit.
+Pressing the dial brings an older gain to -12 dB. The UI development standards
+describe the shared binding and accessibility behavior.
 
 ## Responsive composition — issue #58
 
@@ -200,6 +209,7 @@ production standards revision; this revision does not change plugin/state versio
 | 12 | #107 native button family revision 4 approved 2026-11-06 | Four aqua corner brackets, 2-pixel stroke with 3-pixel outside gap inside component bounds; body border/background owns hover/press. Destructive mouse feedback stays red; neutral icons stay off-white. Explicit neutral/primary/destructive/latch roles share one painter. No new token, knob or FileDragTile redesign; integrated acceptance remains separate |
 | 13 | #107 owner approved input-dependent focus visibility 2026-11-06 | Shared commands show brackets for keyboard/accessibility focus and hide them after pointer clicks while retaining actual focus/activation. Hover/held ink and geometry stay unchanged. Other families adopt the policy during their own jobs; caret/editing/selection feedback remains separate. See the shared focus visibility contract |
 | 14 | #107 revised native selector family approved 2026-11-07 | Quiet transient pointer highlight, persistent keyboard inspection, independent accepted checkmark and explicit commit; aqua outside focus, steady glyphs. Scoped popup metrics and minimum 13 value type; local help uses 12-height Inter, 17-height lines and 4-unit gap, with red error text/body border. Adopted consumers are listed in the C2 contract; action menus, #108 and #8 stay separate. |
+| 15 | #108 standard Level knob approved 2026-11-07 | Fixed -12 to +12 dB edits and 0 dB at 12 o'clock. The ordinary input preserves older gains until Level is operated |
 
 ### Stable Perform transport information
 

@@ -19,6 +19,16 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Issue #108, production standards revision 15. Level uses the standard `KnobValue`
+appearance and drag response with one -12 to +12 dB edit range. The normal
+field shows an older value below -12 dB. A primary press on the dial brings
+that value to -12 dB and starts any subsequent drag at that limit. The
+accessibility slider reports the bounded position and edit limits, with the
+actual saved gain in its text readback and help. The Level binding uses
+`onDialPress` for first touch and `onAbsolute` for numeric accessibility writes.
+`--test-level` checks native input, neutral paint, layout and project reopen.
+The owner approved this interaction on 2026-11-07.
+
 Production standards revision 13 adopts the owner's
 [focus visibility policy](ui-control-contracts.md#focus-visibility-policy).
 Shared command buttons show their aqua brackets for keyboard/accessibility focus,

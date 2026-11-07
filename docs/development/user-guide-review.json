@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced project portability and asset retention requirements against the existing Storage and Learn flows. The guide already describes working-folder selection, Backup, Restore and normal Learn recovery. Scratch administration remains outside production controls.",
+  "summary": "Reviewed the synced swell gain staging spec against the approved Perform Level guide. The existing guide already documents the standard knob, fixed limits, saved values and first touch.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 32547,
-      "sha256": "63854fdf6df71e6c1b7bdbd97f4a1219cb3f41310e9899c70b915e77fd1dda97"
+      "bytes": 32743,
+      "sha256": "ddd279b65f305c2085a64300fccc1224c8fd064ac3faab1e5bfc49e41221ea0b"
     },
     {
       "path": "CMakePresets.json",
@@ -260,13 +260,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 32957,
-      "sha256": "497347d3e63bdc8c7524ae75ea288544dc9cbf59f543c12e6f54d242cbaaea70"
+      "bytes": 32990,
+      "sha256": "d4940c876e36b88d52879091dccfa1c21d1a5dc9ff6aec8f81311d7f5cbc23b8"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 8923,
-      "sha256": "13f092253ed2018e1525d10f0bc0d0dcf79a33e1677ba3dabae8291dcb590842"
+      "bytes": 9192,
+      "sha256": "383a878451de7304403b944d587c2974a900204c2a72559844dc910ea8392639"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 88471,
-      "sha256": "fba249c2bb241fc5f7d7c14139bd281169aee6713fc8e3f4adf0abaf4c2ebdef"
+      "bytes": 89419,
+      "sha256": "14b609f750f075b752e3c859e1673f41b3befbca12353e5ca187a9bdfed0e757"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 22546,
-      "sha256": "897c09ce188bfea620df92d71c9dcb3f40bf66f9f8e0e98b5ded3a88c11b1a79"
+      "bytes": 23901,
+      "sha256": "2922f0d245590ed342443c8de23f41045b90258e812b7b86c49950c3d5a5d225"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -760,8 +760,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 14240,
-      "sha256": "71c7858d069eb250242096cfd6f1236cedb4f417371fbc54db48141911f6cf5e"
+      "bytes": 14749,
+      "sha256": "2fbbe3d40845c14fdfd88bc9dcfe15fe9a1056c9d36a5a3ab305d67261a908f3"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -772,6 +772,11 @@
       "path": "Source/UI/LearnWorkspace.h",
       "bytes": 35316,
       "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+    },
+    {
+      "path": "Source/UI/LevelAdjustment.h",
+      "bytes": 715,
+      "sha256": "656a4685da2c48ce1d0e8006129853a45b57c5857e9107820f80170cda2c2a9d"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -915,8 +920,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 27861,
-      "sha256": "ce8ba5eb0dfed1b434d5d116d10c1d712a3b1549520bf6e82471b3362b43735a"
+      "bytes": 28516,
+      "sha256": "11213ac70f145ffec31a48b7ed9b8454eb56796caabd47c06c71e8f5dae03414"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1010,8 +1015,8 @@
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
-      "bytes": 13234,
-      "sha256": "606c1840ab3e17b89530e1a02d5f6c75ad2264c5641c6eb63c51c9a048eb101a"
+      "bytes": 16276,
+      "sha256": "9306aec627b8032dce1c411eb1c04a5c4922f1d419317e32e9c1d66d0fd7f670"
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
