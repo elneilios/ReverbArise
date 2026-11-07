@@ -7,6 +7,7 @@ Issue #107's action/context menus still rely on generic popup styling while sele
 ## What Changes
 
 - Reuse the popup-row policy delivered by `unify-selector-states` for the Swells-list Rename/Delete menu and existing per-value reset popups.
+- Open the same Swells item menu from a right-click on its row or a click on its three-dot icon.
 - Clear pointer highlight when it leaves a row/menu; retain the actual keyboard-navigation highlight while its focus remains. Ordinary action rows do not acquire selected checkmarks or a latched background after invocation.
 - Give Delete its explicit destructive red text/edge and restrained red hover/held surfaces; retain quiet neutral feedback for Rename and per-value reset. Labels and component names do not choose semantic variants.
 - Preserve generated reset labels, captured actions, popup anchors, cancellation, deletion checks, one-shot dispatch and all current stale session/selection/input/pass/reset-revision rejection.

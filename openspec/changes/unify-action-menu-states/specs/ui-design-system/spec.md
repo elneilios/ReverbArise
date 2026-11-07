@@ -42,3 +42,7 @@ Migrated menus SHALL preserve existing action effects, captured target/session/i
 - **THEN** activation dispatches the original guarded action once and cancellation dispatches none
 - **AND** menu anchoring, owner lifetime and input-appropriate focus return remain valid
 - **AND** pointer-restored focus does not introduce keyboard/accessibility focus brackets
+
+#### Scenario: Open a Swells item menu from either pointer entry point
+- **WHEN** the user right-clicks a Swells item or clicks that item's three-dot icon
+- **THEN** the same Rename/Delete menu opens for the clicked item at the pointer anchor

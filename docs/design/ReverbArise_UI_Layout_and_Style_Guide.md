@@ -38,6 +38,17 @@ input typography. `SelectorPresentation::valueFont` is the authority for closed
 selectors and their popup values. Visible selector/import bodies remain aligned;
 outside focus is reserved in the component frame and existing row gaps are retained.
 
+## Action-menu preview — issue #107
+
+The [C2 action-menu contract](../development/ui-control-contracts.md#c2-action-menu-preview--issue-107)
+defines explicit neutral and destructive rows. The candidate reuses the
+selector popup geometry and Inter text. Neutral actions use quiet dark fills.
+Destructive actions use `danger` ink and edge emphasis with a 14% hover blend
+and 24% held blend from `background` toward `danger`. These mixes are scoped
+to the popup preview until native approval. Action menus clear pointer emphasis
+on departure and retain active keyboard inspection. Selection marks belong to
+choice menus.
+
 ## Responsive composition — issue #58
 
 This section takes precedence over the older fixed-size Learn/header values

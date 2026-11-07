@@ -4,6 +4,8 @@
 
 namespace m3::ui::controls
 {
+enum class PopupRowRole { choice, action, destructiveAction };
+
 // A snapshot of presentation, not model authority. Completion is still subject
 // to the owner's captured binding/lifetime checks.
 struct PopupChoice
@@ -11,6 +13,10 @@ struct PopupChoice
     int id=0;
     juce::String label,reason;
     bool eligible=true,selected=false;
+    PopupRowRole role=PopupRowRole::choice;
+
+    bool representsChoice() const noexcept { return role == PopupRowRole::choice; }
+    bool hasSelectionMarker() const noexcept { return representsChoice() && selected; }
 };
 
 class PopupInteraction final

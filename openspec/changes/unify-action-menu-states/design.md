@@ -33,6 +33,11 @@ Pass typed row descriptors (ID, label, reason, neutral/destructive role, eligibl
 
 Use the adapter's existing screen clamping, Escape/outside cancellation, keyboard/Space/Return/accessibility invocation, focus return and safe owner lifetime. Preserve each call site's anchors: Swells uses the original row/event screen area, resets use the original pointer anchor and owner lifetime. Revalidate eligibility on activation/delivery through the existing model guards; styling does not grant acceptance.
 
+Both Swells pointer entry points use the existing row callback. Right-click on
+the row body or click its three-dot icon to open Rename/Delete for that item.
+The native fixture uses the actual list component so both paths can be tried
+before editor adoption.
+
 Rejected alternatives: change global PopupMenu colours (would affect deferred #8/native boundaries and cannot distinguish role/inspection), infer Delete from its text/name (violates explicit ownership), or rebuild reset providers around a generic command API (would jeopardize exact captured authority). A new button or confirmation flow is not part of this change.
 
 ### Exact adoption and coordination

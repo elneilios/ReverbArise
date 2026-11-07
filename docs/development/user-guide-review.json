@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced selector requirements against the approved implementation and the offline dropdown instructions. Existing guide prose remains accurate after the spec sync and archive.",
+  "summary": "Reviewed the opt-in action-row preview against the shipped selector behavior. Production dropdown and menu consumers retain their documented behavior at this checkpoint.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -565,8 +565,8 @@
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 13021,
-      "sha256": "ef7ad19d5f58ecb373aa046fb9d56a07187615d00cda320ae5a562fb5a90f227"
+      "bytes": 13961,
+      "sha256": "8656294cd9125bcc77ca416c9ef19864da6230911f581de2d37a83cf5dff74f4"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
@@ -670,8 +670,8 @@
     },
     {
       "path": "Source/UI/Controls/PopupInteraction.h",
-      "bytes": 1850,
-      "sha256": "3e4cd7806e7aab2aa88c219592d0047c4d7a8be107291620f9722da6b8433300"
+      "bytes": 2131,
+      "sha256": "7155e66efbf9e5239db501f35a37d828d16778ac0ac736e7c4494a265b23d2a3"
     },
     {
       "path": "Source/UI/Controls/PresentationSurface.h",

@@ -146,6 +146,25 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
+### C2 action-menu preview — issue #107
+
+`ChoicePopup` accepts `PopupChoice` descriptors with `PopupRowRole::choice`,
+`action`, or `destructiveAction`. The choice role owns selection marks and
+selectable accessibility metadata. Neutral actions use the quiet selector
+hover/held fills and aqua edge. The destructive role uses `danger` text and
+edge ink, with popup-only hover and held blends. Labels are display text.
+
+Supply the complete label, eligibility and visible/accessibility explanation
+from the action provider. Unavailable rows remain inspectable. The binding
+captures the original action and target before opening and checks eligibility
+again on one-shot delivery. Outside dismissal preserves the focus recipient.
+
+The fixture is the native review gate for these popup roles. Its Swells item
+opens via right-click or its three-dot icon. Reset and screen-edge samples share
+the same adapter. Production adoption awaits the scoped native approval.
+The C1 command roles and deferred #8 popup ownership are documented separately
+in the [control inventory](../design/ui-control-inventory.md).
+
 ### C2 approved implementation — 2026-11-07
 
 `Controls/ChoiceSelector.h` extends the existing deliberate selector as an explicit
