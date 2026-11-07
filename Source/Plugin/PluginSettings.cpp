@@ -129,7 +129,14 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
     move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
     move(1,{&mappingButton,&automaticButton,&autoButton,&separationLabel,&separationSlider,&defaultIRButton});
-    move(2,{&muteButton,&fullButton,&inCurveBox,&outCurveBox,&sampleUnitsButton,&barStartLabel,&barStartEditor,&barEndLabel,&barEndEditor,&setBarsButton,&removeButton});
+    move(2,{&muteButton,&fullButton,&inCurveBox,&outCurveBox,&sampleUnitsButton,&barStartLabel,&barStartEditor,&barEndLabel,&barEndEditor,&setBarsButton,&removeButton,&sourceRangeFeedback});
+    sourceRangeFeedback.setName("sourceRangeFeedback");
+    for(auto* caption:{&barStartLabel,&barEndLabel})
+    {
+        m3::ui::applyTextRole(*caption,m3::ui::TextRole::controlLabel);
+        caption->setBorderSize({});
+        caption->setAccessible(false);
+    }
     move(3,{&isolateButton,&isolateDryButton,&tailLabel,&tailSlider,&auditionLabel,&auditionSlider});
     move(4,{&generateButton,&allButton,&analyzeButton,&confirmButton,&candidateBox,&recaptureButton,&cancelButton,&recaptureStatus,&clearButton,&suppressionButton,&toneButton,&toneStartLabel,&toneStartSlider,&toneEndLabel,&toneEndSlider,&openDiagnosticsButton});
     allButton.setName("regenerateAll");
@@ -186,9 +193,8 @@ void PreverbAudioProcessorEditor::layoutSettings()
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
     muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
     row(settingsLabels[2],inCurveBox,60);row(settingsLabels[3],outCurveBox,100);
-    settingsLabels[4].setBounds(left,146,width,24);barStartLabel.setBounds(left,178,70,30);barStartEditor.setBounds(left+75,178,90,30);
-    barEndLabel.setBounds(left+185,178,70,30);barEndEditor.setBounds(left+260,178,90,30);setBarsButton.setBounds(left+365,178,225,30);
-    fullButton.setBounds(left,230,220,32);removeButton.setBounds(left+240,230,160,32);
+    settingsLabels[4].setBounds(left,146,width,24);
+    layoutSourceRange();
     settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,30);isolateDryButton.setBounds(left+265,56,300,30);
     row(tailLabel,tailSlider,106);row(auditionLabel,auditionSlider,152);
     settingsLabels[6].setBounds(left,12,160,26);generateButton.setBounds(left+175,12,200,30);allButton.setBounds(left+390,12,200,30);
@@ -203,7 +209,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     toneStartLabel.setBounds(left,300+feedbackBand,90,30);toneStartSlider.setBounds(left+95,300+feedbackBand,190,30);toneEndLabel.setBounds(left+300,300+feedbackBand,100,30);toneEndSlider.setBounds(left+405,300+feedbackBand,185,30);
     openDiagnosticsButton.setBounds(left,346+feedbackBand,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
-    for(int i=0;i<5;++i)settingsHelp[i].setBounds(left,i==4?394+feedbackBand:310,width,70);
+    for(int i:{0,1,3,4})settingsHelp[i].setBounds(left,i==4?394+feedbackBand:310,width,70);
     using namespace m3::ui;
     aboutHeading.setBounds(left,spacing::section,width,controlGeometry::headingHeight);
     auto aboutY=aboutHeading.getBottom()+spacing::section;
@@ -215,6 +221,61 @@ void PreverbAudioProcessorEditor::layoutSettings()
     }
     copyBuildInformation.setBounds(left,aboutY+spacing::related,width,controlGeometry::height);
     settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,2*learnTypography::secondaryLineHeight);
+}
+
+void PreverbAudioProcessorEditor::refreshSourceRangeFeedback(const m3::Swell* swell)
+{
+    if(sourceRangeRejection && (sourceRangeRejection->epoch!=state.sessionEpoch
+                               || sourceRangeRejection->primary!=state.session.primary))
+        sourceRangeRejection.reset();
+
+    const auto* result=sourceRangeRejection ? &sourceRangeRejection->result : nullptr;
+    const auto affected=result ? result->affected : SourceBarFields::none;
+    barStartEditor.setInvalid(affected==SourceBarFields::start || affected==SourceBarFields::both);
+    barEndEditor.setInvalid(affected==SourceBarFields::end || affected==SourceBarFields::both);
+    juce::String message=result ? result->rejection
+        : !swell ? "Select a swell to apply its source range."
+        : swell->frozen ? "Unfreeze the selected swell to change its source range."
+        : "The end bar is excluded.";
+    if(affected==SourceBarFields::end)
+        message+=". Enter a later bar, then choose Set source from bars to apply the corrected range.";
+    if(sourceRangeMessage==message && sourceRangeHasError==(result!=nullptr))return;
+
+    sourceRangeMessage=message;
+    sourceRangeHasError=result!=nullptr;
+    barStartEditor.setFieldDescription(message);
+    barEndEditor.setFieldDescription(message);
+    if(!settingsLabels[4].getBounds().isEmpty())layoutSourceRange();
+}
+
+void PreverbAudioProcessorEditor::layoutSourceRange()
+{
+    using namespace m3::ui;
+    using controls::commandBodyBounds;
+    const auto heading=settingsLabels[4].getBounds();
+    const auto margin=controls::SelectorPresentation::focusMargin;
+    const auto fieldWidth=(heading.getWidth()/2-spacing::related)/2;
+    const auto frameHeight=controlGeometry::height+2*margin;
+    const auto top=heading.getBottom()+controlGeometry::labelHeight;
+    barStartEditor.setBounds(heading.getX()-margin,top,fieldWidth,frameHeight);
+    barEndEditor.setBounds(barStartEditor.getRight()+spacing::related,top,fieldWidth,frameHeight);
+
+    const auto startBody=commandBodyBounds(barStartEditor.getBounds());
+    const auto endBody=commandBodyBounds(barEndEditor.getBounds());
+    const auto caption=[top](juce::Rectangle<int> body)
+    {return body.withHeight(controlGeometry::labelHeight).withY(top-controlGeometry::labelHeight);};
+    barStartLabel.setBounds(caption(startBody));
+    barEndLabel.setBounds(caption(endBody));
+    const auto pair=startBody.getUnion(endBody);
+    sourceRangeFeedback.arrange(sourceRangeMessage,sourceRangeHasError,pair);
+
+    const auto feedbackBottom=std::max(pair.getBottom(),sourceRangeFeedback.getBottom());
+    setBarsButton.setBounds(barStartEditor.getBounds().getUnion(barEndEditor.getBounds())
+                            .withY(feedbackBottom+spacing::related));
+    const auto actionY=setBarsButton.getBottom()+spacing::related;
+    fullButton.setBounds(heading.getX(),actionY,220,32);
+    removeButton.setBounds(heading.getX()+240,actionY,160,32);
+    settingsHelp[2].setBounds(heading.getX(),fullButton.getBottom()+spacing::section,heading.getWidth(),70);
 }
 
 void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapshot& capture,uint64_t epoch)

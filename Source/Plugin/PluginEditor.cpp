@@ -86,7 +86,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         fields[i].setFont(m3::ui::fontFor(*this,m3::ui::controlSize));fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
     }
     barStartEditor.setName("sourceStart");barEndEditor.setName("sourceEnd");barStartEditor.setText("1",false);barEndEditor.setText("2",false);
-    for(auto* editor:{&barStartEditor,&barEndEditor,&placementEditor})editor->setFont(m3::ui::fontFor(*this,m3::ui::controlSize));
+    placementEditor.setFont(m3::ui::fontFor(*this,m3::ui::controlSize));
     for(auto* field:{&barStartEditor,&barEndEditor}){field->setInputRestrictions(12,"0123456789");addAndMakeVisible(field);field->onReturnKey=[this]{applyBarRange();};}
     const auto slider=[&](juce::Slider& control,double a,double b,double step,const juce::String& suffix)
     {control.setRange(a,b,step);control.setSliderStyle(juce::Slider::LinearHorizontal);control.setTextBoxStyle(juce::Slider::TextBoxRight,false,78,22);control.setTextValueSuffix(suffix);addAndMakeVisible(control);};
@@ -415,7 +415,14 @@ void PreverbAudioProcessorEditor::curveChanged(bool in)
     processor.swellEngine().edit(state.session.primary,[&](auto& w,auto&){if(in)w.shape.inCurve=curve;else w.shape.outCurve=curve;return true;});
 }
 void PreverbAudioProcessorEditor::applyBarRange()
-{processor.setSourceBars(barStartEditor.getText().getLargeIntValue(),barEndEditor.getText().getLargeIntValue());refresh();}
+{
+    auto result=processor.setSourceBars(barStartEditor.getText().getLargeIntValue(),
+                                        barEndEditor.getText().getLargeIntValue());
+    sourceRangeRejection.reset();
+    if(result.rejection.isNotEmpty())
+        sourceRangeRejection=SourceRangeRejection{state.sessionEpoch,state.session.primary,std::move(result)};
+    refresh();
+}
 void PreverbAudioProcessorEditor::shapeReset(bool full)
 {
     if(!full){processor.swellEngine().resetSwell(state.session.primary,false);refresh();return;}
@@ -770,6 +777,7 @@ void PreverbAudioProcessorEditor::refresh()
     freezeButton.setEnabled(w && (w->frozen || w->phase==m3::Phase::ready));
     for(auto* control:std::array<juce::Component*,6>{&enabledButton,&muteButton,&soloButton,&inCurveBox,&outCurveBox,&setBarsButton})control->setEnabled(w!=nullptr);
     if(w && w->frozen){for(int field:{arrival,sourceA,sourceB})fields[field].setEnabled(false);setBarsButton.setEnabled(false);}
+    refreshSourceRangeFeedback(w);
     timingButton.setEnabled(w!=nullptr);
     mappingButton.setToggleState(processor.isMappingEnabled(),juce::dontSendNotification);toneButton.setToggleState(processor.isTestToneEnabled(),juce::dontSendNotification);
     toneStartSlider.setValue(processor.getToneStartBar(),juce::dontSendNotification);toneEndSlider.setValue(processor.getToneEndBar(),juce::dontSendNotification);

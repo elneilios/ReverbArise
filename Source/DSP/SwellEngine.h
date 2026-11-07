@@ -127,7 +127,7 @@ public:
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
-    bool addTarget(int64_t arrival);
+    bool addTarget(int64_t arrival,juce::String* rejection=nullptr);
     bool confirmCandidate(size_t index);
     bool confirmCandidateAt(int64_t sample);
     void removeSelected();
@@ -135,7 +135,8 @@ public:
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
-    bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession);
+    bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession,
+              juce::String* rejection=nullptr);
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
@@ -260,7 +261,7 @@ private:
     bool requestLearnLocked(const PreviewContext&,uint64_t session,uint64_t pass,uint64_t serial,bool automatic);
     bool learnGenerationStep(const PreviewContext&);
     void performLearnGeneration(LearnRequest);
-    bool permitCreative();
+    bool permitCreative(juce::String* rejection=nullptr);
     workflow::State* workflowState=nullptr;
     std::array<GenerationConfiguration,2> generationConfigurations;
     uint64_t configurationRevision=0;
@@ -308,7 +309,8 @@ private:
     void acceptedSourceLocked(const CaptureManifest&);
     void importJob(const Import&);
     void resetJob(const Reset&);
-    bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,uint64_t expectedSession=0);
+    bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,
+                     uint64_t expectedSession=0,juce::String* rejection=nullptr);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
     void shapeJob(Swell,uint64_t session);

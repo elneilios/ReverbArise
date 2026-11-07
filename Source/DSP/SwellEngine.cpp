@@ -8,10 +8,13 @@
 
 namespace m3
 {
-bool SwellEngine::permitCreative()
+bool SwellEngine::permitCreative(juce::String* rejection)
 {
     if(!workflowState || workflowState->snapshot().mode==workflow::Mode::live)return true;
-    const juce::ScopedLock guard(lock);message="Creative editing is available in Perform mode";return false;
+    const juce::ScopedLock guard(lock);
+    message="Creative editing is available in Perform mode";
+    if(rejection) *rejection=message;
+    return false;
 }
 SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
     :Thread("Preverb Swells"),persistentChange(std::move(changed)),legacyProjectsRoot(path),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context))
@@ -179,13 +182,17 @@ void SwellEngine::clear()
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=false;
 }
-bool SwellEngine::addTarget(int64_t arrival)
+bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection)
 {
-    if(!permitCreative())return false;
+    if(!permitCreative(rejection))return false;
     const auto context=contextProvider(); const juce::ScopedLock guard(lock);
     std::vector<int64_t> arrivals; for(const auto& c:candidates) arrivals.push_back(c.sample);
     const auto& targetTime=sameMusicalMapping(model.timing,context.time)?model.timing:context.time;
-    if(!add(model,arrival,context.capture.manifest,targetTime,arrivals,message)) return false;
+    if(!add(model,arrival,context.capture.manifest,targetTime,arrivals,message))
+    {
+        if(rejection) *rejection=message;
+        return false;
+    }
     if(workflowState){performPositionEstablished=true;initialPerformOffer=0;}
     protectedGenerationCalibration.clear();
     ++monitoringGeneration;auto& w=model.swells.back();w.detectorAnchor=arrival;w.ir=model.defaultIR;w.irName=model.defaultIRName;
@@ -235,8 +242,9 @@ bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce:
 {return selectTargets(ids,primary,0);}
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation)
 {return editChecked(id,operation);}
-bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,uint64_t expectedSession)
-{return editChecked(id,operation,false,expectedSession);}
+bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
+                       uint64_t expectedSession,juce::String* rejection)
+{return editChecked(id,operation,false,expectedSession,rejection);}
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
     if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
@@ -266,25 +274,33 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
     message=policy==GainPolicy::musical?"Musical gain staging selected; preparing calibrated swells":"Legacy gain staging selected";
     persistentChangedLocked();notify();return true;
 }
-bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,bool allowReset,uint64_t expectedSession)
+bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
+                             bool allowReset,uint64_t expectedSession,juce::String* rejection)
 {
-    if(!permitCreative())return false;
+    if(!permitCreative(rejection))return false;
     const auto context=contextProvider();
     const juce::ScopedLock guard(lock);
-    if(expectedSession && expectedSession!=sessionGeneration.load())return false;
-    auto w=find(model,id); if(!w) return false;
-    actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return false;
-    if(candidate.id!=id) { message="Swell identity cannot be edited"; return false; }
+    const auto reject=[rejection](const juce::String& reason)
+    {
+        if(rejection) *rejection=reason;
+        return false;
+    };
+    if(expectedSession && expectedSession!=sessionGeneration.load())
+        return reject("The swell session changed");
+    auto w=find(model,id);
+    if(!w) return reject("The selected swell is unavailable");
+    actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return reject(message);
+    if(candidate.id!=id) { message="Swell identity cannot be edited"; return reject(message); }
     if(candidate.arrival==w->arrival && (candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd))candidate.supportOffset=0;
     const auto support=candidate.arrival==w->arrival && candidate.sourceStart==w->sourceStart && candidate.sourceEnd==w->sourceEnd
         && renderInputEnd(candidate)!=renderInputEnd(*w);
     const auto input=(allowReset && w->frozen && !candidate.frozen) || support || candidate.arrival!=w->arrival || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir;
-    if(!allowReset && (candidate.frozen!=w->frozen || (w->frozen && input))){message="Unfreeze before changing source, IR or render support";return false;}
+    if(!allowReset && (candidate.frozen!=w->frozen || (w->frozen && input))){message="Unfreeze before changing source, IR or render support";return reject(message);}
     const auto shape=candidate.shape!=w->shape || candidate.placement!=w->placement;
     const auto activity=candidate.enabled!=w->enabled || candidate.muted!=w->muted || candidate.solo!=w->solo;
     if(input || shape || activity || candidate.name!=w->name)
         if(candidate.provenance==Provenance::automatic)candidate.provenance=Provenance::manualEdited;
-    Session trial=model; *find(trial,id)=candidate; if(!validate(trial,message)) return false;
+    Session trial=model; *find(trial,id)=candidate; if(!validate(trial,message)) return reject(message);
     candidate.inputGeneration=w->inputGeneration+(input?1:0);
     candidate.shapeGeneration=w->shapeGeneration+(shape?1:0);
     if(input)

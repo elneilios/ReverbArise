@@ -12,9 +12,13 @@ struct SongTime
     int numerator = 0, denominator = 0;
 };
 
+enum class SourceBarFields { none, start, end, both };
+
 inline bool resolveSourceBars(const SongTime& time, double captureRate, int64_t firstBar,
-                             int64_t endBar, int64_t& first, int64_t& end, std::string& error)
+                             int64_t endBar, int64_t& first, int64_t& end, std::string& error,
+                             SourceBarFields* affected = nullptr)
 {
+    if (affected) *affected = SourceBarFields::none;
     if (! time.valid || ! std::isfinite(time.ppq) || ! std::isfinite(time.bpm)
         || ! std::isfinite(time.rate) || time.rate <= 0 || time.bpm <= 0
         || time.numerator <= 0 || time.denominator <= 0)
@@ -22,7 +26,11 @@ inline bool resolveSourceBars(const SongTime& time, double captureRate, int64_t 
     if (! std::isfinite(captureRate) || std::abs(captureRate - time.rate) > 0.001)
     { error = "Capture and host sample rates differ; clear and recapture"; return false; }
     if (firstBar < 1 || endBar <= firstBar)
-    { error = "Source end bar must be after start bar"; return false; }
+    {
+        if (affected) *affected = firstBar < 1 ? SourceBarFields::start : SourceBarFields::end;
+        error = "Source end bar must be after start bar";
+        return false;
+    }
     const auto perQuarter = static_cast<long double>(time.rate) * 60 / time.bpm;
     const auto perBar = static_cast<long double>(time.numerator) * 4 / time.denominator;
     const auto boundary = [&](int64_t bar, int64_t& result)
@@ -35,7 +43,11 @@ inline bool resolveSourceBars(const SongTime& time, double captureRate, int64_t 
         result = static_cast<int64_t>(value); return true;
     };
     if (! boundary(firstBar, first) || ! boundary(endBar, end) || end <= first)
-    { error = "Source sample interval overflows"; return false; }
+    {
+        if (affected) *affected = SourceBarFields::both;
+        error = "Source sample interval overflows";
+        return false;
+    }
     error.clear(); return true;
 }
 

@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.16 · **Production standards revision:** 16 · **Purpose:** Production UI authority and design reference. Revision 16 adopts the approved Swells and per-knob Reset action menus. Revision 15 sets the approved Level edit limits in the standard knob. Revision 14 defines C2 selector feedback and local field help and validation. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed on pointer return from an action menu.
+**Version:** 1.17 · **Production standards revision:** 17 · **Purpose:** Production UI authority and design reference. Revision 17 adopts the approved C3 field layout in the Settings Swell source-range group. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -50,6 +50,15 @@ pointer emphasis on departure and retain active keyboard inspection. Selection
 marks belong to choice menus. Revision 16 adopts this policy for Swells
 Rename/Delete and per-knob Reset menus. Right-click a knob for its captured
 Reset action. Menu focus restoration keeps the knob's existing bracket geometry.
+
+## Source-range field feedback — issue #107
+
+In Settings → Swell, each bar input has its caption above the body. A shared
+message below the pair wraps within the span of the two input borders. Help uses
+12-height Inter Regular, 17-unit lines and the existing 4-unit gap. The controls
+below move with the measured message height. A rejected range uses red text and
+marks the affected input border in red. Aqua focus brackets sit outside that
+border. Guidance remains readable when the action is unavailable.
 
 ## Level — issue #108
 
@@ -224,6 +233,7 @@ production standards revision; this revision does not change plugin/state versio
 | 14 | #107 revised native selector family approved 2026-11-07 | Quiet transient pointer highlight, persistent keyboard inspection, independent accepted checkmark and explicit commit; aqua outside focus, steady glyphs. Scoped popup metrics and minimum 13 value type; local help uses 12-height Inter, 17-height lines and 4-unit gap, with red error text/body border. Adopted consumers are listed in the C2 contract; action menus, #108 and #8 stay separate. |
 | 15 | #108 standard Level knob approved 2026-11-07 | Fixed -12 to +12 dB edits and 0 dB at 12 o'clock. The ordinary input preserves older gains until Level is operated |
 | 16 | #107 native action-menu family approved 2026-11-07 | Swells Rename/Delete opens from the row or its three dots. Per-knob Reset uses the same presenter and its captured action. Explicit neutral and destructive roles use transient hover, held feedback and separate keyboard inspection. |
+| 17 | #107 native field feedback approved 2026-11-07 | Settings Swell puts captions above the source-range inputs and wraps one local help or validation message below them. The existing field metrics, error ink and focus geometry apply. |
 
 ### Stable Perform transport information
 

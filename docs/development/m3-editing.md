@@ -64,8 +64,10 @@ uses a sixteenth-note grid; turn it off for free dragging or use exact sample fi
 Source handles are at the bottom of the source lane; arrival markers are at its top.
 Audible bounds are square handles at the wet lane's top; fade handles are orange at
 its bottom. The inspector exposes the same operations numerically, with fade lengths
-in milliseconds. **Set source from bars** explicitly replaces the selected source
-range; merely navigating or focusing a field does not round precise edits.
+in milliseconds. In Settings → Swell, enter **Bar start** and **End excl.**,
+then use **Set source from bars** or press Return in either field to replace the
+selected source range. The end bar is excluded. A rejected submission shows its
+reason below the pair. Simply navigating or focusing a field preserves precise edits.
 
 Full raw response stays visible behind the shaped overlay; excluded samples are
 dimmed. Over-full-scale peaks use a labeled display fit without flattening. Previous
