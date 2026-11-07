@@ -31,6 +31,7 @@ struct PreparedExport
     SongMixMetrics metrics;
     ExportFile file;
     juce::String acceptedNotice;
+    std::shared_ptr<const CaptureStorageLocation> storage;
 };
 struct ExportSnapshot
 {
@@ -314,8 +315,9 @@ private:
     void stopLocked();
     void setExpected(const SongTime&);
     juce::File instanceRoot(const CaptureManifest&) const;
+    bool storageReady(const PreviewContext&); // Worker/offline only; never the real-time callback.
     static std::shared_ptr<Waveform> waveform(const WetRender&);
-    juce::File root;
+    std::atomic<std::shared_ptr<const CaptureStorageLocation>> storageLocation;
     std::function<PreviewContext()> contextProvider;
     mutable juce::CriticalSection lock;
     juce::CriticalSection workLock;
@@ -336,7 +338,7 @@ private:
     ExportSnapshot exportState;
     struct DetailRequest{uint64_t session,serial,mix,pass;int64_t first,end;size_t bins;double due;std::shared_ptr<const PreparedExport> accepted;};
     std::optional<DetailRequest> detailWork;std::atomic<uint64_t> detailSerial{0};
-    struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;};
+    struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;std::shared_ptr<const CaptureStorageLocation> storage;};
     uint64_t exportDeliverySerial=0;std::optional<ExportDelivery> exportDelivery;
     std::unique_ptr<ExportVoice> exportVoice=std::make_unique<ExportVoice>();
     std::unique_ptr<SongMix> exportPreviewReader;

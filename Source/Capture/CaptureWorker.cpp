@@ -89,6 +89,7 @@ bool CaptureWorker::armRecovery(std::vector<std::pair<int64_t,int64_t>> required
     for(const auto [a,b]:required)if(b<=a)return false;
     const juce::ScopedLock guard(commandLock);
     if(isLoading() || !workflowState || workflowState->snapshot().locked())return false;
+    {const juce::ScopedLock data(snapshotLock);if(published.location && !published.location->writable)return false;}
     workflowState->reset(workflow::Mode::capture);recoveryRequired=std::move(required);recoveryCaptureArmed=true;mappingAllowed.store(true);
     refreshAdmission=true;notify();return true;
 }
@@ -151,7 +152,7 @@ void CaptureWorker::publishProgress()
 }
 
 void CaptureWorker::requestRestore(const std::string& project, const std::string& instance,
-                                    const juce::String& reference, uint64_t revision,workflow::Mode mode,bool preserveOnFailure)
+                                    const juce::String& reference, uint64_t revision,workflow::Mode mode,bool preserveOnFailure,std::optional<StorageRestore> storage)
 {
     recapture.cancel();
     const juce::ScopedLock lock(commandLock);
@@ -160,7 +161,7 @@ void CaptureWorker::requestRestore(const std::string& project, const std::string
     generation.fetch_add(1);
     loading.store(true);
     recoveryCaptureArmed=false;recoveryRequired.clear();
-    restore = {project, instance, reference, revision,preserveOnFailure};
+    restore = {project, instance, reference, revision,preserveOnFailure,std::move(storage)};
     restoreRequested.store(true, std::memory_order_release);
 }
 
@@ -221,7 +222,15 @@ void CaptureWorker::run()
             while (queue.tryPop(block)) {}
             continuity.reset();
             rateStale = false;
-            if(command.preserveOnFailure)session.reload(command.project,command.instance,command.reference,command.revision);
+            if(command.storage){
+                auto selected=command.storage->location;
+                try{if(command.storage->resolve)selected=command.storage->resolve();}catch(const std::exception&){selected.reset();}
+                if(!selected)selected=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{{},{},{},false});
+                CaptureSession candidate(selected->projectsRoot,selected);
+                const bool available=candidate.restore(command.project,command.instance,command.reference,command.revision,command.storage->savedManifest);
+                const juce::ScopedLock fence(commandLock);
+                if(generation.load()==commandGeneration && (available || command.storage->allowMissingSource || !command.preserveOnFailure))session=std::move(candidate);
+            }else if(command.preserveOnFailure)session.reload(command.project,command.instance,command.reference,command.revision);
             else session.restore(command.project, command.instance, command.reference, command.revision);
             { const juce::ScopedLock lock(commandLock);
               if (generation.load() == commandGeneration) loading.store(false); }

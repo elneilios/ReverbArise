@@ -107,7 +107,7 @@ disposable preview. Both unchanged native-focus tests passed on retry after that
 review ended. No foreground-focus assertion was removed or weakened.
 
 
-## Open integration decision: an irrecoverable whole working folder
+## Approved integration decision: an irrecoverable whole working folder
 
 The portability delta requires a verified copy before association, while the
 retention/recovery delta promises normal Learn when original assets cannot be
@@ -116,7 +116,7 @@ the existing recovery path. If the entire associated folder is lost or offline,
 its writer root is unavailable and a complete verified transfer is impossible.
 The present plan does not authorize an incomplete transfer as a successful pack.
 
-Proposed explicit exception for owner review: create a new recovery workspace
+The owner approved this explicit exception on 2026-11-06: create a new recovery workspace
 only after a deliberate user choice. Keep the original store/snapshot locator,
 all decodable swell identities/settings and unresolved references for later
 Locate/Restore. Clearly label the workspace incomplete; never publish a complete
@@ -126,7 +126,39 @@ and missing-export disclosures remain unchanged. No Learn/Generate controls are
 added to Storage, no original data is deleted, and no fallback migration occurs
 silently. Host association changes still request an explicit DAW save.
 
-Alternative: require locating/restoring the original folder before permitting
-capture, explicitly limiting re-learning when the whole folder is irrecoverable.
-This is a requirements decision, not cleared by the native layout approval. No
-recovery exception or corresponding production state format is implemented yet.
+The owner chose the explicit recovery workspace. Native layout approval and this recovery exception are recorded separately; all remaining validation and rollout gates still apply. Worker/backend primitives are implemented and covered by native tests; production Settings, coherent host saves and atomic live-root handoff remain pending.
+
+
+## Recovery and location primitives — 2026-11-06
+
+`prepareRecoveryWorkspace` requires a deliberate, empty, separate destination.
+It preserves the accepted processor/source metadata, original locator and
+verified surviving dependencies, records missing dependencies and unknown source
+history, and never publishes a complete snapshot or receipt. A known missing
+capture manifest can be reconstructed from its exact accepted metadata; missing
+audio remains unavailable. Unknown capture coverage is never invented. Native
+tests then use the ordinary complete Learn capture transaction in this workspace.
+
+The candidate v9 codec carries bounded original recovery locators alongside the
+new working association. Unsupported locator versions/identities are rejected
+transactionally. The recovery record lives under the instance namespace and is
+hash-verified and pinned. Production continues to write v8 until host binding and
+rollback checks are complete.
+
+Capture snapshots now own an immutable location/lease. Host-restore commands can
+resolve a location off the callback, retain accepted source on failed handoff,
+and retain known metadata while blocking writes when a folder is unavailable.
+Old snapshots keep their original lease. The engine, offline rendering and
+export use the accepted source location; a Loading source defers file work and
+an unavailable location blocks it. A mere directory change keeps material
+fingerprints unchanged, and the focused engine fixture verifies no unnecessary
+convolution. These primitives are not the final user-association transaction:
+production must quiesce engine file work and conditionally adopt the prepared
+source without resetting workflow or dropping queued capture audio.
+
+Managed category directories contain pinned `.directory-pin` files. Together
+with pinned directory ancestry this prevents replacing an emptied category with
+a junction. Native probes confirm nonempty-category junction conversion is
+rejected and ordinary immutable capture publication still succeeds. No broader
+drive/profile directories are write-locked; marker files are administrative
+protected files, not assets eligible for cleanup.

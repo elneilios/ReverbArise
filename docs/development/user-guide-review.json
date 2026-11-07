@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the final phase-4 working-folder transaction backend, bounded candidate metadata codec and disposable native panel against current Storage/recovery behavior. Production Settings, processor envelope v8 and user-data roots are unchanged; no musician-facing guide prose changes are needed before the gated production integration.",
+  "summary": "Reviewed phase-4 recovery workspace, bounded original-locator codec and pinned capture/engine/offline/export locations, including coherent initial source ownership, against production bindings and approved decisions. Production remains envelope v8 with existing Storage and modal recovery; folder association is not exposed yet. Existing normal Learn and automatic unfrozen material regeneration guidance remains accurate; no prose changes required.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -125,23 +125,23 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 19017,
-      "sha256": "fc5e133bf725a7afd4ee6f95683fc3ba87ade467ce52f1a3bcaab3c8c0642367"
+      "bytes": 20282,
+      "sha256": "7fe1ceae0de0c8d893e9ad295430a01583c0b0ac7cb6fb1a1a43be771e7aec70"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 4077,
-      "sha256": "4c3d0e96099e6bfdca305cbfab51335d3cce9ec6e8cf311015011c1d86ed9713"
+      "bytes": 4635,
+      "sha256": "a89d9f220ca03432dd2d542bfc78fb0e7c3c0d950d256c441c1a1ad45328a94e"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 26273,
-      "sha256": "9a80aa0e29cddecf374d83073f0a591ed05353a2dd46b15b2fc68fade382254e"
+      "bytes": 27262,
+      "sha256": "bdd7260197f41e68719635a1828a7c3be8cb6c95b31bfeb5cd1c647bc55f3ab3"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 7412,
-      "sha256": "5c0ab4a7df9f41b71aa802cbaed06657c1dd8a10cd57165b821e498517c95027"
+      "bytes": 7759,
+      "sha256": "b4c1ae7c7dfeaf2fe802d95c3f16d2e5d3ff653c2b69d7b705ae3a631d458e2a"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -190,8 +190,8 @@
     },
     {
       "path": "Source/Core/AssetAssociation.h",
-      "bytes": 5397,
-      "sha256": "586ec1e2c3a6c08447440a4d73078e8cac29cac0e1bc267e72ac04147da21646"
+      "bytes": 9378,
+      "sha256": "c0198d3f8d8836483f6a93623325c7c23aa7747ea6a7a8624b4f2e33321aa983"
     },
     {
       "path": "Source/Core/BuildInformation.h",
@@ -290,8 +290,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 24705,
-      "sha256": "5c4f2aa5b0b4c4b14f725aa53fac6a0c1ac200738d52b1bbea6ee12f29ad6e58"
+      "bytes": 24876,
+      "sha256": "788ff0330ae0bea96fcae165c21b12f5efab841b1b1a0880a45de09832c1992d"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -410,18 +410,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 82995,
-      "sha256": "496ffb13ed83580ac780a800e092fcd38472456399a8d511b5f1c0a929aa01cf"
+      "bytes": 84354,
+      "sha256": "ce1a1fdaede68a438efc75a613b045b2e59dfebdcc60c0d893eff562151a999a"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 23200,
-      "sha256": "b8e2a14e24b0eb4d057e6014abb701f0a1de968be7d14aa37755096a9a9dca69"
+      "bytes": 23472,
+      "sha256": "74a5d1e0b72eefddbc9eff6eddc29d903a70c802ec26643e457daa4f551c16ce"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 23901,
-      "sha256": "24b64b477d588de68855aa5dd0b57c38ee676aea7ad86105e723bfe13fab2870"
+      "bytes": 24179,
+      "sha256": "6b8b53346f92606adabd276120917a51c5f03622a652c5b174cecbabb0ceefe2"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -440,8 +440,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38067,
-      "sha256": "dfefc3d5d72fe88dc954e3c29d834dcd27623fb1d57ab0267de81c1696e36f2b"
+      "bytes": 38173,
+      "sha256": "1ac4503b8d27c940b304d574431b0aff008f99d5d2a13dbc497cc77493e8d3a8"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -550,8 +550,8 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 47550,
-      "sha256": "db5ab55772c765b95bd19b053c28a93433eb5d4252967b8a0748c51619627e88"
+      "bytes": 58621,
+      "sha256": "38c60080658ada440ab35c612b13ab39f378b8af43e120e036e33f7096fcf8c7"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
@@ -560,8 +560,8 @@
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
-      "bytes": 1508,
-      "sha256": "ceb8d2688f38959a5bbb90ac86d684226a4cb6687e156365a61874caaee4f31b"
+      "bytes": 2226,
+      "sha256": "5afb841710c159740f819fa1997432983d8ab1a4cfaeb2676e76ccd90de00793"
     },
     {
       "path": "Source/UI/CaptureFailureText.h",

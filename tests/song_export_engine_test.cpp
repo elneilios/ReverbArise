@@ -272,7 +272,9 @@ int main(){return runTest([]{
     REQUIRE(engine.savedSession().exportState==history && verifyExportFile(engine.assetDirectory(),*completed,error));
     {
         TestDirectory missing;workflow::State unavailableFlow;REQUIRE(unavailableFlow.requestMode(workflow::Mode::finalise,{true,true,true}));
-        SwellEngine unavailable(missing.file,[&]{return context;});unavailable.useWorkflow(unavailableFlow);unavailable.restore(saved);
+        auto missingContext=context;
+        missingContext.capture.location=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{missing.file,missing.file,{}});
+        SwellEngine unavailable(missing.file,[&]{return missingContext;});unavailable.useWorkflow(unavailableFlow);unavailable.restore(saved);
         waitFor([&]{return unavailable.snapshot().songExport.phase==ExportPhase::error;});
         REQUIRE(!unavailable.snapshot().songExport.prepared && unavailable.savedSession().exportState.history==saved.exportState.history);
     }

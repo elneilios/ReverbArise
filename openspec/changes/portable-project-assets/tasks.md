@@ -34,7 +34,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 ## 4. Optional association and independent future writes
 
-- [ ] 4.1 Add the Storage asset working-folder picker and explicit Use This Folder only after copy/pack verification, with current user-data fallback and existing host-change notification. Use validated host project location as a proposed default only after separate runtime-evidence/rollout review; verify unsaved/unsupported hosts, cancellation, read-only destinations and Save As never silently move existing assets and successful switch requests a host save without claiming it happened.
+- [ ] 4.1 Add the Storage asset working-folder picker and explicit Use This Folder only after copy/pack verification, with current user-data fallback and existing host-change notification. Use validated host project location as a proposed default only after separate runtime-evidence/rollout review; verify unsaved/unsupported hosts, cancellation, read-only destinations and Save As never silently move existing assets and successful switch requests a host save without claiming it happened. Add the owner-approved explicit incomplete recovery-workspace path for irrecoverable assets; preserve original locators, swell metadata and verified survivors, report missing/unknown history, never publish a complete-pack claim, and verify failure/cancellation retains the current association and originals before normal Learn recovery.
 - [ ] 4.2 Add independent writer branch/lease ownership while preserving legacy UUID provenance; verify reopened/copied/duplicated snapshots across two processes cannot overwrite history or publish into one another.
 - [ ] 4.3 Add explicit physical Fork via verified copy, never automatic Save As migration; verify old FLPs still resolve exact legacy dependencies and both store copies remain independently usable.
 - [ ] 4.4 Publish association/version/rollback guidance and run supported old-state fixtures; verify rollback with the retained pre-upgrade FLP, original binary and untouched legacy store, documenting that upgraded states need not open in old binaries.
@@ -68,3 +68,19 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 The owner authorized phase 4 on 2026-11-06, starting with working-folder association on a new branch and PR after PR #31 merged as `f98157e`. Phases 0–3 retain their 20/36 verified tasks; the shared-engine architecture change is separately archived. Tasks 4.1–4.4 are authorized, with existing native control approval before rollout and all copy/identity/compatibility/concurrency/rollback acceptance preserved. The first increment supplies a backend and disposable preview, not a live processor-root switch; all four task checkboxes remain open until complete. See [implementation boundary](../../../docs/development/working-folder-association.md) and [dated evidence](../../../docs/validation/2026-11-06-issue-8-working-folder.md). Phases 5/6 cleanup, quarantine, eviction, compression and efficiency experiments retain separate approvals. Do not close issue #8, archive this active change, merge or publish a release. Each completed task still requires exact-line guarding and refreshed Apply verification.
 
 Native control gate: on 2026-11-06 the owner explicitly approved the phase-4 working-folder preview's layout and Choose → verified copy → Use This Folder interaction. This approval permits that composition's integration; it does not complete tasks 4.1–4.4 or waive their remaining safety/validation gates.
+
+
+## Phase-4 explicit recovery-workspace approval — 2026-11-06
+
+The owner approved an explicit recovery workspace when the entire original asset
+folder is irrecoverable or offline. This is a distinct recovery operation, not
+a successful pack, verified migration or complete backup. It requires deliberate
+folder selection/confirmation, preserves decodable swell metadata, original
+locators and surviving assets, and exposes missing/unknown dependencies. It must
+never silently fall back, overwrite originals or claim all assets were copied.
+After adoption, use normal Learn with detection off and existing complete-source,
+IR, automatic unfrozen regeneration, frozen-consent and export-loss protections.
+No Learn/Generate controls are added to Storage. Ordinary association and Fork
+retain complete verified-copy gates, host-save requests and rollback. Phase-4
+implementation remains authorized; cleanup, compression, default cutover and
+release/merge gates are unchanged. This approval completes no task checkbox.

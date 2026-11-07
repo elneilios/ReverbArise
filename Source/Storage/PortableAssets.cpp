@@ -45,7 +45,7 @@ bool xmlShape(const juce::String& text)
             if(*p=='?'){bool ended=false;while(!p.isEmpty()){const auto q=p.getAndAdvance();if(q=='?' && *p=='>'){++p;ended=true;break;}}if(!ended)return false;continue;}
             inTag=true;closing=*p=='/';previous=0;continue;}
         if(quote){if(c==quote)quote=0;continue;}if(c=='"' || c=='\''){quote=c;continue;}
-        if(c=='=' && ++attributes>128)return false;if(c=='<')return false;if(c=='>'){if(++tags>128)return false;if(closing){if(--depth<0)return false;}else{if(++depth>16)return false;if(previous=='/')--depth;}inTag=false;}
+        if(c=='=' && ++attributes>256)return false;if(c=='<')return false;if(c=='>'){if(++tags>128)return false;if(closing){if(--depth<0)return false;}else{if(++depth>16)return false;if(previous=='/')--depth;}inTag=false;}
         else if(!juce::CharacterFunctions::isWhitespace(c))previous=c;}
     return !inTag && !quote && depth==0;
 }
@@ -400,7 +400,7 @@ public:
     WorkingFolderInfo info;
     std::shared_ptr<Root> pinned;
     Held lease;
-    Snapshot closure;
+    Snapshot closure;uint64_t recoveryRecordBytes=0;
 };
 const WorkingFolderInfo& workingFolderInfo(const WorkingFolder& folder){return folder.info;}
 namespace
@@ -408,13 +408,16 @@ namespace
 void pinWorkingDirectories(WorkingFolder& folder,const ObservedSnapshot& observed)
 {
     const auto prefix="working/"+observed.project+"/"+observed.instance+"/";
-    for(const auto* category:{"segments","manifests","irs","renders","exports"})folder.pinned->path(prefix+category+"/directory-pin",true);
+    for(const auto* category:{"segments","manifests","irs","renders","exports"})writeText(*folder.pinned,prefix+category+"/.directory-pin","ReverbArise directory guard v1\n",{});
     folder.info.projectsRoot=folder.info.folder.getChildFile("working");
     folder.info.association.writer=juce::Uuid().toDashedString();
     const auto branch="instances/"+observed.instance+"/branches/"+folder.info.association.writer+"/lease";
     const auto leaseFile=folder.pinned->path(branch,true);
     folder.lease=relativeOpen(folder.pinned->parentOf(leaseFile)->h,leaseFile.getFileName(),GENERIC_READ|GENERIC_WRITE,false,2,0);
     ordinary(folder.lease->h,false);
+    // Pinned marker files keep managed categories nonempty. Together with
+    // pinned directory ancestry this prevents directory replacement and
+    // in-place junction conversion without blocking ordinary child publication.
     // Immutable data aliases are published with UUID/no-replace semantics by
     // the existing stores. Each runtime has its own exclusive publication lease;
     // no mutable common head is introduced or consulted on restore.
@@ -471,6 +474,7 @@ bool prepareWorkingFolder(const Input& input,const juce::File& selected,const ju
 bool revalidateWorkingFolder(const WorkingFolder& folder,const Input& current,juce::String& error,const Hooks& hooks)
 {
     try{
+        require(!folder.info.incompleteRecovery,"Incomplete recovery is not verified folder migration");
         const auto& expected=folder.info.expected;
         require(storeId(*folder.pinned,false,hooks)==folder.info.association.store,"Working store identity changed");
         require(current.instanceRoot==expected.instanceRoot && current.controlEpoch==expected.controlEpoch
@@ -509,6 +513,121 @@ bool resolveWorkingFolder(const Association& saved,const juce::String& xml,const
         require(match!=nullptr,"Associated assets are unavailable. Locate their working folder or restore a backup.");
         pinWorkingDirectories(*match,match->closure.observed);
         output=std::move(match);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+
+namespace
+{
+ObservedSnapshot recoveryMetadata(const Input& input,juce::String& legacyXml,juce::String& manifest,Association& origin)
+{
+    require(associationXmlShape(input.processorXml),"Malformed or oversized recovery metadata");
+    auto xml=juce::XmlDocument::parse(input.processorXml);require(xml && xml->hasTagName("PreverbState"),"Missing recovery processor metadata");
+    legacyXml=input.processorXml;manifest=input.manifestJson;juce::String error;
+    if(xml->getStringAttribute("stateVersion")==juce::String(associatedEnvelopeVersion)){
+        juce::String embedded;require(decodeAssociatedState(input.processorXml,origin,legacyXml,embedded,error),error);
+        require(manifest.isEmpty() || manifest==embedded,"Conflicting saved recovery capture metadata");manifest=embedded;xml=juce::XmlDocument::parse(legacyXml);
+    }
+    require(xml->getStringAttribute("stateVersion")=="8","Recovery requires a supported accepted envelope");
+    const auto project=xml->getStringAttribute("projectId"),instance=xml->getStringAttribute("instanceId");
+    const auto reference=xml->getStringAttribute("manifestReference"),revision=xml->getStringAttribute("manifestRevision");
+    require(uuid(project) && uuid(instance) && revision.getLargeIntValue()>=0 && juce::String(revision.getLargeIntValue())==revision
+        && (reference.isEmpty()?revision=="0":safeRelativePath(reference) && reference.startsWith("manifests/") && reference.endsWith(".json")),"Invalid saved recovery identity");
+    require(input.instanceRoot.getFileName()==instance && input.instanceRoot.getParentDirectory().getFileName()==project,"Recovery source namespace does not match saved identities");
+    ObservedSnapshot observed;
+    if(manifest.isNotEmpty() || reference.isEmpty())require(legacy(legacyXml,manifest,observed,error),error);
+    else{
+        // Decode only known creative references. No synthetic source manifest,
+        // invented chunk list or inferred capture coverage is published.
+        auto known=std::make_unique<juce::XmlElement>(*xml);known->setAttribute("manifestReference",juce::String{});known->setAttribute("manifestRevision","0");
+        require(legacy(known->toString(),{},observed,error),error);
+        observed.reference=reference;observed.capture.revision=static_cast<uint64_t>(revision.getLargeIntValue());
+        observed.dependencies.push_back({reference,{},{},{}});
+    }
+    legacyXml=xml->toString();return observed;
+}
+void requireEmptyRecoveryRoot(Root& target)
+{
+    WIN32_FIND_DATAW data{};const auto search=target.directory.getChildFile("*").getFullPathName();
+    const auto handle=FindFirstFileW(search.toWideCharPointer(),&data);
+    if(handle==INVALID_HANDLE_VALUE){require(GetLastError()==ERROR_FILE_NOT_FOUND,"Could not inspect recovery destination");return;}
+    struct FindGuard{HANDLE h;~FindGuard(){FindClose(h);}} guard{handle};
+    do{const juce::String name(data.cFileName);require(name=="." || name=="..","Choose an empty, separate recovery workspace folder");}while(FindNextFileW(handle,&data));
+    require(GetLastError()==ERROR_NO_MORE_FILES,"Could not finish recovery destination inspection");
+}
+}
+bool prepareRecoveryWorkspace(const Input& input,const juce::File& selected,const juce::File& registryRoot,
+                              std::shared_ptr<WorkingFolder>& output,juce::String& error,const Hooks& hooks)
+{
+    try{
+        checkpoint(hooks,"recovery-workspace-start");juce::String xml,manifest;Association origin;
+        auto observed=recoveryMetadata(input,xml,manifest,origin);
+        auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->info.expected=input;
+        folder->info.incompleteRecovery=true;folder->info.originalAssociation=origin;
+        folder->info.captureMetadataKnown=manifest.isNotEmpty() || observed.reference.isEmpty();
+        require(selected!=input.instanceRoot && !selected.isAChildOf(input.instanceRoot) && !input.instanceRoot.isAChildOf(selected),"Recovery workspace must be separate from the original source tree");
+        folder->pinned=std::make_shared<Root>(selected);requireEmptyRecoveryRoot(*folder->pinned);
+        std::shared_ptr<Root> source;
+        try{source=std::make_shared<Root>(input.instanceRoot);}catch(const Failure&){folder->info.originalFolderUnavailable=true;}
+        // A readable original manifest can recover known coverage even when the
+        // live pin had no available-source JSON. It must match the saved identity.
+        if(source && !folder->info.captureMetadataKnown){try{
+            const auto captured=readText(*source,observed.reference,maximumMetadataBytes);ObservedSnapshot full;juce::String detail;
+            require(legacy(xml,captured,full,detail),detail);observed=std::move(full);manifest=captured;folder->info.captureMetadataKnown=true;
+        }catch(const Failure&){} }
+        require(observed.dependencies.size()<=maxFiles,"Too many recovery dependencies");
+        folder->info.association.store=storeId(*folder->pinned,true,hooks);
+        folder->info.association.snapshot=associationSnapshot(xml,manifest);folder->closure.observed=observed;folder->info.restoreManifest=manifest;
+        const auto revision=juce::XmlDocument::parse(xml)->getStringAttribute("manifestRevision").getLargeIntValue();
+        RecoveryLocator previous{origin.store,origin.snapshot,origin.writer,origin.registration,observed.project,observed.instance,observed.reference,static_cast<uint64_t>(revision)};
+        require(recoveryLocatorValid(previous),"Invalid original recovery locator");folder->info.association.recoveryOrigins.push_back(previous);
+        for(const auto& older:origin.recoveryOrigins)if(std::find(folder->info.association.recoveryOrigins.begin(),folder->info.association.recoveryOrigins.end(),older)==folder->info.association.recoveryOrigins.end())folder->info.association.recoveryOrigins.push_back(older);
+        require(folder->info.association.recoveryOrigins.size()<=16,"Too many recovery origins; history cannot be discarded");
+        const auto prefix="working/"+observed.project+"/"+observed.instance+"/";uint64_t total=0;
+        for(const auto& dependency:observed.dependencies){
+            checkpoint(hooks,"recovery-survivor",dependency.path);Held file;Entry entry;entry.path=dependency.path;
+            if(source){try{
+                file=source->read(entry.path);entry.bytes=size(file->h);
+                require(entry.bytes<=16ull*1024*1024*1024 && (!entry.path.endsWith(".json") || entry.bytes<=maximumMetadataBytes),"Oversized surviving dependency");
+                entry.sha256=hash(file->h,hooks);entry.object=objectPath(entry);
+                require(dependency.checksum.isEmpty() || dependency.checksum==entry.sha256,"Surviving dependency checksum differs");
+                if(dependency.descriptor.isNotEmpty())require(sameMetadata(readText(*source,entry.path),dependency.descriptor),"Surviving descriptor differs");
+            }catch(const Failure&){file.reset();}}
+            if(!file){folder->info.missing.push_back(entry.path);continue;}
+            total+=entry.bytes;require(total<=64ull*1024*1024*1024,"Recovery byte limit exceeded");
+            // Destination failures are not mistaken for missing source files.
+            copy(*folder->pinned,prefix+entry.path,file->h,entry,hooks);folder->closure.files.push_back(entry);
+        }
+        if(folder->info.captureMetadataKnown && observed.reference.isNotEmpty()
+            && std::find(folder->info.missing.begin(),folder->info.missing.end(),observed.reference)!=folder->info.missing.end()){
+            writeText(*folder->pinned,prefix+observed.reference,manifest,hooks);
+            Entry entry{observed.reference,{},digest(manifest),static_cast<uint64_t>(manifest.getNumBytesAsUTF8())};entry.object=objectPath(entry);folder->closure.files.push_back(entry);total+=entry.bytes;
+            require(total<=64ull*1024*1024*1024,"Recovery byte limit exceeded");folder->info.recreatedCaptureMetadata=true;
+        }
+        require(input.sourceUnavailable || folder->info.originalFolderUnavailable || !folder->info.missing.empty(),"All declared assets are available; prepare a verified folder copy instead");
+        folder->info.files=folder->closure.files.size();folder->info.bytes=total;
+        auto record=object();set(record,"version",1);set(record,"kind","incomplete-recovery-workspace");set(record,"complete",false);
+        set(record,"originalProcessorXml",input.processorXml);set(record,"originalCaptureManifest",manifest);set(record,"captureMetadataKnown",folder->info.captureMetadataKnown);
+        juce::Array<juce::var> missing;for(const auto& path:folder->info.missing)missing.add(path);set(record,"missing",missing);
+        const auto metadata=json(record);folder->info.recoveryRecord=digest(metadata);
+        folder->info.association.recoveryRecord=folder->info.recoveryRecord;
+        writeText(*folder->pinned,prefix+"recovery/"+folder->info.recoveryRecord+".json",metadata,hooks);
+        folder->recoveryRecordBytes=static_cast<uint64_t>(metadata.getNumBytesAsUTF8());
+        pinWorkingDirectories(*folder,observed);registerWorkingHint(*folder,registryRoot,hooks);
+        checkpoint(hooks,"recovery-workspace-ready");output=std::move(folder);error.clear();return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+bool revalidateRecoveryWorkspace(const WorkingFolder& folder,const Input& current,juce::String& error,const Hooks& hooks)
+{
+    try{
+        const auto& expected=folder.info.expected;require(folder.info.incompleteRecovery,"Not an incomplete recovery workspace");
+        require(current.instanceRoot==expected.instanceRoot && current.controlEpoch==expected.controlEpoch && current.processorXml==expected.processorXml
+            && current.manifestJson==expected.manifestJson && current.sourceUnavailable==expected.sourceUnavailable,"Recovery session changed; keep the current association and prepare again");
+        require(storeId(*folder.pinned,false,hooks)==folder.info.association.store,"Recovery store identity changed");
+        verify(*folder.pinned,"working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/recovery/"+folder.info.recoveryRecord+".json",folder.info.recoveryRecord,folder.recoveryRecordBytes,hooks);
+        const auto prefix="working/"+folder.closure.observed.project+"/"+folder.closure.observed.instance+"/";
+        for(const auto& entry:folder.closure.files)verify(*folder.pinned,prefix+entry.path,entry.sha256,entry.bytes,hooks);
+        checkpoint(hooks,"recovery-workspace-revalidated");error.clear();return true;
     }catch(const std::exception& e){return fail(error,e.what());}
 }
 

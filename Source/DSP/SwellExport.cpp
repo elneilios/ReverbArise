@@ -55,10 +55,12 @@ uint64_t SwellEngine::deliverExport(uint64_t expectedSession,const ExportFile& f
         || exportState.pass!=workflowState->snapshot().pass || exportState.session!=sessionGeneration.load()
         || exportState.phase!=ExportPhase::ready || !exportState.prepared || exportState.prepared->file!=file || (!drag && destination==juce::File{}))return 0;
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return 0;
-    if(!drag && (destination==root || destination.isAChildOf(root))){exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
+    const auto location=storageLocation.load();
+    if(!location->writable){exportState.deliveryMessage="Asset working folder unavailable";return 0;}
+    if(!drag && (destination==location->managedRoot || destination.isAChildOf(location->managedRoot))){exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
     const auto id=++exportDeliverySerial;exportVoice->stop();
     exportDelivery=ExportDelivery{id,expectedSession,exportRequest.load(),workflowState->snapshot().pass,file,
-        instanceRoot(exportState.prepared->plan->source),destination,overwrite,drag};
+        instanceRoot(exportState.prepared->plan->source),destination,overwrite,drag,location};
     exportState.delivery=id;exportState.delivering=true;exportState.dragReady=false;exportState.deliveryPath.clear();
     exportState.deliveryMessage=drag?"Checking WAV for dragging":"Saving WAV; preview stopped";notify();return id;
 }
@@ -253,7 +255,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
     {
         const juce::ScopedLock guard(lock);if(cancelled())return;
         activeJobBytes=mix.workingBytes()+publicationScratch;
-        auto preview=std::make_shared<PreparedExport>();preview->plan=plan;preview->metrics=mix.metrics();preview->acceptedNotice=notice;exportState.preview=std::move(preview);
+        auto preview=std::make_shared<PreparedExport>();preview->plan=plan;preview->storage=context.capture.location;preview->metrics=mix.metrics();preview->acceptedNotice=notice;exportState.preview=std::move(preview);
         if(plan->dry>0 && exportPreviewReader && exportPreviewReader->plan()->warnings!=plan->warnings){
             exportVoice->stop(true);exportState.message="Preview stopped: captured dry availability changed";
         }
@@ -285,7 +287,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         if(!cancelled() && exportAttempt==key){exportRetryFile=std::make_pair(key,file);exportAttempt.clear();}
         return;
     }
-    auto prepared=std::make_shared<PreparedExport>();prepared->plan=plan;prepared->metrics=mix.metrics();prepared->file=file;prepared->acceptedNotice=notice;
+    auto prepared=std::make_shared<PreparedExport>();prepared->plan=plan;prepared->storage=context.capture.location;prepared->metrics=mix.metrics();prepared->file=file;prepared->acceptedNotice=notice;
     {
         const juce::ScopedLock guard(lock);if(cancelled())return;
         exportRetryFile.reset();

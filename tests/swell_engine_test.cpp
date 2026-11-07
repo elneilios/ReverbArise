@@ -22,6 +22,7 @@ template<class F> static void waitFor(F condition,const std::source_location loc
     while(!condition()) { if(juce::Time::getMillisecondCounter()>deadline) throw std::runtime_error("Timeout at "+std::to_string(location.line())); juce::Thread::sleep(2); }
 }
 #include "LiveClockEngineCases.h"
+#include "StorageLocationEngineCases.h"
 int main() { return runTest([]
 {
     {
@@ -56,6 +57,7 @@ int main() { return runTest([]
         REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
     }
     runLiveClockEngineCases();
+    runStorageLocationEngineCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
     REQUIRE(capture.commit(0,1000,source.data(),3000));

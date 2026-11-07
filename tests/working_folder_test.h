@@ -1,5 +1,7 @@
 #include <Storage/WorkingFolder.h>
 static void checked(bool ok,const juce::String& error){if(!ok)throw std::runtime_error(error.toStdString());}
+#include "recovery_workspace_cases.h"
+#include "directory_reparse_probe.h"
 static int workingFolderTest(int argc,char** argv)
 {
     return runTest([&]{
@@ -14,6 +16,7 @@ static int workingFolderTest(int argc,char** argv)
             const juce::File release(argv[5]);const auto until=juce::Time::getMillisecondCounterHiRes()+30000;
             while(!release.exists()){REQUIRE(juce::Time::getMillisecondCounterHiRes()<until);juce::Thread::sleep(10);}return;
         }
+        directoryReparseProbe();recoveryWorkspaceCases();
         Fixture fixture;TestDirectory target,registry;REQUIRE(target.file.createDirectory().wasOk() && registry.file.createDirectory().wasOk());
         Input input{fixture.root,fixture.xml,fixture.manifest};input.controlEpoch=42;juce::String error;
         std::shared_ptr<Prepared> source;checked(prepare(input,source,error),error);const auto original=snapshot(*source);

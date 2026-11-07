@@ -132,3 +132,52 @@ follow-up. No new FL Studio/profile, release, merge or cleanup operation occurre
 The recovery-workspace requirements question in the development guide remains
 open. Layout approval is recorded; no exception to complete-copy association is
 implemented or inferred. Tasks stay 20/36 complete and PR #112 remains a draft.
+
+
+## Approved explicit recovery workspace and location ownership
+
+The owner approved an explicit recovery workspace after the whole original store
+is lost/offline. This clears the requirements question above; it does not approve
+an incomplete pack, silent fallback, destructive cleanup or production cutover.
+The active proposal/design/specs/tasks record the exception. All phase-4 tasks
+remain unchecked (20/36 overall).
+
+Native coverage now verifies original locators/metadata, hash-verified surviving
+assets, known missing capture metadata, unknown source coverage, ordinary complete
+Learn capture, stale/cancel/read-only/disk-full/fault guards and no complete-pack
+receipt. The candidate v9 codec round-trips bounded recovery locators and rejects
+unsupported origin versions without replacing accepted output. Production still
+reads 1–8/writes v8; no Settings or host association binding is claimed.
+
+Capture source snapshots retain immutable working-root/lease ownership; native
+tests cover failed handoff rollback, superseded resolution, retained old readers
+and blocked writes when unavailable. Engine/offline/export jobs use the source
+location, defer while Loading, reject unavailable storage and retain export
+history. The location test checks unchanged material causes no new convolution,
+new imports/exports use the new root, managed export-save boundaries remain
+enforced, originals are unchanged and the callback allocates/frees nothing.
+Actual independent processor writer publication remains a later gate.
+
+The native NTFS probe rejected junction conversion for nonempty owned categories.
+Pinned administrative `.directory-pin` files retain that invariant while ordinary
+immutable capture publication succeeds. A trial that denied directory write
+sharing prevented normal MoveFileEx publication (error 32); it was discarded,
+and existing immutable publishers remain unchanged. No original/user folders
+were deleted or broadly write-locked.
+
+Focused native CTest: 5/5 passed in 30.46 s (capture, engine, export, working
+folder and shared engine). After adding recovery-locator serialization the native
+working-folder/recovery cases also passed. The first broader wrapper built
+successfully but passed 86/87 in 242.57 s: recovery admission failed because the
+engine initially held a different location object from the source worker. The
+engine now initializes from the source frame before starting its worker; strict
+coherent-location checks remain intact. Log: `out/build-logs/Release/20261106-235105-e60ba834/`.
+
+The initialization fix passed ordinary missing-asset recovery. Its full wrapper passed 86/87 in 248.17 s; the only failure was a transient rename of the newly written disposable offline-store fixture (out/build-logs/Release/20261106-235621-abf3575a/). That fixture now retries for at most five seconds and still requires the original directory to be genuinely offline. Final supported wrapper: native Release build passed; 85/87 tests passed in 306.08 s (out/build-logs/Release/20261107-000136-74c3a060/), including working-folder and ordinary recovery. The two failures were Perform preview setup waits (knob reset and readability); both passed the immediate focused retry, 2/2 in 3.65 s (out/phase4-recovery-preview-retry.log). All cases have passing native results across the current runs; no uninterrupted 87/87 pass is claimed. Stable complete-suite validation remains a rollout gate.
+
+UI standards passed (66 files/59 bounded occurrences), strict active OpenSpec
+validation passed, changed Markdown relative links and whitespace passed. The
+maintain-user-guide review confirms no prose change is appropriate while the
+controls/host binding remain unintegrated; currency is explicitly refreshed and
+checked. No FL Studio/profile installation, original-binary rollback, release,
+merge, archive, cleanup or issue closure occurred. PR #112 remains draft.

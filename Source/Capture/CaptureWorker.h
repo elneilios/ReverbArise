@@ -47,8 +47,15 @@ public:
     void setPassContextProvider(std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider)
     {const juce::ScopedLock guard(commandLock);passContextProvider=std::move(provider);}
     uint64_t captureGeneration() const noexcept { return generation.load(); }
+    struct StorageRestore
+    {
+        std::shared_ptr<const CaptureStorageLocation> location;
+        std::function<std::shared_ptr<const CaptureStorageLocation>()> resolve;
+        juce::String savedManifest;
+        bool allowMissingSource=false;
+    };
     void requestRestore(const std::string& project, const std::string& instance,
-                        const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture,bool preserveOnFailure=false);
+                        const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture,bool preserveOnFailure=false,std::optional<StorageRestore> storage=std::nullopt);
     CaptureSessionSnapshot snapshot() const;
     CaptureProgress progressSnapshot() const;
     std::optional<ProvisionalCaptureSnapshot> provisionalSnapshot() const;
@@ -89,7 +96,7 @@ private:
     bool progressDirty=false;
     void publishProgress();
     mutable juce::CriticalSection commandLock;
-    struct Restore { std::string project, instance; juce::String reference; uint64_t revision = 0; bool preserveOnFailure=false; };
+    struct Restore { std::string project, instance; juce::String reference; uint64_t revision = 0; bool preserveOnFailure=false;std::optional<StorageRestore> storage; };
     std::vector<std::pair<int64_t,int64_t>> recoveryRequired;
     std::atomic<bool> recoveryCaptureArmed{false},refreshAdmission{false};
     Restore restore;
