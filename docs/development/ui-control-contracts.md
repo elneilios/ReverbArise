@@ -332,9 +332,11 @@ controls below follow its measured height. The command owns rejection and
 affected-field metadata. Correction, selection change and session replacement
 clear the local error. Return and the explicit button submit the pair.
 
-This adoption covers the source-range group. Other C3 surfaces retain their
-individual policies and C4 covers further editor mechanics. The previously
-approved IR composition retains its scoped feedback geometry.
+The source-range group established the shared presentation. Adopt local help
+and validation as part of each field family's plugin-wide rollout wherever the
+control has a feedback position. Document whether that position carries help,
+validation or both. The owning binding continues to decide how an edit commits
+or fails. The approved IR field is another example of local feedback.
 
 ## C4 — Numeric and text fields
 
