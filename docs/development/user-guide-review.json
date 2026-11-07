@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reconciled approved Level limits and first-touch behavior with the reviewed selector and Storage workflows from main. Preserved capture, DAW playback, Export, storage and rollback guidance.",
+  "summary": "Reconciled the approved Level instructions with the current Storage retention and backup guidance. Verified both sets of user-facing instructions in the combined guide.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31987,
-      "sha256": "fdf9b0e2ca9f7a1c35fab970dad424c3c474af2e02802fb506c4959c7ff262bc"
+      "bytes": 32743,
+      "sha256": "ddd279b65f305c2085a64300fccc1224c8fd064ac3faab1e5bfc49e41221ea0b"
     },
     {
       "path": "CMakePresets.json",
@@ -540,23 +540,23 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 24052,
-      "sha256": "44d178f6298451fc089e19b8394d69b3f1b3c3b1f43bff268e0e5652dc1ec945"
+      "bytes": 26698,
+      "sha256": "c80b19479f1d42f1a8182112668f06b8b3883bef66211c912e4d87bec61eddce"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
-      "bytes": 3188,
-      "sha256": "df5db970032ba4af301c88e72cb406344db431ad6aec124eb025979e0ab81de6"
+      "bytes": 3801,
+      "sha256": "76d6fe1bc222b284dd442def105eb9510c0ebb8db1846463038cecd22a8182d2"
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 64033,
-      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
+      "bytes": 103061,
+      "sha256": "da448e8ce03d3772147029eb5abb310b682aca85d7ff72690939498fbc0fd1c4"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4502,
-      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
+      "bytes": 8293,
+      "sha256": "561c6e96037e2aad840b76ed7ced61e3d7e41d1ba88ac5f1fb0bf13bad71ba3f"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
@@ -920,8 +920,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 28440,
-      "sha256": "a8d3e0a6293e44115aa8e9a4a207b864bb23975848f32bf023add0f600989319"
+      "bytes": 28516,
+      "sha256": "11213ac70f145ffec31a48b7ed9b8454eb56796caabd47c06c71e8f5dae03414"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -947,6 +947,11 @@
       "path": "openspec/specs/.gitkeep",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "openspec/specs/asset-retention/spec.md",
+      "bytes": 10312,
+      "sha256": "1f1fd19ef0832edfa763343140f182d4d88c682a294d982319b6396a6449bfe0"
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
@@ -982,6 +987,11 @@
       "path": "openspec/specs/product-release-identity/spec.md",
       "bytes": 4505,
       "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
+    },
+    {
+      "path": "openspec/specs/project-asset-portability/spec.md",
+      "bytes": 15503,
+      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",

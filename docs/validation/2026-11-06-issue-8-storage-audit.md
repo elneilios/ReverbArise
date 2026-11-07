@@ -1,6 +1,6 @@
 # Issue #8 phase-0 storage audit — 2026-11-06
 
-This report measures the current production storage APIs in disposable synthetic roots. It accompanies the [contract/version and rollback matrix](../development/asset-storage-contracts.md) and [OpenSpec change](../../openspec/changes/portable-project-assets/design.md). The [2026-11-03 investigation](2026-11-03-asset-storage-investigation.md) remains unchanged historical evidence; its capacity figures were estimates, not these measurements.
+This report measures the current production storage APIs in disposable synthetic roots. It accompanies the [contract/version and rollback matrix](../development/asset-storage-contracts.md) and [OpenSpec change](../../openspec/changes/archive/2026-11-07-portable-project-assets/design.md). The [2026-11-03 investigation](2026-11-03-asset-storage-investigation.md) remains unchanged historical evidence; its capacity figures were estimates, not these measurements.
 
 ## Scope and reproduction
 

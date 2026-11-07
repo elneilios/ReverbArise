@@ -68,6 +68,69 @@ Result resume(const juce::File& selectedFolder,const juce::String& operation,
               const juce::File& explicitSourceRoot,const Hooks& = {});
 bool inspectInterrupted(const juce::File& selectedFolder,const juce::String& operation,
                         Snapshot&,juce::String& error);
+// Advisory evidence only. The reader opens existing files and directories and
+// has no action token, mutation API or automatic invocation from inventory.
+struct ScratchPreviewEntry
+{
+    juce::String operation,path,reason;
+    uint64_t bytes=0;
+    juce::String evidence; // Binds reviewed bytes and handle identities. Not action approval.
+};
+struct ScratchPreview
+{
+    juce::String store,error;
+    std::vector<ScratchPreviewEntry> eligible,excluded;
+    uint64_t bytes=0;
+    bool complete=false,cancelled=false;
+};
+// Both roots are explicit. The counterpart must be the original instance
+// directory recorded by the Backup producer, never a path from its journal.
+ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& originalInstance,const Hooks& = {});
+class ScratchMaintenance;
+// Worker only. Reopens one explicitly reviewed path and calls ready synchronously
+// while the store, journal, staged file and surviving copy are pinned. Never
+// retain the callback's view or reopen the staged path for an action.
+bool withRevalidatedScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                           const ScratchPreview& reviewed,const juce::String& selectedPath,
+                           const std::function<void(const ScratchMaintenance&)>& ready,
+                           juce::String& error,const Hooks& = {});
+enum class ScratchQuarantineState { unavailable,staged,quarantined,restored,ambiguous,removed };
+struct ScratchQuarantineInfo
+{
+    ScratchQuarantineState state=ScratchQuarantineState::unavailable;
+    juce::String operation,originalPath,quarantinePath,error;
+    uint64_t bytes=0;
+    bool undoPending=false;
+};
+// Worker only. A caller must obtain explicit approval for the exact reviewed
+// entry before quarantine, and for the exact operation before undo. Inspection
+// reconciles on-disk evidence without attempting a repair. After any failure,
+// inspect again before reporting which location currently holds the bytes.
+bool quarantineScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                       const ScratchPreview& reviewed,const juce::String& selectedPath,
+                       juce::String& error,const Hooks& = {});
+ScratchQuarantineInfo inspectScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,
+                                               const Hooks& = {});
+bool undoScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,
+                           juce::String& error,const Hooks& = {});
+struct ScratchRemovalReview
+{
+    juce::String operation,path,evidence;
+    uint64_t bytes=0;
+    juce::int64 eligibleAfterUtcMs=0;
+    bool operator==(const ScratchRemovalReview&) const = default;
+};
+// Worker only. The review is read-only and valid only after verified grace.
+// The caller must present this exact review and obtain a separate affirmative
+// confirmation before passing it to removeReviewedScratch. No timer calls it.
+bool reviewScratchRemoval(const juce::File& selectedStore,const juce::File& originalInstance,
+                          const juce::String& operation,ScratchRemovalReview&,juce::String& error,const Hooks& = {});
+bool removeReviewedScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                           const ScratchRemovalReview&,juce::String& error,const Hooks& = {});
+// Explicit capture-only recovery into a separate root. Copies exact source and
+// context dependencies, then publishes the reviewed manifest. No session is adopted.
+Result recoverCaptureSnapshotCopy(const juce::File& originalInstance,const CaptureRecoveryCandidate&,
+                                  const juce::File& selectedProjectsRoot,const Hooks& = {});
 class Verified;
 bool locate(const juce::File& selectedFolder,const Locator& expected,
             std::shared_ptr<Verified>&,juce::String& error,const Hooks& = {});

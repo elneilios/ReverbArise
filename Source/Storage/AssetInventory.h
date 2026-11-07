@@ -72,6 +72,22 @@ struct Request
     Limits limits;
 };
 Report inspect(const Request&,const std::function<bool()>& cancelled={});
+struct CaptureRecoveryCandidate
+{
+    juce::String reference,sha256;
+    uint64_t revision=0;
+    juce::StringArray unavailable;
+};
+struct CaptureRecoveryReport
+{
+    std::vector<CaptureRecoveryCandidate> snapshots;
+    juce::StringArray unindexedAudio;
+    bool complete=false;
+};
+// Observational only. Unindexed audio may be owned by another pass or FLP.
+// Only an exact, independently verified snapshot can be recovered as a map.
+CaptureRecoveryReport captureRecoveryCandidates(const Report&,const juce::File& instanceRoot,
+                                                 const ObservedSnapshot& accepted);
 class InventoryService final:private juce::Thread
 {
 public:

@@ -1,0 +1,772 @@
+{
+  "python": "3.10.6",
+  "rows": [
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "dense",
+      "frames": 220500,
+      "float32_sha256": "11ecff75ecd57fb05acc9874fb9360d2dfcf3f536b50deb515c2acb0fbbd3c55",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1400608,
+      "encode": {
+        "wall_ms": 29.600300011225045,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 18.30840000184253,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.1512000453658402,
+      "open_seek_middle_ms": 0.2030999748967588,
+      "peak_working_set_bytes": 23494656
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "dense",
+      "frames": 220500,
+      "float32_sha256": "11ecff75ecd57fb05acc9874fb9360d2dfcf3f536b50deb515c2acb0fbbd3c55",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1541952,
+      "encode": {
+        "wall_ms": 64.55249997088686,
+        "cpu_ms": 62.5
+      },
+      "decode": {
+        "wall_ms": 10.947900009341538,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.128700053319335,
+      "open_seek_middle_ms": 4.973499977495521,
+      "peak_working_set_bytes": 24842240
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "sparse",
+      "frames": 220500,
+      "float32_sha256": "e7c6f3a54da4458973b24101234d8896094af5ddcbced677f984c10af29a60a5",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 52706,
+      "encode": {
+        "wall_ms": 6.447699968703091,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 6.468400009907782,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.19080005586147308,
+      "open_seek_middle_ms": 0.30700000934302807,
+      "peak_working_set_bytes": 23363584
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "sparse",
+      "frames": 220500,
+      "float32_sha256": "e7c6f3a54da4458973b24101234d8896094af5ddcbced677f984c10af29a60a5",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 39497,
+      "encode": {
+        "wall_ms": 6.75459997728467,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 9.086400037631392,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 4.052499949466437,
+      "open_seek_middle_ms": 4.163500037975609,
+      "peak_working_set_bytes": 23191552
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "low",
+      "frames": 220500,
+      "float32_sha256": "3d51c3fae29e13448f38cce7849adec33cf52d51f313a91b80690f885749a8b3",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1400608,
+      "encode": {
+        "wall_ms": 25.46859998255968,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 18.307399994228035,
+        "cpu_ms": 31.25
+      },
+      "open_first_frame_ms": 0.14650000957772136,
+      "open_seek_middle_ms": 0.19890000112354755,
+      "peak_working_set_bytes": 23597056
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "low",
+      "frames": 220500,
+      "float32_sha256": "3d51c3fae29e13448f38cce7849adec33cf52d51f313a91b80690f885749a8b3",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1541881,
+      "encode": {
+        "wall_ms": 65.55120000848547,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 11.016900010872632,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.406500014942139,
+      "open_seek_middle_ms": 5.264499981421977,
+      "peak_working_set_bytes": 24715264
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "over-unity",
+      "frames": 220500,
+      "float32_sha256": "f6b0d9b1090bc94772d0cfc4e10561075bd0e89cf553144498ecd0d0d640aa81",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1400608,
+      "encode": {
+        "wall_ms": 27.10020000813529,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 17.511399986688048,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.1818999880924821,
+      "open_seek_middle_ms": 0.2148000057786703,
+      "peak_working_set_bytes": 23400448
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "over-unity",
+      "frames": 220500,
+      "float32_sha256": "f6b0d9b1090bc94772d0cfc4e10561075bd0e89cf553144498ecd0d0d640aa81",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1542029,
+      "encode": {
+        "wall_ms": 64.90599998505786,
+        "cpu_ms": 62.5
+      },
+      "decode": {
+        "wall_ms": 11.016300006303936,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.132900027092546,
+      "open_seek_middle_ms": 4.990399989765137,
+      "peak_working_set_bytes": 24850432
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "subnormal",
+      "frames": 220500,
+      "float32_sha256": "c8e853fd2bbbe87e605e35b9b77b695389fb22d7aed85b8dc558689360b69c02",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1342294,
+      "encode": {
+        "wall_ms": 20.683699985966086,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 17.53330003703013,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.1439000479876995,
+      "open_seek_middle_ms": 0.2014999627135694,
+      "peak_working_set_bytes": 23506944
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "subnormal",
+      "frames": 220500,
+      "float32_sha256": "c8e853fd2bbbe87e605e35b9b77b695389fb22d7aed85b8dc558689360b69c02",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 1541846,
+      "encode": {
+        "wall_ms": 66.35219999589026,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 11.01720001315698,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.008000007364899,
+      "open_seek_middle_ms": 5.433299986179918,
+      "peak_working_set_bytes": 24633344
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 44100,
+      "signal": "signed-zero",
+      "frames": 220500,
+      "float32_sha256": "de9529b12762312d8cc197dd7322219485e15750ef9f0750b515dca0c2f1c1bd",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 112008,
+      "encode": {
+        "wall_ms": 5.895899957977235,
+        "cpu_ms": 0.0
+      },
+      "decode": {
+        "wall_ms": 7.680399983655661,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.1515000476501882,
+      "open_seek_middle_ms": 0.1832999987527728,
+      "peak_working_set_bytes": 23412736
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 44100,
+      "signal": "signed-zero",
+      "frames": 220500,
+      "float32_sha256": "de9529b12762312d8cc197dd7322219485e15750ef9f0750b515dca0c2f1c1bd",
+      "raw_bytes": 1764000,
+      "encoded_bytes": 115712,
+      "encode": {
+        "wall_ms": 39.16009998647496,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 8.197200018912554,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 2.1202999632805586,
+      "open_seek_middle_ms": 1.9506000098772347,
+      "peak_working_set_bytes": 23298048
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "dense",
+      "frames": 240000,
+      "float32_sha256": "fc1776085234a97973b604bc41c093d19dea8608c95a8448ed003a74d4149075",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1524200,
+      "encode": {
+        "wall_ms": 28.726399992592633,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 18.263000005390495,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.15049998182803392,
+      "open_seek_middle_ms": 0.20860001677647233,
+      "peak_working_set_bytes": 23908352
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "dense",
+      "frames": 240000,
+      "float32_sha256": "fc1776085234a97973b604bc41c093d19dea8608c95a8448ed003a74d4149075",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1678237,
+      "encode": {
+        "wall_ms": 69.23070002812892,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 11.257899983320385,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 5.572499998379499,
+      "open_seek_middle_ms": 5.590700020547956,
+      "peak_working_set_bytes": 25260032
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "sparse",
+      "frames": 240000,
+      "float32_sha256": "9d3f7f7083a51b024329f641c6aaeb70cbc71258d0514a418e03288de09e81dc",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 49036,
+      "encode": {
+        "wall_ms": 5.375599954277277,
+        "cpu_ms": 0.0
+      },
+      "decode": {
+        "wall_ms": 8.147099986672401,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.13429997488856316,
+      "open_seek_middle_ms": 0.2115000388585031,
+      "peak_working_set_bytes": 23822336
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "sparse",
+      "frames": 240000,
+      "float32_sha256": "9d3f7f7083a51b024329f641c6aaeb70cbc71258d0514a418e03288de09e81dc",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 39769,
+      "encode": {
+        "wall_ms": 7.056100002955645,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 9.538199985399842,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 4.130200017243624,
+      "open_seek_middle_ms": 4.074700002092868,
+      "peak_working_set_bytes": 23650304
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "low",
+      "frames": 240000,
+      "float32_sha256": "5d103f943edfda2e7231a2688eadd05ef4261a9a30ae22b99cf8244b26f7adf1",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1524200,
+      "encode": {
+        "wall_ms": 29.28969997446984,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 19.705599988810718,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.15030003851279616,
+      "open_seek_middle_ms": 0.20510004833340645,
+      "peak_working_set_bytes": 23912448
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "low",
+      "frames": 240000,
+      "float32_sha256": "5d103f943edfda2e7231a2688eadd05ef4261a9a30ae22b99cf8244b26f7adf1",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1678230,
+      "encode": {
+        "wall_ms": 71.17390003986657,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 10.669699986465275,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 5.716999992728233,
+      "open_seek_middle_ms": 5.445099959615618,
+      "peak_working_set_bytes": 25337856
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "over-unity",
+      "frames": 240000,
+      "float32_sha256": "ed8c31ccc6c471cc092e08439d7286996176adf1f27ea3472f81e34eaec26032",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1524200,
+      "encode": {
+        "wall_ms": 27.368500013835728,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 18.862699973396957,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.18770003225654364,
+      "open_seek_middle_ms": 0.23900001542642713,
+      "peak_working_set_bytes": 23949312
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "over-unity",
+      "frames": 240000,
+      "float32_sha256": "ed8c31ccc6c471cc092e08439d7286996176adf1f27ea3472f81e34eaec26032",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1678362,
+      "encode": {
+        "wall_ms": 67.83530005486682,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 11.014799994882196,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.587499996181577,
+      "open_seek_middle_ms": 5.530200025532395,
+      "peak_working_set_bytes": 25202688
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "subnormal",
+      "frames": 240000,
+      "float32_sha256": "82dd6292549d021142ddc455c38ab7fa73947ee12cdf3bd58c216e9398c5be2b",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1460820,
+      "encode": {
+        "wall_ms": 29.0095999953337,
+        "cpu_ms": 31.25
+      },
+      "decode": {
+        "wall_ms": 18.907700025010854,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.18750003073364496,
+      "open_seek_middle_ms": 0.22950000129640102,
+      "peak_working_set_bytes": 23822336
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "subnormal",
+      "frames": 240000,
+      "float32_sha256": "82dd6292549d021142ddc455c38ab7fa73947ee12cdf3bd58c216e9398c5be2b",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 1678147,
+      "encode": {
+        "wall_ms": 71.97440002346411,
+        "cpu_ms": 62.5
+      },
+      "decode": {
+        "wall_ms": 12.015199987217784,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 5.708199983928353,
+      "open_seek_middle_ms": 5.740599997807294,
+      "peak_working_set_bytes": 25169920
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 48000,
+      "signal": "signed-zero",
+      "frames": 240000,
+      "float32_sha256": "fe7c21383c743ca247fd1c6bc8e241cb0ffbbc13f70001afdd605b40f9e59653",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 121728,
+      "encode": {
+        "wall_ms": 6.307100004050881,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 7.475899998098612,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.23150001652538776,
+      "open_seek_middle_ms": 0.15490001533180475,
+      "peak_working_set_bytes": 23711744
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 48000,
+      "signal": "signed-zero",
+      "frames": 240000,
+      "float32_sha256": "fe7c21383c743ca247fd1c6bc8e241cb0ffbbc13f70001afdd605b40f9e59653",
+      "raw_bytes": 1920000,
+      "encoded_bytes": 125947,
+      "encode": {
+        "wall_ms": 41.29520000424236,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 7.8943000407889485,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 2.1080999867990613,
+      "open_seek_middle_ms": 2.063399995677173,
+      "peak_working_set_bytes": 23678976
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "dense",
+      "frames": 480000,
+      "float32_sha256": "d3597c0a19396cc0867c77c3292cccc1e9beeed1f9521f9d2aacc12965d91f06",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3046338,
+      "encode": {
+        "wall_ms": 55.61089998809621,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 32.779900007881224,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 0.18430000636726618,
+      "open_seek_middle_ms": 0.2823999966494739,
+      "peak_working_set_bytes": 29708288
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "dense",
+      "frames": 480000,
+      "float32_sha256": "d3597c0a19396cc0867c77c3292cccc1e9beeed1f9521f9d2aacc12965d91f06",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3356499,
+      "encode": {
+        "wall_ms": 137.36819999758154,
+        "cpu_ms": 140.625
+      },
+      "decode": {
+        "wall_ms": 16.00559998769313,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 10.861999995540828,
+      "open_seek_middle_ms": 10.936299979221076,
+      "peak_working_set_bytes": 32751616
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "sparse",
+      "frames": 480000,
+      "float32_sha256": "01ee8d9b22555aa01d224ebe48c2348112de7a66512a30f9e2fd7bdb2498feed",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 96516,
+      "encode": {
+        "wall_ms": 14.178299985360354,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 11.435899999924004,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.16599998343735933,
+      "open_seek_middle_ms": 0.2101999707520008,
+      "peak_working_set_bytes": 29483008
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "sparse",
+      "frames": 480000,
+      "float32_sha256": "01ee8d9b22555aa01d224ebe48c2348112de7a66512a30f9e2fd7bdb2498feed",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 79507,
+      "encode": {
+        "wall_ms": 13.406699988991022,
+        "cpu_ms": 15.625
+      },
+      "decode": {
+        "wall_ms": 13.05429998319596,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 7.965199998579919,
+      "open_seek_middle_ms": 7.7609000145457685,
+      "peak_working_set_bytes": 29429760
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "low",
+      "frames": 480000,
+      "float32_sha256": "e8c161a08cfce3bdbd29e7ca84386598de59a823fbbe30ef48a195f147a1966f",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3046338,
+      "encode": {
+        "wall_ms": 48.70909999590367,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 34.74529995582998,
+        "cpu_ms": 46.875
+      },
+      "open_first_frame_ms": 0.21109997760504484,
+      "open_seek_middle_ms": 0.31239999225363135,
+      "peak_working_set_bytes": 29745152
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "low",
+      "frames": 480000,
+      "float32_sha256": "e8c161a08cfce3bdbd29e7ca84386598de59a823fbbe30ef48a195f147a1966f",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3356472,
+      "encode": {
+        "wall_ms": 137.51749997027218,
+        "cpu_ms": 140.625
+      },
+      "decode": {
+        "wall_ms": 16.386999981477857,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 10.59489999897778,
+      "open_seek_middle_ms": 10.807199985720217,
+      "peak_working_set_bytes": 32702464
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "over-unity",
+      "frames": 480000,
+      "float32_sha256": "8fccc39be4a8f6c7cdd715bc0421d45cad33a9abbd731104a6e5f760b23d40b8",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3046338,
+      "encode": {
+        "wall_ms": 51.88619997352362,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 32.72399998968467,
+        "cpu_ms": 31.25
+      },
+      "open_first_frame_ms": 0.21730002481490374,
+      "open_seek_middle_ms": 0.2848999574780464,
+      "peak_working_set_bytes": 29749248
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "over-unity",
+      "frames": 480000,
+      "float32_sha256": "8fccc39be4a8f6c7cdd715bc0421d45cad33a9abbd731104a6e5f760b23d40b8",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3356733,
+      "encode": {
+        "wall_ms": 138.34419997874647,
+        "cpu_ms": 140.625
+      },
+      "decode": {
+        "wall_ms": 16.32870000321418,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 10.743700026068836,
+      "open_seek_middle_ms": 10.180999990552664,
+      "peak_working_set_bytes": 32686080
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "subnormal",
+      "frames": 480000,
+      "float32_sha256": "e060031ef6e3ffe9d8a25508a0ee6d2da91c3640a726401b30939de6280f69e3",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 2919638,
+      "encode": {
+        "wall_ms": 46.54409998329356,
+        "cpu_ms": 46.875
+      },
+      "decode": {
+        "wall_ms": 28.09560002060607,
+        "cpu_ms": 31.25
+      },
+      "open_first_frame_ms": 0.21570001263171434,
+      "open_seek_middle_ms": 0.2734999870881438,
+      "peak_working_set_bytes": 29630464
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "subnormal",
+      "frames": 480000,
+      "float32_sha256": "e060031ef6e3ffe9d8a25508a0ee6d2da91c3640a726401b30939de6280f69e3",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 3356376,
+      "encode": {
+        "wall_ms": 141.01810002466664,
+        "cpu_ms": 140.625
+      },
+      "decode": {
+        "wall_ms": 17.094200011342764,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 10.463500046171248,
+      "open_seek_middle_ms": 10.91210002778098,
+      "peak_working_set_bytes": 32825344
+    },
+    {
+      "codec": "wavpack",
+      "version": "5.9.0",
+      "rate": 96000,
+      "signal": "signed-zero",
+      "frames": 480000,
+      "float32_sha256": "730909852b63e15e1686c6856bc3d69d1bf04ea40fee6d75a0272fa37731c200",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 241728,
+      "encode": {
+        "wall_ms": 12.569800019264221,
+        "cpu_ms": 0.0
+      },
+      "decode": {
+        "wall_ms": 10.282600007485598,
+        "cpu_ms": 0.0
+      },
+      "open_first_frame_ms": 0.14640000881627202,
+      "open_seek_middle_ms": 0.16300001880154014,
+      "peak_working_set_bytes": 29515776
+    },
+    {
+      "codec": "deflate",
+      "version": "1.2.12",
+      "rate": 96000,
+      "signal": "signed-zero",
+      "frames": 480000,
+      "float32_sha256": "730909852b63e15e1686c6856bc3d69d1bf04ea40fee6d75a0272fa37731c200",
+      "raw_bytes": 3840000,
+      "encoded_bytes": 252067,
+      "encode": {
+        "wall_ms": 83.09760002885014,
+        "cpu_ms": 78.125
+      },
+      "decode": {
+        "wall_ms": 8.9043999905698,
+        "cpu_ms": 15.625
+      },
+      "open_first_frame_ms": 3.9459000108763576,
+      "open_seek_middle_ms": 3.768599999602884,
+      "peak_working_set_bytes": 29560832
+    }
+  ],
+  "faults_rejected": [
+    "wavpack:corrupt",
+    "wavpack:truncated",
+    "wavpack:input-over-budget",
+    "deflate:corrupt",
+    "deflate:truncated",
+    "deflate:input-over-budget",
+    "wavpack:missing-hybrid-correction",
+    "wavpack:output-over-budget",
+    "deflate:output-over-budget"
+  ]
+}

@@ -40,4 +40,4 @@ Primary API references: [Steinberg stream metadata](https://steinbergmedia.githu
 
 Enable the option through CMake under the build lock, then use the repository test installer. Logs default to `%TEMP%/ReverbAriseFolderProbe/host-<uuid>.jsonl`; an explicitly set `PREVERB_FOLDER_PROBE_LOG_DIR` can select a local output directory before launching the host. Use disposable FLPs only, repeat the five scenarios, and retain exact host/build versions. Always close the host, restore the retained bundle, and reset the option OFF afterward. The wrapper SHA guard deliberately fails on a changed JUCE file until its injection boundaries are reviewed.
 
-See the [revised plan](../../openspec/changes/portable-project-assets/design.md) and [compatibility/backup matrix](../development/asset-storage-contracts.md). No later storage gate is waived by this result.
+See the [revised plan](../../openspec/changes/archive/2026-11-07-portable-project-assets/design.md) and [compatibility/backup matrix](../development/asset-storage-contracts.md). No later storage gate is waived by this result.
