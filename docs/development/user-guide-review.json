@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reconciled the approved Level instructions with the current Storage retention and backup guidance. Verified both sets of user-facing instructions in the combined guide.",
+  "summary": "Reviewed the synced swell gain staging spec against the approved Perform Level guide. The existing guide already documents the standard knob, fixed limits, saved values and first touch.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1015,8 +1015,8 @@
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
-      "bytes": 13234,
-      "sha256": "606c1840ab3e17b89530e1a02d5f6c75ad2264c5641c6eb63c51c9a048eb101a"
+      "bytes": 16276,
+      "sha256": "9306aec627b8032dce1c411eb1c04a5c4922f1d419317e32e9c1d66d0fd7f670"
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",

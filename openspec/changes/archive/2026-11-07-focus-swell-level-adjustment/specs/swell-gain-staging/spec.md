@@ -2,8 +2,21 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Musical defaults require listening calibration
+New instances SHALL use a versioned musical gain policy with a documented baseline method for new swells. Local source-energy matching SHALL be compared with the user-preferred fixed +6 dB reference and the peak-matched prototype before the final method, tuning and wet ceiling receive explicit user listening approval. Level at 0 dB SHALL represent the approved baseline. Approved IR assets and raw convolution PCM SHALL remain unchanged.
+
+#### Scenario: Compare default candidates
+- **WHEN** the user reviews candidate defaults on transient, chord, sustained and busy musical sources with the six bundled responses
+- **THEN** the comparison identifies dry, legacy wet, fixed/matched candidate wet, applied protection and routing at matched dry level
+- **AND** the recorded approval identifies the method, exact tuning, ceiling, build and fixtures before the default is finalized
+
+#### Scenario: Relative response characters survive
+- **WHEN** quiet and dramatic factory responses or an imported IR are prepared under the musical policy
+- **THEN** fixed-gain candidates preserve authored relative levels, while source-energy matching discloses reduced recording-level differences and preserves timbre, decay, stereo character and IR/render assets
+- **AND** silence remains silent and near-silence is not automatically raised to a target level
+
 ### Requirement: Level provides useful adjustment around the baseline
-New swell Level edits SHALL use one finite -12 to +12 dB range for drag, wheel, keys, numeric entry and accessibility. The dial SHALL use the standard knob appearance and drag response and place 0 dB at 12 o'clock. Creation and reset SHALL use 0 dB. Wheel and keys SHALL step by 1/0.1 dB. Below protection onset, edits SHALL produce the corresponding amplitude ratio. Protection SHALL visibly explain required reduction. Gain edits SHALL reuse raw convolution.
+New swell Level edits SHALL use one finite -12 to +12 dB range for drag, wheel, keys, numeric entry and accessibility. The dial SHALL use the standard appearance and drag response, with 0 dB at 12 o'clock. Creation and reset SHALL use 0 dB. Wheel and keys SHALL step by 1/0.1 dB. Below protection onset, edits SHALL produce the corresponding amplitude ratio. Protection SHALL engage only when the prepared aggregate requires it and disclose reduction. Gain edits SHALL reuse raw convolution.
 
 #### Scenario: Turn down and boost
 - **GIVEN** a prepared swell with sufficient headroom

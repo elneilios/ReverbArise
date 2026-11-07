@@ -63,7 +63,7 @@ Listening evidence is the owner's recorded 2026-11-02 selection of energy-plus-6
 
 ## Plan and validation status
 
-[OpenSpec proposal](../../openspec/changes/focus-swell-level-adjustment/proposal.md), [design](../../openspec/changes/focus-swell-level-adjustment/design.md), [tasks](../../openspec/changes/focus-swell-level-adjustment/tasks.md). The delta addresses `swell-gain-staging`; canonical specs remain current behavior. All implementation tasks are unchecked and require a new Apply request.
+[OpenSpec proposal](../../openspec/changes/archive/2026-11-07-focus-swell-level-adjustment/proposal.md), [design](../../openspec/changes/archive/2026-11-07-focus-swell-level-adjustment/design.md), [tasks](../../openspec/changes/archive/2026-11-07-focus-swell-level-adjustment/tasks.md). The delta addresses `swell-gain-staging`; canonical specs remain current behavior. All implementation tasks are unchecked and require a new Apply request.
 
 Executed: source/spec/docs audit, issue/related PR discovery, retained-metrics SHA-256 verification and 14-row analytical reanalysis. No production source or user guide semantics changed. No new native build, MSVC/CTest, FL Studio test, new listening session or DPI approval occurred. Implementation checks cover endpoints/midpoint/reset, precise and invalid entry, extended legacy round trips/frozen restoration, accessibility, unchanged raw/cache dependencies, Learn/Perform/instance isolation and equivalent admitted audition/live/plugin WAV/offline gains; actual future results must be recorded separately.
 

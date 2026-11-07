@@ -64,7 +64,7 @@ Local output: `out/issue-108-level-listening/index.html`. The page was opened di
 
 ## Review boundary
 
-Owner review is required by [task 2.2](../../openspec/changes/focus-swell-level-adjustment/tasks.md) before task 3.1 rollout. Review the dial's ordinary and extended feel, exact entry/reset and a brief -12/-24 listening comparison. The native automated edge cases do not need repeating manually. If the feel/range needs revision, change only the candidate and its tests until accepted. Continue on PR #110; no merge, canonical spec sync or archive is authorized by this checkpoint.
+Owner review is required by [task 2.2](../../openspec/changes/archive/2026-11-07-focus-swell-level-adjustment/tasks.md) before task 3.1 rollout. Review the dial's ordinary and extended feel, exact entry/reset and a brief -12/-24 listening comparison. The native automated edge cases do not need repeating manually. If the feel/range needs revision, change only the candidate and its tests until accepted. Continue on PR #110; no merge, canonical spec sync or archive is authorized by this checkpoint.
 
 ## Subsequent owner approval — 2026-11-06
 
