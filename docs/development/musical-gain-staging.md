@@ -2,19 +2,17 @@
 
 New ReverbArise instances use the listening-approved **Source energy +6 dB**
 balance. Swell **Level at 0 dB** means that calibrated starting point. Level
-is adjustable from -60 to +12 dB. Reset wet shape returns Level to 0 dB and
+is adjustable from -12 to +12 dB. Reset wet shape returns Level to 0 dB and
 normal timing/fade defaults without accumulating gain or recalibrating edits.
 
 Level's durable domain is finite -60 to +12 dB, including fractional saved values
 that are not multiples of the editor's 1 dB coarse / 0.1 dB fine steps. The
-semantic constants live with `Shape`; a dial's display/gesture range is separate
-and must never constrain loading or rewrite actual dB values. The owner-approved
-main dial spans -12 to +12 dB with 0 dB centered. Type a value down to -60 dB for
-extended attenuation; an extended value remains visible even though the dial
-rests at its lower endpoint. Relative edits from an extended value start at its
-actual dB value, without jumping to -12 dB. Double-click resets only Level to 0.
-Legacy/Musical and frozen values retain their calibration and raw assets; no
-state-schema conversion is needed, and the previous UI can read the same values.
+semantic constants live with `Shape`. All new edits use the same -12 to +12 dB
+limits, including numeric and accessibility entry. Older saved values below
+-12 dB retain their exact gain, including in frozen swells. The dial rests at
+-12 dB until you move it inward, enter a valid new value or reset Level.
+Double-click resets only Level to 0 dB. Both gain policies retain their
+calibration and raw assets. Saved sessions use the same schema and asset format.
 Level is non-parameter plugin state, without a normalized host automation mapping.
 
 Calibration compares the strongest 20 ms RMS window in the local dry attack

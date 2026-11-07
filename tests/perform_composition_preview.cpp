@@ -225,6 +225,14 @@ public:
     void verifyFit();
     void verifyKnobs();
     void verifyFocusedLevel();
+    void showSavedLevel(float db)
+    {
+        auto state=baseline;
+        m3::find(state,firstId)->shape.gainDb=db;
+        auto& engine=processor->swellEngine();
+        engine.restore(state);
+        wait([&]{return engine.snapshot().auditionReady;});
+    }
     void verifyKnobResets();
     void verifyAudition();
     void verifyAuditionStrip();
@@ -416,10 +424,10 @@ public:
         scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
         if(levelReview)
         {
-            scenes.clear();scenes.addItemList({"Level -12 dB","Level 0 dB","Level +12 dB","Extended -30 dB","Extended -60 dB"},1);
+            scenes.clear();scenes.addItemList({"Level -12 dB","Level 0 dB","Level +12 dB","Saved -30 dB","Saved -60 dB"},1);
             scenes.setSelectedId(2,juce::dontSendNotification);
-            scenes.onChange=[this]{const std::array<float,5> values{-12,0,12,-30,-60};auto& cell=require<KnobValue>(*editor,"swellLevelCell");
-                cell.valueField().setText(juce::String(values[static_cast<size_t>(scenes.getSelectedId()-1)]),false);cell.valueField().onReturnKey();};
+            scenes.onChange=[this]{const std::array<float,5> values{-12,0,12,-30,-60};
+                fixture->composition.showSavedLevel(values[static_cast<size_t>(scenes.getSelectedId()-1)]);editor->refresh();};
         }
         if(compact)sizes.addItemList({"900 x 600","1000 x 700","1100 x 850","1400 x 900"},1);
         else sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);
@@ -427,7 +435,7 @@ public:
         sizes.onChange=[this,compact]{const std::array<juce::Point<int>,4> dimensions=compact?std::array<juce::Point<int>,4>{{{900,600},{1000,700},{1100,850},{1400,900}}}:std::array<juce::Point<int>,4>{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];if(compact){editor->setPresentationSize(size.x,size.y);setSize(editor->getWidth(),editor->getHeight()+44);}else setSize(size.x,size.y+44);};
         applyTextRole(note,TextRole::helper);note.setText(irReview?"#80 | Shared IR in Learn / Perform Sound | no audio device":compact?"#58 combined #51 / #68 / #73 / #93 | no audio device":selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(compact?900:1100,compact?644:894);
         if(selectionReview){auto& zoom=require<controls::TimelineZoomControls>(*editor,"performZoom");zoom.beforeInvocation();zoom.onZoomFraction(.55);}
-        if(levelReview)note.setText("#108 | Focused dial / extended entry | native control review",juce::dontSendNotification);
+        if(levelReview)note.setText("#108 | Level limits and saved values | UI scale in Settings > Appearance",juce::dontSendNotification);
     }
     void resized()override
     {
@@ -467,7 +475,7 @@ int main(int argc,char** argv)
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
         if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}
-        if(command=="--test-level"){content->composition.verifyFocusedLevel();std::cout<<"Focused Level endpoints, extended persistence, absolute accessibility and stale-binding checks passed.\n";return;}
+        if(command=="--test-level"){content->composition.verifyFocusedLevel();std::cout<<"Level bounds, native pointer, scale labels, saved-value compatibility and accessibility checks passed.\n";return;}
         if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-level")
         {
             class Window final:public juce::DocumentWindow

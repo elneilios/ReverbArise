@@ -26,7 +26,6 @@ void PreverbAudioProcessorEditor::beginValueEdit(int index)
     valueWorkflowTokens[index]=processor.getWorkflowSnapshot().pass;
     const auto current=processor.swellEngine().snapshot();const auto w=m3::find(current.session,current.session.primary);
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;
-    if(index==levelValue)levelGestureMinimum=w?m3::ui::levelAdjustment::gestureMinimum(w->shape.gainDb):m3::minimumSwellLevelDb;
     valueInvocations[index]={current.sessionEpoch,current.session.selected,processor.getSongTime(),current.session.timing,
         processor.getCaptureSnapshot().manifest.sampleRate,processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
     valueInvocations[index].clock=m3::gridClockContext(current.gridClock,processor.getHostPositionDiagnostics().isPlaying);
@@ -138,14 +137,24 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
     if(!time.valid || !std::isfinite(rate) || rate<=0){processor.swellEngine().diagnostic("Compatible host timing is required");return false;}
     if(delta)
     {
-        if(*delta==0)return true;
+        if(*delta==0 && index!=levelValue)return true;
         const auto displacement=static_cast<long double>(*delta)*valueSpans[index];int64_t offset=0;
         if(index<=sourceEndValue)
         {
             const auto initial=index==targetValue?anchor.arrival:index==sourceStartValue?anchor.sourceStart:anchor.sourceEnd;
             if(!sampleCount(displacement,offset) || !m3::checkedAdd(initial,offset,value)){processor.swellEngine().diagnostic("Sample position overflow");return false;}
         }
-        else if(index==levelValue)scalar=std::clamp(anchor.shape.gainDb+static_cast<double>(displacement),levelGestureMinimum,static_cast<double>(m3::maximumSwellLevelDb));
+        else if(index==levelValue)
+        {
+            using namespace m3::ui::levelAdjustment;
+            const auto initial=bounded(anchor.shape.gainDb);
+            const auto change=static_cast<double>(displacement);
+            if(!std::isfinite(change))return false;
+            const auto requested=initial+change;
+            const auto step=(valueModifierFlags&juce::ModifierKeys::shiftModifier)?m3::swellLevelFineStepDb:m3::swellLevelStepDb;
+            scalar=requested<=minimumDb || requested>=maximumDb?bounded(requested):bounded(initial+std::round(change/step)*step);
+            if((scalar==initial && latest->shape.gainDb<minimumDb) || static_cast<float>(scalar)==latest->shape.gainDb)return true;
+        }
         else if(index==inCurveValue || index==outCurveValue)scalar=std::clamp((index==inCurveValue?anchor.shape.inTension:anchor.shape.outTension)+static_cast<double>(displacement),-1.0,1.0);
         else
         {
@@ -189,7 +198,11 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
         if(index==sourceEndValue)return m3::setSource(w,w.sourceStart,value,error);
         if(index==placementValue)return m3::moveWet(w,value,error);
         auto shape=w.shape;
-        if(index==levelValue){if(scalar<m3::minimumSwellLevelDb || scalar>m3::maximumSwellLevelDb){error="Level must be -60 to +12 dB";return false;}shape.gainDb=static_cast<float>(scalar);}
+        if(index==levelValue)
+        {
+            if(!m3::ui::levelAdjustment::accepts(scalar)){error="Level must be -12 to +12 dB";return false;}
+            shape.gainDb=static_cast<float>(scalar);
+        }
         if(index==inCurveValue || index==outCurveValue)
         {if(std::abs(scalar)>1){error="Curve tension must be -1 to +1";return false;}(index==inCurveValue?shape.inTension:shape.outTension)=scalar;}
         if(index==preRollValue){int64_t positioned,logical;
@@ -252,6 +265,19 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
             if(index<=sourceEndValue && !sampleUnitsButton.getToggleState())text=m3::ui::musicalReadout(index==targetValue?w->arrival:index==sourceStartValue?w->sourceStart:w->sourceEnd,time);
             else if(index>sourceEndValue && !(index==placementValue && sampleUnitsButton.getToggleState()))text=m3::ui::compactValue(exactText.getDoubleValue(),index==preRollValue || index==endOffsetValue?3:index==inCurveValue || index==outCurveValue?2:1);
         }
+        if(index==levelValue)
+        {
+            using namespace m3::ui::levelAdjustment;
+            const auto saved=valueAvailable && w->shape.gainDb<minimumDb;
+            if(saved)text=exactText;
+            auto& cell=valueControls[index];
+            cell.setCaption(saved?"Level (dB) - Saved":"Level (dB)","Level (dB)");
+            const auto description=saved?"Saved Level: "+exactText+" dB. "+help:help;
+            cell.valueKnob().setTooltip(description);
+            cell.valueField().setTooltip(description);
+            cell.valueKnob().setHelpText(description);
+            cell.valueField().setHelpText(description);
+        }
         if(!valueControls[index].editing())valueSpans[index]=domain;
         valueControls[index].display(w?juce::String(state.sessionEpoch)+"/"+w->id:juce::String{},text,fraction,enabled,exactText);
         const auto musical=index<=sourceEndValue && !sampleUnitsButton.getToggleState();long double origin=0;songOrigin(time,origin);
@@ -264,7 +290,12 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
                 domainValue=static_cast<double>((static_cast<long double>(sample)-(musical?origin:0))/units);
                 if(index==sourceStartValue)maximum=static_cast<double>((static_cast<long double>(w->arrival)-(musical?origin:0))/units);
                 if(index==sourceEndValue)minimum=static_cast<double>((static_cast<long double>(w->arrival)+1-(musical?origin:0))/units);}
-            else if(index==levelValue){domainValue=w->shape.gainDb;minimum=m3::minimumSwellLevelDb;maximum=m3::maximumSwellLevelDb;step=m3::swellLevelStepDb;unitsPerFraction=domain;}
+            else if(index==levelValue)
+            {
+                using namespace m3::ui::levelAdjustment;
+                domainValue=bounded(w->shape.gainDb);minimum=minimumDb;maximum=maximumDb;step=m3::swellLevelStepDb;unitsPerFraction=domain;
+                if(w->shape.gainDb<minimumDb)exactText+=" dB (saved)";
+            }
             else if(index==inCurveValue || index==outCurveValue){domainValue=index==inCurveValue?w->shape.inTension:w->shape.outTension;minimum=-1;maximum=1;step=.01;unitsPerFraction=2;}
             else {domainValue=index==placementValue?w->placement:index==preRollValue?static_cast<double>(w->arrival)-a:index==endOffsetValue?static_cast<double>(b)-w->arrival:index==fadeInValue?w->shape.fadeIn:w->shape.fadeOut;domainValue/=units;
                 if(index==fadeInValue || index==fadeOutValue){minimum=0;maximum=static_cast<double>(b-a-1)/units;}}

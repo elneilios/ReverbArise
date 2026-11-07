@@ -142,11 +142,51 @@ public:
     std::function<void(double)> onAbsolute;
     void setCompactPresentation(bool enabled)
     {compactPresentation=enabled;if(enabled)entry.setIndents(responsiveGeometry::entryInset,0);lookAndFeelChanged();resized();}
+    void setScaleLabels(const juce::String& low,const juce::String& centre,const juce::String& high)
+    {
+        const std::array<juce::String,3> labels{low,centre,high};
+        showsScaleLabels=true;
+        for(size_t i=0;i<scaleLabels.size();++i)
+        {
+            auto& tick=scaleLabels[i];
+            addAndMakeVisible(tick);
+            tick.setAccessible(false);
+            tick.setInterceptsMouseClicks(false,false);
+            tick.setText(labels[i],juce::dontSendNotification);
+        }
+        lookAndFeelChanged();
+    }
     void lookAndFeelChanged()override
-    {entry.setFont(componentTextFont(*this,TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));}
+    {
+        entry.setFont(componentTextFont(*this,TextRole::controlValue));
+        applyTextRole(label,TextRole::controlLabel);
+        if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));
+        if(showsScaleLabels)
+        {
+            for(auto& tick:scaleLabels)applyTextRole(tick,TextRole::ruler,juce::Justification::centred);
+            resized();
+        }
+    }
     void resized()override
     {
         auto bounds=getLocalBounds();
+        if(showsScaleLabels)
+        {
+            auto top=bounds.removeFromTop(responsiveGeometry::captionHeight);
+            auto row=bounds.removeFromTop(responsiveGeometry::dialSize);
+            const auto edgeWidth=std::max(juce::GlyphArrangement::getStringWidthInt(scaleLabels[0].getFont(),scaleLabels[0].getText()),
+                                          juce::GlyphArrangement::getStringWidthInt(scaleLabels[2].getFont(),scaleLabels[2].getText()))+2*spacing::tight;
+            const auto edge=[&](juce::Rectangle<int> side)
+            {return side.removeFromBottom(responsiveGeometry::captionHeight);};
+            scaleLabels[0].setBounds(edge(row.removeFromLeft(edgeWidth)));
+            knob.setBounds(row.removeFromLeft(responsiveGeometry::dialSize));
+            scaleLabels[1].setBounds(top.withSizeKeepingCentre(edgeWidth,top.getHeight()).withCentre({knob.getBounds().getCentreX(),top.getCentreY()}));
+            scaleLabels[2].setBounds(edge(row.removeFromLeft(edgeWidth)));
+            row.removeFromLeft(spacing::tight);
+            label.setBounds(top.withLeft(row.getX()));
+            entry.setBounds(row.withSizeKeepingCentre(row.getWidth(),responsiveGeometry::entryHeight));
+            return;
+        }
         if(compactPresentation)
         {
             label.setBounds(bounds.removeFromTop(responsiveGeometry::captionHeight));
@@ -160,7 +200,7 @@ public:
         entry.setBounds(bounds.removeFromTop(controlGeometry::valueHeight));
     }
 private:
-    bool compactPresentation=false;
+    bool compactPresentation=false,showsScaleLabels=false;
     void showResetMenu(const juce::MouseEvent& event)
     {
         if(!isEnabled())return;auto reset=prepareResetAction();juce::PopupMenu menu;menu.setLookAndFeel(&getLookAndFeel());
@@ -205,6 +245,7 @@ private:
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
+    std::array<juce::Label,3> scaleLabels;
     DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     std::function<ResetAction()> onResetInvocation;uint64_t resetTicket=0;
     juce::String identity,canonical,canonicalExact,typingBaseline;

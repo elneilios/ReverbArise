@@ -119,9 +119,15 @@ inline void m3ProcessorCases()
             && accepted.swells[0].ir==definition.swells[0].ir && accepted.swells[0].render==definition.swells[0].render
             && accepted.swells[0].calibration==definition.swells[0].calibration && accepted.gainPolicy==policy
             && accepted.swells[1].shape==definition.swells[1].shape);
+        REQUIRE(restored->swellEngine().edit(first,[](auto& w,auto&){w.name="Frozen swell renamed";return true;}));
         restored->getStateInformation(bytes);auto reopened=juce::AudioProcessor::getXmlFromBinary(bytes.getData(),static_cast<int>(bytes.getSize()));
         m3::Session decoded;REQUIRE(reopened && m3::decode(reopened->getChildByName("SwellSession")->getAllSubText(),decoded,error));
-        REQUIRE(decoded.swells[0].shape.gainDb==level && decoded.swells[0].render==definition.swells[0].render);
+        REQUIRE(decoded.swells[0].name=="Frozen swell renamed" && decoded.swells[0].shape.gainDb==level
+            && decoded.swells[0].render==definition.swells[0].render);
+        restored->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
+        REQUIRE(restored->flushCaptureForTesting());
+        accepted=restored->swellEngine().savedSession();
+        REQUIRE(m3::sameSavedSwell(accepted.swells[0],decoded.swells[0]) && accepted.gainPolicy==policy);
     }
     REQUIRE(storeRoot.getChildFile(savedModel.swells[0].render.path).deleteFile());
     restored->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));REQUIRE(restored->flushCaptureForTesting());restored->processBlock(buffer,midi);

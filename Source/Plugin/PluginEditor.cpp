@@ -1,6 +1,5 @@
 #include "PluginEditor.h"
 #include <UI/PerformText.h>
-#include <UI/LevelAdjustment.h>
 #include <UI/MusicalPosition.h>
 #include <UI/LiveDiagnosticsText.h>
 #include <UI/CaptureFailureText.h>
@@ -255,7 +254,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         if(index==levelValue)
         {
             cell.onAbsolute=[this](double db){commitValueEdit(levelValue,m3::ui::preciseValue(db));};
-            cell.valueKnob().setTooltip(m3::ui::levelAdjustment::help);cell.valueField().setTooltip(m3::ui::levelAdjustment::help);
+            cell.setScaleLabels("-12 dB","0 dB","+12 dB");
         }
     }
     irEditor.setName("selectedIrEditor");irEditor.selector.setName("selectedIR");irEditor.fileButton.setName("loadIR");irEditor.status.setName("irAssignmentStatus");

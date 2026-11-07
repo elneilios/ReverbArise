@@ -30,6 +30,16 @@ binding and isolation; `--review-level` launches the same accepted interaction.
 The owner approved the revised family's native feel and bounded -12/-24 dB
 listening comparison on 2026-11-06. No calibration/default gain change follows.
 
+Issue #108 fixed-limit review candidate: the Level binding uses one -12 to
++12 dB edit range. KnobValue uses the existing ruler text role for persistent
+scale labels on the Level cell, with 0 dB directly above the dial's neutral
+marker. For a saved value below -12 dB, the field
+shows the actual saved gain and the caption identifies it as saved. The
+accessibility slider reports its bounded position and edit limits, with the
+actual saved gain in its text readback and help. Moving outward at the lower
+limit leaves the saved gain intact. Native pointer, paint and scaled layout
+checks are part of `--test-level`. The candidate awaits native owner approval.
+
 `ActionButton::paintSurface` owns the common command-button surface for text and
 glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
 neutral surface, stable off-white content, aqua hover/pressed outline, contained

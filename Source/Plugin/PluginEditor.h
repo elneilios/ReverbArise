@@ -52,7 +52,6 @@ public:
     void setPresentationDisplayForReview(m3::ui::PresentationFitContext);
     const m3::ui::EditorPresentationState* presentationState()const noexcept{return presentation.get();}
 private:
-    double levelGestureMinimum=m3::minimumSwellLevelDb;
     bool responsivePresentation=false;
     bool applyingPresentation=false,updatingPresentationControls=false;
     m3::ui::controls::PresentationSurface presentationSurface;
