@@ -5,6 +5,7 @@
 #include <winternl.h>
 #include <array>
 #include <cwchar>
+#include <cstddef>
 #include <stdexcept>
 
 namespace m3::storage::portable
@@ -12,6 +13,7 @@ namespace m3::storage::portable
 namespace
 {
 struct Failure:std::runtime_error {using std::runtime_error::runtime_error;NTSTATUS status=0;Failure(const std::string& message,NTSTATUS code):std::runtime_error(message),status(code){}};
+struct Cancelled final:Failure {using Failure::Failure;};
 void require(bool good,const juce::String& message){if(!good)throw Failure(message.toStdString());}
 bool fail(juce::String& e,const juce::String& m){e=m;return false;}
 bool hex(const juce::String& s){return s.length()==64 && s.containsOnly("0123456789abcdef");}
@@ -136,31 +138,71 @@ struct Root
         auto result=parent.getChildFile(parts[parts.size()-1]);require(std::wcslen(result.getFullPathName().toWideCharPointer())<=240,"Selected path exceeds the supported Windows path length");return result;
     }
     Held parentOf(const juce::File& file){const auto parent=directories.at(file.getParentDirectory().getFullPathName());ordinary(parent->h,true);return parent;}
-    Held read(const juce::String& relative)
+    Held openRead(const juce::String& relative,DWORD sharing=FILE_SHARE_READ)
     {
         const auto file=path(relative);const auto owner=parentOf(file);
-        auto held=relativeOpen(owner->h,file.getFileName(),GENERIC_READ,false,1,FILE_SHARE_READ);
-        require(resolved(held->h).startsWithIgnoreCase(canonical+"/"),"File escaped selected root");files.push_back(held);return held;
+        auto held=relativeOpen(owner->h,file.getFileName(),GENERIC_READ,false,1,sharing);
+        require(resolved(held->h).startsWithIgnoreCase(canonical+"/"),"File escaped selected root");
+        return held;
+    }
+    Held read(const juce::String& relative)
+    {
+        auto held=openRead(relative);
+        files.push_back(held);
+        return held;
     }
 };
 
 uint64_t size(HANDLE h){LARGE_INTEGER n{};require(GetFileSizeEx(h,&n)!=0 && n.QuadPart>=0,"Could not read file size");return static_cast<uint64_t>(n.QuadPart);}
 void rewind(HANDLE h){LARGE_INTEGER n{};require(SetFilePointerEx(h,n,nullptr,FILE_BEGIN)!=0,"Could not seek pinned file");}
 void checkpoint(const Hooks& hooks,const juce::String& event,const juce::String& path={})
-{require(!hooks.cancelled || !hooks.cancelled(),"Operation cancelled; originals and previous backups remain intact");require(!hooks.checkpoint || hooks.checkpoint(event,path),"Injected interruption at "+event+": "+path);}
+{
+    if(hooks.cancelled && hooks.cancelled())throw Cancelled("Operation cancelled; originals and previous backups remain intact");
+    require(!hooks.checkpoint || hooks.checkpoint(event,path),"Injected interruption at "+event+": "+path);
+}
 juce::String hash(HANDLE h,const Hooks& hooks={})
 {
     rewind(h);ContentHash sum;std::array<char,65536> block{};for(;;){checkpoint(hooks,"read");DWORD n=0;require(ReadFile(h,block.data(),static_cast<DWORD>(block.size()),&n,nullptr)!=0,"Could not read pinned file");if(!n)break;sum.update(block.data(),n);}return sum.finish();
 }
-juce::String readText(Root& root,const juce::String& relative,size_t limit=maxDocumentBytes)
+juce::String readText(const Held& file,size_t limit=maxDocumentBytes)
 {
-    const auto file=root.read(relative);const auto n=size(file->h);require(n<=limit,"Oversized portable metadata");std::vector<char> bytes(static_cast<size_t>(n)+1,0);DWORD got=0;
+    const auto n=size(file->h);require(n<=limit,"Oversized portable metadata");std::vector<char> bytes(static_cast<size_t>(n)+1,0);DWORD got=0;
     require(ReadFile(file->h,bytes.data(),static_cast<DWORD>(n),&got,nullptr)!=0 && got==n,"Unreadable portable metadata");const auto text=juce::String::fromUTF8(bytes.data(),static_cast<int>(n));require(text.getNumBytesAsUTF8()==n && std::memcmp(text.toRawUTF8(),bytes.data(),static_cast<size_t>(n))==0,"Invalid or NUL-containing UTF-8 metadata");return text;
 }
+juce::String readText(Root& root,const juce::String& relative,size_t limit=maxDocumentBytes)
+{return readText(root.read(relative),limit);}
+
+juce::String identity(HANDLE file)
+{
+    FILE_ID_INFO info{};
+    require(GetFileInformationByHandleEx(file,FileIdInfo,&info,sizeof(info))!=0,"Cannot verify physical file identity");
+    ContentHash hash;
+    hash.update(&info.VolumeSerialNumber,sizeof(info.VolumeSerialNumber));
+    hash.update(&info.FileId,sizeof(info.FileId));
+    return hash.finish();
+}
+juce::String rootIdentity(const Root& root)
+{return identity(root.directories.at(root.directory.getFullPathName())->h);}
+
+void requirePrivateDataFile(HANDLE file)
+{
+    ordinary(file,false);
+    BY_HANDLE_FILE_INFORMATION info{};
+    require(GetFileInformationByHandle(file,&info)!=0 && info.nNumberOfLinks==1,"Linked or uninspectable staged file");
+    alignas(FILE_STREAM_INFO) std::array<std::byte,2048> streams{};
+    require(GetFileInformationByHandleEx(file,FileStreamInfo,streams.data(),static_cast<DWORD>(streams.size()))!=0,"Cannot verify staged data streams");
+    const auto* stream=reinterpret_cast<const FILE_STREAM_INFO*>(streams.data());
+    constexpr auto unnamed=L"::$DATA";
+    require(stream->NextEntryOffset==0 && stream->StreamNameLength==7*sizeof(wchar_t)
+        && std::wmemcmp(stream->StreamName,unnamed,7)==0,"Alternate or unknown staged data streams");
+}
+struct SealedPart {juce::String leaf,fileId;};
+constexpr auto scratchRecord="scratch-cancelled.json";
+constexpr int scratchVersion=1;
 void verify(Root& root,const juce::String& path,const juce::String& expected,uint64_t bytes,const Hooks& hooks)
 {const auto h=root.read(path);require(size(h->h)==bytes && hash(h->h,hooks)==expected,"Asset byte identity mismatch: "+path);}
 void publish(Root& root,const juce::String& relative,const juce::String& expected,uint64_t bytes,
-             const std::function<void(HANDLE)>& write,const Hooks& hooks)
+             const std::function<void(HANDLE)>& write,const Hooks& hooks,SealedPart* cancelledPart=nullptr)
 {
     checkpoint(hooks,"before-file",relative);const auto destination=root.path(relative,true);
     const auto attributes=GetFileAttributesW(destination.getFullPathName().toWideCharPointer());
@@ -169,7 +211,20 @@ void publish(Root& root,const juce::String& relative,const juce::String& expecte
     const auto temporary=root.operation.isNotEmpty()?root.path("transactions/"+root.operation+"/staging/part-"+juce::Uuid().toDashedString(),true):destination.getSiblingFile("part-"+juce::Uuid().toDashedString());
     auto h=relativeOpen(root.parentOf(temporary)->h,temporary.getFileName(),GENERIC_READ|GENERIC_WRITE|DELETE,false,2,FILE_SHARE_READ);
     ordinary(h->h,false);require(resolved(h->h).startsWithIgnoreCase(root.canonical+"/"),"Staged file escaped root");write(h->h);
-    require(size(h->h)==bytes && hash(h->h,hooks)==expected,"Destination-only hash verification failed");require(FlushFileBuffers(h->h)!=0,"Could not flush destination bytes");checkpoint(hooks,"before-publish",relative);
+    require(size(h->h)==bytes && hash(h->h,hooks)==expected,"Destination-only hash verification failed");
+    require(FlushFileBuffers(h->h)!=0,"Could not flush destination bytes");
+    try {
+        if(cancelledPart)checkpoint(hooks,"sealed-payload",relative);
+        checkpoint(hooks,"before-publish",relative);
+    }catch(const Cancelled&){
+        if(cancelledPart){
+            // This catch precedes the first attempt to publish these bytes.
+            // Unsupported identity evidence leaves the private file protected.
+            try{requirePrivateDataFile(h->h);*cancelledPart={temporary.getFileName(),identity(h->h)};}
+            catch(const Failure&){}
+        }
+        throw;
+    }
     const auto name=destination.getFileName();std::vector<char> memory(sizeof(FILE_RENAME_INFO)+(static_cast<size_t>(name.length())+1)*sizeof(wchar_t),0);auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(memory.data());
     rename->ReplaceIfExists=FALSE;rename->RootDirectory=root.parentOf(destination)->h;rename->FileNameLength=static_cast<DWORD>(name.length()*sizeof(wchar_t));std::memcpy(rename->FileName,name.toWideCharPointer(),rename->FileNameLength);
     using RenameFunction=NTSTATUS(NTAPI*)(HANDLE,PIO_STATUS_BLOCK,PVOID,ULONG,FILE_INFORMATION_CLASS);
@@ -196,11 +251,11 @@ void writeText(Root& root,const juce::String& path,const juce::String& text,cons
     const auto n=static_cast<uint64_t>(text.getNumBytesAsUTF8());require(n<=maxDocumentBytes,"Oversized metadata output");
     publish(root,path,digest(text),n,[&](HANDLE h){writeBytes(h,text.toRawUTF8(),static_cast<DWORD>(n),0,hooks);},hooks);
 }
-void copy(Root& destination,const juce::String& relative,HANDLE source,const Entry& entry,const Hooks& hooks)
+void copy(Root& destination,const juce::String& relative,HANDLE source,const Entry& entry,const Hooks& hooks,SealedPart* cancelledPart=nullptr)
 {
     publish(destination,relative,entry.sha256,entry.bytes,[&](HANDLE h){rewind(source);std::array<char,65536> block{};uint64_t copied=0;
         while(copied<entry.bytes){checkpoint(hooks,"copy",relative);DWORD n=0;require(ReadFile(source,block.data(),static_cast<DWORD>(std::min<uint64_t>(block.size(),entry.bytes-copied)),&n,nullptr)!=0 && n>0,"Source became unreadable");
-            writeBytes(h,block.data(),n,copied,hooks);copied+=n;}require(size(source)==entry.bytes,"Source changed during copy");},hooks);
+            writeBytes(h,block.data(),n,copied,hooks);copied+=n;}require(size(source)==entry.bytes,"Source changed during copy");},hooks,cancelledPart);
 }
 bool sameMetadata(const juce::String& bytes,const juce::String& descriptor)
 {return json(boundedJson(bytes))==json(boundedJson(descriptor));}
@@ -295,38 +350,77 @@ bool prepareLegacyRecovery(const juce::File& selected,const Input& target,std::s
 }
 namespace
 {
-Result execute(const Snapshot& s,Root* source,const std::vector<Held>* pinned,Root& destination,const juce::String& store,const juce::String& operation,const Hooks& hooks)
+void recordCancelledCopy(Root& destination,const Root& source,const juce::String& store,
+                         const Snapshot& snapshot,const Entry& entry,const SealedPart& part,const Hooks& hooks)
 {
-    Result result;result.operation=operation;try{
+    auto record=object();
+    set(record,"version",scratchVersion);set(record,"producer","backup-payload");set(record,"state","cancelled");
+    set(record,"store",store);set(record,"operation",destination.operation);set(record,"snapshot",snapshot.id);
+    set(record,"destinationRoot",rootIdentity(destination));set(record,"sourceRoot",rootIdentity(source));
+    set(record,"part",part.leaf);set(record,"fileId",part.fileId);set(record,"alias",entry.path);
+    set(record,"bytes",juce::String(static_cast<juce::int64>(entry.bytes)));set(record,"sha256",entry.sha256);
+    auto terminalHooks=hooks;
+    terminalHooks.cancelled={};
+    writeText(destination,"transactions/"+destination.operation+"/"+scratchRecord,json(record),terminalHooks);
+}
+Result execute(const Snapshot& s,Root* source,const std::vector<Held>* pinned,Root& destination,const juce::String& store,
+               const juce::String& operation,const Hooks& hooks,bool recordScratch=false)
+{
+    Result result;
+    result.operation=operation;
+    SealedPart part;
+    const Entry* copying=nullptr;
+    try{
         destination.operation=operation;checkClosure(s);const auto text=encodeSnapshot(s);require(digest(text)==s.id,"Snapshot changed after preparation");
         auto plan=object();set(plan,"version",journalVersion);set(plan,"operation",operation);set(plan,"storeId",store);set(plan,"snapshot",text);
         writeText(destination,"transactions/"+operation+"/plan.json",json(plan),hooks);checkpoint(hooks,"journal");
         for(size_t i=0;i<s.files.size();++i){const auto& e=s.files[i];const auto target=destination.path(e.object,true);
             if(target.exists()){verify(destination,e.object,e.sha256,e.bytes,hooks);continue;}
-            require(source!=nullptr,"Originals are unavailable and a backup object is still missing");const auto h=pinned?(*pinned)[i]:source->read(e.path);copy(destination,e.object,h->h,e,hooks);checkpoint(hooks,"object",e.path);}
+            require(source!=nullptr,"Originals are unavailable and a backup object is still missing");
+            const auto h=pinned?(*pinned)[i]:source->read(e.path);
+            copying=&e;
+            copy(destination,e.object,h->h,e,hooks,recordScratch?&part:nullptr);
+            checkpoint(hooks,"object",e.path);}
         // Validate destination-only closure and saved descriptor bytes before any
         // snapshot or completion receipt makes this operation visible as complete.
         for(const auto& e:s.files)verify(destination,e.object,e.sha256,e.bytes,hooks);
         for(size_t i=0;i<s.files.size();++i){const auto& d=s.observed.dependencies[i];if(d.descriptor.isNotEmpty())require(sameMetadata(readText(destination,s.files[i].object),d.descriptor),"Destination descriptor does not match saved metadata");}
         checkpoint(hooks,"closure");writeText(destination,"snapshots/"+s.id+".json",text,hooks);checkpoint(hooks,"snapshot");
         result.receipt=receiptFor({store,s.id},s);writeText(destination,"receipts/"+s.id+".json",encodeReceipt(result.receipt),hooks);result.success=true;
-    }catch(const std::exception& e){result.error=e.what();result.cancelled=hooks.cancelled && hooks.cancelled();}return result;
+    }catch(const Cancelled& e){
+        result.error=e.what();result.cancelled=true;
+        if(recordScratch && source && copying && part.leaf.isNotEmpty()){
+            // The staging handle has closed. The plan remains pinned until
+            // the cancelled Backup returns, so inspection cannot race it.
+            try{recordCancelledCopy(destination,*source,store,s,*copying,part,hooks);}
+            catch(const std::exception&){result.error+=". Scratch ownership could not be recorded; leftovers remain protected.";}
+        }
+    }catch(const std::exception& e){result.error=e.what();result.cancelled=hooks.cancelled && hooks.cancelled();}
+    return result;
+}
+Snapshot decodePlan(const juce::String& text,const juce::String& operation,const juce::String& store)
+{
+    const auto plan=boundedJson(text);
+    require(version(plan,journalVersion) && only(plan,{"version","operation","storeId","snapshot"}) && plan["operation"].toString()==operation && plan["storeId"].toString()==store,"Invalid or conflicting interrupted operation");Snapshot s;juce::String error;require(decodeSnapshot(plan["snapshot"].toString(),s,error),error);return s;
 }
 Snapshot interrupted(Root& root,const juce::String& operation,juce::String& store)
 {
-    require(uuid(operation),"Invalid operation identity");store=storeId(root,false,{});const auto plan=boundedJson(readText(root,"transactions/"+operation+"/plan.json"));
-    require(version(plan,journalVersion) && only(plan,{"version","operation","storeId","snapshot"}) && plan["operation"].toString()==operation && plan["storeId"].toString()==store,"Invalid or conflicting interrupted operation");Snapshot s;juce::String error;require(decodeSnapshot(plan["snapshot"].toString(),s,error),error);return s;
+    require(uuid(operation),"Invalid operation identity");
+    store=storeId(root,false,{});
+    return decodePlan(readText(root,"transactions/"+operation+"/plan.json"),operation,store);
 }
-}
-Result backup(const std::shared_ptr<Prepared>& p,const juce::File& selected,const Hooks& hooks)
+Result backupPack(const std::shared_ptr<Prepared>& p,const juce::File& selected,const Hooks& hooks,bool recordScratch)
 {
     Result result;try{require(p!=nullptr,"No accepted snapshot was prepared");checkpoint(hooks,"start");Root destination(selected);
         require(!destination.canonical.equalsIgnoreCase(p->root->canonical) && !destination.canonical.startsWithIgnoreCase(p->root->canonical+"/") && !p->root->canonical.startsWithIgnoreCase(destination.canonical+"/"),"Backup destination must be separate from the working instance tree");
         ULARGE_INTEGER free{};require(GetDiskFreeSpaceExW(selected.getFullPathName().toWideCharPointer(),&free,nullptr,nullptr)!=0,"Could not measure destination free space");uint64_t total=0;for(const auto& e:p->state.files)total+=e.bytes;
         require(free.QuadPart>=total*2+4*encodeSnapshot(p->state).getNumBytesAsUTF8()+8192,"Insufficient free space for verified backup and staging");
-        const auto store=storeId(destination,true,hooks);Root source(p->root->directory);return execute(p->state,&source,nullptr,destination,store,juce::Uuid().toDashedString(),hooks);
+        const auto store=storeId(destination,true,hooks);Root source(p->root->directory);return execute(p->state,&source,nullptr,destination,store,juce::Uuid().toDashedString(),hooks,recordScratch);
     }catch(const std::exception& e){result.error=e.what();result.cancelled=hooks.cancelled && hooks.cancelled();return result;}
 }
+}
+Result backup(const std::shared_ptr<Prepared>& p,const juce::File& selected,const Hooks& hooks)
+{return backupPack(p,selected,hooks,true);}
 bool inspectInterrupted(const juce::File& selected,const juce::String& operation,Snapshot& out,juce::String& error)
 {try{Root root(selected);juce::String store;auto s=interrupted(root,operation,store);out=std::move(s);error.clear();return true;}catch(const std::exception& e){return fail(error,e.what());}}
 Result resume(const juce::File& selected,const juce::String& operation,const juce::File& explicitSource,const Hooks& hooks)
@@ -336,6 +430,134 @@ Result resume(const juce::File& selected,const juce::String& operation,const juc
         return execute(s,source.get(),nullptr,destination,store,operation,hooks);
     }catch(const std::exception& e){result.error=e.what();return result;}
 }
+namespace
+{
+constexpr auto missingName=0xc0000034u;
+constexpr uint64_t previewByteLimit=64ull*1024*1024*1024;
+constexpr size_t previewOperationLimit=256;
+struct PreviewLimit final:Failure {using Failure::Failure;};
+
+juce::StringArray previewOperations(Root& root,const Hooks& hooks)
+{
+    Held directory;
+    try{
+        const auto parent=root.directories.at(root.directory.getFullPathName());
+        directory=relativeOpen(parent->h,"transactions",FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES,true,1,FILE_SHARE_READ|FILE_SHARE_WRITE);
+    }catch(const Failure& e){
+        if(static_cast<uint32_t>(e.status)==missingName)return {};
+        throw;
+    }
+    require(resolved(directory->h).equalsIgnoreCase(root.canonical+"/transactions"),"Transaction directory escaped selected store");
+    juce::StringArray operations;
+    size_t visited=0;
+    alignas(FILE_ID_BOTH_DIR_INFO) std::array<std::byte,16384> buffer{};
+    auto infoClass=FileIdBothDirectoryRestartInfo;
+    for(;;){
+        checkpoint(hooks,"preview-directory");
+        if(!GetFileInformationByHandleEx(directory->h,infoClass,buffer.data(),static_cast<DWORD>(buffer.size()))){
+            require(GetLastError()==ERROR_NO_MORE_FILES,"Cannot enumerate pinned transaction directory");
+            break;
+        }
+        infoClass=FileIdBothDirectoryInfo;
+        size_t offset=0;
+        for(;;){
+            constexpr auto nameOffset=offsetof(FILE_ID_BOTH_DIR_INFO,FileName);
+            require(offset<=buffer.size()-nameOffset,"Invalid directory record");
+            const auto* item=reinterpret_cast<const FILE_ID_BOTH_DIR_INFO*>(buffer.data()+offset);
+            require(item->FileNameLength%sizeof(wchar_t)==0 && item->FileNameLength<=buffer.size()-offset-nameOffset,"Invalid directory entry name");
+            const juce::String name(item->FileName,static_cast<size_t>(item->FileNameLength/sizeof(wchar_t)));
+            if(name!="." && name!=".."){
+                require(++visited<=previewOperationLimit,"Transaction preview limit reached; results are incomplete");
+                if(uuid(name))operations.add(name);
+            }
+            if(!item->NextEntryOffset)break;
+            require(item->NextEntryOffset>=nameOffset+item->FileNameLength && item->NextEntryOffset<=buffer.size()-offset
+                && item->NextEntryOffset%alignof(FILE_ID_BOTH_DIR_INFO)==0,"Invalid next directory record");
+            offset+=item->NextEntryOffset;
+        }
+    }
+    operations.sort(false);
+    return operations;
+}
+
+ScratchPreviewEntry inspectCancelledCopy(Root& destination,Root& source,const juce::String& store,
+                                         const juce::String& operation,uint64_t& budget,const Hooks& hooks)
+{
+    const auto prefix="transactions/"+operation+"/";
+    juce::var record;
+    Held proof;
+    try{
+        proof=destination.openRead(prefix+scratchRecord);
+        record=boundedJson(readText(proof,8192));
+    }
+    catch(const Failure& e){
+        if(static_cast<uint32_t>(e.status)==missingName)throw Failure("No terminal scratch record. Existing plans and unknown leftovers are protected.");
+        throw;
+    }
+    require(version(record,scratchVersion) && only(record,{"version","producer","state","store","operation","snapshot",
+        "destinationRoot","sourceRoot","part","fileId","alias","bytes","sha256"})
+        && record["producer"].toString()=="backup-payload" && record["state"].toString()=="cancelled"
+        && record["store"].toString()==store && record["operation"].toString()==operation
+        && record["destinationRoot"].toString()==rootIdentity(destination),"Unsupported or conflicting scratch ownership record");
+    require(record["sourceRoot"].toString()==rootIdentity(source),"Select the original instance folder for this Backup to verify another copy");
+    const auto part=record["part"].toString(),fileId=record["fileId"].toString(),sha=record["sha256"].toString();
+    uint64_t bytes=0;
+    require(part.startsWith("part-") && uuid(part.substring(5)) && hex(fileId) && hex(sha) && number(record["bytes"],bytes),"Invalid staged identity or byte proof");
+
+    // Resume pins the existing plan for its full execution, including with the
+    // legacy reader. Exclusive read access detects a busy operation without
+    // creating a lease file or enabling any maintenance action.
+    const auto plan=destination.openRead(prefix+"plan.json",0);
+    const auto accepted=decodePlan(readText(plan),operation,store);
+    require(accepted.id==record["snapshot"].toString() && source.directory.getFileName()==accepted.observed.instance
+        && source.directory.getParentDirectory().getFileName()==accepted.observed.project,"Original folder or snapshot does not match the Backup plan");
+    const auto alias=record["alias"].toString();
+    const auto entry=std::find_if(accepted.files.begin(),accepted.files.end(),[&](const auto& file){return file.path==alias;});
+    require(entry!=accepted.files.end() && entry->sha256==sha && entry->bytes==bytes,"Staged bytes do not match an accepted Backup dependency");
+    if(bytes>budget/2)throw PreviewLimit("Preview byte verification limit reached; results are incomplete");
+    budget-=bytes*2;
+
+    // Only this generated private leaf is accepted. Pack snapshots reference
+    // immutable object paths, and working aliases live under an instance root.
+    const auto path=prefix+"staging/"+part;
+    const auto staged=destination.openRead(path,0);
+    requirePrivateDataFile(staged->h);
+    require(identity(staged->h)==fileId && size(staged->h)==bytes && hash(staged->h,hooks)==sha,"Staged file changed since the cancelled copy");
+    const auto original=source.openRead(alias);
+    require(identity(original->h)!=fileId && size(original->h)==bytes && hash(original->h,hooks)==sha,"No distinct verified surviving copy");
+    return {operation,path,"Verified cancelled Backup copy with an intact original",bytes};
+}
+}
+
+ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& originalInstance,const Hooks& hooks)
+{
+    ScratchPreview report;
+    try{
+        checkpoint(hooks,"preview-start");
+        Root destination(selectedStore),source(originalInstance);
+        require(!destination.canonical.equalsIgnoreCase(source.canonical)
+            && !destination.canonical.startsWithIgnoreCase(source.canonical+"/")
+            && !source.canonical.startsWithIgnoreCase(destination.canonical+"/"),"Backup and original instance folders must be separate");
+        report.store=storeId(destination,false,hooks);
+        auto budget=previewByteLimit;
+        for(const auto& operation:previewOperations(destination,hooks)){
+            checkpoint(hooks,"preview-operation",operation);
+            try{
+                auto entry=inspectCancelledCopy(destination,source,report.store,operation,budget,hooks);
+                report.bytes+=entry.bytes;
+                report.eligible.push_back(std::move(entry));
+            }catch(const Cancelled&){throw;}
+            catch(const PreviewLimit&){throw;}
+            catch(const std::exception& e){report.excluded.push_back({operation,"transactions/"+operation,e.what(),0});}
+        }
+        checkpoint(hooks,"preview-complete");
+        report.complete=true;
+    }catch(const Cancelled& e){report.cancelled=true;report.error=e.what();}
+    catch(const std::exception& e){report.error=e.what();}
+    if(!report.complete){report.eligible.clear();report.bytes=0;}
+    return report;
+}
+
 bool locate(const juce::File& selected,const Locator& expected,std::shared_ptr<Verified>& out,juce::String& error,const Hooks& hooks)
 {
     try{require(uuid(expected.store) && hex(expected.snapshot),"Select an exact store and immutable snapshot; latest-head inference is unsupported");auto v=std::make_shared<Verified>();v->root=std::make_shared<Root>(selected);
@@ -476,7 +698,7 @@ bool prepareWorkingFolder(const Input& input,const juce::File& selected,const ju
 {
     try{
         std::shared_ptr<Prepared> source;require(prepare(input,source,error,hooks),error);
-        const auto copied=backup(source,selected,hooks);require(copied.success,copied.error);
+        const auto copied=backupPack(source,selected,hooks,false);require(copied.success,copied.error);
         std::shared_ptr<Verified> verified;require(locate(selected,copied.receipt.locator,verified,error,hooks),error);
         auto folder=std::make_shared<WorkingFolder>();folder->info.folder=selected;folder->pinned=std::make_shared<Root>(selected);
         folder->info.association.store=copied.receipt.locator.store;folder->info.expected=input;

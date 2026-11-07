@@ -41,8 +41,8 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 ## 5. Separately approved scratch administration
 
-- [ ] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
-- [ ] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
+- [x] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
+- [x] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
 - [ ] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
 - [ ] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
 - [ ] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
@@ -111,6 +111,11 @@ verified cancelled operation. A candidate requires an independently verified
 surviving copy. Existing operation plans lack the per-file ownership and terminal
 cancellation records required by the proposal.
 
-Task 5.1 awaits the separate scope review. Tasks 5.2–5.7 retain their preview,
+The owner approved the scratch-only scope and matrix on 2026-11-07 and authorized
+read-only preview implementation in PR #118. Tasks 5.3–5.7 retain their
 maintenance, quarantine, undo, removal, recovery and enablement gates. Issue #8
 and the active OpenSpec change remain open.
+
+The read-only preview passed its native backend and component checks. See the
+[dated preview evidence](../../../docs/validation/2026-11-07-issue-8-scratch-preview.md).
+Production UI rollout and file actions retain their later gates.

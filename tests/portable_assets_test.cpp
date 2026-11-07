@@ -36,7 +36,8 @@ struct ReadOnlyFixture
 };
 
 #include "working_folder_test.h"
-int main(int argc,char** argv){if(argc>1)return workingFolderTest(argc,argv);return runTest([]{
+#include "ScratchPreviewCases.h"
+int main(int argc,char** argv){if(argc>1 && juce::String(argv[1])=="--scratch")return runTest(scratchPreviewCases);if(argc>1)return workingFolderTest(argc,argv);return runTest([]{
     Fixture f;juce::String error;Input input{f.root,f.xml,f.manifest};std::shared_ptr<Prepared> prepared;
     if(!prepare(input,prepared,error))throw std::runtime_error(error.toStdString());const auto saved=snapshot(*prepared);REQUIRE(saved.files.size()==f.observed.dependencies.size());
     REQUIRE(saved.observed.session.swells[0].frozen && !saved.observed.session.swells[0].enabled && saved.observed.capture.schemaVersion==2);

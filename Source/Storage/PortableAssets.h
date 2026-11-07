@@ -68,6 +68,19 @@ Result resume(const juce::File& selectedFolder,const juce::String& operation,
               const juce::File& explicitSourceRoot,const Hooks& = {});
 bool inspectInterrupted(const juce::File& selectedFolder,const juce::String& operation,
                         Snapshot&,juce::String& error);
+// Advisory evidence only. The reader opens existing files and directories and
+// has no action token, mutation API or automatic invocation from inventory.
+struct ScratchPreviewEntry {juce::String operation,path,reason;uint64_t bytes=0;};
+struct ScratchPreview
+{
+    juce::String store,error;
+    std::vector<ScratchPreviewEntry> eligible,excluded;
+    uint64_t bytes=0;
+    bool complete=false,cancelled=false;
+};
+// Both roots are explicit. The counterpart must be the original instance
+// directory recorded by the Backup producer, never a path from its journal.
+ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& originalInstance,const Hooks& = {});
 class Verified;
 bool locate(const juce::File& selectedFolder,const Locator& expected,
             std::shared_ptr<Verified>&,juce::String& error,const Hooks& = {});

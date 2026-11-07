@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the selector guidance from main and the Storage and rollback instructions. Recovery saves now retain the accepted folder and Export protects the legacy asset folder after a switch. The guide already covers both workflows.",
+  "summary": "Reviewed the Backup cancellation evidence and standalone scratch preview. Production Storage actions and backup formats retain their documented behavior. The guide describes delivered controls, so the preview belongs in the developer review documentation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31791,
-      "sha256": "4d83d8c9317ae125c834abfe2c52e277952abee9cbf669d345fe8c2551d82dae"
+      "bytes": 31993,
+      "sha256": "84849e0c94ba1c9f58f4e1ca9a8418a6e279a162b9e68cf4c90ed4ea1603b232"
     },
     {
       "path": "CMakePresets.json",
@@ -550,13 +550,13 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 64033,
-      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
+      "bytes": 75771,
+      "sha256": "5c197eef942ca610886791000dc207d8aa5dcf4e4bb0d7ada50e2c20bf542d86"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4502,
-      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
+      "bytes": 5185,
+      "sha256": "128abe14e804da8c44390a969765b503aea42393bb6cf561898a7eb18053cda4"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
