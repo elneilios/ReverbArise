@@ -27,7 +27,9 @@ This directory covers product identity, the existing implementation, development
 
 - [Portable backup backend](development/portable-asset-backups.md) — exact-byte phase-2 backend and approved production Backup/Restore/Locate controls; [dated verification and remaining gates](validation/2026-11-06-issue-8-portable-backend.md).
 
-- [Working-folder association](development/working-folder-association.md) — phase-4 transaction backend and disposable native review candidate; production cutover and independent-write validation remain gated.
+- [Working-folder association](development/working-folder-association.md) — delivered phase 4 folder selection, independent writers, recovery and rollback.
+
+- [Scratch cleanup scope](development/scratch-cleanup-scope.md) — approved phase 5 scope, with the eligibility matrix, read-only preview and remaining gates.
 
 - [Issue #8 FL Studio folder-discovery spike](validation/2026-11-06-issue-8-project-folder-spike.md) — native state-stream observations, tested host/JUCE versions, explicit-folder fallback and restored test installation.
 
@@ -88,6 +90,7 @@ This directory covers product identity, the existing implementation, development
 - [UI development standards](development/ui-development-standards.md) — shared controls, incremental consolidation, interaction tests and visual checkpoints for UI work.
 - [Workflow modes](development/workflow-modes.md) — Learn / Perform / Export header, durable state identities, guarded transitions and capture ownership.
 - [Bundled IR library](development/ir-library.md) and [musical gain staging](development/musical-gain-staging.md) — living technical references.
+- [IR Level range investigation — issue #108](validation/2026-11-06-issue-108-ir-level.md) — verified per-swell semantics and the focused-dial proposal with sound-preserving extended entry. [Approved production integration](validation/2026-11-06-issue-108-integration.md) records the owner-accepted -12/+12 dial, full -60/+12 exact domain, isolation/audio-path checks and final Debug/Release results. The [earlier native checkpoint](validation/2026-11-06-issue-108-control-checkpoint.md) preserves candidate results and subsequent approval.
 - [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implemented by merged #56 and synced/archived through #66.
 - [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
 - [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.

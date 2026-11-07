@@ -1,6 +1,6 @@
 # Tasks
 
-Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compatibility/backup matrix. Checked tasks record verified work only. The owner approved the automatic-scan native preview and task 2.4 production Settings integration is verified; phase 1 is complete and later phases remain gated. See [measured results](../../../docs/validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](../../../docs/development/asset-storage-contracts.md). Later phases require separate explicit approval. Phase 1 permits read-only inventory/adapters and the approved Settings integration, plus disposable fixture writes. It does not authorize relocation, deletion, packing, association or changes to capture/DSP/storage writers. See design.md for phase gates and rollback.
+Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compatibility/backup matrix. Checked tasks record verified work only. The owner approved the automatic-scan native preview and task 2.4 production Settings integration is verified; phase 1 is complete and later phases remain gated. See [measured results](../../../../docs/validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](../../../../docs/development/asset-storage-contracts.md). Later phases require separate explicit approval. Phase 1 permits read-only inventory/adapters and the approved Settings integration, plus disposable fixture writes. It does not authorize relocation, deletion, packing, association or changes to capture/DSP/storage writers. See design.md for phase gates and rollback.
 
 ## 1. Contract and measurement gate
 
@@ -41,22 +41,22 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 ## 5. Separately approved scratch administration
 
-- [ ] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
-- [ ] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
-- [ ] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
-- [ ] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
-- [ ] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
-- [ ] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
-- [ ] 5.7 Update retention/recovery documentation and dated fault-injection evidence; verify every cleanup eligibility condition and rollback operation has a passing focused fixture before enabling this optional phase.
+- [x] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
+- [x] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
+- [x] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
+- [x] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
+- [x] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
+- [x] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
+- [x] 5.7 Update retention/recovery documentation and dated fault-injection evidence; verify every cleanup eligibility condition and rollback operation has a passing focused fixture before enabling this optional phase.
 
 ## 6. Separately reviewed efficiency experiments
 
-- [ ] 6.1 Measure store-local exact-byte dedup candidates separately from normalized decoded identities; verify any approved object reuse retains distinct dependency descriptors, legacy aliases and signed-zero-distinct data without deleting legacy files.
-- [ ] 6.2 Benchmark independent lossless WavPack and byte-compression prototypes outside production storage using dense/sparse/low-level/>unity/subnormal/signed-zero fixtures at 44.1/48/96 kHz; deliver ratio, CPU/wall, peak memory, seek/open latency and exact bitwise round-trip results.
-- [ ] 6.3 Verify corrupt/truncated/hybrid-with-missing-correction inputs fail without lossy fallback and resource limits hold off callback; retain WAV as the default unless a later codec adoption review authorizes a versioned reader/writer change.
-- [ ] 6.4 Document measured trade-offs and adoption/rollback recommendation; verify no claim of compression benefit rests on arithmetic estimates, integer conversion or content hashes that normalize sample bits.
+- [x] 6.1 Measure store-local exact-byte dedup candidates separately from normalized decoded identities; verify any approved object reuse retains distinct dependency descriptors, legacy aliases and signed-zero-distinct data without deleting legacy files.
+- [x] 6.2 Benchmark independent lossless WavPack and byte-compression prototypes outside production storage using dense/sparse/low-level/>unity/subnormal/signed-zero fixtures at 44.1/48/96 kHz; deliver ratio, CPU/wall, peak memory, seek/open latency and exact bitwise round-trip results.
+- [x] 6.3 Verify corrupt/truncated/hybrid-with-missing-correction inputs fail without lossy fallback and resource limits hold off callback; retain WAV as the default unless a later codec adoption review authorizes a versioned reader/writer change.
+- [x] 6.4 Document measured trade-offs and adoption/rollback recommendation; verify no claim of compression benefit rests on arithmetic estimates, integer conversion or content hashes that normalize sample bits.
 
-- [ ] 6.5 Propose measured duplicate-write reduction and a bounded rebuildable-cache eligibility/reconstruction matrix under separate review; verify no legacy saved render, sole source, imported IR, frozen output, export or unknown old-FLP dependency becomes evictable merely through deletion/regeneration/current-reference absence. No collector or eviction rollout without later approval.
+- [x] 6.5 Propose measured duplicate-write reduction and a bounded rebuildable-cache eligibility/reconstruction matrix under separate review; verify no legacy saved render, sole source, imported IR, frozen output, export or unknown old-FLP dependency becomes evictable merely through deletion/regeneration/current-reference absence. No collector or eviction rollout without later approval.
 
 ## Workflow follow-up
 
@@ -65,7 +65,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 ## Current authorized work
 
-The owner authorized phase 4 on 2026-11-06, starting with working-folder association on a new branch and PR after PR #31 merged as `f98157e`. Phases 0–3 retain their 20/36 verified tasks; the shared-engine architecture change is separately archived. Tasks 4.1–4.4 are authorized, with existing native control approval before rollout and all copy/identity/compatibility/concurrency/rollback acceptance preserved. The first increment supplies a backend and disposable preview, not a live processor-root switch; all four task checkboxes remain open until complete. See [implementation boundary](../../../docs/development/working-folder-association.md) and [dated evidence](../../../docs/validation/2026-11-06-issue-8-working-folder.md). Phases 5/6 cleanup, quarantine, eviction, compression and efficiency experiments retain separate approvals. Do not close issue #8, archive this active change, merge or publish a release. Each completed task still requires exact-line guarding and refreshed Apply verification.
+The owner authorized phase 4 on 2026-11-06, starting with working-folder association on a new branch and PR after PR #31 merged as `f98157e`. Phases 0–3 retain their 20/36 verified tasks; the shared-engine architecture change is separately archived. Tasks 4.1–4.4 are authorized, with existing native control approval before rollout and all copy/identity/compatibility/concurrency/rollback acceptance preserved. The first increment supplies a backend and disposable preview, not a live processor-root switch; all four task checkboxes remain open until complete. See [implementation boundary](../../../../docs/development/working-folder-association.md) and [dated evidence](../../../../docs/validation/2026-11-06-issue-8-working-folder.md). Phases 5/6 cleanup, quarantine, eviction, compression and efficiency experiments retain separate approvals. Do not close issue #8, archive this active change, merge or publish a release. Each completed task still requires exact-line guarding and refreshed Apply verification.
 
 Native control gate: on 2026-11-06 the owner explicitly approved the phase-4 working-folder preview's layout and Choose → verified copy → Use This Folder interaction. This approval permits that composition's integration; it does not complete tasks 4.1–4.4 or waive their remaining safety/validation gates.
 
@@ -94,10 +94,60 @@ copy/verification, conditional source/engine handoff, v9 associated host saves,
 exact Locate/Restore and explicit incomplete recovery workspaces. Existing
 user-data defaults, immutable identities, normal Learn/common-engine maintenance
 and host-save notification remain intact. See the updated ownership guide and
-[production evidence](../../../docs/validation/2026-11-07-issue-8-phase4-settings.md).
+[production evidence](../../../../docs/validation/2026-11-07-issue-8-phase4-settings.md).
 Task 4.2 has passing real two-process capture/IR/render/export publication and
 reopen evidence and was checked through the required guarded Apply refresh.
 Phase 4 is complete. The full native regression, destination-only fresh-profile
 restore, FL Studio folder association and physical Fork smoke, and original
 bundle rollback passed. Guarded Apply refreshes confirmed 24/36 tasks complete.
 Issue #8 and the active change remain open for the separately gated phases 5/6.
+
+## Phase 5 scope review — 2026-11-07
+
+The owner requested starting phase 5 on a new branch and PR after PR #112 merged.
+The [scratch cleanup scope and eligibility matrix](../../../../docs/development/scratch-cleanup-scope.md)
+propose an opt-in preview for sealed, unpublished Backup payload copies from a
+verified cancelled operation. A candidate requires an independently verified
+surviving copy. Existing operation plans lack the per-file ownership and terminal
+cancellation records required by the proposal.
+
+The owner approved the scratch-only scope and matrix on 2026-11-07 and authorized
+read-only preview implementation in PR #118. Tasks 5.3–5.7 retain their
+maintenance, quarantine, undo, removal, recovery and enablement gates. Issue #8
+and the active OpenSpec change remain open.
+
+The read-only preview passed its native backend and component checks. See the
+[dated preview evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-preview.md).
+Production UI rollout and file actions retain their later gates.
+
+Task 5.3 passed cross-process lease, stale evidence, reference, path-race and
+audio-callback fixtures. See the [maintenance evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-maintenance.md).
+Task 5.4 passed its quarantine and undo gate in disposable native fixtures.
+
+The worker backend passed the process-exit, restart, hash and conflict fixtures.
+See the [quarantine evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-quarantine.md).
+Grace and permanent removal, recovery reporting and production enablement retain
+their separate gates.
+
+## Phase 5 and 6 verification — 2026-11-07
+
+The owner authorized working through the remaining tasks. The worker-level
+cleanup and recovery sequence passed its focused native gates. The 30-day
+grace, distinct final review, retention guidance and independent recovery copy
+are documented in the [combined evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-recovery.md).
+Production cleanup enablement retains separate owner review and exact user
+confirmation before any file move or permanent removal.
+
+The separately bounded experiments measured exact-byte candidates and codec
+trade-offs, then proposed duplicate-write avoidance and a future cache
+eligibility matrix. See the [efficiency evidence](../../../../docs/validation/2026-11-07-issue-8-storage-efficiency.md).
+WAV remains the baseline. Codec adoption, duplicate-write changes and cache
+eviction retain their separate decisions. PR #118 and issue #8 remain open for
+owner review. No archive or merge occurred.
+
+## Delivery closure — 2026-11-07
+
+The owner approved PR #118 and the completed portability, maintenance worker
+and experimental scope. Production cleanup and recovery controls are tracked in
+[#120](https://github.com/elneilios/ReverbArise/issues/120). Storage optimization
+decisions are tracked in [#121](https://github.com/elneilios/ReverbArise/issues/121).

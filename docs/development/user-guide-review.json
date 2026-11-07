@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the combined Swells action menu and merged working-folder guidance. The Swells paragraph covers both pointer entry points, keyboard inspection, activation and dismissal. The Storage, recovery save and legacy asset instructions retain the merged guidance.",
+  "summary": "Reviewed merged Level and Storage guidance and the adopted Swells and per-knob action menus. Added the Reset menu entry point and label meanings. The Level range, saved-gain behavior, and reset value match the merged provider.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31791,
-      "sha256": "4d83d8c9317ae125c834abfe2c52e277952abee9cbf669d345fe8c2551d82dae"
+      "bytes": 32743,
+      "sha256": "ddd279b65f305c2085a64300fccc1224c8fd064ac3faab1e5bfc49e41221ea0b"
     },
     {
       "path": "CMakePresets.json",
@@ -260,13 +260,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 32957,
-      "sha256": "497347d3e63bdc8c7524ae75ea288544dc9cbf59f543c12e6f54d242cbaaea70"
+      "bytes": 32990,
+      "sha256": "d4940c876e36b88d52879091dccfa1c21d1a5dc9ff6aec8f81311d7f5cbc23b8"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 8923,
-      "sha256": "13f092253ed2018e1525d10f0bc0d0dcf79a33e1677ba3dabae8291dcb590842"
+      "bytes": 9192,
+      "sha256": "383a878451de7304403b944d587c2974a900204c2a72559844dc910ea8392639"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89976,
-      "sha256": "5fb13c406f7bc540b75e305886eb6b98bcc389451137b85a99b7464be2178e83"
+      "bytes": 90924,
+      "sha256": "59bce1c81fac981aa77645f66e8a43d59e895e3f65cb5ca2795920cd9e882179"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 22546,
-      "sha256": "897c09ce188bfea620df92d71c9dcb3f40bf66f9f8e0e98b5ded3a88c11b1a79"
+      "bytes": 23901,
+      "sha256": "2922f0d245590ed342443c8de23f41045b90258e812b7b86c49950c3d5a5d225"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -540,23 +540,23 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 24052,
-      "sha256": "44d178f6298451fc089e19b8394d69b3f1b3c3b1f43bff268e0e5652dc1ec945"
+      "bytes": 26698,
+      "sha256": "c80b19479f1d42f1a8182112668f06b8b3883bef66211c912e4d87bec61eddce"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
-      "bytes": 3188,
-      "sha256": "df5db970032ba4af301c88e72cb406344db431ad6aec124eb025979e0ab81de6"
+      "bytes": 3801,
+      "sha256": "76d6fe1bc222b284dd442def105eb9510c0ebb8db1846463038cecd22a8182d2"
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 64033,
-      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
+      "bytes": 103061,
+      "sha256": "da448e8ce03d3772147029eb5abb310b682aca85d7ff72690939498fbc0fd1c4"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4502,
-      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
+      "bytes": 8293,
+      "sha256": "561c6e96037e2aad840b76ed7ced61e3d7e41d1ba88ac5f1fb0bf13bad71ba3f"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
@@ -760,8 +760,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 14240,
-      "sha256": "71c7858d069eb250242096cfd6f1236cedb4f417371fbc54db48141911f6cf5e"
+      "bytes": 16506,
+      "sha256": "6aa98d1114bb4ca7a2989a530725eb039577f191768fcc752605fb564cd1fb9f"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -772,6 +772,11 @@
       "path": "Source/UI/LearnWorkspace.h",
       "bytes": 35316,
       "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+    },
+    {
+      "path": "Source/UI/LevelAdjustment.h",
+      "bytes": 715,
+      "sha256": "656a4685da2c48ce1d0e8006129853a45b57c5857e9107820f80170cda2c2a9d"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -915,8 +920,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 28055,
-      "sha256": "2260d2af29786849fc5d4c23d3e9a0b8a2375e7440f31e5ee74a8902c0f0e3d3"
+      "bytes": 28981,
+      "sha256": "6113523990ce1e10f16accf27ac7dab4fd62d5bb2a18ed4be648476c1500c19f"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -942,6 +947,11 @@
       "path": "openspec/specs/.gitkeep",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "openspec/specs/asset-retention/spec.md",
+      "bytes": 10312,
+      "sha256": "1f1fd19ef0832edfa763343140f182d4d88c682a294d982319b6396a6449bfe0"
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
@@ -979,6 +989,11 @@
       "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
     },
     {
+      "path": "openspec/specs/project-asset-portability/spec.md",
+      "bytes": 15503,
+      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
+    },
+    {
       "path": "openspec/specs/reverse-convolution/spec.md",
       "bytes": 20641,
       "sha256": "32828a6c73642a59690f919a099e112abc9f434bdb5a017eb4fcaf43b2b79c1d"
@@ -1000,8 +1015,8 @@
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
-      "bytes": 13234,
-      "sha256": "606c1840ab3e17b89530e1a02d5f6c75ad2264c5641c6eb63c51c9a048eb101a"
+      "bytes": 16276,
+      "sha256": "9306aec627b8032dce1c411eb1c04a5c4922f1d419317e32e9c1d66d0fd7f670"
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",

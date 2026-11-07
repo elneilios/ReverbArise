@@ -93,6 +93,11 @@ int main() { return runTest([]
     REQUIRE(fullShape(w,-100,40,error)); REQUIRE(shapeBounds(w,-100,40,a,b,error) && a==-100 && b==40);
     resetShape(w); REQUIRE(w.shape.automaticStart && w.shape.gainDb==0 && w.shape.endOffset==1);
     shape.gainDb=std::numeric_limits<float>::infinity(); REQUIRE(! setShape(w,shape,-100,40,error));
+    for(const auto level:{-60.f,-30.f,-12.f,0.f,12.f,-30.12345f})
+    {shape.gainDb=level;REQUIRE(setShape(w,shape,-100,40,error));REQUIRE(w.shape.gainDb==level);}
+    for(const auto level:{-60.01f,12.01f,std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()})
+    {const auto retained=w.shape;shape.gainDb=level;REQUIRE(!setShape(w,shape,-100,40,error) && w.shape==retained);}
     w.render={}; s.auditionDb=-24; s.autoRegenerate=true; s.sensitivity=0.7f; s.separationSeconds=0.12;
     shape.gainDb=-3;REQUIRE(setShape(w,shape,-100,40,error));
     juce::String json; REQUIRE(encode(s,json,error)); Session restored;performNavigationStateCases(s);
@@ -101,6 +106,16 @@ int main() { return runTest([]
     REQUIRE(restored.auditionDb==-24 && restored.autoRegenerate && !restored.swells[0].shape.automaticStart);
     REQUIRE(restored.swells[0].shape.inCurve==Curve::smooth && restored.swells[0].shape.outCurve==Curve::exponential && restored.swells[0].shape.fadeIn==29);
     juce::String roundtrip;REQUIRE(encode(restored,roundtrip,error) && roundtrip==json);
+    for(const auto policy:{GainPolicy::legacy,GainPolicy::musical})for(const auto level:{-60.f,-30.f,-30.12345f})
+    {
+        auto fixture=s;fixture.gainPolicy=policy;fixture.gainRevision=policy==GainPolicy::legacy?legacyGainRevision:approvedGainRevision;
+        fixture.swells[0].shape.gainDb=level;
+        Session reopened;juce::String bytes,again;
+        REQUIRE(encode(fixture,bytes,error) && decode(bytes,reopened,error) && encode(reopened,again,error) && again==bytes);
+        REQUIRE(reopened.swells[0].shape==fixture.swells[0].shape && reopened.swells[0].frozen==fixture.swells[0].frozen);
+        REQUIRE(reopened.swells[0].ir==fixture.swells[0].ir && reopened.swells[0].render==fixture.swells[0].render
+            && reopened.swells[0].calibration==fixture.swells[0].calibration && reopened.gainPolicy==policy);
+    }
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };

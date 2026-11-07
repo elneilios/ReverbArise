@@ -162,8 +162,11 @@ again on one-shot delivery. Outside dismissal preserves the focus recipient.
 The owner approved the native fixture on 7 November 2026. In production, the
 Swells menu opens via right-click or the row's three-dot icon. The list owns
 the popup across row recycling, and Rename/Delete use the clicked item's
-captured ID and epoch. The Reset fixture uses the same presentation. Its
-production hookup remains pending coordination with #108. The
+captured ID and epoch. Per-knob Reset uses the same neutral presentation at
+the right-click anchor. It displays the provider's label and eligibility,
+and invokes the captured `ResetAction`. Pointer return to the dial keeps
+keyboard access with its focus decoration suppressed. Keyboard or accessibility
+activation can restore the existing brackets. The
 [control inventory](../design/ui-control-inventory.md) records the exact scope.
 
 ### C2 approved implementation — 2026-11-07

@@ -28,7 +28,7 @@ None. Existing capture source/context, Learn generation, song export, `song-time
 
 Future implementation would extend CaptureAssetStore, SwellAssetStore and state/dependency resolution with worker-side services and versioned adapters. This plan refinement changes no production behavior or canonical specs; the separately authorized discovery spike is diagnostic only. Existing `PreverbState`, internal modes, UUIDs, source format and legacy K7MA/Preverb paths remain readable. Older binaries may reject future state versions: retain pre-upgrade FLPs and the untouched legacy store for rollback.
 
-Audit: [current architecture](../../../docs/development/asset-storage-audit.md). Evidence/limits: [dated investigation](../../../docs/validation/2026-11-03-asset-storage-investigation.md). Design and tasks here define phase gates; approval is required before implementing later phases beyond the explicitly authorized discovery spike.
+Audit: [current architecture](../../../../docs/development/asset-storage-audit.md). Evidence/limits: [dated investigation](../../../../docs/validation/2026-11-03-asset-storage-investigation.md). Design and tasks here define phase gates; approval is required before implementing later phases beyond the explicitly authorized discovery spike.
 
 
 ## Phase-4 explicit recovery-workspace approval — 2026-11-06

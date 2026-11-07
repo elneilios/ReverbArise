@@ -3,7 +3,8 @@
 static m3::ui::controls::ActionButton& button(juce::Component& root,const juce::String& name)
 {for(auto* c:root.getChildren())if(c->getName()==name){auto* b=dynamic_cast<m3::ui::controls::ActionButton*>(c);REQUIRE(b);return *b;}throw std::runtime_error("Missing action");}
 #include "working_folder_preview.h"
-int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && juce::String(argv[1]).startsWith("--working-folder"))return workingFolderPreview(juce::String(argv[1])=="--working-folder-review");return runTest([&]{
+#include "scratch_preview_review.h"
+int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && juce::String(argv[1]).startsWith("--scratch"))return scratchPreviewReview(juce::String(argv[1])=="--scratch-review");if(argc>1 && juce::String(argv[1]).startsWith("--working-folder"))return workingFolderPreview(juce::String(argv[1])=="--working-folder-review");return runTest([&]{
     Fixture fixture;TestDirectory backup,restore;REQUIRE(backup.file.createDirectory().wasOk() && restore.file.createDirectory().wasOk());
     m3::storage::portable::Input input{fixture.root,fixture.xml,fixture.manifest};
     m3::ui::WorkspaceTheme theme;

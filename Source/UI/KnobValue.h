@@ -1,5 +1,6 @@
 #pragma once
 #include "WorkspaceTheme.h"
+#include "Controls/ChoicePopup.h"
 
 namespace m3::ui
 {
@@ -18,7 +19,7 @@ private:
         {
             auto& look=getLookAndFeel();const auto box=look.getSliderLayout(*this).sliderBounds;const auto angles=getRotaryParameters();
             look.drawRotarySlider(g,box.getX(),box.getY(),box.getWidth(),box.getHeight(),static_cast<float>(owner.canonicalFraction),angles.startAngleRadians,angles.endAngleRadians,*this);
-            if(hasKeyboardFocus(false))
+            if(hasKeyboardFocus(false) && !pointerResetFocus)
             {
                 const auto bounds=controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);
                 const auto leg=std::min(bounds.getWidth(),bounds.getHeight())*.2f;juce::Path brackets;
@@ -28,7 +29,15 @@ private:
                 g.setColour(aqua);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
             }
         }
-        void mouseDown(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}juce::Slider::mouseDown(e);}
+        void mouseDown(const juce::MouseEvent& e)override
+        {
+            clearResetFocusDecoration();
+            owner.inputModifiers(e.mods);
+            if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}
+            juce::Slider::mouseDown(e);
+            if(isEnabled() && e.mods.isLeftButtonDown() && owner.active && !owner.typing && owner.onDialPress)
+                owner.onDialPress();
+        }
         void mouseDoubleClick(const juce::MouseEvent& e)override{if(e.mods.isLeftButtonDown() && !e.mods.isPopupMenu()){auto reset=owner.prepareResetAction();if(reset.apply)reset.apply();}}
         void mouseDrag(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);juce::Slider::mouseDrag(e);}
         void mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)override
@@ -38,14 +47,30 @@ private:
         void modifierKeysChanged(const juce::ModifierKeys& mods)override{owner.inputModifiers(mods);juce::Slider::modifierKeysChanged(mods);}
         bool keyPressed(const juce::KeyPress& key)override
         {
+            clearResetFocusDecoration();
             const auto code=key.getKeyCode();const auto direction=code==juce::KeyPress::rightKey || code==juce::KeyPress::upKey?1:code==juce::KeyPress::leftKey || code==juce::KeyPress::downKey?-1:0;
             if(!direction)return juce::Slider::keyPressed(key);
             if(isEnabled()){owner.inputModifiers(key.getModifiers());if(owner.onStep)owner.step(direction);else {juce::Slider::ScopedDragNotification gesture(*this);setValue(getValue()+direction*.01*(key.getModifiers().isShiftDown()?.1:1.),juce::sendNotificationSync);}}return true;
         }
         void focusGained(FocusChangeType)override{repaint();}
-        void focusLost(FocusChangeType)override{owner.cancel();owner.inputModifiers({});repaint();}
+        void focusLost(FocusChangeType)override{pointerResetFocus=false;owner.cancel();owner.inputModifiers({});repaint();}
+        void restoreResetMenuFocus(bool showBrackets)
+        {
+            pointerResetFocus = !showBrackets;
+            repaint();
+            grabKeyboardFocus();
+        }
         std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override{return owner.accessibility(*this);}
-    private:KnobValue& owner;juce::Time lastWheel;
+    private:
+        void clearResetFocusDecoration()
+        {
+            if (!pointerResetFocus) return;
+            pointerResetFocus = false;
+            repaint();
+        }
+        KnobValue& owner;
+        juce::Time lastWheel;
+        bool pointerResetFocus = false;
     };
     class Caption final:public juce::Label
     {
@@ -86,6 +111,7 @@ public:
         applyTextRole(label,TextRole::controlLabel);
     }
     std::function<void()> onBegin,onEnd;
+    std::function<void()> onDialPress;
     std::function<void()> onRebase;
     std::function<void(const juce::ModifierKeys&)> onModifierInput;
     std::function<void(double)> onDelta;
@@ -137,6 +163,9 @@ public:
     }
     juce::TextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
+    // Optional domain intent: absolute accessible writes must not inherit a
+    // focused relative gesture clamp. Other consumers keep their delta path.
+    std::function<void(double)> onAbsolute;
     void setCompactPresentation(bool enabled)
     {compactPresentation=enabled;if(enabled)entry.setIndents(responsiveGeometry::entryInset,0);lookAndFeelChanged();resized();}
     void lookAndFeelChanged()override
@@ -160,11 +189,38 @@ private:
     bool compactPresentation=false;
     void showResetMenu(const juce::MouseEvent& event)
     {
-        if(!isEnabled())return;auto reset=prepareResetAction();juce::PopupMenu menu;menu.setLookAndFeel(&getLookAndFeel());
-        menu.addItem(1,reset.label,static_cast<bool>(reset.apply));
-        const auto point=event.getScreenPosition();
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&knob).withTargetScreenArea({point.x,point.y,1,1}).withDeletionCheck(*this),
-            [action=std::move(reset.apply)](int result){if(result==1 && action)action();});
+        using namespace controls;
+        if (resetMenu || !isEnabled() || !knob.isShowing())
+            return;
+
+        const auto point = event.getScreenPosition();
+        const juce::Component::SafePointer<KnobValue> safe(this);
+        auto reset = prepareResetAction();
+        if (!safe || !isEnabled() || !knob.isShowing())
+            return;
+
+        std::vector<PopupChoice> rows{{1, reset.label, {}, static_cast<bool>(reset.apply), false, PopupRowRole::action}};
+        resetMenu = std::make_unique<ChoicePopup>(knob, std::move(rows),
+            [safe, action = std::move(reset.apply)](int result, PopupDismissal why)
+            {
+                if (!safe) return;
+                juce::SharedResourcePointer<FocusVisibility> visibility;
+                const bool showBrackets = visibility->isVisible();
+                safe->resetMenu.reset();
+                if (!safe || why == PopupDismissal::outside || why == PopupDismissal::ownerGone
+                    || !safe->knob.isShowing() || !safe->isEnabled())
+                    return;
+
+                safe->knob.restoreResetMenuFocus(showBrackets);
+                if (!safe) return;
+                if (why == PopupDismissal::tabForward || why == PopupDismissal::tabBackward)
+                    safe->knob.moveKeyboardFocusToSibling(why == PopupDismissal::tabForward);
+                if (safe && result == 1 && action) action();
+            });
+        resetMenu->setName("knobResetMenu");
+        juce::SharedResourcePointer<FocusVisibility> visibility;
+        visibility->pointerInput();
+        resetMenu->show({point.x, point.y, 1, 1}, false);
     }
     void step(double amount){if(!isEnabled() || !std::isfinite(amount) || amount==0)return;begin(false);if(onStep)onStep(amount);finish(false);}
     void inputModifiers(const juce::ModifierKeys& mods){if(onModifierInput)onModifierInput(mods);else setGestureModifiers(mods);}
@@ -177,7 +233,8 @@ private:
             double getCurrentValue()const override{return owner.domain.value;}
             juce::String getCurrentValueAsString()const override{return owner.domain.text.isNotEmpty()?owner.domain.text:owner.canonical;}
             void setValue(double value)override
-            {if(isReadOnly() || !std::isfinite(value))return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
+            {if(isReadOnly() || !std::isfinite(value))return;const auto delta=(value-owner.domain.value)/owner.domain.unitsPerFraction;owner.begin(false);
+                if(owner.onAbsolute)owner.onAbsolute(value);else if(owner.onDelta)owner.onDelta(delta);owner.finish(false);}
             void setValueAsString(const juce::String& value)override
             {if(isReadOnly())return;owner.begin(true);if(owner.onCommit)owner.onCommit(value);owner.finish(false);}
             AccessibleValueRange getRange()const override{return owner.domainValid && owner.domain.minimum<owner.domain.maximum?AccessibleValueRange{{owner.domain.minimum,owner.domain.maximum},owner.domain.step}:AccessibleValueRange{};}
@@ -206,5 +263,6 @@ private:
     juce::String identity,canonical,canonicalExact,typingBaseline;
     double origin=0,canonicalFraction=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false;
+    std::unique_ptr<controls::ChoicePopup> resetMenu;
 };
 }

@@ -141,6 +141,26 @@ int main() { return runTest([]
     REQUIRE(engine.edit(second,[](auto& w,auto&){w.sourceEnd=750;return true;}));
     engine.generate(true);waitFor([&]{return engine.savedSession().swells[1].phase==Phase::ready;});
     const auto saved=engine.savedSession(); const auto savedRender=saved.swells[0].render;
+    for(const auto policy:{GainPolicy::legacy,GainPolicy::musical})for(const auto level:{-60.f,-30.f,-30.12345f})
+    {
+        auto frozen=saved;frozen.automaticProcessing=false;frozen.gainPolicy=policy;
+        frozen.gainRevision=policy==GainPolicy::legacy?legacyGainRevision:approvedGainRevision;
+        frozen.swells[0].frozen=true;frozen.swells[0].shape.gainDb=level;
+        if(policy==GainPolicy::musical)
+        {
+            auto& c=frozen.swells[0].calibration;c.state=CalibrationState::matched;c.baselineDb=.25f;c.revision=approvedGainRevision;
+            c.sourceIdentity=savedRender.dependency;c.irIdentity=savedRender.irContent;c.renderIdentity=savedRender.content;
+            c.referenceStart=frozen.swells[0].arrival;c.referenceEnd=frozen.swells[0].sourceEnd;
+            c.windowFrames=20;c.hopFrames=1;c.dryPeak=c.dryRms=.1f;c.wetPeak=c.wetRms=.2f;
+        }
+        auto missing=context;missing.capture.manifest.ranges.clear();
+        SwellEngine reopened(root.file,[missing]{return missing;});reopened.restore(frozen);
+        waitFor([&]{return reopened.snapshot().raw!=nullptr;});
+        const auto after=reopened.savedSession();
+        REQUIRE(after.swells[0].shape==frozen.swells[0].shape && after.swells[0].render==savedRender
+            && after.swells[0].calibration==frozen.swells[0].calibration && after.gainPolicy==policy);
+        REQUIRE(reopened.snapshot().renderCount==0 && !reopened.snapshot().playing);
+    }
     engine.restore(saved); waitFor([&]{return engine.snapshot().auditionReady;});
     REQUIRE(engine.savedSession().auditionDb==-24 && !engine.snapshot().playing);
     REQUIRE(engine.savedSession().swells[0].render.path==savedRender.path);
