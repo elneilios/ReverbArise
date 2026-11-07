@@ -138,10 +138,10 @@ struct Root
         auto result=parent.getChildFile(parts[parts.size()-1]);require(std::wcslen(result.getFullPathName().toWideCharPointer())<=240,"Selected path exceeds the supported Windows path length");return result;
     }
     Held parentOf(const juce::File& file){const auto parent=directories.at(file.getParentDirectory().getFullPathName());ordinary(parent->h,true);return parent;}
-    Held openRead(const juce::String& relative,DWORD sharing=FILE_SHARE_READ)
+    Held openRead(const juce::String& relative,DWORD sharing=FILE_SHARE_READ,DWORD access=GENERIC_READ)
     {
         const auto file=path(relative);const auto owner=parentOf(file);
-        auto held=relativeOpen(owner->h,file.getFileName(),GENERIC_READ,false,1,sharing);
+        auto held=relativeOpen(owner->h,file.getFileName(),access,false,1,sharing);
         require(resolved(held->h).startsWithIgnoreCase(canonical+"/"),"File escaped selected root");
         return held;
     }
@@ -270,12 +270,21 @@ Receipt receiptFor(const Locator& locator,const Snapshot& s)
     Receipt r;r.locator=locator;r.project=s.observed.project;r.instance=s.observed.instance;r.exclusions=s.exclusions;
     r.unknownCaptureHistory=s.observed.unknownCaptureHistory;r.producer=s.producer;r.files=s.files.size();for(const auto& file:s.files)r.bytes+=file.bytes;return r;
 }
+juce::String decodeStoreId(const Held& metadata)
+{
+    const auto value=boundedJson(readText(metadata,8192));
+    require(version(value,storeVersion) && only(value,{"version","storeId","reader"})
+        && value["reader"].isInt() && static_cast<int>(value["reader"])==readerVersion
+        && uuid(value["storeId"].toString()),"Unknown or invalid portable store version/identity");
+    return value["storeId"].toString();
+}
 juce::String storeId(Root& root,bool create,const Hooks& hooks)
 {
     auto path=root.directory.getChildFile("store.json");
     if(!path.exists() && create){juce::Array<juce::File> entries;root.directory.findChildFiles(entries,juce::File::findFilesAndDirectories,false);
         require(entries.isEmpty(),"Choose an empty folder or an existing supported asset backup");auto v=object();set(v,"version",storeVersion);set(v,"storeId",juce::Uuid().toDashedString());set(v,"reader",readerVersion);writeText(root,"store.json",json(v),hooks);}
-    const auto v=boundedJson(readText(root,"store.json",8192));require(version(v,storeVersion) && only(v,{"version","storeId","reader"}) && v["reader"].isInt() && static_cast<int>(v["reader"])==readerVersion && uuid(v["storeId"].toString()),"Unknown or invalid portable store version/identity");return v["storeId"].toString();
+    // All store users retain this shared open for the lifetime of their Root.
+    return decodeStoreId(root.read("store.json"));
 }
 }
 bool safeRelativePath(const juce::String& path)
@@ -480,15 +489,44 @@ juce::StringArray previewOperations(Root& root,const Hooks& hooks)
     return operations;
 }
 
-ScratchPreviewEntry inspectCancelledCopy(Root& destination,Root& source,const juce::String& store,
-                                         const juce::String& operation,uint64_t& budget,const Hooks& hooks)
+void requireSeparateRoots(const Root& destination,const Root& source)
+{
+    require(!destination.canonical.equalsIgnoreCase(source.canonical)
+        && !destination.canonical.startsWithIgnoreCase(source.canonical+"/")
+        && !source.canonical.startsWithIgnoreCase(destination.canonical+"/"),"Backup and original instance folders must be separate");
+}
+
+void requireNoRecoveryReference(Root& destination,const juce::String& snapshotId)
+{
+    // Valid pack objects can only live in objects/ or descriptors/. Working
+    // and recovery aliases have separate instance roots. A snapshot or receipt
+    // for this exact plan is still a conservative veto, including a snapshot
+    // published before its receipt. Inaccessible metadata is also a veto.
+    for(const auto* name:{"snapshots/","receipts/"}){
+        try{destination.openRead(juce::String(name)+snapshotId+".json");}
+        catch(const Failure& e){if(static_cast<uint32_t>(e.status)==missingName)continue;throw;}
+        throw Failure("The Backup plan has a snapshot or receipt. Keep its recovery data.");
+    }
+}
+
+struct ScratchInspection
+{
+    ScratchPreviewEntry entry;
+    Held proof,plan,staged,original;
+};
+
+ScratchInspection inspectCancelledCopy(Root& destination,Root& source,const juce::String& store,
+                                       const juce::String& operation,uint64_t& budget,const Hooks& hooks,
+                                       const ScratchPreviewEntry* reviewed=nullptr)
 {
     const auto prefix="transactions/"+operation+"/";
     juce::var record;
     Held proof;
+    juce::String recordText;
     try{
         proof=destination.openRead(prefix+scratchRecord);
-        record=boundedJson(readText(proof,8192));
+        recordText=readText(proof,8192);
+        record=boundedJson(recordText);
     }
     catch(const Failure& e){
         if(static_cast<uint32_t>(e.status)==missingName)throw Failure("No terminal scratch record. Existing plans and unknown leftovers are protected.");
@@ -508,24 +546,36 @@ ScratchPreviewEntry inspectCancelledCopy(Root& destination,Root& source,const ju
     // legacy reader. Exclusive read access detects a busy operation without
     // creating a lease file or enabling any maintenance action.
     const auto plan=destination.openRead(prefix+"plan.json",0);
-    const auto accepted=decodePlan(readText(plan),operation,store);
+    const auto planText=readText(plan);
+    const auto accepted=decodePlan(planText,operation,store);
     require(accepted.id==record["snapshot"].toString() && source.directory.getFileName()==accepted.observed.instance
         && source.directory.getParentDirectory().getFileName()==accepted.observed.project,"Original folder or snapshot does not match the Backup plan");
     const auto alias=record["alias"].toString();
     const auto entry=std::find_if(accepted.files.begin(),accepted.files.end(),[&](const auto& file){return file.path==alias;});
     require(entry!=accepted.files.end() && entry->sha256==sha && entry->bytes==bytes,"Staged bytes do not match an accepted Backup dependency");
+    requireNoRecoveryReference(destination,accepted.id);
     if(bytes>budget/2)throw PreviewLimit("Preview byte verification limit reached; results are incomplete");
     budget-=bytes*2;
 
     // Only this generated private leaf is accepted. Pack snapshots reference
     // immutable object paths, and working aliases live under an instance root.
     const auto path=prefix+"staging/"+part;
-    const auto staged=destination.openRead(path,0);
+    require(!reviewed || (reviewed->path==path && reviewed->bytes==bytes),"Reviewed path or byte count changed. Preview again.");
+    const auto staged=destination.openRead(path,0,reviewed?GENERIC_READ|DELETE:GENERIC_READ);
     requirePrivateDataFile(staged->h);
     require(identity(staged->h)==fileId && size(staged->h)==bytes && hash(staged->h,hooks)==sha,"Staged file changed since the cancelled copy");
     const auto original=source.openRead(alias);
-    require(identity(original->h)!=fileId && size(original->h)==bytes && hash(original->h,hooks)==sha,"No distinct verified surviving copy");
-    return {operation,path,"Verified cancelled Backup copy with an intact original",bytes};
+    const auto originalId=identity(original->h);
+    require(originalId!=fileId && size(original->h)==bytes && hash(original->h,hooks)==sha,"No distinct verified surviving copy");
+
+    checkpoint(hooks,"scratch-evidence-checked",path);
+    requireNoRecoveryReference(destination,accepted.id);
+    require(resolved(staged->h).equalsIgnoreCase(destination.canonical+"/"+path)
+        && resolved(original->h).equalsIgnoreCase(source.canonical+"/"+alias),"Pinned staged or original path changed");
+    const auto evidence=digest(digest(destination.canonical)+digest(source.canonical)+identity(proof->h)
+        +digest(recordText)+identity(plan->h)+digest(planText)+fileId+originalId);
+    require(!reviewed || reviewed->evidence==evidence,"Reviewed ownership or surviving copy changed. Preview again.");
+    return {{operation,path,"Verified cancelled Backup copy with an intact original",bytes,evidence},proof,plan,staged,original};
 }
 }
 
@@ -535,15 +585,13 @@ ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& 
     try{
         checkpoint(hooks,"preview-start");
         Root destination(selectedStore),source(originalInstance);
-        require(!destination.canonical.equalsIgnoreCase(source.canonical)
-            && !destination.canonical.startsWithIgnoreCase(source.canonical+"/")
-            && !source.canonical.startsWithIgnoreCase(destination.canonical+"/"),"Backup and original instance folders must be separate");
+        requireSeparateRoots(destination,source);
         report.store=storeId(destination,false,hooks);
         auto budget=previewByteLimit;
         for(const auto& operation:previewOperations(destination,hooks)){
             checkpoint(hooks,"preview-operation",operation);
             try{
-                auto entry=inspectCancelledCopy(destination,source,report.store,operation,budget,hooks);
+                auto entry=inspectCancelledCopy(destination,source,report.store,operation,budget,hooks).entry;
                 report.bytes+=entry.bytes;
                 report.eligible.push_back(std::move(entry));
             }catch(const Cancelled&){throw;}
@@ -556,6 +604,47 @@ ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& 
     catch(const std::exception& e){report.error=e.what();}
     if(!report.complete){report.eligible.clear();report.bytes=0;}
     return report;
+}
+
+// The scope keeps the exact handles alive through the synchronous caller.
+// A later quarantine implementation must use the staged handle and pinned
+// parent, rather than reconstructing and reopening a path from the preview.
+class ScratchMaintenance
+{
+public:
+    Root& destination;
+    Root& source;
+    Held lease;
+    ScratchInspection pinned;
+};
+
+bool withRevalidatedScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                           const ScratchPreview& reviewed,const juce::String& selectedPath,
+                           const std::function<void(const ScratchMaintenance&)>& ready,
+                           juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(reviewed.complete && !reviewed.cancelled && uuid(reviewed.store) && ready,"A complete reviewed preview is required");
+        const auto entry=std::find_if(reviewed.eligible.begin(),reviewed.eligible.end(),[&](const auto& item){return item.path==selectedPath;});
+        require(entry!=reviewed.eligible.end() && uuid(entry->operation) && hex(entry->evidence),"The file was not in the reviewed preview");
+        checkpoint(hooks,"maintenance-start");
+        Root destination(selectedStore),source(originalInstance);
+        requireSeparateRoots(destination,source);
+
+        Held lease;
+        try{lease=destination.openRead("store.json",0);}
+        catch(const Failure& e){throw Failure("Cannot reserve the backup store for maintenance. Keep its files and retry when idle. "+std::string(e.what()),e.status);}
+        requirePrivateDataFile(lease->h);
+        require(decodeStoreId(lease)==reviewed.store,"Reviewed backup store changed");
+        checkpoint(hooks,"maintenance-locked");
+        auto budget=previewByteLimit;
+        ScratchMaintenance scope{destination,source,lease,
+            inspectCancelledCopy(destination,source,reviewed.store,entry->operation,budget,hooks,&*entry)};
+        if(hooks.cancelled && hooks.cancelled())throw Cancelled("Maintenance revalidation cancelled");
+        ready(scope);
+        error.clear();
+        return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
 }
 
 bool locate(const juce::File& selected,const Locator& expected,std::shared_ptr<Verified>& out,juce::String& error,const Hooks& hooks)

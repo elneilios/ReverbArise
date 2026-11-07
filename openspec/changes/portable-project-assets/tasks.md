@@ -43,7 +43,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 - [x] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
 - [x] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
-- [ ] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
+- [x] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
 - [ ] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
 - [ ] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
 - [ ] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
@@ -119,3 +119,7 @@ and the active OpenSpec change remain open.
 The read-only preview passed its native backend and component checks. See the
 [dated preview evidence](../../../docs/validation/2026-11-07-issue-8-scratch-preview.md).
 Production UI rollout and file actions retain their later gates.
+
+Task 5.3 passed cross-process lease, stale evidence, reference, path-race and
+audio-callback fixtures. See the [maintenance evidence](../../../docs/validation/2026-11-07-issue-8-scratch-maintenance.md).
+Task 5.4 retains its separate quarantine and undo gate.

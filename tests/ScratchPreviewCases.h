@@ -32,6 +32,9 @@ static void scratchPreviewCases()
     unsealed.checkpoint=[&](const auto& phase,const auto&){if(phase=="copy")duringCopy=true;return true;};
     const auto partial=backup(prepared,store,unsealed);
     REQUIRE(partial.cancelled && !partial.success && !store.getChildFile("transactions/"+partial.operation+"/scratch-cancelled.json").exists());
+    Input separate{f.original.root,f.original.xml,f.original.manifest};
+    separate.producer="Distinct completed pack in mixed fixture";
+    REQUIRE(prepare(separate,prepared,error));
     const auto committed=backup(prepared,store);
     REQUIRE(committed.success);
     prepared.reset();

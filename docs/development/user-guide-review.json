@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Backup cancellation evidence and standalone scratch preview. Production Storage actions and backup formats retain their documented behavior. The guide describes delivered controls, so the preview belongs in the developer review documentation.",
+  "summary": "Reviewed scratch maintenance admission, store sharing and existing Backup and Restore error paths. The new worker scope has no production UI binding or file action, so the offline user guide needs no change.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31993,
-      "sha256": "84849e0c94ba1c9f58f4e1ca9a8418a6e279a162b9e68cf4c90ed4ea1603b232"
+      "bytes": 32223,
+      "sha256": "b4d493f122fac3fed631ded0732c80b478429834c418c0e0386b0d4466b92bb9"
     },
     {
       "path": "CMakePresets.json",
@@ -550,13 +550,13 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 75771,
-      "sha256": "5c197eef942ca610886791000dc207d8aa5dcf4e4bb0d7ada50e2c20bf542d86"
+      "bytes": 80216,
+      "sha256": "ce46ce23d7fe83a9c777b40eadb3e652980248f646d7bbf6d5d5d876721197c1"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 5185,
-      "sha256": "128abe14e804da8c44390a969765b503aea42393bb6cf561898a7eb18053cda4"
+      "bytes": 5897,
+      "sha256": "cd8bcdf884c609235f18beba3072f61230397171ec6e15ac3ff63b5988d62919"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
