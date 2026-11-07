@@ -125,3 +125,52 @@ original-binary/pre-upgrade-FLP rollback have not been performed for this revisi
 No phase-4 acceptance is inferred from native success; tasks 4.1/4.3/4.4 remain
 open, task 4.2 remains complete (21/36 overall), and PR #112 stays draft.
 Issue #8 remains open and no original project, store or installed bundle changed.
+
+## Fresh profile, FL Studio and rollback acceptance
+
+The owner accepted Windows elevation on retry. `validate-portable-profile.ps1`
+ran under a different Windows SID and exited 0. All six destination-only restores
+passed: full, context-only and unfrozen for both legacy and associated states.
+Their closures contained 14, 5 and 14 files respectively in each family. Asset
+hashes and metadata matched exactly. Each case recorded zero convolution,
+resampling and capture staging. The launcher verified removal of the temporary
+account and profile. Test EXE SHA-256:
+`1FC6CBCF20E1D9AAFB144D8814381E26514F77AC18692E675F768FD0BD1628CC`.
+
+The supported plugin-only Release installer built `ecee561` (the native-tested
+source at `c701c5b` plus evidence). A system-folder access denial was resolved with
+Windows elevation. FL Studio 26.1.7.5654 on the same Windows PC, with Windows
+desktop DPI configured at 96, loaded the system VST3 module directly. Candidate
+module SHA-256: `F9AD21C712DC46F93047952BE78E46F709F685304FDB5E66CB52D66C642611A5`.
+
+- Opened a hash-identical copy of the retained phase-2 v8 FLP. Storage used the
+  legacy user-data folder. Choosing Assets-A verified the two IR dependency files
+  while retaining the active root. Use This Folder switched the root and showed
+  the host-save reminder. A separate FLP saved with envelope v9.
+- Save As into another directory retained Assets-A in the serialized state. Its
+  byte-identical duplicate (SHA-256 `01EEFBEF2D73762C6831D27E6A562A630C72BACC98E0D217E0A5E565454027CC`
+  before the fork) reopened with Assets-A. Explicit verification and adoption of
+  Assets-B produced a distinct store ID. After saving the fork, the two FLPs
+  reopened independently with their respective stores. The original and both
+  copies matched the historical SHA-256 values for the WAV and descriptor.
+  `fsutil file queryfileid` reported three distinct WAV identities.
+- Restored the exact bundle installed before the smoke (`9a8b9d0`, the private
+  compatibility test build with a v8 reader) using the installer transaction
+  helper with FL Studio closed. Verified complete bundle hashes and the loaded
+  system module SHA-256 `DED49001B0395EAA96B08810FA771119724E2B50B41EEBCA32D2D29BFA0DCB31`.
+  FL Studio opened the retained v8 FLP and displayed its saved Preverb Hall IR.
+  A separate v8 verification save retained the exact default/imported IR metadata
+  and project/instance IDs. Both pre-upgrade FLP files retained SHA-256
+  `41A37BFD990CF760CEB9CFE8C753BB0BCB1AA8F72C5D43EA1DC38F998E1CBE93`.
+  The legacy store matched the historical two-file hashes. The original installed
+  bundle is back in place and the phase 4 candidate is retained in the installer backups.
+
+The FLP fixture contains an IR and its descriptor. Captured audio, render and
+Export dependency coverage comes from the native and fresh-profile fixtures.
+This host check covers one FL Studio version, one PC and the configured DPI above.
+Rollback uses the pre-upgrade FLP with the original binary and legacy store.
+Associated v9 FLPs require a reader that supports v9.
+
+Tasks 4.1, 4.3 and 4.4 were completed with guarded Apply refreshes, bringing the
+active change to 24/36 complete. Issue #8 stays open for the separately gated
+phases 5/6.

@@ -109,7 +109,7 @@ a legacy state after an associated session explicitly selects the legacy root.
 An old binary may reject v9; rollback does not promise it can read an upgraded FLP.
 Do not overwrite the only pre-upgrade project or delete original assets.
 
-## Validation and remaining gates
+## Validation
 
 Native component/processor coverage includes production Settings bindings and
 pinned rows, stale/cancel/failure handling, unchanged Learn state, v9 saves during
@@ -119,12 +119,12 @@ processes simultaneously publish actual captures, imported IRs, renders and expo
 then reopen their exact states while original hashes remain intact. This is native
 MSVC coverage, not FL Studio or second-profile evidence.
 
-Required before phase-4 acceptance: stable full native regression; associated
-destination-only fresh Windows-profile validation; retained original-binary/
-pre-upgrade FLP rollback; and one consolidated scoped FL Studio smoke test. Do not
-archive the active change, close issue #8 or merge PR #112 from these component
-results. Phases 5/6 cleanup, eviction, compression and default-storage cutover remain
-separately gated.
+Phase 4 passed the full native regression, six destination-only restore cases
+in a separate Windows account, and the scoped FL Studio smoke. FL Studio reopened
+both physical stores, preserved the association across Save As, and reopened the
+retained v8 FLP after restoring the exact previously installed bundle. See the
+dated evidence for fixture and host coverage. Issue #8 and the active change
+remain open for separately gated phases 5/6.
 
 See [backup contracts](portable-asset-backups.md),
 [version/rollback matrix](asset-storage-contracts.md),

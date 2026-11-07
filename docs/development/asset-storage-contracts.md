@@ -72,6 +72,6 @@ capture or Export schema. Absolute locations remain local hints; writer ownershi
 is reacquired independently on every reopen. Host saves perform no filesystem I/O.
 See [working-folder ownership](working-folder-association.md) for implemented
 bindings and [integration evidence](../validation/2026-11-07-issue-8-phase4-settings.md)
-for remaining native/profile/host/rollback gates. Old-binary rollback still requires
+for native, fresh-profile, FL Studio and rollback results. Old-binary rollback still requires
 the retained pre-upgrade FLP and untouched legacy store; no v9 downconversion or
 old-binary compatibility claim is made. Issue #8 and phases 5/6 remain open.
