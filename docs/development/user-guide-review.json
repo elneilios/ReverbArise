@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed synced audit/contracts and approved command-button requirements against the implemented shared controls and existing guide focus/activation guidance. Archive-only closeout; no guide prose changes needed.",
+  "summary": "Reviewed the opt-in selector/popup family and dedicated native preview/test target against canonical UI contracts and existing guide focus wording. Production declarations and user flows are unchanged before native approval, so no guide prose or screenshot change is appropriate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31110,
-      "sha256": "b31c2cfe5aaf4a877f15e876e09ba218816bf242fc96ac79a3c340602e92f62b"
+      "bytes": 31469,
+      "sha256": "80ce1c4c7a6796adc28f3a59dd82b3b8c680be54b618287ffb7745e17c82a6d2"
     },
     {
       "path": "CMakePresets.json",
@@ -564,6 +564,16 @@
       "sha256": "bbaae8202e61f32e7470ceada0c3ca24dd926021eb9386957baf8115499cc077"
     },
     {
+      "path": "Source/UI/Controls/ChoicePopup.h",
+      "bytes": 12415,
+      "sha256": "4a6964de89394bba3896407649853f937f8c7027502dcaaa5ca1d36954ca394f"
+    },
+    {
+      "path": "Source/UI/Controls/ChoiceSelector.h",
+      "bytes": 9111,
+      "sha256": "b6b5cd3e0b495518347dc44b5f27d97e4534a52d3d024368fddd9e336aaba484"
+    },
+    {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
       "bytes": 6679,
       "sha256": "7df2d339dc53e81d33e51afa5902ed6ecccccb32c6e9c548420e836266dcf91e"
@@ -654,6 +664,11 @@
       "sha256": "809389cd76d9b29dd73a9a37af84cbbc3e5d968042416b6abac6397b7418ce84"
     },
     {
+      "path": "Source/UI/Controls/PopupInteraction.h",
+      "bytes": 1850,
+      "sha256": "3e4cd7806e7aab2aa88c219592d0047c4d7a8be107291620f9722da6b8433300"
+    },
+    {
       "path": "Source/UI/Controls/PresentationSurface.h",
       "bytes": 1232,
       "sha256": "d45c47f9cf1bc541557533f8ee794afc18f984a5464e869f8ca0e9e69d472804"
@@ -662,6 +677,11 @@
       "path": "Source/UI/Controls/SegmentedSelector.h",
       "bytes": 9288,
       "sha256": "6099f5492d317dd114f9ad8c6bfce0de6a58d9b1bcd99d2c920bd89433eca1bc"
+    },
+    {
+      "path": "Source/UI/Controls/SelectorPresentation.h",
+      "bytes": 1461,
+      "sha256": "895fe3a47cb1ac7e99f56ea1ec814a00e29682f689b08561d6a88fa2267ba2ba"
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",

@@ -2,11 +2,11 @@
 
 ## 1. Shared selector and popup family
 
-- [ ] 1.1 Implement the scoped typed popup inspection/activation state and one-shot completion seam described in design.md; verify component tests cover independent hover/keyboard/accepted state, hover exit into padding/outside, keyboard-hover-return, pointer click then leave and no synthetic initial highlight.
-- [ ] 1.2 Build the anchored JUCE popup adapter without a JUCE fork or global popup override; verify native component tests for screen clamping, owner destruction, outside/Escape dismissal, Tab traversal, Return/Space/accessibility one-shot commit and focus return from pointer/keyboard origins.
-- [ ] 1.3 Extend the existing selector body and shared FocusVisibility usage for idle/hover/held/disabled and outer aqua brackets; verify state rendering, steady chevrons, independent combined states, repeated/already-focused accessibility requests, pointer-click hiding and retained keyboard operation in focused control tests.
-- [ ] 1.4 Add long closed-value discovery, wrapped popup rows/reasons and unavailable inspection with separate activation eligibility; verify full accessible names/disabled state, no disabled invocation, accepted disabled Custom, normal text size and focus/checkmark containment in narrow/scaled fixtures.
-- [ ] 1.5 Document the C2 adapter/reuse API, wheel and inspect/commit policies in ui-control-contracts and the standards with exact scoped candidate metrics; verify documentation links and UI standards pass without debt-inventory regeneration, and mark native acceptance pending rather than inferred from mockups.
+- [x] 1.1 Implement the scoped typed popup inspection/activation state and one-shot completion seam described in design.md; verify component tests cover independent hover/keyboard/accepted state, hover exit into padding/outside, keyboard-hover-return, pointer click then leave and no synthetic initial highlight.
+- [x] 1.2 Build the anchored JUCE popup adapter without a JUCE fork or global popup override; verify native component tests for screen clamping, owner destruction, outside/Escape dismissal, Tab traversal, Return/Space/accessibility one-shot commit and focus return from pointer/keyboard origins.
+- [x] 1.3 Extend the existing selector body and shared FocusVisibility usage for idle/hover/held/disabled and outer aqua brackets; verify state rendering, steady chevrons, independent combined states, repeated/already-focused accessibility requests, pointer-click hiding and retained keyboard operation in focused control tests.
+- [x] 1.4 Add long closed-value discovery, wrapped popup rows/reasons and unavailable inspection with separate activation eligibility; verify full accessible names/disabled state, no disabled invocation, accepted disabled Custom, normal text size and focus/checkmark containment in narrow/scaled fixtures.
+- [x] 1.5 Document the C2 adapter/reuse API, wheel and inspect/commit policies in ui-control-contracts and the standards with exact scoped candidate metrics; verify documentation links and UI standards pass without debt-inventory regeneration, and mark native acceptance pending rather than inferred from mockups.
 
 ## 2. Native family checkpoint
 

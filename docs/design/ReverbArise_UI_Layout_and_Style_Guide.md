@@ -8,6 +8,21 @@ See the [control inventory and family roadmap](ui-control-inventory.md),
 Legacy debt remains explicit; family migrations retain scoped native approval.
 
 
+## Selector native preview — issue #107 (pending native acceptance)
+
+The owner approved the quiet dropdown/menu design on 7 November 2026, including
+transient pointer hover, persistent keyboard inspection and an independent
+selected checkmark. `unify-selector-states` now has an opt-in native family
+fixture; this is **not a production rollout or a standards revision advance**.
+Existing consumers remain unchanged until native approval.
+
+The [C2 preview contract](../development/ui-control-contracts.md#c2-native-preview-implementation--2026-11-07-not-rolled-out)
+records the shared API and scoped candidate metrics. Review at normal and larger
+sizes and 100%/125% user scale uses `preverb_selector_popup_test --review-selectors`.
+Physical Windows DPI and FL Studio results remain distinct. #108's Level work,
+#8's storage/recovery work and the separate action-menu child are not adopted by
+this fixture.
+
 ## Responsive composition — issue #58
 
 This section takes precedence over the older fixed-size Learn/header values

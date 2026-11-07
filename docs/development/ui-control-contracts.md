@@ -146,6 +146,39 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
+### C2 native preview implementation — 2026-11-07 (not rolled out)
+
+`Controls/ChoiceSelector.h` extends the existing deliberate selector as an explicit
+adoption seam. `ChoicePopup` owns a one-level anchored popup; `PopupInteraction`
+separates pointer inspection, keyboard navigation, held state and the accepted
+checkmark. A pointer departure clears only hover; any valid keyboard inspection
+remains. Pointer focus never creates a sticky row background. Choice completion
+is one-shot, with the original binding still deciding acceptance.
+
+The popup's root owns real keyboard focus while unavailable child rows remain
+disabled and accessible. Keyboard/accessibility inspection can reach such a row,
+but neither its press action nor Return/Space grants permission to select it.
+This avoids treating an inspectable row as an enabled command. Silent refresh,
+catalogue changes and deferred completion retain captured identity/lifetime guards.
+`setChoiceReason` associates provider-supplied reasons with stable item IDs;
+disabled Export Custom remains an accepted display value, never a preset command.
+
+`SelectorPresentation` owns **candidate popup-only metrics**: width 220–420,
+outer padding 4, row padding 8 and check column 22 logical units. Popup fonts and
+composition follow the source's user transform; OS DPI remains JUCE's concern.
+Existing command bracket stroke/gap and body geometry are reused. Raised/held
+surfaces derive from existing background/outline colours; no raw palette or
+global popup colour override is introduced. The native family review must approve
+these scoped dimensions/roles before adoption or production revision advancement.
+
+Preview: `preverb_selector_popup_test --review-selectors`; focused checks use the
+same executable without arguments. The fixture offers size/scale and normal,
+dense, empty and unavailable/error scenes. Production selectors, including the
+shared IR field, still use their prior declarations at this checkpoint. The
+approved browser design is recorded in `unify-selector-states`; **native owner
+acceptance and consumer migration remain pending**. #108 Level, #8 recovery and
+storage/working-folder controls, C1 buttons and action-menu adoption are separate.
+
 ## C6 — Switches and toggles
 
 Observed owners: [Switch](../../Source/UI/Controls/Switch.h), InvocationToggle,
