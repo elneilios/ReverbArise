@@ -44,3 +44,17 @@ The offline guide combines the Swells and working-folder instructions.
 The earlier baseline run hit the existing Windows foreground prerequisites
 for the knob-reset and exact-value readability fixtures. The combined run
 uses the native fixtures from merged main with their focus checks intact.
+
+The supported combined Release build and CTest run passed **89/89** checks
+at `c2dcb11`, on merged main `ca9f7df`, in run `20261107-111450-26d74cdf`
+(384.08 seconds). It includes the Swells binding, popup, editor, audio,
+storage, and persistence checks. The three earlier-baseline failures
+(knob focus, readability focus, and the transient engine timeout) passed
+in this run. Strict OpenSpec validation, UI standards, guide currency,
+and whitespace checks also passed.
+
+OpenSpec is at 5/9 tasks. The Swells menu is implemented and verified.
+The Reset hookup and its binding tests still await #108 coordination. The
+combined documentation, final validation, and review-ready delivery tasks
+remain open for that seam. The Windows fixture and software-scale results
+are distinct from physical Windows DPI and FL Studio interaction coverage.
