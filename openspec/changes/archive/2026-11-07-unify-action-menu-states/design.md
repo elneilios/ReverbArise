@@ -2,7 +2,7 @@
 
 ## Context
 
-See [proposal](proposal.md) and [delta](specs/ui-design-system/spec.md). The prerequisite [selector design](../archive/2026-11-07-unify-selector-states/design.md) introduces the scoped popup adapter, readable row geometry and independent pointer/keyboard/selection state. Reuse it after that slice is delivered; do not create a second menu framework or bundle the two implementations in one PR.
+See [proposal](proposal.md) and [delta](specs/ui-design-system/spec.md). The prerequisite [selector design](../2026-11-07-unify-selector-states/design.md) introduces the scoped popup adapter, readable row geometry and independent pointer/keyboard/selection state. Reuse it after that slice is delivered; do not create a second menu framework or bundle the two implementations in one PR.
 
 Observed main consumers: `PluginEditor.cpp::showSwellMenu` creates Rename/Delete items, captures a SafePointer, swell ID/name and assignment epoch, and opens Rename's existing modal text field only after valid selection. `KnobValue::showResetMenu` obtains a generated `ResetAction`, anchors its popup at the pointer, uses owner deletion checking and invokes the captured closure once. `PluginInspector.cpp::prepareValueReset` captures selection/session/input/pass/initial positions/reset revision and revalidates before model mutation. Those providers, including existing Level reset behavior, are not presentation policy.
 
@@ -32,6 +32,11 @@ Browser design approval does not establish native row heights, screen-edge behav
 Pass typed row descriptors (ID, label, reason, neutral/destructive role, eligible state and optional selection marker) to the selector child's adapter. Action menus use no selection marker. Keep permission separate from keyboard inspection; unavailable actions have no invocable closure. Result delivery is one-shot and uses the original captured owner/action context, not fresh lookup of whichever swell is selected when a menu closes.
 
 Use the adapter's existing screen clamping, Escape/outside cancellation, keyboard/Space/Return/accessibility invocation, focus return and safe owner lifetime. Preserve each call site's anchors: Swells uses the original row/event screen area, resets use the original pointer anchor and owner lifetime. Revalidate eligibility on activation/delivery through the existing model guards; styling does not grant acceptance.
+
+Both Swells pointer entry points use the existing row callback. Right-click on
+the row body or click its three-dot icon to open Rename/Delete for that item.
+The native fixture uses the actual list component so both paths can be tried
+before editor adoption.
 
 Rejected alternatives: change global PopupMenu colours (would affect deferred #8/native boundaries and cannot distinguish role/inspection), infer Delete from its text/name (violates explicit ownership), or rebuild reset providers around a generic command API (would jeopardize exact captured authority). A new button or confirmation flow is not part of this change.
 

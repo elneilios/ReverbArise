@@ -22,23 +22,27 @@ class ChoicePopup final:public juce::Component,private juce::Timer
         {
             juce::AttributedString textBlock;
             textBlock.setWordWrap(juce::AttributedString::byWord);
-            textBlock.append(item().label,owner.rowFont,item().eligible?text:text.withMultipliedAlpha(.55f));
+            const auto ink = isDestructive() ? danger : text;
+            textBlock.append(item().label,owner.rowFont,item().eligible?ink:ink.withMultipliedAlpha(.55f));
             if(item().reason.isNotEmpty())textBlock.append("\n"+item().reason,owner.reasonFont,textStyle(TextRole::helper).ink);
             juce::TextLayout result;result.createLayout(textBlock,static_cast<float>(juce::jmax(1,width)));return result;
         }
         int heightFor(int width)const
-        {return juce::jmax(owner.unit(controlGeometry::height),juce::roundToInt(std::ceil(textLayout(width-2*owner.unit(SelectorPresentation::rowPadding)-owner.unit(SelectorPresentation::checkWidth)).getHeight()))+2*owner.unit(SelectorPresentation::rowPadding));}
+        {return juce::jmax(owner.unit(controlGeometry::height),juce::roundToInt(std::ceil(textLayout(width-2*owner.unit(SelectorPresentation::rowPadding)-checkColumnWidth()).getHeight()))+2*owner.unit(SelectorPresentation::rowPadding));}
         void paint(juce::Graphics& g)override
         {
             const auto active=owner.interaction.inspected()==index;
             if(active)
             {
-                g.setColour(owner.interaction.heldIndex()==index && item().eligible?SelectorPresentation::held():SelectorPresentation::raised());
-                g.fillRect(getLocalBounds());g.setColour(aqua);g.fillRect(getLocalBounds().removeFromLeft(owner.unit(controlGeometry::focusStroke)));
+                const bool held = owner.interaction.heldIndex() == index && item().eligible;
+                g.setColour(inspectedFill(held));
+                g.fillRect(getLocalBounds());
+                g.setColour(isDestructive() ? danger : aqua);
+                g.fillRect(getLocalBounds().removeFromLeft(owner.unit(controlGeometry::focusStroke)));
             }
             auto area=getLocalBounds().reduced(owner.unit(SelectorPresentation::rowPadding));
-            const auto check=area.removeFromLeft(owner.unit(SelectorPresentation::checkWidth));
-            if(item().selected)
+            const auto check=area.removeFromLeft(checkColumnWidth());
+            if(item().hasSelectionMarker())
             {
                 const auto centre=check.toFloat().getCentre();juce::Path tick;
                 tick.startNewSubPath(centre.x-owner.unit(5),centre.y);tick.lineTo(centre.x-owner.unit(1),centre.y+owner.unit(4));tick.lineTo(centre.x+owner.unit(6),centre.y-owner.unit(5));
@@ -57,8 +61,9 @@ class ChoicePopup final:public juce::Component,private juce::Timer
                         .addAction(juce::AccessibilityActionType::press,[&row]{row.owner.visibility->accessibilityInput();row.owner.activate(row.index);})),target(row){}
                 juce::AccessibleState getCurrentState()const override
                 {
-                    auto state=juce::AccessibleState{}.withFocusable().withSelectable();
-                    if(target.item().selected)state=state.withSelected();
+                    auto state=juce::AccessibleState{}.withFocusable();
+                    if(target.item().representsChoice())state=state.withSelectable();
+                    if(target.item().hasSelectionMarker())state=state.withSelected();
                     if(target.owner.interaction.keyboardIndex()==target.index && target.owner.hasKeyboardFocus(true))state=state.withFocused();
                     return state;
                 }
@@ -67,7 +72,24 @@ class ChoicePopup final:public juce::Component,private juce::Timer
             };
             return std::make_unique<Handler>(*this);
         }
-    private:ChoicePopup& owner;int index;
+    private:
+        bool isDestructive() const noexcept { return item().role == PopupRowRole::destructiveAction; }
+        int checkColumnWidth() const noexcept
+        {
+            return item().representsChoice() ? owner.unit(SelectorPresentation::checkWidth) : 0;
+        }
+        juce::Colour inspectedFill(bool held) const
+        {
+            if (isDestructive())
+            {
+                // Popup-only blends for the scoped native review.
+                constexpr float destructiveHoverMix = .14f, destructiveHeldMix = .24f;
+                return background.interpolatedWith(danger, held ? destructiveHeldMix : destructiveHoverMix);
+            }
+            return held ? SelectorPresentation::held() : SelectorPresentation::raised();
+        }
+        ChoicePopup& owner;
+        int index;
     };
 public:
     ChoicePopup(juce::Component& source,std::vector<PopupChoice> items,std::function<void(int,PopupDismissal)> result)
@@ -103,7 +125,7 @@ public:
         addToDesktop(juce::ComponentPeer::windowIsTemporary);setVisible(true);enterModalState(true);startTimerHz(20);
         if(keyboard && !rows.empty())
         {
-            int index=0;for(size_t i=0;i<interaction.items().size();++i)if(interaction.items()[i].selected)index=static_cast<int>(i);
+            int index=0;for(size_t i=0;i<interaction.items().size();++i)if(interaction.items()[i].hasSelectionMarker())index=static_cast<int>(i);
             inspect(index,false);
         }
     }

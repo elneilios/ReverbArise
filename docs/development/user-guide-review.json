@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced swell gain staging spec against the approved Perform Level guide. The existing guide already documents the standard knob, fixed limits, saved values and first touch.",
+  "summary": "Reviewed the synced action-menu requirements against the approved Swells and per-knob Reset bindings and the offline guide. The existing Perform instructions remain accurate after the spec archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 89419,
-      "sha256": "14b609f750f075b752e3c859e1673f41b3befbca12353e5ca187a9bdfed0e757"
+      "bytes": 90924,
+      "sha256": "59bce1c81fac981aa77645f66e8a43d59e895e3f65cb5ca2795920cd9e882179"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13509,
-      "sha256": "0e491d32e693ac032d1b385118fc71f0dc2197601b7830a6dd52117d5576ed15"
+      "bytes": 13608,
+      "sha256": "a80ab892349ea5ae1a8ecd85959340f1e7f0547354697fbb84c23da590ddf7a4"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -575,8 +575,8 @@
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 13021,
-      "sha256": "ef7ad19d5f58ecb373aa046fb9d56a07187615d00cda320ae5a562fb5a90f227"
+      "bytes": 13961,
+      "sha256": "8656294cd9125bcc77ca416c9ef19864da6230911f581de2d37a83cf5dff74f4"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
@@ -680,8 +680,8 @@
     },
     {
       "path": "Source/UI/Controls/PopupInteraction.h",
-      "bytes": 1850,
-      "sha256": "3e4cd7806e7aab2aa88c219592d0047c4d7a8be107291620f9722da6b8433300"
+      "bytes": 2131,
+      "sha256": "7155e66efbf9e5239db501f35a37d828d16778ac0ac736e7c4494a265b23d2a3"
     },
     {
       "path": "Source/UI/Controls/PresentationSurface.h",
@@ -760,8 +760,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 14749,
-      "sha256": "2fbbe3d40845c14fdfd88bc9dcfe15fe9a1056c9d36a5a3ab305d67261a908f3"
+      "bytes": 16506,
+      "sha256": "6aa98d1114bb4ca7a2989a530725eb039577f191768fcc752605fb564cd1fb9f"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -920,8 +920,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 28516,
-      "sha256": "11213ac70f145ffec31a48b7ed9b8454eb56796caabd47c06c71e8f5dae03414"
+      "bytes": 28981,
+      "sha256": "6113523990ce1e10f16accf27ac7dab4fd62d5bb2a18ed4be648476c1500c19f"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1040,8 +1040,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 25764,
-      "sha256": "113b0eb1b7ec4d3e8064743e8fe1665826437b700ad0050d3bff51f5a3d630f7"
+      "bytes": 29841,
+      "sha256": "e8cbcfa43871d16aafb9f626e8de37daed4b424e9db4b3bd73b3b3a7b0c58b72"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

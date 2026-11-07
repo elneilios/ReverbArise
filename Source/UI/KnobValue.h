@@ -1,5 +1,6 @@
 #pragma once
 #include "WorkspaceTheme.h"
+#include "Controls/ChoicePopup.h"
 
 namespace m3::ui
 {
@@ -18,7 +19,7 @@ private:
         {
             auto& look=getLookAndFeel();const auto box=look.getSliderLayout(*this).sliderBounds;const auto angles=getRotaryParameters();
             look.drawRotarySlider(g,box.getX(),box.getY(),box.getWidth(),box.getHeight(),static_cast<float>(owner.canonicalFraction),angles.startAngleRadians,angles.endAngleRadians,*this);
-            if(hasKeyboardFocus(false))
+            if(hasKeyboardFocus(false) && !pointerResetFocus)
             {
                 const auto bounds=controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);
                 const auto leg=std::min(bounds.getWidth(),bounds.getHeight())*.2f;juce::Path brackets;
@@ -30,6 +31,7 @@ private:
         }
         void mouseDown(const juce::MouseEvent& e)override
         {
+            clearResetFocusDecoration();
             owner.inputModifiers(e.mods);
             if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}
             juce::Slider::mouseDown(e);
@@ -45,14 +47,30 @@ private:
         void modifierKeysChanged(const juce::ModifierKeys& mods)override{owner.inputModifiers(mods);juce::Slider::modifierKeysChanged(mods);}
         bool keyPressed(const juce::KeyPress& key)override
         {
+            clearResetFocusDecoration();
             const auto code=key.getKeyCode();const auto direction=code==juce::KeyPress::rightKey || code==juce::KeyPress::upKey?1:code==juce::KeyPress::leftKey || code==juce::KeyPress::downKey?-1:0;
             if(!direction)return juce::Slider::keyPressed(key);
             if(isEnabled()){owner.inputModifiers(key.getModifiers());if(owner.onStep)owner.step(direction);else {juce::Slider::ScopedDragNotification gesture(*this);setValue(getValue()+direction*.01*(key.getModifiers().isShiftDown()?.1:1.),juce::sendNotificationSync);}}return true;
         }
         void focusGained(FocusChangeType)override{repaint();}
-        void focusLost(FocusChangeType)override{owner.cancel();owner.inputModifiers({});repaint();}
+        void focusLost(FocusChangeType)override{pointerResetFocus=false;owner.cancel();owner.inputModifiers({});repaint();}
+        void restoreResetMenuFocus(bool showBrackets)
+        {
+            pointerResetFocus = !showBrackets;
+            repaint();
+            grabKeyboardFocus();
+        }
         std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override{return owner.accessibility(*this);}
-    private:KnobValue& owner;juce::Time lastWheel;
+    private:
+        void clearResetFocusDecoration()
+        {
+            if (!pointerResetFocus) return;
+            pointerResetFocus = false;
+            repaint();
+        }
+        KnobValue& owner;
+        juce::Time lastWheel;
+        bool pointerResetFocus = false;
     };
     class Caption final:public juce::Label
     {
@@ -171,11 +189,38 @@ private:
     bool compactPresentation=false;
     void showResetMenu(const juce::MouseEvent& event)
     {
-        if(!isEnabled())return;auto reset=prepareResetAction();juce::PopupMenu menu;menu.setLookAndFeel(&getLookAndFeel());
-        menu.addItem(1,reset.label,static_cast<bool>(reset.apply));
-        const auto point=event.getScreenPosition();
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&knob).withTargetScreenArea({point.x,point.y,1,1}).withDeletionCheck(*this),
-            [action=std::move(reset.apply)](int result){if(result==1 && action)action();});
+        using namespace controls;
+        if (resetMenu || !isEnabled() || !knob.isShowing())
+            return;
+
+        const auto point = event.getScreenPosition();
+        const juce::Component::SafePointer<KnobValue> safe(this);
+        auto reset = prepareResetAction();
+        if (!safe || !isEnabled() || !knob.isShowing())
+            return;
+
+        std::vector<PopupChoice> rows{{1, reset.label, {}, static_cast<bool>(reset.apply), false, PopupRowRole::action}};
+        resetMenu = std::make_unique<ChoicePopup>(knob, std::move(rows),
+            [safe, action = std::move(reset.apply)](int result, PopupDismissal why)
+            {
+                if (!safe) return;
+                juce::SharedResourcePointer<FocusVisibility> visibility;
+                const bool showBrackets = visibility->isVisible();
+                safe->resetMenu.reset();
+                if (!safe || why == PopupDismissal::outside || why == PopupDismissal::ownerGone
+                    || !safe->knob.isShowing() || !safe->isEnabled())
+                    return;
+
+                safe->knob.restoreResetMenuFocus(showBrackets);
+                if (!safe) return;
+                if (why == PopupDismissal::tabForward || why == PopupDismissal::tabBackward)
+                    safe->knob.moveKeyboardFocusToSibling(why == PopupDismissal::tabForward);
+                if (safe && result == 1 && action) action();
+            });
+        resetMenu->setName("knobResetMenu");
+        juce::SharedResourcePointer<FocusVisibility> visibility;
+        visibility->pointerInput();
+        resetMenu->show({point.x, point.y, 1, 1}, false);
     }
     void step(double amount){if(!isEnabled() || !std::isfinite(amount) || amount==0)return;begin(false);if(onStep)onStep(amount);finish(false);}
     void inputModifiers(const juce::ModifierKeys& mods){if(onModifierInput)onModifierInput(mods);else setGestureModifiers(mods);}
@@ -218,5 +263,6 @@ private:
     juce::String identity,canonical,canonicalExact,typingBaseline;
     double origin=0,canonicalFraction=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false;
+    std::unique_ptr<controls::ChoicePopup> resetMenu;
 };
 }

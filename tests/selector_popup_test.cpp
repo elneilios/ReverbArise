@@ -2,6 +2,7 @@
 #include <UI/Controls/PopupInteraction.h>
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/Controls/ChoiceSelector.h>
+#include "ActionMenuReview.h"
 #include "SelectorReview.h"
 #if JUCE_WINDOWS
 #include <windows.h>
@@ -94,6 +95,139 @@ static juce::Image selectorImage(ChoiceSelector& selector)
 {juce::Image image(juce::Image::ARGB,selector.getWidth(),selector.getHeight(),true);juce::Graphics g(image);g.fillAll(m3::ui::background);selector.paintEntireComponent(g,true);return image;}
 static bool same(const juce::Image& a,const juce::Image& b)
 {for(int y=0;y<a.getHeight();++y)for(int x=0;x<a.getWidth();++x)if(a.getPixelAt(x,y)!=b.getPixelAt(x,y))return false;return true;}
+static void actionMenuCases()
+{
+    using namespace m3::ui;
+    using Role = PopupRowRole;
+    actionMenuReview::Panel panel;
+    panel.addToDesktop(0);
+    panel.setVisible(true);
+    panel.toFront(true);
+    auto& trigger = panel.fixture.reset;
+    const juce::String reason = "Automatic start is unavailable because this fixture has no source range";
+    const std::vector<PopupChoice> rows{
+        {11, "Delete", {}, true, false, Role::action},
+        {42, "Rename", {}, true, false, Role::destructiveAction},
+        {73, "Reset to the initial value captured for this swell before the current edit was made", reason, false, false, Role::action},
+        {74, "Delete", {}, true, true, Role::action}};
+    int calls = 0, chosen = 0;
+    PopupDismissal dismissal = PopupDismissal::cancel;
+    const auto completion = [&](int id, PopupDismissal why) { ++calls; chosen = id; dismissal = why; };
+
+    {
+        ChoicePopup popup(trigger, rows, completion);
+        popup.show(trigger.getScreenBounds(), false);
+        const auto image = [&](int index)
+        {
+            auto& row = popup.rowComponent(index);
+            juce::Image pixels(juce::Image::RGB, row.getWidth(), row.getHeight(), true, juce::SoftwareImageType{});
+            juce::Graphics g(pixels);
+            g.fillAll(background);
+            row.paint(g);
+            return pixels;
+        };
+        const auto fill = [](const juce::Image& pixels) { return pixels.getPixelAt(pixels.getWidth() - 2, pixels.getHeight() / 2); };
+        const auto edge = [](const juce::Image& pixels) { return pixels.getPixelAt(0, pixels.getHeight() / 2); };
+        REQUIRE(popup.state().inspected() == -1);
+        REQUIRE(same(image(0), image(3)));
+        const auto ordinaryState = popup.rowComponent(3).getAccessibilityHandler()->getCurrentState();
+        REQUIRE(!ordinaryState.isSelectable() && !ordinaryState.isSelected());
+
+        popup.mouseMove(at(popup, 0));
+        REQUIRE(edge(image(0)) == aqua && fill(image(0)) == SelectorPresentation::raised());
+        popup.mouseDown(at(popup, 0, juce::ModifierKeys::leftButtonModifier));
+        REQUIRE(fill(image(0)) == SelectorPresentation::held());
+        popup.mouseMove(at(popup, -1));
+        REQUIRE(fill(image(0)) == background);
+        popup.mouseUp(at(popup, -1));
+
+        popup.inspect(0);
+        popup.mouseMove(at(popup, 1));
+        const auto redHover = fill(image(1));
+        REQUIRE(edge(image(1)) == danger && redHover.getRed() > redHover.getGreen());
+        popup.mouseExit(at(popup, -1));
+        REQUIRE(popup.state().inspected() == 0 && fill(image(1)) == background);
+
+        auto& unavailable = popup.rowComponent(2);
+        auto* handler = unavailable.getAccessibilityHandler();
+        REQUIRE(handler && !unavailable.isEnabled() && handler->getDescription() == reason);
+        REQUIRE(unavailable.getHeight() > controlGeometry::height);
+        popup.mouseDown(at(popup, 2, juce::ModifierKeys::leftButtonModifier));
+        popup.mouseUp(at(popup, 2));
+        REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::focus));
+        REQUIRE(popup.state().keyboardIndex() == 2);
+        popup.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+        REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::press));
+        REQUIRE(calls == 0 && !popup.state().done());
+
+        popup.mouseDown(at(popup, 1, juce::ModifierKeys::leftButtonModifier));
+        const auto redHeld = fill(image(1));
+        REQUIRE(edge(image(1)) == danger && redHeld.getRed() > redHover.getRed());
+        popup.mouseUp(at(popup, 1));
+        popup.mouseExit(at(popup, -1));
+        popup.activate(0);
+        REQUIRE(popup.state().inspected() == -1 && fill(image(1)) == background);
+        pump();
+        REQUIRE(calls == 1 && chosen == 42 && dismissal == PopupDismissal::commit);
+    }
+    for (const auto key : {juce::KeyPress::returnKey, juce::KeyPress::spaceKey, 0})
+    {
+        ChoicePopup popup(trigger, rows, completion);
+        popup.show(trigger.getScreenBounds(), true);
+        const auto before = calls;
+        if (key == 0)
+            REQUIRE(popup.rowComponent(0).getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::press));
+        else
+            popup.keyPressed(juce::KeyPress(key));
+        popup.activate(1);
+        pump();
+        REQUIRE(calls == before + 1 && chosen == 11 && dismissal == PopupDismissal::commit);
+    }
+
+    auto& list = panel.fixture.swells;
+    for (const bool rightClick : {true, false})
+    {
+        const auto row = list.getRowPosition(0, true);
+        const juce::Point<int> point{rightClick ? row.getX() + 70 : row.getRight() - 12, row.getCentreY()};
+        auto* surface = list.getComponentAt(point);
+        REQUIRE(surface != nullptr && surface != &list);
+        const auto position = surface->getLocalPoint(&list, point).toFloat();
+        const auto now = juce::Time::getCurrentTime();
+        const juce::ModifierKeys mods(rightClick ? juce::ModifierKeys::rightButtonModifier : juce::ModifierKeys::leftButtonModifier);
+        const juce::MouseEvent click(juce::Desktop::getInstance().getMainMouseSource(), position, mods,
+                                     0, 0, 0, 0, 0, surface, surface, now, position, now, 1, false);
+        surface->mouseDown(click);
+        surface->mouseUp(click);
+        REQUIRE(panel.fixture.popup && panel.fixture.popup->state().items()[0].label == "Rename...");
+        REQUIRE(panel.fixture.popup->state().items()[1].role == Role::destructiveAction);
+        panel.fixture.popup->dismiss();
+        pump();
+    }
+
+    for (const auto size : actionMenuReview::Panel::reviewSizes)
+        for (const auto scale : {100, 125})
+        {
+            panel.setSize(size.x, size.y);
+            panel.setReviewScale(scale);
+            auto& fixture = panel.fixture;
+            for (auto* control : std::array<juce::Component*, 3>{&fixture.swells, &fixture.reset, &fixture.edge})
+                REQUIRE(panel.getLocalBounds().contains(panel.getLocalArea(control, control->getLocalBounds())));
+
+            fixture.open(fixture.reset, true, false);
+            REQUIRE(fixture.popup && fixture.popup->rowComponent(1).getHeight() > controlGeometry::height);
+            fixture.popup->dismiss();
+            pump();
+            fixture.open(fixture.edge, false, true);
+            REQUIRE(fixture.popup != nullptr);
+            const auto bounds = fixture.popup->getScreenBounds();
+            const auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForRect(bounds);
+            REQUIRE(display && display->userArea.contains(bounds));
+            REQUIRE(bounds.getRight() == display->userArea.getRight());
+            fixture.popup->inputAttemptWhenModal();
+            pump();
+            REQUIRE(fixture.popup == nullptr);
+        }
+}
 static void selectorCases()
 {
     using namespace m3::ui;
@@ -250,6 +384,7 @@ int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--review-selectors"){selectorReview::run();return;}
+    if(argc>1 && juce::String(argv[1])=="--review-action-menus"){actionMenuReview::run();return;}
     if(argc==3 && juce::String(argv[1])=="--capture-selectors")
     {
         selectorReview::Panel panel;panel.setSize(900,600);panel.addToDesktop(0);panel.setVisible(true);panel.toFront(true);
@@ -262,6 +397,7 @@ int main(int argc,char** argv){return runTest([&]
     }
     std::cerr<<"Selector interaction state\n";interactionCases();
     std::cerr<<"Native popup\n";popupCases();
+    std::cerr<<"Action menu rows and preview geometry\n";actionMenuCases();
     std::cerr<<"Selector input and lifetime\n";selectorCases();
     std::cerr<<"Presentation and geometry\n";presentationCases();
     std::cerr<<"Field feedback\n";fieldFeedbackCases();

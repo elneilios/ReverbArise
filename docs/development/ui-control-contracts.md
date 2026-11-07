@@ -146,6 +146,29 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
+### C2 action menus — issue #107
+
+`ChoicePopup` accepts `PopupChoice` descriptors with `PopupRowRole::choice`,
+`action`, or `destructiveAction`. The choice role owns selection marks and
+selectable accessibility metadata. Neutral actions use the quiet selector
+hover/held fills and aqua edge. The destructive role uses `danger` text and
+edge ink, with popup-only hover and held blends. Labels are display text.
+
+Supply the complete label, eligibility and visible/accessibility explanation
+from the action provider. Unavailable rows remain inspectable. The binding
+captures the original action and target before opening and checks eligibility
+again on one-shot delivery. Outside dismissal preserves the focus recipient.
+
+The owner approved the native fixture on 7 November 2026. In production, the
+Swells menu opens via right-click or the row's three-dot icon. The list owns
+the popup across row recycling, and Rename/Delete use the clicked item's
+captured ID and epoch. Per-knob Reset uses the same neutral presentation at
+the right-click anchor. It displays the provider's label and eligibility,
+and invokes the captured `ResetAction`. Pointer return to the dial keeps
+keyboard access with its focus decoration suppressed. Keyboard or accessibility
+activation can restore the existing brackets. The
+[control inventory](../design/ui-control-inventory.md) records the exact scope.
+
 ### C2 approved implementation — 2026-11-07
 
 `Controls/ChoiceSelector.h` extends the existing deliberate selector as an explicit

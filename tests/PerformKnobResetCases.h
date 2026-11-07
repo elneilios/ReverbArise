@@ -43,7 +43,7 @@ void Composition::verifyKnobResets()
     // The real asynchronous popup action, including focus loss to the menu.
     load(original);NativeEditorPeer nativePeer(*panel,"ReverbArise - PerformKnobResetCases native validation");panel->setVisible(true);panel->toFront(true);
     // JUCE keyboard focus alone does not make this an active native window.
-    // PopupMenu dismisses itself when its owning process is in the background.
+    // The popup dismisses when its owning process is in the background.
     auto* peer=panel->getPeer();REQUIRE(peer);
    #if JUCE_WINDOWS
     // JUCE's Windows toFront/grabFocus use BringWindowToTop/SetFocus, which
@@ -57,23 +57,101 @@ void Composition::verifyKnobResets()
     if(!peer->isFocused() || !juce::Process::isForegroundProcess())
         std::cerr<<"Reset fixture native focus unavailable: peer="<<peer->isFocused()<<" foreground="<<juce::Process::isForegroundProcess()<<"\n";
     REQUIRE(peer->isFocused() && juce::Process::isForegroundProcess());
-    auto& inspector=require<juce::Viewport>(*panel,"inspectorViewport");inspector.setViewPosition(0,inspector.getViewedComponent()->getHeight()-inspector.getHeight());
-    auto& level=cell("swellLevel").valueKnob();panel->toFront(true);level.grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
-    REQUIRE(level.hasKeyboardFocus(false));const auto menuClick=event(level,juce::ModifierKeys::rightButtonModifier,1);level.mouseDown(menuClick);level.mouseUp(event(level,{},1));
-    juce::Component* popup=nullptr;auto& desktop=juce::Desktop::getInstance();
-    for(int attempt=0;attempt<50 && !popup;++attempt)
-    {juce::MessageManager::getInstance()->runDispatchLoopUntil(10);for(int n=0;n<desktop.getNumComponents();++n)if(desktop.getComponent(n)->getName()=="menu")popup=desktop.getComponent(n);}
-    if(!popup){std::cerr<<"Reset popup missing; Level enabled="<<level.isEnabled()<<" showing="<<level.isShowing()<<" gain="<<current().shape.gainDb<<" dial="<<level.getScreenBounds().toString()<<" viewport="<<inspector.getScreenBounds().toString()<<"\n";
-        for(int n=0;n<desktop.getNumComponents();++n)std::cerr<<"Desktop: "<<desktop.getComponent(n)->getName()<<" "<<desktop.getComponent(n)->getScreenBounds().toString()<<"\n";}
-    REQUIRE(popup && current().shape.gainDb==-7);
-    REQUIRE(popup->getScreenBounds().expanded(spacing::related).contains(menuClick.getScreenPosition()));
+    using controls::ChoicePopup;
+    const auto pump = [] { juce::MessageManager::getInstance()->runDispatchLoopUntil(50); };
+    const auto openMenu = [&](const char* name)
+    {
+        auto& dial = cell(name).valueKnob();
+        auto& inspector = require<juce::Viewport>(*panel, "inspectorViewport");
+        const auto bounds = inspector.getViewedComponent()->getLocalArea(&dial, dial.getLocalBounds());
+        inspector.setViewPosition(0, bounds.getCentreY() - inspector.getHeight() / 2);
+        const auto click = event(dial, juce::ModifierKeys::rightButtonModifier, 1);
+        const auto point = click.getScreenPosition();
+        dial.mouseDown(click);
+        dial.mouseUp(event(dial, {}, 1));
+
+        auto* popup = dynamic_cast<ChoicePopup*>(juce::Component::getCurrentlyModalComponent());
+        REQUIRE(popup && popup->getName() == "knobResetMenu" && popup->hasKeyboardFocus(true));
+        const auto& rows = popup->state().items();
+        REQUIRE(rows.size() == 1 && rows[0].role == controls::PopupRowRole::action && !rows[0].hasSelectionMarker());
+        REQUIRE(popup->state().inspected() == -1);
+        const juce::Rectangle<int> anchor{point.x, point.y, 1, 1};
+        const auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForRect(anchor);
+        REQUIRE(display && popup->getScreenBounds() == ChoicePopup::placedBounds(anchor, display->userArea, popup->getWidth(), popup->getHeight()));
+        return popup;
+    };
+    const auto pressKey = [](ChoicePopup& popup, int key)
+    {
+        popup.keyPressed(juce::KeyPress(juce::KeyPress::downKey));
+        popup.keyPressed(juce::KeyPress(key));
+    };
+    const auto cornerInk = [](juce::Slider& dial)
+    {
+        juce::Image image(juce::Image::RGB, dial.getWidth(), dial.getHeight(), true, juce::SoftwareImageType{});
+        juce::Graphics g(image);
+        g.fillAll(background);
+        dial.paint(g);
+        return image.getPixelAt(1, 1);
+    };
+    auto& level = cell("swellLevel").valueKnob();
+    auto* popup = openMenu("swellLevel");
+    REQUIRE(current().shape.gainDb == -7 && popup->state().items()[0].label == "Reset to default (0 dB)");
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_PERFORM_KNOB_OUTPUT",{});
     if(output.isNotEmpty()){juce::File folder(output);REQUIRE(folder.createDirectory().wasOk());auto stream=folder.getChildFile("knob-reset-menu.png").createOutputStream();REQUIRE(stream && juce::PNGImageFormat().writeImageToStream(popup->createComponentSnapshot(popup->getLocalBounds()),*stream));}
-    popup->keyPressed(juce::KeyPress(juce::KeyPress::downKey));popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(50);
-    REQUIRE(current().shape.gainDb==0);juce::PopupMenu::dismissAllActiveMenus();
-    load(original);level.mouseDown(event(level,juce::ModifierKeys::rightButtonModifier,1));level.mouseUp(event(level,{},1));
-    juce::PopupMenu::dismissAllActiveMenus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);REQUIRE(current().shape.gainDb==-7);
-    reset("swellLevel");nativePeer.setVisible(false);
+    pressKey(*popup, juce::KeyPress::returnKey);
+    pump();
+    REQUIRE(current().shape.gainDb == 0 && level.hasKeyboardFocus(false) && cornerInk(level) == aqua);
+
+    load(original);
+    popup = openMenu("swellLevel");
+    popup->mouseDown(event(*popup, juce::ModifierKeys::leftButtonModifier, 1));
+    popup->mouseUp(event(*popup, {}, 1));
+    REQUIRE(popup->state().done());
+    popup->activate(0);
+    pump();
+    REQUIRE(current().shape.gainDb == 0 && level.hasKeyboardFocus(false) && cornerInk(level) != aqua);
+
+    load(original);
+    popup = openMenu("preRoll");
+    auto* actionHandler = popup->rowComponent(0).getAccessibilityHandler();
+    REQUIRE(actionHandler && actionHandler->getActions().invoke(juce::AccessibilityActionType::press));
+    pump();
+    REQUIRE(current().shape.automaticStart && current().shape.startOffset == 0);
+
+    load(original);
+    REQUIRE(engine.edit(firstId, [](auto& w, auto& error) { return m3::moveArrival(w, w.arrival + 6000, error); }));
+    panel->refresh();
+    popup = openMenu("arrivalSample");
+    REQUIRE(popup->state().items()[0].label == "Reset to initial position");
+    pressKey(*popup, juce::KeyPress::spaceKey);
+    pump();
+    REQUIRE(current().arrival == original.arrival);
+
+    load(original);
+    popup = openMenu("swellLevel");
+    popup->inputAttemptWhenModal();
+    pump();
+    REQUIRE(current().shape.gainDb == -7 && juce::Component::getCurrentlyModalComponent() == nullptr);
+
+    REQUIRE(engine.selectTargets({secondId}, secondId)); // The editor still displays the old selection.
+    popup = openMenu("swellLevel");
+    REQUIRE(!popup->state().items()[0].eligible && popup->state().items()[0].label.contains("selection changed"));
+    pressKey(*popup, juce::KeyPress::returnKey);
+    REQUIRE(!popup->state().done());
+    popup->dismiss();
+    pump();
+    REQUIRE(current().shape.gainDb == -7);
+
+    auto legacy = original;
+    legacy.shape.gainDb = -33;
+    load(legacy);
+    popup = openMenu("swellLevel");
+    popup->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+    pump();
+    REQUIRE(current().shape.gainDb == -33);
+
+    load(original);
+    reset("swellLevel");
     struct Notifications final:juce::AudioProcessorListener
     {int changes=0;void audioProcessorParameterChanged(juce::AudioProcessor*,int,float)override{}
         void audioProcessorChanged(juce::AudioProcessor*,const ChangeDetails& detail)override{if(detail.nonParameterStateChanged)++changes;}} notifications;
@@ -82,7 +160,10 @@ void Composition::verifyKnobResets()
     REQUIRE(notifications.changes==0 && current().shapeGeneration==generation && engine.snapshot().renderCount==renders);
     for(int stale=0;stale<8;++stale)
     {
-        load(original);auto action=cell("swellLevel").prepareResetAction();REQUIRE(action.apply);
+        load(original);
+        popup = openMenu("swellLevel");
+        REQUIRE(popup->state().items()[0].eligible);
+        popup->activate(0); // Queue the real popup result before the context changes.
         if(stale==0)REQUIRE(engine.selectTargets({secondId},secondId));
         if(stale==1){auto state=engine.savedSession();engine.restore(state);}
         if(stale==2)REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));
@@ -92,15 +173,17 @@ void Composition::verifyKnobResets()
         if(stale==5){const auto ppq=head.position.getPpqPosition();head.position.setPpqPosition((ppq?*ppq:0)+1);juce::AudioBuffer<float> quiet(2,1);quiet.clear();juce::MidiBuffer events;processor->processBlock(quiet,events);}
         if(stale==6){auto& other=cell("curveInTension").valueKnob();other.onDragStart();other.onDragEnd();}
         if(stale==7)REQUIRE(engine.setFrozen(firstId,true));
-        const auto safe=current();action.apply();REQUIRE(current().shape==safe.shape && current().placement==safe.placement);
+        const auto safe=current();pump();REQUIRE(current().shape==safe.shape && current().placement==safe.placement);
+        REQUIRE(juce::Component::getCurrentlyModalComponent() == nullptr);
         if(stale==2)REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
-        if(stale==4){panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();}
+        if(stale==4){panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);nativePeer.setContentNonOwned(panel.get(),true);}
         if(stale==5){head.position=position;juce::AudioBuffer<float> quiet(2,1);quiet.clear();juce::MidiBuffer events;processor->processBlock(quiet,events);}
     }
     load(original);cell("swellLevel").setEnabled(false);REQUIRE(!cell("swellLevel").prepareResetAction().apply);
-    cell("swellLevel").setEnabled(true);panel->addToDesktop(juce::ComponentPeer::windowIsTemporary);panel->setVisible(true);
-    auto& visible=require<juce::Viewport>(*panel,"inspectorViewport");visible.setViewPosition(0,10000);
-    auto& closing=cell("swellLevel").valueKnob();closing.mouseDown(event(closing,juce::ModifierKeys::rightButtonModifier,1));closing.mouseUp(event(closing,{},1));
-    panel.reset();juce::PopupMenu::dismissAllActiveMenus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);REQUIRE(current().shape.gainDb==-7);
+    cell("swellLevel").setEnabled(true);
+    openMenu("swellLevel");
+    panel.reset();
+    pump();
+    REQUIRE(juce::Component::getCurrentlyModalComponent() == nullptr && current().shape.gainDb == -7);
     REQUIRE(processor->getCaptureSnapshot().manifest.revision==captureRevision);
 }
