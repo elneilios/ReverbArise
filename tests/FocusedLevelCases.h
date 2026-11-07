@@ -51,7 +51,7 @@ void Composition::verifyFocusedLevel()
     load(0);drag(quarter);REQUIRE(current().shape.gainDb==6);
     load(0);drag(-quarter);REQUIRE(current().shape.gainDb==-6);
     load(0);drag(quarter,true);const auto fine=current().shape.gainDb;
-    REQUIRE(fine>0 && fine<6 && std::abs(fine*10-std::round(fine*10))<1.e-5);
+    REQUIRE(fine>0 && fine<6);
     load(0);drag(-quarter,true);REQUIRE(std::abs(current().shape.gainDb+fine)<1.e-6);
     load(0);drag(3*quarter);REQUIRE(current().shape.gainDb==12);
     load(0);drag(-3*quarter);REQUIRE(current().shape.gainDb==-12);
@@ -83,13 +83,20 @@ void Composition::verifyFocusedLevel()
     load(12);scroll(true);REQUIRE(current().shape.gainDb==12);
     load(-30);REQUIRE(cell.displayedFraction()==0 && field.getText()=="-30");
     const auto saved=current();
-    dial.grabKeyboardFocus();panel->refresh();drag(0);drag(-quarter);key(false);scroll(false);
+    dial.grabKeyboardFocus();dial.mouseMove(pointer(0,0,false));panel->refresh();
     REQUIRE(current().shape==saved.shape && current().shapeGeneration==saved.shapeGeneration);
+    dial.mouseDown(pointer(0,juce::ModifierKeys::leftButtonModifier,false));
+    REQUIRE(current().shape.gainDb==-12 && field.getText()=="-12");
+    dial.mouseUp(pointer(0,0,false));
+    load(-30);drag(-quarter);REQUIRE(current().shape.gainDb==-12);
+    load(-30);key(false);REQUIRE(current().shape.gainDb==-12);
+    load(-30);scroll(false);REQUIRE(current().shape.gainDb==-12);
+    load(-30);
     key(true);REQUIRE(current().shape.gainDb==-11);
     load(-30);key(true,true);REQUIRE(std::abs(current().shape.gainDb+11.9f)<1.e-6);
     load(-30);scroll(true);REQUIRE(current().shape.gainDb==-11);
-    load(-30);drag(dial.getMouseDragSensitivity()/24.f);REQUIRE(current().shape.gainDb==-11);
-    load(-60);key(false);REQUIRE(current().shape.gainDb==-60);
+    load(-30);drag(dial.getMouseDragSensitivity()/24.f);REQUIRE(std::abs(current().shape.gainDb+11)<.0001f);
+    load(-60);key(false);REQUIRE(current().shape.gainDb==-12);
     load(-30);auto* accessible=dial.getAccessibilityHandler()->getValueInterface();REQUIRE(accessible);
     REQUIRE(accessible->getCurrentValue()==-12 && accessible->getCurrentValueAsString()=="-30 dB (saved)");
     REQUIRE(dial.getAccessibilityHandler()->getHelp().contains("Saved Level: -30 dB"));
@@ -114,15 +121,20 @@ void Composition::verifyFocusedLevel()
     REQUIRE(current().shape.gainDb==-30);
     for(int stale=0;stale<3;++stale)
     {
-        load(-30);dial.mouseDown(pointer(0,juce::ModifierKeys::leftButtonModifier,false));
+        load(-12);dial.mouseDown(pointer(0,juce::ModifierKeys::leftButtonModifier,false));
         if(stale==0)engine.restore(engine.savedSession());
         if(stale==1)REQUIRE(engine.selectTargets({secondId},secondId));
         if(stale==2)REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::setSource(w,w.sourceStart-1,w.sourceEnd,error);}));
         before=current();dial.mouseDrag(pointer(quarter,juce::ModifierKeys::leftButtonModifier,true));
         dial.mouseUp(pointer(quarter,0,true));REQUIRE(current().shape==before.shape);
     }
+    load(-30);
+    REQUIRE(engine.selectTargets({secondId},secondId));
+    drag(quarter);REQUIRE(current().shape.gainDb==-30);
+    REQUIRE(m3::find(engine.savedSession(),secondId)->shape==m3::find(baseline,secondId)->shape);
     panel->enableResponsiveReview({},PresentationFitContext{{4000,3000},{0,0}});
     require<controls::SegmentedSelector>(*panel,"inspectorSections").onRequest(3);
+    auto& standard=require<KnobValue>(*panel,"fadeInMsCell");
     for(const auto [width,height,scale]:std::array<std::array<int,3>,3>{{{900,600,100},{1400,900,100},{900,600,125}}})
     {
         REQUIRE(panel->setPresentationSize(width,height));
@@ -131,17 +143,8 @@ void Composition::verifyFocusedLevel()
         const auto local=cell.getLocalBounds();
         const auto* viewport=cell.findParentComponentOfClass<juce::Viewport>();REQUIRE(viewport && cell.isShowing());
         REQUIRE(viewport->getViewArea().contains(cell.getBounds()));
-        for(const auto* title:{"-12 dB","0 dB","+12 dB"})
-        {
-            juce::Label* tick=nullptr;
-            for(auto* child:cell.getChildren())
-                if(auto* label=dynamic_cast<juce::Label*>(child);label && label->getText()==title)tick=label;
-            REQUIRE(tick && tick->isVisible() && local.contains(tick->getBounds()));
-            REQUIRE(!tick->getBounds().intersects(dial.getBounds()) && !tick->getBounds().intersects(field.getBounds()));
-            REQUIRE(tick->getWidth()>=juce::GlyphArrangement::getStringWidthInt(tick->getFont(),tick->getText()));
-            if(tick->getText()=="0 dB")
-                REQUIRE(tick->getBottom()<=dial.getY() && std::abs(tick->getBounds().getCentreX()-dial.getBounds().getCentreX())<=1);
-        }
+        REQUIRE(cell.getNumChildComponents()==3 && cell.getNumChildComponents()==standard.getNumChildComponents());
+        REQUIRE(dial.getBounds()==standard.valueKnob().getBounds() && local.contains(field.getBounds()));
         const auto angles=dial.getRotaryParameters();
         const auto neutral=(angles.startAngleRadians+angles.endAngleRadians)/2;
         REQUIRE(std::abs(neutral-juce::MathConstants<float>::twoPi)<1.e-5);
@@ -150,12 +153,11 @@ void Composition::verifyFocusedLevel()
         // The bright marker in the production paint must land above the centre.
         REQUIRE(image.getPixelAt(box.getCentreX(),box.getY()+5)==m3::ui::text);
         load(-30);
-        bool hasSavedCaption=false;
+        bool hasStandardCaption=false;
         for(auto* child:cell.getChildren())
-            if(auto* label=dynamic_cast<juce::Label*>(child);label && label->getText().contains("Saved"))
-                hasSavedCaption=label->isVisible() && local.contains(label->getBounds())
-                    && label->getWidth()>=juce::GlyphArrangement::getStringWidthInt(label->getFont(),label->getText());
-        REQUIRE(hasSavedCaption && field.getText()=="-30");
+            if(auto* label=dynamic_cast<juce::Label*>(child);label && label->getText()=="Level (dB)")
+                hasStandardCaption=label->isVisible() && local.contains(label->getBounds());
+        REQUIRE(hasStandardCaption && field.getText()=="-30");
     }
     panel->removeFromDesktop();
 }

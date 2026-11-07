@@ -10,7 +10,8 @@ that are not multiples of the editor's 1 dB coarse / 0.1 dB fine steps. The
 semantic constants live with `Shape`. All new edits use the same -12 to +12 dB
 limits, including numeric and accessibility entry. Older saved values below
 -12 dB retain their exact gain, including in frozen swells. The dial rests at
--12 dB until you move it inward, enter a valid new value or reset Level.
+-12 dB. Pressing it brings the older value to -12 dB. Valid typed entry applies
+the chosen gain.
 Double-click resets only Level to 0 dB. Both gain policies retain their
 calibration and raw assets. Saved sessions use the same schema and asset format.
 Level is non-parameter plugin state, without a normalized host automation mapping.

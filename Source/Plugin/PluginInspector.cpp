@@ -150,10 +150,8 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
             const auto initial=bounded(anchor.shape.gainDb);
             const auto change=static_cast<double>(displacement);
             if(!std::isfinite(change))return false;
-            const auto requested=initial+change;
-            const auto step=(valueModifierFlags&juce::ModifierKeys::shiftModifier)?m3::swellLevelFineStepDb:m3::swellLevelStepDb;
-            scalar=requested<=minimumDb || requested>=maximumDb?bounded(requested):bounded(initial+std::round(change/step)*step);
-            if((scalar==initial && latest->shape.gainDb<minimumDb) || static_cast<float>(scalar)==latest->shape.gainDb)return true;
+            scalar=bounded(initial+change);
+            if(static_cast<float>(scalar)==latest->shape.gainDb)return true;
         }
         else if(index==inCurveValue || index==outCurveValue)scalar=std::clamp((index==inCurveValue?anchor.shape.inTension:anchor.shape.outTension)+static_cast<double>(displacement),-1.0,1.0);
         else
@@ -271,7 +269,6 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
             const auto saved=valueAvailable && w->shape.gainDb<minimumDb;
             if(saved)text=exactText;
             auto& cell=valueControls[index];
-            cell.setCaption(saved?"Level (dB) - Saved":"Level (dB)","Level (dB)");
             const auto description=saved?"Saved Level: "+exactText+" dB. "+help:help;
             cell.valueKnob().setTooltip(description);
             cell.valueField().setTooltip(description);

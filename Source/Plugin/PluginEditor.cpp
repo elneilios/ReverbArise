@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <UI/LevelAdjustment.h>
 #include <UI/PerformText.h>
 #include <UI/MusicalPosition.h>
 #include <UI/LiveDiagnosticsText.h>
@@ -254,7 +255,20 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         if(index==levelValue)
         {
             cell.onAbsolute=[this](double db){commitValueEdit(levelValue,m3::ui::preciseValue(db));};
-            cell.setScaleLabels("-12 dB","0 dB","+12 dB");
+            cell.onDialPress=[this]
+            {
+                const auto& anchor=valueAnchors[levelValue];
+                const auto& invocation=valueInvocations[levelValue];
+                const auto* displayed=m3::find(state.session,state.session.primary);
+                if(!anchor || !displayed || invocation.epoch!=state.sessionEpoch || anchor->id!=displayed->id
+                    || anchor->inputGeneration!=displayed->inputGeneration || invocation.selected!=state.session.selected)
+                {
+                    valueControls[levelValue].cancel();
+                    return;
+                }
+                if(anchor->shape.gainDb<m3::ui::levelAdjustment::minimumDb)
+                    commitValueEdit(levelValue,{},0.);
+            };
         }
     }
     irEditor.setName("selectedIrEditor");irEditor.selector.setName("selectedIR");irEditor.fileButton.setName("loadIR");irEditor.status.setName("irAssignmentStatus");

@@ -2,13 +2,13 @@
 
 ## Context
 
-See [proposal](proposal.md). At `541b8ba`, the control has a -12/+12 display sweep but retains extended editing and [-60,+12] numeric entry. Review found that downward native dragging at an extended value is blocked by the normalized Slider endpoint, although wheel/key edits can decrease it. The owner then explicitly confirmed a simpler fixed editing range and preservation of older values until a deliberate change/reset. This revision implements that clarification; earlier approval/evidence does not verify the revised interaction.
+See [proposal](proposal.md). The owner reviewed `418ac1c` and asked to retain the standard knob appearance and remove the extra labels and saved-value caption. A primary press on the dial brings an older saved value into range. The ordinary input shows the exact saved gain up to that point.
 
 Level is per-swell `Shape::gainDb`, not IR asset gain. The durable finite [-60,+12] float domain and `shape.gain` serialization must remain readable. There is no Level host parameter. Learn shares IR selection with Perform but has no Level default.
 
 ## Goals / Non-Goals
 
-**Goals:** One clear -12/+12 editing range, visibly labeled limits, 0 dB at 12 o'clock, consistent input methods, and sound-preserving old-project retention until accepted edits.
+**Goals:** One -12/+12 editing range in the standard knob, 0 dB at 12 o'clock, and preservation of older gains until the user operates Level.
 
 **Non-Goals:** Extended authoring below -12 dB, new Learn gain defaults, bulk/history infrastructure, import normalization, gain stages, protection changes, mute controls, effects, a general control framework or plugin-wide migration.
 
@@ -20,19 +20,19 @@ Keep named durable limits [-60,+12] for state decode, save, DSP, frozen restorat
 
 All new values are finite and inside [-12,+12]. Relative movement clamps at those boundaries; out-of-range typed/absolute requests are rejected rather than silently accepted or clamped. No separate extended authoring path remains. Reset is exactly 0 dB. The owner-confirmed contract supersedes the earlier recommendation to retain extended entry; the prior measurements remain historical evidence about gain and source dynamics.
 
-### Make the dial's bounds and center explicit
+### Reuse the standard knob
 
-Use the linear fraction `(dB + 12)/24` inside the editing range. Show persistent -12 dB and +12 dB endpoint labels and a clear 0 dB center reference. Verify the actual rotary angles/paint geometry place 0 dB physically at 12 o'clock; a numeric fraction of 0.5 alone is insufficient evidence. Reuse the existing text roles, geometry/spacing tokens and KnobValue family. Keep the scoped labels/layout usable at the supported compact size and user scales, and obtain native family approval before rollout. No new visual token or one-off variant is presumed approved.
+Use the linear fraction `(dB + 12)/24` with the existing KnobValue caption, field, dial and drag response. Verify appearance and layout against another standard knob and confirm the actual paint puts 0 dB at 12 o'clock at supported sizes and user scales. Use the existing contextual help to describe the limits.
 
 Drag, wheel and key input share the same bounded editing policy. Typed and absolute-accessibility requests use the same limits and validation. Preserve captured session/selection/input/render/pass guards and the established reset lifecycle. Keep absolute-versus-relative intent only where it serves these common limits; do not add another control framework or alter other KnobValue consumers. Real native pointer-event tests must cover both directions and endpoints, rather than using only synthetic Slider::setValue calls.
 
 ### Preserve an older out-of-range value until an accepted edit
 
-For a supported saved value such as -30 dB, loading, displaying, focusing, hovering, mouse-down without movement, saving, unrelated edits and rejected/cancelled text entry preserve the exact float and sound. Show its actual value with a short saved-value indication; help/accessibility must distinguish the preserved applied value from the fixed editing limits. The dial rests at the -12 endpoint without writing that endpoint to the model. This indication is compatibility feedback, not an extended editing mode or another editable range.
+For a saved value such as -30 dB, loading, displaying, focusing, hovering, saving, unrelated edits and rejected/cancelled text entry preserve the exact float and sound. The standard input shows the actual value while the dial rests at -12 dB. Accessibility exposes the bounded dial position, the exact applied value and the fixed edit limits.
 
-Relative edits begin from the bounded displayed position, not from the old numerical gain. A relative move that cannot change that bounded position is a no-op: at saved -30, downward input at the lower endpoint preserves -30, and an upward coarse step selects -11. The same rule applies to pointer, wheel and keys; there is no wheel-only route to -31. An accepted explicit value of -12 sets -12, and Reset sets 0. Once a valid value is committed, ordinary [-12,+12] editing applies. Unchanged old text is not a fresh invalid edit; changed out-of-range text is rejected without changing the old sound.
+Use the bounded displayed position as the anchor for relative input. A primary press commits -12 immediately when Level is below range, and a subsequent drag continues from that endpoint. An outward wheel/key step sets -12, and an inward coarse step sets -11. Valid typed or absolute-accessibility entry applies its requested value directly, and Reset sets 0. Unchanged old text and rejected text retain the applied gain.
 
-Such an explicit edit can change sound substantially; never perform it merely because the UI refreshes or an edit starts. Bind the saved-value indication and actual readback to accepted state, and retain stale-intent rejection. Test the legacy boundary with actual pointer events as well as wheel/key/numeric/accessibility commands so no input method secretly retains extended authoring.
+Use the normal captured edit guards for the primary press and the subsequent drag. Passive refresh and selection cannot trigger a write. Test the legacy boundary with native pointer events, wheel, keys, numeric entry and accessibility.
 
 ### Preserve ownership, history and cache behavior
 
@@ -48,8 +48,7 @@ Production gain remains `10^((calibration.baselineDb + shape.gainDb)/20)` times 
 
 ## Risks / Trade-offs
 
-- A preserved old value sits outside the editing range -> show its actual saved value truthfully, avoid automatic writes, and verify first accepted edits and no-op interactions across all input methods.
-- Bounds or center labels can be unclear at compact size -> use existing roles/tokens, native geometry/render checks, and one focused owner review of the revised presentation.
+- First touch can substantially change an older gain -> keep passive actions read-only and verify the primary press and both relative directions explicitly.
 - Prior tests overstated extended pointer coverage -> use real mouseDown/mouseDrag/mouseUp paths in both directions; distinguish earlier results from new verification.
 - Existing listening evidence uses synthetic sources -> retain the scoped approval and source-relative quietness observation without claiming a universal audibility threshold or changing calibration. Request another host smoke only for concrete unresolved host behavior.
 - Shared-control work may move under #107 -> reconcile the current branch before Apply; reuse the accepted family and avoid a competing abstraction.
@@ -58,4 +57,4 @@ Production gain remains `10^((calibration.baselineDb + shape.gainDb)/20)` times 
 
 No load-time state/asset migration is required. Keep session JSON v11, plugin wrapper, stored floats, calibration and engine revisions unchanged. Old -60/-30/fractional values remain supported in Legacy/Musical and frozen projects until accepted Level edits. Save/reopen before editing preserves sound; save/reopen after editing preserves the chosen bounded value. Rollback can read both. There is no Level host parameter or normalized automation mapping to remap; if one appears concurrently, resolve it before implementation. Do not silently adopt Musical policy in Legacy projects.
 
-This invocation updates planning only. Sections 1-4 of tasks.md retain the completed earlier implementation record; section 5 contains unchecked correction work and fresh validation. Use Apply separately to implement the revised contract and keep the PR draft until it matches the plan and passes the required review/checks. Keep canonical specs and dated historical evidence unchanged; sync/archive and merge remain separately authorized lifecycle actions.
+Sections 1-4 of tasks.md retain the completed earlier implementation record. Section 5 tracks the correction and validation. Keep the PR draft through validation and retain the dated evidence for earlier candidates.

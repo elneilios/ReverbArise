@@ -41,3 +41,27 @@ preview SHA-256:
 - UI standards, strict OpenSpec validation and whitespace checks passed.
   Release and final integration checks follow the owner checkpoint. FL Studio
   and OS DPI coverage were outside this candidate run.
+
+## Standard-knob revision
+
+The owner asked to keep the standard knob appearance and show the exact older
+value in the ordinary input. The revised candidate reuses the standard caption,
+layout and drag response. A primary press immediately applies -12 dB for a
+saved value below range. A valid typed value applies directly.
+
+- Supported warm Debug build passed with `CMAKE_BUILD_PARALLEL_LEVEL=4`.
+  Log: `out/build-logs/Debug/20261107-120840-dc4d926f`.
+- Debug CTest passed the focused Level, shared Perform knob, session, and Level
+  audio-path checks. The focused test covers native primary press before
+  movement, passive hover/focus, wheel and keys, exact entry and stale input.
+  It compares the standard control layout and verifies neutral paint at compact,
+  larger and 125% presentation sizes.
+- The reset regression initially lacked foreground activation. It passed
+  unchanged on rerun after activating the named fixture window. Logs:
+  `out/issue-108-standard-level-debug.log` and
+  `out/issue-108-standard-level-reset.log`.
+- UI standards, strict OpenSpec validation and whitespace checks passed.
+- The preview build reports `418ac1c9544c8c41cac593b05d9e4407e768e91a` plus
+  working-tree changes. Its SHA-256 is
+  `333d57e2e5f6996719d3fdad5cdb24f26468f6e0552c006a9b05cc6f4e621980`.
+  The standard-knob preview was opened for the owner checkpoint.

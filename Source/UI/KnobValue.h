@@ -28,7 +28,14 @@ private:
                 g.setColour(aqua);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
             }
         }
-        void mouseDown(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}juce::Slider::mouseDown(e);}
+        void mouseDown(const juce::MouseEvent& e)override
+        {
+            owner.inputModifiers(e.mods);
+            if(e.mods.isPopupMenu()){if(isEnabled())grabKeyboardFocus();owner.showResetMenu(e);return;}
+            juce::Slider::mouseDown(e);
+            if(isEnabled() && e.mods.isLeftButtonDown() && owner.active && !owner.typing && owner.onDialPress)
+                owner.onDialPress();
+        }
         void mouseDoubleClick(const juce::MouseEvent& e)override{if(e.mods.isLeftButtonDown() && !e.mods.isPopupMenu()){auto reset=owner.prepareResetAction();if(reset.apply)reset.apply();}}
         void mouseDrag(const juce::MouseEvent& e)override{owner.inputModifiers(e.mods);juce::Slider::mouseDrag(e);}
         void mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)override
@@ -86,6 +93,7 @@ public:
         applyTextRole(label,TextRole::controlLabel);
     }
     std::function<void()> onBegin,onEnd;
+    std::function<void()> onDialPress;
     std::function<void()> onRebase;
     std::function<void(const juce::ModifierKeys&)> onModifierInput;
     std::function<void(double)> onDelta;
@@ -142,51 +150,11 @@ public:
     std::function<void(double)> onAbsolute;
     void setCompactPresentation(bool enabled)
     {compactPresentation=enabled;if(enabled)entry.setIndents(responsiveGeometry::entryInset,0);lookAndFeelChanged();resized();}
-    void setScaleLabels(const juce::String& low,const juce::String& centre,const juce::String& high)
-    {
-        const std::array<juce::String,3> labels{low,centre,high};
-        showsScaleLabels=true;
-        for(size_t i=0;i<scaleLabels.size();++i)
-        {
-            auto& tick=scaleLabels[i];
-            addAndMakeVisible(tick);
-            tick.setAccessible(false);
-            tick.setInterceptsMouseClicks(false,false);
-            tick.setText(labels[i],juce::dontSendNotification);
-        }
-        lookAndFeelChanged();
-    }
     void lookAndFeelChanged()override
-    {
-        entry.setFont(componentTextFont(*this,TextRole::controlValue));
-        applyTextRole(label,TextRole::controlLabel);
-        if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));
-        if(showsScaleLabels)
-        {
-            for(auto& tick:scaleLabels)applyTextRole(tick,TextRole::ruler,juce::Justification::centred);
-            resized();
-        }
-    }
+    {entry.setFont(componentTextFont(*this,TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));}
     void resized()override
     {
         auto bounds=getLocalBounds();
-        if(showsScaleLabels)
-        {
-            auto top=bounds.removeFromTop(responsiveGeometry::captionHeight);
-            auto row=bounds.removeFromTop(responsiveGeometry::dialSize);
-            const auto edgeWidth=std::max(juce::GlyphArrangement::getStringWidthInt(scaleLabels[0].getFont(),scaleLabels[0].getText()),
-                                          juce::GlyphArrangement::getStringWidthInt(scaleLabels[2].getFont(),scaleLabels[2].getText()))+2*spacing::tight;
-            const auto edge=[&](juce::Rectangle<int> side)
-            {return side.removeFromBottom(responsiveGeometry::captionHeight);};
-            scaleLabels[0].setBounds(edge(row.removeFromLeft(edgeWidth)));
-            knob.setBounds(row.removeFromLeft(responsiveGeometry::dialSize));
-            scaleLabels[1].setBounds(top.withSizeKeepingCentre(edgeWidth,top.getHeight()).withCentre({knob.getBounds().getCentreX(),top.getCentreY()}));
-            scaleLabels[2].setBounds(edge(row.removeFromLeft(edgeWidth)));
-            row.removeFromLeft(spacing::tight);
-            label.setBounds(top.withLeft(row.getX()));
-            entry.setBounds(row.withSizeKeepingCentre(row.getWidth(),responsiveGeometry::entryHeight));
-            return;
-        }
         if(compactPresentation)
         {
             label.setBounds(bounds.removeFromTop(responsiveGeometry::captionHeight));
@@ -200,7 +168,7 @@ public:
         entry.setBounds(bounds.removeFromTop(controlGeometry::valueHeight));
     }
 private:
-    bool compactPresentation=false,showsScaleLabels=false;
+    bool compactPresentation=false;
     void showResetMenu(const juce::MouseEvent& event)
     {
         if(!isEnabled())return;auto reset=prepareResetAction();juce::PopupMenu menu;menu.setLookAndFeel(&getLookAndFeel());
@@ -245,7 +213,6 @@ private:
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
-    std::array<juce::Label,3> scaleLabels;
     DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     std::function<ResetAction()> onResetInvocation;uint64_t resetTicket=0;
     juce::String identity,canonical,canonicalExact,typingBaseline;
