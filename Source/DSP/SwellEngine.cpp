@@ -14,14 +14,31 @@ bool SwellEngine::permitCreative()
     const juce::ScopedLock guard(lock);message="Creative editing is available in Perform mode";return false;
 }
 SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
-    :Thread("Preverb Swells"),persistentChange(std::move(changed)),root(std::move(path)),contextProvider(std::move(context))
-{ voice.setLevel(1); startThread(); }
+    :Thread("Preverb Swells"),persistentChange(std::move(changed)),legacyProjectsRoot(path),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context))
+{ if(const auto initial=contextProvider().capture.location)storageLocation.store(initial);voice.setLevel(1);startThread(); }
 SwellEngine::~SwellEngine() { signalThreadShouldExit(); sessionGeneration.fetch_add(1); stopThread(-1); }
 void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true);exportVoice->stop(true); }
 void SwellEngine::setExpected(const SongTime& time)
 { expectedRate=time.rate; expectedBpm=time.bpm; expectedNumerator=time.numerator; expectedDenominator=time.denominator; }
 juce::File SwellEngine::instanceRoot(const CaptureManifest& map) const
-{ return root.getChildFile(map.projectId).getChildFile(map.instanceId); }
+{ return storageLocation.load()->projectsRoot.getChildFile(map.projectId).getChildFile(map.instanceId); }
+bool SwellEngine::storageReady(const PreviewContext& context)
+{
+    if(context.capture.status.startsWith("Loading"))return false;
+    const juce::ScopedLock guard(lock);
+    if(context.capture.location && context.capture.location!=storageLocation.load()){
+        storageLocation.store(context.capture.location);invalidateLiveLocked();liveCache.clear();stopLocked();
+    }
+    if(context.capture.location && !context.capture.location->writable){
+        stopLocked();message="Asset working folder unavailable; locate, restore or explicitly create a recovery workspace";
+        for(auto& swell:model.swells){swell.phase=Phase::stale;swell.status=message;}
+        if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise){
+            exportState={ExportPhase::error,message,{}};exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;
+        }
+        return false;
+    }
+    return true;
+}
 Session SwellEngine::savedSession() const { const juce::ScopedLock guard(lock); return model; }
 bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Session& session,juce::File& directory,uint64_t& epoch,juce::String& error,bool allowUnavailable) const
 {
@@ -30,12 +47,13 @@ bool SwellEngine::acceptedStorageSnapshot(CaptureSessionSnapshot& capture,Sessio
     const bool knownSource=(before.capture.reference==captureReference && before.captureGeneration==captureGeneration)
         || (storageRestoreReference.isNotEmpty() && before.capture.reference==storageRestoreReference)
         || (storageRestoreReference.isEmpty() && before.capture.reference.isEmpty() && before.capture.manifest.revision==0 && before.capture.manifest.ranges.empty());
-    if((before.capture.unavailable && !allowUnavailable) || before.capture.status.startsWith("Loading") || !knownSource)
+    if((before.capture.unavailable && !allowUnavailable) || before.capture.status.startsWith("Loading") || !knownSource
+        || (before.capture.location && before.capture.location!=storageLocation.load()))
     {error="Accepted source is unavailable or still settling. Retry after it settles.";return false;}
     auto accepted=model;const auto after=contextProvider();
     if(before.captureGeneration!=after.captureGeneration || before.capture.reference!=after.capture.reference
         || before.capture.manifest.revision!=after.capture.manifest.revision || before.capture.manifest.projectId!=after.capture.manifest.projectId
-        || before.capture.manifest.instanceId!=after.capture.manifest.instanceId)
+        || before.capture.manifest.instanceId!=after.capture.manifest.instanceId || before.capture.location!=after.capture.location)
     {error="Accepted source changed while its creative state was pinned. Retry.";return false;}
     capture=before.capture;session=std::move(accepted);directory=instanceRoot(before.capture.manifest);epoch=sessionGeneration.load();error.clear();return true;
 }
@@ -1034,7 +1052,9 @@ void SwellEngine::run()
         {const juce::ScopedLock guard(lock);if(offlinePlayer || !offlineAccepted.empty()){offlinePlayer.reset();offlineEntries.clear();offlineMembers.clear();offlineAccepted.clear();offlineIRNotice.clear();offlineSession={};}}
         try
         {
-            const auto context=contextProvider();collectCompletedPass(context);inspect(context);prepareDefault(context);
+            const auto context=contextProvider();
+            if(!storageReady(context)){wait(2);continue;}
+            collectCompletedPass(context);inspect(context);prepareDefault(context);
             if(learnGenerationStep(context))continue;
             reconcileRenders(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);

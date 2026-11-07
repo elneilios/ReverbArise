@@ -69,7 +69,7 @@ private:
     }
     void begin()
     {
-        auto request=provider();if(!shown)clearResults();juce::StringArray roots;for(const auto& root:request.roots)roots.add(root.getFullPathName());setValue(0,roots.joinIntoString("; "));
+        auto request=provider();if(!shown)clearResults();juce::StringArray roots;for(const auto& root:request.roots)roots.add(root.getFullPathName());setValue(0,roots.isEmpty()?juce::String("Unavailable"):roots.joinIntoString("; "));
         service.request(std::move(request));setValue(5,shown?"Refreshing; showing scan from "+shown->scannedAt.formatted("%H:%M:%S"):"Scanning this instance's storage...");cancelButton.setVisible(true);resized();
     }
     void timerCallback()override{poll();}

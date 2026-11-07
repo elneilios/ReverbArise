@@ -10,7 +10,7 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
-#include <Storage/PortableAssets.h>
+#include <Storage/WorkingFolder.h>
 
 struct HostPositionDiagnostics
 {
@@ -59,6 +59,9 @@ public:
     void setToneEndBar(int bar) noexcept;
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
+    juce::File assetRegistryRoot() const;
+    bool useWorkingFolder(const std::shared_ptr<m3::storage::portable::WorkingFolder>&,
+                          const m3::storage::portable::Input&,juce::String& error,const m3::storage::portable::Hooks& hooks={});
     bool pinPortableAssets(m3::storage::portable::Input&,juce::String& error,bool allowUnavailable=false) const;
     bool beginRelearning(const m3::storage::portable::Input& expected,juce::String& error);
     void cancelRelearning();
@@ -78,6 +81,7 @@ public:
     void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
     void holdCaptureWorkerForTesting(bool hold) noexcept {captureWorker.holdWorkerForTesting(hold);}
+    bool captureWorkerHeldForTesting() const noexcept {return captureWorker.workerHeldForTesting();}
     PreviewSnapshot getPreviewSnapshot() const;
     void loadPreviewIR(const juce::File& file);
     void setSourceBars(int64_t start, int64_t end);
@@ -113,6 +117,9 @@ private:
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};
     std::optional<RecoveryIntent> recoveryIntent;
+    juce::File legacyProjectsRoot;
+    CaptureSessionSnapshot pendingHostCapture;
+    m3::storage::Association pendingHostAssociation;
     mutable juce::CriticalSection storageStateLock;
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};

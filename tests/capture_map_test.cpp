@@ -6,6 +6,8 @@
 #include "Capture/SparseSongMap.h"
 
 #include <array>
+#include <atomic>
+#include <thread>
 
 namespace
 {
@@ -69,6 +71,21 @@ bool testFloatWavChunkRoundTrip()
         return false;
 
     return true;
+}
+
+// Concurrent capture writers/readers exercise hash teardown while other threads
+// allocate and verify exact PCM. Each operation owns its directory and handles.
+bool testConcurrentChunkRoundTrips()
+{
+    std::atomic<bool> passed{true};
+    std::array<std::thread, 4> workers;
+    for (auto& worker : workers)
+        worker = std::thread([&] {
+            for (int attempt = 0; attempt < 32; ++attempt)
+                if (! testFloatWavChunkRoundTrip()) passed.store(false);
+        });
+    for (auto& worker : workers) worker.join();
+    return passed.load();
 }
 
 bool testAtomicCaptureAssetStore()
@@ -231,6 +248,8 @@ int main()
         return 16;
     if (! testAtomicCaptureAssetStore())
         return 17;
+    if (! testConcurrentChunkRoundTrips())
+        return 18;
 
     return 0;
 }

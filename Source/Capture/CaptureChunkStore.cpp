@@ -16,6 +16,9 @@ struct BCryptHandles
 {
     BCRYPT_ALG_HANDLE algorithm = nullptr;
     BCRYPT_HASH_HANDLE hash = nullptr;
+    // BCrypt retains this memory until DestroyHash completes. Member storage
+    // outlives the destructor body on every success/error return.
+    std::vector<UCHAR> hashObject;
 
     ~BCryptHandles()
     {
@@ -54,9 +57,9 @@ bool calculateSha256(const juce::File& file, std::string& checksum, juce::String
         return false;
     }
 
-    std::vector<UCHAR> hashObject(objectLength);
+    handles.hashObject.resize(objectLength);
     std::vector<UCHAR> digest(digestLength);
-    if (BCryptCreateHash(handles.algorithm, &handles.hash, hashObject.data(), objectLength,
+    if (BCryptCreateHash(handles.algorithm, &handles.hash, handles.hashObject.data(), objectLength,
                          nullptr, 0, 0) < 0)
     {
         error = "Could not create a SHA-256 hash";

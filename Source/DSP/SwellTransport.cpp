@@ -192,6 +192,7 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
             offlineEntries.clear();offlineMembers.clear();
             const auto context=contextProvider();long double origin;
             if(!songOrigin(hostTime.song,origin)){fail("valid absolute Song timing is required"+offlineTimingEvidence(offlineSession.timing,offlineClock.reference,hostTime.song));return;}
+            if(!storageReady(context)){fail("asset working folder unavailable or still loading");return;}
             collectCompletedPass(context);inspect(context);prepareDefault(context);reconcileRenders(context);
             Session pending;uint64_t generation;
             {const juce::ScopedLock guard(lock);pending=model;generation=sessionGeneration.load();}

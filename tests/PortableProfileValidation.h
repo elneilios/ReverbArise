@@ -28,9 +28,10 @@ struct ProfileHost:juce::AudioPlayHead
 static void profilePrepare(const juce::File& bridge)
 {
     auto bootstrap=juce::var(new juce::DynamicObject);bootstrap.getDynamicObject()->setProperty("ownerSid",validationSid());juce::Array<juce::var> cases;
-    for(const auto name:{"full","context","unfrozen"}){
-        Fixture fixture;
-        if(juce::String(name)=="context"){fixture.session.swells.clear();fixture.session.defaultIR={};fixture.session.importedIRs.clear();}
+    for(const auto name:{"full","context","unfrozen","associated-full","associated-context","associated-unfrozen"}){
+        const auto caseType=juce::String(name).replace("associated-","");const bool associated=juce::String(name).startsWith("associated-");
+        Fixture fixture;TestDirectory sourceAssociated;std::unique_ptr<PreverbAudioProcessor> associatedOwner;
+        if(caseType=="context"){fixture.session.swells.clear();fixture.session.defaultIR={};fixture.session.importedIRs.clear();}
         else{
             fixture.session.primary=fixture.session.swells[0].id;fixture.session.selected={fixture.session.primary};fixture.session.swells[0].name="Preserved recovery edit";
             fixture.session.swells[0].shape.gainDb=-3;fixture.session.swells[0].shape.endOffset=2;fixture.session.autoGenerateOnStop=true;
@@ -39,7 +40,7 @@ static void profilePrepare(const juce::File& bridge)
             fixture.session.exportState.history.push_back(history);fixture.session.exportState.completedPath=history.path;
         }
         fixture.refresh();
-        if(juce::String(name)=="unfrozen"){
+        if(caseType=="unfrozen"){
             auto& w=fixture.session.swells[0];w.frozen=false;w.shape.fadeIn=w.shape.fadeOut=0;
             fixture.session.automaticProcessing=false;fixture.session.autoMarkersEnabled=false;fixture.session.autoGenerateOnStop=false;fixture.refresh();
             auto owner=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);load(*owner,fixture.xml);
@@ -49,14 +50,22 @@ static void profilePrepare(const juce::File& bridge)
             REQUIRE(owner->swellEngine().snapshot().renderCount==1);fixture.session=owner->swellEngine().savedSession();owner->setPlayHead(nullptr);owner.reset();fixture.refresh();
         }
         const auto folder=bridge.getChildFile(name);REQUIRE(folder.createDirectory().wasOk());const auto assets=folder.getChildFile("assets");REQUIRE(assets.createDirectory().wasOk());
-        std::shared_ptr<m3::storage::portable::Prepared> prepared;juce::String error;REQUIRE(m3::storage::portable::prepare({fixture.root,fixture.xml,fixture.manifest},prepared,error));
+        m3::storage::portable::Input input{fixture.root,fixture.xml,fixture.manifest};juce::String error;
+        if(associated){
+            REQUIRE(sourceAssociated.file.createDirectory().wasOk());associatedOwner=std::make_unique<PreverbAudioProcessor>(fixture.directory.file);load(*associatedOwner,fixture.xml);
+            waitFor([&]{return associatedOwner->pinPortableAssets(input,error);});std::shared_ptr<m3::storage::portable::WorkingFolder> working;
+            REQUIRE(m3::storage::portable::prepareWorkingFolder(input,sourceAssociated.file,associatedOwner->assetRegistryRoot(),working,error));
+            REQUIRE(associatedOwner->useWorkingFolder(working,input,error));waitFor([&]{return associatedOwner->pinPortableAssets(input,error);});
+        }
+        std::shared_ptr<m3::storage::portable::Prepared> prepared;REQUIRE(m3::storage::portable::prepare(input,prepared,error));
         const auto result=m3::storage::portable::backup(prepared,assets);if(!result.success)throw std::runtime_error(result.error.toStdString());
-        REQUIRE(folder.getChildFile("state.xml").replaceWithText(fixture.xml));auto record=juce::var(new juce::DynamicObject);
-        record.getDynamicObject()->setProperty("name",name);record.getDynamicObject()->setProperty("originalRoot",fixture.root.getFullPathName());
+        REQUIRE(folder.getChildFile("state.xml").replaceWithText(input.processorXml));auto record=juce::var(new juce::DynamicObject);
+        record.getDynamicObject()->setProperty("name",name);record.getDynamicObject()->setProperty("originalRoot",input.instanceRoot.getFullPathName());record.getDynamicObject()->setProperty("legacyOriginalRoot",fixture.root.getFullPathName());record.getDynamicObject()->setProperty("associated",associated);
         record.getDynamicObject()->setProperty("receipt",result.receipt.locator.snapshot+".json");
         if(!fixture.session.swells.empty()){m3::SwellAssetStore store(fixture.root);WetRender wet;REQUIRE(store.readRender(fixture.session.swells[0].render,previewMemoryBudget,wet,error));record.getDynamicObject()->setProperty("peak",wet.peak);record.getDynamicObject()->setProperty("start",static_cast<juce::int64>(wet.start));}
         cases.add(record);
     }
+    for(const auto& record:cases){REQUIRE(!juce::File(record["originalRoot"].toString()).exists());REQUIRE(!juce::File(record["legacyOriginalRoot"].toString()).exists());}
     bootstrap.getDynamicObject()->setProperty("cases",cases);REQUIRE(bridge.getChildFile("bootstrap.json").replaceWithText(juce::JSON::toString(bootstrap,true)));
 }
 static void profileValidate(const juce::File& bridge,const juce::String& expectedUser)
@@ -70,22 +79,34 @@ static void profileValidate(const juce::File& bridge,const juce::String& expecte
         std::shared_ptr<m3::storage::portable::Verified> verified;REQUIRE(m3::storage::portable::locateReceipt(folder.getChildFile("assets/receipts/"+record["receipt"].toString()),verified,error));
         const auto& saved=m3::storage::portable::snapshot(*verified);const auto work=renderWorkCounts();
         auto owner=std::make_unique<PreverbAudioProcessor>();auto& processor=*owner;load(processor,folder.getChildFile("state.xml").loadFileAsString());
-        REQUIRE(processor.getCaptureSnapshot().unavailable);m3::storage::portable::Input scope;REQUIRE(processor.pinPortableAssets(scope,error,true));
+        REQUIRE(processor.getCaptureSnapshot().unavailable);m3::storage::portable::Input scope;waitFor([&]{return processor.pinPortableAssets(scope,error,true);});
         juce::String before;REQUIRE(m3::encode(processor.swellEngine().savedSession(),before,error));
-        REQUIRE(m3::storage::portable::matchesRecoveryTarget(*verified,scope,error));REQUIRE(m3::storage::portable::restoreCopy(verified,root).success);
-        REQUIRE(processor.reloadRecoveredAssets(scope,error));REQUIRE(processor.flushCaptureForTesting());REQUIRE(!processor.getCaptureSnapshot().unavailable);
+        REQUIRE(m3::storage::portable::matchesRecoveryTarget(*verified,scope,error));auto activeProjects=root;
+        if(static_cast<bool>(record["associated"])){
+            REQUIRE(scope.folderUnavailable && processor.getCaptureSnapshot().manifestKnown);
+            const auto target=juce::File(profile).getChildFile("Assets-"+record["name"].toString());REQUIRE(target.createDirectory().wasOk());
+            std::shared_ptr<m3::storage::portable::WorkingFolder> working;
+            if(!m3::storage::portable::prepareRestoredWorkingFolder(scope,folder.getChildFile("assets/receipts/"+record["receipt"].toString()),target,root,working,error))throw std::runtime_error(error.toStdString());
+            if(!processor.useWorkingFolder(working,scope,error))throw std::runtime_error(error.toStdString());activeProjects=m3::storage::portable::workingFolderInfo(*working).projectsRoot;
+            juce::MemoryBlock state;processor.getStateInformation(state);const auto xml=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));REQUIRE(xml && xml->getIntAttribute("stateVersion")==9);
+            auto reopened=std::make_unique<PreverbAudioProcessor>();load(*reopened,xml->toString());REQUIRE(!reopened->getCaptureSnapshot().unavailable);
+            REQUIRE(reopened->getCaptureSnapshot().location->association.writer!=processor.getCaptureSnapshot().location->association.writer);
+        }else{
+            REQUIRE(m3::storage::portable::restoreCopy(verified,root).success);REQUIRE(processor.reloadRecoveredAssets(scope,error));REQUIRE(processor.flushCaptureForTesting());
+        }
+        REQUIRE(!processor.getCaptureSnapshot().unavailable);
         ProfileHost host;host.position.setTimeInSamples(0);host.position.setPpqPosition(0.0);host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});host.position.setIsPlaying(false);
         processor.setPlayHead(&host);processor.prepareToPlay(48000,1);juce::AudioBuffer<float> stopped(2,1);stopped.clear();juce::MidiBuffer midi;processor.processBlock(stopped,midi);
         if(!saved.observed.session.swells.empty()){const auto end=juce::Time::getMillisecondCounterHiRes()+15000;while(processor.swellEngine().savedSession().swells[0].phase!=m3::Phase::ready){if(juce::Time::getMillisecondCounterHiRes()>=end)throw std::runtime_error(processor.swellEngine().savedSession().swells[0].status.toStdString());juce::Thread::sleep(2);}}
-        const auto instance=root.getChildFile(saved.observed.project).getChildFile(saved.observed.instance);
+        const auto instance=activeProjects.getChildFile(saved.observed.project).getChildFile(saved.observed.instance);
         for(const auto& entry:saved.files)REQUIRE(m3::fileHash(instance.getChildFile(entry.path))==entry.sha256);
-        CaptureSession capture(root);REQUIRE(capture.restore(saved.observed.project.toStdString(),saved.observed.instance.toStdString(),saved.observed.reference,saved.observed.capture.revision));
+        CaptureSession capture(activeProjects);REQUIRE(capture.restore(saved.observed.project.toStdString(),saved.observed.instance.toStdString(),saved.observed.reference,saved.observed.capture.revision));
         float a=0,b=0;REQUIRE(capture.readSample(0,a,b) && a==.1f && b==-.2f);REQUIRE(!capture.readSample(3,a,b));REQUIRE(capture.readSample(4,a,b) && a==0 && b==0);
         REQUIRE(processor.getCaptureSnapshot().manifest.contextSpans==saved.observed.capture.contextSpans);
         juce::String after;REQUIRE(m3::encode(processor.swellEngine().savedSession(),after,error));REQUIRE(after==before);
         if(!saved.observed.session.swells.empty()){m3::SwellAssetStore store(instance);WetRender wet;REQUIRE(store.readRender(saved.observed.session.swells[0].render,previewMemoryBudget,wet,error));REQUIRE(wet.peak==static_cast<float>(static_cast<double>(record["peak"])) && wet.start==static_cast<juce::int64>(record["start"]) && wet.sourceStart==0 && wet.sourceEnd==2);}
         const auto done=renderWorkCounts();REQUIRE(done.convolutions==work.convolutions && done.resamplings==work.resamplings && processor.captureStageCountForTesting()==0 && processor.swellEngine().snapshot().renderCount==0);
-        auto result=juce::var(new juce::DynamicObject);auto* o=result.getDynamicObject();o->setProperty("case",record["name"]);o->setProperty("files",static_cast<int>(saved.files.size()));o->setProperty("hashesExact",true);o->setProperty("metadataExact",true);o->setProperty("convolutions",0);o->setProperty("resamplings",0);o->setProperty("captureStages",0);reports.add(result);
+        auto result=juce::var(new juce::DynamicObject);auto* o=result.getDynamicObject();o->setProperty("case",record["name"]);o->setProperty("associated",record["associated"]);o->setProperty("activeProjects",activeProjects.getFullPathName());o->setProperty("files",static_cast<int>(saved.files.size()));o->setProperty("hashesExact",true);o->setProperty("metadataExact",true);o->setProperty("convolutions",0);o->setProperty("resamplings",0);o->setProperty("captureStages",0);reports.add(result);
         processor.setPlayHead(nullptr);
     }
     auto result=juce::var(new juce::DynamicObject);result.getDynamicObject()->setProperty("sid",sid);result.getDynamicObject()->setProperty("profile",profile);result.getDynamicObject()->setProperty("projectsRoot",root.getFullPathName());result.getDynamicObject()->setProperty("cases",reports);
