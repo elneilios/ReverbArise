@@ -2,6 +2,21 @@
 
 ## ADDED Requirements
 
+### Requirement: Selector fields present local help and validation consistently
+Migrated selector fields SHALL place smaller readable helper text directly beneath and aligned with the visible input body. Binding-supplied errors SHALL replace routine help with red validation text and a red body border, retained through hover and held states. Keyboard/accessibility brackets SHALL remain aqua and independent. Disabled inputs SHALL retain readable feedback. Presentation SHALL NOT introduce new validation or commit rules.
+
+#### Scenario: Show and clear a field error
+- **WHEN** a selector's binding supplies an error
+- **THEN** the local message and body border turn red while any keyboard/accessibility brackets remain aqua
+- **AND** the explanation wraps without shrinking and is exposed with the input's accessible description
+- **WHEN** accepted binding refresh clears the error
+- **THEN** normal helper text and body feedback return without an extra selection command
+
+#### Scenario: Explain an unavailable field
+- **WHEN** a selector is disabled because its prerequisite is absent
+- **THEN** its small local explanation stays readable directly below the input, separately from the dimmed control
+- **AND** disabled state alone is not presented as a validation error
+
 ### Requirement: Selectors separate body feedback from focus decoration
 Migrated dropdown selectors SHALL provide distinguishable idle, hover, held and disabled body states with steady off-white text and chevrons. Keyboard and explicit accessibility focus SHALL use aqua outer corner brackets separated from the body border by a small gap. Pointer clicks SHALL hide focus decoration without removing actual focus or keyboard operation. Body and focus feedback SHALL remain independent.
 

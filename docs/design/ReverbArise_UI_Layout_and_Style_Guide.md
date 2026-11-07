@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.13 · **Production standards revision:** 13 · **Purpose:** Production UI authority and design reference. Revision 13 records the owner-approved focus-visibility policy: keyboard/accessibility focus shows decoration; pointer clicks retain focus without its decoration. Shared command buttons implement it now. Other families adopt it in their own design-system jobs. Revision-12 corner geometry, hover/press feedback and glyph ink are retained.
+**Version:** 1.14 · **Production standards revision:** 14 · **Purpose:** Production UI authority and design reference. Revision 14 records the native-approved C2 selector family and small local field help/red error-message-and-border policy. Explicit consumer adoption is in progress. Keyboard/accessibility focus uses aqua outer brackets; pointer clicks retain focus without decoration. Revision-12 command geometry/colours and other families' scoped migration boundaries remain intact.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -8,13 +8,21 @@ See the [control inventory and family roadmap](ui-control-inventory.md),
 Legacy debt remains explicit; family migrations retain scoped native approval.
 
 
-## Selector native preview — issue #107 (pending native acceptance)
+## Selector family — issue #107 (native approved, adoption in progress)
 
 The owner approved the quiet dropdown/menu design on 7 November 2026, including
 transient pointer hover, persistent keyboard inspection and an independent
-selected checkmark. `unify-selector-states` now has an opt-in native family
-fixture; this is **not a production rollout or a standards revision advance**.
-Existing consumers remain unchanged until native approval.
+selected checkmark. The owner approved the revised native family on 7 November,
+including small local help/red error feedback. `unify-selector-states` adopts
+only its listed consumers; remaining families and #8 controls remain explicit debt.
+
+The owner also approved smaller help immediately beneath the input and **red
+validation text plus a red body border**, with aqua focus brackets independent,
+on 7 November. The revised native fixture starts in a clearable validation-error
+scene and uses the scoped `FieldPresentation` policy (12-height Inter Regular,
+17-height line box, 4-unit body-to-feedback gap). Routine help returns when the
+error clears; disabled explanations remain readable. This shared field anatomy
+is recorded for later text/numeric jobs, without migrating their controls here.
 
 The [C2 preview contract](../development/ui-control-contracts.md#c2-native-preview-implementation--2026-11-07-not-rolled-out)
 records the shared API and scoped candidate metrics. Review at normal and larger

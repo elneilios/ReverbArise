@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the opt-in selector/popup family and dedicated native preview/test target against canonical UI contracts and existing guide focus wording. Production declarations and user flows are unchanged before native approval, so no guide prose or screenshot change is appropriate.",
+  "summary": "Reviewed the native-approved selector field-feedback policy and explicit approval comments. Production declarations have not migrated at this checkpoint; existing guide prose remains accurate. Native-approved C2 adoption follows separately.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -570,8 +570,8 @@
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
-      "bytes": 9111,
-      "sha256": "b6b5cd3e0b495518347dc44b5f27d97e4534a52d3d024368fddd9e336aaba484"
+      "bytes": 9695,
+      "sha256": "2b0a92b121087f34e40889792514fd99e7e1a10103da7555fe25a684e51ff4c0"
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
@@ -597,6 +597,11 @@
       "path": "Source/UI/Controls/ExternalFileDrag.h",
       "bytes": 736,
       "sha256": "ed5c1e663a6a7d43692ab4177afc29d93d4eb4bea76d4e154a94a368535e5528"
+    },
+    {
+      "path": "Source/UI/Controls/FieldPresentation.h",
+      "bytes": 891,
+      "sha256": "0f79114ef495363b721906159129f1030a83287d536802d7b1a6048119fd347e"
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
@@ -680,8 +685,8 @@
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
-      "bytes": 1461,
-      "sha256": "895fe3a47cb1ac7e99f56ea1ec814a00e29682f689b08561d6a88fa2267ba2ba"
+      "bytes": 1558,
+      "sha256": "2e211b66c3bf7bf72c93af7b62880db434589773e48517edee8758424db778dd"
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",

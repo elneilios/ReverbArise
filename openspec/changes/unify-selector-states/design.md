@@ -29,6 +29,21 @@ These are approved design directions. Browser fonts/pixels and simulated menu be
 
 ### Extend the selector and provide one scoped popup adapter
 
+**Native-feedback amendment, 2026-11-07:** The owner approved the side-by-side
+field study's **red message plus red border** treatment and smaller help text
+immediately below the input. Capture that anatomy here and in the selector
+delta/tasks. `FieldPresentation` supplies the initial scoped policy (12-height
+Inter Regular, 17-height line box, 4-unit gap, normal helper ink versus semantic
+danger ink). Align local feedback and captions to the visible body edge, outside
+the reserved bracket margin. Binding-supplied errors replace routine guidance,
+remain red during hover/held states and are exposed accessibly; the border is
+red while the outer keyboard/accessibility brackets remain aqua. Disabled input
+does not dim its explanation. Clearing validation restores normal body/help
+without a model command. These are field presentation roles, not new validation
+or commit rules. The native fixture starts on a clearable missing-IR error scene.
+Text/numeric fields should use the same approved anatomy in their own C3/C4 work;
+this change does not migrate them or introduce a universal field/editor wrapper.
+
 Keep `DeliberateSelector`/`InvocationComboBox` and their callback-facing interface. Add a narrow project-owned popup presentation/inspection adapter for explicit C2 consumers. Share typed row identity, accepted/inspected/eligible state, reason and semantic role, plus geometry and painting, rather than rediscovering semantics from names or labels. Use current command focus geometry/observer and existing Inter/responsive roles.
 
 The adapter owns an anchored JUCE component popup with explicit row navigation and dismissal; it separates navigation eligibility from activation eligibility and does not delegate those decisions to JUCE's `isEnabled` item flag. Reuse JUCE component/accessibility, screen placement, focus and asynchronous lifetime mechanisms, without patching vendored code. Keep the adapter small: one-level choice/action rows, wrapping, reasons, selection marker, guarded completion and cancellation. Native file dialogs, nested arbitrary menu frameworks and domain commands are outside it. An opt-in view prevents recolouring unrelated recovery/storage/native popups through `WorkspaceTheme`.

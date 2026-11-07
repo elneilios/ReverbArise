@@ -163,20 +163,30 @@ catalogue changes and deferred completion retain captured identity/lifetime guar
 `setChoiceReason` associates provider-supplied reasons with stable item IDs;
 disabled Export Custom remains an accepted display value, never a preset command.
 
-`SelectorPresentation` owns **candidate popup-only metrics**: width 220–420,
+`SelectorPresentation` owns **native-approved popup-only metrics**: width 220–420,
 outer padding 4, row padding 8 and check column 22 logical units. Popup fonts and
 composition follow the source's user transform; OS DPI remains JUCE's concern.
 Existing command bracket stroke/gap and body geometry are reused. Raised/held
 surfaces derive from existing background/outline colours; no raw palette or
-global popup colour override is introduced. The native family review must approve
-these scoped dimensions/roles before adoption or production revision advancement.
+global popup colour override is introduced. Scoped native family approval was
+recorded on 2026-11-07; standards revision 14 governs explicit consumer adoption.
+
+Owner feedback approved the **red message plus red body border** field treatment
+on 2026-11-07. `FieldPresentation` owns the initial small local feedback policy:
+12-height Inter Regular, 17-height line box and 4-unit gap from the visible body,
+left-aligned with that body. `ChoiceSelector::setValidationMessage` accepts a
+binding-supplied error without parsing input or changing selection. Error border
+ink stays red during hover/held feedback; outside focus brackets remain aqua.
+The preview replaces routine guidance with the local error, keeps disabled
+explanations readable and restores normal help after a valid simulated choice.
+These roles were approved in the updated native fixture; production adoption is scoped to the C2 change.
 
 Preview: `preverb_selector_popup_test --review-selectors`; focused checks use the
 same executable without arguments. The fixture offers size/scale and normal,
 dense, empty and unavailable/error scenes. Production selectors, including the
 shared IR field, still use their prior declarations at this checkpoint. The
-approved browser design is recorded in `unify-selector-states`; **native owner
-acceptance and consumer migration remain pending**. #108 Level, #8 recovery and
+approved browser design and native owner acceptance are recorded in
+`unify-selector-states`; **consumer migration is in progress**. #108 Level, #8 recovery and
 storage/working-folder controls, C1 buttons and action-menu adoption are separate.
 
 ## C6 — Switches and toggles
@@ -269,6 +279,21 @@ feedback, accessible associations/full descriptions, disabled input with readabl
 error, context-help inheritance into nested/auxiliary controls, notice precedence
 and no-forced-speech source/interaction checks. Reuse UiStandards, WorkspaceNotice,
 WorkspaceFeedback, WorkflowHeader and responsive cases, plus #109 field cases.
+
+### Approved field anatomy — 2026-11-07
+
+Use the owner-approved small helper text directly beneath the input body, aligned
+with its left edge. A binding-supplied error replaces routine guidance with red
+text and a red body border; keyboard/accessibility focus decoration stays aqua
+and separate. Helper/error text wraps without shrinking and stays readable when
+the input is disabled. Disabled state alone is not a validation error. Do not
+introduce a new validation, parsing or commit rule through this presentation.
+
+The initial `FieldPresentation` policy is exercised by the C2 selector preview
+(12-height Inter, 17-height line box, 4-unit gap). This records shared design
+intent for dropdowns and inputs; it does not migrate C4 editors, change #108
+Level behavior or override reviewed density/legibility policies. Text/numeric
+input adoption and any compact-role adjustment belong to their own scoped jobs.
 
 ## C4 — Numeric and text fields
 

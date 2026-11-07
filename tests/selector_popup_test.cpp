@@ -175,6 +175,48 @@ static void presentationCases()
         REQUIRE(commandBodyBounds(preview.fixture.normal.getBounds()).getY()==commandBodyBounds(preview.fixture.folder.getBounds()).getY());
     }
 }
+static void fieldFeedbackCases()
+{
+    using namespace m3::ui;
+    REQUIRE(FieldPresentation::helperFont().getHeight()==FieldPresentation::helperHeight);
+    REQUIRE(FieldPresentation::helperHeight<textStyle(TextRole::controlValue).height);
+    REQUIRE(FieldPresentation::feedbackInk(true)==danger);
+    for(bool hovered:{false,true})for(bool down:{false,true})for(bool focus:{false,true})
+    {
+        juce::Image image(juce::Image::ARGB,280,44,true,juce::SoftwareImageType{});juce::Graphics g(image);g.fillAll(background);
+        SelectorPresentation::surface(g,{0,0,280,44},{true,hovered,down,focus,false},true);
+        const auto body=commandBodyBounds({0,0,280,44});
+        REQUIRE(image.getPixelAt(body.getX(),body.getCentreY())==danger);
+        if(focus)REQUIRE(image.getPixelAt(1,1)==aqua);
+    }
+    std::cerr<<"Field border state matrix passed\n";
+    WorkspaceTheme theme;juce::Component window;window.setLookAndFeel(&theme);window.setBounds(80,80,900,600);window.addToDesktop(0);window.setVisible(true);window.toFront(true);
+    ChoiceSelector selector;selector.addItem("Accepted",1);selector.setSelectedId(1,juce::dontSendNotification);int changes=0;selector.onChange=[&]{++changes;};
+    window.addAndMakeVisible(selector);selector.setBounds(30,30,280,44);auto* handler=selector.getAccessibilityHandler();REQUIRE(handler);
+    selector.setValidationMessage("IR file not found");REQUIRE(handler->getDescription().contains("IR file not found"));
+    selector.setValidationMessage({});REQUIRE(!handler->getDescription().contains("IR file not found") && changes==0 && selector.getSelectedId()==1);
+    std::cerr<<"Field accessible metadata cleared\n";
+    selectorReview::Panel preview;
+    for(const auto size:{juce::Point<int>{900,600},{1000,700},{1100,850},{1400,1000}})for(const auto scale:{100,125})
+    {
+        preview.setSize(size.x,size.y);preview.setReviewScale(scale);
+        const std::array<std::pair<ChoiceSelector*,selectorReview::Feedback*>,4> fields{{{&preview.fixture.normal,&preview.fixture.normalFeedback},{&preview.fixture.longName,&preview.fixture.longFeedback},{&preview.fixture.empty,&preview.fixture.emptyFeedback},{&preview.fixture.unavailable,&preview.fixture.unavailableFeedback}}};
+        for(const auto& field:fields)
+        {
+            const auto body=commandBodyBounds(field.first->getBounds());
+            REQUIRE(field.second->getX()==body.getX() && field.second->getY()==body.getBottom()+FieldPresentation::helperGap);
+            REQUIRE(preview.fixture.getLocalBounds().contains(field.second->getBounds()));
+            REQUIRE(field.second->isEnabled());
+        }
+    }
+    std::cerr<<"Field layout matrix passed\n";
+    REQUIRE(preview.fixture.normal.isEnabled() && preview.fixture.normalFeedback.isError());
+    REQUIRE(!preview.fixture.emptyFeedback.isError() && !preview.fixture.unavailableFeedback.isError());
+    preview.fixture.normal.setSelectedId(1,juce::sendNotificationSync);
+    REQUIRE(!preview.fixture.normalFeedback.isError() && preview.fixture.normal.getValidationMessage().isEmpty());
+    std::cerr<<"Field clearing passed\n";
+    window.setLookAndFeel(nullptr);
+}
 int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -189,6 +231,10 @@ int main(int argc,char** argv){return runTest([&]
         };
         const juce::File path(argv[2]);capture(panel,path);panel.fixture.longName.showPopup();auto* popup=panel.fixture.longName.activePopup();REQUIRE(popup);popup->mouseMove(at(*popup,1));capture(*popup,path.getSiblingFile("selector-long-menu.png"));panel.fixture.longName.hidePopup();pump();return;
     }
-    interactionCases();popupCases();selectorCases();presentationCases();
+    std::cerr<<"Selector interaction state\n";interactionCases();
+    std::cerr<<"Native popup\n";popupCases();
+    std::cerr<<"Selector input and lifetime\n";selectorCases();
+    std::cerr<<"Presentation and geometry\n";presentationCases();
+    std::cerr<<"Field feedback\n";fieldFeedbackCases();
     std::cout<<"Selector popup state, native input, accessibility, focus, geometry and lifetime cases passed.\n";
 });}

@@ -12,6 +12,13 @@ class ChoiceSelector:public DeliberateSelector
 public:
     ChoiceSelector(){setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);hideNativeLabel();}
     ~ChoiceSelector()override{hidePopup();}
+    void setValidationMessage(juce::String value)
+    {
+        if(validationMessage==value)return;
+        validationMessage=std::move(value);repaint();
+        if(isShowing())if(auto* handler=getAccessibilityHandler())handler->notifyAccessibilityEvent(juce::AccessibilityEvent::valueChanged);
+    }
+    const juce::String& getValidationMessage()const noexcept{return validationMessage;}
     void setChoiceReason(int id,juce::String reason){if(reasons[id]!=reason){hidePopup();reasons[id]=std::move(reason);}}
     void addItem(const juce::String& text,int id){hidePopup();juce::ComboBox::addItem(text,id);}
     void clear(juce::NotificationType notification=juce::sendNotificationAsync)
@@ -24,7 +31,7 @@ public:
     bool isPopupActive()const noexcept{return popup!=nullptr && !popup->state().done();}
     ChoicePopup* activePopup()const noexcept{return popup.get();}
     bool isFocusVisible()const noexcept{return visibility->isVisible() && (hasKeyboardFocus(true) || isPopupActive());}
-    juce::String getTooltip()override{return juce::ComboBox::getTooltip()+"\n"+getText();}
+    juce::String getTooltip()override{return juce::ComboBox::getTooltip()+"\n"+getText()+(validationMessage.isEmpty()?juce::String{}:"\n"+validationMessage);}
     void hidePopup(){++generation;if(popup)popup->dismiss();popup.reset();juce::ComboBox::hidePopup();repaint();}
     void showPopup()override
     {
@@ -58,7 +65,7 @@ public:
     }
     void paint(juce::Graphics& g)override
     {
-        SelectorPresentation::surface(g,getLocalBounds(),{isEnabled(),over,held && over,isFocusVisible(),false});
+        SelectorPresentation::surface(g,getLocalBounds(),{isEnabled(),over,held && over,isFocusVisible(),false},validationMessage.isNotEmpty());
         const auto alpha=isEnabled()?1.f:.35f;auto area=commandBodyBounds(getLocalBounds()).reduced(spacing::labelHelp,0);
         const auto arrow=area.removeFromRight(controlGeometry::numericStepWidth).toFloat().getCentre();
         juce::Path chevron;chevron.startNewSubPath(arrow.x-5,arrow.y-2);chevron.lineTo(arrow.x,arrow.y+2);chevron.lineTo(arrow.x+5,arrow.y-2);
@@ -111,7 +118,7 @@ public:
                 Interfaces{std::make_unique<Value>(selector)}),owner(selector){}
             juce::AccessibleState getCurrentState()const override
             {auto state=juce::AccessibilityHandler::getCurrentState().withExpandable();return owner.isPopupActive()?state.withExpanded():state.withCollapsed();}
-            juce::String getDescription()const override{return owner.getDescription()+"\n"+owner.getText();}
+            juce::String getDescription()const override{return (owner.validationMessage.isEmpty()?owner.getDescription():owner.validationMessage)+"\n"+owner.getText();}
             juce::String getHelp()const override{return owner.getTooltip();}
         private:ChoiceSelector& owner;
         };
@@ -120,6 +127,7 @@ public:
 private:
     void hideNativeLabel(){for(auto* child:getChildren())if(dynamic_cast<juce::Label*>(child))child->setVisible(false);}
     std::map<int,juce::String> reasons;
+    juce::String validationMessage;
     std::unique_ptr<ChoicePopup> popup;
     juce::SharedResourcePointer<FocusVisibility> visibility;
     uint64_t generation=0;

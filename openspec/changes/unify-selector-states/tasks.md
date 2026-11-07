@@ -7,10 +7,11 @@
 - [x] 1.3 Extend the existing selector body and shared FocusVisibility usage for idle/hover/held/disabled and outer aqua brackets; verify state rendering, steady chevrons, independent combined states, repeated/already-focused accessibility requests, pointer-click hiding and retained keyboard operation in focused control tests.
 - [x] 1.4 Add long closed-value discovery, wrapped popup rows/reasons and unavailable inspection with separate activation eligibility; verify full accessible names/disabled state, no disabled invocation, accepted disabled Custom, normal text size and focus/checkmark containment in narrow/scaled fixtures.
 - [x] 1.5 Document the C2 adapter/reuse API, wheel and inspect/commit policies in ui-control-contracts and the standards with exact scoped candidate metrics; verify documentation links and UI standards pass without debt-inventory regeneration, and mark native acceptance pending rather than inferred from mockups.
+- [x] 1.6 Incorporate the owner-approved field-feedback amendment in the selector control and native preview: smaller help directly below the visible body, red error message/border, independent aqua brackets and readable disabled explanations. Verify error/hover/held/focus rendering, accessible error/clear behavior, unchanged selection, exact body/help alignment and supported-size/scale fixture checks; update the durable approval record without migrating text/numeric fields.
 
 ## 2. Native family checkpoint
 
-- [ ] 2.1 Prepare and directly launch the lightweight selector/menu native preview with long/empty/unavailable/error and combined states at 900x600/100%, 1000x700, 1100x850 and 1400x1000 plus supported 100%/125% user scale; record scoped owner acceptance and any approved popup tokens/geometry before wider adoption, distinguishing physical Windows DPI/FL Studio coverage.
+- [x] 2.1 Prepare and directly launch the lightweight selector/menu native preview with long/empty/unavailable/error and combined states at 900x600/100%, 1000x700, 1100x850 and 1400x1000 plus supported 100%/125% user scale; record scoped owner acceptance and any approved popup tokens/geometry before wider adoption, distinguishing physical Windows DPI/FL Studio coverage.
 
 ## 3. Bounded consumer adoption
 
