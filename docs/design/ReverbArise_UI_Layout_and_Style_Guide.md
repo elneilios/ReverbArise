@@ -1,12 +1,42 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.13 · **Production standards revision:** 13 · **Purpose:** Production UI authority and design reference. Revision 13 records the owner-approved focus-visibility policy: keyboard/accessibility focus shows decoration; pointer clicks retain focus without its decoration. Shared command buttons implement it now. Other families adopt it in their own design-system jobs. Revision-12 corner geometry, hover/press feedback and glyph ink are retained.
+**Version:** 1.14 · **Production standards revision:** 14 · **Purpose:** Production UI authority and design reference. Revision 14 records the native-approved C2 selector family and small local field help/red error-message-and-border policy. Named selector consumers are adopted; remaining families retain their own changes. Keyboard/accessibility focus uses aqua outer brackets; pointer clicks retain focus without decoration. Revision-12 command geometry/colours and other families' scoped migration boundaries remain intact.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
 [approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
 Legacy debt remains explicit; family migrations retain scoped native approval.
 
+
+## Selector family — issue #107 (native approved)
+
+The owner approved the quiet dropdown/menu design on 7 November 2026, including
+transient pointer hover, persistent keyboard inspection and an independent
+selected checkmark. The owner approved the revised native family on 7 November,
+including small local help/red error feedback. `unify-selector-states` adopts
+only its listed consumers; remaining families and #8 controls remain explicit debt.
+
+The owner also approved smaller help immediately beneath the input and **red
+validation text plus a red body border**, with aqua focus brackets independent,
+on 7 November. The revised native fixture starts in a clearable validation-error
+scene and uses the scoped `FieldPresentation` policy (12-height Inter Regular,
+17-height line box, 4-unit body-to-feedback gap). Routine help returns when the
+error clears; disabled explanations remain readable. This shared field anatomy
+is recorded for later text/numeric jobs, without migrating their controls here.
+
+The [C2 contract](../development/ui-control-contracts.md#c2-approved-implementation--2026-11-07)
+records the shared API and scoped approved metrics. Review at normal and larger
+sizes and 100%/125% user scale uses `preverb_selector_popup_test --review-selectors`.
+Physical Windows DPI and FL Studio results remain distinct. #108's Level work,
+#8's storage/recovery work and the separate action-menu child are not adopted by
+this fixture.
+
+C2 value text retains the native-approved control-value height of at least 13,
+while larger responsive roles can grow it. This scoped selector role keeps the
+12-height local helper smaller in compact layouts; it does not change text/numeric
+input typography. `SelectorPresentation::valueFont` is the authority for closed
+selectors and their popup values. Visible selector/import bodies remain aligned;
+outside focus is reserved in the component frame and existing row gaps are retained.
 
 ## Responsive composition — issue #58
 
@@ -169,6 +199,7 @@ production standards revision; this revision does not change plugin/state versio
 | 11 | #107 audit and shared contracts explicitly approved 2026-11-06 | Full consumer ownership/state inventory, C1–C8 contracts and separate P1–P8 delivery packets, reconciled against merged #80. Documentation/governance only; all numerical roles and native approvals unchanged; #108 and #8 remain independent |
 | 12 | #107 native button family revision 4 approved 2026-11-06 | Four aqua corner brackets, 2-pixel stroke with 3-pixel outside gap inside component bounds; body border/background owns hover/press. Destructive mouse feedback stays red; neutral icons stay off-white. Explicit neutral/primary/destructive/latch roles share one painter. No new token, knob or FileDragTile redesign; integrated acceptance remains separate |
 | 13 | #107 owner approved input-dependent focus visibility 2026-11-06 | Shared commands show brackets for keyboard/accessibility focus and hide them after pointer clicks while retaining actual focus/activation. Hover/held ink and geometry stay unchanged. Other families adopt the policy during their own jobs; caret/editing/selection feedback remains separate. See the shared focus visibility contract |
+| 14 | #107 revised native selector family approved 2026-11-07 | Quiet transient pointer highlight, persistent keyboard inspection, independent accepted checkmark and explicit commit; aqua outside focus, steady glyphs. Scoped popup metrics and minimum 13 value type; local help uses 12-height Inter, 17-height lines and 4-unit gap, with red error text/body border. Adopted consumers are listed in the C2 contract; action menus, #108 and #8 stay separate. |
 
 ### Stable Perform transport information
 

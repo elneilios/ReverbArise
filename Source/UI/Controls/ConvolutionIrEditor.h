@@ -17,7 +17,7 @@ class ConvolutionIrEditor final:public juce::Component
     {
     public:void paint(juce::Graphics& g)override
         {
-            g.setFont(getLookAndFeel().getLabelFont(*this));g.setColour(findColour(juce::Label::textColourId));
+            g.setFont(FieldPresentation::helperFont());g.setColour(findColour(juce::Label::textColourId));
             g.drawFittedText(getText(),getLocalBounds(),juce::Justification::topLeft,2,1.f);
         }
     };
@@ -66,16 +66,17 @@ public:
         view=std::move(next);label.setText(view.label,juce::dontSendNotification);
         restoreSelection();
         selector.setEnabled(view.editable);fileButton.setEnabled(view.editable);
-        status.setText(view.status,juce::dontSendNotification);
+        const auto feedback=feedbackText();status.setText(feedback,juce::dontSendNotification);
         status.setColour(juce::Label::textColourId,view.error?danger:textStyle(TextRole::helper).ink);
+        selector.setValidationMessage(view.error?feedback:juce::String{});
         selector.setTitle(view.label);selector.setDescription(view.reason.isNotEmpty()?view.reason:"Choose an impulse response");
         juce::String help="Choose an impulse response";
         for(const auto& entry:view.choices)if(entry.identity==view.accepted){help+="\n"+entry.description;break;}
         if(view.reason.isNotEmpty())help+="\n"+view.reason;
         selector.setTooltip(help);fileButton.setTooltip("Import WAV or WavPack IR\n"+view.reason);
         fileButton.setDescription(view.reason.isNotEmpty()?view.reason:"Import an impulse response");fileButton.setHelpText(fileButton.getTooltip());
-        status.setTooltip(view.status);status.setDescription(view.status);
-        if(view.error && view.reason.isNotEmpty()){status.setTooltip(view.status+"\n"+view.reason);status.setDescription(status.getTooltip());}
+        status.setTooltip(feedback);status.setDescription(feedback);
+        if(view.error && view.reason.isNotEmpty()){status.setTooltip(feedback+"\n"+view.reason);status.setDescription(status.getTooltip());}
         resized();
     }
     int preferredHeight(){return preferredHeight(getWidth());}
@@ -83,23 +84,23 @@ public:
     {
         refreshFonts();
         return responsiveGeometry::captionHeight+spacing::labelHelp+responsiveGeometry::controlHeight
-            +(view.status.isEmpty()?actionFocusMargin:spacing::tight+feedbackLines(width)*controlGeometry::feedbackHeight);
+            +(feedbackText().isEmpty()?actionFocusMargin:FieldPresentation::helperGap+feedbackLines(width-2*actionFocusMargin)*FieldPresentation::helperLineHeight);
     }
     void resized()override
     {
         refreshFonts();
         auto area=getLocalBounds();
-        label.setBounds(area.removeFromTop(responsiveGeometry::captionHeight));area.removeFromTop(spacing::labelHelp);
+        label.setBounds(area.removeFromTop(responsiveGeometry::captionHeight).reduced(actionFocusMargin,0));area.removeFromTop(spacing::labelHelp);
         auto row=area.removeFromTop(responsiveGeometry::controlHeight);
         const auto rowBottom=row.getBottom();
         fileButton.setBounds(row.removeFromRight(responsiveGeometry::controlHeight+2*actionFocusMargin).expanded(0,actionFocusMargin));
-        row.removeFromRight(spacing::tight);selector.setBounds(row);
+        row.removeFromRight(spacing::tight);selector.setBounds(row.expanded(0,actionFocusMargin));
         // Label, input/action row and supporting text form one visual field.
         // Empty feedback occupies no space; hosts reflow adjacent fields using
         // preferredHeight(width) when a message appears or wraps.
-        status.setVisible(view.status.isNotEmpty());
-        const auto lines=feedbackLines(area.getWidth());
-        status.setBounds(view.status.isNotEmpty()?juce::Rectangle<int>{0,rowBottom+spacing::tight,getWidth(),lines*controlGeometry::feedbackHeight}:juce::Rectangle<int>{});
+        const auto feedback=feedbackText();status.setVisible(feedback.isNotEmpty());
+        const auto width=getWidth()-2*actionFocusMargin;const auto lines=feedbackLines(width);
+        status.setBounds(feedback.isNotEmpty()?juce::Rectangle<int>{actionFocusMargin,rowBottom+FieldPresentation::helperGap,width,lines*FieldPresentation::helperLineHeight}:juce::Rectangle<int>{});
     }
     void lookAndFeelChanged()override{refreshFonts();}
     std::function<void()> beforeInvocation,onImport;
@@ -110,16 +111,18 @@ public:
 private:
     // The action frame contains its outside focus; its body matches the selector.
     static constexpr int actionFocusMargin=static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke);
+    juce::String feedbackText()const
+    {return view.status.isNotEmpty()?view.status:!view.editable || view.error?view.reason:juce::String{};}
     int feedbackLines(int width)
     {
-        const auto messageWidth=juce::GlyphArrangement::getStringWidth(getLookAndFeel().getLabelFont(status),view.status);
-        return view.status.containsChar('\n') || messageWidth>width?2:1;
+        const auto message=feedbackText();const auto messageWidth=juce::GlyphArrangement::getStringWidth(FieldPresentation::helperFont(),message);
+        return message.containsChar('\n') || messageWidth>width?2:1;
     }
     void refreshFonts()
     {
         // Label LookAndFeel resolves responsive typography exactly once.
         label.setFont(textFont(TextRole::controlLabel));
-        status.setFont(textFont(TextRole::helper));
+        status.setFont(FieldPresentation::helperFont());
     }
     void restoreSelection()
     {

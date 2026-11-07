@@ -224,6 +224,7 @@ public:
     }
     void verifyGestures();
     void verifyEditorBindings();
+    void verifySelectors();
     void verifyFit();
     void verifyKnobs();
     void verifyKnobResets();
@@ -382,6 +383,7 @@ private:
 
 #include "PerformGestureCases.h"
 #include "PerformEditorBindingCases.h"
+#include "SelectorBindingCases.h"
 #include "PerformFitCases.h"
 #include "PerformKnobCases.h"
 #include "PerformKnobResetCases.h"
@@ -481,6 +483,7 @@ int main(int argc,char** argv)
         if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}
         if(command=="--test-gestures"){content->composition.verifyGestures();std::cout<<"Perform grid/translation/modifier/stale-owner/source checks passed.\n";return;}
         if(command=="--test-editor"){content->composition.verifyEditorBindings();std::cout<<"Perform actual editor layout/navigation/restore/Export binding checks passed.\n";return;}
+        if(command=="--test-selectors"){content->composition.verifySelectors();std::cout<<"Actual editor selector inspection, context rejection and Settings bindings passed.\n";return;}
         if(command=="--test-fit"){content->composition.verifyFit();std::cout<<"Perform selected/pending/overlap/sparse/empty Fit checks passed.\n";return;}
         if(command=="--test-knobs"){content->composition.verifyKnobs();std::cout<<"Perform knob grid/accepted feedback/guards/focus/accessibility/font checks passed.\n";return;}
         if(command=="--test-knob-resets"){content->composition.verifyKnobResets();std::cout<<"Perform knob double-click/menu/default/initial/stale reset checks passed.\n";return;}

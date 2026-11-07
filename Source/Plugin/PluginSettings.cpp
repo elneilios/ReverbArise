@@ -179,7 +179,8 @@ void PreverbAudioProcessorEditor::layoutSettings()
     // scrolling, independent of the plugin editor's current dimensions.
     const int left=24,width=590,labelWidth=175;
     const auto row=[&](juce::Component& label,juce::Component& value,int y)
-    {label.setBounds(left,y,labelWidth,32);value.setBounds(left+labelWidth,y,width-labelWidth,32);};
+    {label.setBounds(left,y,labelWidth,32);const juce::Rectangle<int> body{left+labelWidth,y,width-labelWidth,32};
+        if(auto* selector=dynamic_cast<m3::ui::controls::ChoiceSelector*>(&value))selector->setRowBounds(body);else value.setBounds(body);};
     row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
     mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);

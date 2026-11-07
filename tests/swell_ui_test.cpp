@@ -141,6 +141,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
     {
         commandButtonCases::cases();
@@ -734,7 +735,11 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(sourceHeading && automaticHeading && sourceHeading->getFont().getHeight()==automaticHeading->getFont().getHeight());
         REQUIRE(sourceHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi") && automaticHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi"));
         for(const auto* labelName:{"learnRecaptureLabel","learnAutomaticLabel","learnIRLabel","learnSensitivityLabel"})
-        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize && learning->getLocalArea(label,label->getLocalBounds()).getX()==sourceHeading->getX());
+        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize);
+            const auto* selector=named(editor,"learnDefaultIR");REQUIRE(selector);
+            const auto expectedX=juce::String(labelName)=="learnIRLabel"
+                ?learning->getLocalArea(selector,m3::ui::controls::commandBodyBounds(selector->getLocalBounds())).getX():sourceHeading->getX();
+            REQUIRE(learning->getLocalArea(label,label->getLocalBounds()).getX()==expectedX);
             REQUIRE(label->getLookAndFeel().getLabelFont(*label).getTypefaceStyle().containsIgnoreCase("medium"));
             REQUIRE(label->findColour(juce::Label::textColourId)==m3::ui::text);}
         const auto recaptureSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"recaptureExisting")),automaticSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutomaticSwells"));
@@ -746,7 +751,9 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(sourceHeading->getY()==learning->timelineHeadingBounds().getY());
         REQUIRE(!learning->showsEmptyPrompt());
         for(const auto* labelName:{"learnRecaptureHelp","learnAutomaticHelp","learnIRStatus"})
-        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()>=14);
+        {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label);
+            if(juce::String(labelName)=="learnIRStatus")REQUIRE(label->getFont().getHeight()==m3::ui::controls::FieldPresentation::helperHeight);
+            else REQUIRE(label->getFont().getHeight()>=14);
             REQUIRE(label->getFont().getTypefaceStyle().containsIgnoreCase("regular") && label->findColour(juce::Label::textColourId)==m3::ui::learnTypography::descriptionColour);}
         REQUIRE(!learning->timelineHeadingBounds().intersects(learning->timelineCaptionBounds()) && !learning->timelineCaptionBounds().intersects(learning->timelineRulerBounds()));
         REQUIRE(!learning->timelineRulerBounds().intersects(learning->timelineBounds()) && !learning->timelineStatusBounds().intersects(learning->timelineBounds()));
@@ -854,7 +861,7 @@ int main(int argc,char* argv[]){return runTest([&]
         sensitivity->onDragStart();sensitivity->setValue(37.5,juce::sendNotificationSync);if(sensitivity->onDragEnd)sensitivity->onDragEnd();editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f);
         auto* sharedIr=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"learnIrEditor"));REQUIRE(sharedIr);
         const auto irLabelBounds=sharedIr->label.getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
-        REQUIRE(defaultIR->getY()-irLabelBounds.getBottom()==m3::ui::spacing::labelHelp);
+        REQUIRE(m3::ui::controls::commandBodyBounds(defaultIR->getBounds()).getY()-irLabelBounds.getBottom()==m3::ui::spacing::labelHelp);
         const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds();
         REQUIRE(autoStopBounds.getY()-named(editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
         REQUIRE(sharedIr->getY()-autoStopBounds.getBottom()==m3::ui::spacing::group);

@@ -62,7 +62,7 @@ private:
     std::optional<m3::ui::PresentationFitContext> reviewDisplay;
     std::optional<m3::ui::PresentationFitContext> appliedPresentationDisplay;
     juce::Point<int> appliedPresentationSize;
-    m3::ui::controls::DeliberateSelector presentationSizeBox,presentationScaleBox;
+    m3::ui::controls::ChoiceSelector presentationSizeBox,presentationScaleBox;
     juce::Label presentationSizeLabel,presentationScaleLabel,presentationHelp;
     void initialisePresentation();
     void applyPresentation();
@@ -154,7 +154,7 @@ private:
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
     m3::ui::controls::TimelineZoomControls performZoom;
     m3::ui::controls::LatchingActionButton snapButton{"Snap"};
-    m3::ui::controls::DeliberateSelector gridBox;
+    m3::ui::controls::ChoiceSelector gridBox;
     struct NavigationScope {uint64_t epoch=0,pass=0;juce::String primary;};
     std::optional<NavigationScope> navigationInvocation;
     bool navigationIntentCurrent()const;
@@ -169,7 +169,8 @@ private:
     juce::Slider auditionSlider,toneStartSlider,toneEndSlider;
     m3::ui::controls::InvocationSlider separationSlider;
     std::optional<uint64_t> markerPass,separationPass,automaticPass,markingPass,refreshPass;
-    juce::ComboBox candidateBox,inCurveBox,outCurveBox;
+    juce::ComboBox candidateBox;
+    m3::ui::controls::ChoiceSelector inCurveBox,outCurveBox;
     std::array<juce::Label,fieldCount> fieldLabels;
     std::array<juce::TextEditor,fieldCount> fields;
     juce::TextEditor barStartEditor,barEndEditor;
@@ -209,8 +210,8 @@ private:
     juce::Slider regenerationKnob;juce::Label regenerationLabel;juce::ToggleButton freezeButton{"Freeze render"};
     m3::ui::controls::InvocationSlider markerKnob;m3::ui::controls::InvocationToggle markerButton{"Auto markers"};juce::ToggleButton isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
     juce::Label markerLabel,markerState,placementLabel;juce::TextEditor placementEditor;
-    juce::ToggleButton liveButton{"Live playback"};juce::ComboBox liveRoutingBox;juce::Slider liveLevel;
-    juce::Label liveLevelLabel,gainPolicyLabel;juce::ComboBox gainPolicyBox;
+    juce::ToggleButton liveButton{"Live playback"};m3::ui::controls::ChoiceSelector liveRoutingBox;juce::Slider liveLevel;
+    juce::Label liveLevelLabel,gainPolicyLabel;m3::ui::controls::ChoiceSelector gainPolicyBox;
     juce::Slider tailSlider;
     juce::Label tailLabel;
     bool diagnosticsOpen=false;

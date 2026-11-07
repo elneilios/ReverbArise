@@ -33,6 +33,31 @@ static void workingFolderProcessorCases()
     m3::storage::Association association;juce::String base,manifest;
     REQUIRE(m3::storage::decodeAssociatedState(xml->toString(),association,base,manifest,error));
     REQUIRE(association.store==workingFolderInfo(*folder).association.store && association.writer==workingFolderInfo(*folder).association.writer);
+    {
+        // A same-folder Restore after v8 -> v9 adoption must save the active
+        // association even while the worker is held in the loading state.
+        const auto expectedManifest=manifest;
+        Input active;waitFor([&]{return processor->pinPortableAssets(active,error);});
+        std::shared_ptr<Verified> verified;REQUIRE(locateReceipt(receiptFile,verified,error));
+        REQUIRE(matchesRecoveryTarget(*verified,active,error));
+        REQUIRE(restoreCopy(verified,workingFolderInfo(*folder).projectsRoot).success);
+        processor->holdCaptureWorkerForTesting(true);
+        waitFor([&]{return processor->captureWorkerHeldForTesting();});
+        REQUIRE(processor->reloadRecoveredAssets(active,error));
+        juce::MemoryBlock duringReload;processor->getStateInformation(duringReload);
+        const auto pendingXml=juce::AudioProcessor::getXmlFromBinary(duringReload.getData(),static_cast<int>(duringReload.getSize()));
+        REQUIRE(pendingXml && pendingXml->getStringAttribute("stateVersion")=="9");
+        REQUIRE(pendingXml->getStringAttribute("projectId")==fixture.observed.project
+            && pendingXml->getStringAttribute("instanceId")==fixture.observed.instance
+            && pendingXml->getStringAttribute("manifestReference")==before.reference
+            && pendingXml->getStringAttribute("manifestRevision")==xml->getStringAttribute("manifestRevision"));
+        m3::storage::Association pendingAssociation;juce::String pendingBase,pendingManifest;
+        REQUIRE(m3::storage::decodeAssociatedState(pendingXml->toString(),pendingAssociation,pendingBase,pendingManifest,error));
+        REQUIRE(pendingAssociation.store==association.store && pendingAssociation.writer==association.writer
+            && pendingAssociation.registration==association.registration && pendingManifest==expectedManifest);
+        processor->holdCaptureWorkerForTesting(false);
+        REQUIRE(processor->flushCaptureForTesting());
+    }
     {CaptureSession verified(workingFolderInfo(*folder).projectsRoot);REQUIRE(verified.restore(before.manifest.projectId,before.manifest.instanceId,before.reference,before.manifest.revision));
     float left=0,right=0;REQUIRE(verified.readSample(0,left,right));}
     {TestDirectory unsafeRegistry;REQUIRE(unsafeRegistry.file.getChildFile("locations").createDirectory().wasOk());

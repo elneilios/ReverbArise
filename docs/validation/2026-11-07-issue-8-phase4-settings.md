@@ -187,3 +187,23 @@ UI standards passed (67 files, 59 bounded occurrences). The earlier 87/87 run
 and the host and profile checks apply to the builds recorded above. The owner
 approved skipping the additional uninterrupted rerun on the combined branch.
 The full run and focused retry together have passing results for all 87 tests.
+
+## Review fixes and selector sync
+
+Same-folder recovery now pins the accepted capture identity, manifest and folder
+association for DAW saves while the capture worker reloads. A held-worker fixture
+restores a verified backup after v8-to-v9 adoption and verifies the exact active
+store, writer, registration, capture reference and embedded manifest in the save.
+
+Export Save protects the original user-data Projects root after adoption. The
+associated export fixture attempts an explicit overwrite of a legacy managed WAV
+while both active and prepared roots point to the new store. It verifies rejection
+and checks the original WAV hash.
+
+Synced main at `954accd` and regenerated the combined user guide review. The
+Release build passed (wrapper `20261107-091548-5e22d00e`). Focused CTest passed
+**16/16 (96.25 s)**, covering the new regressions, workflow, capture, compatibility,
+portable storage and Export. UI standards passed (72 files, 59 bounded occurrences).
+Validation used disposable native fixtures without opening the host or running
+foreground UI tests. The recorded FL Studio and fresh-profile results use the
+builds identified above.

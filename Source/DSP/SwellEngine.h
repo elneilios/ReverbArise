@@ -325,6 +325,7 @@ private:
     juce::File instanceRoot(const CaptureManifest&) const;
     bool storageReady(const PreviewContext&); // Worker/offline only; never the real-time callback.
     static std::shared_ptr<Waveform> waveform(const WetRender&);
+    const juce::File legacyProjectsRoot;
     std::atomic<std::shared_ptr<const CaptureStorageLocation>> storageLocation;
     std::function<PreviewContext()> contextProvider;
     mutable juce::CriticalSection lock;

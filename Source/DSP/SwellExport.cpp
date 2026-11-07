@@ -57,7 +57,9 @@ uint64_t SwellEngine::deliverExport(uint64_t expectedSession,const ExportFile& f
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return 0;
     const auto activeLocation=storageLocation.load();const auto location=exportState.prepared->storage?exportState.prepared->storage:activeLocation;
     if(!activeLocation->writable || !location->writable){exportState.deliveryMessage="Asset working folder unavailable";return 0;}
-    if(!drag && (destination==location->managedRoot || destination.isAChildOf(location->managedRoot) || destination==activeLocation->managedRoot || destination.isAChildOf(activeLocation->managedRoot))){exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
+    const auto inside=[&](const juce::File& root){return destination==root || destination.isAChildOf(root);};
+    if(!drag && (inside(location->managedRoot) || inside(activeLocation->managedRoot) || inside(legacyProjectsRoot)))
+    {exportState.deliveryMessage="Choose a Save location outside managed plugin storage";return 0;}
     const auto id=++exportDeliverySerial;exportVoice->stop();
     exportDelivery=ExportDelivery{id,expectedSession,exportRequest.load(),workflowState->snapshot().pass,file,
         location->projectsRoot.getChildFile(exportState.prepared->plan->source.projectId).getChildFile(exportState.prepared->plan->source.instanceId),destination,overwrite,drag,location};

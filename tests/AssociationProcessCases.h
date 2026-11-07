@@ -22,6 +22,12 @@ static void associationChild(const juce::File& stateFile,const juce::File& regis
     REQUIRE(p->requestWorkflowMode(workflow::Mode::finalise));REQUIRE(engine.initializeExport());
     waitFor([&]{const auto snapshot=engine.snapshot();if(snapshot.songExport.phase==ExportPhase::error)throw std::runtime_error(snapshot.songExport.message.toStdString());return snapshot.songExport.phase==ExportPhase::ready;});
     const auto frame=p->getCaptureSnapshot();const auto session=engine.savedSession();const auto prepared=engine.snapshot().songExport.prepared;REQUIRE(prepared);
+    REQUIRE(frame.location && prepared->storage==frame.location && frame.location->association.present());
+    const auto legacyWav=registry.getChildFile(old.manifest.projectId).getChildFile(old.manifest.instanceId).getChildFile(oldRender.path);
+    const auto originalHash=fileHash(legacyWav);
+    REQUIRE(!engine.deliverExport(engine.assignmentEpoch(),prepared->file,legacyWav,true));
+    REQUIRE(engine.snapshot().songExport.deliveryMessage.contains("outside managed plugin storage"));
+    REQUIRE(fileHash(legacyWav)==originalHash);
     juce::MemoryBlock bytes;p->getStateInformation(bytes);const auto xml=juce::AudioProcessor::getXmlFromBinary(bytes.getData(),static_cast<int>(bytes.getSize()));REQUIRE(xml);
     const auto root=engine.assetDirectory();auto record=juce::var(new juce::DynamicObject);auto* values=record.getDynamicObject();
     values->setProperty("writer",frame.location->association.writer);values->setProperty("capture",frame.reference);values->setProperty("xml",xml->toString());

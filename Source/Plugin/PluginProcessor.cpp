@@ -684,10 +684,24 @@ bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::I
         || a->getStringAttribute("manifestReference")!=b->getStringAttribute("manifestReference")
         || a->getStringAttribute("manifestRevision")!=b->getStringAttribute("manifestRevision"))
     {error="The accepted session changed; recovered copies were retained without replacing current state.";return false;}
-    if(!swells->reloadStorageAssets(current.controlEpoch,b->getStringAttribute("manifestReference")))
+    auto capture=captureWorker.snapshot();
+    const auto revision=static_cast<uint64_t>(b->getStringAttribute("manifestRevision").getLargeIntValue());
+    if(capture.manifest.projectId!=b->getStringAttribute("projectId").toStdString()
+        || capture.manifest.instanceId!=b->getStringAttribute("instanceId").toStdString()
+        || capture.reference!=b->getStringAttribute("manifestReference") || capture.manifest.revision!=revision
+        || !swells->reloadStorageAssets(current.controlEpoch,capture.reference))
     {error="The session changed before reload. Copied assets remain available.";return false;}
-    captureWorker.requestRestore(b->getStringAttribute("projectId").toStdString(),b->getStringAttribute("instanceId").toStdString(),
-        b->getStringAttribute("manifestReference"),static_cast<uint64_t>(b->getStringAttribute("manifestRevision").getLargeIntValue()),workflowState.snapshot().mode,true);
+
+    // Same-folder recovery also publishes a loading frame. Keep the accepted
+    // metadata available for a DAW save until the worker publishes its result.
+    // Copy the association value without keeping an extra writer lease alive.
+    pendingHostCapture={};
+    pendingHostCapture.manifest=std::move(capture.manifest);
+    pendingHostCapture.reference=capture.reference;
+    pendingHostCapture.manifestKnown=capture.manifestKnown;
+    pendingHostAssociation=capture.location?capture.location->association:m3::storage::Association{};
+    captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,
+        pendingHostCapture.reference,revision,workflowState.snapshot().mode,true);
     error.clear();return true;
 }
 

@@ -47,5 +47,21 @@ inline void cases()
         Panel panel;panel.setSize(size.x,size.y);REQUIRE(panel.getLocalBounds().contains(panel.levels.getBounds()));
         for(auto* child:panel.levels.getChildren())REQUIRE(panel.levels.getLocalBounds().contains(child->getBounds()));
     }
+    {
+        Panel panel;panel.addToDesktop(0);panel.setVisible(true);panel.toFront(true);
+        auto& control=panel.levels;auto& selector=control.selector;unsigned changes=0,prepared=0;
+        ExportLevelsControl::Pair pair{.87321f,.45678f};control.display(pair);
+        control.beforeInvocation=[&]{++prepared;};control.onChange=[&](auto value){pair=value;++changes;};
+        const auto pump=[]{juce::MessageManager::getInstance()->runDispatchLoopUntil(40);};
+        selector.showPopup();auto* popup=selector.activePopup();REQUIRE(popup && prepared==1);
+        popup->inspect(0,true);popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+        REQUIRE(selector.isPopupActive() && changes==0 && selector.getSelectedId()==1);
+        popup->inspect(4,true);REQUIRE(changes==0 && pair==ExportLevelsControl::Pair(.87321f,.45678f));
+        popup->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));pump();REQUIRE(changes==0);
+        selector.showPopup();popup=selector.activePopup();REQUIRE(popup && prepared==2);
+        popup->inspect(4,true);popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();
+        REQUIRE(changes==1 && pair==ExportLevelsControl::Pair(1,1) && selector.getSelectedId()==5);
+        control.display(pair);REQUIRE(changes==1);
+    }
 }
 }

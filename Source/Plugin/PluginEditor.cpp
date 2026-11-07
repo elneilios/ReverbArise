@@ -55,7 +55,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         juce::SystemClipboard::copyTextToClipboard(info);
     };
     for(auto* button:std::array<juce::Button*,6>{&autoButton,&enabledButton,&muteButton,&soloButton,&mappingButton,&toneButton})addAndMakeVisible(button);
-    for(auto* box:{&candidateBox,&inCurveBox,&outCurveBox})addAndMakeVisible(box);
+    for(auto* box:std::array<juce::ComboBox*,3>{&candidateBox,&inCurveBox,&outCurveBox})addAndMakeVisible(box);
     inCurveBox.setName("fadeInCurve");outCurveBox.setName("fadeOutCurve");
     addAndMakeVisible(performZoom);addAndMakeVisible(snapButton);addAndMakeVisible(gridBox);addAndMakeVisible(listCount);
     performZoom.setName("performZoom");snapButton.setName("performSnap");gridBox.setName("performGrid");
@@ -127,6 +127,29 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     gridBox.onChange=[this]{const auto index=gridBox.getSelectedId()-1;if(navigationIntentCurrent() && index>=0 && index<static_cast<int>(m3::gridChoices.size())){timeline.setGridDivision(m3::gridChoices[static_cast<size_t>(index)].division);for(auto& cell:valueControls)cell.cancel();navigationDirty=true;publishPerformNavigation();}refreshPerformNavigation();};
     recaptureButton.onClick=[this]{armSelected();};cancelButton.onClick=[this]{processor.cancelRecapture();refresh();};
     fullButton.onClick=[this]{shapeReset(true);};resetButton.onClick=[this]{shapeReset(false);};setBarsButton.onClick=[this]{applyBarRange();};
+    // A popup inspects a snapshot. Legacy Settings commands must still refer to
+    // that session/swell when the asynchronous choice eventually returns.
+    const auto captureSelectorContext=[this](m3::ui::controls::ChoiceSelector& selector,bool perSwell)
+    {
+        const auto epoch=state.sessionEpoch,pass=processor.getWorkflowSnapshot().pass;
+        const auto primary=state.session.primary;const auto selected=state.session.selected;
+        const auto* swell=m3::find(state.session,primary);
+        const auto generation=swell?swell->inputGeneration:0;
+        const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+        selector.canCommit=[safe,epoch,pass,primary,selected,generation,perSwell]
+        {
+            if(!safe || safe->destroying || safe->updating)return false;
+            const auto current=safe->processor.swellEngine().snapshot();
+            if(current.sessionEpoch!=epoch || safe->processor.getWorkflowSnapshot().pass!=pass)return false;
+            if(!perSwell)return true;
+            const auto* target=m3::find(current.session,primary);
+            return target && current.session.primary==primary && current.session.selected==selected && target->inputGeneration==generation;
+        };
+    };
+    inCurveBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(inCurveBox,true);};
+    outCurveBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(outCurveBox,true);};
+    liveRoutingBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(liveRoutingBox,false);};
+    gainPolicyBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(gainPolicyBox,false);};
     inCurveBox.onChange=[this]{curveChanged(true);};outCurveBox.onChange=[this]{curveChanged(false);};
     const auto activity=[this]
     {if(updating)return;processor.swellEngine().edit(state.session.primary,[&](auto& w,auto&){w.enabled=enabledButton.getToggleState();w.muted=muteButton.getToggleState();w.solo=soloButton.getToggleState();return true;});};
@@ -148,6 +171,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     gainPolicyLabel.setText("Gain staging",juce::dontSendNotification);gainPolicyBox.setName("gainPolicy");
     gainPolicyBox.addItem("Legacy (original projects)",1);gainPolicyBox.addItem("Musical (source energy +6 dB)",2);
     gainPolicyBox.addItem("Saved musical prototype",3);gainPolicyBox.setItemEnabled(3,false);
+    gainPolicyBox.setChoiceReason(3,"Displayed for saved-project compatibility; choose Legacy or Musical to change policy");
     gainPolicyBox.onChange=[this]{if(!updating && gainPolicyBox.getSelectedId()!=3){processor.swellEngine().setGainPolicy(gainPolicyBox.getSelectedId()==2?m3::GainPolicy::musical:m3::GainPolicy::legacy);refresh();}};
     addAndMakeVisible(liveButton);addAndMakeVisible(liveRoutingBox);addAndMakeVisible(liveLevel);addAndMakeVisible(liveLevelLabel);
     const auto updateLive=[this]{if(!updating)processor.swellEngine().setLivePlayback(liveButton.getToggleState(),
@@ -375,7 +399,7 @@ void PreverbAudioProcessorEditor::resized()
     inspectorViewport.setBounds(inspectorArea);inspectorEmpty.setBounds(inspectorArea.reduced(10));
     const auto inspectorWidth=perform.inspector.getWidth();
     auto navigation=perform.toolbar.reduced(performGeometry::toolbarInset);
-    gridBox.setBounds(navigation.removeFromRight(performGeometry::gridWidth));navigation.removeFromRight(performGeometry::toolbarGap);
+    gridBox.setRowBounds(navigation.removeFromRight(performGeometry::gridWidth));navigation.removeFromRight(performGeometry::toolbarGap);
     snapButton.setBounds(navigation.removeFromRight(performGeometry::snapWidth));navigation.removeFromRight(performGeometry::toolbarGap);performZoom.setBounds(navigation);
     editorReadout.setBounds(perform.readout);editorReadout.setName("editorReadout");
     timeline.setBounds(perform.detail.withTrimmedTop(performGeometry::columnInset));
@@ -501,7 +525,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     valueControls[levelValue].setBounds(0,levelTop,width,valueRowHeight);
     inspectorContent.setSize(width,std::max({layout.fields.getHeight(),3*valueRowHeight,levelTop+valueRowHeight}));
     timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
-    performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setBounds(layout.grid.reduced(0,3));
+    performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setRowBounds(layout.grid.reduced(0,3));
     auto audition=layout.audition.reduced(0,contentPadding);auditionHeading.setBounds(audition.removeFromLeft(88));
     auditionButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);stopButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);
     auditionWetOnly.setBounds(audition.removeFromLeft(96));audition.removeFromLeft(contentPadding);monitorStatus.setBounds(audition);

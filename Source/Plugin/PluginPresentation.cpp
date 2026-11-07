@@ -57,9 +57,9 @@ void PreverbAudioProcessorEditor::layoutPresentationSettings()
 {
     using namespace m3::ui;
     auto area=juce::Rectangle<int>(spacing::section,spacing::section,590,240);
-    auto row=area.removeFromTop(controlGeometry::height);presentationSizeLabel.setBounds(row.removeFromLeft(175));presentationSizeBox.setBounds(row);
+    auto row=area.removeFromTop(controlGeometry::height);presentationSizeLabel.setBounds(row.removeFromLeft(175));presentationSizeBox.setRowBounds(row);
     area.removeFromTop(spacing::related);row=area.removeFromTop(controlGeometry::height);
-    presentationScaleLabel.setBounds(row.removeFromLeft(175));presentationScaleBox.setBounds(row);
+    presentationScaleLabel.setBounds(row.removeFromLeft(175));presentationScaleBox.setRowBounds(row);
     area.removeFromTop(spacing::section);presentationHelp.setBounds(area);
 }
 void PreverbAudioProcessorEditor::updatePresentationControls()

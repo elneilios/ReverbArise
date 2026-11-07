@@ -14,7 +14,7 @@ bool SwellEngine::permitCreative()
     const juce::ScopedLock guard(lock);message="Creative editing is available in Perform mode";return false;
 }
 SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
-    :Thread("Preverb Swells"),persistentChange(std::move(changed)),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context))
+    :Thread("Preverb Swells"),persistentChange(std::move(changed)),legacyProjectsRoot(path),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context))
 { if(const auto initial=contextProvider().capture.location)storageLocation.store(initial);voice.setLevel(1);startThread(); }
 SwellEngine::~SwellEngine() { signalThreadShouldExit(); sessionGeneration.fetch_add(1); stopThread(-1); }
 void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true);exportVoice->stop(true); }
