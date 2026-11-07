@@ -39,7 +39,7 @@ anchoring, cancelled menu and dialog, rename after reorder, deletion of the
 captured row after selection and order change, queued Delete across session
 replacement, and editor destruction before delivery.
 
-The integration branch also includes current merged main `ca9f7df` (PR #112).
+The initial Swells integration included merged main `ca9f7df` (PR #112).
 The offline guide combines the Swells and working-folder instructions.
 The earlier baseline run hit the existing Windows foreground prerequisites
 for the knob-reset and exact-value readability fixtures. The combined run
@@ -53,8 +53,36 @@ storage, and persistence checks. The three earlier-baseline failures
 in this run. Strict OpenSpec validation, UI standards, guide currency,
 and whitespace checks also passed.
 
-OpenSpec is at 5/9 tasks. The Swells menu is implemented and verified.
-The Reset hookup and its binding tests still await #108 coordination. The
-combined documentation, final validation, and review-ready delivery tasks
-remain open for that seam. The Windows fixture and software-scale results
-are distinct from physical Windows DPI and FL Studio interaction coverage.
+### Reset hookup after #108
+
+PR #110 landed in `4cf96d0`. The action-menu branch integrates that baseline
+and keeps Level's approved revision 15, fixed edit range, legacy gain and reset
+provider. Action menus use revision 16. The new Reset popup captures the
+existing provider label and closure and anchors at the right-click point.
+Pointer dismissal and activation return keyboard focus with the dial's brackets
+suppressed. Keyboard or accessibility activation can restore those brackets.
+The scope is the popup return, with ordinary dial input using the existing policy.
+
+The built native `preverb_perform_composition_preview --test-knob-resets`
+passed on `e9c3bbe`. It covers pointer, keyboard and accessibility activation,
+initial/default/automatic effects, anchor and focus ink, unavailable selection,
+legacy gain dismissal, and queued supersession after selection, session,
+source/input, workflow pass, timing, reset revision, freeze or editor destruction.
+The Windows fixture and software-scale results are distinct from physical DPI
+and FL Studio interaction coverage.
+
+The combined Windows/MSVC Release wrapper at `e9c3bbe` on main `4cf96d0`
+passed configure/build and 97/98 CTests in run `20261107-135341-652219e9`
+(401.19 seconds). The only failure was the Reset fixture's foreground
+prerequisite (`peer=1 foreground=0`), before any Reset assertions. The first
+focused CTest retry hit the same prerequisite. The final focused CTest passed
+1/1 in 10.96 seconds on the same binary, with the foreground assertion intact.
+The fixture finished before the planned window activation. All 98 cases
+have a passing result at the same runtime revision across these runs.
+
+The passing coverage includes Swells and Reset bindings, fixed Level and
+audio paths, and storage and persistence regressions. UI standards passed
+with 73 files and 59 bounded occurrences. Strict change validation, guide
+currency, whitespace and changed Markdown file links passed. The final
+branch diff scopes production work to the shared popup and its Swells and
+Reset hookups.

@@ -13,12 +13,12 @@
 ## 3. Bounded action-menu adoption
 
 - [x] 3.1 Adopt the shared presenter for Swells-list Rename/Delete while retaining existing closures, ID/name/epoch and rename dialog; verify actual binding tests for right-click and three-dot opening, one-shot activation, stale epoch, destroyed owner, cancellation, captured target, anchors and unchanged Rename/Delete effects, and update its inventory/evidence.
-- [ ] 3.2 Integrate only the per-value reset popup hookup in KnobValue after resolving any live #108 file overlap, leaving providers/ranges/precision/reset values unchanged; extend PerformKnobResetCases to verify initial/default/automatic resets, pointer/keyboard/accessibility once, selection/session/source/input/pass/reset-revision supersession, owner destruction and popup focus/anchor behavior. Keep this task pending while its seam remains unintegrated.
-- [ ] 3.3 Update approved standards revision, contracts, exact menu inventory and dated evidence for adopted seams; semantically review the offline guide and any needed prose, then verify currency and links. Record remaining native/list/navigation/#8 debt without claiming whole-family or host coverage beyond evidence.
+- [x] 3.2 Integrate only the per-value reset popup hookup in KnobValue after resolving any live #108 file overlap, leaving providers/ranges/precision/reset values unchanged; extend PerformKnobResetCases to verify initial/default/automatic resets, pointer/keyboard/accessibility once, selection/session/source/input/pass/reset-revision supersession, owner destruction and popup focus/anchor behavior. Keep this task pending while its seam remains unintegrated.
+- [x] 3.3 Update approved standards revision, contracts, exact menu inventory and dated evidence for adopted seams; semantically review the offline guide and any needed prose, then verify currency and links. Record remaining native/list/navigation/#8 debt without claiming whole-family or host coverage beyond evidence.
 
 ## 4. Combined integration and review delivery
 
-- [ ] 4.1 Integrate current merged main and the independently delivered #108 baseline where necessary without altering its semantics; run scripts/build.ps1 -Configuration Release -Test, scripts/check-ui-standards.ps1, strict change validation, guide currency and whitespace/link checks. Record revision/environment/results and protected command/audio/persistence regressions, separately from physical DPI/host gaps.
+- [x] 4.1 Integrate current merged main and the independently delivered #108 baseline where necessary without altering its semantics; run scripts/build.ps1 -Configuration Release -Test, scripts/check-ui-standards.ps1, strict change validation, guide currency and whitespace/link checks. Record revision/environment/results and protected command/audio/persistence regressions, separately from physical DPI/host gaps.
 - [ ] 4.2 Deliver a separate review-ready action-menu PR using Refs #107; verify its diff contains only shared action-menu extension and the two named popup adoption seams, with native approval/evidence and no #8/#108 implementation scope.
 
 ## Workflow follow-up
