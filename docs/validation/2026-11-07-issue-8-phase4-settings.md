@@ -174,3 +174,15 @@ Associated v9 FLPs require a reader that supports v9.
 Tasks 4.1, 4.3 and 4.4 were completed with guarded Apply refreshes, bringing the
 active change to 24/36 complete. Issue #8 stays open for the separately gated
 phases 5/6.
+
+## Regression after syncing main
+
+Merged main at `89da1e7` and regenerated the user guide review record. The
+combined Release build at `4b54774` passed. Wrapper `20261107-084355-2085df8d`
+passed 86/87 tests (392.31 s), including all phase 4 storage, compatibility and
+recovery tests. The knob-reset fixture timed out waiting for native foreground
+focus (`peer=1 foreground=0`). Its focused CTest retry passed 1/1 (11.96 s) with
+the original focus assertion. No automated foreground intervention was used.
+UI standards passed (67 files, 59 bounded occurrences). The earlier 87/87 run
+and the host and profile checks apply to the builds recorded above. The PR stays
+draft pending a single uninterrupted full pass on the combined branch.
