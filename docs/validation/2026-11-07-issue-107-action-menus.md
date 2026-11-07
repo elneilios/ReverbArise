@@ -86,3 +86,7 @@ with 73 files and 59 bounded occurrences. Strict change validation, guide
 currency, whitespace and changed Markdown file links passed. The final
 branch diff scopes production work to the shared popup and its Swells and
 Reset hookups.
+
+[PR #119](https://github.com/elneilios/ReverbArise/pull/119) is ready for
+review and references umbrella issue #107. The completed OpenSpec change
+remains active for review and later sync/archive.

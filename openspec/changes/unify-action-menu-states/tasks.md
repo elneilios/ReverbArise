@@ -19,7 +19,7 @@
 ## 4. Combined integration and review delivery
 
 - [x] 4.1 Integrate current merged main and the independently delivered #108 baseline where necessary without altering its semantics; run scripts/build.ps1 -Configuration Release -Test, scripts/check-ui-standards.ps1, strict change validation, guide currency and whitespace/link checks. Record revision/environment/results and protected command/audio/persistence regressions, separately from physical DPI/host gaps.
-- [ ] 4.2 Deliver a separate review-ready action-menu PR using Refs #107; verify its diff contains only shared action-menu extension and the two named popup adoption seams, with native approval/evidence and no #8/#108 implementation scope.
+- [x] 4.2 Deliver a separate review-ready action-menu PR using Refs #107; verify its diff contains only shared action-menu extension and the two named popup adoption seams, with native approval/evidence and no #8/#108 implementation scope.
 
 ## Workflow follow-up
 
