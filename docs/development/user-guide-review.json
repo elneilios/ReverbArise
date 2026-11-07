@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed synced audit/contracts and approved command-button requirements against the implemented shared controls and existing guide focus/activation guidance. Archive-only closeout; no guide prose changes needed.",
+  "summary": "Reviewed the synced selector requirements against the approved implementation and the offline dropdown instructions. Existing guide prose remains accurate after the spec sync and archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31110,
-      "sha256": "b31c2cfe5aaf4a877f15e876e09ba218816bf242fc96ac79a3c340602e92f62b"
+      "bytes": 31579,
+      "sha256": "8f29c94a778e9b185cac3daec0d96cdc935c3afa848ae1bc2ece94a0bddc21c8"
     },
     {
       "path": "CMakePresets.json",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86614,
-      "sha256": "fa5686308d474133a4aa2b267780a449521d1fb964136fd299136ed3f5800fd7"
+      "bytes": 88471,
+      "sha256": "fba249c2bb241fc5f7d7c14139bd281169aee6713fc8e3f4adf0abaf4c2ebdef"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13443,
-      "sha256": "fb6a45d75626809820f3b3c61a90c9480bd7ff8e0aacce8cb51d639c7b2a8dad"
+      "bytes": 13509,
+      "sha256": "0e491d32e693ac032d1b385118fc71f0dc2197601b7830a6dd52117d5576ed15"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
-      "bytes": 8801,
-      "sha256": "7839b62d1e6ec9f535bf1b887b9409ad2b569cdddb65a57152a282e12dbc9910"
+      "bytes": 8807,
+      "sha256": "eb5ad3f320af14f4ca30fa4a09f6f9dfd53ae60218cdfe016bd0ff3a5977fec0"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -530,8 +530,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 21989,
-      "sha256": "a28fcc91bdace8e0f7095139abd7117b3c7d7f590b58f6612e5a1ced10b36663"
+      "bytes": 22144,
+      "sha256": "cedb4b1c6d28c8db82ab856e3eeb75803703190eeb5ad013f99d4e9604714e6d"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -564,9 +564,19 @@
       "sha256": "bbaae8202e61f32e7470ceada0c3ca24dd926021eb9386957baf8115499cc077"
     },
     {
+      "path": "Source/UI/Controls/ChoicePopup.h",
+      "bytes": 13021,
+      "sha256": "ef7ad19d5f58ecb373aa046fb9d56a07187615d00cda320ae5a562fb5a90f227"
+    },
+    {
+      "path": "Source/UI/Controls/ChoiceSelector.h",
+      "bytes": 10207,
+      "sha256": "019df5248d072fa7f291aa4fd7f63a77c9c40d47c54dc5f817dee01b0aa40b80"
+    },
+    {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
-      "bytes": 6679,
-      "sha256": "7df2d339dc53e81d33e51afa5902ed6ecccccb32c6e9c548420e836266dcf91e"
+      "bytes": 7137,
+      "sha256": "13b4ee6a986df7807d6dce0830c9a6d67878d022c2a1910bbc6a37eeec8ebcee"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",
@@ -580,13 +590,18 @@
     },
     {
       "path": "Source/UI/Controls/ExportLevelsControl.h",
-      "bytes": 4560,
-      "sha256": "2f41da3503dec777537959dae2ea5e755667602e26a7caf2f97f1da73e78aa86"
+      "bytes": 4783,
+      "sha256": "07f9b739b879d0a146b4d2ad053960ffd773cef4628b9cc041b14f5dc6f230f5"
     },
     {
       "path": "Source/UI/Controls/ExternalFileDrag.h",
       "bytes": 736,
       "sha256": "ed5c1e663a6a7d43692ab4177afc29d93d4eb4bea76d4e154a94a368535e5528"
+    },
+    {
+      "path": "Source/UI/Controls/FieldPresentation.h",
+      "bytes": 891,
+      "sha256": "0f79114ef495363b721906159129f1030a83287d536802d7b1a6048119fd347e"
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
@@ -625,8 +640,8 @@
     },
     {
       "path": "Source/UI/Controls/IrSelector.h",
-      "bytes": 286,
-      "sha256": "f61d9a13e27837a5817cd748d6cc9a2e2fedf6e8d5ea3c365d0fc14d126ded83"
+      "bytes": 278,
+      "sha256": "b343530638bacb8ed2ec3f5b426162a47b4fb425daca4280d2cf0b2a88eac238"
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
@@ -654,6 +669,11 @@
       "sha256": "809389cd76d9b29dd73a9a37af84cbbc3e5d968042416b6abac6397b7418ce84"
     },
     {
+      "path": "Source/UI/Controls/PopupInteraction.h",
+      "bytes": 1850,
+      "sha256": "3e4cd7806e7aab2aa88c219592d0047c4d7a8be107291620f9722da6b8433300"
+    },
+    {
       "path": "Source/UI/Controls/PresentationSurface.h",
       "bytes": 1232,
       "sha256": "d45c47f9cf1bc541557533f8ee794afc18f984a5464e869f8ca0e9e69d472804"
@@ -662,6 +682,11 @@
       "path": "Source/UI/Controls/SegmentedSelector.h",
       "bytes": 9288,
       "sha256": "6099f5492d317dd114f9ad8c6bfce0de6a58d9b1bcd99d2c920bd89433eca1bc"
+    },
+    {
+      "path": "Source/UI/Controls/SelectorPresentation.h",
+      "bytes": 1818,
+      "sha256": "3e85d6f6503c665616efb24cd2494d19ce145fc9d296d472566222b9f233e20b"
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",
@@ -875,8 +900,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 25570,
-      "sha256": "0a12728989f24cb484311e53a83497b15595859f47ee7fb38a2fba842a238fd7"
+      "bytes": 26332,
+      "sha256": "5b23a8eb3d4e442852ad7153c752a8a3c0a29c3bb04ab4493f13a03edce25dea"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -985,8 +1010,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 18971,
-      "sha256": "73a6f278d6d6346145d9c36b205f7f24d9bcd0811aebe14aaf27fc5521711cef"
+      "bytes": 25764,
+      "sha256": "113b0eb1b7ec4d3e8064743e8fe1665826437b700ad0050d3bff51f5a3d630f7"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

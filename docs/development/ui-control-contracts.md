@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, 6 November 2026; production standards revision 13.**
+**Owner-approved contracts, updated 7 November 2026; production standards revision 14.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -146,6 +146,60 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
+### C2 approved implementation — 2026-11-07
+
+`Controls/ChoiceSelector.h` extends the existing deliberate selector as an explicit
+adoption seam. `ChoicePopup` owns a one-level anchored popup; `PopupInteraction`
+separates pointer inspection, keyboard navigation, held state and the accepted
+checkmark. A pointer departure clears only hover; any valid keyboard inspection
+remains. Pointer focus never creates a sticky row background. Choice completion
+is one-shot, with the original binding still deciding acceptance.
+
+When keyboard focus leaves the popup, cancel immediately and close after the
+native focus transfer. Outside dismissal leaves focus on its new recipient,
+including a native host control in the same process.
+
+`setRowBounds` reserves the outside focus frame around an existing visible body
+row. `canCommit` is an optional read-only predicate captured after
+`beforeInvocation`; Settings bindings use it to reject a changed session/pass or
+selected swell before the original command runs. The control owns no engine.
+
+The popup's root owns real keyboard focus while unavailable child rows remain
+disabled and accessible. Keyboard/accessibility inspection can reach such a row,
+but neither its press action nor Return/Space grants permission to select it.
+This avoids treating an inspectable row as an enabled command. Silent refresh,
+catalogue changes and deferred completion retain captured identity/lifetime guards.
+`setChoiceReason` associates provider-supplied reasons with stable item IDs;
+disabled Export Custom remains an accepted display value, never a preset command.
+
+`SelectorPresentation` owns **native-approved popup-only metrics**: width 220–420,
+outer padding 4, row padding 8 and check column 22 logical units. Popup fonts and
+composition follow the source's user transform; OS DPI remains JUCE's concern.
+Existing command bracket stroke/gap and body geometry are reused. Raised/held
+surfaces derive from existing background/outline colours; no raw palette or
+global popup colour override is introduced. Scoped native family approval was
+recorded on 2026-11-07; standards revision 14 governs explicit consumer adoption.
+
+Owner feedback approved the **red message plus red body border** field treatment
+on 2026-11-07. `FieldPresentation` owns the initial small local feedback policy:
+12-height Inter Regular, 17-height line box and 4-unit gap from the visible body,
+left-aligned with that body. `ChoiceSelector::setValidationMessage` accepts a
+binding-supplied error without parsing input or changing selection. Error border
+ink stays red during hover/held feedback; outside focus brackets remain aqua.
+The preview replaces routine guidance with the local error, keeps disabled
+explanations readable and restores normal help after a valid simulated choice.
+These roles were approved in the updated native fixture; production adoption is scoped to the C2 change.
+
+Preview: `preverb_selector_popup_test --review-selectors`; focused checks use the
+same executable without arguments. The fixture offers size/scale and normal,
+dense, empty and unavailable/error scenes. Adopted consumers are Learn/Perform IR,
+Perform grid, Export Character, Appearance size/scale, Playback routing/gain policy
+and Swell fade-in/out curve. All use deliberate no-wheel selection and silent
+accepted refresh. Control values retain the approved minimum height 13 above
+12-height feedback. The approved browser design and native owner acceptance are
+recorded in `unify-selector-states`. #108 Level, #8 recovery and
+storage/working-folder controls, C1 buttons and action-menu adoption are separate.
+
 ## C6 — Switches and toggles
 
 Observed owners: [Switch](../../Source/UI/Controls/Switch.h), InvocationToggle,
@@ -236,6 +290,21 @@ feedback, accessible associations/full descriptions, disabled input with readabl
 error, context-help inheritance into nested/auxiliary controls, notice precedence
 and no-forced-speech source/interaction checks. Reuse UiStandards, WorkspaceNotice,
 WorkspaceFeedback, WorkflowHeader and responsive cases, plus #109 field cases.
+
+### Approved field anatomy — 2026-11-07
+
+Use the owner-approved small helper text directly beneath the input body, aligned
+with its left edge. A binding-supplied error replaces routine guidance with red
+text and a red body border; keyboard/accessibility focus decoration stays aqua
+and separate. Helper/error text wraps without shrinking and stays readable when
+the input is disabled. Disabled state alone is not a validation error. Do not
+introduce a new validation, parsing or commit rule through this presentation.
+
+The initial `FieldPresentation` policy is exercised by the C2 selector preview
+(12-height Inter, 17-height line box, 4-unit gap). This records shared design
+intent for dropdowns and inputs; it does not migrate C4 editors, change #108
+Level behavior or override reviewed density/legibility policies. Text/numeric
+input adoption and any compact-role adjustment belong to their own scoped jobs.
 
 ## C4 — Numeric and text fields
 
@@ -354,7 +423,7 @@ native review must use the actual prepared fixture and retain one review window.
 | Policy | Current authority / disposition |
 | --- | --- |
 | Neutral/primary/destructive/latching command state | Shared resolver/roles and IR geometry approved at revision 12; keyboard/accessibility-only decoration approved at revision 13; shared C1 implementation, other families retain their staged jobs |
-| No-wheel IR/deliberate selector | Existing DeliberateSelector and UI standards; plain Settings boxes remain P2 debt |
+| No-wheel selector | ChoiceSelector explicit C2 consumers approved at revision 14; Recovery candidateBox and action menus remain separate debt |
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
 | Stable fixed transport typography and bounded notice wrapping | Production guide revisions 6/7 and no-forced-speech spec; not generic text shrink permission |
