@@ -227,3 +227,11 @@ The supported Release build and all 87 CTest checks passed with the fix applied
 in run `20261107-085044-f912bb88` (241.82 s). UI standards, strict selector
 OpenSpec validation and guide currency passed. The focus regression ran in the
 native Win32 fixture. FL Studio interaction remains unverified for this follow-up.
+
+### Spec closeout
+
+After owner approval of PR #117, five selector requirements were synced into the
+canonical UI design-system spec. The completed selector change was archived at
+`openspec/changes/archive/2026-11-07-unify-selector-states`. All 18 main specs
+passed validation. The final diff contains spec, archive, and documentation
+changes. The 87 passing native Release tests above cover the runtime code.

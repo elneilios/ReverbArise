@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed selector dismissal against the approved choice contract and offline keyboard instructions. Native focus transfer now cancels the dropdown and keeps focus on the receiving control. The existing guide remains accurate.",
+  "summary": "Reviewed the synced selector requirements against the approved implementation and the offline dropdown instructions. Existing guide prose remains accurate after the spec sync and archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1010,8 +1010,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 18971,
-      "sha256": "73a6f278d6d6346145d9c36b205f7f24d9bcd0811aebe14aaf27fc5521711cef"
+      "bytes": 25764,
+      "sha256": "113b0eb1b7ec4d3e8064743e8fe1665826437b700ad0050d3bff51f5a3d630f7"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
