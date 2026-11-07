@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed production association/recovery behavior and Settings bindings against the updated guide, including coherent saves, explicit copy/adoption and normal Learn guidance. Capture checksum fix only corrects BCrypt buffer lifetime without changing file format or user workflow; no further prose change needed. Native/profile/host limits remain recorded separately.",
+  "summary": "Reviewed the combined command button keyboard focus guidance from main and the phase 4 Storage instructions for verified folder switching, recovery and rollback. The guide covers both sets of production bindings.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -510,8 +510,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13055,
-      "sha256": "bfe50fa4968c9761aa254fcba5d4562c8ff313fd053b20b9d6f6dd054bf7e445"
+      "bytes": 13443,
+      "sha256": "fb6a45d75626809820f3b3c61a90c9480bd7ff8e0aacce8cb51d639c7b2a8dad"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -570,13 +570,13 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 3814,
-      "sha256": "f4f456d1375937bbe4421b32703477e5152659694e1778266dddb90dd267cab7"
+      "bytes": 7901,
+      "sha256": "bbaae8202e61f32e7470ceada0c3ca24dd926021eb9386957baf8115499cc077"
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
-      "bytes": 6359,
-      "sha256": "266253d1226e7ef8d7a0a617cd420ecc20e25ffbb6673bb0174edf1230896b19"
+      "bytes": 6679,
+      "sha256": "7df2d339dc53e81d33e51afa5902ed6ecccccb32c6e9c548420e836266dcf91e"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",
@@ -609,14 +609,19 @@
       "sha256": "19c53fde561af00945450ef3c7c85b802a232da8bf4d8451bfc7563b7f343140"
     },
     {
+      "path": "Source/UI/Controls/FocusVisibility.h",
+      "bytes": 1907,
+      "sha256": "732892a2eecc2bbda33bba7a3edcefddd9b026e6a9a4cf2a86c3a4ec41f15cb8"
+    },
+    {
       "path": "Source/UI/Controls/HeaderInformation.h",
       "bytes": 1305,
       "sha256": "1c82bc370403437e53e26223272dd06616698f454102201ea7d42ecc07b8e8ea"
     },
     {
       "path": "Source/UI/Controls/IconActionButton.h",
-      "bytes": 2330,
-      "sha256": "51d4070b3661a28f37a45d376fa848b42b1e1633917d1e49438b460dec78ffa9"
+      "bytes": 1917,
+      "sha256": "d01d40b20a8f42926fd2ec17ae955c5b2897e85486ef26a22c37e94afe3c63d2"
     },
     {
       "path": "Source/UI/Controls/InvocationSlider.h",
@@ -635,8 +640,8 @@
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
-      "bytes": 1413,
-      "sha256": "6b6d0b0699a477fb38a9320ed9852f4d8c2db244188ec4887864151d763a5186"
+      "bytes": 593,
+      "sha256": "bbbe1a07550ddf523e2ddf8ed14584c2b67cc5069ea62c4d328fa077b636a7a2"
     },
     {
       "path": "Source/UI/Controls/ModeIcon.h",
@@ -855,8 +860,8 @@
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 15898,
-      "sha256": "c8a0af484b1b0aa3cc8110eee243a1143d8a7e4641cce1b4d71b6574533270b8"
+      "bytes": 17034,
+      "sha256": "f9cb6a568756e21fcf451caeccfebba1bff118dda3aa338af66ad959b83f9ae1"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -885,8 +890,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 26546,
-      "sha256": "95ed4195dea8beb30504ebce82b134491c095173459e22186fdbe2084b1638d4"
+      "bytes": 27023,
+      "sha256": "ba93f63e140bb4498c1c093d8cce1124290e26a6dd2a6684692f81b7e4bcaead"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -995,8 +1000,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 9242,
-      "sha256": "b17ef520092016e35dfe5e69b32d356ba40225dea6f5b2d9b2a2c29b1a16f8c9"
+      "bytes": 18971,
+      "sha256": "73a6f278d6d6346145d9c36b205f7f24d9bcd0811aebe14aaf27fc5521711cef"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
@@ -1075,8 +1080,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32785,
-      "sha256": "3c7e6b7b27189797451a467cec0eb4090c7cd331aa82f97273875c6456b86b7d"
+      "bytes": 32784,
+      "sha256": "83153e866cb9d740d7ba6a4e3c0b1d3bc9892aba7c3a49299684d8e9f20f2205"
     }
   ]
 }

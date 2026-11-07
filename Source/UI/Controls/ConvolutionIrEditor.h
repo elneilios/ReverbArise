@@ -83,7 +83,7 @@ public:
     {
         refreshFonts();
         return responsiveGeometry::captionHeight+spacing::labelHelp+responsiveGeometry::controlHeight
-            +(view.status.isEmpty()?0:spacing::tight+feedbackLines(width)*controlGeometry::feedbackHeight);
+            +(view.status.isEmpty()?actionFocusMargin:spacing::tight+feedbackLines(width)*controlGeometry::feedbackHeight);
     }
     void resized()override
     {
@@ -91,14 +91,15 @@ public:
         auto area=getLocalBounds();
         label.setBounds(area.removeFromTop(responsiveGeometry::captionHeight));area.removeFromTop(spacing::labelHelp);
         auto row=area.removeFromTop(responsiveGeometry::controlHeight);
-        fileButton.setBounds(row.removeFromRight(responsiveGeometry::controlHeight));row.removeFromRight(spacing::tight);selector.setBounds(row);
+        const auto rowBottom=row.getBottom();
+        fileButton.setBounds(row.removeFromRight(responsiveGeometry::controlHeight+2*actionFocusMargin).expanded(0,actionFocusMargin));
+        row.removeFromRight(spacing::tight);selector.setBounds(row);
         // Label, input/action row and supporting text form one visual field.
         // Empty feedback occupies no space; hosts reflow adjacent fields using
         // preferredHeight(width) when a message appears or wraps.
-        area.removeFromTop(spacing::tight);
         status.setVisible(view.status.isNotEmpty());
         const auto lines=feedbackLines(area.getWidth());
-        status.setBounds(view.status.isNotEmpty()?area.removeFromTop(lines*controlGeometry::feedbackHeight):juce::Rectangle<int>{});
+        status.setBounds(view.status.isNotEmpty()?juce::Rectangle<int>{0,rowBottom+spacing::tight,getWidth(),lines*controlGeometry::feedbackHeight}:juce::Rectangle<int>{});
     }
     void lookAndFeelChanged()override{refreshFonts();}
     std::function<void()> beforeInvocation,onImport;
@@ -107,6 +108,8 @@ public:
     IconActionButton fileButton{ActionIcon::openFile};
     EllipsisLabel label;FieldMessage status;
 private:
+    // The action frame contains its outside focus; its body matches the selector.
+    static constexpr int actionFocusMargin=static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke);
     int feedbackLines(int width)
     {
         const auto messageWidth=juce::GlyphArrangement::getStringWidth(getLookAndFeel().getLabelFont(status),view.status);

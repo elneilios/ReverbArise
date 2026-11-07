@@ -230,7 +230,7 @@ static void aboutBindings(bool review=false)
     const auto fill=[&](bool over,bool down){juce::Image image(juce::Image::ARGB,copy->getWidth(),copy->getHeight(),true);
         {juce::Graphics graphics(image);copy->paintButton(graphics,over,down);}return image.getPixelAt(8,8);};
     const auto normal=fill(false,false),hover=fill(true,false),pressed=fill(true,true);
-    REQUIRE(normal==m3::ui::aqua && hover==m3::ui::hover && pressed==m3::ui::hover && normal!=hover);
+    REQUIRE(normal==m3::ui::aqua && hover==m3::ui::hover && pressed==m3::ui::aqua && normal!=hover);
     copy->setEnabled(false);REQUIRE(fill(false,false)!=normal);copy->setEnabled(true);
     controlReview::pointerClick(*copy);REQUIRE(copiedInformation==juce::String(m3::build::report()));
     REQUIRE(status->getText().contains("Build information copied to clipboard."));

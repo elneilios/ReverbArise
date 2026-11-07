@@ -78,11 +78,11 @@ void Composition::verifyEditorBindings()
     REQUIRE(require<ExportWorkspace>(*panel,"exportWorkspace").isVisible() && !zoom.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
     REQUIRE(panel->timelineComponent().viewport().first==revealed.first && panel->timelineComponent().viewport().last==revealed.last);
-    snap.beforeInvocation();snap.triggerClick();juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    REQUIRE(snap.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(!panel->timelineComponent().requestedSnap() && !engine.savedSession().performUi.snap && !snap.getToggleState());
     panel->modifierKeysChanged(juce::ModifierKeys::ctrlModifier);panel->modifierKeysChanged({});
     REQUIRE(!snap.getToggleState() && !engine.savedSession().performUi.snap);
-    snap.beforeInvocation();snap.triggerClick();juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    REQUIRE(snap.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(snap.getToggleState() && engine.savedSession().performUi.snap);
     struct Notifications final:juce::AudioProcessorListener
     {
@@ -127,4 +127,18 @@ void Composition::verifyEditorBindings()
     const auto after=engine.savedSession();REQUIRE(after.swells.size()==saved.swells.size());
     for(size_t n=0;n<saved.swells.size();++n)
     {const auto& a=saved.swells[n];const auto& b=after.swells[n];REQUIRE(a.id==b.id && a.render==b.render && a.ir==b.ir && a.shape==b.shape && a.arrival==b.arrival && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd);}
+    // Production reset buttons retain their model boundary through keyboard input.
+    const auto id=after.primary;REQUIRE(engine.edit(id,[](auto& swell,auto&){swell.shape.gainDb=-7;return true;}));panel->refresh();
+    const auto edited=*m3::find(engine.savedSession(),id);
+    auto& reset=require<controls::ActionButton>(*panel,"resetWetShape");
+    REQUIRE(reset.isEnabled() && reset.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
+    const auto resetShape=*m3::find(engine.savedSession(),id);
+    REQUIRE(resetShape.shape.gainDb==0 && resetShape.id==edited.id && resetShape.ir==edited.ir && resetShape.render==edited.render);
+    REQUIRE(resetShape.sourceStart==edited.sourceStart && resetShape.sourceEnd==edited.sourceEnd);
+    auto& resetAll=require<controls::ActionButton>(*panel,"resetSwellMenu");
+    REQUIRE(resetAll.getTitle()=="Reset All");
+    REQUIRE(resetAll.isEnabled() && resetAll.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
+    REQUIRE(m3::find(engine.savedSession(),id)->id==id && processor->getCaptureSnapshot().manifest.revision==captureRevision);
 }

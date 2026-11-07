@@ -12,6 +12,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 #include <map>
+#include <source_location>
 #if JUCE_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -30,12 +31,12 @@ static juce::Component* find(juce::Component& root,const juce::String& name)
 }
 template<class T>static T& require(juce::Component& root,const juce::String& name)
 {auto* result=dynamic_cast<T*>(find(root,name));if(!result)throw std::runtime_error("Missing native fixture control: "+name.toStdString());return *result;}
-template<class F>static void wait(F predicate)
+template<class F>static void wait(F predicate,const std::source_location location=std::source_location::current())
 {
     const auto end=juce::Time::getMillisecondCounter()+30000;
     while(!predicate() && juce::Time::getMillisecondCounter()<end)
         juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
-    REQUIRE(predicate());
+    if(!predicate())throw std::runtime_error("Native preview wait timed out at "+std::string(location.file_name())+":"+std::to_string(location.line()));
 }
 struct Head final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -234,6 +235,12 @@ public:
     void verifyResponsiveScale();
     std::unique_ptr<PreverbAudioProcessorEditor> productionEditor()
     {stopTimer();return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
+    void failIrForReview()
+    {
+        setScene(0);const auto invalid=directory.file.getChildFile("Invalid review IR.wav");
+        REQUIRE(invalid.replaceWithText("Invalid native review fixture"));processor->swellEngine().loadIR(invalid);
+        wait([&]{const auto state=processor->swellEngine().savedSession();const auto* selected=m3::find(state,state.primary);return selected && selected->phase==m3::Phase::error;});
+    }
     void refresh()
     {
         editor->refresh();const auto state=processor->swellEngine().snapshot();
@@ -312,8 +319,8 @@ public:
             }
         }
         area.removeFromTop(12);auto reset=area.removeFromTop(34);
-        require<juce::TextButton>(*content,"resetWetShape").setBounds(reset.removeFromLeft((reset.getWidth()-8)/2));reset.removeFromLeft(8);
-        require<juce::TextButton>(*content,"resetSwellMenu").setBounds(reset);
+        require<m3::ui::controls::ActionButton>(*content,"resetWetShape").setBounds(reset.removeFromLeft((reset.getWidth()-8)/2));reset.removeFromLeft(8);
+        require<m3::ui::controls::ActionButton>(*content,"resetSwellMenu").setBounds(reset);
     }
     void paint(juce::Graphics& g)override
     {
@@ -412,11 +419,12 @@ public:
         if(irReview){require<controls::SegmentedSelector>(*editor,"learnSections").onRequest(2);require<controls::SegmentedSelector>(*editor,"inspectorSections").onRequest(3);}
         addAndMakeVisible(scenes);addAndMakeVisible(sizes);addAndMakeVisible(note);
         scenes.addItemList({"Sparse / selected","Empty swells","Dense / long labels"},1);scenes.setSelectedId(1,juce::dontSendNotification);
-        scenes.onChange=[this]{fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
-        if(compact)sizes.addItemList({"900 x 600","1000 x 700","1100 x 850","1400 x 900"},1);
+        if(compact)scenes.addItem("Invalid IR / unavailable",4);
+        scenes.onChange=[this]{if(scenes.getSelectedId()==4)fixture->composition.failIrForReview();else fixture->composition.setScene(scenes.getSelectedId()-1);editor->refresh();};
+        if(compact)sizes.addItemList({"900 x 600","1000 x 700","1100 x 850","1400 x 1000"},1);
         else sizes.addItemList({"1100 x 850","1400 x 900","1400 x 1000","1600 x 1000"},1);
         sizes.setSelectedId(1,juce::dontSendNotification);
-        sizes.onChange=[this,compact]{const std::array<juce::Point<int>,4> dimensions=compact?std::array<juce::Point<int>,4>{{{900,600},{1000,700},{1100,850},{1400,900}}}:std::array<juce::Point<int>,4>{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];if(compact){editor->setPresentationSize(size.x,size.y);setSize(editor->getWidth(),editor->getHeight()+44);}else setSize(size.x,size.y+44);};
+        sizes.onChange=[this,compact]{const std::array<juce::Point<int>,4> dimensions=compact?std::array<juce::Point<int>,4>{{{900,600},{1000,700},{1100,850},{1400,1000}}}:std::array<juce::Point<int>,4>{{{1100,850},{1400,900},{1400,1000},{1600,1000}}};const auto size=dimensions[static_cast<size_t>(sizes.getSelectedId()-1)];if(compact){editor->setPresentationSize(size.x,size.y);setSize(editor->getWidth(),editor->getHeight()+44);}else setSize(size.x,size.y+44);};
         applyTextRole(note,TextRole::helper);note.setText(irReview?"#80 | Shared IR in Learn / Perform Sound | no audio device":compact?"#58 combined #51 / #68 / #73 / #93 | no audio device":selectionReview?"#93 | Select a swell to auto-Fit | Pan/zoom away and re-click to Fit again | no audio device":slimAudition?"Perform clarity checkpoint | 52 px audition strip | no audio device":"Integrated Perform | Snap/grid connected | no audio device",juce::dontSendNotification);setSize(compact?900:1100,compact?644:894);
         if(selectionReview){auto& zoom=require<controls::TimelineZoomControls>(*editor,"performZoom");zoom.beforeInvocation();zoom.onZoomFraction(.55);}
     }
@@ -458,7 +466,7 @@ int main(int argc,char** argv)
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
         if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}
-        if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || command=="--review-ir-integrated")
+        if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-command-integrated")
         {
             class Window final:public juce::DocumentWindow
             {
@@ -466,7 +474,9 @@ int main(int argc,char** argv)
                 {setUsingNativeTitleBar(true);auto* review=new IntegratedReview(std::move(scope),slim,selection,compact,irReview);setContentOwned(review,true);setResizable(true,false);setResizeLimits(compact?900:1100,compact?644:894,2000,1444);centreWithSize(compact?900:1100,compact?644:924);if(compact)review->verifyCompactBaseline();setVisible(true);}
                 void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
             };
-            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated",command=="--review-ir-integrated");juce::MessageManager::getInstance()->runDispatchLoop();return;
+            Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",command=="--review-responsive" || command=="--review-ir-integrated" || command=="--review-command-integrated",command=="--review-ir-integrated" || command=="--review-command-integrated");
+            if(command=="--review-command-integrated")window.setName("ReverbArise - #107 integrated button review");
+            juce::MessageManager::getInstance()->runDispatchLoop();return;
         }
         if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}
         if(command=="--test-gestures"){content->composition.verifyGestures();std::cout<<"Perform grid/translation/modifier/stale-owner/source checks passed.\n";return;}

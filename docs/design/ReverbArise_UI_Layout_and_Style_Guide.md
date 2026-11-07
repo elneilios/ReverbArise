@@ -1,6 +1,12 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.10 · **Production standards revision:** 10 · **Purpose:** Production UI authority and design reference. Revision 10 collapses empty IR feedback space; revision 9 aligns shared icon-button states with the existing command-button surface; revision 8 adds the shared IR field family.
+**Version:** 1.13 · **Production standards revision:** 13 · **Purpose:** Production UI authority and design reference. Revision 13 records the owner-approved focus-visibility policy: keyboard/accessibility focus shows decoration; pointer clicks retain focus without its decoration. Shared command buttons implement it now. Other families adopt it in their own design-system jobs. Revision-12 corner geometry, hover/press feedback and glyph ink are retained.
+
+See the [control inventory and family roadmap](ui-control-inventory.md),
+[shared contracts](../development/ui-control-contracts.md) and
+[approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
+Legacy debt remains explicit; family migrations retain scoped native approval.
+
 
 ## Responsive composition — issue #58
 
@@ -160,6 +166,9 @@ production standards revision; this revision does not change plugin/state versio
 | 9 | #80 integrated-review correction requested 2026-11-06 | Folder/import and Settings glyph buttons reuse ActionButton's surface: stable off-white content and aqua hover/pressed outline, existing contained focus/disabled treatment. No new token; wider legacy button-state audit remains #107. Corrected native interaction approved 2026-11-06; evidence is separately recorded |
 
 | 10 | #80 owner identified idle IR-to-Level gap on 2026-11-06; revised native spacing approved | Empty IR feedback collapses; present feedback uses one or two helper lines and adjacent fields reflow using existing spacing. Reset remains fixed. No new token |
+| 11 | #107 audit and shared contracts explicitly approved 2026-11-06 | Full consumer ownership/state inventory, C1–C8 contracts and separate P1–P8 delivery packets, reconciled against merged #80. Documentation/governance only; all numerical roles and native approvals unchanged; #108 and #8 remain independent |
+| 12 | #107 native button family revision 4 approved 2026-11-06 | Four aqua corner brackets, 2-pixel stroke with 3-pixel outside gap inside component bounds; body border/background owns hover/press. Destructive mouse feedback stays red; neutral icons stay off-white. Explicit neutral/primary/destructive/latch roles share one painter. No new token, knob or FileDragTile redesign; integrated acceptance remains separate |
+| 13 | #107 owner approved input-dependent focus visibility 2026-11-06 | Shared commands show brackets for keyboard/accessibility focus and hide them after pointer clicks while retaining actual focus/activation. Hover/held ink and geometry stay unchanged. Other families adopt the policy during their own jobs; caret/editing/selection feedback remains separate. See the shared focus visibility contract |
 
 ### Stable Perform transport information
 
