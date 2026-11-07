@@ -108,3 +108,20 @@ The installed system bundle was observed at a separate experimental revision
 `9a8b9d073e33ea03dac059dc2cdcfa510c3ecd8f` (SHA256
 `DED49001B0395EAA96B08810FA771119724E2B50B41EEBCA32D2D29BFA0DCB31`);
 it was not replaced and no FLP was modified during this checkpoint.
+
+## Final supported native regression
+
+At clean source revision `c701c5b`, supported Release wrapper `20261107-021227-4842de91`
+passed configure/build and **87/87 CTests (276.36 s)** in one uninterrupted run.
+The corrected coordinator, native foreground fixtures, production Storage,
+capture, association, independent processes, ordinary recovery and Export passed.
+Before this run, the focused capture/coordinator/portable-recovery group passed
+ten consecutive repetitions each (85.00 s total); the capture case performs
+128 concurrent exact round trips per repetition. Earlier failures remain above.
+
+The native gate is satisfied. Different-SID profile validation still did not
+start because Windows elevation was canceled. Host installation/smoke and actual
+original-binary/pre-upgrade-FLP rollback have not been performed for this revision.
+No phase-4 acceptance is inferred from native success; tasks 4.1/4.3/4.4 remain
+open, task 4.2 remains complete (21/36 overall), and PR #112 stays draft.
+Issue #8 remains open and no original project, store or installed bundle changed.
