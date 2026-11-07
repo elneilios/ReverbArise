@@ -1,0 +1,62 @@
+# Phase 5 scratch cleanup scope
+
+Proposed for owner review under task 5.1 of `portable-project-assets`, [issue #8](https://github.com/elneilios/ReverbArise/issues/8). Phase 4 shipped in PR #112. The first phase 5 increment would offer an opt-in, read-only preview of proven leftovers from a cancelled Backup copy in one explicitly selected managed backup store. Quarantine, undo and permanent removal each have later gates. The current Storage inventory continues to report zero reclaimable bytes.
+
+## What current backups can prove
+
+Backup writes an operation plan at `transactions/<operation>/plan.json` with a version, operation ID, store ID and the intended snapshot. It stages `part-<uuid>` files under the transaction while copying, then verifies and publishes immutable objects, a snapshot and a completion receipt. The same staging helper also writes transaction metadata. An interrupted plan can be inspected and resumed using verified published objects and, when needed, the original source. The plan alone supplies neither a terminal cancellation record nor the identity and hash of each unpublished part. A missing receipt can also mean interruption between snapshot and receipt publication. No existing plan or filename qualifies a leftover for the proposed preview. [Pack publication and resume](../../Source/Storage/PortableAssets.cpp) · [Backup behavior and Windows path policy](portable-asset-backups.md)
+
+## Eligibility matrix
+
+“Conditional” means eligible for **preview** only when every proof below succeeds. All other rows are excluded from phase 5 scratch actions, including when the current project has no reference to them.
+
+| File or state | Initial eligibility | Reason and handling |
+| --- | --- | --- |
+| Private, unpublished Backup payload copy from a durably cancelled operation | Conditional | A supported journal must identify the exact staged file and a separately verified surviving copy. It must also show that publication never adopted that file. |
+| Pack plan, journal, staging metadata, completion receipt, snapshot or published object | Excluded | Retain operation history, resume inputs and accepted backup dependencies. A published object stays protected even when the operation has no receipt. |
+| Active, resumable or interrupted pack with no verified terminal cancellation | Excluded | Retain files when a process or recovery operation may need them. An abandoned or crashed operation, timeout, disk-full error or missing receipt cannot stand in for cancellation. |
+| Capture chunks, coverage manifests, context/provenance and all capture staging | Excluded | An abandoned pass can contain the only surviving recording. Report it separately for explicit recovery. |
+| Imported, bundled, default, context and per-swell IR assets and descriptors | Excluded | Retain exact bytes used by current or historical state and capture contexts. |
+| Current or historical wet renders, frozen results, descriptors and retained revisions | Excluded | Earlier FLPs can still use them after Clear, deletion, regeneration or Save As. Exact hashes and apparent rebuildability cannot establish ownership or disposal rights. |
+| Export history, DAW Playlist WAVs, user Save destinations and export staging | Excluded | Treat exports as user-owned even inside an asset store. Temporary export names are outside the approved producer scope. |
+| Restore, Locate, Fork, recovery-workspace and other writer leftovers | Excluded | They have separate ownership and rollback contracts. Only the Backup payload-copy producer is in scope. |
+| Legacy `.tmp`, `.part`, `part-*`, `.unpublished-*` and any unknown or unjournaled file | Excluded | Names, extensions, location, age and duplicate hashes are insufficient. Preserve files that cannot be classified. |
+| Inaccessible or ambiguous files, linked files, unknown journal versions and changed roots | Excluded | Show why the affected scope is incomplete. Unknown or unmeasured entries do not contribute eligible counts or bytes. |
+
+## Proof required for a candidate
+
+All checks must pass for the same file. A missing or stale proof excludes it. The later implementation must keep the evidence bounded by the existing Windows path, metadata and file budgets.
+
+1. **Producer and location.** Select one local managed backup store explicitly. Verify its store ID and pinned volume and directory identities. Accept only a normal file in the exact private staging directory for an operation that a supported, versioned ownership journal identifies as a Backup payload copy. Open paths by pinned directory handles. Exclude reparse points, hard links, alternate streams, overlaps with source or quarantine, and unsupported paths. Store relative candidate paths and never use absolute paths from metadata to open files.
+2. **Identity and terminal state.** The future producer records the operation ID, candidate path, file identity, size and SHA-256 of the sealed staged bytes. Record terminal cancellation durably after the writer has stopped and closed the file. Require exact identity and byte verification against the record. A partially written or unsealed file, ambiguous journal transition, or publish or resume in flight blocks the candidate. A versioned ownership record can coexist with the existing plan format so older backups remain readable. Existing transactions receive no inferred ownership or backfill.
+3. **Protection and another copy.** Prove that the staging file was never published as an object or alias and that no snapshot, accepted reference, pack, reader, export, job or recovery operation depends on it. Verify a readable byte-identical copy with a distinct physical file identity through the exact original accepted dependency or a verified completed backup. A digest alone cannot prove that another copy still exists. Exclude the candidate if no counterpart can be verified, metadata is incompatible or reference coverage is uncertain. The private staging namespace and publication records must establish that an older FLP cannot address the staging path through supported readers. Unenumerated FLPs continue to protect all durable and possibly referenced assets.
+4. **Exclusive action.** Treat the preview as advisory. Before any move or removal, take worker-side cross-process maintenance coordination and recheck store, journal, leases, open handles, identity, bytes, counterpart and references against the exact reviewed candidates. A new job, lost counterpart, changed file, busy lock, unsupported writer or inaccessible metadata skips that file or blocks the affected scope. Protect the evidence through the operation so a path swap between verification and action cannot change the target. Keep scans, waits and filesystem work off the audio callback.
+
+## Actions and review gates
+
+| Step | Review and observable behavior |
+| --- | --- |
+| 5.1 Scope | Owner reviews this matrix and the Backup-only boundary before implementation. |
+| 5.2 Preview | User requests a read-only preview for the selected store. List exact eligible relative paths, logical file count and bytes, store and operation scope and reason. Separate protected and unknown entries. A partial or cancelled scan grants no action authority. Reuse approved Storage controls and obtain native review for any new or revised control family before rollout. |
+| 5.3 Revalidation | Prove cross-process ownership and fail-closed behavior before a preview can authorize a file move. Production maintenance remains off by default. |
+| 5.4 Quarantine and undo | After explicit approval of the exact candidates, write a durable move journal and move each revalidated file on the same volume with no overwrite. Record the original and quarantine identities and verify bytes. An interrupted move reconciles the two locations after restart. Conflicts or ambiguous state preserve both sides for inspection. Undo requires hash verification and refuses overwrite. A move to quarantine retains the bytes on disk. |
+| 5.5 Permanent removal | Retain quarantined files for at least 30 days from verified quarantine. An elapsed deadline alone leaves files in place. A second, explicit review lists the exact files after grace and requires fresh proof, including the surviving copy. A missing journal or uncertain deadline blocks removal. |
+| 5.6 Recovery | Report abandoned source or available snapshots separately. Require explicit, verified recovery and preserve current accepted references and original files on failure. Recovery cannot confer scratch eligibility. |
+| 5.7 Enablement | Review dated fault-injection results and user guidance before enabling the optional workflow. Keep every destructive operation opt-in. |
+
+The preview reports logical bytes in eligible scratch. Physical or allocated bytes, where measured, stay separate. Quarantine does not free disk space. Excluded or unknown bytes and quarantined files are never presented as immediately reclaimable.
+
+## Acceptance fixtures for later implementation
+
+Run against disposable roots, with exact before and after path, hash and accepted-state checks. Use focused native tests for each acceptance case and separate any later UI review from backend verification.
+
+| Fixture | Expected result |
+| --- | --- |
+| One sealed, cancelled Backup copy and a separate verified counterpart, mixed with every protected matrix class | Preview lists exactly one file and its exact bytes and reason. Protected bytes and accepted references remain unchanged. |
+| Same names and hashes with a v1-only plan, missing or corrupt journal, unsupported version, absent receipt as the sole cancellation evidence, unsealed copy, ordinary I/O failure or interrupted producer | Zero eligible files for those operations. Plans, objects and available recovery inputs stay intact. |
+| Candidate loses its counterpart, gains a recovery reference or lease, changes contents or path, is replaced with a link, or is locked after preview | Revalidation skips the changed candidate. Exercise independent processes and pathname replacement without blocking the callback. |
+| Crash before and after each journal and move boundary, interrupted undo, and a conflicting original destination | Restart preserves recoverable files, verifies identity before undo and refuses overwrite or ambiguous adoption. |
+| Grace not elapsed, grace elapsed without review, explicit review with newly missing evidence, and explicit valid review | The first three retain bytes. Only the last removes the specifically approved quarantined copy after fresh checks. |
+| Abandoned capture and prior accepted snapshot, including interrupted recovery | Both remain protected. Only an explicit, verified recovery may change the accepted reference. |
+
+Phase 5 excludes durable asset collection, automatic eviction, deduplication, compression, retention changes and any default-folder cutover. Issue #8 remains open for later work. [OpenSpec tasks](../../openspec/changes/portable-project-assets/tasks.md) · [Retention requirements](../../openspec/changes/portable-project-assets/specs/asset-retention/spec.md)

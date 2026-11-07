@@ -101,3 +101,16 @@ Phase 4 is complete. The full native regression, destination-only fresh-profile
 restore, FL Studio folder association and physical Fork smoke, and original
 bundle rollback passed. Guarded Apply refreshes confirmed 24/36 tasks complete.
 Issue #8 and the active change remain open for the separately gated phases 5/6.
+
+## Phase 5 scope review — 2026-11-07
+
+The owner requested starting phase 5 on a new branch and PR after PR #112 merged.
+The [scratch cleanup scope and eligibility matrix](../../../docs/development/scratch-cleanup-scope.md)
+propose an opt-in preview for sealed, unpublished Backup payload copies from a
+verified cancelled operation. A candidate requires an independently verified
+surviving copy. Existing operation plans lack the per-file ownership and terminal
+cancellation records required by the proposal.
+
+Task 5.1 awaits the separate scope review. Tasks 5.2–5.7 retain their preview,
+maintenance, quarantine, undo, removal, recovery and enablement gates. Issue #8
+and the active OpenSpec change remain open.
