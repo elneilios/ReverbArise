@@ -87,6 +87,9 @@ currency, whitespace and changed Markdown file links passed. The final
 branch diff scopes production work to the shared popup and its Swells and
 Reset hookups.
 
-[PR #119](https://github.com/elneilios/ReverbArise/pull/119) is ready for
-review and references umbrella issue #107. The completed OpenSpec change
-remains active for review and later sync/archive.
+After owner approval of [PR #119](https://github.com/elneilios/ReverbArise/pull/119),
+three action-menu requirements were synced into the canonical UI design-system
+spec. The completed change was archived at
+`openspec/changes/archive/2026-11-07-unify-action-menu-states`. All 20 main specs
+passed validation. The closeout changes specs and documentation, so the native
+Release results above still cover the runtime code.

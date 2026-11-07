@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed merged Level and Storage guidance and the adopted Swells and per-knob action menus. Added the Reset menu entry point and label meanings. The Level range, saved-gain behavior, and reset value match the merged provider.",
+  "summary": "Reviewed the synced action-menu requirements against the approved Swells and per-knob Reset bindings and the offline guide. The existing Perform instructions remain accurate after the spec archive.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1040,8 +1040,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 25764,
-      "sha256": "113b0eb1b7ec4d3e8064743e8fe1665826437b700ad0050d3bff51f5a3d630f7"
+      "bytes": 29841,
+      "sha256": "e8cbcfa43871d16aafb9f626e8de37daed4b424e9db4b3bd73b3b3a7b0c58b72"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
