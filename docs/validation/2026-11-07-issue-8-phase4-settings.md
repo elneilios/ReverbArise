@@ -184,5 +184,6 @@ recovery tests. The knob-reset fixture timed out waiting for native foreground
 focus (`peer=1 foreground=0`). Its focused CTest retry passed 1/1 (11.96 s) with
 the original focus assertion. No automated foreground intervention was used.
 UI standards passed (67 files, 59 bounded occurrences). The earlier 87/87 run
-and the host and profile checks apply to the builds recorded above. The PR stays
-draft pending a single uninterrupted full pass on the combined branch.
+and the host and profile checks apply to the builds recorded above. The owner
+approved skipping the additional uninterrupted rerun on the combined branch.
+The full run and focused retry together have passing results for all 87 tests.
