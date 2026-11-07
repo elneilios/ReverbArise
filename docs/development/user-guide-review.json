@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the native-approved selector field-feedback policy and explicit approval comments. Production declarations have not migrated at this checkpoint; existing guide prose remains accurate. Native-approved C2 adoption follows separately.",
+  "summary": "Reviewed approved C2 selector adoption against production IR, grid, Character, Appearance and four Playback/Swell bindings, canonical UI/workflow contracts and active selector delta. Added deliberate inspect/confirm/cancel/no-wheel, independent checkmark/hover/focus and local IR feedback instructions; retained all capture/Perform/optional Export and host/DPI limitations.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31469,
-      "sha256": "80ce1c4c7a6796adc28f3a59dd82b3b8c680be54b618287ffb7745e17c82a6d2"
+      "bytes": 31579,
+      "sha256": "8f29c94a778e9b185cac3daec0d96cdc935c3afa848ae1bc2ece94a0bddc21c8"
     },
     {
       "path": "CMakePresets.json",
@@ -500,13 +500,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 86614,
-      "sha256": "fa5686308d474133a4aa2b267780a449521d1fb964136fd299136ed3f5800fd7"
+      "bytes": 88471,
+      "sha256": "fba249c2bb241fc5f7d7c14139bd281169aee6713fc8e3f4adf0abaf4c2ebdef"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13443,
-      "sha256": "fb6a45d75626809820f3b3c61a90c9480bd7ff8e0aacce8cb51d639c7b2a8dad"
+      "bytes": 13509,
+      "sha256": "0e491d32e693ac032d1b385118fc71f0dc2197601b7830a6dd52117d5576ed15"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
-      "bytes": 8801,
-      "sha256": "7839b62d1e6ec9f535bf1b887b9409ad2b569cdddb65a57152a282e12dbc9910"
+      "bytes": 8807,
+      "sha256": "eb5ad3f320af14f4ca30fa4a09f6f9dfd53ae60218cdfe016bd0ff3a5977fec0"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -530,8 +530,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 21989,
-      "sha256": "a28fcc91bdace8e0f7095139abd7117b3c7d7f590b58f6612e5a1ced10b36663"
+      "bytes": 22144,
+      "sha256": "cedb4b1c6d28c8db82ab856e3eeb75803703190eeb5ad013f99d4e9604714e6d"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -565,18 +565,18 @@
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 12415,
-      "sha256": "4a6964de89394bba3896407649853f937f8c7027502dcaaa5ca1d36954ca394f"
+      "bytes": 12406,
+      "sha256": "2dfb9038b48b9f5b122739f3c4e3ac1bd0871b32d95a555e5df38be017b31e53"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
-      "bytes": 9695,
-      "sha256": "2b0a92b121087f34e40889792514fd99e7e1a10103da7555fe25a684e51ff4c0"
+      "bytes": 10207,
+      "sha256": "019df5248d072fa7f291aa4fd7f63a77c9c40d47c54dc5f817dee01b0aa40b80"
     },
     {
       "path": "Source/UI/Controls/ConvolutionIrEditor.h",
-      "bytes": 6679,
-      "sha256": "7df2d339dc53e81d33e51afa5902ed6ecccccb32c6e9c548420e836266dcf91e"
+      "bytes": 7137,
+      "sha256": "13b4ee6a986df7807d6dce0830c9a6d67878d022c2a1910bbc6a37eeec8ebcee"
     },
     {
       "path": "Source/UI/Controls/DeliberateSelector.h",
@@ -590,8 +590,8 @@
     },
     {
       "path": "Source/UI/Controls/ExportLevelsControl.h",
-      "bytes": 4560,
-      "sha256": "2f41da3503dec777537959dae2ea5e755667602e26a7caf2f97f1da73e78aa86"
+      "bytes": 4783,
+      "sha256": "07f9b739b879d0a146b4d2ad053960ffd773cef4628b9cc041b14f5dc6f230f5"
     },
     {
       "path": "Source/UI/Controls/ExternalFileDrag.h",
@@ -640,8 +640,8 @@
     },
     {
       "path": "Source/UI/Controls/IrSelector.h",
-      "bytes": 286,
-      "sha256": "f61d9a13e27837a5817cd748d6cc9a2e2fedf6e8d5ea3c365d0fc14d126ded83"
+      "bytes": 278,
+      "sha256": "b343530638bacb8ed2ec3f5b426162a47b4fb425daca4280d2cf0b2a88eac238"
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
@@ -685,8 +685,8 @@
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
-      "bytes": 1558,
-      "sha256": "2e211b66c3bf7bf72c93af7b62880db434589773e48517edee8758424db778dd"
+      "bytes": 1818,
+      "sha256": "3e85d6f6503c665616efb24cd2494d19ce145fc9d296d472566222b9f233e20b"
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",
@@ -900,8 +900,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 25570,
-      "sha256": "0a12728989f24cb484311e53a83497b15595859f47ee7fb38a2fba842a238fd7"
+      "bytes": 26332,
+      "sha256": "5b23a8eb3d4e442852ad7153c752a8a3c0a29c3bb04ab4493f13a03edce25dea"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

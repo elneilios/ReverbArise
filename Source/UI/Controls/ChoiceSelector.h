@@ -12,6 +12,10 @@ class ChoiceSelector:public DeliberateSelector
 public:
     ChoiceSelector(){setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);hideNativeLabel();}
     ~ChoiceSelector()override{hidePopup();}
+    // A binding may snapshot a read-only context predicate during beforeInvocation.
+    // Only human popup completion uses it; accepted display remains notification-free.
+    std::function<bool()> canCommit;
+    void setRowBounds(juce::Rectangle<int> bodyRow){setBounds(bodyRow.expanded(0,SelectorPresentation::focusMargin));}
     void setValidationMessage(juce::String value)
     {
         if(validationMessage==value)return;
@@ -49,7 +53,8 @@ public:
         }
         const auto ticket=++generation;
         const auto accepted=getSelectedId();
-        popup=std::make_unique<ChoicePopup>(*this,snapshot,[safe,ticket,accepted,snapshot](int id,PopupDismissal why)
+        const auto permitted=canCommit;
+        popup=std::make_unique<ChoicePopup>(*this,snapshot,[safe,ticket,accepted,snapshot,permitted](int id,PopupDismissal why)
         {
             if(safe==nullptr || safe->generation!=ticket)return;
             bool eligible=safe->isEnabled() && safe->isShowing() && safe->getSelectedId()==accepted;
@@ -59,7 +64,8 @@ public:
             if(why==PopupDismissal::tabForward || why==PopupDismissal::tabBackward)
             {safe->visibility->keyboardInput();safe->grabKeyboardFocus();if(safe)safe->moveKeyboardFocusToSibling(why==PopupDismissal::tabForward);}
             else if(why!=PopupDismissal::outside && why!=PopupDismissal::ownerGone && safe->isShowing() && safe->isEnabled())safe->grabKeyboardFocus();
-            if(id!=0 && eligible && safe!=nullptr && safe->isItemEnabled(id))safe->setSelectedId(id,juce::sendNotificationSync);
+            if(id!=0 && eligible && safe!=nullptr && safe->getSelectedId()==accepted && safe->isEnabled() && safe->isShowing() && safe->isItemEnabled(id)
+                && (!permitted || permitted()) && safe!=nullptr) safe->setSelectedId(id,juce::sendNotificationSync);
         });
         popup->show(localAreaToGlobal(commandBodyBounds(getLocalBounds())),visibility->isVisible());repaint();
     }
@@ -70,7 +76,7 @@ public:
         const auto arrow=area.removeFromRight(controlGeometry::numericStepWidth).toFloat().getCentre();
         juce::Path chevron;chevron.startNewSubPath(arrow.x-5,arrow.y-2);chevron.lineTo(arrow.x,arrow.y+2);chevron.lineTo(arrow.x+5,arrow.y-2);
         g.setColour(text.withMultipliedAlpha(alpha));g.strokePath(chevron,juce::PathStrokeType(rule*2));
-        area.removeFromRight(spacing::tight);g.setFont(componentTextFont(*this,TextRole::controlValue));
+        area.removeFromRight(spacing::tight);g.setFont(SelectorPresentation::valueFont(*this));
         g.drawText(getText().isNotEmpty()?getText():getTextWhenNothingSelected(),area,juce::Justification::centredLeft,true);
     }
     void resized()override{juce::ComboBox::resized();hideNativeLabel();}

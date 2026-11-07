@@ -119,3 +119,65 @@ verified (7/13). The review window remains open. This supersedes the earlier pen
 feedback/native-approval status. Production adoption and final combined verification
 follow; no physical Windows DPI/FL Studio coverage is inferred from this acceptance.
 Text/numeric input migration and #108/#8 implementation remain separate.
+
+### Shared IR adoption
+
+Learn and Perform now opt into ChoiceSelector through IrSelector. Existing
+ConvolutionIrEditor/ConvolutionIrBinding catalogue snapshots and session/input/pass
+acceptance are retained. Only presentation changes: reserved vertical focus frame,
+matching selector/import body height, small left-aligned local feedback and error
+border/message. Disabled reasons are shown locally when no status is supplied;
+healthy empty feedback still collapses. Field typography uses the native-approved
+minimum 13 control value against 12-height local help, avoiding a compact-mode
+inversion of that hierarchy.
+
+Supported Release build 20261107-013814-b2715771 passed. Native
+preverb_swell_ui_test --test-ir-editor passed, exit 0, with temporary capture/storage
+and process-lock access outside the sandbox. The initial sandbox-only run could
+not commit its temporary capture; this was recorded separately from the successful
+native binding run. The checks preserve meaningful IR asset/default/selected,
+reorder/captured identity, queued stale choice, readonly, persistence/audio and
+body/feedback geometry oracles; arrows inspect before explicit commit now.
+
+### Remaining selector adoption and binding checks
+
+Perform grid, Export Character, Appearance size/scale and the four named
+Playback/Swell selectors now opt into ChoiceSelector. IDs, grid divisions,
+canonical gain pairs, Custom, profile storage and original Settings commands
+remain intact. The latter capture a read-only session/pass predicate; curve
+choices additionally capture primary/selection/input generation, preventing a
+queued popup from targeting a replacement swell even before an editor refresh.
+Recovery candidateBox, action/reset menus and #108 controls are unchanged.
+
+Warm Release build `20261107-015005-e36c1f3d` passed. The actual-editor
+`--test-selectors` path passed native grid inspection/cancel/commit, both curve
+callbacks, stale primary rejection, routing/gain callbacks, unavailable saved
+prototype inspection and session replacement rejection. The first attempted
+`--test-export-levels` invocation fell through to the broad UI suite because that
+focused CLI route did not yet exist; the route is now explicit. Its legacy
+UiStandards arrow-key oracle was updated to require inspection before Return,
+retaining its stale-epoch rejection and silent-refresh checks.
+
+The first combined supported Release/CTest run,
+`20261107-015319-e41b64e7`, built successfully and passed 85/87 checks (212.77 s).
+The two failures were old IR presentation assertions: Learn expected the former
+14-height help/outer-edge caption and responsive layout expected only the import
+button to reserve an outer focus frame. Updated oracles retain all unrelated
+label metrics and now require the approved 12-height helper, caption-to-visible
+body alignment and matching selector/import bodies and frames. No production
+behavior was weakened to pass these checks. A final complete run follows.
+
+Run `20261107-015749-8826d700` subsequently reached a later Learn caption-gap
+oracle that still measured to the outer selector frame. That assertion now
+measures to the visible body (the approved 6-unit label gap); the outside focus
+frame is reserved independently. This was a test-only correction. The previous
+Learn font/alignment checks passed through to this later assertion.
+
+### Separate action-menu handoff
+
+`unify-action-menu-states` remains a separate, unapplied child (0/9). Begin its
+implementation from the delivered selector adapter and current merged main;
+extend ChoicePopup/PopupInteraction with action-row semantics rather than
+replacing captured list/reset commands. Its native checkpoint and separate PR
+remain required. Resolve the #108 KnobValue hookup overlap against that work's
+delivered baseline; do not import active #108/#8 work. The umbrella #107 stays open.

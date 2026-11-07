@@ -15,9 +15,9 @@
 
 ## 3. Bounded consumer adoption
 
-- [ ] 3.1 Adopt the family in the shared Learn/Perform IR field without changing import sibling body alignment or spacing; verify ConvolutionIr component/binding and actual-editor checks for catalogue reorder, captured identity, accepted refresh, stale/pass/session rejection, deletion and Learn/default versus selected-swell isolation, and update their migration rows/evidence.
-- [ ] 3.2 Adopt Perform grid and Export Character, preserving existing IDs, grid timing meaning, Custom and atomic gain-pair edits; verify focused navigation/ExportLevels binding tests for inspection/cancel/no-wheel/one commit and silent accepted refresh, and update the exact inventory rows.
-- [ ] 3.3 Adopt Appearance size/scale plus Playback liveRoutingBox/gainPolicyBox and Swell inCurveBox/outCurveBox with explicit deliberate/no-wheel policy; verify actual Settings callbacks, disabled prototype inspection, preference refresh, focus/overflow and unchanged model outcomes. Leave Recovery candidateBox and all #8/#108 consumers outside the diff.
+- [x] 3.1 Adopt the family in the shared Learn/Perform IR field without changing import sibling body alignment or spacing; verify ConvolutionIr component/binding and actual-editor checks for catalogue reorder, captured identity, accepted refresh, stale/pass/session rejection, deletion and Learn/default versus selected-swell isolation, and update their migration rows/evidence.
+- [x] 3.2 Adopt Perform grid and Export Character, preserving existing IDs, grid timing meaning, Custom and atomic gain-pair edits; verify focused navigation/ExportLevels binding tests for inspection/cancel/no-wheel/one commit and silent accepted refresh, and update the exact inventory rows.
+- [x] 3.3 Adopt Appearance size/scale plus Playback liveRoutingBox/gainPolicyBox and Swell inCurveBox/outCurveBox with explicit deliberate/no-wheel policy; verify actual Settings callbacks, disabled prototype inspection, preference refresh, focus/overflow and unchanged model outcomes. Leave Recovery candidateBox and all #8/#108 consumers outside the diff.
 - [ ] 3.4 Finalize approved standards revision, contracts, consumer inventory and dated validation evidence for adopted selectors; semantically review the offline guide and record review only after any needed prose changes, then verify guide currency and links. Retain explicit debt for deferred controls and the separate action-menu child.
 
 ## 4. Combined integration and review delivery

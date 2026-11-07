@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, 6 November 2026; production standards revision 13.**
+**Owner-approved contracts, updated 7 November 2026; production standards revision 14.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -146,7 +146,7 @@ and long-value geometry. Reuse UiStandards/ControlLibrary/PerformKnobReset and
 the #109 IR binding tests on the merged baseline. Plain Settings selectors require a
 documented intended policy before migration; they are not certified by inheritance.
 
-### C2 native preview implementation — 2026-11-07 (not rolled out)
+### C2 approved implementation — 2026-11-07
 
 `Controls/ChoiceSelector.h` extends the existing deliberate selector as an explicit
 adoption seam. `ChoicePopup` owns a one-level anchored popup; `PopupInteraction`
@@ -154,6 +154,11 @@ separates pointer inspection, keyboard navigation, held state and the accepted
 checkmark. A pointer departure clears only hover; any valid keyboard inspection
 remains. Pointer focus never creates a sticky row background. Choice completion
 is one-shot, with the original binding still deciding acceptance.
+
+`setRowBounds` reserves the outside focus frame around an existing visible body
+row. `canCommit` is an optional read-only predicate captured after
+`beforeInvocation`; Settings bindings use it to reject a changed session/pass or
+selected swell before the original command runs. The control owns no engine.
 
 The popup's root owns real keyboard focus while unavailable child rows remain
 disabled and accessible. Keyboard/accessibility inspection can reach such a row,
@@ -183,10 +188,12 @@ These roles were approved in the updated native fixture; production adoption is 
 
 Preview: `preverb_selector_popup_test --review-selectors`; focused checks use the
 same executable without arguments. The fixture offers size/scale and normal,
-dense, empty and unavailable/error scenes. Production selectors, including the
-shared IR field, still use their prior declarations at this checkpoint. The
-approved browser design and native owner acceptance are recorded in
-`unify-selector-states`; **consumer migration is in progress**. #108 Level, #8 recovery and
+dense, empty and unavailable/error scenes. Adopted consumers are Learn/Perform IR,
+Perform grid, Export Character, Appearance size/scale, Playback routing/gain policy
+and Swell fade-in/out curve. All use deliberate no-wheel selection and silent
+accepted refresh. Control values retain the approved minimum height 13 above
+12-height feedback. The approved browser design and native owner acceptance are
+recorded in `unify-selector-states`. #108 Level, #8 recovery and
 storage/working-folder controls, C1 buttons and action-menu adoption are separate.
 
 ## C6 — Switches and toggles
@@ -412,7 +419,7 @@ native review must use the actual prepared fixture and retain one review window.
 | Policy | Current authority / disposition |
 | --- | --- |
 | Neutral/primary/destructive/latching command state | Shared resolver/roles and IR geometry approved at revision 12; keyboard/accessibility-only decoration approved at revision 13; shared C1 implementation, other families retain their staged jobs |
-| No-wheel IR/deliberate selector | Existing DeliberateSelector and UI standards; plain Settings boxes remain P2 debt |
+| No-wheel selector | ChoiceSelector explicit C2 consumers approved at revision 14; Recovery candidateBox and action menus remain separate debt |
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
 | Stable fixed transport typography and bounded notice wrapping | Production guide revisions 6/7 and no-forced-speech spec; not generic text shrink permission |

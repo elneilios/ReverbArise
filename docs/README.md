@@ -13,6 +13,7 @@ This directory covers product identity, the existing implementation, development
 ## Recent engineering references
 
 - [Shared command buttons — issue #107](validation/2026-11-06-issue-107-buttons.md) — owner-approved native family revision 4, explicit command roles and independent aqua corner focus; production migration, automated checks and integrated acceptance are recorded separately. Knobs and independently owned #108/#8 implementation remain outside this migration.
+- [Shared selectors — issue #107](validation/2026-11-07-issue-107-selectors.md) — approved quiet inspection/explicit commit, independent aqua focus and small local help/red error feedback; named consumer adoption and native verification. Action menus remain a separate child.
 
 - [UI control inventory and roadmap](design/ui-control-inventory.md) and [shared contracts](development/ui-control-contracts.md) — owner-approved #107 audit, reconciled with merged #80; [evidence](validation/2026-11-06-issue-107-control-audit.md). Production migrations remain separate family changes.
 

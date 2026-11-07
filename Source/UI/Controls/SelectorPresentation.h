@@ -12,6 +12,9 @@ struct SelectorPresentation
     static constexpr int popupMinimumWidth=220,popupMaximumWidth=420;
     static constexpr int popupPadding=4,rowPadding=8,checkWidth=22;
     static constexpr int focusMargin=static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke);
+    static constexpr float minimumValueHeight=controlSize;
+    static juce::Font valueFont(juce::Component& source)
+    {const auto font=componentTextFont(source,TextRole::controlValue);return font.withHeight(juce::jmax(minimumValueHeight,font.getHeight()));}
     static juce::Colour raised(){return background.interpolatedWith(outline,.22f);}
     static juce::Colour held(){return background.interpolatedWith(outline,.4f);}
     static void surface(juce::Graphics& g,juce::Rectangle<int> bounds,CommandState state,bool error=false)

@@ -72,7 +72,7 @@ class ChoicePopup final:public juce::Component,private juce::Timer
 public:
     ChoicePopup(juce::Component& source,std::vector<PopupChoice> items,std::function<void(int,PopupDismissal)> result)
         :origin(&source),interaction(std::move(items)),completion(std::move(result)),
-         rowFont(componentTextFont(source,TextRole::controlValue)),reasonFont(componentTextFont(source,TextRole::helper))
+         rowFont(SelectorPresentation::valueFont(source)),reasonFont(componentTextFont(source,TextRole::helper))
     {
         magnification=source.getWidth()>0?static_cast<float>(source.getScreenBounds().getWidth())/source.getWidth():1.f;
         rowFont=rowFont.withHeight(rowFont.getHeight()*magnification);reasonFont=reasonFont.withHeight(reasonFont.getHeight()*magnification);
