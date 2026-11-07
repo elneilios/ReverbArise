@@ -29,3 +29,18 @@ The native `ReverbArise - #107 action menu review` window was launched directly
 for owner review. The owner approved it on 7 November 2026, including the
 popup-only 14% hover and 24% held destructive blends in the preview. The
 approval covers the fixture's action-row treatment and interaction.
+
+The Swells list now owns the action popup across row recycling. Right-click and
+the three-dot hit area both anchor it at the pointer. Rename retains the
+existing dialog, and Delete retains the captured-ID and epoch removal path.
+The native `preverb_swell_ui_test` passed in build `20261107-110641-d61df603`
+on the original selector baseline. It verified both openings, pointer
+anchoring, cancelled menu and dialog, rename after reorder, deletion of the
+captured row after selection and order change, queued Delete across session
+replacement, and editor destruction before delivery.
+
+The integration branch also includes current merged main `ca9f7df` (PR #112).
+The offline guide combines the Swells and working-folder instructions.
+The earlier baseline run hit the existing Windows foreground prerequisites
+for the knob-reset and exact-value readability fixtures. The combined run
+uses the native fixtures from merged main with their focus checks intact.
