@@ -125,3 +125,34 @@ git diff --check origin/main HEAD
 Coverage includes native 100% and 125% user scale and simulated host
 processing. Physical OS DPI, an FL Studio run and full CTest suites were
 outside this focused validation.
+
+### Storage baseline refresh
+
+`main` advanced to `d07d139` before PR handoff. The next merge retained the
+approved Level source and the new scratch-storage behavior. The guide retained
+both workflows and its explicit currency review passed.
+
+Clean source `bcfa74b4748b1720fc2721070ca264b6388f350a` passed the same
+supported Debug and Release wrapper commands on the warm tree. Logs:
+`out/build-logs/Debug/20261107-125154-dc3a9f84` and
+`out/build-logs/Release/20261107-125256-6bc3e7a7`.
+
+```powershell
+& $ctest --test-dir out/build/windows-msvc -C Debug -R '^preverb_(focused_level|level_audio_paths|swell_session)_test$' --output-on-failure --timeout 240
+& $ctest --test-dir out/build/windows-msvc -C Release -R '^preverb_(focused_level|level_audio_paths|processor|working_folder|scratch_maintenance|scratch_quarantine|scratch_removal|scratch_maintenance_callback|storage_settings|portable_recovery)_test$' --output-on-failure --timeout 240
+```
+
+Debug passed 3/3 in 13.52 s. Release passed 10/10 in 28.56 s. Logs:
+`out/issue-108-storage-base-debug.log` and
+`out/issue-108-storage-base-release.log`. UI standards, guide currency,
+strict OpenSpec, whitespace and a fresh Release guide capture and assembly
+passed. The assembled guide includes the Level first-touch instructions and
+current Storage retention guidance.
+
+| Refreshed artifact | SHA-256 |
+| --- | --- |
+| Debug native Level executable | `20c1694f241f9825d674991098ecd068b0f337f2e8464d4b8011de0a1b0bd841` |
+| Release native Level executable | `901c918905689c782e49bbdf41dd98dc62954445e1dbddef9cd1c0c77f961b95` |
+| Release processor test | `a4a74ab33529f90c94f98bd1bee15d8886c6fab68e32c39c013918b4bd142ebb` |
+| Release VST3 binary | `42a2bff57fdbf92b4ceabae8ad73a80e4fb141dc1a1837e7a5e10dddcdb51783` |
+| Assembled offline guide | `f608e41aab502408d020b4cb7850709ff8e8790b105d8c181e10c95d6118d852` |
