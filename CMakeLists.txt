@@ -442,6 +442,7 @@ if(BUILD_TESTING)
     add_test(NAME preverb_working_folder_test COMMAND preverb_portable_assets_test --working-folder)
     add_test(NAME preverb_scratch_preview_test COMMAND preverb_portable_assets_test --scratch)
     add_test(NAME preverb_scratch_maintenance_test COMMAND preverb_portable_assets_test --scratch-maintenance)
+    add_test(NAME preverb_scratch_quarantine_test COMMAND preverb_portable_assets_test --scratch-quarantine)
 endif()
 
 if(BUILD_TESTING)

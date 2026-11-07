@@ -22,7 +22,25 @@ Backup, Resume, Locate and associated-store handles already pin the existing `st
 
 Pack readers address published objects and descriptors through their fixed paths. Working and recovery aliases resolve beneath their instance roots. The private staging path is outside those namespaces. Maintenance also checks the exact plan's snapshot and receipt paths before and after verifying bytes. Either artifact can indicate new recovery state, even when the other is absent. Unsupported, inaccessible or changed metadata keeps the candidate protected.
 
-The synchronous callback receives an opaque scope while the store, pinned directories, plan, ownership record, candidate and counterpart remain open. It has no file action in this increment. A later quarantine operation must keep that scope through publication and use the same held candidate handle and pinned directory. An earlier report or a reopened pathname cannot authorize a move. Coordination and filesystem work stay on the worker path.
+The synchronous callback receives an opaque scope while the store, pinned directories, plan, ownership record, candidate and counterpart remain open. Quarantine keeps that scope through publication and uses the same held candidate handle and pinned directory. An earlier report or a reopened pathname cannot authorize a move. Coordination and filesystem work stay on the worker path.
+
+## Quarantine and undo
+
+Task 5.4 adds worker APIs for an explicitly approved preview entry and an explicitly selected undo operation. Quarantine currently requires a local NTFS store. It uses the existing exclusive store reservation and the already revalidated staging handle. The move stays inside the pinned store on the same volume. It uses a handle-relative rename with replacement disabled. [Windows rename contract](https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information)
+
+Each cancelled Backup operation owns one quarantine directory at `quarantine/<operation>/`. `move.json` binds the exact ownership proof, store, source staging path, target path, both physical parent directories and the file identity, byte count and SHA-256. The same physical file is renamed to `payload` after the intent is durable. `moved.json` records verified completion. `undo.json` records explicit intent to return the payload to its original staged path. `restored.json` records verified undo. Each phase record binds the exact move intent. Journal publication flushes the staged bytes, renames without overwrite on a write-through handle, and flushes the published file. [Windows file caching](https://learn.microsoft.com/en-us/windows/win32/fileio/file-caching) · [NTFS write-through rename behavior](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-createfile2_extended_parameters)
+
+Inspection opens the selected operation under the same store reservation. It verifies the journal against the original Backup proof, then reconciles the two pinned locations by identity and hash.
+
+| Observed evidence | Result |
+| --- | --- |
+| No committed move intent and no quarantine payload or phase marker | No committed quarantine operation. Unpublished journal bytes stay protected. |
+| Verified move intent with the file still in staging and no completion or undo | Staged. A fresh explicit quarantine retry can reuse the exact intent. |
+| Only the verified quarantine payload exists | Quarantined. This also covers interruption after the move and before its completion record. An undo intent in this state means undo can be retried explicitly. |
+| Valid undo intent and only the verified staging file exists | Restored. A repeated undo can complete the interrupted journal record without moving the file again. |
+| Both locations exist, neither exists, a directory changed, or proof is unreadable or contradictory | Ambiguous. Preserve all files and require inspection. |
+
+Inspection never moves files. Undo reopens and verifies the payload, commits its intent and refuses any occupied original destination. It restores the staged copy even if the separate original audio later becomes unavailable, because undo preserves the copy rather than removing it. Completed or interrupted undo history retires the prior quarantine review. This increment supports one reversible quarantine cycle per cancelled Backup copy. Any failure can occur after a rename, so callers must inspect the operation again before reporting its state. Later work owns grace accounting, permanent removal and production controls.
 
 ## Eligibility matrix
 

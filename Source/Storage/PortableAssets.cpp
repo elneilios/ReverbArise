@@ -89,7 +89,7 @@ bool component(const juce::String& name)
     const auto base=name.upToFirstOccurrenceOf(".",false,false).toUpperCase();return !(base=="CON" || base=="PRN" || base=="AUX" || base=="NUL" || (base.length()==4 && (base.startsWith("COM") || base.startsWith("LPT")) && base[3]>='0' && base[3]<='9'));
 }
 
-Held relativeOpen(HANDLE parent,const juce::String& leaf,DWORD access,bool directory,ULONG disposition,DWORD sharing)
+Held relativeOpen(HANDLE parent,const juce::String& leaf,DWORD access,bool directory,ULONG disposition,DWORD sharing,bool writeThrough=false)
 {
     // A single component, anchored to an already opened directory object. No
     // global path walk can follow a directory changed to a junction mid-operation.
@@ -101,9 +101,9 @@ Held relativeOpen(HANDLE parent,const juce::String& leaf,DWORD access,bool direc
     OBJECT_ATTRIBUTES attributes{};attributes.Length=sizeof(attributes);attributes.RootDirectory=parent;attributes.ObjectName=&name;
     constexpr ULONG dontReparse=0x1000;attributes.Attributes=OBJ_CASE_INSENSITIVE|dontReparse;
     IO_STATUS_BLOCK io{};HANDLE file=INVALID_HANDLE_VALUE;
-    constexpr ULONG synchronous=0x20,openReparsePoint=0x00200000,directoryFile=1,nonDirectoryFile=0x40;
+    constexpr ULONG synchronous=0x20,openReparsePoint=0x00200000,directoryFile=1,nonDirectoryFile=0x40,writeThroughOption=2;
     const auto code=createFile(&file,access|SYNCHRONIZE,&attributes,&io,nullptr,FILE_ATTRIBUTE_NORMAL,sharing,disposition,
-                              synchronous|openReparsePoint|(directory?directoryFile:nonDirectoryFile),nullptr,0);
+                              synchronous|openReparsePoint|(directory?directoryFile:nonDirectoryFile)|(writeThrough?writeThroughOption:0u),nullptr,0);
     if(code<0)throw Failure(("Handle-relative open/create failed for "+leaf+" (NTSTATUS "+juce::String::toHexString(static_cast<int>(code))+")").toStdString(),code);
     auto held=std::make_shared<Handle>(file);ordinary(file,directory);return held;
 }
@@ -138,10 +138,10 @@ struct Root
         auto result=parent.getChildFile(parts[parts.size()-1]);require(std::wcslen(result.getFullPathName().toWideCharPointer())<=240,"Selected path exceeds the supported Windows path length");return result;
     }
     Held parentOf(const juce::File& file){const auto parent=directories.at(file.getParentDirectory().getFullPathName());ordinary(parent->h,true);return parent;}
-    Held openRead(const juce::String& relative,DWORD sharing=FILE_SHARE_READ,DWORD access=GENERIC_READ)
+    Held openRead(const juce::String& relative,DWORD sharing=FILE_SHARE_READ,DWORD access=GENERIC_READ,bool writeThrough=false)
     {
         const auto file=path(relative);const auto owner=parentOf(file);
-        auto held=relativeOpen(owner->h,file.getFileName(),access,false,1,sharing);
+        auto held=relativeOpen(owner->h,file.getFileName(),access,false,1,sharing,writeThrough);
         require(resolved(held->h).startsWithIgnoreCase(canonical+"/"),"File escaped selected root");
         return held;
     }
@@ -201,6 +201,22 @@ constexpr auto scratchRecord="scratch-cancelled.json";
 constexpr int scratchVersion=1;
 void verify(Root& root,const juce::String& path,const juce::String& expected,uint64_t bytes,const Hooks& hooks)
 {const auto h=root.read(path);require(size(h->h)==bytes && hash(h->h,hooks)==expected,"Asset byte identity mismatch: "+path);}
+NTSTATUS renameNoReplace(Root& root,HANDLE file,const juce::File& destination)
+{
+    const auto name=destination.getFileName();
+    const auto length=static_cast<DWORD>(std::wcslen(name.toWideCharPointer())*sizeof(wchar_t));
+    std::vector<char> memory(sizeof(FILE_RENAME_INFO)+length,0);
+    auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(memory.data());
+    rename->ReplaceIfExists=FALSE;
+    rename->RootDirectory=root.parentOf(destination)->h;
+    rename->FileNameLength=length;
+    std::memcpy(rename->FileName,name.toWideCharPointer(),length);
+    using RenameFunction=NTSTATUS(NTAPI*)(HANDLE,PIO_STATUS_BLOCK,PVOID,ULONG,FILE_INFORMATION_CLASS);
+    const auto renameFile=reinterpret_cast<RenameFunction>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"),"NtSetInformationFile"));
+    require(renameFile!=nullptr,"Handle-relative publication is unavailable on this Windows version");
+    IO_STATUS_BLOCK status{};
+    return renameFile(file,&status,rename,static_cast<ULONG>(memory.size()),static_cast<FILE_INFORMATION_CLASS>(10)); // FileRenameInformation
+}
 void publish(Root& root,const juce::String& relative,const juce::String& expected,uint64_t bytes,
              const std::function<void(HANDLE)>& write,const Hooks& hooks,SealedPart* cancelledPart=nullptr)
 {
@@ -225,12 +241,7 @@ void publish(Root& root,const juce::String& relative,const juce::String& expecte
         }
         throw;
     }
-    const auto name=destination.getFileName();std::vector<char> memory(sizeof(FILE_RENAME_INFO)+(static_cast<size_t>(name.length())+1)*sizeof(wchar_t),0);auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(memory.data());
-    rename->ReplaceIfExists=FALSE;rename->RootDirectory=root.parentOf(destination)->h;rename->FileNameLength=static_cast<DWORD>(name.length()*sizeof(wchar_t));std::memcpy(rename->FileName,name.toWideCharPointer(),rename->FileNameLength);
-    using RenameFunction=NTSTATUS(NTAPI*)(HANDLE,PIO_STATUS_BLOCK,PVOID,ULONG,FILE_INFORMATION_CLASS);
-    const auto renameFile=reinterpret_cast<RenameFunction>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"),"NtSetInformationFile"));
-    require(renameFile!=nullptr,"Handle-relative publication is unavailable on this Windows version");IO_STATUS_BLOCK status{};
-    const auto renamed=renameFile(h->h,&status,rename,static_cast<ULONG>(memory.size()),static_cast<FILE_INFORMATION_CLASS>(10));
+    const auto renamed=renameNoReplace(root,h->h,destination);
     h.reset();
     // Another verified writer may have won the no-replace publication. Reuse
     // only exact bytes, with a bounded wait for its write handle to close.
@@ -509,15 +520,14 @@ void requireNoRecoveryReference(Root& destination,const juce::String& snapshotId
     }
 }
 
-struct ScratchInspection
+struct ScratchProof
 {
-    ScratchPreviewEntry entry;
-    Held proof,plan,staged,original;
+    juce::String path,alias,sourceRoot,project,instance,snapshot,fileId,sha,ownership;
+    uint64_t bytes=0;
+    Held record,plan;
 };
 
-ScratchInspection inspectCancelledCopy(Root& destination,Root& source,const juce::String& store,
-                                       const juce::String& operation,uint64_t& budget,const Hooks& hooks,
-                                       const ScratchPreviewEntry* reviewed=nullptr)
+ScratchProof readScratchProof(Root& destination,const juce::String& store,const juce::String& operation)
 {
     const auto prefix="transactions/"+operation+"/";
     juce::var record;
@@ -537,7 +547,8 @@ ScratchInspection inspectCancelledCopy(Root& destination,Root& source,const juce
         && record["producer"].toString()=="backup-payload" && record["state"].toString()=="cancelled"
         && record["store"].toString()==store && record["operation"].toString()==operation
         && record["destinationRoot"].toString()==rootIdentity(destination),"Unsupported or conflicting scratch ownership record");
-    require(record["sourceRoot"].toString()==rootIdentity(source),"Select the original instance folder for this Backup to verify another copy");
+    const auto sourceRoot=record["sourceRoot"].toString();
+    require(hex(sourceRoot),"Invalid original folder identity");
     const auto part=record["part"].toString(),fileId=record["fileId"].toString(),sha=record["sha256"].toString();
     uint64_t bytes=0;
     require(part.startsWith("part-") && uuid(part.substring(5)) && hex(fileId) && hex(sha) && number(record["bytes"],bytes),"Invalid staged identity or byte proof");
@@ -548,34 +559,63 @@ ScratchInspection inspectCancelledCopy(Root& destination,Root& source,const juce
     const auto plan=destination.openRead(prefix+"plan.json",0);
     const auto planText=readText(plan);
     const auto accepted=decodePlan(planText,operation,store);
-    require(accepted.id==record["snapshot"].toString() && source.directory.getFileName()==accepted.observed.instance
-        && source.directory.getParentDirectory().getFileName()==accepted.observed.project,"Original folder or snapshot does not match the Backup plan");
+    require(accepted.id==record["snapshot"].toString(),"Scratch snapshot does not match the Backup plan");
     const auto alias=record["alias"].toString();
     const auto entry=std::find_if(accepted.files.begin(),accepted.files.end(),[&](const auto& file){return file.path==alias;});
     require(entry!=accepted.files.end() && entry->sha256==sha && entry->bytes==bytes,"Staged bytes do not match an accepted Backup dependency");
-    requireNoRecoveryReference(destination,accepted.id);
+    const auto ownership=digest(identity(proof->h)+digest(recordText)+identity(plan->h)+digest(planText));
+    return {prefix+"staging/"+part,alias,sourceRoot,accepted.observed.project,accepted.observed.instance,
+            accepted.id,fileId,sha,ownership,bytes,proof,plan};
+}
+
+Held existingFile(Root& root,const juce::String& path,DWORD access=GENERIC_READ,bool durable=false)
+{
+    try{return root.openRead(path,0,access,durable);}
+    catch(const Failure& e){if(static_cast<uint32_t>(e.status)==missingName)return {};throw;}
+}
+
+void requireNoQuarantineHistory(Root& destination,const juce::String& operation)
+{
+    const auto prefix="quarantine/"+operation+"/";
+    require(!existingFile(destination,prefix+"undo.json") && !existingFile(destination,prefix+"restored.json")
+        && !existingFile(destination,prefix+"moved.json"),"This copy already has a quarantine or undo history");
+}
+
+struct ScratchInspection
+{
+    ScratchPreviewEntry entry;
+    ScratchProof proof;
+    Held staged,original;
+};
+
+ScratchInspection inspectCancelledCopy(Root& destination,Root& source,const juce::String& store,
+                                       const juce::String& operation,uint64_t& budget,const Hooks& hooks,
+                                       const ScratchPreviewEntry* reviewed=nullptr)
+{
+    requireNoQuarantineHistory(destination,operation);
+    auto proof=readScratchProof(destination,store,operation);
+    require(proof.sourceRoot==rootIdentity(source) && source.directory.getFileName()==proof.instance
+        && source.directory.getParentDirectory().getFileName()==proof.project,"Select the original instance folder for this Backup to verify another copy");
+    requireNoRecoveryReference(destination,proof.snapshot);
+    const auto bytes=proof.bytes;
     if(bytes>budget/2)throw PreviewLimit("Preview byte verification limit reached; results are incomplete");
     budget-=bytes*2;
-
-    // Only this generated private leaf is accepted. Pack snapshots reference
-    // immutable object paths, and working aliases live under an instance root.
-    const auto path=prefix+"staging/"+part;
+    const auto& path=proof.path;
     require(!reviewed || (reviewed->path==path && reviewed->bytes==bytes),"Reviewed path or byte count changed. Preview again.");
-    const auto staged=destination.openRead(path,0,reviewed?GENERIC_READ|DELETE:GENERIC_READ);
+    const auto staged=destination.openRead(path,0,reviewed?GENERIC_READ|DELETE:GENERIC_READ,reviewed!=nullptr);
     requirePrivateDataFile(staged->h);
-    require(identity(staged->h)==fileId && size(staged->h)==bytes && hash(staged->h,hooks)==sha,"Staged file changed since the cancelled copy");
-    const auto original=source.openRead(alias);
+    require(identity(staged->h)==proof.fileId && size(staged->h)==bytes && hash(staged->h,hooks)==proof.sha,"Staged file changed since the cancelled copy");
+    const auto original=source.openRead(proof.alias);
     const auto originalId=identity(original->h);
-    require(originalId!=fileId && size(original->h)==bytes && hash(original->h,hooks)==sha,"No distinct verified surviving copy");
+    require(originalId!=proof.fileId && size(original->h)==bytes && hash(original->h,hooks)==proof.sha,"No distinct verified surviving copy");
 
     checkpoint(hooks,"scratch-evidence-checked",path);
-    requireNoRecoveryReference(destination,accepted.id);
+    requireNoRecoveryReference(destination,proof.snapshot);
     require(resolved(staged->h).equalsIgnoreCase(destination.canonical+"/"+path)
-        && resolved(original->h).equalsIgnoreCase(source.canonical+"/"+alias),"Pinned staged or original path changed");
-    const auto evidence=digest(digest(destination.canonical)+digest(source.canonical)+identity(proof->h)
-        +digest(recordText)+identity(plan->h)+digest(planText)+fileId+originalId);
+        && resolved(original->h).equalsIgnoreCase(source.canonical+"/"+proof.alias),"Pinned staged or original path changed");
+    const auto evidence=digest(digest(destination.canonical)+digest(source.canonical)+proof.ownership+proof.fileId+originalId);
     require(!reviewed || reviewed->evidence==evidence,"Reviewed ownership or surviving copy changed. Preview again.");
-    return {{operation,path,"Verified cancelled Backup copy with an intact original",bytes,evidence},proof,plan,staged,original};
+    return {{operation,path,"Verified cancelled Backup copy with an intact original",bytes,evidence},std::move(proof),staged,original};
 }
 }
 
@@ -609,6 +649,18 @@ ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& 
 // The scope keeps the exact handles alive through the synchronous caller.
 // A later quarantine implementation must use the staged handle and pinned
 // parent, rather than reconstructing and reopening a path from the preview.
+namespace
+{
+Held reserveScratchStore(Root& destination)
+{
+    Held lease;
+    try{lease=destination.openRead("store.json",0);}
+    catch(const Failure& e){throw Failure("Cannot reserve the backup store for maintenance. Keep its files and retry when idle. "+std::string(e.what()),e.status);}
+    requirePrivateDataFile(lease->h);
+    return lease;
+}
+}
+
 class ScratchMaintenance
 {
 public:
@@ -631,10 +683,7 @@ bool withRevalidatedScratch(const juce::File& selectedStore,const juce::File& or
         Root destination(selectedStore),source(originalInstance);
         requireSeparateRoots(destination,source);
 
-        Held lease;
-        try{lease=destination.openRead("store.json",0);}
-        catch(const Failure& e){throw Failure("Cannot reserve the backup store for maintenance. Keep its files and retry when idle. "+std::string(e.what()),e.status);}
-        requirePrivateDataFile(lease->h);
+        const auto lease=reserveScratchStore(destination);
         require(decodeStoreId(lease)==reviewed.store,"Reviewed backup store changed");
         checkpoint(hooks,"maintenance-locked");
         auto budget=previewByteLimit;
@@ -642,6 +691,235 @@ bool withRevalidatedScratch(const juce::File& selectedStore,const juce::File& or
             inspectCancelledCopy(destination,source,reviewed.store,entry->operation,budget,hooks,&*entry)};
         if(hooks.cancelled && hooks.cancelled())throw Cancelled("Maintenance revalidation cancelled");
         ready(scope);
+        error.clear();
+        return true;
+    }catch(const std::exception& e){return fail(error,e.what());}
+}
+
+namespace
+{
+struct QuarantinePaths
+{
+    explicit QuarantinePaths(const juce::String& operation):prefix("quarantine/"+operation+"/"){}
+    juce::String prefix;
+    juce::String payload()const{return prefix+"payload";}
+    juce::String move()const{return prefix+"move.json";}
+    juce::String moved()const{return prefix+"moved.json";}
+    juce::String undo()const{return prefix+"undo.json";}
+    juce::String restored()const{return prefix+"restored.json";}
+};
+
+void requireNtfs(HANDLE lease)
+{
+    wchar_t system[16]{};
+    require(GetVolumeInformationByHandleW(lease,nullptr,0,nullptr,nullptr,nullptr,system,16)!=0
+        && juce::String(system).equalsIgnoreCase("NTFS"),"Quarantine requires a local NTFS store");
+}
+
+juce::String moveIntent(Root& root,const juce::String& store,const juce::String& operation,
+                        const ScratchProof& proof,const QuarantinePaths& paths)
+{
+    const auto originalParent=root.parentOf(root.path(proof.path));
+    const auto quarantineParent=root.parentOf(root.path(paths.payload()));
+    auto value=object();
+    set(value,"version",1);
+    set(value,"store",store);
+    set(value,"operation",operation);
+    set(value,"rootId",rootIdentity(root));
+    set(value,"ownership",proof.ownership);
+    set(value,"original",proof.path);
+    set(value,"originalParent",identity(originalParent->h));
+    set(value,"quarantine",paths.payload());
+    set(value,"quarantineParent",identity(quarantineParent->h));
+    set(value,"fileId",proof.fileId);
+    set(value,"sha256",proof.sha);
+    set(value,"bytes",juce::String(static_cast<juce::int64>(proof.bytes)));
+    return json(value);
+}
+
+juce::String phaseRecord(const juce::String& intent,const juce::String& phase)
+{
+    auto value=object();
+    set(value,"version",1);set(value,"intent",digest(intent));set(value,"phase",phase);
+    return json(value);
+}
+
+void checkRecord(const Held& file,const juce::String& expected)
+{
+    requirePrivateDataFile(file->h);
+    require(readText(file,8192)==expected,"Quarantine journal conflicts with the exact operation. Files retained.");
+}
+
+Held writeJournalRecord(Root& root,const juce::String& relative,const juce::String& text,
+                        const juce::String& boundary,const Hooks& hooks)
+{
+    checkpoint(hooks,boundary+"-before",relative);
+    const auto target=root.path(relative);
+    if(auto existing=existingFile(root,relative,GENERIC_READ|GENERIC_WRITE,true)){
+        checkRecord(existing,text);
+        require(FlushFileBuffers(existing->h)!=0,"Cannot flush existing quarantine record");
+        checkpoint(hooks,boundary+"-after",relative);
+        return existing;
+    }
+    const auto parent=root.parentOf(target);
+    const auto temporary="journal-"+juce::Uuid().toDashedString();
+    auto staged=relativeOpen(parent->h,temporary,GENERIC_READ|GENERIC_WRITE|DELETE,false,2,0,true);
+    writeBytes(staged->h,text.toRawUTF8(),static_cast<DWORD>(text.getNumBytesAsUTF8()),0,hooks);
+    require(FlushFileBuffers(staged->h)!=0,"Cannot flush quarantine record bytes");
+    rewind(staged->h);
+    checkRecord(staged,text);
+    checkpoint(hooks,boundary+"-sealed",relative);
+    require(renameNoReplace(root,staged->h,target)>=0,"Cannot publish quarantine record without overwrite");
+    checkpoint(hooks,boundary+"-published",relative);
+    require(FlushFileBuffers(staged->h)!=0,"Cannot flush published quarantine record");
+    checkpoint(hooks,boundary+"-after",relative);
+    return staged;
+}
+
+void verifyQuarantineFile(Root& root,const Held& file,const juce::String& path,const ScratchProof& proof,const Hooks& hooks)
+{
+    requirePrivateDataFile(file->h);
+    require(resolved(file->h).equalsIgnoreCase(root.canonical+"/"+path)
+        && identity(file->h)==proof.fileId && size(file->h)==proof.bytes && hash(file->h,hooks)==proof.sha,
+        "Quarantine path, file identity or hash differs. Files retained.");
+}
+
+void moveQuarantineFile(Root& root,const Held& file,const juce::String& to)
+{
+    const auto target=root.path(to);
+    const auto parent=root.parentOf(target);
+    const auto parentPath=resolved(parent->h);
+    require(parentPath.startsWithIgnoreCase(root.canonical+"/"),"Quarantine target escaped the pinned store");
+    // All ancestors are opened without reparse traversal. The volume GUID
+    // also has to agree. The native rename has no replace or copy fallback.
+    const auto current=resolved(file->h);
+    require(current.startsWithIgnoreCase(root.canonical+"/")
+        && current.upToFirstOccurrenceOf("}/",true,false).equalsIgnoreCase(parentPath.upToFirstOccurrenceOf("}/",true,false)),
+        "Quarantine move must stay on the pinned volume");
+    require(renameNoReplace(root,file->h,target)>=0,"Quarantine destination is occupied or unavailable. Files retained.");
+}
+
+struct QuarantineObservation
+{
+    ScratchQuarantineInfo info;
+    ScratchProof proof;
+    juce::String intent;
+    Held record,moved,undo,restored,original,payload;
+};
+
+QuarantineObservation observeQuarantine(Root& root,const juce::String& store,const juce::String& operation,
+                                        const QuarantinePaths& paths,bool forUndo,const Hooks& hooks)
+{
+    QuarantineObservation observed;
+    auto& info=observed.info;
+    info.operation=operation;
+    info.quarantinePath=paths.payload();
+    observed.record=existingFile(root,paths.move());
+    if(!observed.record){
+        require(!existingFile(root,paths.payload()) && !existingFile(root,paths.moved())
+            && !existingFile(root,paths.undo()) && !existingFile(root,paths.restored()),"Quarantine data has no verified move journal. Files retained.");
+        info.error="No committed quarantine journal for this operation";
+        return observed;
+    }
+    observed.proof=readScratchProof(root,store,operation);
+    const auto& proof=observed.proof;
+    info.originalPath=proof.path;
+    info.bytes=proof.bytes;
+    observed.intent=moveIntent(root,store,operation,proof,paths);
+    checkRecord(observed.record,observed.intent);
+    observed.moved=existingFile(root,paths.moved());
+    observed.undo=existingFile(root,paths.undo());
+    observed.restored=existingFile(root,paths.restored());
+    if(observed.moved)checkRecord(observed.moved,phaseRecord(observed.intent,"moved"));
+    if(observed.undo)checkRecord(observed.undo,phaseRecord(observed.intent,"undo"));
+    if(observed.restored)checkRecord(observed.restored,phaseRecord(observed.intent,"restored"));
+
+    observed.original=existingFile(root,proof.path);
+    observed.payload=existingFile(root,paths.payload(),forUndo?GENERIC_READ|DELETE:GENERIC_READ,forUndo);
+    require(static_cast<bool>(observed.original)!=static_cast<bool>(observed.payload),"Both or neither quarantine locations exist. Files retained for inspection.");
+    if(observed.original){
+        verifyQuarantineFile(root,observed.original,proof.path,proof,hooks);
+        require((!observed.moved && !observed.restored) || observed.undo,"Original staging file conflicts with quarantine journal. Files retained.");
+        info.state=observed.undo?ScratchQuarantineState::restored:ScratchQuarantineState::staged;
+    }else{
+        verifyQuarantineFile(root,observed.payload,paths.payload(),proof,hooks);
+        require(!observed.restored,"Quarantine payload conflicts with restored journal. Files retained.");
+        info.state=ScratchQuarantineState::quarantined;
+        info.undoPending=static_cast<bool>(observed.undo);
+    }
+    return observed;
+}
+}
+
+bool quarantineScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                       const ScratchPreview& reviewed,const juce::String& selectedPath,
+                       juce::String& error,const Hooks& hooks)
+{
+    return withRevalidatedScratch(selectedStore,originalInstance,reviewed,selectedPath,[&](const ScratchMaintenance& scope){
+        auto& root=scope.destination;
+        const auto& proof=scope.pinned.proof;
+        const auto& operation=scope.pinned.entry.operation;
+        const QuarantinePaths paths(operation);
+        requireNtfs(scope.lease->h);
+        checkpoint(hooks,"quarantine-before-directory");
+        root.path(paths.move(),true);
+        require(!existingFile(root,paths.payload()),"Quarantine destination already exists. Files retained.");
+        const auto intent=moveIntent(root,reviewed.store,operation,proof,paths);
+        const auto record=writeJournalRecord(root,paths.move(),intent,"quarantine-intent",hooks);
+        checkpoint(hooks,"quarantine-before-move",proof.path);
+        verifyQuarantineFile(root,scope.pinned.staged,proof.path,proof,hooks);
+        requireNoRecoveryReference(root,proof.snapshot);
+        requireNoQuarantineHistory(root,operation);
+        moveQuarantineFile(root,scope.pinned.staged,paths.payload());
+        checkpoint(hooks,"quarantine-after-move",paths.payload());
+        verifyQuarantineFile(root,scope.pinned.staged,paths.payload(),proof,hooks);
+        writeJournalRecord(root,paths.moved(),phaseRecord(intent,"moved"),"quarantine-complete",hooks);
+    },error,hooks);
+}
+
+ScratchQuarantineInfo inspectScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,const Hooks& hooks)
+{
+    try{
+        require(uuid(operation),"Select an exact quarantine operation");
+        checkpoint(hooks,"quarantine-inspect");
+        Root root(selectedStore);
+        const auto lease=reserveScratchStore(root);
+        return observeQuarantine(root,decodeStoreId(lease),operation,QuarantinePaths(operation),false,hooks).info;
+    }catch(const std::exception& e){
+        ScratchQuarantineInfo result;
+        result.state=ScratchQuarantineState::ambiguous;
+        result.operation=operation;
+        result.error=e.what();
+        return result;
+    }
+}
+
+bool undoScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,juce::String& error,const Hooks& hooks)
+{
+    try{
+        require(uuid(operation),"Select an exact quarantine operation to undo");
+        checkpoint(hooks,"undo-start");
+        Root root(selectedStore);
+        const auto lease=reserveScratchStore(root);
+        requireNtfs(lease->h);
+        const QuarantinePaths paths(operation);
+        const auto observed=observeQuarantine(root,decodeStoreId(lease),operation,paths,true,hooks);
+        const auto& proof=observed.proof;
+        const auto& intent=observed.intent;
+        if(observed.info.state==ScratchQuarantineState::restored){
+            if(!observed.restored)writeJournalRecord(root,paths.restored(),phaseRecord(intent,"restored"),"undo-complete",hooks);
+            error.clear();
+            return true;
+        }
+        require(observed.info.state==ScratchQuarantineState::quarantined,"No verified quarantined file to undo");
+        const auto undo=observed.undo?observed.undo:writeJournalRecord(root,paths.undo(),phaseRecord(intent,"undo"),"undo-intent",hooks);
+        checkpoint(hooks,"undo-before-move",paths.payload());
+        verifyQuarantineFile(root,observed.payload,paths.payload(),proof,hooks);
+        require(!existingFile(root,paths.restored()),"Undo history changed. Files retained.");
+        moveQuarantineFile(root,observed.payload,proof.path);
+        checkpoint(hooks,"undo-after-move",proof.path);
+        verifyQuarantineFile(root,observed.payload,proof.path,proof,hooks);
+        writeJournalRecord(root,paths.restored(),phaseRecord(intent,"restored"),"undo-complete",hooks);
         error.clear();
         return true;
     }catch(const std::exception& e){return fail(error,e.what());}

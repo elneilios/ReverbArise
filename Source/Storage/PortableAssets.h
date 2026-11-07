@@ -88,11 +88,30 @@ struct ScratchPreview
 ScratchPreview previewScratch(const juce::File& selectedStore,const juce::File& originalInstance,const Hooks& = {});
 class ScratchMaintenance;
 // Worker only. Reopens one explicitly reviewed path and calls ready synchronously
-// while the store, journal, staged file and surviving copy are pinned. No move
-// or removal API exists at this stage. Never retain the callback's view.
+// while the store, journal, staged file and surviving copy are pinned. Never
+// retain the callback's view or reopen the staged path for an action.
 bool withRevalidatedScratch(const juce::File& selectedStore,const juce::File& originalInstance,
                            const ScratchPreview& reviewed,const juce::String& selectedPath,
                            const std::function<void(const ScratchMaintenance&)>& ready,
+                           juce::String& error,const Hooks& = {});
+enum class ScratchQuarantineState { unavailable,staged,quarantined,restored,ambiguous };
+struct ScratchQuarantineInfo
+{
+    ScratchQuarantineState state=ScratchQuarantineState::unavailable;
+    juce::String operation,originalPath,quarantinePath,error;
+    uint64_t bytes=0;
+    bool undoPending=false;
+};
+// Worker only. A caller must obtain explicit approval for the exact reviewed
+// entry before quarantine, and for the exact operation before undo. Inspection
+// reconciles on-disk evidence without attempting a repair. After any failure,
+// inspect again before reporting which location currently holds the bytes.
+bool quarantineScratch(const juce::File& selectedStore,const juce::File& originalInstance,
+                       const ScratchPreview& reviewed,const juce::String& selectedPath,
+                       juce::String& error,const Hooks& = {});
+ScratchQuarantineInfo inspectScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,
+                                               const Hooks& = {});
+bool undoScratchQuarantine(const juce::File& selectedStore,const juce::String& operation,
                            juce::String& error,const Hooks& = {});
 class Verified;
 bool locate(const juce::File& selectedFolder,const Locator& expected,

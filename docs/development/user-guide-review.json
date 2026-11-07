@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed scratch maintenance admission, store sharing and existing Backup and Restore error paths. The new worker scope has no production UI binding or file action, so the offline user guide needs no change.",
+  "summary": "Reviewed worker-only quarantine, inspection and undo alongside the existing Backup and recovery behavior. Production Storage exposes no quarantine or undo control in this increment, so the offline user guide needs no change.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 32223,
-      "sha256": "b4d493f122fac3fed631ded0732c80b478429834c418c0e0386b0d4466b92bb9"
+      "bytes": 32332,
+      "sha256": "4324169f21654bf99e86023f83bff2874a174470f7d084503997d3da5b5e6b9e"
     },
     {
       "path": "CMakePresets.json",
@@ -550,13 +550,13 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 80216,
-      "sha256": "ce46ce23d7fe83a9c777b40eadb3e652980248f646d7bbf6d5d5d876721197c1"
+      "bytes": 93350,
+      "sha256": "c71cb75233c4d95bc98f817db2890834bcff9fa00e1d681914526ff774727cc8"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 5897,
-      "sha256": "cd8bcdf884c609235f18beba3072f61230397171ec6e15ac3ff63b5988d62919"
+      "bytes": 7086,
+      "sha256": "fce8380b8fe39a039187c85010316141aa6818e78942a13d9fe5fbfbc1445226"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",

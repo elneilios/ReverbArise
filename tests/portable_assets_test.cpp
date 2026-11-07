@@ -38,7 +38,10 @@ struct ReadOnlyFixture
 #include "working_folder_test.h"
 #include "ScratchPreviewCases.h"
 #include "ScratchMaintenanceCases.h"
+#include "ScratchQuarantineCases.h"
 int main(int argc,char** argv){
+    if(argc==7 && juce::String(argv[1])=="--scratch-quarantine-child")return runTest([&]{scratchQuarantineChild(argv[2],juce::File(argv[3]),juce::File(argv[4]),argv[5],argv[6]);});
+    if(argc==2 && juce::String(argv[1])=="--scratch-quarantine")return runTest(scratchQuarantineCases);
     if(argc==7 && juce::String(argv[1])=="--scratch-lease-child")return runTest([&]{scratchLeaseChild(argv[2],juce::File(argv[3]),juce::File(argv[4]),argv[5],juce::File(argv[6]));});
     if(argc==2 && juce::String(argv[1])=="--scratch-maintenance")return runTest(scratchMaintenanceCases);
     if(argc==2 && juce::String(argv[1])=="--scratch")return runTest(scratchPreviewCases);

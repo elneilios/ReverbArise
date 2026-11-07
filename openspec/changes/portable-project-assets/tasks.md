@@ -44,7 +44,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 - [x] 5.1 Obtain a separate reviewed scratch-only implementation scope; deliver the eligible-class matrix showing source, capture staging, IRs, durable renders/history, exports and unknown legacy temporary files are excluded.
 - [x] 5.2 Add opt-in preview restricted initially to journaled cancelled pack-copy scratch; verify exact counts/bytes/reasons and zero eligibility for sole recordings, exports and possibly referenced old-FLP assets.
 - [x] 5.3 Add cross-process maintenance coordination and immediate handle/path/hash/reference/lease revalidation; verify active readers/jobs, new references after preview, locked files and path races skip candidates without callback blocking.
-- [ ] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
+- [x] 5.4 Add journaled same-volume quarantine and restart-safe hash-verified undo; verify crash at each journal/move boundary, destination conflicts and preserved ambiguous data.
 - [ ] 5.5 Add at least 30-day grace plus separate explicit permanent-removal review; verify time expiry alone never erases files and fresh uncertainty or leases veto final removal.
 - [ ] 5.6 Add recovery reporting for abandoned source/snapshots without automatic adoption; verify explicit validated recovery preserves both previous accepted refs and originals on failure.
 - [ ] 5.7 Update retention/recovery documentation and dated fault-injection evidence; verify every cleanup eligibility condition and rollback operation has a passing focused fixture before enabling this optional phase.
@@ -122,4 +122,9 @@ Production UI rollout and file actions retain their later gates.
 
 Task 5.3 passed cross-process lease, stale evidence, reference, path-race and
 audio-callback fixtures. See the [maintenance evidence](../../../docs/validation/2026-11-07-issue-8-scratch-maintenance.md).
-Task 5.4 retains its separate quarantine and undo gate.
+Task 5.4 passed its quarantine and undo gate in disposable native fixtures.
+
+The worker backend passed the process-exit, restart, hash and conflict fixtures.
+See the [quarantine evidence](../../../docs/validation/2026-11-07-issue-8-scratch-quarantine.md).
+Grace and permanent removal, recovery reporting and production enablement retain
+their separate gates.
