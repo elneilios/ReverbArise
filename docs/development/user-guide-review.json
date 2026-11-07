@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the selector guidance from main and the Storage and rollback instructions. Recovery saves now retain the accepted folder and Export protects the legacy asset folder after a switch. The guide already covers both workflows.",
+  "summary": "Reviewed the synced project portability and asset retention requirements against the existing Storage and Learn flows. The guide already describes working-folder selection, Backup, Restore and normal Learn recovery. Scratch administration remains outside production controls.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 31791,
-      "sha256": "4d83d8c9317ae125c834abfe2c52e277952abee9cbf669d345fe8c2551d82dae"
+      "bytes": 32547,
+      "sha256": "63854fdf6df71e6c1b7bdbd97f4a1219cb3f41310e9899c70b915e77fd1dda97"
     },
     {
       "path": "CMakePresets.json",
@@ -540,23 +540,23 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 24052,
-      "sha256": "44d178f6298451fc089e19b8394d69b3f1b3c3b1f43bff268e0e5652dc1ec945"
+      "bytes": 26698,
+      "sha256": "c80b19479f1d42f1a8182112668f06b8b3883bef66211c912e4d87bec61eddce"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
-      "bytes": 3188,
-      "sha256": "df5db970032ba4af301c88e72cb406344db431ad6aec124eb025979e0ab81de6"
+      "bytes": 3801,
+      "sha256": "76d6fe1bc222b284dd442def105eb9510c0ebb8db1846463038cecd22a8182d2"
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 64033,
-      "sha256": "ee62c7f4caa71602fbda9ef766f1afa119871affb8634440f61382c5e42e62ca"
+      "bytes": 103061,
+      "sha256": "da448e8ce03d3772147029eb5abb310b682aca85d7ff72690939498fbc0fd1c4"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
-      "bytes": 4502,
-      "sha256": "b692f71995ad09ad18804c2c364f80f4c9364cc5b7318ab939e316d3e09fe877"
+      "bytes": 8293,
+      "sha256": "561c6e96037e2aad840b76ed7ced61e3d7e41d1ba88ac5f1fb0bf13bad71ba3f"
     },
     {
       "path": "Source/Storage/WorkingFolder.h",
@@ -915,8 +915,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 27785,
-      "sha256": "7510d45e74f096a2d7967eb14697a456255b11ccd38c13e39e1e79435aa6b7f2"
+      "bytes": 27861,
+      "sha256": "ce8ba5eb0dfed1b434d5d116d10c1d712a3b1549520bf6e82471b3362b43735a"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -942,6 +942,11 @@
       "path": "openspec/specs/.gitkeep",
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "openspec/specs/asset-retention/spec.md",
+      "bytes": 10312,
+      "sha256": "1f1fd19ef0832edfa763343140f182d4d88c682a294d982319b6396a6449bfe0"
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
@@ -977,6 +982,11 @@
       "path": "openspec/specs/product-release-identity/spec.md",
       "bytes": 4505,
       "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
+    },
+    {
+      "path": "openspec/specs/project-asset-portability/spec.md",
+      "bytes": 15503,
+      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",

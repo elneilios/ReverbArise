@@ -221,6 +221,51 @@ Report inspect(const Request& request,const std::function<bool()>& cancelled)
     } catch(const std::exception& e){report.inventoryComplete=false;report.dependencyVerificationComplete=false;report.issues.push_back("Inventory failed: "+juce::String(e.what()));}
     return report;
 }
+CaptureRecoveryReport captureRecoveryCandidates(const Report& report,const juce::File& root,
+                                                 const ObservedSnapshot& accepted)
+{
+    CaptureRecoveryReport result;
+    if(!uuid(accepted.project) || !uuid(accepted.instance) || root.getFileName()!=accepted.instance
+        || root.getParentDirectory().getFileName()!=accepted.project)return result;
+    std::map<juce::String,const InventoryFile*> files;
+    std::set<juce::String> referenced;
+    for(const auto& file:report.files)
+        if(juce::File(file.root)==root)files.emplace(file.path.toLowerCase(),&file);
+    result.complete=report.inventoryComplete && !report.cancelled && !files.empty();
+    for(const auto& dependency:accepted.dependencies)referenced.insert(dependency.path.toLowerCase());
+    for(const auto& [path,file]:files){
+        if(!path.startsWith("manifests/") || !path.endsWith(".json") || !relative(file->path))continue;
+        CaptureRecoveryCandidate candidate{file->path,file->sha256};
+        ObservedSnapshot observed;
+        observed.reference=file->path;
+        juce::String error;
+        if(file->sha256.isEmpty() || !parseCaptureManifest(file->metadata,observed.capture,error)
+            || observed.capture.projectId!=accepted.project.toStdString()
+            || observed.capture.instanceId!=accepted.instance.toStdString()
+            || !visitDependencies(observed,error)){
+            candidate.unavailable.add("Unsupported or unreadable capture snapshot.");
+            result.complete=false;
+        }else{
+            candidate.revision=observed.capture.revision;
+            for(const auto& dependency:observed.dependencies){
+                const auto key=dependency.path.toLowerCase();
+                referenced.insert(key);
+                const auto found=files.find(key);
+                if(found==files.end() || found->second->sha256.isEmpty()
+                    || (dependency.checksum.isNotEmpty() && found->second->sha256!=dependency.checksum)
+                    || (dependency.descriptor.isNotEmpty()
+                        && juce::JSON::toString(juce::JSON::parse(found->second->metadata),true)!=dependency.descriptor))
+                    candidate.unavailable.add(dependency.path);
+            }
+        }
+        if(file->path!=accepted.reference)result.snapshots.push_back(std::move(candidate));
+    }
+    for(const auto& [path,file]:files)
+        if(path.startsWith("segments/") && path.endsWith(".wav") && relative(file->path)
+            && !referenced.contains(path) && !report.catalog.references.contains(path))result.unindexedAudio.add(file->path);
+    return result;
+}
+
 InventoryService::InventoryService():Thread("Read-only asset inventory"){}
 InventoryService::~InventoryService(){signalThreadShouldExit();++epoch;notify();stopThread(-1);}
 uint64_t InventoryService::request(Request request)

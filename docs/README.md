@@ -27,7 +27,9 @@ This directory covers product identity, the existing implementation, development
 
 - [Portable backup backend](development/portable-asset-backups.md) — exact-byte phase-2 backend and approved production Backup/Restore/Locate controls; [dated verification and remaining gates](validation/2026-11-06-issue-8-portable-backend.md).
 
-- [Working-folder association](development/working-folder-association.md) — phase-4 transaction backend and disposable native review candidate; production cutover and independent-write validation remain gated.
+- [Working-folder association](development/working-folder-association.md) — delivered phase 4 folder selection, independent writers, recovery and rollback.
+
+- [Scratch cleanup scope](development/scratch-cleanup-scope.md) — approved phase 5 scope, with the eligibility matrix, read-only preview and remaining gates.
 
 - [Issue #8 FL Studio folder-discovery spike](validation/2026-11-06-issue-8-project-folder-spike.md) — native state-stream observations, tested host/JUCE versions, explicit-folder fallback and restored test installation.
 
