@@ -10,6 +10,13 @@ acceptance and automated results. Other production migrations remain
 separate child changes; #107 remains open. Independent #108 Level and #8 recovery/engine
 work are outside this delivery and the remaining-button proposal.
 
+The selector child `unify-selector-states` adds the native-approved C2 family and
+named consumer adoption at standards revision 14 (7 November 2026). Its
+[evidence](../validation/2026-11-07-issue-107-selectors.md) records local field
+feedback approval, binding checks and remaining host/DPI coverage. Action menus
+remain the separate `unify-action-menu-states` child; Recovery candidateBox stays
+with #8.
+
 ## How to read this inventory
 
 Each row identifies the actual member(s), source/owning policy, surface, semantic

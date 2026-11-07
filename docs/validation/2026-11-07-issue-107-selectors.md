@@ -173,6 +173,32 @@ measures to the visible body (the approved 6-unit label gap); the outside focus
 frame is reserved independently. This was a test-only correction. The previous
 Learn font/alignment checks passed through to this later assertion.
 
+### Final integration gate
+
+The supported command `scripts/build.ps1 -Configuration Release -Test` passed
+against committed runtime/test revision `8eca860`, warm retained Windows/MSVC
+Release tree, run `20261107-020247-e6ab68c2`: preflight/configure/build all passed,
+**87/87 native CTest checks passed**, 251.04 s, wrapper exit 0. This includes
+SelectorPopup, actual SelectorBinding, ExportLevels within SwellUI, shared IR,
+UiStandards, Perform navigation/bindings/reset/audition, ResponsiveEditor/Scale,
+protected commands, audio, persistence and recovery regressions. The preceding
+run finished 86/87, 243.45 s, with only the now-corrected caption-gap oracle.
+
+Current merged main remains `89da1e7` (fetched and verified as an ancestor);
+no active #108/#8 implementation was imported. UI standards passed, 71 files /
+59 bounded occurrences, with no debt inventory regeneration. Both selector and
+action-menu proposals pass strict validation. Guide prose was semantically
+updated for delivered selection/focus/field-feedback behavior and its deliberate
+review record passes currency checks. Change Markdown file targets and
+`git diff --check` passed. Documentation/task-only completion commits follow
+the tested runtime revision and do not require another native suite.
+
+Native family acceptance covers the directly launched Windows preview and
+automated component/editor/software-scale cases. Physical Windows DPI variants,
+screen-reader application speech and FL Studio interaction have not been
+retested for this selector change; no host or physical-DPI result is inferred
+from the passing CTest suite. No release or installed host-test build is claimed.
+
 ### Separate action-menu handoff
 
 `unify-action-menu-states` remains a separate, unapplied child (0/9). Begin its
