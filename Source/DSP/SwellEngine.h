@@ -31,6 +31,7 @@ struct PreparedExport
     SongMixMetrics metrics;
     ExportFile file;
     juce::String acceptedNotice;
+    std::shared_ptr<const CaptureStorageLocation> storage;
 };
 struct ExportSnapshot
 {
@@ -119,6 +120,10 @@ public:
     std::optional<GenerationConfiguration> passConfiguration(uint64_t pass) const;
     EditorSnapshot snapshot() const;
     Session savedSession() const;
+    // Pure control-thread capture of one accepted source/creative pair.
+    bool acceptedStorageSnapshot(CaptureSessionSnapshot&,Session&,juce::File&,uint64_t&,juce::String&,bool allowUnavailable=false) const;
+    bool reloadStorageAssets(uint64_t expectedSession,juce::String expectedReference);
+    void beginSourceReplacement();
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
@@ -205,6 +210,14 @@ public:
     void endOffline() noexcept {offlineActive.store(false);}
     void recaptureCompleted(int64_t start,int64_t end);
     uint64_t residentBytes() const;
+    // Control worker only: fence file jobs, then reserve model state only for
+    // the final no-I/O capture actor swap. The audio callback takes neither lock.
+    bool withStorageJobsPaused(const std::function<bool()>& operation)
+    {const juce::ScopedLock work(workLock);return operation();}
+    bool withStorageModelLocked(const std::function<bool()>& operation)
+    {const juce::ScopedLock guard(lock);return operation();}
+    void acceptStorageLocation(std::shared_ptr<const CaptureStorageLocation> location)
+    {const juce::ScopedLock guard(lock);storageLocation.store(std::move(location));invalidateLiveLocked();liveCache.clear();stopLocked();notify();}
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
     std::function<void()> persistentChange;
@@ -232,7 +245,6 @@ private:
     std::optional<CandidateIdentity> learnAttempt;
     std::optional<LearnRequest> learnRequest;
     std::optional<StopIntent> stopIntent;
-    std::set<juce::String> deferredLearnDependencies;
     std::set<juce::String> protectedGenerationCalibration;
     uint64_t learnCandidateSerial=0,successfulGeneration=0,initialPerformOffer=0;
     bool performPositionEstablished=false,learnUpdating=true,learnGenerating=false,learnUsable=false,learnFailed=false;
@@ -290,7 +302,7 @@ private:
     bool automaticJob();
     void collectCompletedPass(const PreviewContext&,bool acceptedCapture=false);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
-    void dispatchAutomatic(const PreviewContext&);
+    void reconcileRenders(const PreviewContext&);
     void requestManualPreparationLocked(const Swell&,const PreviewContext&);
     void dirtyLocked(int64_t,int64_t,bool acceptedPass=false);
     void acceptedSourceLocked(const CaptureManifest&);
@@ -311,8 +323,10 @@ private:
     void stopLocked();
     void setExpected(const SongTime&);
     juce::File instanceRoot(const CaptureManifest&) const;
+    bool storageReady(const PreviewContext&); // Worker/offline only; never the real-time callback.
     static std::shared_ptr<Waveform> waveform(const WetRender&);
-    juce::File root;
+    const juce::File legacyProjectsRoot;
+    std::atomic<std::shared_ptr<const CaptureStorageLocation>> storageLocation;
     std::function<PreviewContext()> contextProvider;
     mutable juce::CriticalSection lock;
     juce::CriticalSection workLock;
@@ -324,7 +338,8 @@ private:
     std::vector<Candidate> candidates;
     juce::String message="Capture source, add or confirm a target, then assign an IR";
     juce::String actionError;
-    juce::String captureReference,captureScope;
+    bool initialiseDefaultIfMissing=true;
+    juce::String captureReference,captureScope,storageRestoreReference;
     juce::String awaitingCaptureReference;
     std::set<juce::String> forceRefresh;
     uint64_t captureGeneration=0,renderCount=0,useSerial=0;
@@ -332,7 +347,7 @@ private:
     ExportSnapshot exportState;
     struct DetailRequest{uint64_t session,serial,mix,pass;int64_t first,end;size_t bins;double due;std::shared_ptr<const PreparedExport> accepted;};
     std::optional<DetailRequest> detailWork;std::atomic<uint64_t> detailSerial{0};
-    struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;};
+    struct ExportDelivery{uint64_t id,session,request,pass;ExportFile file;juce::File directory,destination;bool overwrite,drag;std::shared_ptr<const CaptureStorageLocation> storage;};
     uint64_t exportDeliverySerial=0;std::optional<ExportDelivery> exportDelivery;
     std::unique_ptr<ExportVoice> exportVoice=std::make_unique<ExportVoice>();
     std::unique_ptr<SongMix> exportPreviewReader;

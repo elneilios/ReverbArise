@@ -41,12 +41,7 @@ void Composition::verifyKnobResets()
     auto sourceOnly=baseline;*m3::find(sourceOnly,firstId)=replacement;engine.restore(sourceOnly);panel->refresh(); // Source-only epoch oracle; no wet readiness is implied.
     REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::setSource(w,w.sourceStart,w.sourceEnd+2400,error);}));panel->refresh();reset("sourceSampleEnd");REQUIRE(current().sourceEnd==replacement.sourceEnd);
     // The real asynchronous popup action, including focus loss to the menu.
-    load(original);
-    // A named native top-level window lets the desktop test runner target this
-    // exact fixture when Windows denies activation to a background process.
-    juce::DocumentWindow nativeWindow("ReverbArise native knob reset regression",background,juce::DocumentWindow::closeButton);
-    nativeWindow.setUsingNativeTitleBar(true);nativeWindow.setContentNonOwned(panel.get(),false);
-    nativeWindow.centreWithSize(panel->getWidth(),panel->getHeight());nativeWindow.setVisible(true);nativeWindow.toFront(true);
+    load(original);NativeEditorPeer nativePeer(*panel,"ReverbArise - PerformKnobResetCases native validation");panel->setVisible(true);panel->toFront(true);
     // JUCE keyboard focus alone does not make this an active native window.
     // PopupMenu dismisses itself when its owning process is in the background.
     auto* peer=panel->getPeer();REQUIRE(peer);
@@ -56,9 +51,7 @@ void Composition::verifyKnobResets()
     ::SetForegroundWindow(static_cast<HWND>(peer->getNativeHandle()));
    #endif
     peer->grabFocus();
-    // A bounded activation handoff lets desktop test runners raise this unique
-    // peer when Windows denies foreground activation to a background process.
-    const auto focusDeadline=juce::Time::getMillisecondCounter()+10000;
+    const auto focusDeadline=juce::Time::getMillisecondCounter()+30000; // Allow the interactive native runner to grant real foreground focus.
     while((!peer->isFocused() || !juce::Process::isForegroundProcess()) && juce::Time::getMillisecondCounter()<focusDeadline)
         juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
     if(!peer->isFocused() || !juce::Process::isForegroundProcess())
@@ -80,7 +73,7 @@ void Composition::verifyKnobResets()
     REQUIRE(current().shape.gainDb==0);juce::PopupMenu::dismissAllActiveMenus();
     load(original);level.mouseDown(event(level,juce::ModifierKeys::rightButtonModifier,1));level.mouseUp(event(level,{},1));
     juce::PopupMenu::dismissAllActiveMenus();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);REQUIRE(current().shape.gainDb==-7);
-    reset("swellLevel");nativeWindow.clearContentComponent();nativeWindow.setVisible(false);
+    reset("swellLevel");nativePeer.setVisible(false);
     struct Notifications final:juce::AudioProcessorListener
     {int changes=0;void audioProcessorParameterChanged(juce::AudioProcessor*,int,float)override{}
         void audioProcessorChanged(juce::AudioProcessor*,const ChangeDetails& detail)override{if(detail.nonParameterStateChanged)++changes;}} notifications;

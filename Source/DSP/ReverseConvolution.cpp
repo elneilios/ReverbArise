@@ -2,6 +2,7 @@
 #include "WavPackDecoder.h"
 #include <juce_dsp/juce_dsp.h>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <complex>
 #include <cstring>
@@ -10,10 +11,13 @@
 
 namespace
 {
+std::atomic<uint64_t> convolutionCalls{0},resamplingCalls{0};
 bool fail(juce::String& error, const juce::String& reason) { error = reason; return false; }
 bool finiteSamples(const std::vector<float>& data)
 { return std::all_of(data.begin(), data.end(), [](float v) { return std::isfinite(v); }); }
 }
+
+RenderWorkCounts renderWorkCounts() noexcept{return {convolutionCalls.load(),resamplingCalls.load()};}
 
 bool loadImpulseResponse(const juce::File& file, uint64_t available, ImpulseResponse& output, juce::String& error)
 {
@@ -68,6 +72,7 @@ bool prepareImpulseResponse(const ImpulseResponse& input, double rate, uint64_t 
     if (rate == input.rate) result.samples = input.samples;
     else
     {
+        resamplingCalls.fetch_add(1,std::memory_order_relaxed);
         // Symmetric 64-lobe Hann-windowed sinc, evaluated at the exact input origin.
         // Zero extension preserves the origin without adding a causal filter delay.
         const auto cutoff = std::min(1.0, rate / input.rate);
@@ -117,6 +122,7 @@ bool renderReverseConvolution(const std::vector<float>& source, int64_t start, d
     const ImpulseResponse& ir, uint64_t occupied, WetRender& output, juce::String& error,
     const RenderCancellation& cancelled, const RenderProgress& progress)
 {
+    convolutionCalls.fetch_add(1,std::memory_order_relaxed);
     const auto n = source.size() / 2, m = ir.frames();
     uint64_t required = 0;
     if (source.size() % 2 || ! finiteSamples(source) || ! finiteSamples(ir.samples)

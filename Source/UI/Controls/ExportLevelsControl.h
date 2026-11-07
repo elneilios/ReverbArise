@@ -1,5 +1,5 @@
 #pragma once
-#include "DeliberateSelector.h"
+#include "ChoiceSelector.h"
 #include "SliderControl.h"
 #include <array>
 
@@ -25,6 +25,7 @@ public:
         selector.setTooltip("Musical starting points set only the Dry and Wet levels; unmatched levels display Custom.");
         selector.addItem("Custom",1);for(size_t n=0;n<candidates.size();++n)selector.addItem(candidates[n].name,static_cast<int>(n)+2);
         selector.setItemEnabled(1,false);
+        selector.setChoiceReason(1,"Custom reflects the accepted Dry/Wet pair; choose a named preset to change it");
         selector.beforeInvocation=[this]{if(beforeInvocation)beforeInvocation();};
         selector.onChange=[this]{if(refreshing)return;const auto index=selector.getSelectedId()-2;
             if(index>=0 && index<static_cast<int>(candidates.size()))commit(candidates[static_cast<size_t>(index)].levels);};
@@ -58,12 +59,14 @@ public:
         for(auto row:std::array<std::pair<juce::Label*,juce::Component*>,3>{{{&characterLabel,&selector},{&dryLabel,&dry},{&wetLabel,&wet}}}){
             if(responsive)row.first->setFont(componentTextFont(*this,TextRole::controlLabel));
             row.first->setBounds(area.removeFromTop(responsive?responsiveGeometry::captionHeight:controlGeometry::labelHeight));area.removeFromTop(spacing::labelHelp);
-            row.second->setBounds(area.removeFromTop(responsive?responsiveGeometry::controlHeight:controlGeometry::height));area.removeFromTop(responsive?responsiveGeometry::contentPadding:spacing::related);
+            const auto bodyRow=area.removeFromTop(responsive?responsiveGeometry::controlHeight:controlGeometry::height);
+            if(row.second==&selector)selector.setRowBounds(bodyRow);else row.second->setBounds(bodyRow);
+            area.removeFromTop(responsive?responsiveGeometry::contentPadding:spacing::related);
         }
     }
     std::function<void()> beforeInvocation;
     std::function<void(Pair)> onChange;
-    DeliberateSelector selector;SliderControl dry,wet;
+    ChoiceSelector selector;SliderControl dry,wet;
 private:
     void commit(Pair pair){if(pair==accepted)return;display(pair);if(onChange)onChange(pair);}
     Pair accepted;bool refreshing=false,responsive=false;

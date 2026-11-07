@@ -22,6 +22,7 @@ template<class F> static void waitFor(F condition,const std::source_location loc
     while(!condition()) { if(juce::Time::getMillisecondCounter()>deadline) throw std::runtime_error("Timeout at "+std::to_string(location.line())); juce::Thread::sleep(2); }
 }
 #include "LiveClockEngineCases.h"
+#include "StorageLocationEngineCases.h"
 int main() { return runTest([]
 {
     {
@@ -56,6 +57,7 @@ int main() { return runTest([]
         REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
     }
     runLiveClockEngineCases();
+    runStorageLocationEngineCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
     REQUIRE(capture.commit(0,1000,source.data(),3000));
@@ -109,18 +111,29 @@ int main() { return runTest([]
     REQUIRE(engine.snapshot().shaped->peak>initial.shaped->peak);
     REQUIRE(engine.edit(second,[](auto& w,auto&){w.solo=true;return true;})); REQUIRE(!engine.audition());
     REQUIRE(engine.edit(second,[](auto& w,auto&){w.solo=false;return true;})); waitFor([&]{return engine.snapshot().auditionReady;}); REQUIRE(engine.audition());
+    // Material timing changes are maintained by the common worker. The host
+    // provider and callback must describe the same accepted clock; a transient
+    // stale phase is not a durable/manual-Generate contract.
+    const auto beforeTempo=engine.savedSession();const auto beforeTempoCount=engine.snapshot().renderCount;
+    const auto assetRoot=root.file.getChildFile(context.capture.manifest.projectId).getChildFile(context.capture.manifest.instanceId);
     auto changed=context.time; changed.bpm=241;
+    {const juce::ScopedLock guard(contextLock);context.time=changed;}
     std::fill_n(left,64,0); engine.processAudio(left,right,64,changed); REQUIRE(std::all_of(left,left+64,[](float x){return x==0;}));
-    waitFor([&]{return engine.savedSession().swells[0].phase==Phase::stale;});
-    REQUIRE(engine.selectTargets({first},first)); engine.generate(); waitFor([&]{return engine.snapshot().auditionReady;});
+    waitFor([&]{const auto state=engine.snapshot();return state.auditionReady && state.session.swells[0].phase==Phase::ready
+        && state.session.swells[1].phase==Phase::ready && state.session.swells[0].render.bpm==241 && state.session.swells[1].render.bpm==241;});
+    REQUIRE(engine.snapshot().renderCount==beforeTempoCount+2);
+    for(size_t i=0;i<beforeTempo.swells.size();++i){const auto& previous=beforeTempo.swells[i];const auto current=engine.savedSession().swells[i];
+        REQUIRE(current.id==previous.id && current.shape==previous.shape && current.ir==previous.ir && current.render.path!=previous.render.path);
+        REQUIRE(fileHash(assetRoot.getChildFile(previous.render.path))==previous.render.checksum);}
+    REQUIRE(engine.selectTargets({first},first)); // Retain the fixture's single-target ownership for later removal.
     const auto count=engine.snapshot().renderCount;
     REQUIRE(capture.commit(0,1000,source.data(),250)); update(); juce::Thread::sleep(100);
     waitFor([&]{return engine.snapshot().auditionReady;}); REQUIRE(engine.snapshot().renderCount==count);
     float replacement[]{0.25f,-0.25f}; REQUIRE(capture.commit(0,1000,replacement,1)); update();
-    waitFor([&]{return engine.savedSession().swells[0].phase==Phase::stale;});
+    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+1;});
     engine.setPreferences(-24,0.7f,0.1,true);
     replacement[0]=0.3f; REQUIRE(capture.commit(0,1000,replacement,1)); update();
-    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+1;});
+    waitFor([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount==count+2;});
     // A bad batch member cannot prevent independent valid results.
     REQUIRE(engine.edit(second,[](auto& w,auto&){w.sourceEnd=4000;return true;}));
     engine.generate(true); waitFor([&]{return engine.savedSession().swells[1].phase==Phase::error;});
@@ -161,8 +174,14 @@ int main() { return runTest([]
     waitFor([&]{return !engine.snapshot().analyzing;}); REQUIRE(engine.savedSession().swells.size()==ids.swells.size());
     REQUIRE(engine.snapshot().candidates.empty());
     REQUIRE(engine.savedSession().swells[0].id==first && engine.savedSession().swells[0].shape.gainDb==6);
+    const auto beforeEdit=engine.savedSession().swells[0];
     engine.generate(); REQUIRE(engine.edit(first,[](auto& w,auto&){++w.sourceEnd;return true;}));
-    juce::Thread::sleep(100); REQUIRE(engine.savedSession().swells[0].phase!=Phase::ready);
+    // Cancelling a superseded request must not suppress the current material
+    // revision. Assert the accepted result, rather than racing its Ready phase.
+    waitFor([&]{const auto state=engine.snapshot();const auto& current=state.session.swells[0];return state.auditionReady
+        && current.phase==Phase::ready && current.sourceEnd==beforeEdit.sourceEnd+1
+        && current.render.sourceEnd==current.sourceEnd && current.render.dependency!=beforeEdit.render.dependency;});
+    REQUIRE(fileHash(assetRoot.getChildFile(beforeEdit.render.path))==beforeEdit.render.checksum);
     engine.generate(); engine.removeSelected(); juce::Thread::sleep(100); REQUIRE(!find(engine.savedSession(),first));
     REQUIRE(engine.residentBytes()<previewMemoryBudget);
     REQUIRE(engine.selectTargets({second},second));

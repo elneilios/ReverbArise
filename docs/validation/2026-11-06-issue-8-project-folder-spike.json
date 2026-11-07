@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-06",
+  "sourceBase": "d049cfcb5caa01b51c09ccdde86a42e2afa38ff7",
+  "scope": "Native runtime diagnostic of optional VST3 IStreamAttributes at JUCE component getState/setState boundaries; no project-path inference or asset relocation.",
+  "host": {
+    "product": "FL Studio 2026 Producer Edition, All Plugins Edition, Windows x64",
+    "fileVersion": "26.1.7.5654",
+    "juce": "9.0.4"
+  },
+  "installedDiagnosticBinarySha256": "b5c774d1b9fbfa2886bea789827d7b34f2fcdb38a147d3b237806106abfa9165",
+  "originalAndRestoredBinarySha256": "94bee38a215d6564ebbdcfada6cb76acdfdc2082e895e848c09f32001d109774",
+  "rawLogSha256": "96c13b35f166a0d2a57d5a1894a8169f2a9baa9603bbd5a15982a2543b98645b",
+  "fieldNote": "hostExecutable is the JUCE currentExecutableFile special location: the loaded system VST3 DLL in this context, NOT a DAW project path or host executable discovery result.",
+  "scenarios": [
+    {
+      "name": "Fresh unsaved instance",
+      "eventIndexes": [
+        0
+      ]
+    },
+    {
+      "name": "First save to original/folder-discovery.flp",
+      "eventIndexes": [
+        1
+      ]
+    },
+    {
+      "name": "Reopen original FLP",
+      "eventIndexes": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Save As to save-as/folder-discovery-save-as.flp",
+      "eventIndexes": [
+        4
+      ]
+    },
+    {
+      "name": "Open moved/folder-discovery.flp after moving original FLP and verifying its byte hash",
+      "eventIndexes": [
+        5,
+        6
+      ]
+    }
+  ],
+  "events": [
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "getState",
+      "time": "2026-11-06T10:55:50.445Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "getState",
+      "time": "2026-11-06T10:56:51.856Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "getState",
+      "time": "2026-11-06T10:57:19.476Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "setState",
+      "time": "2026-11-06T10:57:19.479Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "getState",
+      "time": "2026-11-06T10:57:40.086Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "getState",
+      "time": "2026-11-06T10:58:16.623Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    },
+    {
+      "schema": 1,
+      "probe": "issue8-stream-metadata-only-1",
+      "juce": "JUCE v9.0.4",
+      "operation": "setState",
+      "time": "2026-11-06T10:58:16.625Z",
+      "hostExecutable": "C:\\Program Files\\Common Files\\VST3\\ReverbArise.vst3\\Contents\\x86_64-win\\ReverbArise.vst3",
+      "thread": "message",
+      "streamPresent": true,
+      "streamAttributes": false
+    }
+  ],
+  "conclusion": "No observed stream supported IStreamAttributes. State type, stream filename and FilePathString could not be queried. No reliable project-folder signal established on this tested host/version/path.",
+  "limitations": [
+    "No claim about other DAWs, plugin formats, proprietary host extensions or other FL Studio versions.",
+    "No preset path was returned, so preset-versus-project discrimination was not exercised with a positive host signal.",
+    "No recapture, transfer integrity, second-profile portability, audio acceptance or DPI claim.",
+    "The fresh plugin creates its ordinary empty namespace/default IR; no song audio was played/captured or existing user project opened."
+  ]
+}

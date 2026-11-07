@@ -1,0 +1,38 @@
+{
+  "launcher": {
+    "bridge": "C:\\Users\\Public\\Documents\\ReverbArise-Recovery-e5a57a46ed60401786dafca5e1cbe68d",
+    "account": "RvRecoverye5a57a46",
+    "sourceExecutable": "C:\\Users\\neila\\.codex\\worktrees\\issue-8-portable-assets\\k7ma-preverb\\out\\build\\windows-msvc\\Release\\preverb_portable_recovery_test.exe",
+    "testExit": 0,
+    "accountRemoved": true,
+    "profileRemoved": true,
+    "binarySha256": "4E50D375578D1ED353DCA2E6AD4882B3916AC3FF162C497BD5C5CDAD1CFFD12A",
+    "sid": "S-1-5-21-651336283-4192031611-4053223580-1022",
+    "profile": "C:\\Users\\RvRecoverye5a57a46"
+  },
+  "validation": {
+    "sid": "S-1-5-21-651336283-4192031611-4053223580-1022",
+    "profile": "C:\\Users\\RvRecoverye5a57a46",
+    "projectsRoot": "C:\\Users\\RvRecoverye5a57a46\\AppData\\Local\\K7MA\\Preverb\\Projects",
+    "cases": [
+      {
+        "case": "full",
+        "files": 14,
+        "hashesExact": true,
+        "metadataExact": true,
+        "convolutions": 0,
+        "resamplings": 0,
+        "captureStages": 0
+      },
+      {
+        "case": "context",
+        "files": 5,
+        "hashesExact": true,
+        "metadataExact": true,
+        "convolutions": 0,
+        "resamplings": 0,
+        "captureStages": 0
+      }
+    ]
+  }
+}

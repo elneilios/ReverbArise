@@ -203,12 +203,12 @@ static void aboutBindings(bool review=false)
     if(!review)writer=[&](const juce::String& information){copiedInformation=information;};
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor,std::move(writer));editor->setVisible(true);editor->refresh();
     const auto showAbout=[&]{auto* action=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));REQUIRE(action);action->onClick();
-        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==6);tabs->setCurrentTabIndex(5);};
+        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);};
     if(review)
     {
         juce::Timer::callAfterDelay(200,[safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(editor.get())]{if(!safe)return;
             auto* action=dynamic_cast<juce::Button*>(named(*safe,"diagnostics"));REQUIRE(action);action->onClick();
-            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(5);});
+            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);});
         controlReview::run(std::move(editor));return;
     }
     juce::String before,after,error;REQUIRE(encode(engine.savedSession(),before,error));
@@ -230,7 +230,7 @@ static void aboutBindings(bool review=false)
     const auto fill=[&](bool over,bool down){juce::Image image(juce::Image::ARGB,copy->getWidth(),copy->getHeight(),true);
         {juce::Graphics graphics(image);copy->paintButton(graphics,over,down);}return image.getPixelAt(8,8);};
     const auto normal=fill(false,false),hover=fill(true,false),pressed=fill(true,true);
-    REQUIRE(normal==m3::ui::aqua && hover==m3::ui::hover && pressed==m3::ui::hover && normal!=hover);
+    REQUIRE(normal==m3::ui::aqua && hover==m3::ui::hover && pressed==m3::ui::aqua && normal!=hover);
     copy->setEnabled(false);REQUIRE(fill(false,false)!=normal);copy->setEnabled(true);
     controlReview::pointerClick(*copy);REQUIRE(copiedInformation==juce::String(m3::build::report()));
     REQUIRE(status->getText().contains("Build information copied to clipboard."));

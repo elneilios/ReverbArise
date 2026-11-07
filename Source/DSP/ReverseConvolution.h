@@ -25,6 +25,9 @@ struct WetRender
     size_t frames() const noexcept { return samples.size() / 2; }
 };
 
+// Worker-side counters distinguish verified reload from regeneration/resampling.
+struct RenderWorkCounts{uint64_t convolutions=0,resamplings=0;};
+RenderWorkCounts renderWorkCounts() noexcept;
 bool loadImpulseResponse(const juce::File&, uint64_t availableBytes, ImpulseResponse&, juce::String& error);
 bool prepareImpulseResponse(const ImpulseResponse&, double targetRate, uint64_t availableBytes,
                             ImpulseResponse&, juce::String& error, const RenderCancellation& cancelled = {});

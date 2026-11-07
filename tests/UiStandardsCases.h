@@ -35,16 +35,23 @@ static void uiStandardsCases()
         for(int y=0;y<actual.getHeight();++y)for(int x=0;x<actual.getWidth();++x)REQUIRE(actual.getPixelAt(x,y)==old.getPixelAt(x,y));
     }
     REQUIRE(headerBodyInk!=learnTypography::descriptionColour && headerBodyInk!=secondary);
-    controls::IrSelector picker;picker.addItem("One",1);picker.addItem("Two",2);picker.addItem("Three",3);picker.setSelectedId(2,juce::dontSendNotification);
+    juce::Component peer;peer.setBounds(80,80,500,240);peer.addToDesktop(0);peer.setVisible(true);peer.toFront(true);
+    controls::IrSelector picker;peer.addAndMakeVisible(picker);picker.setBounds(24,24,260,44);
+    picker.addItem("One",1);picker.addItem("Two",2);picker.addItem("Three",3);picker.setSelectedId(2,juce::dontSendNotification);
     unsigned invocations=0,changes=0,epoch=1,invoked=0;int accepted=2;
     picker.beforeInvocation=[&]{++invocations;invoked=epoch;};
     picker.onChange=[&]{++changes;if(invoked==epoch)accepted=picker.getSelectedId();else picker.setSelectedId(accepted,juce::dontSendNotification);};
     wheelOver(picker,1.f);wheelOver(picker,-1.f);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(picker.getSelectedId()==2 && invocations==0 && changes==0);
-    REQUIRE(picker.keyPressed(juce::KeyPress(juce::KeyPress::downKey)));++epoch;
+    REQUIRE(picker.keyPressed(juce::KeyPress(juce::KeyPress::downKey)));
+    REQUIRE(picker.activePopup());picker.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::endKey));
+    REQUIRE(changes==0 && picker.getSelectedId()==2);++epoch;
+    picker.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
     juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(invocations==1 && changes==1 && accepted==2 && picker.getSelectedId()==2);
-    REQUIRE(picker.keyPressed(juce::KeyPress(juce::KeyPress::downKey)));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    REQUIRE(picker.keyPressed(juce::KeyPress(juce::KeyPress::downKey)));REQUIRE(picker.activePopup());
+    picker.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::endKey));
+    picker.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(accepted==3 && changes==2 && invocations==2);
     picker.setSelectedId(1,juce::dontSendNotification);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(changes==2);
 }

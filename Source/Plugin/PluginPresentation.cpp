@@ -32,7 +32,7 @@ m3::ui::PresentationFitContext PreverbAudioProcessorEditor::presentationDisplay(
 void PreverbAudioProcessorEditor::initialisePresentation()
 {
     using namespace m3::ui;
-    auto& page=settingsPages[6];page.setName("settingsAppearance");settingsTabs.addTab("Appearance",background,&page,false);
+    auto& page=settingsPages[6];page.setName("settingsAppearance");settingsTabs.addTab("Appearance",background,&page,false,6);
     for(auto* child:std::initializer_list<juce::Component*>{&presentationSizeLabel,&presentationScaleLabel,&presentationSizeBox,&presentationScaleBox,&presentationHelp})page.addAndMakeVisible(child);
     presentationSizeLabel.setText("Window size",juce::dontSendNotification);presentationScaleLabel.setText("UI scale",juce::dontSendNotification);
     applyTextRole(presentationSizeLabel,TextRole::controlLabel);applyTextRole(presentationScaleLabel,TextRole::controlLabel);
@@ -57,9 +57,9 @@ void PreverbAudioProcessorEditor::layoutPresentationSettings()
 {
     using namespace m3::ui;
     auto area=juce::Rectangle<int>(spacing::section,spacing::section,590,240);
-    auto row=area.removeFromTop(controlGeometry::height);presentationSizeLabel.setBounds(row.removeFromLeft(175));presentationSizeBox.setBounds(row);
+    auto row=area.removeFromTop(controlGeometry::height);presentationSizeLabel.setBounds(row.removeFromLeft(175));presentationSizeBox.setRowBounds(row);
     area.removeFromTop(spacing::related);row=area.removeFromTop(controlGeometry::height);
-    presentationScaleLabel.setBounds(row.removeFromLeft(175));presentationScaleBox.setBounds(row);
+    presentationScaleLabel.setBounds(row.removeFromLeft(175));presentationScaleBox.setRowBounds(row);
     area.removeFromTop(spacing::section);presentationHelp.setBounds(area);
 }
 void PreverbAudioProcessorEditor::updatePresentationControls()

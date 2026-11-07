@@ -5,30 +5,21 @@ namespace m3::ui::controls
 {
 enum class ActionIcon { settings, openFile };
 
-class IconActionButton final:public juce::Button
+class IconActionButton final:public CommandButton
 {
 public:
-    explicit IconActionButton(ActionIcon role):juce::Button(role==ActionIcon::settings?"Settings":"Open IR file"),icon(role)
+    explicit IconActionButton(ActionIcon role):CommandButton(role==ActionIcon::settings?"Settings":"Open IR file",true),icon(role)
     {
         setTitle(getButtonText());setTooltip(role==ActionIcon::settings?"Open Settings":"Import WAV or WavPack IR");setHelpText(getTooltip());
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
     }
-    // Space and Return have the same activation semantics. No mode toggling.
-    bool keyPressed(const juce::KeyPress& key)override
-    {
-        if(key.isKeyCode(juce::KeyPress::returnKey) || key.isKeyCode(juce::KeyPress::spaceKey))
-        {if(isEnabled())triggerClick();return true;}
-        return juce::Button::keyPressed(key);
-    }
-    void focusGained(FocusChangeType)override{repaint();}
-    void focusLost(FocusChangeType)override{repaint();}
     juce::Rectangle<float> outlineBounds(bool focused)const noexcept
     {return controlGeometry::insideStroke(getLocalBounds(),focused?controlGeometry::focusStroke:rule);}
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
         ActionButton::paintSurface(g,*this,over,down);
         const auto c=getLocalBounds().toFloat().getCentre();
-        g.setColour(m3::ui::text.withMultipliedAlpha(isEnabled()?1.f:.35f));
+        g.setColour(commandInk(CommandVariant::neutral,{isEnabled(),over,down,isFocusVisible(),false}).glyph);
         switch(icon)
         {
             case ActionIcon::openFile:

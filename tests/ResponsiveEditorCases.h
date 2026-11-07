@@ -57,7 +57,14 @@ void Composition::verifyResponsive(const juce::File& output)
                 auto& level=require<KnobValue>(*panel,"swellLevelCell");
                 REQUIRE(ir.getHeight()==ir.preferredHeight());
                 REQUIRE(level.getY()==ir.getBottom()+responsiveGeometry::contentPadding);
-                if(ir.status.getText().isEmpty())REQUIRE(ir.getHeight()==ir.selector.getBottom());
+                if(ir.status.getText().isEmpty())
+                {
+                    REQUIRE(ir.getHeight()==ir.fileButton.getBottom());
+                    REQUIRE(ir.getHeight()==ir.selector.getBottom());
+                    const auto selectorBody=controls::commandBodyBounds(ir.selector.getBounds());
+                    const auto importBody=controls::commandBodyBounds(ir.fileButton.getBounds());
+                    REQUIRE(selectorBody.getY()==importBody.getY() && selectorBody.getBottom()==importBody.getBottom());
+                }
             }
             for(const auto& cellName:std::vector<juce::String>{"arrivalSampleCell","sourceSampleStartCell","sourceSampleEndCell","preRollCell","endOffsetCell","fadeInMsCell","fadeOutMsCell","swellLevelCell","curveInTensionCell","curveOutTensionCell","wetPlacementCell"})
             {

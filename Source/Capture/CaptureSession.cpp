@@ -6,8 +6,11 @@
 #include <cmath>
 #include <limits>
 
-CaptureSession::CaptureSession(juce::File projectsRoot) : root(std::move(projectsRoot))
+CaptureSession::CaptureSession(juce::File projectsRoot,std::shared_ptr<const CaptureStorageLocation> selected)
+    :root(std::move(projectsRoot)),location(selected?std::move(selected):std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{root,root,{}}))
 {
+    jassert(location->projectsRoot==root);state.location=location;
+    if(!location->writable){state.unavailable=true;state.manifestKnown=false;state.status="Asset working folder unavailable; locate, restore or explicitly create a recovery workspace";}
     state.manifest.projectId = juce::Uuid().toDashedString().toStdString();
     state.manifest.instanceId = juce::Uuid().toDashedString().toStdString();
 }
@@ -24,7 +27,7 @@ CaptureAssetStore& CaptureSession::store() const
 }
 
 bool CaptureSession::restore(const std::string& project, const std::string& instance,
-                             const juce::String& reference, uint64_t revision)
+                             const juce::String& reference, uint64_t revision,const juce::String& savedManifest)
 {
     abortPass();
     CaptureManifest identity;
@@ -37,26 +40,44 @@ bool CaptureSession::restore(const std::string& project, const std::string& inst
         state.unavailable = true;
         return false;
     }
-    state = {};
+    state = {};state.location=location;state.manifestKnown=false;
     assets.reset(); // Reopen must check assets again even when their metadata is unchanged.
     state.manifest = identity;
     state.manifest.revision = revision;
     state.reference = reference;
     if (reference.isEmpty() && revision == 0)
-        return true;
+    {state.manifestKnown=true;state.unavailable=!location->writable;return !state.unavailable;}
     CaptureManifest loaded;
-    if (! store().loadSnapshot(reference, loaded, error)
+    const bool fromDisk=savedManifest.isEmpty() && location->writable && store().loadSnapshot(reference,loaded,error);
+    // Associated host metadata is authoritative. A changed local manifest must
+    // not silently substitute another map with the same IDs/revision.
+    const bool fromState=reference.startsWith("manifests/") && reference.endsWith(".json") && isSafeCaptureAssetPath(reference.toStdString())
+        && savedManifest.getNumBytesAsUTF8()<=8*1024*1024 && savedManifest.isNotEmpty() && parseCaptureManifest(savedManifest,loaded,error);
+    if ((!fromDisk && !fromState)
         || loaded.projectId != project || loaded.instanceId != instance || loaded.revision != revision)
     {
         state.status = "Unavailable: saved manifest missing, invalid, or mismatched";
         state.unavailable = true;
         return false;
     }
-    state.manifest = std::move(loaded);
+    state.manifest = std::move(loaded);state.manifestKnown=true;
+    if(!location->writable){state.unavailable=true;state.status="Asset working folder unavailable; source metadata retained";return false;}
     rebuildOverview();
     return ! state.unavailable;
 }
 
+bool CaptureSession::relocateVerified(std::shared_ptr<const CaptureStorageLocation> next)
+{
+    if(staged || state.unavailable || !next || !next->writable)return false;
+    root=next->projectsRoot;location=std::move(next);state.location=location;assets.reset();assetScope.clear();return true;
+}
+bool CaptureSession::reload(const std::string& project,const std::string& instance,const juce::String& reference,uint64_t revision)
+{
+    CaptureSession candidate(root,location);
+    if(!candidate.restore(project,instance,reference,revision))
+    {state.status="Recovery reload failed; previous accepted source retained: "+candidate.snapshot().status;return false;}
+    state=std::move(candidate.state);assets=std::move(candidate.assets);assetScope=std::move(candidate.assetScope);return true;
+}
 bool CaptureSession::makeRange(CaptureManifestRange& range, const float* samples, double rate)
 {
     range.kind = std::all_of(samples, samples + range.frameCount * 2,
@@ -179,13 +200,13 @@ bool CaptureSession::publish(CaptureManifest next)
     if(!isValidCaptureManifest(next,error)){state.status="Uncommitted: "+error;return false;}
     // Private candidate maps reuse exact chunk/slicing logic, but never expose
     // a source revision or write intermediate manifests during a capture pass.
-    if(provisional){state.manifest=std::move(next);rebuildOverview();return !state.unavailable;}
+    if(provisional){state.manifest=std::move(next);state.manifestKnown=true;rebuildOverview();return !state.unavailable;}
     if (! store().publishSnapshot(next, reference, error))
     {
         state.status = "Uncommitted: " + error + "; previous committed map retained";
         return false;
     }
-    state.manifest = std::move(next);
+    state.manifest = std::move(next);state.manifestKnown=true;
     state.reference = reference;
     rebuildOverview();
     return true;
@@ -193,6 +214,7 @@ bool CaptureSession::publish(CaptureManifest next)
 
 bool CaptureSession::clear(double rate)
 {
+    if(!location->writable)return false;
     abortPass();
     auto next = state.manifest;
     next.ranges.clear();
@@ -206,13 +228,25 @@ bool CaptureSession::clear(double rate)
 bool CaptureSession::beginPass(uint64_t token,uint64_t epoch,bool replace,const CaptureGenerationContext* context)
 {
     if(!token || staged || state.unavailable)return false;
-    staged=std::make_unique<CaptureSession>(root);staged->state=state;staged->provisional=true;
+    staged=std::make_unique<CaptureSession>(root,location);staged->state=state;staged->provisional=true;
     passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
     replaceMapped=replace;passUseful=false;passReplaced=false;passAnyChanged=false;passError.clear();passChanges.clear();passContextChanges.clear();
     passReason=CaptureFailureReason::none;
     passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
 }
 
+bool CaptureSession::beginRecoveryPass(uint64_t token,uint64_t epoch,const std::vector<std::pair<int64_t,int64_t>>& required,const CaptureGenerationContext* context)
+{
+    if(!location->writable || !token || staged || required.empty() || required.size()>65536 || state.manifest.revision>=static_cast<uint64_t>(INT64_MAX))return false;
+    auto coverage=required;std::sort(coverage.begin(),coverage.end());
+    for(const auto [a,b]:coverage)if(b<=a)return false;
+    staged=std::make_unique<CaptureSession>(root,location);staged->state.manifest=state.manifest;
+    staged->state.manifest.ranges.clear();staged->state.manifest.generationContexts.clear();staged->state.manifest.contextSpans.clear();
+    staged->provisional=true;passToken=token;passEpoch=epoch;baseRevision=state.manifest.revision;
+    replaceMapped=false;passUseful=false;passReplaced=false;passAnyChanged=false;passError.clear();passChanges.clear();passContextChanges.clear();
+    passReason=CaptureFailureReason::none;recoveryRequired=std::move(coverage);
+    passContext=context?std::optional<CaptureGenerationContext>(*context):std::nullopt;return true;
+}
 bool CaptureSession::stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames)
 {
     if(!staged || token!=passToken || passError.isNotEmpty())return false;
@@ -261,6 +295,11 @@ CaptureSession::PassResult CaptureSession::preparePass(uint64_t token,uint64_t e
     if(!staged || token!=passToken || epoch!=passEpoch || state.manifest.revision!=baseRevision)
     {result.error="Obsolete capture pass";return result;}
     result.error=passError;
+    if(result.error.isEmpty() && !recoveryRequired.empty())
+        for(const auto [start,end]:recoveryRequired){auto covered=start;
+            for(const auto& range:staged->state.manifest.ranges){const auto tail=range.startSample+static_cast<int64_t>(range.frameCount);
+                if(tail<=covered)continue;if(range.startSample>covered)break;covered=tail;if(covered>=end)break;}
+            if(covered<end){result.error="Re-learning is incomplete; previous source and arrangement retained";passReason=CaptureFailureReason::rejected;break;}}
     if(result.error.isEmpty())
     {
         result.changed=passAnyChanged;
@@ -295,7 +334,7 @@ CaptureSession::PassResult CaptureSession::finishPass(uint64_t token,uint64_t ep
 }
 
 void CaptureSession::abortPass()
-{staged.reset();prepared.reset();passContext.reset();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passContextChanges.clear();passAnyChanged=false;passUseful=false;passReplaced=false;}
+{staged.reset();prepared.reset();passContext.reset();recoveryRequired.clear();passToken=0;passEpoch=0;passError.clear();passChanges.clear();passContextChanges.clear();passAnyChanged=false;passUseful=false;passReplaced=false;}
 
 void CaptureSession::rebuildOverview()
 {

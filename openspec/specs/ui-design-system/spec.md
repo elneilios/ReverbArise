@@ -95,3 +95,179 @@ Shared notices SHALL expose visible severity and accessible title, description a
 - **WHEN** the same notice is refreshed, hidden or shown again
 - **THEN** no forced speech occurs and unchanged refresh does not create redundant notice-change events
 - **AND** cleared notices expose no stale title or description
+
+### Requirement: Control consumers have a traceable family inventory
+The design system SHALL provide a maintained inventory of actual controls across all workspaces and owned auxiliary windows. Each consumer SHALL identify its family or explicit legacy owner, semantic role, applicable states, interaction policy, approval evidence and migration disposition. An omitted or unreviewed consumer SHALL NOT be represented as compliant.
+
+#### Scenario: Audit a control in an auxiliary window
+- **WHEN** a contributor looks up an interactive Settings or Diagnostics consumer
+- **THEN** the inventory identifies its current owner, applicable state and interaction differences, approved variants and remaining debt with source references
+- **AND** compact workspace composition, user magnification and auxiliary comfortable typography remain distinguishable
+
+#### Scenario: Specialized interaction has no generic equivalent
+- **WHEN** an audit includes a timeline handle, list row, navigation surface or native chooser
+- **THEN** the inventory records the specialized or native policy, reusable parts and review status without requiring replacement by a generic widget
+
+### Requirement: Families expose explicit semantic state and interaction contracts
+Each control family SHALL document applicable visual states, keyboard and pointer behavior, focus, accessibility and disabled or read-only behavior using approved presentation roles. Matching semantic actions SHALL share a contract; intentional differences SHALL be named and traceable. Migrated appearance SHALL NOT depend on incidental component names or visible labels.
+
+#### Scenario: Text and glyph command actions are compared
+- **WHEN** command actions with matching semantics are idle, hovered, pressed, focused or disabled
+- **THEN** their contract specifies consistent surface feedback and activation behavior, with separate explicit primary, destructive or latched variants where needed
+- **AND** renaming or relabeling a migrated action does not select a different visual variant
+
+#### Scenario: Interaction differences are intentional
+- **WHEN** a selector rejects wheel selection while a value control permits wheel adjustment
+- **THEN** the contracts identify the intended policies and their rationale rather than treating different control semantics as inconsistent
+
+### Requirement: Reusable fields define help and validation presentation
+Field contracts SHALL define composition of captions, inputs, help and validation feedback, including accessible associations and overflow. They SHALL specify Return, Escape, focus-loss, invalid-input and refresh behavior for applicable field types. Bindings SHALL retain domain validation and accepted-state authority; presentation SHALL NOT silently invent new rejection or commit behavior.
+
+#### Scenario: Invalid or stale input is rejected
+- **WHEN** a binding rejects a field edit as invalid or stale
+- **THEN** the field follows its documented reconciliation policy and exposes the binding-supplied explanation through the applicable visible and accessible feedback
+- **AND** the rejected edit does not mutate accepted model state or erase unrelated active input
+
+#### Scenario: Help and validation coexist in a constrained view
+- **WHEN** a field with a long caption, help and validation feedback is shown at a supported size or user scale
+- **THEN** its contract preserves readable input, discoverable full feedback and keyboard access
+- **AND** shared contextual help and local validation have explicit precedence without introducing forced speech
+
+### Requirement: Family migrations have independently reviewable delivery boundaries
+Design-system delivery SHALL separate umbrella audit and contract completion from family migration completion. Each migration SHALL name consumers, reuse, variants, compatibility guards, automated checks and scoped native approval. Remaining consumers SHALL stay explicit debt until delivered; family delivery SHALL preserve commands, invocation/session guards, persistent state and audio behavior.
+
+#### Scenario: Umbrella audit is delivered before all migrations
+- **WHEN** the inventory, contracts and family roadmap are accepted
+- **THEN** umbrella audit completion is recorded separately from pending family migrations
+- **AND** the umbrella issue remains open while accepted implementation slices are outstanding
+
+#### Scenario: Revised family becomes ready for adoption
+- **WHEN** a child change materially revises a control family
+- **THEN** focused component and binding checks establish its state, keyboard, accessibility, disabled and rejection behavior before broader adoption
+- **AND** its prepared native preview is opened for owner look and feel approval, with standards revision and evidence updated upon approval
+- **AND** minimum, larger-size and user-scale results are recorded separately from actual Windows DPI and host coverage
+
+#### Scenario: Partial migration preserves unrelated behavior
+- **WHEN** an approved child change migrates named consumers
+- **THEN** only that reviewed scope is marked migrated and its obsolete debt entries are removed
+- **AND** protected commands, session identities, saved assignments, captures and renders retain their existing behavior
+
+### Requirement: Migrated command states follow explicit semantics
+Migrated text and glyph command actions SHALL share reviewed, distinguishable idle, hover, pressed, focus and disabled feedback for equivalent semantic roles. Primary, destructive and latched variants SHALL remain explicit. Names and labels SHALL NOT select appearance. Neutral glyphs SHALL retain steady ink while border/background provide mouse feedback; semantic filled variants SHALL retain readable contrast. Specialized file-drag presentation SHALL retain its scoped behavior.
+
+#### Scenario: Command metadata changes
+- **WHEN** a migrated action is renamed or relabeled without changing its explicit semantic role
+- **THEN** its state surface and content role remain unchanged apart from the intended text and accessible-name update
+- **AND** an incidental name matching an old play, stop, reset or import identifier does not change its glyph or variant
+
+#### Scenario: Focus and disabled combinations are rendered
+- **WHEN** a migrated command is hovered, pressed, keyboard-focused or disabled, including applicable combined states
+- **THEN** its reviewed state matrix provides contained focus and consistent semantic content/surface feedback
+- **AND** disabled state does not make the action appear eligible or permit invocation
+- **AND** focus uses aqua outer corner brackets with a small gap from the button border and does not mask hover or held-press feedback, including on destructive actions
+
+#### Scenario: Shared IR import button aligns with its selector
+- **WHEN** the shared IR field lays out its selector and import action
+- **THEN** the import button's visible body matches the selector's top, bottom and height
+- **AND** its original folder glyph fits within that body, the outside focus frame remains contained, and field feedback retains its existing gap below the inputs
+
+#### Scenario: Input method controls focus visibility
+- **WHEN** a shared command receives keyboard navigation or explicit accessibility focus
+- **THEN** its aqua brackets identify the focused command, including when focus was already present
+- **AND** Return/Space and accessibility activation retain one-shot guarded delivery
+- **WHEN** the user clicks with the pointer, including clicking an already focused command
+- **THEN** the brackets are hidden while actual focus and keyboard eligibility are retained
+- **AND** hover and mouse-down body feedback is unchanged, mouse movement alone does not clear keyboard focus visibility, and pointer-driven programmatic focus restoration does not reintroduce brackets
+
+### Requirement: Command activation preserves binding authority
+Migrated commands SHALL support pointer, Return, Space and applicable accessibility activation through the same eligible command path. One activation SHALL issue at most one command. Disabled, stale or destroyed targets SHALL NOT gain permission through a new input path. Existing command effects, target/session guards, persistent data and audio behavior SHALL remain unchanged.
+
+#### Scenario: Keyboard or accessibility invokes a selected action
+- **WHEN** an eligible migrated action is activated through Return, Space or its accessibility press action
+- **THEN** it issues the same guarded command as pointer activation exactly once
+- **AND** the existing target/session and asynchronous completion rules still determine acceptance
+
+#### Scenario: Activation is no longer eligible before delivery
+- **WHEN** a migrated action is disabled, destroyed or its captured context becomes invalid before queued delivery
+- **THEN** no stale command mutates another target or session
+- **AND** existing model rejection and reconciliation remain authoritative
+
+### Requirement: Latching commands preserve accepted effective state
+Latching command presentation SHALL use the shared command state language while distinguishing accepted effective on/off state. Programmatic refresh SHALL be silent and SHALL NOT rewrite preferences or issue another command. Requested state and temporarily overridden effective state SHALL remain distinct where the current binding distinguishes them.
+
+#### Scenario: Effective latch state refreshes during interaction
+- **WHEN** Snap or audition listening state refreshes from its accepted binding state
+- **THEN** the latch displays the accepted effective state without another invocation
+- **AND** hover, press, focus and disabled rendering follow its reviewed on/off matrix without changing requested preference semantics
+
+### Requirement: Selector fields present local help and validation consistently
+Migrated selector fields SHALL place smaller readable helper text directly beneath and aligned with the visible input body. Binding-supplied errors SHALL replace routine help with red validation text and a red body border, retained through hover and held states. Keyboard/accessibility brackets SHALL remain aqua and independent. Disabled inputs SHALL retain readable feedback. Presentation SHALL NOT introduce new validation or commit rules.
+
+#### Scenario: Show and clear a field error
+- **WHEN** a selector's binding supplies an error
+- **THEN** the local message and body border turn red while any keyboard/accessibility brackets remain aqua
+- **AND** the explanation wraps without shrinking and is exposed with the input's accessible description
+- **WHEN** accepted binding refresh clears the error
+- **THEN** normal helper text and body feedback return without an extra selection command
+
+#### Scenario: Explain an unavailable field
+- **WHEN** a selector is disabled because its prerequisite is absent
+- **THEN** its small local explanation stays readable directly below the input, separately from the dimmed control
+- **AND** disabled state alone is not presented as a validation error
+
+### Requirement: Selectors separate body feedback from focus decoration
+Migrated dropdown selectors SHALL provide distinguishable idle, hover, held and disabled body states with steady off-white text and chevrons. Keyboard and explicit accessibility focus SHALL use aqua outer corner brackets separated from the body border by a small gap. Pointer clicks SHALL hide focus decoration without removing actual focus or keyboard operation. Body and focus feedback SHALL remain independent.
+
+#### Scenario: Compare mouse and keyboard states
+- **WHEN** a selector is hovered or held with the pointer
+- **THEN** its border and background provide the reviewed feedback without recoloring its chevron or showing pointer-induced focus brackets
+- **WHEN** the selector receives keyboard or explicit accessibility focus, including while already focused
+- **THEN** the outside aqua brackets appear without changing its accepted value or masking the applicable body state
+- **AND** pointer movement alone does not remove keyboard focus decoration
+
+#### Scenario: Disable a focused selector
+- **WHEN** a selector becomes unavailable while focused or hovered
+- **THEN** its disabled presentation and discoverable explanation communicate ineligibility and no input path changes its accepted value
+- **AND** its focus ink remains contained and no mouse emphasis makes it appear enabled
+
+### Requirement: Choice inspection is distinct from accepted selection
+Migrated choice menus SHALL use the quiet row highlight for pointer or keyboard inspection, with distinct held feedback. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains, including after pointer hover leaves. Accepted selection SHALL use a checkmark independent of inspection; selection alone SHALL NOT retain a row background or edge highlight.
+
+#### Scenario: Pointer leaves an inspected choice
+- **WHEN** the pointer enters and then leaves a choice without keyboard navigation focus
+- **THEN** the quiet background and edge appear only during hover and clear on leaving, including leaving into menu padding
+- **AND** the accepted checkmark and value remain unchanged, including after pointer activation and subsequent departure
+
+#### Scenario: Keyboard inspection survives pointer departure
+- **WHEN** keyboard navigation reaches a choice and the pointer temporarily hovers another choice then leaves
+- **THEN** hover feedback clears and the keyboard-navigation highlight remains on the actually focused choice
+- **AND** no value is committed by inspection, pointer movement or opening the menu
+- **AND** leaving keyboard navigation focus clears its highlight without removing the accepted checkmark
+
+### Requirement: Choice content remains readable and unavailable reasons inspectable
+Migrated selectors SHALL preserve full accessible choice names and accepted values. Closed long values SHALL ellipsize with discoverable full text; open long choices SHALL wrap within the available menu width without shrinking text or losing their checkmark. Unavailable choices SHALL expose a reason through visible and accessible presentation and support keyboard inspection without permission to select them. Entirely disabled fields SHALL explain their unavailability.
+
+#### Scenario: Inspect a long or unavailable choice
+- **WHEN** a long choice or unavailable choice is inspected at a supported size or user scale
+- **THEN** the complete choice name and applicable reason are discoverable with pointer and keyboard access
+- **AND** inspection or activation of an unavailable choice does not invoke a selection command or move the accepted checkmark
+
+#### Scenario: No selected swell
+- **WHEN** an IR field is disabled because no swell is selected
+- **THEN** its visible and accessible explanation identifies that prerequisite while the control remains ineligible
+- **AND** no missing-file, recovery or asset-relink operation is invented by the presentation
+
+### Requirement: Selector input preserves deliberate guarded selection
+Migrated selectors SHALL preserve stable choice identities, captured invocation context, accepted-state refresh and existing binding rejection. Wheel input SHALL NOT change selection and SHALL retain surrounding scrolling. Keyboard inspection, explicit commit, cancellation, popup anchoring and focus return SHALL be defined. One eligible commit SHALL issue at most one existing selection intent; disabled, stale or destroyed contexts SHALL NOT acquire authority.
+
+#### Scenario: Inspect then commit or cancel
+- **WHEN** a user opens a selector and navigates its choices
+- **THEN** arrow navigation inspects choices without changing accepted state, Return or Space commits an eligible choice once, and Escape cancels without a command
+- **AND** dismissal restores focus according to the initiating input method, without pointer-restored focus showing brackets
+- **AND** Tab dismisses the popup and continues keyboard traversal without committing
+
+#### Scenario: Refresh or context changes while a menu is open
+- **WHEN** the catalogue reorders, the target/session/pass changes, the owner is destroyed, or a queued edit is rejected
+- **THEN** the original captured choice identity and existing eligibility guards determine acceptance, never its new displayed index
+- **AND** silent refresh and reconciliation issue no extra edit and preserve accepted model state
+- **AND** Learn defaults, selected-swell IR and Export gain-pair semantics remain isolated and unchanged

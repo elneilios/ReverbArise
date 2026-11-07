@@ -10,6 +10,7 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
+#include <Storage/WorkingFolder.h>
 
 struct HostPositionDiagnostics
 {
@@ -58,6 +59,16 @@ public:
     void setToneEndBar(int bar) noexcept;
     int getToneEndBar() const noexcept;
     static juce::File defaultProjectsRoot();
+    juce::File assetRegistryRoot() const;
+    bool useWorkingFolder(const std::shared_ptr<m3::storage::portable::WorkingFolder>&,
+                          const m3::storage::portable::Input&,juce::String& error,const m3::storage::portable::Hooks& hooks={});
+    bool pinPortableAssets(m3::storage::portable::Input&,juce::String& error,bool allowUnavailable=false) const;
+    bool beginRelearning(const m3::storage::portable::Input& expected,juce::String& error);
+    void cancelRelearning();
+    // Worker/control only: validates current source/IRs before queuing explicit recovery rendering.
+    uint64_t captureStageCountForTesting()const{return captureWorker.metrics().stages;}
+    bool isRelearning()const noexcept{return captureWorker.recoveryArmed();}
+    bool reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error);
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
     CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
     bool flushCaptureForTesting() { return captureWorker.flush(); }
@@ -66,10 +77,11 @@ public:
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
     workflow::Readiness getWorkflowReadiness() const;
     bool requestWorkflowMode(workflow::Mode);
-    bool setRecaptureExisting(bool enabled) {return workflowState.arm(enabled);}
-    void cancelCapturePass() {const auto previous=workflowState.snapshot().mode;captureWorker.cancelWorkflowPass();if(previous!=workflow::Mode::capture)persistentStateChanged();}
+    bool setRecaptureExisting(bool enabled);
+    void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
     void holdCaptureWorkerForTesting(bool hold) noexcept {captureWorker.holdWorkerForTesting(hold);}
+    bool captureWorkerHeldForTesting() const noexcept {return captureWorker.workerHeldForTesting();}
     PreviewSnapshot getPreviewSnapshot() const;
     void loadPreviewIR(const juce::File& file);
     void setSourceBars(int64_t start, int64_t end);
@@ -103,6 +115,13 @@ public:
 private:
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
+    struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};
+    std::optional<RecoveryIntent> recoveryIntent;
+    juce::File legacyProjectsRoot;
+    CaptureSessionSnapshot pendingHostCapture;
+    m3::storage::Association pendingHostAssociation;
+    mutable juce::CriticalSection storageStateLock;
+    std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;

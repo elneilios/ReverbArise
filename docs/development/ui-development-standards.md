@@ -19,7 +19,7 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
-Issue #108, production standards revision 12. Level uses the standard `KnobValue`
+Issue #108, production standards revision 15. Level uses the standard `KnobValue`
 appearance and drag response with one -12 to +12 dB edit range. The normal
 field shows an older value below -12 dB. A primary press on the dial brings
 that value to -12 dB and starts any subsequent drag at that limit. The
@@ -29,16 +29,37 @@ actual saved gain in its text readback and help. The Level binding uses
 `--test-level` checks native input, neutral paint, layout and project reopen.
 The owner approved this interaction on 2026-11-07.
 
-`ActionButton::paintSurface` owns the common command-button surface for text and
-glyph-only actions. `IconActionButton` (folder/import and Settings gear) reuses it:
-neutral surface, stable off-white content, aqua hover/pressed outline, contained
-two-pixel focus and the same disabled treatment. Do not recolour an icon instead
-of applying the shared surface state. Primary and latched variants retain their
-existing explicit fill policies. Native parity cases compare both icon roles
-against an ordinary ActionButton across idle/hover/pressed/disabled states.
-The #80 owner requested this correction during integrated review; broader
-legacy/name-based button migration is tracked separately in
-[#107](https://github.com/elneilios/ReverbArise/issues/107).
+Production standards revision 13 adopts the owner's
+[focus visibility policy](ui-control-contracts.md#focus-visibility-policy).
+Shared command buttons show their aqua brackets for keyboard/accessibility focus,
+and hide them after pointer clicks without discarding actual focus or keyboard
+activation. Hover and held feedback are unchanged. Other families adopt this
+policy only in their own design-system jobs, preserving their separate editing,
+caret and selection cues. Reuse the shared input observer where appropriate;
+never disable focus or keyboard operation as a way to hide its decoration.
+
+Production standards revision 11 adopts the owner-approved
+[control inventory and family roadmap](../design/ui-control-inventory.md) and
+[shared control contracts](ui-control-contracts.md), reconciled with merged #80.
+Use them to identify actual ownership, applicable state/interaction matrices,
+field help/validation composition and bounded child delivery. This is contract
+governance, not certification of legacy widgets or approval of new native variants.
+[Audit evidence](../validation/2026-11-06-issue-107-control-audit.md) records scope
+and validation; #108 Level and #8 recovery/engine work remain independent.
+
+Production standards revision 12 records the owner-approved #107 command family
+revision 4. `ActionButton::paintSurface`, icon actions, latches and the generic
+theme fallback delegate to one semantic resolver/painter. Focus uses four aqua
+corner brackets, 2-pixel stroke, with a 3-pixel gap outside the body border;
+component bounds contain all ink. Body border/background own hover and held-press
+feedback. Destructive hover/press stays red; neutral icons remain off-white.
+Primary/on-latch fills keep contrasting dark content. Disabled body state wins
+over mouse emphasis; focus remains independent. Reuse explicit variants and
+`CommandButton` invocation hooks, never names or labels to select appearance.
+The 20 scoped legacy commands now use ActionButton; generic Rename OK/Cancel
+keeps the neutral theme fallback. FileDragTile and knobs retain their painters.
+[Button evidence](../validation/2026-11-06-issue-107-buttons.md) records the family
+approval, 85/85 native checks and owner acceptance of the integrated IR alignment correction.
 
 Issue #80's owner-approved `Controls/ConvolutionIrEditor` family composes
 `IrSelector`, `IconActionButton` and `EllipsisLabel` using existing responsive
@@ -98,7 +119,7 @@ The dedicated native
 fixture is `--review-export-levels` on `preverb_swell_ui_test`.
 
 The [production guide](../design/ReverbArise_UI_Layout_and_Style_Guide.md) is the
-numerical authority (production standards revision 10; scoped knob focus review below). Its responsive composition section
+numerical authority (production standards revision 13; scoped knob focus review below). Its responsive composition section
 takes precedence over the retained historical mockup suggestions. Current code
 and scoped native approval establish measurements; do not sample a generated
 mockup to invent a production token. The [#37 evidence](../validation/2026-11-04-issue-37-ui-standards.md)

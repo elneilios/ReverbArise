@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CaptureAssetStore.h"
+#include <Core/AssetAssociation.h>
 #include "CaptureFailureRecord.h"
 #include <optional>
 
@@ -18,6 +19,15 @@ struct CaptureOverviewRange
     std::vector<CapturePeak> peaks;
 };
 
+// Immutable worker/control metadata. A copied source snapshot keeps its exact
+// working directory and lease alive; no location lookup occurs in the callback.
+struct CaptureStorageLocation
+{
+    juce::File projectsRoot,managedRoot;
+    std::shared_ptr<void> lease;
+    bool writable=true;
+    m3::storage::Association association;
+};
 struct CaptureSessionSnapshot
 {
     CaptureManifest manifest;
@@ -26,6 +36,8 @@ struct CaptureSessionSnapshot
     bool unavailable = false;
     std::vector<CaptureOverviewRange> overview;
     CaptureFailureRecord failure;
+    std::shared_ptr<const CaptureStorageLocation> location;
+    bool manifestKnown=true;
 };
 struct ProvisionalCaptureSnapshot
 {
@@ -37,9 +49,11 @@ struct ProvisionalCaptureSnapshot
 class CaptureSession
 {
 public:
-    explicit CaptureSession(juce::File projectsRoot);
+    explicit CaptureSession(juce::File projectsRoot,std::shared_ptr<const CaptureStorageLocation> location={});
     bool restore(const std::string& projectId, const std::string& instanceId,
-                 const juce::String& reference, uint64_t revision);
+                 const juce::String& reference, uint64_t revision,const juce::String& savedManifest={});
+    bool relocateVerified(std::shared_ptr<const CaptureStorageLocation>);
+    bool reload(const std::string& projectId,const std::string& instanceId,const juce::String& reference,uint64_t revision);
     bool commit(int64_t start, double rate, const float* samples, uint32_t frames,double tolerance=0,const CaptureGenerationContext* context=nullptr);
     bool clear(double rate);
     struct PassResult
@@ -50,6 +64,9 @@ public:
         std::vector<std::pair<int64_t,int64_t>> contextChangedIntervals;
     };
     bool beginPass(uint64_t token,uint64_t epoch,bool replace,const CaptureGenerationContext* context=nullptr);
+    // Explicit worker-only recovery. Fresh PCM remains provisional until every
+    // supplied required interval is covered; ordinary capture admission is unchanged.
+    bool beginRecoveryPass(uint64_t token,uint64_t epoch,const std::vector<std::pair<int64_t,int64_t>>& required,const CaptureGenerationContext* context=nullptr);
     bool stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames);
     PassResult finishPass(uint64_t token,uint64_t epoch);
     PassResult preparePass(uint64_t token,uint64_t epoch);
@@ -63,7 +80,7 @@ public:
     {return staged && passError.isEmpty()?std::optional<CaptureManifest>{staged->state.manifest}:std::nullopt;}
     const CaptureSessionSnapshot& snapshot() const noexcept { return state; }
     bool readSample(int64_t position, float& left, float& right) const;
-    uint64_t audioReadCount() const { return store().audioReadCount(); }
+    uint64_t audioReadCount() const { return location->writable?store().audioReadCount():0; }
 
 private:
     CaptureAssetStore& store() const;
@@ -71,11 +88,13 @@ private:
     bool makeRange(CaptureManifestRange& range, const float* samples, double rate);
     void rebuildOverview();
     juce::File root;
+    std::shared_ptr<const CaptureStorageLocation> location;
     CaptureSessionSnapshot state;
     mutable std::unique_ptr<CaptureAssetStore> assets;
     mutable std::string assetScope;
     std::unique_ptr<CaptureSession> staged;
     uint64_t passToken=0,passEpoch=0,baseRevision=0;
+    std::vector<std::pair<int64_t,int64_t>> recoveryRequired;
     bool provisional=false,replaceMapped=false,passUseful=false,passReplaced=false;
     bool lastCommitAudioChanged=false,passAnyChanged=false;
     std::optional<CaptureGenerationContext> passContext;

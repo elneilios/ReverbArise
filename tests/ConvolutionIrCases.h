@@ -47,6 +47,7 @@ inline void buttonSurfaceCases()
         const auto render=[&](auto& button)
         {juce::Image image(juce::Image::RGB,button.getWidth(),button.getHeight(),true);juce::Graphics g(image);g.fillAll(background);button.paintButton(g,state.first,state.second);return image;};
         const auto actual=render(icon),expected=render(reference);
+        const auto contentBounds=commandBodyBounds(icon.getLocalBounds()).reduced(static_cast<int>(controlGeometry::focusOutset));
         for(int y=0;y<actual.getHeight();++y)for(int x=0;x<actual.getWidth();++x)
         {
             // State colours are sampled on straight edges, away from curved
@@ -57,10 +58,12 @@ inline void buttonSurfaceCases()
                 if(actual.getPixelAt(x,y)!=expected.getPixelAt(x,y))
                     throw std::runtime_error("Button surface mismatch role="+std::to_string(static_cast<int>(role))+" enabled="+std::to_string(enabled)+" hover="+std::to_string(state.first)+" down="+std::to_string(state.second)+" at "+std::to_string(x)+","+std::to_string(y)+" actual="+actual.getPixelAt(x,y).toDisplayString(true).toStdString()+" expected="+expected.getPixelAt(x,y).toDisplayString(true).toStdString());
             }
-            else if(x>=4 && y>=4 && x<actual.getWidth()-4 && y<actual.getHeight()-4)
+            else if(contentBounds.contains(x,y))
             {
                 const auto pixel=actual.getPixelAt(x,y);
-                REQUIRE(!(pixel.getGreen()>pixel.getRed()+40 && pixel.getBlue()>pixel.getRed()+40));
+                const auto accent=pixel.getGreen()>pixel.getRed()+40 && pixel.getBlue()>pixel.getRed()+40;
+                // The owner retained neutral glyph ink; body feedback is separate.
+                REQUIRE(!accent);
             }
         }
     }
@@ -69,19 +72,24 @@ inline void componentCases()
 {
     WorkspaceTheme theme;theme.setResponsiveViewport(900,600);
     ConvolutionIrEditor editor;editor.setLookAndFeel(&theme);editor.setSize(259,editor.preferredHeight());
+    juce::Component host;host.setBounds(40,40,400,300);host.addAndMakeVisible(editor);host.addToDesktop(0);host.setVisible(true);host.toFront(true);editor.setTopLeftPosition(12,12);
     ConvolutionIrEditor::View view;
     view.choices={{"a","One response","Real description"},{"b",juce::String::repeatedString("Long imported name ",8),"Other description"}};
     view.accepted="a";view.editable=true;view.status="Accepted: One response";
     int changes=0,imports=0;juce::String requested;
     editor.onChoice=[&](const auto& key){++changes;requested=key;};editor.onImport=[&]{++imports;};
     editor.display(view);editor.display(view);REQUIRE(changes==0 && editor.selector.getSelectedId()==1);
-    REQUIRE(editor.getLookAndFeel().getLabelFont(editor.status).getHeight()==theme.resolvedHeight(textStyle(TextRole::helper).height));
+    REQUIRE(editor.status.getFont().getHeight()==FieldPresentation::helperHeight);
+    REQUIRE(SelectorPresentation::valueFont(editor.selector).getHeight()>FieldPresentation::helperHeight);
     choose(editor,2);REQUIRE(changes==1 && requested=="b" && editor.selector.getSelectedId()==1);
     // The control keeps the original offered identity even if a refresh reorders entries.
     editor.selector.beforeInvocation();std::reverse(view.choices.begin(),view.choices.end());editor.display(view);
     editor.selector.setSelectedId(1,juce::sendNotificationSync);REQUIRE(changes==2 && requested=="a");
     REQUIRE(editor.selector.getSelectedId()==2);
     editor.selector.keyPressed(juce::KeyPress(juce::KeyPress::upKey));
+    REQUIRE(changes==2 && editor.selector.isPopupActive());
+    editor.selector.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::upKey));REQUIRE(changes==2);
+    editor.selector.activePopup()->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
     juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(changes==3 && requested=="b");
     const auto count=changes;
     const auto point=editor.selector.getLocalBounds().getCentre().toFloat();const auto time=juce::Time::getCurrentTime();
@@ -99,24 +107,33 @@ inline void componentCases()
     view.editable=true;view.accepted="b";view.status="Requested: New response | Accepted: Old response";
     editor.display(view);editor.setSize(editor.getWidth(),editor.preferredHeight());
     REQUIRE(editor.status.getDescription()==view.status);
-    REQUIRE(editor.status.getY()==editor.selector.getBottom()+spacing::tight);
+    REQUIRE(editor.status.getY()==commandBodyBounds(editor.selector.getBounds()).getBottom()+FieldPresentation::helperGap);
+    REQUIRE(editor.status.getX()==commandBodyBounds(editor.selector.getBounds()).getX());
     view.status={};editor.display(view);
     REQUIRE(!editor.status.isVisible() && editor.getNumChildComponents()==4);
     view.status="Couldn't load IR. Choose another; previous default kept.";view.error=true;view.editable=false;view.reason="The WAV could not be decoded";
     editor.display(view);
     REQUIRE(editor.status.isVisible() && editor.status.isEnabled() && !editor.selector.isEnabled());
     REQUIRE(editor.status.findColour(juce::Label::textColourId)==danger && editor.status.getDescription().contains(view.reason));
-    REQUIRE(editor.status.getHeight()<=2*controlGeometry::feedbackHeight);
+    REQUIRE(editor.selector.getValidationMessage()==view.status);
+    REQUIRE(editor.status.getHeight()<=2*FieldPresentation::helperLineHeight);
     const auto narrowHeight=editor.preferredHeight(160);editor.setSize(160,narrowHeight);
-    REQUIRE(editor.status.getHeight()==2*controlGeometry::feedbackHeight && editor.preferredHeight()==narrowHeight);
-    view.status={};editor.display(view);editor.setSize(160,editor.preferredHeight(160));
-    REQUIRE(editor.getHeight()==editor.selector.getBottom() && !editor.status.isVisible());
+    REQUIRE(editor.status.getHeight()==2*FieldPresentation::helperLineHeight && editor.preferredHeight()==narrowHeight);
+    view.status={};view.reason={};view.error=false;view.editable=true;editor.display(view);editor.setSize(160,editor.preferredHeight(160));
+    REQUIRE(editor.getHeight()==editor.fileButton.getBottom() && !editor.status.isVisible());
     for(int width:{259,276,304})
     {
         editor.setSize(width,editor.preferredHeight(width));
         for(auto* child:editor.getChildren())REQUIRE(editor.getLocalBounds().contains(child->getBounds()));
         REQUIRE(!editor.selector.getBounds().intersects(editor.fileButton.getBounds()));
+        const auto body=commandBodyBounds(editor.fileButton.getLocalBounds()).translated(editor.fileButton.getX(),editor.fileButton.getY());
+        const auto selectorBody=commandBodyBounds(editor.selector.getBounds());
+        REQUIRE(body.getY()==selectorBody.getY() && body.getBottom()==selectorBody.getBottom());
+        REQUIRE(body.getHeight()==responsiveGeometry::controlHeight && body.getWidth()==body.getHeight());
     }
+    const auto beforeQueued=changes;editor.selector.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));REQUIRE(editor.selector.isPopupActive());
+    editor.selector.activePopup()->activate(1);std::reverse(view.choices.begin(),view.choices.end());editor.display(view);
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(30);REQUIRE(changes==beforeQueued && !editor.selector.isPopupActive());
     editor.setLookAndFeel(nullptr);
 }
 inline void bindingCases()

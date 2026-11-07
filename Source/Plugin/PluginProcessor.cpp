@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include <Core/BuildInformation.h>
 
 #include "PluginEditor.h"
 #include <Playback/ScheduledTestTone.h>
@@ -16,7 +17,7 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-      captureWorker(captureQueue, projectsRoot)
+      legacyProjectsRoot(projectsRoot),captureWorker(captureQueue, projectsRoot)
 {
     captureWorker.useWorkflow(workflowState);
     swells = std::make_unique<m3::SwellEngine>(std::move(projectsRoot), [this]
@@ -235,6 +236,22 @@ void PreverbAudioProcessor::requestClearCapture()
     persistentStateChanged();
 }
 
+bool PreverbAudioProcessor::setRecaptureExisting(bool enabled)
+{
+    const juce::ScopedLock guard(storageStateLock);
+    if(workflowState.snapshot().mode!=workflow::Mode::capture)return false;
+    if(enabled && captureWorker.snapshot().unavailable){
+        m3::storage::portable::Input current;juce::String error;
+        if(!pinPortableAssets(current,error,true) || !beginRelearning(current,error)){swells->diagnostic(error);return false;}
+    }else if(!enabled && recoveryIntent && captureWorker.recoveryArmed()){cancelRelearning();return true;}
+    return workflowState.arm(enabled);
+}
+void PreverbAudioProcessor::cancelCapturePass()
+{
+    const juce::ScopedLock guard(storageStateLock);const auto previous=workflowState.snapshot().mode;
+    if(recoveryIntent)cancelRelearning();else captureWorker.cancelWorkflowPass();
+    if(previous!=workflow::Mode::capture)persistentStateChanged();
+}
 bool PreverbAudioProcessor::armRecapture(int64_t start,int64_t end)
 {
     if(start>=end){swells->diagnostic("Invalid recapture interval; arm pass-wide Recapture in Learn mode");return false;}
@@ -486,29 +503,60 @@ void PreverbAudioProcessor::changeProgramName(int, const juce::String&)
 
 void PreverbAudioProcessor::getStateInformation(juce::MemoryBlock& destinationData)
 {
+    const juce::ScopedLock stateGuard(storageStateLock);
+    CaptureSessionSnapshot capture;m3::Session session;m3::storage::Association association;workflow::Mode mode;
+    // Pair the source and model while model publication is fenced. Capture may
+    // advance afterwards, but a newer wet revision cannot enter this older frame.
+    swells->withStorageModelLocked([&]{
+        const bool restoring=captureWorker.isRestoring();capture=restoring?pendingHostCapture:captureWorker.snapshot();
+        session=swells->savedSession();mode=workflowState.snapshot().mode;session.mappingEnabled=mode==workflow::Mode::capture;
+        association=restoring?pendingHostAssociation:(capture.location?capture.location->association:m3::storage::Association{});return true;
+    });
     juce::XmlElement state("PreverbState");
     state.setAttribute("stateVersion", 8);
-    state.setAttribute("workflowMode",workflow::modeName(workflowState.snapshot().mode));
+    state.setAttribute("workflowMode",workflow::modeName(mode));
     state.setAttribute("toneEnabled", isTestToneEnabled());
     state.setAttribute("toneStartBar", getToneStartBar());
     state.setAttribute("toneEndBar", getToneEndBar());
-    const auto capture = captureWorker.snapshot();
     state.setAttribute("projectId", juce::String(capture.manifest.projectId));
     state.setAttribute("instanceId", juce::String(capture.manifest.instanceId));
     state.setAttribute("manifestReference", capture.reference);
     state.setAttribute("manifestRevision", juce::String(static_cast<juce::int64>(capture.manifest.revision)));
     juce::String json,error;
-    auto session=swells->savedSession();session.mappingEnabled=isMappingEnabled();
     if(!m3::encode(session,json,error)) {swells->diagnostic("Save failed: "+error);return;}
     state.createNewChildElement("SwellSession")->addTextElement(json);
-    copyXmlToBinary(state, destinationData);
+    if(association.present()){
+        juce::String manifest,encoded;
+        if((capture.manifestKnown && !serializeCaptureManifest(capture.manifest,manifest,error))
+            || !m3::storage::encodeAssociatedState(state.toString(),manifest,association,encoded,error)){swells->diagnostic("Save failed: "+error);return;}
+        const auto associated=juce::XmlDocument::parse(encoded);copyXmlToBinary(*associated,destinationData);
+    }else copyXmlToBinary(state, destinationData);
 }
 
 void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    if(sizeInBytes<=0 || sizeInBytes>static_cast<int>(m3::maximumStateBytes*6+1024*1024))
+    const juce::ScopedLock stateGuard(storageStateLock);stateDecodeRejected=true;
+    if(data==nullptr || sizeInBytes<8 || sizeInBytes>97*1024*1024+16)
     {swells->diagnostic("Invalid or oversized plugin state");return;}
-    const auto state = getXmlFromBinary(data, sizeInBytes);
+    // JUCE states have an eight-byte header followed by UTF-8 XML. Reject
+    // declarations before framework parsing, not after XML normalization.
+    const auto* raw=static_cast<const char*>(data);
+    const auto payloadBytes=std::min<uint32_t>(juce::ByteOrder::littleEndianInt(raw+4),static_cast<uint32_t>(sizeInBytes-8));
+    for(uint32_t i=0;i+1<payloadBytes;++i)if(raw[8+i]=='<' && raw[9+i]=='!'){
+        swells->diagnostic("State rejected: XML declarations and entities are unsupported");return;
+    }
+    if(!m3::storage::associationXmlShape(juce::String::fromUTF8(raw+8,static_cast<int>(payloadBytes)))){
+        swells->diagnostic("State rejected: malformed or excessively nested XML metadata");return;
+    }
+    auto state = getXmlFromBinary(data, sizeInBytes);
+    m3::storage::Association association;juce::String embeddedManifest,associatedBase,associationError;
+    if(state && state->getStringAttribute("stateVersion")=="9"){
+        if(!m3::storage::decodeAssociatedState(state->toString(),association,associatedBase,embeddedManifest,associationError)){
+            swells->diagnostic("State rejected: "+associationError);return;}
+        state=juce::XmlDocument::parse(associatedBase);
+    }else if(sizeInBytes>static_cast<int>(m3::maximumStateBytes*6+1024*1024)){
+        swells->diagnostic("Oversized legacy plugin state");return;
+    }
     if (state == nullptr || ! state->hasTagName("PreverbState")
         || state->getIntAttribute("stateVersion",0)<1 || state->getIntAttribute("stateVersion",0)>8)
     {swells->diagnostic("Unsupported or malformed plugin state");return;}
@@ -526,7 +574,8 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     if(version>=3)
     {
         const auto child=state->getChildByName("SwellSession");
-        if(!child || !m3::decode(child->getAllSubText(),session,error)) {swells->diagnostic("State rejected: "+error);return;}
+        if(!child || !m3::storage::associationJsonShape(child->getAllSubText())){swells->diagnostic("State rejected: malformed or excessively nested creative metadata");return;}
+        if(!m3::decode(child->getAllSubText(),session,error)) {swells->diagnostic("State rejected: "+error);return;}
         if(version==3)
         {
             session.mappingEnabled=false;session.automaticProcessing=false;
@@ -543,6 +592,17 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         {swells->diagnostic("State rejected: invalid capture reference");return;}
     }
 
+    CaptureSessionSnapshot hostCapture;hostCapture.manifestKnown=false;
+    hostCapture.manifest.projectId=state->getStringAttribute("projectId").toStdString();
+    hostCapture.manifest.instanceId=state->getStringAttribute("instanceId").toStdString();
+    hostCapture.reference=state->getStringAttribute("manifestReference");hostCapture.manifest.revision=static_cast<uint64_t>(state->getStringAttribute("manifestRevision").getLargeIntValue());
+    if(embeddedManifest.isNotEmpty()){
+        CaptureManifest captured;if(!parseCaptureManifest(embeddedManifest,captured,error) || captured.projectId!=hostCapture.manifest.projectId
+            || captured.instanceId!=hostCapture.manifest.instanceId || captured.revision!=hostCapture.manifest.revision){swells->diagnostic("State rejected: mismatched associated capture metadata");return;}
+        hostCapture.manifest=std::move(captured);hostCapture.manifestKnown=true;
+    }else if(hostCapture.reference.isEmpty())hostCapture.manifestKnown=true;
+    pendingHostCapture=hostCapture;pendingHostAssociation=association;
+    recoveryIntent.reset();
     awaitingRestoredPosition.store(true,std::memory_order_release);
     auto startBar = std::clamp(state->getIntAttribute("toneStartBar", 8), 1, 511);
     auto endBar = std::clamp(state->getIntAttribute("toneEndBar", 10), 2, 512);
@@ -555,21 +615,149 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     if (version >= 2)
     {
         const auto revision = state->getStringAttribute("manifestRevision").getLargeIntValue();
+        CaptureWorker::StorageRestore storage;storage.savedManifest=embeddedManifest;storage.allowMissingSource=true;
+        if(association.present()){
+            const auto registry=legacyProjectsRoot;const auto base=state->toString();
+            storage.resolve=[association,registry,base,embeddedManifest]{std::shared_ptr<m3::storage::portable::WorkingFolder> folder;juce::String error;
+                if(!m3::storage::portable::resolveWorkingFolder(association,base,embeddedManifest,registry,folder,error))
+                    return std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{registry.getChildFile("unavailable").getChildFile(association.store),registry,{},false,association});
+                const auto& info=m3::storage::portable::workingFolderInfo(*folder);
+                return std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{info.projectsRoot,info.folder,folder,true,info.association});};
+        }else {
+            const auto prior=captureWorker.snapshot().location;
+            storage.location=prior && prior->writable && !prior->association.present() && prior->projectsRoot==legacyProjectsRoot
+                ?prior:std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{legacyProjectsRoot,legacyProjectsRoot,{}});
+        }
         captureWorker.requestRestore(state->getStringAttribute("projectId").toStdString(),
                                      state->getStringAttribute("instanceId").toStdString(),
                                      state->getStringAttribute("manifestReference"),
-                                     static_cast<uint64_t>(std::max(juce::int64{0}, revision)),savedMode);
+                                     static_cast<uint64_t>(std::max(juce::int64{0}, revision)),savedMode,false,std::move(storage));
     }
     else
     {
-        captureWorker.requestRestore(juce::Uuid().toDashedString().toStdString(),
-                                     juce::Uuid().toDashedString().toStdString(), {}, 0,savedMode);
+        CaptureWorker::StorageRestore storage;storage.location=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{legacyProjectsRoot,legacyProjectsRoot,{}});
+        pendingHostCapture.manifest.projectId=juce::Uuid().toDashedString().toStdString();pendingHostCapture.manifest.instanceId=juce::Uuid().toDashedString().toStdString();
+        captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,{},0,savedMode,false,std::move(storage));
     }
     swells->restore(std::move(session),version>=2?state->getStringAttribute("manifestReference"):juce::String{});
+    stateDecodeRejected=false;
     cancelPendingUpdate(); // Loading acknowledged state is not a new user edit.
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new PreverbAudioProcessor();
+}
+
+bool PreverbAudioProcessor::pinPortableAssets(m3::storage::portable::Input& output,juce::String& error,bool allowUnavailable) const
+{
+    const juce::ScopedLock stateGuard(storageStateLock);
+    if(stateDecodeRejected.load()){error="Saved plugin metadata could not be decoded. The arrangement cannot be confirmed intact.";return false;}
+    const auto generation=captureWorker.captureGeneration();const auto flow=workflowState.snapshot();const auto mapping=isMappingEnabled();
+    if(captureWorker.isLoading()){error="Capture state is loading. Retry after it settles.";return false;}
+    CaptureSessionSnapshot capture;m3::Session session;juce::File root;uint64_t epoch=0;
+    if(!swells->acceptedStorageSnapshot(capture,session,root,epoch,error,allowUnavailable))return false;
+    if(captureWorker.isLoading() || captureWorker.captureGeneration()!=generation || swells->assignmentEpoch()!=epoch
+        || workflowState.snapshot().mode!=flow.mode || isMappingEnabled()!=mapping)
+    {error="Accepted session changed while its backup metadata was pinned. Retry.";return false;}
+    session.mappingEnabled=mapping;juce::String creative,manifest;
+    if(!m3::encode(session,creative,error) || (capture.manifestKnown && !serializeCaptureManifest(capture.manifest,manifest,error)))return false;
+    juce::XmlElement state("PreverbState");state.setAttribute("stateVersion",8);state.setAttribute("workflowMode",workflow::modeName(flow.mode));
+    state.setAttribute("toneEnabled",isTestToneEnabled());state.setAttribute("toneStartBar",getToneStartBar());state.setAttribute("toneEndBar",getToneEndBar());
+    state.setAttribute("projectId",juce::String(capture.manifest.projectId));state.setAttribute("instanceId",juce::String(capture.manifest.instanceId));
+    state.setAttribute("manifestReference",capture.reference);state.setAttribute("manifestRevision",juce::String(static_cast<juce::int64>(capture.manifest.revision)));
+    state.createNewChildElement("SwellSession")->addTextElement(creative);
+    juce::String stateXml=state.toString();
+    if(capture.location && capture.location->association.present()){
+        auto association=capture.location->association;
+        if(!m3::storage::encodeAssociatedState(stateXml,manifest,association,stateXml,error))return false;
+    }
+    m3::storage::portable::Input accepted{root,stateXml,manifest};accepted.producer=juce::String(m3::build::report());accepted.sourceUnavailable=capture.unavailable;accepted.folderUnavailable=capture.location && !capture.location->writable;accepted.controlEpoch=epoch;output=std::move(accepted);error.clear();return true;
+}
+bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error)
+{
+    const juce::ScopedLock guard(storageStateLock);m3::storage::portable::Input current;
+    if(workflowState.snapshot().locked() || isPlaying.load() || !pinPortableAssets(current,error,true))
+    {if(error.isEmpty())error="Stop the DAW and wait for pending work before reloading recovered assets.";return false;}
+    const auto a=juce::XmlDocument::parse(expected.processorXml),b=juce::XmlDocument::parse(current.processorXml);
+    if(!a || !b || expected.instanceRoot!=current.instanceRoot || expected.controlEpoch!=current.controlEpoch
+        || a->getStringAttribute("manifestReference")!=b->getStringAttribute("manifestReference")
+        || a->getStringAttribute("manifestRevision")!=b->getStringAttribute("manifestRevision"))
+    {error="The accepted session changed; recovered copies were retained without replacing current state.";return false;}
+    auto capture=captureWorker.snapshot();
+    const auto revision=static_cast<uint64_t>(b->getStringAttribute("manifestRevision").getLargeIntValue());
+    if(capture.manifest.projectId!=b->getStringAttribute("projectId").toStdString()
+        || capture.manifest.instanceId!=b->getStringAttribute("instanceId").toStdString()
+        || capture.reference!=b->getStringAttribute("manifestReference") || capture.manifest.revision!=revision
+        || !swells->reloadStorageAssets(current.controlEpoch,capture.reference))
+    {error="The session changed before reload. Copied assets remain available.";return false;}
+
+    // Same-folder recovery also publishes a loading frame. Keep the accepted
+    // metadata available for a DAW save until the worker publishes its result.
+    // Copy the association value without keeping an extra writer lease alive.
+    pendingHostCapture={};
+    pendingHostCapture.manifest=std::move(capture.manifest);
+    pendingHostCapture.reference=capture.reference;
+    pendingHostCapture.manifestKnown=capture.manifestKnown;
+    pendingHostAssociation=capture.location?capture.location->association:m3::storage::Association{};
+    captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,
+        pendingHostCapture.reference,revision,workflowState.snapshot().mode,true);
+    error.clear();return true;
+}
+
+bool PreverbAudioProcessor::beginRelearning(const m3::storage::portable::Input& expected,juce::String& error)
+{
+    const juce::ScopedLock guard(storageStateLock);m3::storage::portable::Input current;
+    if(isPlaying.load() || workflowState.snapshot().locked() || !pinPortableAssets(current,error,true))
+    {if(error.isEmpty())error="Stop DAW playback before arming re-learning.";return false;}
+    if(expected.instanceRoot!=current.instanceRoot || expected.controlEpoch!=current.controlEpoch || expected.processorXml!=current.processorXml)
+    {error="The session changed; review recovery again.";return false;}
+    RecoveryIntent intent;intent.original=current;const auto capture=captureWorker.snapshot();const auto session=swells->savedSession();
+    const auto timing=getSongTime();
+    if(!timing.valid || (session.timing.valid && !sameMusicalMapping(session.timing,timing)) || (capture.manifest.sampleRate>0 && capture.manifest.sampleRate!=timing.rate))
+    {error="Re-learning requires the saved sample rate, tempo and musical mapping. Restore the original DAW timing first.";return false;}
+    for(const auto& range:capture.manifest.ranges)intent.required.emplace_back(range.startSample,range.startSample+static_cast<int64_t>(range.frameCount));
+    for(const auto& w:session.swells)intent.required.emplace_back(w.sourceStart,m3::renderInputEnd(w));
+    if(intent.required.empty()){error="Saved source bounds are unavailable. Locate or restore assets before re-learning this empty arrangement.";return false;}
+    swells->beginSourceReplacement();
+    if(!captureWorker.armRecovery(intent.required)){error="Re-learning could not be armed; previous source retained.";return false;}
+    recoveryIntent=std::move(intent);persistentStateChanged();error.clear();return true;
+}
+void PreverbAudioProcessor::cancelRelearning()
+{const juce::ScopedLock guard(storageStateLock);if(!recoveryIntent)return;captureWorker.cancelWorkflowPass();recoveryIntent.reset();}
+
+juce::File PreverbAudioProcessor::assetRegistryRoot() const {return legacyProjectsRoot;}
+bool PreverbAudioProcessor::useWorkingFolder(const std::shared_ptr<m3::storage::portable::WorkingFolder>& folder,
+    const m3::storage::portable::Input& expected,juce::String& error,const m3::storage::portable::Hooks& hooks)
+{
+    using namespace m3::storage::portable;
+    if(!folder){error="No prepared folder";return false;}
+    const auto cancelled=[&]{return hooks.cancelled && hooks.cancelled();};
+    // File verification runs off the message/audio threads, without model locks.
+    return swells->withStorageJobsPaused([&]{
+        if(cancelled()){error="Folder change stopped; current folder retained";return false;}
+        Input current;
+        if(isPlaying.load() || workflowState.snapshot().locked() || !pinPortableAssets(current,error,true)){
+            if(error.isEmpty())error="Stop DAW playback before changing the working folder";return false;}
+        const auto& info=workingFolderInfo(*folder);
+        if(!(info.incompleteRecovery?revalidateRecoveryWorkspace(*folder,current,error,hooks):revalidateWorkingFolder(*folder,current,error,hooks)))return false;
+        if(expected.instanceRoot!=current.instanceRoot || expected.controlEpoch!=current.controlEpoch
+            || expected.processorXml!=current.processorXml || expected.manifestJson!=current.manifestJson){error="The session changed; prepare the folder again";return false;}
+        auto location=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{info.projectsRoot,info.folder,folder,true,info.association});
+        const auto capture=captureWorker.snapshot();const auto generation=captureWorker.captureGeneration();
+        std::unique_ptr<CaptureSession> recovered;
+        if(info.incompleteRecovery || info.located){recovered=std::make_unique<CaptureSession>(info.projectsRoot,location);
+            recovered->restore(capture.manifest.projectId,capture.manifest.instanceId,capture.reference,capture.manifest.revision,info.restoreManifest);}
+        juce::String workerError;
+        const bool applied=captureWorker.relocateStorage(capture,generation,location,std::move(recovered),[&](const std::function<bool()>& adopt){
+          const juce::ScopedLock stateGuard(storageStateLock);
+          return swells->withStorageModelLocked([&]{
+            if(cancelled()){error="Folder change stopped; current folder retained";return false;}Input final;if(isPlaying.load() || workflowState.snapshot().locked() || !pinPortableAssets(final,error,true) || final.processorXml!=current.processorXml || final.manifestJson!=current.manifestJson
+                || final.controlEpoch!=current.controlEpoch || final.instanceRoot!=current.instanceRoot){error="The accepted session changed during verification";return false;}
+            if(!adopt())return false;
+            swells->acceptStorageLocation(location);persistentStateChanged();error.clear();return true;
+          });
+        },workerError);
+        if(!applied && error.isEmpty())error=workerError;return applied;
+    });
 }

@@ -12,6 +12,28 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Shared command buttons — issue #107](validation/2026-11-06-issue-107-buttons.md) — owner-approved native family revision 4, explicit command roles and independent aqua corner focus; production migration, automated checks and integrated acceptance are recorded separately. Knobs and independently owned #108/#8 implementation remain outside this migration.
+- [Shared selectors — issue #107](validation/2026-11-07-issue-107-selectors.md) — approved quiet inspection/explicit commit, independent aqua focus and small local help/red error feedback; named consumer adoption and native verification. Action menus remain a separate child.
+
+- [UI control inventory and roadmap](design/ui-control-inventory.md) and [shared contracts](development/ui-control-contracts.md) — owner-approved #107 audit, reconciled with merged #80; [evidence](validation/2026-11-06-issue-107-control-audit.md). Production migrations remain separate family changes.
+
+- [Swell-engine architecture](development/swell-engine-architecture.md) — implemented ownership/call paths, data-flow/lifecycle diagrams and material regeneration boundaries; [native/profile verification](validation/2026-11-06-shared-swell-engine.md).
+
+- [Issue #8 fresh-profile validation](validation/2026-11-06-issue-8-fresh-profile.md) — passing destination-only restore in a separate Windows account, exact metadata/audio and zero generation/recapture work.
+- [Issue #8 Storage polish and recovery candidate](validation/2026-11-06-issue-8-storage-polish-recovery.md) — retained scans, pinned actions, native recovery tests and explicit remaining profile/rollout gates.
+- [Issue #8 FL Studio Storage smoke](validation/2026-11-06-issue-8-fl-studio-storage-smoke.md) — successful installation retry, Backup/Save As/project-copy/reopen/Locate/Restore results and explicit same-profile/default-IR limits.
+
+- [Issue #8 approved Storage actions](validation/2026-11-06-issue-8-storage-actions.md) — production Backup/Restore/Locate bindings, explicit receipt selection, native tests and remaining profile/host/recovery gates.
+
+- [Portable backup backend](development/portable-asset-backups.md) — exact-byte phase-2 backend and approved production Backup/Restore/Locate controls; [dated verification and remaining gates](validation/2026-11-06-issue-8-portable-backend.md).
+
+- [Working-folder association](development/working-folder-association.md) — phase-4 transaction backend and disposable native review candidate; production cutover and independent-write validation remain gated.
+
+- [Issue #8 FL Studio folder-discovery spike](validation/2026-11-06-issue-8-project-folder-spike.md) — native state-stream observations, tested host/JUCE versions, explicit-folder fallback and restored test installation.
+
+- [Read-only asset inventory](development/asset-inventory.md) — phase-1 dependency readers, protected storage accounting and automatic Settings scans; [Settings integration evidence](validation/2026-11-06-issue-8-settings-integration.md) and [backend verification](validation/2026-11-06-issue-8-inventory.md).
+
+- [Issue #8 measured storage audit](validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](development/asset-storage-contracts.md) — deterministic capture/IR/render growth, synchronized clone writers, version fixtures and preserved phase/owner-review gates.
 - [Shared Learn/Perform IR editor](validation/2026-11-06-issue-80-shared-ir.md) — shared field/binding ownership, owner-reviewed feedback and scope refinements, native isolation/persistence/audio evidence and completed native acceptance and remaining host acceptance.
 - [Host processing reactivation](development/perform-live-diagnostics.md#host-processing-reactivation) — explicit VST3 reset invalidates the live clock without changing saved source or swells; [issue #103 evidence](validation/2026-11-06-issue-103-host-reactivation.md) distinguishes native lifecycle coverage from pending FL Studio confirmation.
 
@@ -73,6 +95,8 @@ This directory covers product identity, the existing implementation, development
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
 - [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels and continuous gain preview are implemented by #51.
 - [IR library evidence](validation/ir-library-evidence.md) and [gain-staging evidence](validation/gain-staging-evidence.md) — recorded validation and measurement evidence. Related JSON reports are kept alongside the IR evidence.
+
+- [Asset storage audit](development/asset-storage-audit.md) and [dated investigation evidence](validation/2026-11-03-asset-storage-investigation.md) — source-backed Issue #8 findings; proposed portability and retention remain planning only.
 
 ## Documentation policy
 

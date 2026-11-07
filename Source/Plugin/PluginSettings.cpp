@@ -117,6 +117,14 @@ void PreverbAudioProcessorEditor::initialiseSettings()
         settingsHelp[i].setColour(juce::Label::textColourId,m3::ui::secondary);settingsHelp[i].setFont(juce::FontOptions(m3::ui::bodySize));
         settingsHelp[i].setJustificationType(juce::Justification::topLeft);
     }
+    const auto recoveryRoot=processor.swellEngine().assetDirectory().getParentDirectory().getParentDirectory();
+    storageInventory=std::make_unique<m3::ui::PortableStoragePanel>([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);},recoveryRoot);
+    auto* storageOwner=&processor;
+    storageInventory->enableWorkingFolder(processor.assetRegistryRoot(),[storageOwner](const auto& folder,const auto& input,auto& error,const auto& hooks){return storageOwner->useWorkingFolder(folder,input,error,hooks);});
+    storageInventory->onRestored=[this](const auto& input,auto& error){return processor.reloadRecoveredAssets(input,error);};
+    storageViewport.setName("storageViewport");storageViewport.setFocusRevealEnabled(true);
+    storageViewport.setViewedComponent(storageInventory.get(),false);
+    settingsTabs.addTab("Storage",m3::ui::background,&storageViewport,false);
     const auto move=[&](int page,std::initializer_list<juce::Component*> controls)
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
     move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
@@ -171,7 +179,8 @@ void PreverbAudioProcessorEditor::layoutSettings()
     // scrolling, independent of the plugin editor's current dimensions.
     const int left=24,width=590,labelWidth=175;
     const auto row=[&](juce::Component& label,juce::Component& value,int y)
-    {label.setBounds(left,y,labelWidth,32);value.setBounds(left+labelWidth,y,width-labelWidth,32);};
+    {label.setBounds(left,y,labelWidth,32);const juce::Rectangle<int> body{left+labelWidth,y,width-labelWidth,32};
+        if(auto* selector=dynamic_cast<m3::ui::controls::ChoiceSelector*>(&value))selector->setRowBounds(body);else value.setBounds(body);};
     row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
     mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
@@ -206,4 +215,62 @@ void PreverbAudioProcessorEditor::layoutSettings()
     }
     copyBuildInformation.setBounds(left,aboutY+spacing::related,width,controlGeometry::height);
     settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,2*learnTypography::secondaryLineHeight);
+}
+
+void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapshot& capture,uint64_t epoch)
+{
+    const auto identity=(capture.location?capture.location->projectsRoot.getFullPathName():juce::String{})+"/"+juce::String(capture.manifest.projectId)+"/"+juce::String(capture.manifest.instanceId)+"/"+juce::String(static_cast<juce::int64>(epoch));
+    if(storageInventory)
+    {
+        if(identity!=storageIdentity){storageIdentity=identity;if(!storageInventory->reloadPending() && !storageInventory->consumeReloadEpoch(epoch))storageInventory->bind([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);});}
+        storageInventory->setSize(std::max(1,storageViewport.getWidth()-storageViewport.getScrollBarThickness()),
+            std::max(1,storageViewport.getHeight()));
+        storageInventory->poll();
+    }
+}
+void PreverbAudioProcessorEditor::serviceAssetRecovery()
+{
+    if(!isShowing() || destroying)return;
+    m3::storage::portable::Input input;juce::String error;
+    if(!processor.pinPortableAssets(input,error,true)){
+        if(error.contains("could not be decoded") && !metadataRecoveryWarned){
+            metadataRecoveryWarned=true;
+            // A failed restore must replace any earlier "edits preserved"
+            // warning, including one still modal for a previous valid state.
+            if(recoveryWarning){recoveryWarning->exitModalState(0);recoveryWarning->setVisible(false);}
+            showAssetRecoveryWarning(input,true);
+        }return;
+    }
+    metadataRecoveryWarned=false;
+    const auto xml=juce::XmlDocument::parse(input.processorXml);const auto reference=xml?xml->getStringAttribute("manifestReference"):juce::String{};
+    if(input.controlEpoch!=recoveryInspectionEpoch || input.instanceRoot!=recoveryInspectionRoot){
+        recoveryInspection.cancel();recoveryInspectionEpoch=input.controlEpoch;recoveryInspectionRoot=input.instanceRoot;recoveryInspected=false;recoveryWarned=false;
+    }
+    if(recoveryWarned)return;
+    if(input.sourceUnavailable){recoveryWarned=true;showAssetRecoveryWarning(input);return;}
+    if(!recoveryInspected){
+        m3::storage::ObservedSnapshot observed;if(!m3::storage::readLegacySnapshot(input.processorXml,input.manifestJson,observed,error))return;
+        m3::storage::Request request;request.roots={input.instanceRoot};request.snapshots.push_back(std::move(observed));
+        recoveryInspectionReference=reference;recoveryInspection.request(std::move(request));recoveryInspected=true;return;
+    }
+    if(reference!=recoveryInspectionReference){recoveryInspection.cancel();recoveryInspected=false;return;}
+    if(!recoveryInspection.busy())if(const auto report=recoveryInspection.snapshot();report && !report->cancelled && report->missingReferences>0){recoveryWarned=true;showAssetRecoveryWarning(input);}
+}
+void PreverbAudioProcessorEditor::showAssetRecoveryWarning(const m3::storage::portable::Input& expected,bool metadataFailure)
+{
+    if(recoveryWarning && recoveryWarning->isCurrentlyModal())return;
+    recoveryWarning=std::make_unique<juce::AlertWindow>(metadataFailure?"Project metadata unavailable":"Project assets unavailable",
+        metadataFailure?"Saved plugin metadata could not be decoded. The arrangement cannot be confirmed intact. Keep the project and original assets; restore an earlier DAW project copy if available.":m3::ui::PortableStoragePanel::recoveryGuidance(),juce::MessageBoxIconType::NoIcon,this);
+    recoveryWarning->setDescription(metadataFailure?"Saved plugin metadata could not be decoded; the arrangement cannot be confirmed intact.":m3::ui::PortableStoragePanel::recoveryGuidance());
+    recoveryWarning->setComponentID("missingAssetRecoveryDialog");recoveryWarning->setLookAndFeel(&workspaceTheme);
+    if(!metadataFailure){recoveryWarning->addButton("Locate assets...",1);recoveryWarning->addButton("Restore backup...",2);}
+    recoveryWarning->addButton("Continue",0,juce::KeyPress(juce::KeyPress::escapeKey));
+    recoveryWarning->setAlwaysOnTop(false);addAndMakeVisible(*recoveryWarning);recoveryWarning->setCentrePosition(getLocalBounds().getCentre());recoveryWarning->toFront(true);
+    recoveryWarning->enterModalState(true,juce::ModalCallbackFunction::create([safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),expected](int action){
+        if(!safe || safe->destroying || action==0)return;
+        m3::storage::portable::Input current;juce::String error;
+        if(!safe->processor.pinPortableAssets(current,error,true) || current.instanceRoot!=expected.instanceRoot || current.controlEpoch!=expected.controlEpoch)return;
+        safe->setSettingsOpen(true);for(int i=0;i<safe->settingsTabs.getNumTabs();++i)if(safe->settingsTabs.getTabNames()[i]=="Storage")safe->settingsTabs.setCurrentTabIndex(i);
+        if(action==1)safe->storageInventory->locateOriginalAssets();else if(action==2)safe->storageInventory->restoreBackup();
+    }),false);
 }
