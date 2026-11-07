@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed production Settings working-folder selection, verified copy and explicit adoption, coherent v9 saves and legacy fallback, Locate/Restore and incomplete recovery workspace with normal Learn; checked bounded host parsing, registry hints, pinned export ownership and retained originals. Updated affected Storage and rollback guidance; profile/host coverage remains explicitly pending.",
+  "summary": "Reviewed production association/recovery behavior and Settings bindings against the updated guide, including coherent saves, explicit copy/adoption and normal Learn guidance. Capture checksum fix only corrects BCrypt buffer lifetime without changing file format or user workflow; no further prose change needed. Native/profile/host limits remain recorded separately.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -75,8 +75,8 @@
     },
     {
       "path": "Source/Capture/CaptureChunkStore.cpp",
-      "bytes": 8750,
-      "sha256": "0917b6677a8ce3d3aadf70468e64fc9522b0bb6255e43b76fcb15999da512686"
+      "bytes": 8934,
+      "sha256": "008d31ee16fb200edb0c6c6106f4c63c8c9e1a111ca81067482f67aa14689806"
     },
     {
       "path": "Source/Capture/CaptureChunkStore.h",

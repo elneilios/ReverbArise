@@ -75,3 +75,36 @@ Raw host XML/creative JSON complexity and relative registry hints are rejected
 before parser/path adoption. The authoritative embedded capture manifest wins
 over a locally altered same-ID/revision map. Focused affected coverage previously
 passed 14/14 (48.62 s); these are native checks, not fresh-profile or FL acceptance.
+
+## Full-run fault and capture checksum lifetime correction
+
+At `841f2a3`, supported wrapper `20261107-020143-a579c352` built successfully
+and passed 86/87 in 305.28 s. All native foreground fixtures and Storage/recovery
+checks passed. Automatic-coordinator instead crashed; Windows Application event
+1000 recorded access violation `0xc0000005` in `bcrypt.dll` at offset `0x6a08`.
+Its retained dump is `preverb_automatic_coordinator_test.exe.71052.dmp` in the
+current user's CrashDumps directory. Five immediate focused repetitions passed
+(24.61 s), so repetition alone did not establish the cause or waive the gate.
+
+Inspection identified a concrete existing capture-checksum lifetime defect:
+`calculateSha256` declared the caller-owned BCrypt hash buffer after its handle
+owner, freeing the buffer before `BCryptDestroyHash` on every return. The buffer
+now belongs to the handle owner and outlives its destructor body. This follows
+the [BCrypt lifetime contract](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptcreatehash).
+It is consistent with the crash, without claiming a symbolized dump proved the
+specific failing call. No hashing format, durable identity or callback changes.
+The capture test additionally runs 128 concurrent owned-directory write/read
+round trips with exact PCM/checksum and deliberate-corruption rejection checks.
+
+Warm wrapper `20261107-020950-3692976e` builds the correction. The production
+Storage snapshot check passes; screenshots show the working-folder section at
+the top and both pinned action rows, with details scrolling above them.
+
+The actual different-profile launcher was attempted. `Start-Process -Verb RunAs`
+reported cancellation before the administrator script started. No different-SID
+success or test-account creation is claimed. The profile gate remains open,
+alongside the original-binary/pre-upgrade FLP rollback and scoped host smoke.
+The installed system bundle was observed at a separate experimental revision
+`9a8b9d073e33ea03dac059dc2cdcfa510c3ecd8f` (SHA256
+`DED49001B0395EAA96B08810FA771119724E2B50B41EEBCA32D2D29BFA0DCB31`);
+it was not replaced and no FLP was modified during this checkpoint.
