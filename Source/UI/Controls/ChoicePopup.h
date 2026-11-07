@@ -150,7 +150,28 @@ public:
         return false;
     }
     void inputAttemptWhenModal()override{visibility->pointerInput();dismiss(PopupDismissal::outside);}
-    void focusLost(FocusChangeType)override{interaction.navigationLost();repaintRows();}
+    void focusLost(FocusChangeType) override
+    {
+        if (interaction.done())
+            return;
+
+        if (hasKeyboardFocus(true) || !isCurrentlyModal(false))
+        {
+            interaction.navigationLost();
+            repaintRows();
+            return;
+        }
+
+        // A native host control can take focus without a JUCE modal input attempt.
+        // Cancel now and close after the native focus transfer has finished.
+        interaction.cancel();
+        const juce::Component::SafePointer<ChoicePopup> safe(this);
+        juce::MessageManager::callAsync([safe]
+        {
+            if (safe != nullptr)
+                safe->finish(0, PopupDismissal::outside);
+        });
+    }
     void mouseMove(const juce::MouseEvent& event)override{pointAt(event);}
     void mouseEnter(const juce::MouseEvent& event)override{pointAt(event);}
     void mouseExit(const juce::MouseEvent&)override{interaction.pointerExit();repaintRows();}

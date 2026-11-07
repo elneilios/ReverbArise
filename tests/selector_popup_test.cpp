@@ -3,6 +3,9 @@
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/Controls/ChoiceSelector.h>
 #include "SelectorReview.h"
+#if JUCE_WINDOWS
+#include <windows.h>
+#endif
 using namespace m3::ui::controls;
 
 static std::vector<PopupChoice> choices()
@@ -128,6 +131,32 @@ static void selectorCases()
     auto destroyedInPrepare=std::make_unique<ChoiceSelector>();window.addAndMakeVisible(*destroyedInPrepare);destroyedInPrepare->setBounds(30,100,280,44);destroyedInPrepare->beforeInvocation=[&]{destroyedInPrepare.reset();};destroyedInPrepare->showPopup();REQUIRE(!destroyedInPrepare);
     auto destroyedInCommit=std::make_unique<ChoiceSelector>();window.addAndMakeVisible(*destroyedInCommit);destroyedInCommit->setBounds(30,100,280,44);destroyedInCommit->addItem("A",1);destroyedInCommit->addItem("B",2);destroyedInCommit->setSelectedId(1,juce::dontSendNotification);
     destroyedInCommit->onChange=[&]{destroyedInCommit.reset();};destroyedInCommit->showPopup();destroyedInCommit->activePopup()->activate(1);pump();REQUIRE(!destroyedInCommit);
+
+   #if JUCE_WINDOWS
+    // A host control can take native focus without going through JUCE modal input.
+    const auto hostControl=CreateWindowExW(WS_EX_TOOLWINDOW,L"EDIT",L"",WS_POPUP|WS_BORDER,
+                                            400,160,200,30,nullptr,nullptr,GetModuleHandleW(nullptr),nullptr);
+    REQUIRE(hostControl != nullptr);
+    const juce::ScopeGuard destroyHostControl{[hostControl]{DestroyWindow(hostControl);}};
+    ShowWindow(hostControl,SW_SHOWNOACTIVATE);
+
+    const auto accepted=selector.getSelectedId();
+    const auto changesBefore=changes;
+    selector.showPopup();
+    auto* openPopup=selector.activePopup();
+    REQUIRE(openPopup && openPopup->isCurrentlyModal());
+    REQUIRE(GetFocus() == static_cast<HWND>(openPopup->getWindowHandle()));
+
+    SetFocus(hostControl);
+    REQUIRE(GetFocus() == hostControl);
+    // Check cancellation before dispatching the foreground polling timer.
+    REQUIRE(!selector.isPopupActive());
+    pump(100);
+    REQUIRE(selector.activePopup() == nullptr);
+    REQUIRE(juce::Component::getCurrentlyModalComponent() == nullptr);
+    REQUIRE(GetFocus() == hostControl);
+    REQUIRE(selector.getSelectedId() == accepted && changes == changesBefore);
+   #endif
     window.setLookAndFeel(nullptr);
 }
 static void presentationCases()

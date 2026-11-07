@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed approved C2 selector adoption against production IR, grid, Character, Appearance and four Playback/Swell bindings, canonical UI/workflow contracts and active selector delta. Added deliberate inspect/confirm/cancel/no-wheel, independent checkmark/hover/focus and local IR feedback instructions; retained all capture/Perform/optional Export and host/DPI limitations.",
+  "summary": "Reviewed selector dismissal against the approved choice contract and offline keyboard instructions. Native focus transfer now cancels the dropdown and keeps focus on the receiving control. The existing guide remains accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -565,8 +565,8 @@
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 12406,
-      "sha256": "2dfb9038b48b9f5b122739f3c4e3ac1bd0871b32d95a555e5df38be017b31e53"
+      "bytes": 13021,
+      "sha256": "ef7ad19d5f58ecb373aa046fb9d56a07187615d00cda320ae5a562fb5a90f227"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",

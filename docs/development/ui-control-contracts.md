@@ -155,6 +155,10 @@ checkmark. A pointer departure clears only hover; any valid keyboard inspection
 remains. Pointer focus never creates a sticky row background. Choice completion
 is one-shot, with the original binding still deciding acceptance.
 
+When keyboard focus leaves the popup, cancel immediately and close after the
+native focus transfer. Outside dismissal leaves focus on its new recipient,
+including a native host control in the same process.
+
 `setRowBounds` reserves the outside focus frame around an existing visible body
 row. `canCommit` is an optional read-only predicate captured after
 `beforeInvocation`; Settings bindings use it to reject a changed session/pass or

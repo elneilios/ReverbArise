@@ -214,3 +214,16 @@ Refs #107. The remote diff was checked against the named selector/shared-popup
 scope; it contains no protected engine/audio/persistence, KnobValue, storage or
 #108 implementation changes. The PR is open for owner review; spec sync/archive
 and merge remain later delivery steps, not inferred from native family approval.
+
+### PR #117 native focus follow-up
+
+A Win32 edit control in the same process took keyboard focus while the selector
+remained active on the original `1171bf0` implementation. The regression checks
+that transfer before dispatching the foreground timer. `ChoicePopup` now cancels
+on focus loss and defers window teardown until the transfer finishes. The test
+verifies modal release, focus retention on the native control and no selection edit.
+
+The supported Release build and all 87 CTest checks passed with the fix applied
+in run `20261107-085044-f912bb88` (241.82 s). UI standards, strict selector
+OpenSpec validation and guide currency passed. The focus regression ran in the
+native Win32 fixture. FL Studio interaction remains unverified for this follow-up.
