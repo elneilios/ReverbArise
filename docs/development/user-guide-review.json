@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the worker-only grace, final removal and historical capture recovery paths. Production folder selection remains available. Updated the Storage guide to explain why retained source and renders stay protected.",
+  "summary": "Reviewed the synced project portability and asset retention requirements against the existing Storage and Learn flows. The guide already describes working-folder selection, Backup, Restore and normal Learn recovery. Scratch administration remains outside production controls.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -944,6 +944,11 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
+      "path": "openspec/specs/asset-retention/spec.md",
+      "bytes": 10312,
+      "sha256": "1f1fd19ef0832edfa763343140f182d4d88c682a294d982319b6396a6449bfe0"
+    },
+    {
       "path": "openspec/specs/audition-monitoring/spec.md",
       "bytes": 17359,
       "sha256": "2a00638a4f9211d48d554da0cddef902987bc0a9d4e8ebbc8409da11c9103bba"
@@ -977,6 +982,11 @@
       "path": "openspec/specs/product-release-identity/spec.md",
       "bytes": 4505,
       "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
+    },
+    {
+      "path": "openspec/specs/project-asset-portability/spec.md",
+      "bytes": 15503,
+      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",

@@ -1,10 +1,10 @@
-# Spec Delta
+# project-asset-portability Specification
 
 ## Purpose
 
 Allow accepted ReverbArise sessions and their exact audio dependencies to travel between Windows profiles without sacrificing legacy project recovery or independent instance ownership.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Asset folder association is explicit and host independent
 The system SHALL support a user-selected asset folder without requiring the host project path. Ordinary association SHALL preserve existing identities and legacy references until a verified copy and explicit switch succeed. The explicitly approved incomplete recovery workspace defined below is a distinct operation, not verified migration. Relative references SHALL resolve against the selected store rather than an inferred host working directory.
@@ -114,7 +114,7 @@ The system SHALL reject escaping or ambiguous paths and malformed or oversized p
 - **THEN** acceptance fails without overwriting or deleting files outside the owned operation
 
 ### Requirement: Legacy and exact-sample compatibility remain recoverable
-New readers SHALL preserve supported legacy state, paths, checksums and immutable snapshots through nondestructive adapters. Storage deduplication or compression SHALL preserve exact float32 samples and dependency identity. Unknown formats SHALL fail transactionally. Older-binary limitations and the need for pre-upgrade FLPs and stores SHALL be explicit.
+New readers SHALL preserve supported legacy state, paths, checksums and immutable snapshots through nondestructive adapters. Exact-byte reuse SHALL preserve exact float32 samples and distinct dependency identity. Production storage SHALL use WAV. Unknown formats SHALL fail transactionally. Older-binary limitations and the need for pre-upgrade FLPs and stores SHALL be explicit.
 
 #### Scenario: Older saved project after association
 - **WHEN** a legacy FLP saved before folder association is reopened
@@ -122,7 +122,7 @@ New readers SHALL preserve supported legacy state, paths, checksums and immutabl
 
 #### Scenario: Exact samples despite normalized content identities
 - **WHEN** assets differ in float bit patterns such as signed zero or contain valid above-unity/subnormal samples
-- **THEN** deduplication and optional encoding cannot silently change those samples even if a normalized musical content identity agrees
+- **THEN** exact-byte reuse preserves the distinct data even if a normalized musical content identity agrees
 
 #### Scenario: Binary rollback
 - **WHEN** the user returns to an older binary that cannot read the new state version

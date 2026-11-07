@@ -1,6 +1,6 @@
 # Tasks
 
-Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compatibility/backup matrix. Checked tasks record verified work only. The owner approved the automatic-scan native preview and task 2.4 production Settings integration is verified; phase 1 is complete and later phases remain gated. See [measured results](../../../docs/validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](../../../docs/development/asset-storage-contracts.md). Later phases require separate explicit approval. Phase 1 permits read-only inventory/adapters and the approved Settings integration, plus disposable fixture writes. It does not authorize relocation, deletion, packing, association or changes to capture/DSP/storage writers. See design.md for phase gates and rollback.
+Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compatibility/backup matrix. Checked tasks record verified work only. The owner approved the automatic-scan native preview and task 2.4 production Settings integration is verified; phase 1 is complete and later phases remain gated. See [measured results](../../../../docs/validation/2026-11-06-issue-8-storage-audit.md) and [contract/rollback matrix](../../../../docs/development/asset-storage-contracts.md). Later phases require separate explicit approval. Phase 1 permits read-only inventory/adapters and the approved Settings integration, plus disposable fixture writes. It does not authorize relocation, deletion, packing, association or changes to capture/DSP/storage writers. See design.md for phase gates and rollback.
 
 ## 1. Contract and measurement gate
 
@@ -65,7 +65,7 @@ Phase 0 and phase 1 were authorized on 2026-11-06; the owner approved the compat
 
 ## Current authorized work
 
-The owner authorized phase 4 on 2026-11-06, starting with working-folder association on a new branch and PR after PR #31 merged as `f98157e`. Phases 0–3 retain their 20/36 verified tasks; the shared-engine architecture change is separately archived. Tasks 4.1–4.4 are authorized, with existing native control approval before rollout and all copy/identity/compatibility/concurrency/rollback acceptance preserved. The first increment supplies a backend and disposable preview, not a live processor-root switch; all four task checkboxes remain open until complete. See [implementation boundary](../../../docs/development/working-folder-association.md) and [dated evidence](../../../docs/validation/2026-11-06-issue-8-working-folder.md). Phases 5/6 cleanup, quarantine, eviction, compression and efficiency experiments retain separate approvals. Do not close issue #8, archive this active change, merge or publish a release. Each completed task still requires exact-line guarding and refreshed Apply verification.
+The owner authorized phase 4 on 2026-11-06, starting with working-folder association on a new branch and PR after PR #31 merged as `f98157e`. Phases 0–3 retain their 20/36 verified tasks; the shared-engine architecture change is separately archived. Tasks 4.1–4.4 are authorized, with existing native control approval before rollout and all copy/identity/compatibility/concurrency/rollback acceptance preserved. The first increment supplies a backend and disposable preview, not a live processor-root switch; all four task checkboxes remain open until complete. See [implementation boundary](../../../../docs/development/working-folder-association.md) and [dated evidence](../../../../docs/validation/2026-11-06-issue-8-working-folder.md). Phases 5/6 cleanup, quarantine, eviction, compression and efficiency experiments retain separate approvals. Do not close issue #8, archive this active change, merge or publish a release. Each completed task still requires exact-line guarding and refreshed Apply verification.
 
 Native control gate: on 2026-11-06 the owner explicitly approved the phase-4 working-folder preview's layout and Choose → verified copy → Use This Folder interaction. This approval permits that composition's integration; it does not complete tasks 4.1–4.4 or waive their remaining safety/validation gates.
 
@@ -94,7 +94,7 @@ copy/verification, conditional source/engine handoff, v9 associated host saves,
 exact Locate/Restore and explicit incomplete recovery workspaces. Existing
 user-data defaults, immutable identities, normal Learn/common-engine maintenance
 and host-save notification remain intact. See the updated ownership guide and
-[production evidence](../../../docs/validation/2026-11-07-issue-8-phase4-settings.md).
+[production evidence](../../../../docs/validation/2026-11-07-issue-8-phase4-settings.md).
 Task 4.2 has passing real two-process capture/IR/render/export publication and
 reopen evidence and was checked through the required guarded Apply refresh.
 Phase 4 is complete. The full native regression, destination-only fresh-profile
@@ -105,7 +105,7 @@ Issue #8 and the active change remain open for the separately gated phases 5/6.
 ## Phase 5 scope review — 2026-11-07
 
 The owner requested starting phase 5 on a new branch and PR after PR #112 merged.
-The [scratch cleanup scope and eligibility matrix](../../../docs/development/scratch-cleanup-scope.md)
+The [scratch cleanup scope and eligibility matrix](../../../../docs/development/scratch-cleanup-scope.md)
 propose an opt-in preview for sealed, unpublished Backup payload copies from a
 verified cancelled operation. A candidate requires an independently verified
 surviving copy. Existing operation plans lack the per-file ownership and terminal
@@ -117,15 +117,15 @@ maintenance, quarantine, undo, removal, recovery and enablement gates. Issue #8
 and the active OpenSpec change remain open.
 
 The read-only preview passed its native backend and component checks. See the
-[dated preview evidence](../../../docs/validation/2026-11-07-issue-8-scratch-preview.md).
+[dated preview evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-preview.md).
 Production UI rollout and file actions retain their later gates.
 
 Task 5.3 passed cross-process lease, stale evidence, reference, path-race and
-audio-callback fixtures. See the [maintenance evidence](../../../docs/validation/2026-11-07-issue-8-scratch-maintenance.md).
+audio-callback fixtures. See the [maintenance evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-maintenance.md).
 Task 5.4 passed its quarantine and undo gate in disposable native fixtures.
 
 The worker backend passed the process-exit, restart, hash and conflict fixtures.
-See the [quarantine evidence](../../../docs/validation/2026-11-07-issue-8-scratch-quarantine.md).
+See the [quarantine evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-quarantine.md).
 Grace and permanent removal, recovery reporting and production enablement retain
 their separate gates.
 
@@ -134,13 +134,20 @@ their separate gates.
 The owner authorized working through the remaining tasks. The worker-level
 cleanup and recovery sequence passed its focused native gates. The 30-day
 grace, distinct final review, retention guidance and independent recovery copy
-are documented in the [combined evidence](../../../docs/validation/2026-11-07-issue-8-scratch-recovery.md).
+are documented in the [combined evidence](../../../../docs/validation/2026-11-07-issue-8-scratch-recovery.md).
 Production cleanup enablement retains separate owner review and exact user
 confirmation before any file move or permanent removal.
 
 The separately bounded experiments measured exact-byte candidates and codec
 trade-offs, then proposed duplicate-write avoidance and a future cache
-eligibility matrix. See the [efficiency evidence](../../../docs/validation/2026-11-07-issue-8-storage-efficiency.md).
+eligibility matrix. See the [efficiency evidence](../../../../docs/validation/2026-11-07-issue-8-storage-efficiency.md).
 WAV remains the baseline. Codec adoption, duplicate-write changes and cache
 eviction retain their separate decisions. PR #118 and issue #8 remain open for
 owner review. No archive or merge occurred.
+
+## Delivery closure — 2026-11-07
+
+The owner approved PR #118 and the completed portability, maintenance worker
+and experimental scope. Production cleanup and recovery controls are tracked in
+[#120](https://github.com/elneilios/ReverbArise/issues/120). Storage optimization
+decisions are tracked in [#121](https://github.com/elneilios/ReverbArise/issues/121).

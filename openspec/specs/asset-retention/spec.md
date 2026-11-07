@@ -1,10 +1,10 @@
-# Spec Delta
+# asset-retention Specification
 
 ## Purpose
 
 Make managed audio storage inspectable and recoverable while protecting sole recordings, historical project dependencies and user exports from inferred or automatic deletion.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Storage inventory reports scope and uncertainty
 The system SHALL provide read-only location, logical byte and file-count reporting by asset category and retained history for selected managed stores. Shared physical objects SHALL count once in physical totals. Unknown references, inaccessible files, scan time and unmeasured allocation SHALL remain explicit. Potential duplicates SHALL NOT be labelled reclaimable without eligibility proof.
@@ -51,7 +51,7 @@ Routine cleanup SHALL exclude captured recordings including abandoned capture st
 - **THEN** it is still treated as user-owned durable audio and excluded from cleanup
 
 ### Requirement: Scratch cleanup requires ownership proof and explicit review
-Cleanup SHALL default to disabled and target only journaled plugin-owned non-recording transient files with terminal operation status, no committed or recovery dependency and no active writer, reader or job. Preview SHALL show exact files, counts, bytes, scopes and eligibility reasons. Unknown legacy temporaries SHALL be preserved. No file SHALL move without explicit review approval.
+Scratch administration SHALL remain outside production Storage controls. The worker SHALL accept only a sealed payload copy from a verified cancelled Backup with a distinct, verified surviving original and no committed or recovery dependency, writer, reader or job. Preview SHALL show exact files, counts, bytes, scope and eligibility reasons. Unknown legacy temporaries SHALL be preserved. No file SHALL move without explicit review approval.
 
 #### Scenario: Old temporary extension without a journal
 - **WHEN** a legacy .tmp or .part file has no trustworthy operation ownership record
@@ -73,7 +73,7 @@ Before every reviewed cleanup action the system SHALL revalidate file identity, 
 - **THEN** the action fails safely without moving or deleting the target
 
 ### Requirement: Removal uses reversible quarantine and separate final review
-Approved scratch removal SHALL first use durable journaled quarantine with hash-verified undo and a minimum 30-day grace period. Grace expiry SHALL NOT authorize deletion. Permanent removal SHALL require a second explicit review and fresh eligibility checks. Interrupted moves SHALL preserve recoverable source or quarantine data and report reconciliation needs.
+The worker SHALL use durable, journaled same-volume quarantine with hash-verified undo and a minimum 30-day grace period from verified completion. Grace expiry SHALL NOT authorize deletion. Permanent removal SHALL require a separate exact-file review and fresh eligibility checks. Interrupted moves SHALL preserve recoverable source or quarantine data and report reconciliation needs.
 
 #### Scenario: Undo after restart
 - **WHEN** the user requests undo during grace after a process restart
@@ -88,11 +88,11 @@ Approved scratch removal SHALL first use durable journaled quarantine with hash-
 - **THEN** restart reconciles source and destination identities and preserves ambiguous data instead of deleting it
 
 ### Requirement: Recovery never silently adopts abandoned history
-Recovery SHALL identify recoverable snapshots, missing dependencies and abandoned source scopes without replacing accepted state automatically. Explicitly selected recovery SHALL validate dependencies and retain the previous accepted snapshot. Failure SHALL preserve both the current session and recoverable originals.
+The recovery worker SHALL report historical capture snapshots, missing dependencies and audio absent from inspected indexes. Explicit snapshot recovery SHALL verify dependencies and write a separate copy, preserving the current session, its accepted snapshot and all recoverable originals on success or failure.
 
 #### Scenario: Unsaved committed capture survives shutdown
-- **WHEN** assets or snapshots newer than the FLP are discovered
-- **THEN** they are offered as separate recovery candidates without redirecting the FLP's exact saved references
+- **WHEN** an explicitly inspected instance contains a capture snapshot newer than the saved FLP
+- **THEN** the worker reports it as a separate recovery candidate and leaves the saved references in place
 
 ### Requirement: Missing assets expose explicit recovery choices
 The system SHALL identify unavailable dependencies and offer Locate assets, Restore backup and explicit Re-learn song. Decodable swell identities, positions and edits SHALL remain preserved, together with unaffected output and surviving assets. Metadata decode failure SHALL be reported separately rather than claiming the arrangement is intact.
@@ -116,7 +116,7 @@ Re-learn recovery SHALL require explicit user choice and DAW playback, preserve 
 - **WHEN** the user has explicitly adopted an incomplete recovery workspace because the original folder cannot be recovered
 - **THEN** normal Learn captures fresh source without duplicate Storage Learn/Generate actions; swell metadata and the original locator persist, and existing unfrozen swells regenerate automatically only after complete fresh source and verified required IRs are available
 
-### Requirement: Future cache limits cannot reclassify durable history
+### Requirement: Durable history remains outside cache eviction
 A future rebuildable-cache policy SHALL require separate eligibility and reconstruction review before eviction is enabled. Current source, IRs, immutable saved renders, exports and unknown old-project dependencies SHALL remain protected. Swell deletion, regeneration or lack of a current reference SHALL NOT establish garbage-collection eligibility.
 
 #### Scenario: A deleted swell has an older saved project
