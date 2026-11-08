@@ -130,6 +130,8 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/Capture/LoopCapture.cpp
+    Source/DSP/LoopPerformance.cpp
+    Source/Playback/LoopPlayback.cpp
     Source/UI/SwellTimeline.cpp
 )
 

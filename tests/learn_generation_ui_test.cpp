@@ -151,7 +151,9 @@ static void loopBindings(bool review)
     auto* enable=dynamic_cast<m3::ui::controls::Switch*>(named(*editor,"learnEnableLoop"));
     auto* arm=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"learnArmLoop"));
     auto* show=named(*editor,"learnShowLoopWav");
-    REQUIRE(enable && arm && show && visible(enable) && !visible(arm) && !visible(show));
+    auto* notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(*editor,"learnLoopStatus"));
+    auto* take=dynamic_cast<juce::Label*>(named(*editor,"learnLoopTake"));
+    REQUIRE(enable && arm && show && notice && take && visible(enable) && !visible(arm) && !visible(show) && !visible(notice));
     REQUIRE(visible(named(*editor,"recaptureExisting")));
     controlReview::pointerClick(*enable);editor->refresh();
     REQUIRE(processor->getLoopCaptureView().enabled && visible(arm) && !visible(named(*editor,"recaptureExisting")));
@@ -160,10 +162,45 @@ static void loopBindings(bool review)
         REQUIRE(editor->setPresentationScale(scale));editor->refresh();
         for(const auto* component:{static_cast<juce::Component*>(enable),static_cast<juce::Component*>(arm)})
             REQUIRE(!component->getBounds().isEmpty() && component->getParentComponent()->getLocalBounds().contains(component->getBounds()));
+        REQUIRE(visible(notice) && notice->completeMessageFits() && notice->getY()>=arm->getBottom());
+        REQUIRE(notice->currentMessage() && notice->currentMessage()->tone==m3::ui::controls::NoticeTone::warning);
         captureImage(*editor,"issue116-loop-"+juce::String(scale));
     }
     REQUIRE(editor->setPresentationScale(100));
+    auto* method=dynamic_cast<juce::ComboBox*>(named(*editor,"learnLoopMethod"));
+    auto* bars=dynamic_cast<juce::Slider*>(named(*editor,"learnLoopBars"));
+    auto* beats=dynamic_cast<juce::Slider*>(named(*editor,"learnLoopBeats"));
+    REQUIRE(method && bars && beats && visible(method) && !visible(bars) && !visible(beats));
+    method->setSelectedId(2,juce::sendNotificationSync);
+    editor->refresh();
+    REQUIRE(processor->getLoopCaptureView().settings.method==LoopCapture::Method::fixedLength);
+    for(int scale:{100,125})
+    {
+        REQUIRE(editor->setPresentationScale(scale));editor->refresh();
+        REQUIRE(visible(bars) && visible(beats) && !bars->getBounds().intersects(beats->getBounds()));
+        for(auto* field:{bars,beats})
+            REQUIRE(!field->getBounds().isEmpty() && field->getParentComponent()->getLocalBounds().contains(field->getBounds()));
+        REQUIRE(visible(notice) && notice->completeMessageFits() && notice->getY()>=arm->getBottom());
+        REQUIRE(notice->getParentComponent()->getLocalBounds().contains(notice->getBounds()));
+        captureImage(*editor,"issue116-loop-fixed-"+juce::String(scale));
+    }
+    beats->setValue(2,juce::sendNotificationSync);
+    REQUIRE(processor->getLoopCaptureView().settings.beats==2);
+    REQUIRE(editor->setPresentationScale(100));
     if(review){controlReview::run(std::move(editor));return;}
+    method->setSelectedId(1,juce::sendNotificationSync);
+    editor->refresh();
+    REQUIRE(!visible(bars) && !visible(beats));
+    // The remaining Perform assertions use the original saved gate-only fixture.
+    juce::MemoryBlock saved;
+    processor->getStateInformation(saved);
+    auto legacy=juce::AudioProcessor::getXmlFromBinary(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(legacy);
+    legacy->removeAttribute("learnLoopMethod");
+    juce::AudioProcessor::copyXmlToBinary(*legacy,saved);
+    processor->setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    REQUIRE(processor->flushCaptureForTesting());
+    editor->refresh();
     controlReview::pointerClick(*arm);editor->refresh();
     REQUIRE(arm->getButtonText()=="Cancel capture" && !enable->isEnabled());
     controlReview::pointerClick(*arm);editor->refresh();
@@ -183,9 +220,107 @@ static void loopBindings(bool review)
     await([&]{return processor->getLoopCaptureView().phase==LoopCapture::Phase::ready;});
     editor->refresh();
     REQUIRE(visible(show) && show->getParentComponent()->getLocalBounds().contains(show->getBounds()));
+    REQUIRE(visible(take) && take->getText().contains("Last accepted take"));
+    REQUIRE(notice->currentMessage() && notice->currentMessage()->text=="Loop take accepted");
     captureImage(*editor,"issue116-loop-accepted-100");
     controlReview::pointerClick(*enable);editor->refresh();
     REQUIRE(!processor->getLoopCaptureView().enabled && !visible(arm) && visible(named(*editor,"recaptureExisting")) && visible(show));
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));
+    await([&]{return processor->getLoopPerformanceView().cueReady;});
+    editor->refresh();
+    auto* audition=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"loopAudition"));
+    auto* cue=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"loopCue"));
+    auto* stop=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"loopStop"));
+    auto* workspace=named(*editor,"loopPerformWorkspace");
+    REQUIRE(workspace);
+    auto* swells=dynamic_cast<m3::ui::controls::SwellList*>(named(*workspace,"loopSwellList"));
+    auto* sections=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(*workspace,"loopInspectorSections"));
+    auto* zoom=dynamic_cast<m3::ui::controls::TimelineZoomControls*>(named(*workspace,"loopTimelineZoom"));
+    REQUIRE(swells && sections && zoom && swells->primaryId()=="loopSwell");
+    auto* placement=dynamic_cast<m3::ui::KnobValue*>(named(*workspace,"loopPlacementCell"));
+    auto* lead=named(*workspace,"loopLeadCell");
+    REQUIRE(placement && lead && visible(placement) && !visible(lead));
+    controlReview::pointerClick(*sections->segment(2));
+    REQUIRE(sections->selectedId()==2 && !visible(placement) && visible(lead));
+    controlReview::pointerClick(*sections->segment(1));
+    REQUIRE(sections->selectedId()==1 && visible(placement) && !visible(lead));
+    REQUIRE(zoom->zoomInButton().isEnabled() && !zoom->zoomOutButton().isEnabled());
+    controlReview::pointerClick(zoom->zoomInButton());
+    REQUIRE(zoom->zoomOutButton().isEnabled());
+    controlReview::pointerClick(zoom->fitButton());
+    REQUIRE(!zoom->zoomOutButton().isEnabled());
+    auto* resetShape=dynamic_cast<m3::ui::controls::ActionButton*>(named(*workspace,"loopResetShape"));
+    auto* resetAll=dynamic_cast<m3::ui::controls::ActionButton*>(named(*workspace,"loopResetAll"));
+    REQUIRE(resetShape && resetAll && visible(resetShape) && visible(resetAll));
+    const auto initial=processor->getLoopPerformanceView();
+    REQUIRE(initial.wet && !initial.wet->empty());
+    const auto first=initial.wet->front().startSample;
+    REQUIRE(first<0);
+    const auto startX=static_cast<float>(zoom->getX()+zoom->getWidth()*(-first)/static_cast<double>(initial.frames-first));
+    const auto mouse=[&](float x)
+    {
+        const auto point=juce::Point<float>{x,70.0f};
+        const auto time=juce::Time::getCurrentTime();
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,
+            juce::ModifierKeys::leftButtonModifier,0,0,0,0,0,workspace,workspace,time,point,time,1,false);
+    };
+    workspace->mouseDown(mouse(startX));
+    workspace->mouseDrag(mouse(startX+25));
+    REQUIRE(processor->getLoopPerformanceView().edit.first==0);
+    workspace->mouseUp(mouse(startX+25));
+    const auto trimmed=processor->getLoopPerformanceView().edit.first;
+    REQUIRE(trimmed>0 && trimmed<initial.frames);
+    placement->valueField().setText("-0.125",false);
+    placement->valueField().onReturnKey();
+    REQUIRE(processor->getLoopPerformanceView().edit.placement==-6);
+    placement->valueField().setText("0.5oops",false);
+    placement->valueField().onReturnKey();
+    REQUIRE(processor->getLoopPerformanceView().edit.placement==-6);
+    controlReview::pointerClick(*resetShape);
+    REQUIRE(processor->getLoopPerformanceView().edit.placement==0 && processor->getLoopPerformanceView().edit.first==trimmed);
+    controlReview::pointerClick(*resetAll);
+    REQUIRE(processor->getLoopPerformanceView().edit==initial.edit);
+    await([&]{return processor->getLoopPerformanceView().cueReady;});
+    editor->refresh();
+    auto* settings=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());
+    REQUIRE(audition && cue && stop && visible(audition) && visible(cue) && visible(stop));
+    REQUIRE(settings && settings->getCurrentTabName()=="Appearance"
+        && !settings->getTabbedButtonBar().getTabButton(0)->isEnabled());
+    REQUIRE(cue->getButtonText()=="Cue Loop" && stop->getButtonText()=="Stop Loop");
+    REQUIRE(!cue->isEnabled() && !stop->isEnabled() && audition->isEnabled());
+    juce::AudioBuffer<float> clockBlock(2,42);
+    const auto phrase=[&]
+    {
+        clockBlock.clear();
+        gate.addEvent(juce::MidiMessage::noteOn(1,LoopPlayback::phraseNote,static_cast<juce::uint8>(100)),0);
+        processor->processBlock(clockBlock,gate);
+    };
+    phrase();phrase();phrase();
+    editor->refresh();
+    REQUIRE(cue->isEnabled() && !stop->isEnabled());
+    for(int scale:{100,125})
+    {
+        REQUIRE(editor->setPresentationScale(scale));editor->refresh();
+        for(const auto* control:{audition,cue,stop})
+            REQUIRE(!control->getBounds().isEmpty() && control->getParentComponent()->getLocalBounds().contains(control->getBounds()));
+        REQUIRE(!audition->getBounds().intersects(cue->getBounds()) && !cue->getBounds().intersects(stop->getBounds()));
+        REQUIRE(swells->getRight()<zoom->getX() && zoom->getRight()<sections->getX());
+        REQUIRE(audition->getY()==cue->getY() && cue->getY()==stop->getY());
+        captureImage(*editor,"issue116-loop-perform-"+juce::String(scale));
+    }
+    REQUIRE(cue->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    phrase();phrase();
+    editor->refresh();
+    REQUIRE(stop->isEnabled() && !cue->isEnabled() && !audition->isEnabled());
+    REQUIRE(processor->getLoopPerformanceView().loopPosition.has_value());
+    controlReview::pointerClick(*stop);
+    for(int i=0;i<7;++i)phrase();
+    editor->refresh();
+    REQUIRE(cue->isEnabled() && audition->isEnabled() && !stop->isEnabled());
+    REQUIRE(!processor->getLoopPerformanceView().loopPosition);
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));editor->refresh();
+    REQUIRE(settings->getTabbedButtonBar().getTabButton(0)->isEnabled());
 }
 static void candidateOverlay(PreverbAudioProcessorEditor& editor,GenerationFixture& fixture)
 {

@@ -1,0 +1,4 @@
+Source frames: 49153
+Negative start: -2048, prepared frames: 4096
+Audible leading wet peak: 0.29375
+Translation preserved every shaped sample and reused one convolution.

@@ -155,22 +155,25 @@ private:
     void listBoxItemClicked(int row,const juce::MouseEvent& event)override
     {
         const auto* found=rowAt(row);if(!found || updating)return;const auto w=*found;
-        if(event.mods.isPopupMenu() || (event.eventComponent && event.x>=event.eventComponent->getWidth()-26))
-        {if(onMenu)onMenu(w,event);return;}
-        if(event.x<28){if(onToggleEnabled)onToggleEnabled(w.id);return;}
+        if(event.mods.isPopupMenu()) {if(onMenu)onMenu(w,event);return;}
+        if(onMenu && event.eventComponent && event.x>=event.eventComponent->getWidth()-26)
+        {onMenu(w,event);return;}
+        if(onToggleEnabled && event.x<28){onToggleEnabled(w.id);return;}
         if(primary.isNotEmpty() && onReveal)onReveal(primary,epoch);
     }
     void paintListBoxItem(int row,juce::Graphics& g,int width,int height,bool isSelected)override
     {
         const auto* found=rowAt(row);if(!found)return;const auto& w=*found;
         if(isSelected){g.setColour(aqua.withAlpha(.06f));g.fillRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4);g.setColour(aqua);g.drawRoundedRectangle(juce::Rectangle<float>(1,1,static_cast<float>(width-2),static_cast<float>(height-2)),4,1);}
-        g.setColour(m3::ui::text);g.setFont(fontFor(*this,bodySize));g.drawText(w.name,32,2,width-62,20,juce::Justification::left);
-        g.drawRect(8,8,15,15);if(w.enabled){g.setColour(aqua);g.fillRect(11,11,9,9);}
-        g.setFont(fontFor(*this,smallSize));g.drawText(w.irName.isNotEmpty()?w.irName:"No IR",32,23,width-62,18,juce::Justification::left);
+        const auto x=onToggleEnabled?32:spacing::related;
+        const auto labelWidth=std::max(0,width-x-(onMenu?30:spacing::related));
+        g.setColour(m3::ui::text);g.setFont(fontFor(*this,bodySize));g.drawText(w.name,x,2,labelWidth,20,juce::Justification::left);
+        if(onToggleEnabled){g.drawRect(8,8,15,15);if(w.enabled){g.setColour(aqua);g.fillRect(11,11,9,9);}}
+        g.setFont(fontFor(*this,smallSize));g.drawText(w.irName.isNotEmpty()?w.irName:"No IR",x,23,labelWidth,18,juce::Justification::left);
         g.setFont(fontFor(*this,captionSize));g.setColour(w.error?warning:secondary);
-        g.drawText(w.status+(w.muted?" | mute":"")+(!w.enabled?" | off":"")+(w.solo?" | solo":"")+(w.frozen?" | frozen":""),32,43,width-62,height-43,juce::Justification::left);
+        g.drawText(w.status+(w.muted?" | mute":"")+(!w.enabled?" | off":"")+(w.solo?" | solo":"")+(w.frozen?" | frozen":""),x,43,labelWidth,height-43,juce::Justification::left);
         g.setColour(secondary);
-        for(int n=0;n<3;++n)g.fillEllipse(juce::Rectangle<float>(3,3).withCentre({static_cast<float>(width-13),static_cast<float>(height/2-7+n*7)}));
+        if(onMenu)for(int n=0;n<3;++n)g.fillEllipse(juce::Rectangle<float>(3,3).withCentre({static_cast<float>(width-13),static_cast<float>(height/2-7+n*7)}));
     }
 };
 }

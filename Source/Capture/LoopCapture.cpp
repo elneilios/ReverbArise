@@ -24,7 +24,25 @@ bool LoopCapture::setEnabled(bool enabled)
     if (busy())
         return false;
     if (loopEnabled.exchange(enabled) != enabled)
+    {
+        if (musicalRoute.load())
+            invalidate();
         changed();
+    }
+    return true;
+}
+
+bool LoopCapture::setSettings(Settings next)
+{
+    const juce::ScopedLock lock(control);
+    if (busy() || (next.method != Method::followGate && next.method != Method::fixedLength)
+        || next.bars < 0 || next.bars > maxBars || next.beats < 0 || next.beats > maxBeats
+        || (next.bars == 0 && next.beats == 0))
+        return false;
+    settings = next;
+    if (!musicalRoute.exchange(true))
+        invalidate();
+    changed();
     return true;
 }
 
@@ -42,6 +60,8 @@ bool LoopCapture::arm(const Session& session)
     settlementCancelled = false;
     armEpoch.store(prepareEpoch.load());
     armGeneration.store(session.generation);
+    armedSettings.store(static_cast<uint32_t>(settings.method) | (static_cast<uint32_t>(settings.bars) << 8)
+                        | (static_cast<uint32_t>(settings.beats) << 16));
     state.store(withPhase(state.load() + 256, Phase::armed));
     notify();
     return true;
@@ -77,8 +97,18 @@ void LoopCapture::process(const juce::AudioBuffer<float>& input, const juce::Mid
     {
         observedEpoch = epoch;
         gate = Gate::unknown;
+        clock = {};
+        clockReady.store(false, std::memory_order_relaxed);
     }
     auto current = state.load();
+    const bool musical = active(phase(current))
+        ? (armedSettings.load() & 255) != static_cast<uint32_t>(Method::legacyGate) : musicalRoute.load();
+    if (musical)
+    {
+        if (enabled() || active(phase(current)))
+            processMusical(input, midi, current, eligible, generation);
+        return;
+    }
     const auto moveTo = [&](Phase next)
     {
         auto expected = current;
@@ -137,6 +167,7 @@ void LoopCapture::process(const juce::AudioBuffer<float>& input, const juce::Mid
             frames = 0;
             recordingRate = preparedRate.load();
             recordingTicket = current & ~uint64_t{255};
+            recordedLength = {};
             moveTo(Phase::recording);
         }
         else if (!high && phase(current) == Phase::waitForLow)
@@ -148,6 +179,196 @@ void LoopCapture::process(const juce::AudioBuffer<float>& input, const juce::Mid
     appendTo(input.getNumSamples());
 }
 
+void LoopCapture::Clock::clear() noexcept
+{
+    lastBeat = -1;
+    period = beatsSinceBar = meter = 0;
+    sawBar = false;
+}
+
+bool LoopCapture::Clock::expired(int64_t sample) const noexcept
+{
+    // CLKD produces adjacent integer intervals at fractional samples per beat.
+    return period > 0 && sample - lastBeat > period + 1;
+}
+
+bool LoopCapture::Clock::tick(int64_t sample, int rate, bool bar) noexcept
+{
+    bool continuous = true;
+    if (lastBeat >= 0)
+    {
+        const auto interval = sample - lastBeat;
+        continuous = interval >= rate / 10 && interval <= 3 * rate
+            && (period == 0 || std::abs(interval - period) <= 1);
+        if (!continuous)
+            clear();
+        else
+            period = static_cast<int>(interval);
+    }
+
+    if (sawBar && lastBeat >= 0)
+    {
+        ++beatsSinceBar;
+        if (bar)
+        {
+            if (beatsSinceBar > maxBeats + 1 || (meter && meter != beatsSinceBar))
+            {
+                clear();
+                continuous = false;
+            }
+            else
+                meter = beatsSinceBar;
+        }
+        else if (beatsSinceBar >= (meter ? meter : maxBeats + 1))
+        {
+            clear();
+            continuous = false;
+        }
+    }
+    if (bar)
+    {
+        sawBar = true;
+        beatsSinceBar = 0;
+    }
+    lastBeat = sample;
+    return continuous;
+}
+
+void LoopCapture::processMusical(const juce::AudioBuffer<float>& input, const juce::MidiBuffer& midi,
+                                 uint64_t current, bool eligible, uint64_t generation) noexcept
+{
+    const int count = input.getNumSamples();
+    const int rate = preparedRate.load();
+    const auto armed = armedSettings.load();
+    const bool fixed = (armed & 255) == static_cast<uint32_t>(Method::fixedLength);
+    const auto moveTo = [&](Phase next)
+    {
+        auto expected = current;
+        const auto nextState = withPhase(current, next);
+        current = state.compare_exchange_strong(expected, nextState) ? nextState : withPhase(current, Phase::idle);
+    };
+    const auto recording = [&] { return phase(current) == Phase::recording || phase(current) == Phase::waitForBar; };
+    const auto loseClock = [&]
+    {
+        clock.clear();
+        if (recording())
+            moveTo(Phase::interrupted);
+    };
+
+    if (active(phase(current)) && phase(current) != Phase::settling)
+    {
+        if (!eligible || armEpoch.load() != observedEpoch || armGeneration.load() != generation)
+            moveTo(Phase::interrupted);
+        else if (input.getNumChannels() < 2 || rate == 0)
+            moveTo(Phase::invalidAudio);
+        else if (phase(current) == Phase::armed)
+            moveTo(gate == Gate::low ? Phase::waitForRise : Phase::waitForLow);
+    }
+
+    const auto blockStart = clock.nextSample;
+    clock.nextSample += count;
+    int cursor = 0;
+    const auto appendTo = [&](int end)
+    {
+        const int length = end - cursor;
+        if (recording() && length > 0)
+        {
+            if (length > recordingRate * maxSeconds - frames)
+                moveTo(Phase::tooLong);
+            else
+            {
+                audio.copyFrom(0, frames, input, 0, cursor, length);
+                audio.copyFrom(1, frames, input, 1, cursor, length);
+                frames += length;
+            }
+        }
+        cursor = end;
+    };
+    auto event = midi.cbegin();
+    while (event != midi.cend())
+    {
+        const auto offset = (*event).samplePosition;
+        auto nextGate = gate;
+        bool beat = false, bar = false, phrase = false, reset = false;
+        while (event != midi.cend() && (*event).samplePosition == offset)
+        {
+            const auto message = *event++;
+            if (message.numBytes != 3)
+                continue;
+            const auto type = message.data[0] & 0xf0;
+            if (type != 0x80 && type != 0x90)
+                continue;
+            const auto note = message.data[1];
+            const bool high = type == 0x90 && message.data[2] != 0;
+            if (note == gateNote)
+                nextGate = high ? Gate::high : Gate::low;
+            else if (high)
+            {
+                beat |= note == beatNote;
+                bar |= note == barNote;
+                phrase |= note == phraseNote;
+                reset |= note == resetNote;
+            }
+        }
+        if (!(beat || bar || phrase || reset || nextGate != gate))
+            continue;
+        if (offset < cursor || offset >= count)
+        {
+            if (active(phase(current)) && phase(current) != Phase::settling)
+                moveTo(Phase::invalidAudio);
+            loseClock();
+            gate = Gate::unknown;
+            continue;
+        }
+        const auto sample = blockStart + offset;
+        if (reset || clock.expired(sample))
+            loseClock();
+        appendTo(offset);
+        if (bar && !beat)
+            loseClock();
+        if (beat && rate > 0 && !clock.tick(sample, rate, bar) && recording())
+            moveTo(Phase::interrupted);
+
+        const bool rising = gate == Gate::low && nextGate == Gate::high;
+        const bool falling = gate == Gate::high && nextGate == Gate::low;
+        gate = nextGate;
+
+        if (recording())
+        {
+            if (beat)
+                ++recordedLength.beats;
+            if (falling && !fixed)
+                moveTo(Phase::waitForBar);
+            if ((fixed && beat && recordedLength.beats == fixedEnd)
+                || (phase(current) == Phase::waitForBar && bar))
+                moveTo(frames > 0 ? Phase::settling : Phase::invalidAudio);
+        }
+        else if (phase(current) == Phase::waitForLow && gate == Gate::low)
+            moveTo(Phase::waitForRise);
+        else if (phase(current) == Phase::waitForRise && rising)
+        {
+            const auto additionalBeats = static_cast<int>((armed >> 16) & 255);
+            if (reset || !beat || !bar || !phrase || clock.meter == 0)
+                moveTo(Phase::invalidStart);
+            else if (fixed && additionalBeats >= clock.meter)
+                moveTo(Phase::invalidLength);
+            else
+            {
+                frames = 0;
+                recordingRate = rate;
+                recordedLength = {0, clock.meter};
+                fixedEnd = static_cast<int>((armed >> 8) & 255) * clock.meter + additionalBeats;
+                recordingTicket = current & ~uint64_t{255};
+                moveTo(Phase::recording);
+            }
+        }
+    }
+    if (clock.expired(clock.nextSample - 1))
+        loseClock();
+    appendTo(count);
+    clockReady.store(clock.meter > 0, std::memory_order_relaxed);
+}
+
 LoopCapture::View LoopCapture::view() const
 {
     const juce::ScopedLock lock(control);
@@ -156,7 +377,63 @@ LoopCapture::View LoopCapture::view() const
     if (interrupted)
         visiblePhase = Phase::interrupted;
     return {enabled(), visiblePhase, hasAcceptedLoop(), restoreGeneration.has_value(), interrupted,
-            accepted.rate > 0 ? static_cast<double>(accepted.frames) / accepted.rate : 0, acceptedFile, acceptedWaveform};
+            accepted.rate > 0 ? static_cast<double>(accepted.frames) / accepted.rate : 0, acceptedFile, acceptedWaveform,
+            settings, clockReady.load(std::memory_order_relaxed), accepted.musicalLength};
+}
+
+std::optional<LoopCapture::Source> LoopCapture::source() const
+{
+    const juce::ScopedLock lock(control);
+    if (!hasAcceptedLoop() || restoreGeneration || acceptedFile == juce::File{})
+        return {};
+    return Source{accepted.id, accepted.hash, accepted.rate, accepted.frames, acceptedFile, accepted.musicalLength};
+}
+
+bool LoopCapture::Source::read(int first, int end, uint64_t budget, std::vector<float>& output,
+                               juce::String& error) const
+{
+    const auto fail = [&](const char* message) { error = message; return false; };
+    if (!Take{id, hash, rate, frames, musicalLength}.valid() || first < 0 || end <= first || end > frames)
+        return fail("The selected interval is outside the verified Loop take.");
+    const auto pcmBytes = uint64_t{8} * static_cast<unsigned>(frames);
+    const auto selectionBytes = uint64_t{8} * static_cast<unsigned>(end - first);
+    auto input = file.createInputStream();
+    if (!input)
+        return fail("The Loop WAV is unavailable.");
+    const auto size = static_cast<uint64_t>(input->getTotalLength());
+    if (size < pcmBytes + 44 || size > pcmBytes + 4096 || size + 2 * selectionBytes > budget)
+        return fail("The Loop WAV is incomplete or exceeds the preparation budget.");
+
+    // Verify the exact bytes used to decode. A replaced file cannot race a
+    // separate verification and subsequent reopen of the path.
+    juce::MemoryBlock bytes(static_cast<size_t>(size));
+    if (input->read(bytes.getData(), static_cast<int>(size)) != static_cast<int>(size))
+        return fail("Could not read the complete Loop WAV.");
+    m3::ContentHash checksum;
+    checksum.update(bytes.getData(), bytes.getSize());
+    if (checksum.finish() != hash)
+        return fail("The Loop WAV no longer matches the accepted take.");
+    juce::WavAudioFormat wav;
+    const std::unique_ptr<juce::AudioFormatReader> reader(
+        wav.createReaderFor(new juce::MemoryInputStream(bytes, false), true));
+    juce::AudioBuffer<float> decoded(2, end - first);
+    if (!reader || reader->sampleRate != rate || reader->lengthInSamples != frames
+        || reader->numChannels != 2 || reader->bitsPerSample != 32 || !reader->usesFloatingPointData
+        || !reader->read(&decoded, 0, end - first, first, true, true))
+        return fail("Could not decode the verified stereo Loop interval.");
+    std::vector<float> selected;
+    selected.reserve(static_cast<size_t>(2 * (end - first)));
+    for (int i = 0; i < end - first; ++i)
+        for (int channel = 0; channel < 2; ++channel)
+        {
+            const auto value = decoded.getSample(channel, i);
+            if (!std::isfinite(value))
+                return fail("The selected Loop audio contains invalid samples.");
+            selected.push_back(value);
+        }
+    output = std::move(selected);
+    error.clear();
+    return true;
 }
 
 void LoopCapture::acceptSong(uint64_t generation)
@@ -247,6 +524,12 @@ void LoopCapture::save(juce::XmlElement& stateXml) const
     const juce::ScopedLock lock(control);
     if (enabled())
         stateXml.setAttribute("learnLoopEnabled", true);
+    if (settings.method != Method::legacyGate && (enabled() || settings != Settings{}))
+    {
+        stateXml.setAttribute("learnLoopMethod", static_cast<int>(settings.method));
+        stateXml.setAttribute("learnLoopBars", settings.bars);
+        stateXml.setAttribute("learnLoopBeats", settings.beats);
+    }
     if (hasAcceptedLoop())
     {
         stateXml.setAttribute("learnLoopTakeVersion", 1);
@@ -254,6 +537,11 @@ void LoopCapture::save(juce::XmlElement& stateXml) const
         stateXml.setAttribute("learnLoopTakeHash", accepted.hash);
         stateXml.setAttribute("learnLoopTakeRate", accepted.rate);
         stateXml.setAttribute("learnLoopTakeFrames", accepted.frames);
+        if (accepted.musicalLength.beats > 0)
+        {
+            stateXml.setAttribute("learnLoopTakeBeats", accepted.musicalLength.beats);
+            stateXml.setAttribute("learnLoopTakeBeatsPerBar", accepted.musicalLength.beatsPerBar);
+        }
     }
 }
 
@@ -266,11 +554,31 @@ void LoopCapture::restore(const juce::XmlElement& stateXml, uint64_t generation)
     if (const auto current = state.load(); phase(current) != Phase::settling)
         state.store(withPhase(current, Phase::idle));
     loopEnabled.store(stateXml.getBoolAttribute("learnLoopEnabled", false));
+    settings = {};
+    if (!stateXml.hasAttribute("learnLoopMethod") && enabled())
+        settings.method = Method::legacyGate;
+    else
+    {
+        if (stateXml.getIntAttribute("learnLoopMethod") == static_cast<int>(Method::fixedLength))
+            settings.method = Method::fixedLength;
+        const auto bars = stateXml.getIntAttribute("learnLoopBars", 1);
+        const auto beats = stateXml.getIntAttribute("learnLoopBeats", 0);
+        if (bars >= 0 && bars <= maxBars && beats >= 0 && beats <= maxBeats && (bars || beats))
+        {
+            settings.bars = bars;
+            settings.beats = beats;
+        }
+    }
+    musicalRoute.store(settings.method != Method::legacyGate);
     if (stateXml.hasAttribute("learnLoopTakeVersion"))
     {
         acceptedLoop.store(true);
         accepted = {stateXml.getStringAttribute("learnLoopTakeId"), stateXml.getStringAttribute("learnLoopTakeHash"),
-                    stateXml.getIntAttribute("learnLoopTakeRate"), stateXml.getIntAttribute("learnLoopTakeFrames")};
+                    stateXml.getIntAttribute("learnLoopTakeRate"), stateXml.getIntAttribute("learnLoopTakeFrames"),
+                    {stateXml.getIntAttribute("learnLoopTakeBeats"), stateXml.getIntAttribute("learnLoopTakeBeatsPerBar")}};
+        if (accepted.musicalLength.beats <= 0 || accepted.musicalLength.beatsPerBar < 1
+            || accepted.musicalLength.beatsPerBar > maxBeats + 1 || accepted.musicalLength.beats > 256)
+            accepted.musicalLength = {};
         if (stateXml.getIntAttribute("learnLoopTakeVersion") == 1 && accepted.valid() && (isThreadRunning() || startThread()))
             restoreGeneration = generation;
         notify();
@@ -298,7 +606,7 @@ void LoopCapture::settle(uint64_t current)
         session = target;
         cancelled = settlementCancelled;
     }
-    Take take{juce::Uuid().toString(), {}, recordingRate, frames};
+    Take take{juce::Uuid().toString(), {}, recordingRate, frames, recordedLength};
     Phase result = Phase::storageError;
     juce::File file;
     std::optional<Waveform> waveform;

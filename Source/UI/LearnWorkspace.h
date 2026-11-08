@@ -7,6 +7,8 @@
 #include "ConvolutionIrBinding.h"
 #include "Controls/ActionButton.h"
 #include "Controls/SegmentedSelector.h"
+#include "Controls/DeliberateSelector.h"
+#include "Controls/NoticeBar.h"
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
 #include <Capture/LoopCapture.h>
@@ -25,16 +27,42 @@ public:
         for(auto* c:std::array<juce::Component*,17>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
             &autoStopLabel,&autoStopHelp,&autoStop,&irEditor,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
         captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
-        for(auto* c:std::initializer_list<juce::Component*>{&enableLoop,&enableLoopLabel,&loopMethodLabel,&loopTitle,&loopHelp,&loopStatus,&loopAction,&loopTake,&showWav})
+        for(auto* c:std::initializer_list<juce::Component*>{&enableLoop,&enableLoopLabel,&loopMethodLabel,&loopMethod,&loopBarsLabel,&loopBeatsLabel,&loopBars,&loopBeats,&loopHelp,&loopStatus,&loopAction,&loopTake,&showWav})
             addChildComponent(c);
         enableLoop.setName("learnEnableLoop");loopAction.setName("learnArmLoop");showWav.setName("learnShowLoopWav");
         enableLoop.setTooltip("Choose Loop for the next capture. The last accepted take stays active until a new take succeeds.");
         enableLoopLabel.setText("Enable Loop",juce::dontSendNotification);applyTextRole(enableLoopLabel,TextRole::controlLabel);
         loopMethodLabel.setText("Capture method",juce::dontSendNotification);applyTextRole(loopMethodLabel,TextRole::controlLabel);
-        loopTitle.setText("Follow capture gate",juce::dontSendNotification);applyTextRole(loopTitle,TextRole::controlLabel);
-        loopHelp.setText("Host-FX Note Gate D0 (MIDI note 14)\n15 seconds max",juce::dontSendNotification);
-        for(auto* label:{&loopHelp,&loopStatus,&loopTake})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
-        for(auto* label:{&enableLoopLabel,&loopMethodLabel,&loopTitle,&loopHelp,&loopStatus,&loopTake})label->setBorderSize({});
+        loopMethod.setName("learnLoopMethod");loopMethod.setTitle("Loop capture method");
+        loopMethod.addItem("Follow capture gate",1);
+        loopMethod.addItem("Fixed length",2);
+        loopMethod.onChange=[this]{
+            if(const auto selected=loopMethod.getSelectedId(); selected==1 || selected==2)
+            {
+                auto next=loopView.settings;
+                next.method=selected==1?LoopCapture::Method::followGate:LoopCapture::Method::fixedLength;
+                changeLoopSettings(next);
+            }
+        };
+        const auto setupLength=[](controls::SliderControl& field,juce::Label& label,const char* name,const char* units,int maximum)
+        {
+            field.setName(name);field.setTitle(units);field.setRange(0,maximum,1);
+            field.setNumDecimalPlacesToDisplay(0);
+            label.setText(units,juce::dontSendNotification);applyTextRole(label,TextRole::controlLabel);
+        };
+        setupLength(loopBars,loopBarsLabel,"learnLoopBars","Bars",LoopCapture::maxBars);
+        setupLength(loopBeats,loopBeatsLabel,"learnLoopBeats","Beats",LoopCapture::maxBeats);
+        const auto changeLength=[this]{
+            auto next=loopView.settings;
+            next.bars=static_cast<int>(loopBars.getValue());
+            next.beats=static_cast<int>(loopBeats.getValue());
+            changeLoopSettings(next);
+        };
+        loopBars.onValueChange=loopBeats.onValueChange=changeLength;
+        loopStatus.setName("learnLoopStatus");
+        loopTake.setName("learnLoopTake");
+        for(auto* label:{&loopHelp,&loopTake})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+        for(auto* label:{&enableLoopLabel,&loopMethodLabel,&loopBarsLabel,&loopBeatsLabel,&loopHelp,&loopTake})label->setBorderSize({});
         enableLoop.onClick=[this]{
             if(onEnableLoop && onEnableLoop(enableLoop.getToggleState()))armDenied=false;
             if(onRefresh)onRefresh();};
@@ -80,11 +108,12 @@ public:
     std::function<void(bool)> onRecapture;
     std::function<bool(bool)> onEnableLoop;
     std::function<bool()> onArmLoop;
+    std::function<bool(LoopCapture::Settings)> onLoopSettings;
     std::function<void()> onCancelLoop;
     std::function<void()> onRefresh;
     void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,workflow::Snapshot flow,bool position,const CaptureProgress& pending={},const LoopCapture::View& loop={})
     {
-        if(loop.phase!=loopView.phase)armDenied=false;
+        if(loop.phase!=loopView.phase || loop.clockReady!=loopView.clockReady)armDenied=false;
         loopView=loop;
         loopPanel=loop.enabled && !flow.locked();
         loopAudio=!flow.locked() && (loop.acceptedLoop || (loop.enabled && source.reference.isEmpty()));
@@ -92,11 +121,27 @@ public:
         enableLoop.setEnabled(!flow.locked() && !loop.busy());
         loopAction.setButtonText(loop.busy()?"Cancel capture":"Arm capture");
         loopAction.setEnabled(!loop.checking);
-        loopStatus.setText(armDenied?"Cannot arm. Check Rack audio and folder permissions.":loopPhaseText(loop.phase),
-                           juce::dontSendNotification);
-        loopTake.setText(!loop.acceptedLoop?(source.reference.isNotEmpty()?"Last accepted take: Song":"No accepted take yet"):loop.checking?"Checking saved Loop WAV..."
-            :loop.wav==juce::File{}?"Accepted Loop WAV unavailable."
-            :"Last accepted take: Loop | "+juce::String(loop.seconds,3)+" s",juce::dontSendNotification);
+        const bool legacy=loop.settings.method==LoopCapture::Method::legacyGate;
+        if(legacy && loopMethod.getNumItems()==2)loopMethod.addItem("Legacy gate",3);
+        if(!legacy && loopMethod.getNumItems()==3)
+        {
+            loopMethod.clear(juce::dontSendNotification);
+            loopMethod.addItem("Follow capture gate",1);
+            loopMethod.addItem("Fixed length",2);
+        }
+        loopMethod.setSelectedId(1+static_cast<int>(loop.settings.method),juce::dontSendNotification);
+        loopBars.setValue(loop.settings.bars,juce::dontSendNotification);
+        loopBeats.setValue(loop.settings.beats,juce::dontSendNotification);
+        for(auto* c:std::initializer_list<juce::Component*>{&loopMethod,&loopBars,&loopBeats})
+            c->setEnabled(!loop.busy());
+        loopAction.setTooltip(loop.busy()?"Cancel this attempt and keep the last accepted take."
+                                           :"Arm Learn to capture at the next valid Start.");
+        loopStatus.display(loopPanel?std::optional{loopNotice(loop,armDenied)}:std::nullopt);
+        loopHelp.setText(legacy?"Record from gate rise to gate fall."
+            :loop.settings.method==LoopCapture::Method::fixedLength
+                ?"Start on a phrase downbeat.\nCapture ends at the selected length."
+                :"Start on a phrase downbeat.\nGate release finishes at the next bar.",juce::dontSendNotification);
+        loopTake.setText(loopTakeCaption(loop),juce::dontSendNotification);
         refreshing=true;capture=source;clock=time;playhead=position;automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
         generationView=editor.learnGeneration;displaySession=editor.sessionEpoch;displayPass=flow.pass;
         autoStop.setToggleState(editor.session.autoGenerateOnStop,juce::dontSendNotification);
@@ -201,6 +246,7 @@ public:
             captureGroup.setName("learnSourceCaptureHeading");soundScope.setName("learnSoundScope");
             captureGroup.setBorderSize({});soundScope.setBorderSize({});
         }
+        loopStatus.setResponsivePresentation(type);
         sections.setTextHeight(type.body);updateSections();resized();
     }
     void resized()override
@@ -247,7 +293,7 @@ public:
         g.setColour(separator);
         if(responsive){g.drawVerticalLine(left.getRight(),static_cast<float>(responsiveGeometry::dividerClearance),static_cast<float>(getHeight()-responsiveGeometry::dividerClearance));if(selectedSection==1)g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()-responsiveGeometry::dividerClearance));}
         else{g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));}
-        applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Audio",timelineHeading,juce::Justification::left);
+        applyTextRole(g,*this,TextRole::sectionHeading);g.drawText(loopAudio?"Loop audio":"Audio",timelineHeading,juce::Justification::left);
         if(!loopTake.isVisible()){applyTextRole(g,*this,TextRole::helper);g.drawText(statusText,timelineCaption,juce::Justification::left);}
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         if(loopAudio){paintLoopAudio(g);return;}
@@ -377,23 +423,37 @@ private:
         enableLoop.setBounds(row.removeFromRight(controlGeometry::switchWidth));
         row.removeFromRight(spacing::tight);
         enableLoopLabel.setBounds(row);
-        for(auto* c:std::initializer_list<juce::Component*>{&loopMethodLabel,&loopTitle,&loopHelp,&loopStatus,&loopAction})
+        for(auto* c:std::initializer_list<juce::Component*>{&loopMethodLabel,&loopMethod,&loopHelp,&loopStatus,&loopAction})
             c->setVisible(visible && loopPanel);
+        const auto fixed=visible && loopPanel && loopView.settings.method==LoopCapture::Method::fixedLength;
+        for(auto* c:std::initializer_list<juce::Component*>{&loopBarsLabel,&loopBeatsLabel,&loopBars,&loopBeats})
+            c->setVisible(fixed);
         if(visible && loopPanel)
         {
             column.removeFromTop(spacing::tight);
             loopMethodLabel.setBounds(column.removeFromTop(controlGeometry::labelHeight));
-            loopTitle.setBounds(column.removeFromTop(controlHeight));
+            loopMethod.setBounds(column.removeFromTop(controlHeight));
+            if(fixed)
+            {
+                column.removeFromTop(spacing::tight);
+                auto length=column.removeFromTop(controlHeight+controlGeometry::labelHeight);
+                auto bars=length.removeFromLeft((length.getWidth()-contentPadding)/2);
+                length.removeFromLeft(contentPadding);
+                loopBarsLabel.setBounds(bars.removeFromTop(controlGeometry::labelHeight));
+                loopBeatsLabel.setBounds(length.removeFromTop(controlGeometry::labelHeight));
+                loopBars.setBounds(bars);loopBeats.setBounds(length);
+            }
+            column.removeFromTop(spacing::labelHelp);
+            loopHelp.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
             column.removeFromTop(spacing::tight);
             loopAction.setBounds(column.removeFromTop(controlHeight));
-            column.removeFromTop(spacing::tight);
-            loopStatus.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
-            loopHelp.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
+            column.removeFromTop(contentPadding);
+            loopStatus.setBounds(column.removeFromTop(controls::NoticeBar::preferredHeight));
         }
     }
     void layoutLoopAudio()
     {
-        loopTake.setVisible(loopAudio || loopPanel);
+        loopTake.setVisible(loopAudio);
         loopTake.setBounds(timelineCaption);
         showWav.setVisible(loopAudio && loopView.wav!=juce::File{});
         const auto width=workspaceGeometry::learnSettingsWidth/2;
@@ -402,11 +462,18 @@ private:
     void paintLoopAudio(juce::Graphics& g)
     {
         const auto& waveform=loopView.waveform;
+        if(chart.getWidth()<2 || chart.isEmpty())return;
         if(waveform.size==0)
         {
+            const auto regions=emptyStateRegions();
+            applyTextRole(g,*this,TextRole::sectionHeading);
+            g.drawText(loopView.checking?"Checking saved audio":loopView.acceptedLoop?"Loop audio unavailable":"No Loop take yet",
+                       regions[1],juce::Justification::centred);
             applyTextRole(g,*this,TextRole::helper);
-            g.drawText(loopView.checking?"Checking the saved WAV...":loopView.acceptedLoop?"The saved WAV could not be opened."
-                :"Captured audio will appear here.",chart,juce::Justification::centred);
+            g.drawFittedText(loopView.checking?"The waveform appears once the file is verified."
+                :loopView.acceptedLoop?"Check that the captured WAV is available."
+                :loopView.busy()?"The waveform appears after capture finishes."
+                :"Arm capture to record a Loop.",regions[2],juce::Justification::centred,2);
             return;
         }
         applyTextRole(g,*this,TextRole::ruler);
@@ -417,13 +484,14 @@ private:
         g.setColour(text);
         const auto centre=static_cast<float>(chart.getCentreY());
         const auto height=chart.getHeight()*.45f;
+        const auto width=static_cast<float>(chart.getWidth()-2)/waveform.size;
         for(int i=0;i<waveform.size;++i)
         {
             const auto& peak=waveform.peaks[static_cast<size_t>(i)];
-            const auto x=chart.getX()+(i+.5f)*chart.getWidth()/waveform.size;
+            const auto x=chart.getX()+1+i*width;
             const auto top=centre-std::clamp(peak.maximum,-1.f,1.f)*height;
             const auto bottom=centre-std::clamp(peak.minimum,-1.f,1.f)*height;
-            g.drawLine(x,top,x,std::max(top+rule,bottom),rule);
+            g.fillRect(x,top,width,std::max(rule,bottom-top));
         }
     }
     void setLegacySongControls()
@@ -433,26 +501,61 @@ private:
         for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&autoStopHelp,&irEditor,&sensitivity,&sensitivityLabel,&generate,&generateReason})
             c->setVisible(!loopPanel && automaticOn);
     }
-    static juce::String loopPhaseText(LoopCapture::Phase value)
+    static juce::String loopTakeCaption(const LoopCapture::View& view)
+    {
+        if (!view.acceptedLoop || view.wav==juce::File{})
+            return {};
+        const auto duration=juce::String(view.seconds,3)+" s";
+        const auto [beats,meter]=view.musicalLength;
+        if (beats<=0 || meter<=0)
+            return "Last accepted take  |  "+duration;
+        const auto units=[](int count,const char* singular)
+        {
+            return juce::String(count)+" "+singular+(count==1?"":"s");
+        };
+        const int bars=beats/meter, remainder=beats%meter;
+        auto length=bars>0?units(bars,"bar"):juce::String{};
+        if (remainder>0)
+            length+=(length.isEmpty()?"":" + ")+units(remainder,"beat");
+        return "Last accepted take  |  "+length+"  |  "+duration;
+    }
+    static controls::NoticeMessage loopNotice(const LoopCapture::View& view,bool denied)
     {
         using Phase=LoopCapture::Phase;
-        switch(value)
+        using Method=LoopCapture::Method;
+        using Tone=controls::NoticeTone;
+        const auto method=view.settings.method;
+        if (denied)
+            return {"Could not arm capture","Check that Rack is processing audio and the project can save files.",Tone::error};
+        switch(view.phase)
         {
-            case Phase::armed: return "Armed. Waiting for audio and gate input.";
-            case Phase::waitForLow: return "Waiting for gate low. Let the gate fall once.";
-            case Phase::waitForRise: return "Waiting for the next gate rise.";
-            case Phase::recording: return "Recording. Gate low ends this take.";
-            case Phase::settling: return "Checking and saving the WAV...";
-            case Phase::cancelled: return "Capture cancelled. Previous take kept.";
-            case Phase::interrupted: return "Capture interrupted. Arm again when audio is running.";
-            case Phase::tooLong: return "Gate exceeded 15 seconds. Previous take kept.";
-            case Phase::invalidAudio: return "Invalid stereo audio or gate. Previous take kept.";
-            case Phase::silent: return "No audible audio captured. Check the audio input.";
-            case Phase::storageError: return "Could not save the WAV. Previous take kept.";
-            case Phase::ready: return "Loop captured and verified. Open the WAV below.";
-            case Phase::idle: return "Arm capture, then run one gate cycle.";
+            case Phase::armed: return {"Armed","Waiting for Rack audio and Start."};
+            case Phase::waitForLow: return {"Waiting for the gate to go low","A fresh gate rise is required to start capture."};
+            case Phase::waitForRise:
+                if (method==Method::legacyGate)
+                    return {"Waiting for the gate to rise",{}};
+                if (!view.clockReady)
+                    return {"Waiting for beat and bar signals","Run the Rack clock before sending Start.",Tone::warning};
+                return {"Waiting for Start","Send Start at the beginning of the phrase."};
+            case Phase::recording: return {"Recording Loop",{}};
+            case Phase::waitForBar: return {"Finishing at the next bar","Keep the clock running until capture finishes."};
+            case Phase::settling: return {"Checking and saving the take",{}};
+            case Phase::cancelled: return {"Capture cancelled","The last accepted take is still available if one exists."};
+            case Phase::interrupted: return {"Capture interrupted","Restore Rack audio and clock, then arm again.",Tone::warning};
+            case Phase::tooLong: return {"Capture reached the 15-second limit","Choose a shorter length or release the gate earlier.",Tone::warning};
+            case Phase::invalidAudio: return {"Capture audio unavailable","Check the stereo inputs and capture signals.",Tone::error};
+            case Phase::silent: return {"Captured audio was silent","Check the audio feeding Host-FX.",Tone::warning};
+            case Phase::storageError: return {"Could not save the captured WAV","Check the project folder and available space.",Tone::error};
+            case Phase::ready: return {"Loop take accepted",{}};
+            case Phase::idle: break;
+            case Phase::invalidStart: return {"Start missed the phrase downbeat","Arm again and send Start on the verified phrase downbeat.",Tone::warning};
+            case Phase::invalidLength: return {"Choose fewer extra beats","The extra beats must fit inside one bar.",Tone::warning};
         }
-        return {};
+        if (view.checking)
+            return {"Checking saved Loop audio",{}};
+        if (method!=Method::legacyGate && !view.clockReady)
+            return {"Waiting for beat and bar signals","Arm Capture can wait while the Rack clock starts.",Tone::warning};
+        return {"Ready to arm","Maximum capture length is 15 seconds."};
     }
     std::optional<int64_t> nearestEvent(int64_t sample)const
     {
@@ -481,6 +584,9 @@ private:
     {return static_cast<int64_t>(std::clamp(static_cast<long double>(value),static_cast<long double>(INT64_MIN),static_cast<long double>(INT64_MAX)));}
     int64_t pointerSample(juce::Point<float> point)const noexcept{return sampleBound(first+(last-first)*(point.x-chart.getX())/chart.getWidth());}
     void updateAccessibleDescription(){
+        if(loopAudio){
+            const auto description="Captured Loop audio. "+loopTake.getText();
+            setTooltip(description);setDescription(description);return;}
         const juce::String markerHelp="Event guides brighten on hover or pin. Solid yellow: DAW position. White pin: inspection.";
         setTooltip(inspectionHelp+"\n"+markerHelp+"\n"+visibleInspectionText());setDescription(inspectionHelp+" "+statusText+" "+markerHelp+" "+visibleInspectionText());}
     void clearInspection(){const auto changed=inspection.has_value() || inspectionPinned || hoverEvent.has_value();inspection.reset();inspectionPinned=false;hoverEvent.reset();
@@ -494,7 +600,15 @@ private:
     controls::Switch autoStop{"Auto-generate on Stop"};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
     controls::Switch enableLoop{"Enable Loop"};
     controls::ActionButton loopAction{"Arm capture",controls::CommandIcon::none,true},showWav{"Show captured WAV"};
-    juce::Label enableLoopLabel,loopMethodLabel,loopTitle,loopHelp,loopStatus,loopTake;
+    controls::DeliberateSelector loopMethod;
+    controls::SliderControl loopBars,loopBeats;
+    controls::NoticeBar loopStatus;
+    juce::Label enableLoopLabel,loopMethodLabel,loopBarsLabel,loopBeatsLabel,loopHelp,loopTake;
+    void changeLoopSettings(LoopCapture::Settings next)
+    {
+        if(onLoopSettings && onLoopSettings(next))armDenied=false;
+        if(onRefresh)onRefresh();
+    }
     LoopCapture::View loopView;
     bool loopPanel=false,loopAudio=false,armDenied=false;
     controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;controls::SliderControl sensitivity;

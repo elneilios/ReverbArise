@@ -1,0 +1,10 @@
+{
+  "wav": "a72ee0830e754ab5aec3abb11302d8df.wav",
+  "frames": 49153,
+  "rate": 48000,
+  "max_abs_sample_error": [
+    2.384185793236071e-08,
+    1.1622902612584696e-08
+  ],
+  "sha256": "de05c49ce9de01a6112f6f706c5c7dd7a4c54feac2ccfd5332a7a5950afd8e85"
+}

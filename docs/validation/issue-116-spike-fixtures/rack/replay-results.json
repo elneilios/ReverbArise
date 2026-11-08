@@ -1,0 +1,58 @@
+[
+  {
+    "trace": "timing-4501c84c8dae4fb6a6f6f9f1df88d75d.csv",
+    "callback_frames": 128,
+    "whole_lead_in_frames": 2048,
+    "bar_one_offset_samples": 0,
+    "repeats_checked": 3,
+    "overlap_summed_exactly": true,
+    "late_cue_deferral_frames": 49153,
+    "duplicate_cue_kept_first_launch": true,
+    "queued_and_simultaneous_stop_silent": true,
+    "wet_fade_frames": 240,
+    "missing_marker_fades_wet": true,
+    "mismatch_blocks_cue": true
+  },
+  {
+    "trace": "timing-9b99a6d19bcc4fbfa5d48ffa76b60e35.csv",
+    "callback_frames": 128,
+    "whole_lead_in_frames": 2048,
+    "bar_one_offset_samples": 0,
+    "repeats_checked": 3,
+    "overlap_summed_exactly": true,
+    "late_cue_deferral_frames": 49153,
+    "duplicate_cue_kept_first_launch": true,
+    "queued_and_simultaneous_stop_silent": true,
+    "wet_fade_frames": 240,
+    "missing_marker_fades_wet": true,
+    "mismatch_blocks_cue": true
+  },
+  {
+    "trace": "timing-cb492dbeff1f42e18d430715ba53d70d.csv",
+    "callback_frames": 256,
+    "whole_lead_in_frames": 2048,
+    "bar_one_offset_samples": 0,
+    "repeats_checked": 3,
+    "overlap_summed_exactly": true,
+    "late_cue_deferral_frames": 49153,
+    "duplicate_cue_kept_first_launch": true,
+    "queued_and_simultaneous_stop_silent": true,
+    "wet_fade_frames": 240,
+    "missing_marker_fades_wet": true,
+    "mismatch_blocks_cue": true
+  },
+  {
+    "trace": "timing-ce6f42d2b5184cf09e89dbe6bc4fb983.csv",
+    "callback_frames": 256,
+    "whole_lead_in_frames": 2048,
+    "bar_one_offset_samples": 0,
+    "repeats_checked": 3,
+    "overlap_summed_exactly": true,
+    "late_cue_deferral_frames": 49153,
+    "duplicate_cue_kept_first_launch": true,
+    "queued_and_simultaneous_stop_silent": true,
+    "wet_fade_frames": 240,
+    "missing_marker_fades_wet": true,
+    "mismatch_blocks_cue": true
+  }
+]

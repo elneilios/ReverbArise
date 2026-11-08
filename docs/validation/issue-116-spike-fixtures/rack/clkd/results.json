@@ -1,0 +1,196 @@
+[
+  {
+    "trace": "timing-1fd4f57e19674f6d91e55a2d9020c408.csv",
+    "callback_frames": [
+      128
+    ],
+    "nominal_tempo": 120,
+    "bar_intervals_samples": {
+      "96000": 35
+    },
+    "phrase_intervals_samples": {
+      "384000": 8
+    },
+    "bar_audio": {
+      "edges": 34,
+      "audio_minus_midi_samples": {
+        "1": 34
+      }
+    },
+    "phrase_audio": {
+      "edges": 7,
+      "audio_minus_midi_samples": {
+        "1": 7
+      }
+    },
+    "capture_case": "between_bars",
+    "verified_captures": 8,
+    "capture_lengths_samples": {
+      "96000": 8
+    },
+    "stop_to_boundary_samples": {
+      "48000": 8
+    },
+    "stop_callback_offsets": [
+      1
+    ],
+    "non_silent_frames_range": [
+      49,
+      49
+    ]
+  },
+  {
+    "trace": "timing-d4518c5cc9c04400a4fbafd167651ceb.csv",
+    "callback_frames": [
+      128
+    ],
+    "nominal_tempo": 137,
+    "bar_intervals_samples": {
+      "84087": 16,
+      "84088": 24
+    },
+    "phrase_intervals_samples": {
+      "336350": 6,
+      "336351": 4
+    },
+    "bar_audio": {
+      "edges": 39,
+      "audio_minus_midi_samples": {
+        "1": 39
+      }
+    },
+    "phrase_audio": {
+      "edges": 9,
+      "audio_minus_midi_samples": {
+        "1": 9
+      }
+    },
+    "capture_case": "between_bars",
+    "verified_captures": 9,
+    "capture_lengths_samples": {
+      "84087": 4,
+      "84088": 5
+    },
+    "stop_to_boundary_samples": {
+      "42043": 3,
+      "42044": 6
+    },
+    "stop_callback_offsets": [
+      15,
+      21,
+      28,
+      48,
+      55,
+      82,
+      88,
+      109,
+      116,
+      122
+    ],
+    "non_silent_frames_range": [
+      49,
+      49
+    ]
+  },
+  {
+    "trace": "timing-7efdd0ddbb41401bb1f425d8568b1a9d.csv",
+    "callback_frames": [
+      256
+    ],
+    "nominal_tempo": 137,
+    "bar_intervals_samples": {
+      "84087": 16,
+      "84088": 24
+    },
+    "phrase_intervals_samples": {
+      "336350": 6,
+      "336351": 4
+    },
+    "bar_audio": {
+      "edges": 39,
+      "audio_minus_midi_samples": {
+        "1": 39
+      }
+    },
+    "phrase_audio": {
+      "edges": 9,
+      "audio_minus_midi_samples": {
+        "1": 9
+      }
+    },
+    "capture_case": "exactly_on_bar",
+    "verified_captures": 9,
+    "capture_lengths_samples": {
+      "84087": 4,
+      "84088": 5
+    },
+    "stop_to_boundary_samples": {
+      "0": 9
+    },
+    "stop_callback_offsets": [
+      20,
+      54,
+      74,
+      87,
+      108,
+      142,
+      175,
+      209,
+      243
+    ],
+    "non_silent_frames_range": [
+      49,
+      49
+    ]
+  },
+  {
+    "trace": "timing-9c26139a0d9742d89b6da239dc2ab283.csv",
+    "callback_frames": [
+      256
+    ],
+    "nominal_tempo": 280,
+    "bar_intervals_samples": {
+      "41142": 11,
+      "41143": 72
+    },
+    "phrase_intervals_samples": {
+      "164571": 11,
+      "164572": 9
+    },
+    "bar_audio": {
+      "edges": 82,
+      "audio_minus_midi_samples": {
+        "1": 82
+      }
+    },
+    "phrase_audio": {
+      "edges": 19,
+      "audio_minus_midi_samples": {
+        "1": 19
+      }
+    },
+    "capture_case": "between_bars",
+    "verified_captures": 20,
+    "capture_lengths_samples": {
+      "41142": 2,
+      "41143": 18
+    },
+    "stop_to_boundary_samples": {
+      "20571": 11,
+      "20572": 9
+    },
+    "stop_callback_offsets": [
+      20,
+      56,
+      93,
+      130,
+      166,
+      203,
+      239
+    ],
+    "non_silent_frames_range": [
+      49,
+      49
+    ]
+  }
+]

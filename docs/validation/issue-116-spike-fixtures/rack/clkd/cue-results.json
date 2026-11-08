@@ -1,0 +1,85 @@
+[
+  {
+    "file": "clkd-cue-ab36cfe3c4d44ddcaafd76433b3a5869.f32",
+    "callback_frames": 128,
+    "source_frames": 336350,
+    "phrase_interval_counts": {
+      "336350": 6,
+      "336351": 4
+    },
+    "cue_samples": [
+      720256,
+      1104256,
+      2496256,
+      4176256
+    ],
+    "reset_samples": [
+      1728257
+    ],
+    "sync_loss_samples": [
+      1728257,
+      3073663
+    ],
+    "downbeat_samples": [
+      1345404,
+      1681754,
+      2737310,
+      4419061
+    ],
+    "downbeat_audio_minus_marker": {
+      "0": 4
+    },
+    "extra_lead_hold_samples": {
+      "0": 1,
+      "1": 2,
+      "2": 1
+    },
+    "mix_error": 2.9802322387695312e-08,
+    "stop_sample": 4512256
+  },
+  {
+    "file": "clkd-cue-bb77a2a53eb94a8aa9fcd90687a8078f.f32",
+    "callback_frames": 256,
+    "source_frames": 164571,
+    "phrase_interval_counts": {
+      "164571": 12,
+      "164572": 10
+    },
+    "cue_samples": [
+      720256,
+      1104256,
+      2496256,
+      4176256
+    ],
+    "reset_samples": [
+      1728257
+    ],
+    "sync_loss_samples": [
+      1728257,
+      3044833
+    ],
+    "downbeat_samples": [
+      822860,
+      987431,
+      1152003,
+      1316574,
+      1481145,
+      1645717,
+      2551116,
+      2715687,
+      2880259,
+      4196830,
+      4361401
+    ],
+    "downbeat_audio_minus_marker": {
+      "0": 11
+    },
+    "extra_lead_hold_samples": {
+      "0": 4,
+      "1": 2,
+      "2": 5
+    },
+    "mix_error": 2.9802322387695312e-08,
+    "stop_sample": 4512256
+  }
+]

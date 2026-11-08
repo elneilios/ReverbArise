@@ -1,0 +1,102 @@
+[
+  {
+    "trace": "timing-4501c84c8dae4fb6a6f6f9f1df88d75d.csv",
+    "callback_frames": 128,
+    "reference_pair": [
+      "capture",
+      "phrase"
+    ],
+    "start_sample": 49409,
+    "end_exclusive": 1622305,
+    "period_frames": 49153,
+    "cycles": 32,
+    "gate_high_frames": 49153,
+    "matching_reference_edges": 96,
+    "command_counts": {
+      "capture": 32,
+      "phrase": 64,
+      "cue": 256,
+      "stop": 128
+    },
+    "simultaneous_cue_stop_rises": 32,
+    "single_frame_cues": 32,
+    "single_frame_stops": 32,
+    "distinct_phrase_callback_offsets": 32,
+    "max_abs_reference_offset_frames": 0
+  },
+  {
+    "trace": "timing-9b99a6d19bcc4fbfa5d48ffa76b60e35.csv",
+    "callback_frames": 128,
+    "reference_pair": [
+      "cue",
+      "stop"
+    ],
+    "start_sample": 49409,
+    "end_exclusive": 1622305,
+    "period_frames": 49153,
+    "cycles": 32,
+    "gate_high_frames": 49153,
+    "matching_reference_edges": 384,
+    "command_counts": {
+      "capture": 32,
+      "phrase": 64,
+      "cue": 256,
+      "stop": 128
+    },
+    "simultaneous_cue_stop_rises": 32,
+    "single_frame_cues": 32,
+    "single_frame_stops": 32,
+    "distinct_phrase_callback_offsets": 32,
+    "max_abs_reference_offset_frames": 0
+  },
+  {
+    "trace": "timing-cb492dbeff1f42e18d430715ba53d70d.csv",
+    "callback_frames": 256,
+    "reference_pair": [
+      "cue",
+      "stop"
+    ],
+    "start_sample": 49409,
+    "end_exclusive": 1622305,
+    "period_frames": 49153,
+    "cycles": 32,
+    "gate_high_frames": 49153,
+    "matching_reference_edges": 384,
+    "command_counts": {
+      "capture": 32,
+      "phrase": 64,
+      "cue": 256,
+      "stop": 128
+    },
+    "simultaneous_cue_stop_rises": 32,
+    "single_frame_cues": 32,
+    "single_frame_stops": 32,
+    "distinct_phrase_callback_offsets": 32,
+    "max_abs_reference_offset_frames": 0
+  },
+  {
+    "trace": "timing-ce6f42d2b5184cf09e89dbe6bc4fb983.csv",
+    "callback_frames": 256,
+    "reference_pair": [
+      "capture",
+      "phrase"
+    ],
+    "start_sample": 49409,
+    "end_exclusive": 1622305,
+    "period_frames": 49153,
+    "cycles": 32,
+    "gate_high_frames": 49153,
+    "matching_reference_edges": 96,
+    "command_counts": {
+      "capture": 32,
+      "phrase": 64,
+      "cue": 256,
+      "stop": 128
+    },
+    "simultaneous_cue_stop_rises": 32,
+    "single_frame_cues": 32,
+    "single_frame_stops": 32,
+    "distinct_phrase_callback_offsets": 32,
+    "max_abs_reference_offset_frames": 0
+  }
+]

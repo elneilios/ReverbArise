@@ -12,6 +12,7 @@
 #include <UI/Controls/InvocationSlider.h>
 #include <UI/LearnWorkspace.h>
 #include <UI/ExportWorkspace.h>
+#include <UI/LoopPerformWorkspace.h>
 #include <UI/Controls/SwellList.h>
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/PerformLayout.h>
@@ -143,7 +144,8 @@ private:
     PreverbAudioProcessor& processor;
     m3::ui::LearnWorkspace learnWorkspace;
     m3::ui::ExportWorkspace exportWorkspace;
-    bool learningLayout=false,exportLayout=false,hasPerformWorkspace=false;
+    m3::ui::LoopPerformWorkspace loopPerformWorkspace;
+    bool learningLayout=false,exportLayout=false,loopLayout=false,hasPerformWorkspace=false;
     std::map<juce::Component*,bool> performVisibility;
     std::optional<m3::SwellViewport> performViewport;
     m3::EditorSnapshot state;

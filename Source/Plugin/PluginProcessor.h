@@ -10,6 +10,7 @@
 #include <Capture/LoopCapture.h>
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
+#include <DSP/LoopPerformance.h>
 #include <DSP/SwellEngine.h>
 #include <Storage/WorkingFolder.h>
 
@@ -81,8 +82,15 @@ public:
     bool requestWorkflowMode(workflow::Mode);
     LoopCapture::View getLoopCaptureView() const { return loopCapture.view(); }
     bool setLoopCaptureEnabled(bool);
+    bool setLoopCaptureSettings(LoopCapture::Settings);
     bool armLoopCapture();
     void cancelLoopCapture() { loopCapture.cancel(); }
+    LoopPerformance::View getLoopPerformanceView() const { return loopPerformance.view(); }
+    bool updateLoopSwell(LoopPerformance::Edit,uint64_t);
+    bool auditionLoopSwell(uint64_t);
+    void stopLoopAudition() { loopPerformance.stop(); }
+    bool cueLoop(uint64_t binding);
+    void stopLoop() noexcept { loopPerformance.stopLoop(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
@@ -167,6 +175,7 @@ private:
     CaptureWorker captureWorker;
     std::optional<LoopCapture::Session> loopSession() const;
     LoopCapture loopCapture;
+    LoopPerformance loopPerformance;
     std::unique_ptr<m3::SwellEngine> swells;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PreverbAudioProcessor)

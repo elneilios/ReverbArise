@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the preserved Song workflow and integrated Learn Loop Source Capture controls, note gate wiring, arming, waveform and verified WAV access, time limit, local storage and rollback.",
+  "summary": "Reviewed the Loop Learn capture notices, method guidance and accepted-take summary. The guide describes the musical length and WAV reveal.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 33050,
-      "sha256": "70e1e96c2cdbf826a10200269039e80a998858120c9e5e51763e13847bb83a16"
+      "bytes": 33122,
+      "sha256": "5c93e9fb593ebc017285b8e110643010abaec3f8a0dc7e68ae64903d87764de4"
     },
     {
       "path": "CMakePresets.json",
@@ -145,13 +145,13 @@
     },
     {
       "path": "Source/Capture/LoopCapture.cpp",
-      "bytes": 14649,
-      "sha256": "5e559aa971cce848353f3b2d6a09b6e0fa83933a91060beb0ddd5e29c7eafa99"
+      "bytes": 26966,
+      "sha256": "a5ba0934e832191840e1ed666bc68265e0c57d0fba459d43841be7e8c3c3f451"
     },
     {
       "path": "Source/Capture/LoopCapture.h",
-      "bytes": 3659,
-      "sha256": "0c416d13643507905f5a065711f031c0ffeba41f8c0703069ec0e14ecd9f76d6"
+      "bytes": 5516,
+      "sha256": "252b8550ab3111e681900693c730cd86e246b20cdfa907ca4b549d5fb2e60e99"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -359,6 +359,16 @@
       "sha256": "6abbb55c8b99f630e46aa08c95d59ae266333830eecdf07177d1db60e8c307b8"
     },
     {
+      "path": "Source/DSP/LoopPerformance.cpp",
+      "bytes": 9982,
+      "sha256": "2fef2b1b999cdaa911dc0416f92895f5c2d85738949ec26877511751da2fb3b1"
+    },
+    {
+      "path": "Source/DSP/LoopPerformance.h",
+      "bytes": 2517,
+      "sha256": "81cc19e52fe3f5fb1ff943f6265c5c5a108db92ac15e4d13f41cb6e481e892cc"
+    },
+    {
       "path": "Source/DSP/PreviewEngine.cpp",
       "bytes": 10790,
       "sha256": "4bed6a0cef6c116489d367e50fda397eac509546a1d3e8860e8239cd4dab1edf"
@@ -494,6 +504,16 @@
       "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
     },
     {
+      "path": "Source/Playback/LoopPlayback.cpp",
+      "bytes": 7138,
+      "sha256": "abeb712964f2cda41b59b48fd4f0ffd0e43d214f3301560e42ae53afebefe1d4"
+    },
+    {
+      "path": "Source/Playback/LoopPlayback.h",
+      "bytes": 2137,
+      "sha256": "79de998fdb54d0e461607919fbe0ee3f66fef33eaf6640042c97ee34477882dc"
+    },
+    {
       "path": "Source/Playback/ScheduledTestTone.cpp",
       "bytes": 4959,
       "sha256": "4b98a4f2665c263d7f69b3516b681c6ca5e491a34a7469777358708cf6c2ecd3"
@@ -515,13 +535,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 91715,
-      "sha256": "a0312e9a827011435e3c1da7497e265abcdd38e01f1cbceae0e4135feab248d7"
+      "bytes": 94437,
+      "sha256": "0f4a60590baa2b7f263dae4127acbe1a626af472586435c33ab20ff150e96e61"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13608,
-      "sha256": "a80ab892349ea5ae1a8ecd85959340f1e7f0547354697fbb84c23da590ddf7a4"
+      "bytes": 13717,
+      "sha256": "d7096f95a6e12f01866b70f5be7999e24f60dfa21fdc8ba6cefd8513d6da4cad"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -535,13 +555,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 48458,
-      "sha256": "1d6f39a048fd3a83c28be10b8b22802f718fb49e85102dd561bd1c1e8d7a0360"
+      "bytes": 51195,
+      "sha256": "7e76d6792d0665793607bb251dc22598b8fd0ab01bc5f74ed592aa63cb2ceb13"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8575,
-      "sha256": "398fea1645f4cb63fc853c484699d3d9e6afb72558fbea2d18cddd29efbf078c"
+      "bytes": 9042,
+      "sha256": "bd904868925aefe536641fcfe7b396aa13bc24ca1db705c871b1939bad71155c"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -715,8 +735,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 9931,
-      "sha256": "d377358b66b1328bb6b8dac8bb8b7150bdadc6e7d0413fb02f4b3bdf832b8491"
+      "bytes": 10146,
+      "sha256": "a2c313c1f0189597278354fd12ec7a2820f0dc1a94655cd60c1b700d98621913"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -780,8 +800,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 44375,
-      "sha256": "117d1f015de31ce1b6487b46c7803c79f79f06cf69859f25a67587b22d1dac5e"
+      "bytes": 51248,
+      "sha256": "9c271c405756b0a434facf4b8c5ceda6bab6b99d451d0c0b3b704aa66fdb106a"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -792,6 +812,11 @@
       "path": "Source/UI/LiveDiagnosticsText.h",
       "bytes": 9105,
       "sha256": "67e865b761f63df50cc17df16ed3dbcb33896a059ed0170f7780a34030eac5a0"
+    },
+    {
+      "path": "Source/UI/LoopPerformWorkspace.h",
+      "bytes": 27685,
+      "sha256": "9b4f8fd24a85127292cf812f12d057827906c8a732dedf0e38c07bae78016c92"
     },
     {
       "path": "Source/UI/MusicalPosition.h",
@@ -930,8 +955,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 29955,
-      "sha256": "5ed490e0af608868dfdf77d5764aad478a0c8df45d485723b1c55d787df75c4d"
+      "bytes": 32409,
+      "sha256": "c962bd154849045d0c3cc9c0fb4bdbacfe6910cddb57dfe4d79c0cec45d6456b"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1130,8 +1155,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 35814,
-      "sha256": "180f7c85c21db7a931b7e1bd6751b8ff157060a5f9bae7e23bfee84281ed0297"
+      "bytes": 44337,
+      "sha256": "ce0260a07a8f2b842d4f0d46a3f10c15a3d42067e8c624eff58cad195c9a6686"
     }
   ]
 }

@@ -1,0 +1,13 @@
+sample,blockStart,blockSize,sampleRate,stream,high,value
+0,0,128,48000,callback,0,0
+0,0,128,48000,gate_parameter,0,0
+0,0,128,48000,pulse_parameter,0,0
+0,0,128,48000,gate_audio,0,0
+0,0,128,48000,pulse_audio,0,0
+384,384,128,48000,gate_parameter,1,1
+410,384,128,48000,gate_audio,1,1
+620,512,128,48000,pulse_audio,1,1
+668,640,128,48000,pulse_audio,0,0
+768,768,128,48000,gate_parameter,0,0
+790,768,128,48000,gate_audio,0,0
+1250,1152,128,48000,pulse_audio,1,1

@@ -28,11 +28,17 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     buildInformationWriter=writer?std::move(writer):[](const juce::String& text){juce::SystemClipboard::copyTextToClipboard(text);};
     setLookAndFeel(&workspaceTheme);addMouseListener(this,true);
     addAndMakeVisible(hoverHelp);hoverHelp.setName("hoverHelp");m3::ui::applyTextRole(hoverHelp,m3::ui::TextRole::helper);hoverHelp.setInterceptsMouseClicks(false,false);
-    addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
+    addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);addChildComponent(loopPerformWorkspace);
+    loopPerformWorkspace.onEdit=[this](auto edit,uint64_t binding){const auto accepted=processor.updateLoopSwell(std::move(edit),binding);refresh();return accepted;};
+    loopPerformWorkspace.onAudition=[this](uint64_t binding){processor.auditionLoopSwell(binding);refresh();};
+    loopPerformWorkspace.onStop=[this]{processor.stopLoopAudition();refresh();};
+    loopPerformWorkspace.onCue=[this](uint64_t binding){processor.cueLoop(binding);refresh();};
+    loopPerformWorkspace.onStopLoop=[this]{processor.stopLoop();refresh();};
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
     learnWorkspace.onEnableLoop=[this](bool enabled){return processor.setLoopCaptureEnabled(enabled);};
     learnWorkspace.onArmLoop=[this]{return processor.armLoopCapture();};
+    learnWorkspace.onLoopSettings=[this](LoopCapture::Settings settings){return processor.setLoopCaptureSettings(settings);};
     learnWorkspace.onCancelLoop=[this]{processor.cancelLoopCapture();};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
@@ -334,7 +340,7 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
         using namespace m3::ui;
         const ResponsiveWorkspaceLayout layout(workspaceBounds());g.fillAll(background);g.setColour(separator);
         g.drawHorizontalLine(layout.header.getBottom(),float(layout.header.getX()),float(layout.header.getRight()));
-        if(learningLayout || exportLayout)return;
+        if(learningLayout || exportLayout || loopLayout)return;
         for(const auto y:{layout.work.getBottom(),layout.audition.getBottom(),layout.overview.getBottom()})
             g.drawHorizontalLine(y,float(layout.header.getX()),float(layout.header.getRight()));
         for(const auto line:{layout.listDivider(),layout.inspectorDivider()})
@@ -342,7 +348,7 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
         return;
     }
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
-    if(learningLayout || exportLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
+    if(learningLayout || exportLayout || loopLayout){g.drawHorizontalLine(layout.header.getBottom(),static_cast<float>(layout.header.getX()),static_cast<float>(layout.header.getRight()));return;}
     const m3::ui::PerformLayout perform(getLocalBounds());
     for(const auto y:{perform.header.getBottom(),perform.work.getBottom(),perform.audition.getBottom(),perform.overview.getBottom()})
         g.drawHorizontalLine(y,static_cast<float>(perform.header.getX()),static_cast<float>(perform.header.getRight()));
@@ -446,8 +452,8 @@ void PreverbAudioProcessorEditor::resized()
     hoverHelp.setBounds(inset,getHeight()-m3::ui::controlGeometry::feedbackHeight,getWidth()-2*inset,m3::ui::controlGeometry::feedbackHeight);
     workflowHeader.setBounds(layout.header);
     noticeBar.setBounds(layout.notice);
-    if(learningLayout || exportLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);
-        body.setBottom(std::min(body.getBottom(),hoverHelp.getY()));learnWorkspace.setBounds(body);exportWorkspace.setBounds(body);return;}
+    if(learningLayout || exportLayout || loopLayout){auto body=getLocalBounds().reduced(m3::ui::workspaceGeometry::outerInset(getWidth()));body.setTop(layout.header.getBottom()+m3::ui::spacing::group);
+        body.setBottom(std::min(body.getBottom(),hoverHelp.getY()));learnWorkspace.setBounds(body);exportWorkspace.setBounds(body);loopPerformWorkspace.setBounds(body);return;}
     const m3::ui::PerformLayout perform(getLocalBounds());
     using namespace m3::ui;
     for(auto* component:std::initializer_list<juce::Component*>{&markerButton,&markerLabel,&markerKnob,&recaptureExisting,&headerStatus,&spanLabel}){component->setBounds({});component->setVisible(false);}
@@ -560,8 +566,8 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     workflowHeader.setResponsivePresentation(type);workflowHeader.setBounds(layout.header);
     noticeBar.setResponsivePresentation(type);noticeBar.setBounds(layout.notice);hoverHelp.setBounds(layout.help);
     learnWorkspace.setResponsivePresentation(type);exportWorkspace.setResponsivePresentation();
-    learnWorkspace.setBounds(layout.body);exportWorkspace.setBounds(layout.body);
-    if(learningLayout || exportLayout)return;
+    learnWorkspace.setBounds(layout.body);exportWorkspace.setBounds(layout.body);loopPerformWorkspace.setBounds(layout.body);
+    if(learningLayout || exportLayout || loopLayout)return;
     for(auto* child:std::initializer_list<juce::Component*>{&markerButton,&markerLabel,&markerKnob,&recaptureExisting,&headerStatus,&spanLabel,&regenerationLabel,&regenerationKnob,&markerState})
     {child->setBounds({});child->setVisible(false);}
     auto listArea=layout.list.withTrimmedRight(contentPadding);auto title=listArea.removeFromTop(headingHeight);
@@ -625,9 +631,10 @@ void PreverbAudioProcessorEditor::refresh()
     if(regenerationFeedbackSession!=state.sessionEpoch)
     {regenerationFeedback.setText({},juce::dontSendNotification);regenerationFeedback.setDescription({});regenerationFeedbackSession=state.sessionEpoch;}
     const auto mode=state.workflowState.mode;
+    const auto loop=processor.getLoopCaptureView();
     if(presentationSession!=state.sessionEpoch)presentationSession=state.sessionEpoch;
     bool initialFrame=false;
-    if(mode==workflow::Mode::live && !state.session.swells.empty())
+    if(mode==workflow::Mode::live && !loop.acceptedLoop && !state.session.swells.empty())
     {
         const auto first=m3::ui::firstChronologicalSwell(state.session);
         if(state.initialPerformHandoff && processor.swellEngine().selectInitialPerform(state.sessionEpoch,state.initialPerformHandoff,first))
@@ -638,16 +645,66 @@ void PreverbAudioProcessorEditor::refresh()
         processor.swellEngine().establishPerformPosition(state.sessionEpoch);
     }
     const auto nextLearning=mode==workflow::Mode::capture,nextExport=mode==workflow::Mode::finalise;
+    const auto nextLoop=mode==workflow::Mode::live && loop.acceptedLoop;
     if(exportLayout && !nextExport)exportWorkspace.resetView();
-    const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
+    const auto wasSpecial=learningLayout || exportLayout || loopLayout,nextSpecial=nextLearning || nextExport || nextLoop;
     const auto leavingLearn=wasSpecial && !nextSpecial;
-    const auto isShared=[this](juce::Component* c){return c==recoveryWarning.get() || c==&workflowHeader || c==&noticeBar || c==&hoverHelp || c==&learnWorkspace || c==&exportWorkspace
+    const auto isShared=[this](juce::Component* c){return c==recoveryWarning.get() || c==&workflowHeader || c==&noticeBar || c==&hoverHelp || c==&learnWorkspace || c==&exportWorkspace || c==&loopPerformWorkspace
         || dynamic_cast<juce::ResizableCornerComponent*>(c)!=nullptr || dynamic_cast<juce::ResizableBorderComponent*>(c)!=nullptr;};
-    if(nextLearning!=learningLayout || nextExport!=exportLayout)
+    if(nextLearning!=learningLayout || nextExport!=exportLayout || nextLoop!=loopLayout)
     {
         if(nextSpecial && !wasSpecial){if(hasPerformWorkspace)performViewport=timeline.viewport();performVisibility.clear();for(auto* c:workspaceRoot().getChildren())if(!isShared(c))performVisibility[c]=c->isVisible();}
         else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==&workspaceRoot())c->setVisible(visible);performVisibility.clear();}
-        learningLayout=nextLearning;exportLayout=nextExport;resized();
+        if(nextLoop!=loopLayout)
+        {
+            const auto tabs=settingsTabs.getTabNames();
+            const auto about=tabs.indexOf("About");
+            const auto appearance=tabs.indexOf("Appearance");
+            for(int i=0;i<about;++i)
+            {
+                settingsPages[static_cast<size_t>(i)].setEnabled(!nextLoop);
+                if(auto* tab=settingsTabs.getTabbedButtonBar().getTabButton(i))
+                {
+                    tab->setEnabled(!nextLoop);
+                    tab->setTooltip(nextLoop?"These settings apply to Song. Use the Loop Perform controls for this take.":"");
+                }
+            }
+            if(nextLoop && settingsTabs.getCurrentTabIndex()<about)
+                settingsTabs.setCurrentTabIndex(appearance>=0?appearance:about);
+        }
+        learningLayout=nextLearning;exportLayout=nextExport;loopLayout=nextLoop;resized();
+    }
+    const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
+    auto journey=m3::ui::presentWorkflow(flow,workflowReady);
+    if(loop.enabled)
+        journey.choices[static_cast<size_t>(workflow::Mode::capture)].subtitle="Next capture: Loop";
+    if(loop.acceptedLoop)
+    {
+        auto& perform=journey.choices[static_cast<size_t>(workflow::Mode::live)];
+        perform.subtitle="Accepted loop";
+        if(!workflowReady.compatible)perform.reason="Open the verified Loop take at its original sample rate.";
+        auto& exportChoice=journey.choices[static_cast<size_t>(workflow::Mode::finalise)];
+        exportChoice.available=false;
+        exportChoice.reason="Download the captured Loop WAV from Learn.";
+    }
+    if(loop.busy())
+        for(auto& choice:journey.choices)
+            if(choice.mode!=workflow::Mode::capture)
+            {
+                choice.available=false;
+                choice.reason="Finish or cancel Loop capture in Learn.";
+            }
+    workflowHeader.display(journey,capture.status);
+    loopPerformWorkspace.setVisible(nextLoop);
+    if(nextLoop)
+    {
+        for(auto* child:workspaceRoot().getChildren())if(!isShared(child))child->setVisible(false);
+        learnWorkspace.setVisible(false);exportWorkspace.setVisible(false);
+        noticeBar.display({});
+        loopPerformWorkspace.display(processor.getLoopPerformanceView(),loop.waveform,workflowReady.compatible);
+        refreshHoverHelp();
+        updating=false;
+        return;
     }
     if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
     hostInfo.display(m3::ui::transportPresentation(time,diagnostics.samplePositionAvailable,
@@ -830,20 +887,7 @@ void PreverbAudioProcessorEditor::refresh()
         else recapture<<arm.status;
     }
     recaptureStatus.setText(recapture,juce::dontSendNotification);recaptureStatus.setTooltip(recapture);
-    const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
-    const auto loop=processor.getLoopCaptureView();
-    auto journey=m3::ui::presentWorkflow(flow,workflowReady);
-    if(loop.enabled)
-        journey.choices[static_cast<size_t>(workflow::Mode::capture)].subtitle="Next capture: Loop";
-    if(loop.acceptedLoop || loop.busy())
-        for(auto& choice:journey.choices)
-            if(choice.mode!=workflow::Mode::capture)
-            {
-                choice.available=false;
-                choice.reason=loop.busy()?"Finish or cancel Loop capture in Learn.":"The Loop take is available as a WAV in Learn.";
-            }
-    workflowHeader.display(journey,capture.status);
     noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
         processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes())));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
@@ -901,7 +945,7 @@ bool PreverbAudioProcessorEditor::navigationIntentCurrent()const
 }
 void PreverbAudioProcessorEditor::refreshPerformNavigation()
 {
-    const auto fraction=timeline.zoomFraction();const bool active=!learningLayout && !exportLayout;
+    const auto fraction=timeline.zoomFraction();const bool active=!learningLayout && !exportLayout && !loopLayout;
     performZoom.setEnabled(active);performZoom.display({fraction,fraction<1-1.e-9,fraction>1.e-9,hasPerformWorkspace});
     snapButton.setEnabled(active);snapButton.display(timeline.effectiveSnap());
     snapButton.setTooltip("Snap timing to the selected grid. Hold Ctrl to bypass; Shift gives fine drag. Ctrl+Shift combines both.");
@@ -947,7 +991,7 @@ void PreverbAudioProcessorEditor::modifierKeysChanged(const juce::ModifierKeys& 
 }
 void PreverbAudioProcessorEditor::publishPerformNavigation()
 {
-    if(destroying || updating || !navigationDirty || learningLayout || exportLayout)return;
+    if(destroying || updating || !navigationDirty || learningLayout || exportLayout || loopLayout)return;
     const auto view=timeline.viewport();m3::PerformNavigationState preferences;
     preferences.hasView=performFitted;preferences.first=view.first;preferences.last=view.last;
     preferences.snap=timeline.requestedSnap();preferences.grid=timeline.selectedGrid();

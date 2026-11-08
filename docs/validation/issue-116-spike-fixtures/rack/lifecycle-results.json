@@ -1,0 +1,12 @@
+{
+  "trace": "timing-a64e6095364e4d3ba3807e90c7e33381.csv",
+  "startup_held_note_on_sample": 1,
+  "duplicate_cue_edges_delivered_once": 46,
+  "patch_reset_interval_frames": 43836,
+  "capture_note_off_after_unplug_sample": 1076800,
+  "dry_gate_still_high": true,
+  "suspension_heartbeat_wall_gap_ms": 21673,
+  "suspension_heartbeat_frame_gap": 12032,
+  "suspension_phrase_interval_frames": 56495,
+  "processor_lifecycle_events_after_start": 0
+}

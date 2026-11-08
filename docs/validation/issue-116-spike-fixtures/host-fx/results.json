@@ -1,0 +1,674 @@
+{
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-c97cf7a3268a478893d97f18eb9720e6.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 44100,
+        "block_size": 8,
+        "first_sample": 0,
+        "last_event_sample": 4992367,
+        "matching_window_samples": 16,
+        "gate": {
+          "reference_edges": 14,
+          "matched": 14,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -15,
+            -11.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            351337,
+            351337.0,
+            351338
+          ],
+          "observed_high_width_error_samples": [
+            -9,
+            -1.5,
+            15
+          ]
+        },
+        "pulse": {
+          "reference_edges": 2264,
+          "matched": 2264,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -15,
+            -9.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            44,
+            44,
+            45
+          ],
+          "observed_high_width_error_samples": [
+            -13,
+            -4,
+            12
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-bfc0e2a0a1e94862b8c8a75ef5f3e532.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 44100,
+        "block_size": 64,
+        "first_sample": 0,
+        "last_event_sample": 4992367,
+        "matching_window_samples": 128,
+        "gate": {
+          "reference_edges": 14,
+          "matched": 14,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -63,
+            -48.5,
+            -34
+          ],
+          "reference_high_width_samples": [
+            351337,
+            351337.0,
+            351338
+          ],
+          "observed_high_width_error_samples": [
+            22,
+            23.0,
+            23
+          ]
+        },
+        "pulse": {
+          "reference_edges": 2262,
+          "matched": 1582,
+          "unmatched_reference_edges": 680,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -63,
+            -32.0,
+            -1
+          ],
+          "reference_high_width_samples": [
+            44,
+            44,
+            45
+          ],
+          "observed_high_width_error_samples": [
+            19,
+            20,
+            20
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-08bb42ac921447dea525e36d1d2c26d7.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 44100,
+        "block_size": 256,
+        "first_sample": 0,
+        "last_event_sample": 4992367,
+        "matching_window_samples": 512,
+        "gate": {
+          "reference_edges": 14,
+          "matched": 14,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -251,
+            -123.0,
+            -35
+          ],
+          "reference_high_width_samples": [
+            351337,
+            351337.0,
+            351338
+          ],
+          "observed_high_width_error_samples": [
+            -106,
+            23.0,
+            151
+          ]
+        },
+        "pulse": {
+          "reference_edges": 2262,
+          "matched": 380,
+          "unmatched_reference_edges": 1882,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -255,
+            -131.0,
+            -6
+          ],
+          "reference_high_width_samples": [
+            44,
+            44,
+            45
+          ],
+          "observed_high_width_error_samples": [
+            211,
+            212.0,
+            212
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-b1259c880dae47828e9073298b07139b.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 44100,
+        "block_size": 128,
+        "first_sample": 0,
+        "last_event_sample": 4906085,
+        "matching_window_samples": 256,
+        "gate": {
+          "reference_edges": 13,
+          "matched": 13,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -126,
+            -98,
+            -35
+          ],
+          "reference_high_width_samples": [
+            351337,
+            351337.0,
+            351338
+          ],
+          "observed_high_width_error_samples": [
+            22,
+            23.0,
+            23
+          ]
+        },
+        "pulse": {
+          "reference_edges": 12,
+          "matched": 6,
+          "unmatched_reference_edges": 6,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -127,
+            -82.5,
+            -38
+          ],
+          "reference_high_width_samples": [
+            45,
+            45.0,
+            45
+          ],
+          "observed_high_width_error_samples": [
+            83,
+            83,
+            83
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-25b33eb2d5584d7e8392af118435219e.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 8,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 16,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -14,
+            -5,
+            -1
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            -7,
+            1.5,
+            9
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1478,
+          "matched": 1478,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -15,
+            -4.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            -9,
+            0.0,
+            15
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-eaae211ef30544a7bb060109b6343e07.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 64,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 128,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -63,
+            -38,
+            -13
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            1,
+            1.0,
+            2
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1476,
+          "matched": 1110,
+          "unmatched_reference_edges": 366,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -63,
+            -32.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            15,
+            16,
+            16
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-2c7f4d5138514809a063d56d62b58085.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 128,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 256,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -127,
+            -102,
+            -77
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            1,
+            1.0,
+            2
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1476,
+          "matched": 556,
+          "unmatched_reference_edges": 920,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -127,
+            -63.5,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            79,
+            80.0,
+            80
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-687c727e11df4d4498eaa1c59007fcfc.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 256,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 512,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -255,
+            -205,
+            -89
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            1,
+            1.0,
+            2
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1476,
+          "matched": 278,
+          "unmatched_reference_edges": 1198,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -255,
+            -127.5,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            207,
+            208,
+            208
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-1060e787197f4d0aad719c253ea31b08.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 128,
+        "first_sample": 0,
+        "last_event_sample": 3440077,
+        "matching_window_samples": 256,
+        "gate": {
+          "reference_edges": 8,
+          "matched": 8,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -127,
+            -102.5,
+            -78
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            1,
+            1,
+            2
+          ]
+        },
+        "pulse": {
+          "reference_edges": 8,
+          "matched": 6,
+          "unmatched_reference_edges": 2,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            -117,
+            -64.5,
+            -12
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            48
+          ],
+          "observed_high_width_error_samples": [
+            80,
+            80,
+            80
+          ]
+        },
+        "pulse_route": "parameter",
+        "gate_route": "parameter"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-c521d45310744c548338911e410c9e62.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 128,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 256,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0,
+            0
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0.0,
+            0
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1476,
+          "matched": 1476,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0.0,
+            0
+          ]
+        },
+        "pulse_route": "midi_note",
+        "gate_route": "midi_note"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-853e0f2b65124ed384a1da22c47aa741.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 256,
+        "first_sample": 0,
+        "last_event_sample": 3557748,
+        "matching_window_samples": 512,
+        "gate": {
+          "reference_edges": 9,
+          "matched": 9,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0,
+            0
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975.0,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0.0,
+            0
+          ]
+        },
+        "pulse": {
+          "reference_edges": 1476,
+          "matched": 1476,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            49
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0.0,
+            0
+          ]
+        },
+        "pulse_route": "midi_note",
+        "gate_route": "midi_note"
+      }
+    ]
+  },
+  "C:\\git\\k7ma-preverb\\out\\host-fx-spike\\trace-7bb809404a0243c0991c9111eab4c1a8.csv": {
+    "warnings": [],
+    "sections": [
+      {
+        "sample_rate": 48000,
+        "block_size": 128,
+        "first_sample": 0,
+        "last_event_sample": 3440077,
+        "matching_window_samples": 256,
+        "gate": {
+          "reference_edges": 8,
+          "matched": 8,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            382974,
+            382975,
+            382975
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0,
+            0
+          ]
+        },
+        "pulse": {
+          "reference_edges": 8,
+          "matched": 8,
+          "unmatched_reference_edges": 0,
+          "unmatched_parameter_edges": 0,
+          "parameter_minus_audio_samples": [
+            0,
+            0.0,
+            0
+          ],
+          "reference_high_width_samples": [
+            48,
+            48.0,
+            48
+          ],
+          "observed_high_width_error_samples": [
+            0,
+            0.0,
+            0
+          ]
+        },
+        "pulse_route": "midi_note",
+        "gate_route": "midi_note"
+      }
+    ]
+  }
+}
