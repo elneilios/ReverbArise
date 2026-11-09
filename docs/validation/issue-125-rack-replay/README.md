@@ -11,4 +11,8 @@ CTest replays the compact fixtures through production `LoopPlayback` and compare
 | 137 BPM | 2 | 4 | `1.49012e-08` |
 | 280 BPM | 3 | 11 | `1.49012e-08` |
 
-Both Release replays passed with unchanged dry contribution, complete lead-in, summed wet overlap, a missing-marker stop, and a fresh Cue after re-lock. The traces exercise a shared-clock 4/4 setup with recurring one-bar phrase markers. The synthetic scheduler and processor tests cover other admitted phrase lengths and unsupported configurations.
+Both Release replays passed with unchanged dry contribution, complete lead-in, summed wet overlap, a missing-marker stop, and a fresh Cue after re-lock. The traces exercise a shared-clock 4/4 setup with a recurring four-bar phrase. The synthetic scheduler and processor tests cover other admitted phrase lengths and unsupported configurations.
+
+## Windows Release validation
+
+On 9 November 2026, `scripts/build.ps1 -Configuration Release -Test` configured and built the implementation in `43fbf75` with the existing MSVC build tree. CTest passed 100 of 101 cases in 360.89 seconds. The remaining test, `preverb_perform_readability_test`, timed out at the Windows foreground-focus check previously recorded in the [#123 baseline](../2026-11-09-issue-123-rack-timing.md#native-song-regression). `ctest -C Release --rerun-failed --output-on-failure` passed that test on the same build in 20.73 seconds. The logs are in `out/build-logs/Release/20261109-234450-f664210b/`.
