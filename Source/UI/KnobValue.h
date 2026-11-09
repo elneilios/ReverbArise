@@ -1,6 +1,8 @@
 #pragma once
 #include "WorkspaceTheme.h"
 #include "Controls/ChoicePopup.h"
+#include "Controls/FieldTextEditor.h"
+#include "Controls/FieldPresentation.h"
 
 namespace m3::ui
 {
@@ -77,24 +79,26 @@ private:
     public:void paint(juce::Graphics& g)override
         {g.setColour(text);g.setFont(getLookAndFeel().getLabelFont(*this));g.drawText(getText(),getLocalBounds(),juce::Justification::centredLeft);}
     };
-    class Entry final:public juce::TextEditor
+    class Entry final:public controls::FieldTextEditor
     {
     public:
         std::function<void()> gained;
-        void focusGained(FocusChangeType type)override{juce::TextEditor::focusGained(type);if(gained)gained();}
-        void mouseDown(const juce::MouseEvent& event)override{if(gained)gained();juce::TextEditor::mouseDown(event);}
+        void focusGained(FocusChangeType type)override{controls::FieldTextEditor::focusGained(type);if(gained)gained();}
+        void mouseDown(const juce::MouseEvent& event)override{if(gained)gained();controls::FieldTextEditor::mouseDown(event);}
         bool keyPressed(const juce::KeyPress& key)override
         {if(key!=juce::KeyPress::escapeKey && key!=juce::KeyPress::returnKey && gained)gained();return juce::TextEditor::keyPressed(key);}
     };
 public:
     KnobValue():knob(*this)
     {
-        addAndMakeVisible(label);addAndMakeVisible(knob);addAndMakeVisible(entry);
+        addAndMakeVisible(label);addAndMakeVisible(knob);addAndMakeVisible(entry);addAndMakeVisible(feedback);
         label.setBorderSize({});
         knob.setRange(0,1,.000001);knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setScrollWheelEnabled(true);
         knob.setVelocityModeParameters(.2,1,0,true,juce::ModifierKeys::shiftModifier);
         entry.setFont(fontFor(*this,controlSize));entry.setJustification(juce::Justification::centredLeft);
+        entry.setIndents(spacing::tight,0);
+        entry.setNumericCharacters("0123456789+.-");
         entry.setSelectAllWhenFocused(true);
         entry.gained=[this]{begin(true);};
         entry.onReturnKey=[this]{finish(true);};entry.onFocusLost=[this]{if(typing)finish(true);};
@@ -123,12 +127,16 @@ public:
         label.setTooltip(title);
         entry.setName(name);knob.setName(name+"Knob");
         setTitle(title);entry.setTitle(title+" exact value");knob.setTitle(title);
-        entry.setTooltip(tooltip);knob.setTooltip(tooltip);
+        entry.setTooltip(tooltip);entry.setFieldDescription(tooltip);knob.setTooltip(tooltip);
+        feedback.setName(name+"Feedback");
     }
     void display(const juce::String& owner,const juce::String& valueText,double fraction,bool enabled,const juce::String& exactText={})
     {
-        if(owner!=identity){++resetTicket;cancel();identity=owner;}
-        canonical=valueText;canonicalExact=exactText.isEmpty()?valueText:exactText;canonicalFraction=std::clamp(fraction,0.0,1.0);
+        if(owner!=identity){++resetTicket;cancel();identity=owner;setValidation({});}
+        if(!enabled)setValidation({});
+        const auto exact=exactText.isEmpty()?valueText:exactText;
+        if(exact!=canonicalExact)setValidation({});
+        canonical=valueText;canonicalExact=exact;canonicalFraction=std::clamp(fraction,0.0,1.0);
         if(!domainSupplied)domain={canonicalFraction,0,1,.01,1,canonical};
         setEnabled(enabled);
         if(!typing){refreshing=true;entry.setText(canonical,false);if(!active)knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}knob.repaint();
@@ -136,7 +144,11 @@ public:
     void cancel(){if(active && !typing)cancelledGesture=true;active=false;typing=false;restore();if(onEnd)onEnd();}
     bool editing()const noexcept{return active;}
     void setCaption(const juce::String& caption,const juce::String& fullTitle={})
-    {const auto title=fullTitle.isEmpty()?caption:fullTitle;label.setText(caption,juce::dontSendNotification);label.setTooltip(title);setTitle(title);knob.setTitle(title);entry.setTitle(title+" exact value");}
+    {
+        const auto title=fullTitle.isEmpty()?caption:fullTitle;
+        if(getTitle()!=title)setValidation({});
+        label.setText(caption,juce::dontSendNotification);label.setTooltip(title);setTitle(title);knob.setTitle(title);entry.setTitle(title+" exact value");
+    }
     void setGestureModifiers(const juce::ModifierKeys& mods)
     {
         const auto next=mods.getRawFlags()&(juce::ModifierKeys::ctrlModifier|juce::ModifierKeys::shiftModifier);
@@ -161,8 +173,32 @@ public:
         if(reset.apply){auto action=std::move(reset.apply);reset.apply=[safe,ticket,action=std::move(action)]{if(safe && safe->isEnabled() && safe->resetTicket==ticket)action();};}
         return reset;
     }
-    juce::TextEditor& valueField()noexcept{return entry;}
+    controls::FieldTextEditor& valueField()noexcept{return entry;}
     juce::Slider& valueKnob()noexcept{return knob;}
+    std::function<void()> onFeedbackChanged;
+    void setInlineHelp(const juce::String& message)
+    {
+        if(inlineHelp==message)return;
+        inlineHelp=message;
+        if(onFeedbackChanged)onFeedbackChanged();
+    }
+    void setValidation(const juce::String& message)
+    {
+        if(validation==message)return;
+        validation=message;
+        entry.setInvalid(validation.isNotEmpty());
+        entry.setFieldDescription(validation.isNotEmpty()?validation:entry.getTooltip());
+        if(onFeedbackChanged)onFeedbackChanged();
+    }
+    int setValueBounds(juce::Rectangle<int> bounds)
+    {
+        baseHeight=bounds.getHeight();
+        arrangeEntry(bounds.withZeroOrigin());
+        arrangeFeedback();
+        bounds.setHeight(std::max(baseHeight,feedback.getBottom()));
+        setBounds(bounds);
+        return bounds.getHeight();
+    }
     // Optional domain intent: absolute accessible writes must not inherit a
     // focused relative gesture clamp. Other consumers keep their delta path.
     std::function<void(double)> onAbsolute;
@@ -172,7 +208,17 @@ public:
     {entry.setFont(componentTextFont(*this,TextRole::controlValue));applyTextRole(label,TextRole::controlLabel);if(compactPresentation)label.setFont(interFont(controlSize,InterFace::medium));}
     void resized()override
     {
-        auto bounds=getLocalBounds();
+        arrangeEntry(getLocalBounds().withHeight(baseHeight>0?baseHeight:getHeight()));
+        arrangeFeedback();
+    }
+private:
+    void arrangeFeedback()
+    {
+        const bool invalid=validation.isNotEmpty();
+        feedback.arrange(invalid?validation:inlineHelp,invalid,controls::commandBodyBounds(entry.getBounds()));
+    }
+    void arrangeEntry(juce::Rectangle<int> bounds)
+    {
         if(compactPresentation)
         {
             label.setBounds(bounds.removeFromTop(responsiveGeometry::captionHeight));
@@ -185,8 +231,8 @@ public:
         label.setBounds(bounds.removeFromTop(controlGeometry::labelHeight));
         entry.setBounds(bounds.removeFromTop(controlGeometry::valueHeight));
     }
-private:
     bool compactPresentation=false;
+    int baseHeight=0;
     void showResetMenu(const juce::MouseEvent& event)
     {
         using namespace controls;
@@ -253,16 +299,23 @@ private:
     void restore(){refreshing=true;entry.setText(canonical,false);knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}
     void finish(bool commit)
     {
+        if(committing)return;
         if(!active){if(commit && entry.getText()!=canonical){const auto proposed=entry.getText();begin(true);entry.setText(proposed,false);}else return;}
-        if(commit && typing && entry.getText()!=typingBaseline && onCommit)onCommit(entry.getText());
+        if(commit && typing && entry.getText()!=typingBaseline && onCommit)
+        {
+            const juce::ScopedValueSetter<bool> guard(committing,true);
+            onCommit(entry.getText());
+        }
         active=false;typing=false;restore();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
+    controls::FieldFeedbackLabel feedback;
+    juce::String validation,inlineHelp;
     DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     std::function<ResetAction()> onResetInvocation;uint64_t resetTicket=0;
     juce::String identity,canonical,canonicalExact,typingBaseline;
     double origin=0,canonicalFraction=0;
-    bool refreshing=false,active=false,typing=false,cancelledGesture=false;
+    bool refreshing=false,active=false,typing=false,cancelledGesture=false,committing=false;
     std::unique_ptr<controls::ChoicePopup> resetMenu;
 };
 }

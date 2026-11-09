@@ -89,7 +89,14 @@ public:
         juce::String rejection;
         SourceBarFields affected=SourceBarFields::none;
     };
-    SourceBarSubmission setSourceBars(int64_t start, int64_t end);
+    struct SourceBarTarget
+    {
+        uint64_t epoch;
+        juce::String primary;
+        bool operator==(const SourceBarTarget&) const = default;
+    };
+    SourceBarSubmission setSourceBars(int64_t start, int64_t end, std::optional<SourceBarTarget> target = {});
+    SourceBarSubmission checkSourceBars(int64_t start, int64_t end, const SourceBarTarget& target) const;
     void generatePreview() { swells->generate(); }
     bool auditionPreview() { return swells->audition(); }
     void setAuditionLevelDb(float db);
@@ -118,6 +125,7 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+    SourceBarSubmission resolveBarRange(int64_t start,int64_t end,int64_t& firstSample,int64_t& endSample) const;
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};

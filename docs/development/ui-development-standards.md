@@ -19,6 +19,17 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 18 adopts the owner-approved P4 field family.
+Use `FieldTextEditor` for editable and read-only text and `FieldNumericInput`
+for numeric value boxes. Keep each binding's commit, cancellation, range and
+precision rules. Route local help and validation through `FieldFeedbackLabel`,
+with error text and border independent of keyboard or accessibility focus.
+Captions belong above the editable field or group. When a value box has
+steppers, wheel input over the box or arrows makes one configured step. Use the
+[C4 contract](ui-control-contracts.md#c4--numeric-and-text-fields) and
+[P4 review evidence](../validation/2026-11-09-issue-107-numeric-text-fields.md)
+for the approved variants and subtype behavior.
+
 Issue #108, production standards revision 15. Level uses the standard `KnobValue`
 appearance and drag response with one -12 to +12 dB edit range. The normal
 field shows an older value below -12 dB. A primary press on the dial brings
@@ -56,8 +67,8 @@ feedback. Destructive hover/press stays red; neutral icons remain off-white.
 Primary/on-latch fills keep contrasting dark content. Disabled body state wins
 over mouse emphasis; focus remains independent. Reuse explicit variants and
 `CommandButton` invocation hooks, never names or labels to select appearance.
-The 20 scoped legacy commands now use ActionButton; generic Rename OK/Cancel
-keeps the neutral theme fallback. FileDragTile and knobs retain their painters.
+The 20 scoped legacy commands use ActionButton. Revision 18 also adopts neutral
+ActionButtons for Rename OK and Cancel. FileDragTile and knobs retain their painters.
 [Button evidence](../validation/2026-11-06-issue-107-buttons.md) records the family
 approval, 85/85 native checks and owner acceptance of the integrated IR alignment correction.
 

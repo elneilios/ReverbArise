@@ -214,6 +214,8 @@ static void sourceRangeFeedbackCases()
     REQUIRE(start->getDescription().contains("start bar must be 1 or later"));
     start->setText("1",false);
     end->setText("1",false);
+    end->onFocusLost();
+    REQUIRE(acceptedEnd()==original && end->isInvalid() && !start->isInvalid());
     submitReturn();
     REQUIRE(acceptedEnd()==original && end->isInvalid() && !start->isInvalid());
     REQUIRE(engine.snapshot().message=="Source end bar must be after start bar");
@@ -240,6 +242,8 @@ static void sourceRangeFeedbackCases()
         }
 
     end->setText("3",false);
+    end->onFocusLost();
+    REQUIRE(acceptedEnd()==original && !end->isInvalid() && feedback->getHeight()==normalHeight);
     invokeCommand(*apply);
     REQUIRE(acceptedEnd()==2000 && !end->isInvalid() && feedback->getHeight()==normalHeight);
     REQUIRE(end->getDescription()=="The end bar is excluded.");
@@ -250,9 +254,43 @@ static void sourceRangeFeedbackCases()
     end->setText("1",false);
     invokeCommand(*apply);
     REQUIRE(end->isInvalid() && acceptedEnd()==3000);
+    const auto secondEnd=[&]{return m3::find(engine.savedSession(),second)->sourceEnd;};
+    const auto originalSecondEnd=secondEnd();
+
+    // Validate a real draft under A, then submit before the editor observes B.
+    end->selectAll();
+    end->insertTextAtCaret("5");
+    end->onFocusLost();
+    REQUIRE(!end->isInvalid() && acceptedEnd()==3000);
     REQUIRE(engine.selectTargets({second},second));
+    invokeCommand(*apply);
+    REQUIRE(acceptedEnd()==3000 && secondEnd()==originalSecondEnd);
+    REQUIRE(start->getText().isEmpty() && end->getText().isEmpty());
+    REQUIRE(!end->isInvalid() && end->getDescription().contains("Enter both bars"));
+    submitReturn();
+    REQUIRE(secondEnd()==originalSecondEnd);
+
+    // Blur also discards the previous pair before it can validate against B.
+    REQUIRE(engine.selectTargets({first},first));
     editor->refresh();
-    REQUIRE(!end->isInvalid() && end->getDescription()=="The end bar is excluded.");
+    start->insertTextAtCaret("1");
+    end->insertTextAtCaret("1");
+    REQUIRE(engine.selectTargets({second},second));
+    end->onFocusLost();
+    REQUIRE(!end->isInvalid() && end->getText().isEmpty() && secondEnd()==originalSecondEnd);
+    start->insertTextAtCaret("2");
+    end->insertTextAtCaret("4");
+    submitReturn();
+    REQUIRE(secondEnd()==3000 && acceptedEnd()==3000);
+
+    // A restored session can have the same selected ID with a different epoch.
+    end->selectAll();
+    end->insertTextAtCaret("5");
+    const auto draftEpoch=engine.assignmentEpoch();
+    engine.restore(engine.savedSession());
+    REQUIRE(engine.assignmentEpoch()!=draftEpoch);
+    submitReturn();
+    REQUIRE(secondEnd()==3000 && start->getText().isEmpty() && end->getText().isEmpty());
     REQUIRE(engine.selectTargets({first},first));
     editor->refresh();
 
@@ -267,6 +305,8 @@ static void sourceRangeFeedbackCases()
     REQUIRE(!apply->isEnabled() && start->isEnabled() && end->isEnabled());
     REQUIRE(end->getDescription().contains("Unfreeze") && !end->isInvalid());
 
+    start->insertTextAtCaret("1");
+    end->insertTextAtCaret("1");
     submitReturn();
     REQUIRE(end->isInvalid());
     const auto epoch=engine.assignmentEpoch();
@@ -1129,9 +1169,19 @@ int main(int argc,char* argv[]){return runTest([&]
         enter("curveInTension","0.25");enter("curveOutTension","-0.4");enter("wetPlacement","25");
         auto edited=*m3::find(engine.savedSession(),first);REQUIRE(edited.placement==1200 && edited.shape.startOffset==-19200 && edited.shape.endOffset==720);
         REQUIRE(edited.shape.fadeIn==480 && edited.shape.fadeOut==960 && edited.shape.gainDb==-3 && edited.shape.inTension==.25 && edited.shape.outTension==-.4);
-        auto levelField=dynamic_cast<juce::TextEditor*>(named(editor,"swellLevel"));REQUIRE(levelField && levelField->isEnabled() && !levelField->isReadOnly());
+        auto levelField=dynamic_cast<m3::ui::controls::FieldTextEditor*>(named(editor,"swellLevel"));REQUIRE(levelField && levelField->isEnabled() && !levelField->isReadOnly());
+        levelField->selectAll();
+        REQUIRE(levelField->keyPressed(juce::KeyPress('a',{},'a')));
+        REQUIRE(!levelField->getText().containsChar('a'));
+        levelField->setText("13",false);
+        levelField->onFocusLost();
+        REQUIRE(levelField->isInvalid() && levelField->getDescription().contains("-12 to +12 dB"));
+        REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==-3);
+        auto* levelFeedback=named(editor,"swellLevelFeedback");REQUIRE(levelFeedback);
+        REQUIRE(levelFeedback->getWidth()==m3::ui::controls::commandBodyBounds(levelField->getBounds()).getWidth());
+        REQUIRE(levelFeedback->getBottom()<=levelField->getParentComponent()->getHeight());
         levelField->selectAll();REQUIRE(levelField->keyPressed(juce::KeyPress('2',{},'2')));editor.refresh();REQUIRE(levelField->getText()=="2");
-        levelField->onReturnKey();REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==2);
+        levelField->onReturnKey();REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==2 && !levelField->isInvalid());
         enter("swellLevel","+6");REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==6);enter("swellLevel","-3");
         enter("preRoll","0.45");enter("endOffset","0.05");edited=*m3::find(engine.savedSession(),first);
         REQUIRE(edited.shape.startOffset==-22800 && edited.shape.endOffset==1200 && edited.placement==1200);
@@ -1203,11 +1253,34 @@ int main(int argc,char* argv[]){return runTest([&]
     diagnostics->onClick();editor.refresh();
     auto tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==7 && tabs->getCurrentTabIndex()==0);
     REQUIRE(editor.settingsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.settingsPanel()));
+    std::map<juce::String,int> settingsValueFields;
+    for(int page:{0,1,3,4})
+        for(auto* child:tabs->getTabContentComponent(page)->getChildren())
+            if(auto* slider=dynamic_cast<m3::ui::controls::SliderControl*>(child))
+            {
+                auto* value=dynamic_cast<m3::ui::controls::FieldNumericInput*>(slider->getChildComponent(0));
+                REQUIRE(value && (!slider->isEnabled() || value->getWantsKeyboardFocus()) && value->getDescription().isNotEmpty());
+                REQUIRE(value->getNumChildComponents()==0);
+                ++settingsValueFields[value->getTitle()];
+            }
+    REQUIRE(settingsValueFields.size()==6);
+    for(const auto* title:{"Live level (dB)","Separation (ms)","Audition tail (s)","Audition trim (dB)",
+                           "Test tone start bar","Test tone end bar (exclusive)"})
+        REQUIRE(settingsValueFields[title]==1);
     for(int page=0;page<6;++page){tabs->setCurrentTabIndex(page);snapshotPanel(*tabs,"settings-"+tabs->getTabNames()[page].toLowerCase());}
     tabs->setCurrentTabIndex(4); // Continue the existing Recovery action checks after visiting About.
     REQUIRE(visibleOffscreen(named(editor,"generate")));snapshotEditor(editor,"settings-open");
     auto openDetails=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);invokeCommand(*openDetails);editor.refresh();
     REQUIRE(editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.diagnosticsPanel()));
+    auto* exactArrival=dynamic_cast<m3::ui::controls::FieldTextEditor*>(named(editor,"legacy_arrivalSample"));
+    REQUIRE(exactArrival && exactArrival->isReadOnly() && exactArrival->getAccessibilityHandler()->getTitle().contains("Arrival"));
+    const auto readout=exactArrival->getText();
+    REQUIRE(readout.isNotEmpty());
+    exactArrival->selectAll();
+    editor.refresh();
+    REQUIRE(exactArrival->getHighlightedRegion().getLength()==readout.length());
+    exactArrival->insertTextAtCaret("123");
+    REQUIRE(exactArrival->getText()==readout);
     snapshotPanel(*editor.diagnosticsPanel(),"dedicated-diagnostics");
     auto* liveEvidence=dynamic_cast<juce::Label*>(named(editor,"diagnosticLiveAdmission"));REQUIRE(liveEvidence);
     REQUIRE(liveEvidence->getText().contains(m3::ui::liveCallbackText(engine.snapshot().liveObservation,"Current callback")));

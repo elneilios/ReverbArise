@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Settings Swell source-range submission and local error feedback against the existing command and approved C3 design. Updated the guide with the exclusive end bar, explicit submission, and correction steps.",
+  "summary": "Verified the approved P4 field behavior against the synced UI design system spec. The existing guide covers the delivered behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,18 +505,18 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 91148,
-      "sha256": "7296d9d31c83b2d841ed97e5982555a343474ab6e1c458dbb3970b40355b4422"
+      "bytes": 95546,
+      "sha256": "f9a407b4174728aba248a225ed690b6227ceec375a967cf4d0d488d6dd9001fc"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 14132,
-      "sha256": "72787789658b82629350591c9c9abe5da9c73d41b5fda1428b39c4892b3e0355"
+      "bytes": 15101,
+      "sha256": "6f1d79c9d66c15f142a18780a4735a1c1d94b44c20a5b4c41998055d381a9b82"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 23901,
-      "sha256": "2922f0d245590ed342443c8de23f41045b90258e812b7b86c49950c3d5a5d225"
+      "bytes": 24943,
+      "sha256": "8121ef47554826b28e6468f054f6711992dac1f10b3af226b3d2a792d0e22294"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -525,18 +525,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 46014,
-      "sha256": "97f37bc5505e8f87aef4e148d549ab35ebf0a0e3f4b8f5ee6bce0abf160d57ac"
+      "bytes": 47636,
+      "sha256": "42ef24bb30a45c33924396cb5ac2b622541c95dfab8841a282d14c5456a4499d"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8313,
-      "sha256": "4e28063c497c00f5f186ad1ec134c0dcade2c39930934d132748850b9703f286"
+      "bytes": 8736,
+      "sha256": "12ad2d0b4e3bd0692c96d869af38e230e9ccc724e222c8aff24768e04a2e3abf"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 25548,
-      "sha256": "073fcaf9a638deccaa52d67375e50aaa0b513b47945573d5609394ffacde1dc5"
+      "bytes": 25975,
+      "sha256": "6fc089cac74c52301184883c4a62a7f4665530cd8aa98ade39fd13494b8be212"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -600,13 +600,18 @@
     },
     {
       "path": "Source/UI/Controls/ExportLevelsControl.h",
-      "bytes": 4783,
-      "sha256": "07f9b739b879d0a146b4d2ad053960ffd773cef4628b9cc041b14f5dc6f230f5"
+      "bytes": 4924,
+      "sha256": "ec15d31ea4aed50644fe010b9f81f3212de5e54e13761bddc14ebf6be64e3230"
     },
     {
       "path": "Source/UI/Controls/ExternalFileDrag.h",
       "bytes": 736,
       "sha256": "ed5c1e663a6a7d43692ab4177afc29d93d4eb4bea76d4e154a94a368535e5528"
+    },
+    {
+      "path": "Source/UI/Controls/FieldNumericInput.h",
+      "bytes": 5634,
+      "sha256": "96e120dd0318d2677dee49556bb9d013ab7d5ff523fcaebaf9f1c371955d2e02"
     },
     {
       "path": "Source/UI/Controls/FieldPresentation.h",
@@ -615,8 +620,8 @@
     },
     {
       "path": "Source/UI/Controls/FieldTextEditor.h",
-      "bytes": 2286,
-      "sha256": "f102b768245fff9cfa7f4c20daa2b7f3111924497c9814a175b4b961fa0139f3"
+      "bytes": 3503,
+      "sha256": "7fda551e7e1479c37ed2f9df8b3822664fb61970156e18f3483932f18ee44df6"
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
@@ -680,8 +685,8 @@
     },
     {
       "path": "Source/UI/Controls/NumericInputControl.h",
-      "bytes": 3312,
-      "sha256": "809389cd76d9b29dd73a9a37af84cbbc3e5d968042416b6abac6397b7418ce84"
+      "bytes": 4339,
+      "sha256": "08d873d6290d3de579ffeccd164c20a860af127820bc361d3d9d762b125b6ff0"
     },
     {
       "path": "Source/UI/Controls/PopupInteraction.h",
@@ -705,8 +710,8 @@
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",
-      "bytes": 1956,
-      "sha256": "a153ce50cec56f45194fb4a1d75ea38fc1e4952be45daf3a8010d0203a12ff25"
+      "bytes": 2515,
+      "sha256": "6dd2d01566675c6167a81664b3b38df385317aad20e52fc5cfee5793291cfba9"
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
@@ -765,8 +770,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 16506,
-      "sha256": "6aa98d1114bb4ca7a2989a530725eb039577f191768fcc752605fb564cd1fb9f"
+      "bytes": 18491,
+      "sha256": "fc27a45e1e01cbc9b993ad3269eae665fe423ff8455416eaf1a9208f9c916654"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -775,8 +780,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 35316,
-      "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+      "bytes": 35406,
+      "sha256": "afc46f9d11f0911f5eb39fd6e42373c46423112ed010fbf1db8fbb86b31f068f"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -840,8 +845,8 @@
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 8176,
-      "sha256": "fdef4d314d18730a387578d625137f5c67d24d9bb991a556fcb8793374499df5"
+      "bytes": 8324,
+      "sha256": "e6a44b19ddd65ce047b2b2645a7e71d76ad9027bb7c84e14cbbd1ad2eb252b93"
     },
     {
       "path": "Source/UI/SwellViewport.h",
@@ -925,8 +930,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 29463,
-      "sha256": "5434bc7f461d9f85fe307345a2f48242ff2b8e7d09dd4a176aeb3471867a074c"
+      "bytes": 30122,
+      "sha256": "97d107af33da7d2d8eed27b4ff124dc5a8ce1371f58908982c34fb53b6a19f66"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1045,8 +1050,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 29841,
-      "sha256": "e8cbcfa43871d16aafb9f626e8de37daed4b424e9db4b3bd73b3b3a7b0c58b72"
+      "bytes": 35161,
+      "sha256": "3f2b7302a83473d76716dc5737ddf3b6b29ac625db16ae660e0623c868f72c19"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
