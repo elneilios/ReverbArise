@@ -66,7 +66,9 @@ public:
     }
     std::function<void()> beforeInvocation;
     std::function<void(Pair)> onChange;
-    ChoiceSelector selector;SliderControl dry,wet;
+    ChoiceSelector selector;
+    SliderControl dry{{"Dry level (%)", "Captured source level in the export."}};
+    SliderControl wet{{"Wet level (%)", "Rendered swell level in the export."}};
 private:
     void commit(Pair pair){if(pair==accepted)return;display(pair);if(onChange)onChange(pair);}
     Pair accepted;bool refreshing=false,responsive=false;

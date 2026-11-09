@@ -5,7 +5,7 @@ namespace m3::ui::controls
 {
 // A reusable formatted numeric editor. The binding owns range, formatting and
 // validation; this control owns typed editing and accessible increment buttons.
-class NumericInputControl final:public juce::Label
+class NumericInputControl:public juce::Label
 {
     class StepButton final:public juce::Button
     {
@@ -17,11 +17,19 @@ class NumericInputControl final:public juce::Label
         bool keyPressed(const juce::KeyPress& key)override
         {
             if(key.isKeyCode(juce::KeyPress::returnKey) || key.isKeyCode(juce::KeyPress::spaceKey))
-            {if(isEnabled()){if(onBegin)onBegin();triggerClick();}return true;}
+            {invokeStep();return true;}
             return juce::Button::keyPressed(key);
         }
         void focusGained(FocusChangeType)override{repaint();}
         void focusLost(FocusChangeType)override{repaint();}
+        std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
+        {
+            return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::button,
+                juce::AccessibilityActions{}.addAction(juce::AccessibilityActionType::press, [this]
+                {
+                    invokeStep();
+                }));
+        }
         void paintButton(juce::Graphics& g,bool over,bool down)override
         {
             if(over || down || hasKeyboardFocus(false)){g.setColour(aqua.withAlpha(.12f));g.fillRect(getLocalBounds());}
@@ -31,13 +39,22 @@ class NumericInputControl final:public juce::Label
             g.strokePath(p,juce::PathStrokeType(1.2f));
             if(hasKeyboardFocus(false))g.drawRect(getLocalBounds().toFloat().reduced(1),1.f);
         }
-    private:bool up;
+    private:
+        void invokeStep()
+        {
+            if(!isEnabled())return;
+            const juce::Component::SafePointer<StepButton> safe(this);
+            if(onBegin)onBegin();
+            if(safe && safe->isEnabled())safe->triggerClick();
+        }
+        bool up;
     };
 public:
-    NumericInputControl()
+    explicit NumericInputControl(bool steppers = true) : hasSteppers(steppers)
     {
         setFont(interFont(controlSize));setJustificationType(juce::Justification::centred);setKeyboardType(juce::TextInputTarget::decimalKeyboard);
-        setBorderSize({0,spacing::tight,0,controlGeometry::numericStepWidth+spacing::tight});
+        setBorderSize({0,spacing::tight,0,spacing::tight+(hasSteppers?controlGeometry::numericStepWidth:0)});
+        if (!hasSteppers) return;
         addAndMakeVisible(increment);addAndMakeVisible(decrement);
         increment.onBegin=decrement.onBegin=[this]{if(onBegin)onBegin();};
         increment.onClick=[this]{if(isEnabled() && onStep)onStep(1);};decrement.onClick=[this]{if(isEnabled() && onStep)onStep(-1);};
@@ -48,13 +65,27 @@ public:
     juce::Button& decrementButton()noexcept{return decrement;}
     void resized()override
     {
-        juce::Label::resized();auto buttons=getLocalBounds().removeFromRight(controlGeometry::numericStepWidth);
-        increment.setBounds(buttons.removeFromTop(buttons.getHeight()/2));decrement.setBounds(buttons);
-        if(auto* input=getCurrentTextEditor())input->setBounds(getLocalBounds().withTrimmedRight(controlGeometry::numericStepWidth));
+        juce::Label::resized();
+        if (hasSteppers)
+        {
+            auto buttons=getLocalBounds().removeFromRight(controlGeometry::numericStepWidth);
+            increment.setBounds(buttons.removeFromTop(buttons.getHeight()/2));decrement.setBounds(buttons);
+        }
+        if(auto* input=getCurrentTextEditor())input->setBounds(valueBounds());
     }
     void paint(juce::Graphics& g)override
-    {juce::Label::paint(g);g.setColour(outline);g.drawVerticalLine(getWidth()-controlGeometry::numericStepWidth,1.f,static_cast<float>(getHeight()-1));}
+    {juce::Label::paint(g);paintStepDivider(g);}
+protected:
+    juce::Rectangle<int> valueBounds() const
+    {return getLocalBounds().withTrimmedRight(hasSteppers?controlGeometry::numericStepWidth:0);}
+    void paintStepDivider(juce::Graphics& graphics) const
+    {
+        if (!hasSteppers) return;
+        graphics.setColour(outline);
+        graphics.drawVerticalLine(valueBounds().getRight(),1.f,static_cast<float>(getHeight()-1));
+    }
 private:
+    const bool hasSteppers;
     StepButton increment{true},decrement{false};
 };
 }

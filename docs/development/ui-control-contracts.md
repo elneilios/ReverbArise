@@ -345,10 +345,18 @@ Observed mechanisms differ intentionally:
 | Existing subtype | Commit/cancel/refresh authority to preserve |
 | --- | --- |
 | KnobValue Entry | Return and typing focus-loss commit; Escape cancels; same-identity display preserves active text, identity change cancels; restore accepted canonical display after commit/rejection; exact text is separate from rounded display |
-| SliderControl NumericInputControl | Editable Label/temporary JUCE TextEditor and shared slider range/interval/formatter; step buttons use invocation-aware slider gestures; JUCE editor lifecycle must be characterized before wrapping |
-| Settings bar range TextEditors | Digits-only restriction; explicit Return or Set source from bars command commits the pair; no locally installed focus-loss or Escape commit handlers; do not silently add a new trigger |
+| SliderControl FieldNumericInput | Shared numeric label and temporary FieldTextEditor retain JUCE's editor lifecycle, slider range and formatter. Where present, step buttons and wheel over the value or arrows use one configured step and capture invocation ownership. |
+| Settings bar range FieldTextEditor pair | Digits-only input. Focus loss checks the draft and updates feedback. Return or Set source from bars submits the pair. |
 | Read-only diagnostic fields / placement | Copy/inspect accepted values, no edit publication; hidden Name seam remains hidden |
-| Rename dialog TextEditor | Explicit OK/Return and Cancel/Escape; only nonempty accepted rename, ID/epoch guarded; no focus-loss commit |
+| Rename dialog FieldTextEditor | Focus loss validates. OK/Return submits a nonempty name to the captured ID and epoch. Cancel/Escape discards the draft. |
+
+P4 uses the shared field surface for the inspector, embedded entries, Rename
+and read-only Diagnostics. Keyboard and accessibility focus show the aqua
+brackets while pointer editing keeps its caret and selection. Numeric editors
+filter letters on insertion, including paste. The timing entries still use the
+song-position parser. Standalone and embedded steppers share one-step wheel
+behavior. The P5 fixture direction is Ctrl+wheel for fine slider-track changes
+and ordinary drag with either modifier state.
 
 Contract: reusable field composition extends these working mechanisms;
 it does not introduce another parser or universal commit policy. Each field must

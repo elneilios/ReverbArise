@@ -5,6 +5,7 @@
 #include "SwellViewport.h"
 #include "EnvelopeHandles.h"
 #include "WaveformDisplay.h"
+#include "Controls/SliderControl.h"
 
 namespace m3
 {
@@ -84,7 +85,7 @@ private:
     float x(int64_t sample) const {return static_cast<float>(view.pixel(static_cast<double>(sample),source.getX(),source.getWidth()));}
     SwellEngine& engine;CaptureSessionSnapshot capture;EditorSnapshot data;SongTime time;
     SwellViewport view;juce::ScrollBar scrollbar{false};juce::Rectangle<int> ruler;
-    juce::Slider waveZoom;
+    ui::controls::SliderControl waveZoom{{"Height (dB)", "Display zoom for source and wet waveforms. Audio gain stays the same.", false}};
     juce::Label waveZoomLabel;
     juce::Rectangle<float> overview,source,wet;
     juce::String dragId;Drag drag=Drag::none;

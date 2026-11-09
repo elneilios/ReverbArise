@@ -143,7 +143,9 @@ void Composition::verifyFocusedLevel()
         const auto local=cell.getLocalBounds();
         const auto* viewport=cell.findParentComponentOfClass<juce::Viewport>();REQUIRE(viewport && cell.isShowing());
         REQUIRE(viewport->getViewArea().contains(cell.getBounds()));
-        REQUIRE(cell.getNumChildComponents()==3 && cell.getNumChildComponents()==standard.getNumChildComponents());
+        REQUIRE(cell.getNumChildComponents()==standard.getNumChildComponents());
+        auto& feedback=require<controls::FieldFeedbackLabel>(cell,"swellLevelFeedback");
+        REQUIRE(!feedback.getBounds().isEmpty() && local.contains(feedback.getBounds()));
         REQUIRE(dial.getBounds()==standard.valueKnob().getBounds() && local.contains(field.getBounds()));
         const auto angles=dial.getRotaryParameters();
         const auto neutral=(angles.startAngleRadians+angles.endAngleRadians)/2;

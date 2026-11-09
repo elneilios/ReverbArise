@@ -20,7 +20,97 @@ juce::String phaseName(m3::Phase phase)
 }
 juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gainToDecibels(peak),1)+" dBFS":juce::String("silent");}
 
+class RenameSwellDialog final : public juce::AlertWindow
+{
+public:
+    using Submit = std::function<bool(const juce::String&)>;
 
+    RenameSwellDialog(juce::Component& owner,const juce::String& currentName,Submit submitName)
+        : juce::AlertWindow("Rename swell",{},juce::MessageBoxIconType::NoIcon,&owner),
+          submit(std::move(submitName))
+    {
+        using namespace m3::ui;
+        using namespace controls;
+        setLookAndFeel(&theme);
+        setEscapeKeyCancels(true);
+        caption.setText("Name",juce::dontSendNotification);
+        applyTextRole(caption,TextRole::controlLabel);
+        caption.setBorderSize({});
+        caption.setAccessible(false);
+        field.setName("name");
+        field.setText(currentName,false);
+        field.setSelectAllWhenFocused(true);
+        field.onReturnKey=[this]{accept();};
+        field.onEscapeKey=[this]{exitModalState(0);};
+        field.onFocusLost=[this]{if(isCurrentlyModal())validate();};
+        ok.onClick=[this]{accept();};
+        cancel.onClick=[this]{exitModalState(0);};
+        for(auto* child:std::initializer_list<juce::Component*>{&caption,&field,&feedback,&ok,&cancel})
+            form.addAndMakeVisible(child);
+
+        const int width=320;
+        const auto frame=juce::Rectangle<int>(0,controlGeometry::labelHeight,width,
+            controlGeometry::height+2*SelectorPresentation::focusMargin);
+        const auto body=commandBodyBounds(frame);
+        caption.setBounds(body.withY(0).withHeight(controlGeometry::labelHeight));
+        field.setBounds(frame);
+        const auto actions=FieldPresentation::feedbackBounds(body,body.getWidth()).getBottom()+spacing::related;
+        ok.setBounds(body.getX(),actions,(body.getWidth()-spacing::related)/2,controlGeometry::height);
+        cancel.setBounds(ok.getRight()+spacing::related,actions,body.getRight()-ok.getRight()-spacing::related,ok.getHeight());
+        form.setSize(width,ok.getBottom());
+        addCustomComponent(&form);
+        describe("This name appears in the Swells list.",false);
+    }
+
+    ~RenameSwellDialog() override
+    {
+        field.onFocusLost={};
+        removeCustomComponent(0);
+        setLookAndFeel(nullptr);
+    }
+
+    void show()
+    {
+        enterModalState(true,nullptr,true);
+        field.grabKeyboardFocus();
+        field.selectAll();
+    }
+
+private:
+    void describe(const juce::String& message,bool error)
+    {
+        field.setInvalid(error);
+        field.setFieldDescription(message);
+        feedback.arrange(message,error,m3::ui::controls::commandBodyBounds(field.getBounds()));
+    }
+
+    bool validate()
+    {
+        const bool valid=field.getText().isNotEmpty();
+        describe(valid?"This name appears in the Swells list.":"Enter a name for this swell before choosing OK.",!valid);
+        return valid;
+    }
+
+    void accept()
+    {
+        if(!isCurrentlyModal())return;
+        if(!validate())
+        {
+            field.grabKeyboardFocus();
+            return;
+        }
+        if(submit(field.getText()))exitModalState(1);
+        else describe("This swell is no longer available. Close the dialog and try again.",true);
+    }
+
+    m3::ui::WorkspaceTheme theme;
+    juce::Component form;
+    juce::Label caption;
+    m3::ui::controls::FieldTextEditor field{"Name"};
+    m3::ui::controls::FieldFeedbackLabel feedback;
+    m3::ui::controls::ActionButton ok{"OK"},cancel{"Cancel"};
+    Submit submit;
+};
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p,std::function<void(const juce::String&)> writer)
     :AudioProcessorEditor(p),irBinding(irEditor,p.swellEngine()),processor(p),learnWorkspace(p.swellEngine(),[&p]{return p.getWorkflowSnapshot();}),exportWorkspace(p.swellEngine()),timeline(p.swellEngine())
@@ -82,12 +172,17 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(int i=0;i<fieldCount;++i)
     {
         fieldLabels[i].setText(labels[i],juce::dontSendNotification);fieldLabels[i].setColour(juce::Label::textColourId,m3::ui::secondary);fieldLabels[i].setFont(juce::FontOptions(m3::ui::smallSize));addAndMakeVisible(fieldLabels[i]);
-        fields[i].setName(names[i]);fields[i].setInputRestrictions(i==name?256:40,i==name?juce::String{}:(i>=fadeIn?juce::String("0123456789."):juce::String("-0123456789.")));
-        fields[i].setFont(m3::ui::fontFor(*this,m3::ui::controlSize));fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
+        fields[i].setName(names[i]);fields[i].setTitle(labels[i]);fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
     }
     barStartEditor.setName("sourceStart");barEndEditor.setName("sourceEnd");barStartEditor.setText("1",false);barEndEditor.setText("2",false);
-    placementEditor.setFont(m3::ui::fontFor(*this,m3::ui::controlSize));
-    for(auto* field:{&barStartEditor,&barEndEditor}){field->setInputRestrictions(12,"0123456789");addAndMakeVisible(field);field->onReturnKey=[this]{applyBarRange();};}
+    for(auto* field:{&barStartEditor,&barEndEditor})
+    {
+        field->setInputRestrictions(12,"0123456789");
+        field->setNumericCharacters("0123456789");
+        addAndMakeVisible(field);
+        field->onReturnKey=[this]{applyBarRange();};
+        field->onFocusLost=[this]{validateBarRangeDraft();};
+    }
     const auto slider=[&](juce::Slider& control,double a,double b,double step,const juce::String& suffix)
     {control.setRange(a,b,step);control.setSliderStyle(juce::Slider::LinearHorizontal);control.setTextBoxStyle(juce::Slider::TextBoxRight,false,78,22);control.setTextValueSuffix(suffix);addAndMakeVisible(control);};
     slider(auditionSlider,-60,0,0.1," dB");auditionSlider.setName("auditionLevel");
@@ -223,7 +318,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     isolateDryButton.onClick=[this]{processor.swellEngine().setIsolateDry(isolateDryButton.getToggleState());refresh();};
     isolateButton.onClick=[this]{processor.swellEngine().setIsolateSelected(isolateButton.getToggleState());refresh();};
     diagnosticsContent.addAndMakeVisible(placementLabel);diagnosticsContent.addAndMakeVisible(placementEditor);
-    placementLabel.setText("Move wet (ms)",juce::dontSendNotification);placementEditor.setName("legacy_wetPlacement");placementEditor.setReadOnly(true);
+    placementLabel.setText("Move wet (ms)",juce::dontSendNotification);placementEditor.setName("legacy_wetPlacement");
     diagnosticsContent.addAndMakeVisible(timingButton);timingButton.setName("advancedTiming");
     timingButton.onClick=[this]{advancedTiming=!advancedTiming;resized();};
     diagnosticsContent.addAndMakeVisible(copyDiagnosticsButton);copyDiagnosticsButton.setName("copyDiagnostics");
@@ -276,6 +371,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         cell.setResetAction([this,index]{return prepareValueReset(index);});
         cell.onModifierInput=[this](const juce::ModifierKeys& mods){modifierKeysChanged(mods);};
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
+        cell.onFeedbackChanged=[this]{valueFeedbackChanged=true;};
         if(index==levelValue)
         {
             cell.onAbsolute=[this](double db){commitValueEdit(levelValue,m3::ui::preciseValue(db));};
@@ -318,7 +414,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();if(renameDialog)renameDialog->exitModalState(0);recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     if(responsivePresentation){g.fillAll(m3::ui::background);return;}
@@ -387,19 +483,18 @@ void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellLis
                 if (safe) safe->refresh();
                 return;
             }
-            if (result != 1 || !m3::find(engine.savedSession(), id))
+            if (result != 1 || safe->renameDialog || !m3::find(engine.savedSession(), id))
                 return;
 
-            auto* dialog=new juce::AlertWindow("Rename swell","",juce::MessageBoxIconType::NoIcon);
-            dialog->addTextEditor("name",name);dialog->getTextEditor("name")->selectAll();
-            dialog->addButton("OK",1,juce::KeyPress(juce::KeyPress::returnKey));dialog->addButton("Cancel",0,juce::KeyPress(juce::KeyPress::escapeKey));
-            dialog->enterModalState(true,juce::ModalCallbackFunction::create([safe,id,dialog,epoch](int button)
+            auto* dialog=new RenameSwellDialog(*safe,name,[safe,id,epoch](const juce::String& text)
             {
-                if(!safe || button!=1)return;
-                const auto text=dialog->getTextEditorContents("name");
-                if(text.isNotEmpty())safe->processor.swellEngine().edit(id,[&](auto& swell,auto&){swell.name=text;return true;},epoch);
-                safe->refresh();
-            }),true);
+                if(!safe || safe->destroying)return false;
+                const bool accepted=safe->processor.swellEngine().edit(id,[&](auto& swell,auto&){swell.name=text;return true;},epoch);
+                if(safe)safe->refresh();
+                return accepted;
+            });
+            safe->renameDialog=dialog;
+            dialog->show();
         });
     swellMenu->setName("swellActionMenu");
     swellMenu->setTitle("Actions for " + w.name);
@@ -422,6 +517,21 @@ void PreverbAudioProcessorEditor::applyBarRange()
     if(result.rejection.isNotEmpty())
         sourceRangeRejection=SourceRangeRejection{state.sessionEpoch,state.session.primary,std::move(result)};
     refresh();
+}
+void PreverbAudioProcessorEditor::validateBarRangeDraft()
+{
+    if(updating || destroying)return;
+    const auto session=processor.swellEngine().savedSession();
+    const auto* swell=m3::find(session,session.primary);
+    if(processor.swellEngine().assignmentEpoch()!=state.sessionEpoch || session.primary!=state.session.primary
+       || !swell || swell->frozen)
+        return;
+    auto result=processor.checkSourceBars(barStartEditor.getText().getLargeIntValue(),
+                                          barEndEditor.getText().getLargeIntValue());
+    sourceRangeRejection.reset();
+    if(result.rejection.isNotEmpty())
+        sourceRangeRejection=SourceRangeRejection{state.sessionEpoch,state.session.primary,std::move(result)};
+    refreshSourceRangeFeedback(swell);
 }
 void PreverbAudioProcessorEditor::shapeReset(bool full)
 {
@@ -473,8 +583,8 @@ void PreverbAudioProcessorEditor::resized()
     auditionWetOnly.setBounds(auditionRow.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
     auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info.withBottom(std::min(perform.info.getBottom(),hoverHelp.getY())));
-    const auto width=inspectorWidth-16;inspectorContent.setSize(width,650+3*controlGeometry::labelHeight+3*spacing::group+2*64);
-    auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
+    const auto width=inspectorWidth-16;
+    auto inspector=juce::Rectangle<int>(width,std::numeric_limits<int>::max()).reduced(2,4);
     selectedStatus.setBounds(inspector.removeFromTop(24));
     fields[name].setBounds({});fieldLabels[name].setBounds({});
     auto row=inspector.removeFromTop(36);enabledButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));soloButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));freezeButton.setBounds(row);
@@ -484,10 +594,11 @@ void PreverbAudioProcessorEditor::resized()
     for(auto& group:inspectorGroups)group.setVisible(true);
     {
         const auto group=[&](int index){inspectorGroups[index].setBounds(inspector.removeFromTop(controlGeometry::labelHeight));inspector.removeFromTop(performGeometry::toolbarGap);};
-        const auto pair=[&](int first,int second){auto line=inspector.removeFromTop(64);auto left=line.removeFromLeft((line.getWidth()-performGeometry::toolbarGap)/2);line.removeFromLeft(performGeometry::toolbarGap);valueControls[first].setBounds(left);valueControls[second].setBounds(line);};
-        group(0);pair(targetValue,placementValue);valueControls[sourceStartValue].setBounds(inspector.removeFromTop(64));valueControls[sourceEndValue].setBounds(inspector.removeFromTop(64));
-        inspector.removeFromTop(spacing::group);group(1);pair(preRollValue,endOffsetValue);pair(fadeInValue,fadeOutValue);pair(inCurveValue,outCurveValue);
-        inspector.removeFromTop(spacing::group);group(2);valueControls[levelValue].setBounds(inspector.removeFromTop(64));
+        const auto values=[&](int first,int second=-1)
+        {inspector.removeFromTop(layoutValueRow(inspector.withHeight(64),first,second,performGeometry::toolbarGap));};
+        group(0);values(targetValue,placementValue);values(sourceStartValue);values(sourceEndValue);
+        inspector.removeFromTop(spacing::group);group(1);values(preRollValue,endOffsetValue);values(fadeInValue,fadeOutValue);values(inCurveValue,outCurveValue);
+        inspector.removeFromTop(spacing::group);group(2);values(levelValue);
     }
     // Destructive resets sit beneath all the knob controls.
     inspector.removeFromTop(12);
@@ -577,18 +688,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     inspectorSections.setTextHeight(type.body);inspectorSections.setBounds(layout.tabs);
     inspectorViewport.setBounds(layout.fields);inspectorEmpty.setBounds(layout.fields);
     auto resets=layout.resets;resetButton.setBounds(resets.removeFromLeft((resets.getWidth()-contentPadding)/2));resets.removeFromLeft(contentPadding);resetMenu.setBounds(resets);
-    const auto width=layout.fields.getWidth();
-    const auto pair=[&](int first,int second,int y)
-    {valueControls[first].setBounds(0,y,(width-contentPadding)/2,valueRowHeight);valueControls[second].setBounds((width+contentPadding)/2,y,(width-contentPadding)/2,valueRowHeight);};
-    pair(targetValue,placementValue,0);
-    valueControls[sourceStartValue].setBounds(0,valueRowHeight,width,valueRowHeight);valueControls[sourceEndValue].setBounds(0,2*valueRowHeight,width,valueRowHeight);
-    pair(preRollValue,endOffsetValue,0);pair(fadeInValue,fadeOutValue,valueRowHeight);pair(inCurveValue,outCurveValue,2*valueRowHeight);
-    performSoundScope.setBounds(0,0,width,controlGeometry::feedbackHeight);
-    const auto soundTop=controlGeometry::feedbackHeight+contentPadding;
-    irEditor.setBounds(0,soundTop,width,irEditor.preferredHeight(width));
-    const auto levelTop=irEditor.getBottom()+contentPadding;
-    valueControls[levelValue].setBounds(0,levelTop,width,valueRowHeight);
-    inspectorContent.setSize(width,std::max({layout.fields.getHeight(),3*valueRowHeight,levelTop+valueRowHeight}));
+    layoutResponsiveValues();
     timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
     performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setRowBounds(layout.grid.reduced(0,3));
     auto audition=layout.audition.reduced(0,contentPadding);auditionHeading.setBounds(audition.removeFromLeft(88));
@@ -597,6 +697,28 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     songOverview.setBounds(layout.overview.reduced(0,contentPadding));hostInfo.setBounds(layout.position);
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     layoutSettings();layoutPresentationSettings();layoutLiveDiagnostics();refreshResponsiveSections();
+}
+int PreverbAudioProcessorEditor::layoutValueRow(juce::Rectangle<int> row,int first,int second,int gap)
+{
+    if(second<0)return valueControls[first].setValueBounds(row);
+    const auto left=row.removeFromLeft((row.getWidth()-gap)/2);
+    row.removeFromLeft(gap);
+    return std::max(valueControls[first].setValueBounds(left),valueControls[second].setValueBounds(row));
+}
+void PreverbAudioProcessorEditor::layoutResponsiveValues()
+{
+    using namespace m3::ui;
+    using namespace responsiveGeometry;
+    const auto width=inspectorViewport.getWidth();
+    const auto values=[&](int y,int first,int second=-1)
+    {return y+layoutValueRow({0,y,width,valueRowHeight},first,second,contentPadding);};
+    const auto timingBottom=values(values(values(0,targetValue,placementValue),sourceStartValue),sourceEndValue);
+    const auto envelopeBottom=values(values(values(0,preRollValue,endOffsetValue),fadeInValue,fadeOutValue),inCurveValue,outCurveValue);
+    performSoundScope.setBounds(0,0,width,controlGeometry::feedbackHeight);
+    const auto soundTop=controlGeometry::feedbackHeight+contentPadding;
+    irEditor.setBounds(0,soundTop,width,irEditor.preferredHeight(width));
+    const auto soundBottom=values(irEditor.getBottom()+contentPadding,levelValue);
+    inspectorContent.setSize(width,std::max({inspectorViewport.getHeight(),timingBottom,envelopeBottom,soundBottom}));
 }
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
@@ -736,7 +858,13 @@ void PreverbAudioProcessorEditor::refresh()
     if(responsivePresentation && !learningLayout && !exportLayout && irEditor.getHeight()!=irEditor.preferredHeight())layoutResponsive();
     resetButton.setEnabled(w && time.valid && capture.manifest.sampleRate==time.rate);resetMenu.setEnabled(w && time.valid);
     const std::array<juce::String,5> timingLabels{"Arrival","Source start","Source end","Wet start","Wet end"};
-    for(int field=arrival;field<=audibleB;++field)fieldLabels[field].setText(timingLabels[static_cast<size_t>(field-arrival)]+(sampleUnitsButton.getToggleState()?" sample":""),juce::dontSendNotification);
+    for(int field=arrival;field<=audibleB;++field)
+    {
+        const auto label=timingLabels[static_cast<size_t>(field-arrival)];
+        const bool samples=sampleUnitsButton.getToggleState();
+        fieldLabels[field].setText(label+(samples?" sample":""),juce::dontSendNotification);
+        fields[field].setTitle(label+(samples?" (sample)":" (bar.beat.fraction)"));
+    }
     juce::String aggregate;
     int ready=0,updatingCount=0,failed=0,waiting=0;
     for(const auto& item:state.session.swells){if(item.phase==m3::Phase::ready)++ready;else if(item.phase==m3::Phase::error)++failed;else if(item.phase==m3::Phase::stale || item.phase==m3::Phase::empty)++waiting;else ++updatingCount;}
@@ -820,10 +948,31 @@ void PreverbAudioProcessorEditor::refresh()
     if(w && state.message.isNotEmpty())text<<"\n"<<state.message;
     detail.setText(text,juce::dontSendNotification);detail.setTooltip(text);
     const auto position=[&](int64_t sample){return sampleUnitsButton.getToggleState()?juce::String(sample):m3::musicalPosition(sample,time);};
-    for(auto& field:fields)field.clear();placementEditor.clear();
-    if(w){fields[name].setText(w->name,false);fields[arrival].setText(position(w->arrival),false);fields[sourceA].setText(position(w->sourceStart),false);fields[sourceB].setText(position(w->sourceEnd),false);
-        int64_t a,b;if(state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b)){fields[audibleA].setText(position(a),false);fields[audibleB].setText(position(b),false);}
-        if(time.rate>0){fields[fadeIn].setText(juce::String(w->shape.fadeIn*1000.0/time.rate,3),false);fields[fadeOut].setText(juce::String(w->shape.fadeOut*1000.0/time.rate,3),false);placementEditor.setText(juce::String(w->placement*1000.0/time.rate,3),false);}}
+    std::array<juce::String,fieldCount> exactValues;
+    juce::String placement;
+    if(w)
+    {
+        exactValues[name]=w->name;
+        exactValues[arrival]=position(w->arrival);
+        exactValues[sourceA]=position(w->sourceStart);
+        exactValues[sourceB]=position(w->sourceEnd);
+        int64_t a,b;
+        if(state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b))
+        {
+            exactValues[audibleA]=position(a);
+            exactValues[audibleB]=position(b);
+        }
+        if(time.rate>0)
+        {
+            exactValues[fadeIn]=juce::String(w->shape.fadeIn*1000.0/time.rate,3);
+            exactValues[fadeOut]=juce::String(w->shape.fadeOut*1000.0/time.rate,3);
+            placement=juce::String(w->placement*1000.0/time.rate,3);
+        }
+    }
+    // Do not disturb a selection being copied while the readout is unchanged.
+    for(size_t i=0;i<fields.size();++i)
+        if(fields[i].getText()!=exactValues[i])fields[i].setText(exactValues[i],false);
+    if(placementEditor.getText()!=placement)placementEditor.setText(placement,false);
 
     }
     const auto arm=processor.getRecaptureSnapshot();cancelButton.setEnabled(arm.active);recaptureButton.setEnabled(hasSelection && !arm.active);
@@ -883,6 +1032,12 @@ void PreverbAudioProcessorEditor::refresh()
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;
     refreshHoverHelp();
+    if(valueFeedbackChanged && !learningLayout && !exportLayout)
+    {
+        valueFeedbackChanged=false;
+        if(responsivePresentation)layoutResponsiveValues();
+        else resized();
+    }
     if(responsivePresentation)refreshResponsiveSections();
     updating=false;if(initialFrame)publishPerformNavigation();
 }

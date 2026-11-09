@@ -354,7 +354,8 @@ private:
     SwellEngine& engine;std::function<workflow::Snapshot()> flowNow;
     controls::Switch recapture{"Recapture existing audio"},automatic{"Enable automatic swells"};
     controls::Switch autoStop{"Auto-generate on Stop"};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
-    controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;controls::SliderControl sensitivity;
+    controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;
+    controls::SliderControl sensitivity{{"Event sensitivity (%)", "Adjust how many events are detected in captured audio."}};
     juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,sensitivityLabel;
     juce::Label autoStopLabel,autoStopHelp,manualHelp,generateReason;
     LearnGenerationView generationView;uint64_t displaySession=0,displayPass=0;

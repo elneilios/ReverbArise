@@ -90,6 +90,7 @@ public:
         SourceBarFields affected=SourceBarFields::none;
     };
     SourceBarSubmission setSourceBars(int64_t start, int64_t end);
+    SourceBarSubmission checkSourceBars(int64_t start, int64_t end) const;
     void generatePreview() { swells->generate(); }
     bool auditionPreview() { return swells->audition(); }
     void setAuditionLevelDb(float db);
@@ -118,6 +119,7 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+    SourceBarSubmission resolveBarRange(int64_t start,int64_t end,int64_t& firstSample,int64_t& endSample) const;
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};
