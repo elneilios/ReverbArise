@@ -348,10 +348,10 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
     }
     const auto stopAt = [&](int64_t at)
     {
-        if (!seenLoopArm || pendingLoopEnd >= 0) return;
+        if (!seenLoopArm) return;
         if (loopTake.start() < 0 || loopTake.duration())
             cancel(false);
-        else
+        else if (pendingLoopEnd < 0)
         {
             loopTake.requestStop(at);
             loopFinishPending.store(true, std::memory_order_release);

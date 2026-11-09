@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the stable Learn layout and Loop capture instructions. Added Host-FX Note Gate labels and MIDI numbers for Clock, Start/Arm and Stop, with numeric guidance for hosts with different octave labels. The existing capture and Recapture Audio instructions still apply.",
+  "summary": "Reviewed the Loop capture timing fixes against the user guide. The guide already documents that Arm off or Stop cancels a Duration take, and that capture requires verified timing. The fixes enforce that behavior while a short take awaits cadence evidence. The guide text and screenshots remain accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -145,8 +145,8 @@
     },
     {
       "path": "Source/Capture/LoopBeatClock.h",
-      "bytes": 1753,
-      "sha256": "b509eac06f67d0c31e7e73ee2d24b92caa8aa4d86e82ef445a0343a11d0cecc7"
+      "bytes": 2006,
+      "sha256": "f5eb490e2540c6c974a9d2ad40536ef465e51189cb0b7da8f2cd58d85581d55b"
     },
     {
       "path": "Source/Capture/LoopCapturePreference.h",
@@ -555,8 +555,8 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 65059,
-      "sha256": "1debbe0566ff5c4dad0244b83fb3d155525a55376bd0fdd188a4bb1eb7d0495d"
+      "bytes": 65060,
+      "sha256": "4d643e7e33cb960a7f7a348e9420ffdd0388dfbc8049bf8bca9d332cec7d212b"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",

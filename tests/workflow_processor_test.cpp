@@ -139,6 +139,28 @@ static void loopBeatClockCases()
     REQUIRE(clock.observe(0));
     REQUIRE(clock.observe(24000));
     REQUIRE(!clock.observe(24020));
+
+    for (const auto firstInterval : {24000, 24002})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0));
+        REQUIRE(clock.observe(firstInterval));
+        REQUIRE(!clock.observe(48002) && !clock.verified());
+    }
+    for (const auto firstInterval : {24000, 24001})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0));
+        REQUIRE(clock.observe(firstInterval));
+        REQUIRE(clock.observe(48001) && clock.verified());
+        REQUIRE(clock.tempo(48001, 2) > 0);
+    }
+    for (const auto period : {9600, 96000})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0) && clock.observe(period) && clock.observe(2 * period));
+        REQUIRE(clock.verified() && clock.tempo(2 * period, 2) > 0);
+    }
 }
 
 static void loopTakeCases()
@@ -432,6 +454,31 @@ static void simpleLoopProcessorCases()
     REQUIRE(cold.getCaptureSnapshot().sourceKind() == CaptureSourceKind::song);
     shortTake.through(shortTake.marker(2), true);
     REQUIRE(cold.getCaptureSnapshot().manifest.loop->endSample == shortTake.marker(1) - shortTake.marker(0));
+    const auto acceptedShortTake = cold.getCaptureSnapshot().reference;
+    REQUIRE(cold.setLoopRecapture(true));
+    for (const bool midiStop : {false, true})
+    {
+        const int startBeat = shortTake.nextBeat;
+        REQUIRE(cold.armLoopCapture());
+        shortTake.through(shortTake.marker(startBeat + 1), true);
+        const auto pending = cold.getWorkflowSnapshot();
+        REQUIRE(pending.phase == workflow::Phase::recording && cold.loopCaptureArmed());
+        if (midiStop)
+        {
+            shortTake.commandNote = 25;
+            shortTake.commandSample = shortTake.marker(startBeat + 1) + 1024;
+            shortTake.through(shortTake.commandSample, true);
+        }
+        else
+        {
+            REQUIRE(cold.requestLoopStop(pending.pass));
+            shortTake.tick();
+        }
+        REQUIRE(!cold.loopCaptureArmed());
+        shortTake.through(shortTake.marker(startBeat + 2), true);
+        REQUIRE(cold.getWorkflowSnapshot().result == workflow::Result::cancelled);
+        REQUIRE(cold.getCaptureSnapshot().reference == acceptedShortTake);
+    }
 
     LoopCaptureFixture between(512, 44100);
     between.simpleClock = true;

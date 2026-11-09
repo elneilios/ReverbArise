@@ -71,6 +71,11 @@ End Signal SHALL require a verified start and a separately attributable Stop req
 - **WHEN** Stop and the configured Duration end arrive on the same sample
 - **THEN** Stop cancels the attempt and the previous accepted source remains available
 
+#### Scenario: Duration Stop while cadence is still unverified
+- **WHEN** Arm is switched off or external Stop arrives after the Duration audio boundary while the armed take still awaits a corroborating beat
+- **THEN** the take is cancelled and a later beat cannot publish it
+- **AND** the previous accepted source remains available
+
 ## ADDED Requirements
 
 ### Requirement: Recapture Audio protects an accepted Loop

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 namespace loop_capture
 {
@@ -47,16 +48,19 @@ public:
     {
         if (!verified() || beats == 0)
             return 0;
-        const auto low = std::max(earliest, (extent - 1.0) / beats);
-        const auto high = std::min(latest, (extent + 1.0) / beats);
-        return low <= high ? rate * 60 / ((low + high) * 0.5) : 0;
+        auto fit = *this;
+        fit.constrain(extent, beats);
+        return fit.earliest <= fit.latest ? rate * 60 / ((fit.earliest + fit.latest) * 0.5) : 0;
     }
 
 private:
     void constrain(int64_t distance, unsigned beats) noexcept
     {
-        earliest = std::max(earliest, (distance - 1.0) / beats);
-        latest = std::min(latest, (distance + 1.0) / beats);
+        // Rounding the two pulse timestamps introduces less than one sample
+        // of interval error. Keep the supported tempo limits inclusive.
+        constexpr auto infinity = std::numeric_limits<double>::infinity();
+        earliest = std::max(earliest, std::nextafter((distance - 1.0) / beats, infinity));
+        latest = std::min(latest, std::nextafter((distance + 1.0) / beats, -infinity));
     }
 
     double rate = 0, earliest = 0, latest = 0;

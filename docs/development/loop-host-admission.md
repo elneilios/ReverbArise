@@ -17,9 +17,10 @@ first captured beat is the local downbeat, and subsequent observed beats
 establish bar ends. The route measures cadence from sample offsets and
 requires enough observed intervals to verify the take. A one-beat candidate
 may wait for another beat to verify its clock, while retaining the original
-exclusive capture end. Clock loss, reset, or conflicting markers before the
-required boundary invalidate the attempt. A local capture grid grants no
-recurring phase authority for Perform.
+exclusive capture end. Rounded pulse distances must admit a common period
+with strictly less than one sample of rounding error per distance. Clock loss,
+reset, or conflicting markers before the required boundary invalidate the
+attempt. A local capture grid grants no recurring phase authority for Perform.
 
 See the [manual and sequenced Rack fixtures](../validation/issue-133-rack-fixture/README.md)
 for measured control delivery and sample alignment. Existing marker-based
@@ -112,7 +113,8 @@ resumed reference before granting authority.
 For the simplified capture route, End Signal closes immediately before the
 next downbeat strictly after Stop. Stop on a downbeat includes the bar
 beginning there. Duration Stop cancels the current take, including when Stop
-coincides with its configured end. If processing or timing is interrupted
+coincides with its configured end or arrives while the take still awaits a
+corroborating beat. If processing or timing is interrupted
 before the required boundary, the incomplete attempt cannot replace the
 accepted source.
 

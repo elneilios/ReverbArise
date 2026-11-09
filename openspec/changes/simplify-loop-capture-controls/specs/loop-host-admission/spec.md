@@ -57,6 +57,10 @@ The simplified capture route SHALL verify stable tempo from consecutive beat off
 - **THEN** that pulse can start a candidate at its actual sample
 - **AND** settlement waits for enough observed intervals to verify the cadence through the required closing beat
 
+#### Scenario: Rounded intervals cannot share a stable period
+- **WHEN** observed intervals can share a period only by assigning exactly one sample of rounding error to a timestamp difference
+- **THEN** the candidate cadence is rejected
+
 #### Scenario: Clock is incompatible or lost
 - **WHEN** a required beat misses its deadline, drifts beyond the measured cadence, or arrives after a timing invalidation
 - **THEN** the incomplete candidate cannot settle as an accepted loop

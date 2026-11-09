@@ -23,3 +23,9 @@ The Recapture Audio on replacement case used the native processor fixture with t
 The owner approved the red Arm treatment in the native End Signal preview on 2026-11-09. Focused Release tests exercised the red armed fill in Learn and the shared command state rendering, including disabled and focused states. The original Rack measurements above used the preceding visual treatment.
 
 The owner approved the empty Learn layout on 2026-11-09. The Windows Release build and five focused checks passed for Learn, responsive editor geometry, presentation scale, UI standards and guide currency. The Learn test toggles Loop Mode both ways and compares the editor, waveform area, section tabs, Source Capture heading and Loop Mode button bounds, plus the Recapture Audio switch width and horizontal position. Both Rack example archives were checked for the new note legend and their existing cables and note assignments.
+
+The PR #135 review regression checks pass for both Learn and MIDI Stop between the audio boundary and the corroborating beat of a one-beat Duration take. The previously accepted reference survives the stop and the next beat. Cadence checks reject 24,000 and 24,002 sample intervals in either order at 48 kHz, accept valid adjacent rounded intervals, and retain the supported tempo endpoints.
+
+The reviewed Release VST3 repeated the headless Rack End Signal and Duration proofs in fresh test profiles at 48 kHz and 137 BPM. Each saved a four-beat, 84,088-frame stereo revision with 42,531 frames in audio ranges. Both manifests had contiguous coverage and matching WAV checksums. The VST3 SHA-256 was `f50b66458b5ce5b9a56dfd183c660278cd660c2b8eeec22b894ef0ecaf82e7fe`.
+
+The Windows Release wrapper passed all 98 tests in 310.34 seconds with the two review fixes, including the new processor cases and the Perform knob-reset fixture.
