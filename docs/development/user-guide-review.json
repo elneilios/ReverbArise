@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Loop working-folder save and restore fix and the Arm cancellation boundary. Existing guide instructions remain accurate for the corrected behavior.",
+  "summary": "Reviewed the synced Loop phrase capture specification against the offline guide. The existing instructions already cover the shared 4/4 timing setup, Duration, Arm and cancellation, accepted source replacement, automatic markers, and End signal limitations.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1017,6 +1017,11 @@
       "path": "openspec/specs/loop-host-admission/spec.md",
       "bytes": 7068,
       "sha256": "755482aa751ee228ff3085da3522dfcae1c07622527b750e4928a81b60a2f5f9"
+    },
+    {
+      "path": "openspec/specs/loop-phrase-capture/spec.md",
+      "bytes": 7929,
+      "sha256": "8a86e6f822e1cbf97ac30c5fea02c6b3d1f175862a6f06f44ba889377907a608"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
