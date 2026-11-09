@@ -21,3 +21,5 @@ The warm Windows Release wrapper passed all 98 tests in 353.41 seconds on the fi
 The Recapture Audio on replacement case used the native processor fixture with the same Step 1 and Step 4 MIDI roles. The Rack sequencer proof verified first capture and protection with Recapture Audio off. Other DAW integrations remain unverified.
 
 The owner approved the red Arm treatment in the native End Signal preview on 2026-11-09. Focused Release tests exercised the red armed fill in Learn and the shared command state rendering, including disabled and focused states. The original Rack measurements above used the preceding visual treatment.
+
+The owner approved the empty Learn layout on 2026-11-09. The Windows Release build and five focused checks passed for Learn, responsive editor geometry, presentation scale, UI standards and guide currency. The Learn test toggles Loop Mode both ways and compares the editor, waveform area, section tabs, Source Capture heading and Loop Mode button bounds, plus the Recapture Audio switch width and horizontal position. Both Rack example archives were checked for the new note legend and their existing cables and note assignments.

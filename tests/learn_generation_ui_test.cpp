@@ -165,7 +165,8 @@ static void loopUiCases(bool review)
     auto* onStop=named(editor,"learnAutoGenerateOnStop");
     auto* sensitivity=named(editor,"learnMarkerSensitivity");
     auto* policies=dynamic_cast<m3::ui::controls::FocusViewport*>(named(editor,"learnLoopPolicies"));
-    REQUIRE(toggle && arm && method && unit && count && status && automatic && recapture && generate && onStop && sensitivity && policies);
+    auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
+    REQUIRE(toggle && arm && method && unit && count && status && automatic && recapture && generate && onStop && sensitivity && policies && workspace);
     const auto activate=[](m3::ui::controls::CommandButton& button){
         button.invokeCommand();
         juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
@@ -178,11 +179,27 @@ static void loopUiCases(bool review)
     };
     REQUIRE(visible(toggle) && toggle->getButtonText()=="Loop Mode" && !toggle->getToggleState());
     REQUIRE(visible(named(editor,"recaptureExisting")) && !visible(arm));
+    const auto controlBounds=[&](const char* name){
+        auto* control=named(editor,name);
+        REQUIRE(control);
+        return workspace->getLocalArea(control,control->getLocalBounds());
+    };
+    const auto emptyLearnGeometry=[&]{
+        const auto recaptureBounds=controlBounds("recaptureExisting");
+        return std::make_tuple(editor.getLocalBounds(),workspace->timelineBounds(),
+                               controlBounds("learnSections"),controlBounds("learnSourceCaptureHeading"),
+                               controlBounds("learnLoopMode"),recaptureBounds.getX(),recaptureBounds.getWidth());
+    };
+    const auto songGeometry=emptyLearnGeometry();
+    captureImage(editor,"issue133-empty-song");
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && visible(recapture) && !recapture->getToggleState());
     REQUIRE(toggle->getToggleState());
+    REQUIRE(emptyLearnGeometry()==songGeometry);
+    captureImage(editor,"issue133-empty-loop");
     activate(*toggle);
     REQUIRE(!processor.getLoopCapturePreference().enabled && !toggle->getToggleState() && !visible(arm));
+    REQUIRE(emptyLearnGeometry()==songGeometry);
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && toggle->getToggleState());
     REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
@@ -206,8 +223,7 @@ static void loopUiCases(bool review)
     REQUIRE(processor.loopCaptureArmed() && arm->getButtonText()=="Arm" && arm->getToggleState() && !count->isEnabled());
     REQUIRE(buttonFill(*arm)==m3::ui::danger);
     REQUIRE(status->getText().contains("Waiting") && !toggle->isEnabled());
-    auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
-    REQUIRE(workspace && workspace->coverageTotalsText()=="No accepted source");
+    REQUIRE(workspace->coverageTotalsText()=="No accepted source");
     activate(*arm);
     fixture.tick();
     editor.refresh();
@@ -446,6 +462,19 @@ static void alphaGuide()
 }
 int main(int argc,char** argv){return runTest([&]
 {
+    if (argc==2 && juce::String(argv[1])=="--review-empty-loop")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        LoopCaptureFixture fixture;
+        auto& processor=*fixture.processor;
+        auto preference=processor.getLoopCapturePreference();
+        preference.enabled=false;
+        REQUIRE(processor.setLoopCapturePreference(preference));
+        auto editor=std::make_unique<PreverbAudioProcessorEditor>(processor);
+        editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
+        controlReview::run(std::move(editor));
+        return;
+    }
     if (argc==2 && juce::String(argv[1])=="--review-loop")
     {
         juce::ScopedJuceInitialiser_GUI gui;

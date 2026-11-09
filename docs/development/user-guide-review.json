@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the simplified Loop capture instructions and Learn binding for issue #133. The guide covers one clock pulse per beat, Start/Arm and Stop, method-specific completion and cancellation, and Recapture Audio protection. The red Arm treatment uses the same control label and behavior, so the guide remains accurate.",
+  "summary": "Reviewed the stable Learn layout and Loop capture instructions. Added Host-FX Note Gate labels and MIDI numbers for Clock, Start/Arm and Stop, with numeric guidance for hosts with different octave labels. The existing capture and Recapture Audio instructions still apply.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -805,8 +805,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 50652,
-      "sha256": "112a2d5a32aeeede29a38b2b988f6804abd5ca1de635883ca63b8b4748644adf"
+      "bytes": 50621,
+      "sha256": "b5ffca74f5d4bba6f6a0a2db06869124a5c66dfa37ed40c316f89aa4190f3cb5"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -955,8 +955,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30843,
-      "sha256": "d123ed62a535748c7cbc62c61a21959dc682f915de36600fee8fc19c29f8a43b"
+      "bytes": 31377,
+      "sha256": "efe75b327bbc01205a1e1958132625622f44ea1ba02372216a091ff42ed8a82b"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1165,8 +1165,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 42817,
-      "sha256": "352f27d7cfbaf3ef06439ee25e2e8cb962be2475bdd6ff28ac77f7b4300b8056"
+      "bytes": 44284,
+      "sha256": "f7c073e8bf4e3ce383c575c3076fe4180612e29b1f8c8aad74493754a399ecd7"
     }
   ]
 }

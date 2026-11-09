@@ -449,7 +449,7 @@ private:
         loopUnit.setVisible(duration);loopCount.setVisible(duration);
         if (!show) return;
         auto row=column.removeFromTop(controlGeometry::height);
-        loopMode.setBounds(loopMode.getParentComponent()==&loopPolicies?row.expanded(policyFocusMargin,0):row);
+        loopMode.setBounds(responsive || usesLoopPolicies()?row.expanded(policyFocusMargin,0):row);
         if (!loop) return;
         column.removeFromTop(spacing::related);
         loopMethod.setRowBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
@@ -482,6 +482,8 @@ private:
     controls::FocusViewport loopPoliciesViewport;
     bool usesLoopPolicies()const noexcept
     {return loopSettings.enabled || capture.sourceKind()==CaptureSourceKind::loop;}
+    juce::Rectangle<int> policyContentBounds(juce::Rectangle<int> bounds)const
+    {return bounds.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);}
     void placePolicyControls(bool inViewport)
     {
         auto* parent=inViewport?&loopPolicies:static_cast<juce::Component*>(this);
@@ -495,7 +497,7 @@ private:
     {
         loopPoliciesViewport.setBounds(bounds);
         const auto width=std::max(0,bounds.getWidth()-loopPoliciesViewport.getScrollBarThickness());
-        auto column=juce::Rectangle<int>{0,0,width,bounds.getHeight()}.reduced(policyFocusMargin,0);
+        auto column=policyContentBounds(bounds.withZeroOrigin());
         const auto row=[&](int height){auto rect=column.withHeight(height);column.setY(column.getY()+height);return rect;};
         const auto toggle=[&](controls::Switch& value,juce::Label& label){
             auto rect=row(controlGeometry::switchHeight);
@@ -503,7 +505,7 @@ private:
             label.setBounds(rect);
         };
         captureGroup.setVisible(responsive);
-        if(responsive)captureGroup.setBounds(row(controlGeometry::headingHeight));
+        if(responsive)captureGroup.setBounds(row(responsiveGeometry::headingHeight));
         // Use an unbounded vertical budget so the viewport can reveal the whole policy.
         auto captureRows=column.withHeight(8*controlGeometry::switchHeight);
         layoutLoopControls(captureRows,true);column.setY(captureRows.getY());
@@ -543,18 +545,15 @@ private:
         auto column=left.withTrimmedRight(groupGap);
         const bool loopPanel=usesLoopPolicies();
         placePolicyControls(loopPanel);
-        auto heading=column.removeFromTop(headingHeight);
-        if(loopPanel)heading=heading.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
-        captureTitle.setBounds(heading);column.removeFromTop(spacing::tight);
-        auto tabRow=column.removeFromTop(tabsHeight);
-        if(loopPanel)tabRow=tabRow.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
-        sections.setBounds(tabRow);column.removeFromTop(contentPadding);
+        captureTitle.setBounds(policyContentBounds(column.removeFromTop(headingHeight)));column.removeFromTop(spacing::tight);
+        sections.setBounds(policyContentBounds(column.removeFromTop(tabsHeight)));column.removeFromTop(contentPadding);
         const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
         if(loopPanel)layoutLoopPolicies(column);
         else
         {
+        column=policyContentBounds(column);
         auto actions=column.removeFromBottom(132);actions.removeFromTop(contentPadding);
-        generate.setBounds(actions.removeFromTop(controlHeight));actions.removeFromTop(spacing::tight);
+        generate.setBounds(actions.removeFromTop(controlHeight).expanded(policyFocusMargin,0));actions.removeFromTop(spacing::tight);
         generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
         captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
         const auto toggleRow=[&](controls::Switch& value,juce::Label& label)
@@ -569,7 +568,7 @@ private:
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         manualHelp.setVisible(true);
         }
-        auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
+        auto sound=policyContentBounds(left.withTrimmedRight(groupGap)).withTrimmedTop(sections.getBottom()+contentPadding);
         soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
         irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);

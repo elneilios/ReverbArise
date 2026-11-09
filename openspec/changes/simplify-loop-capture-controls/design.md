@@ -44,6 +44,8 @@ Reuse the existing shared Arm latch, method selector, setup help and status text
 
 Use the shared destructive command role for Learn's Loop Arm latch. A red outline and label identify the recording control when off, and a solid red fill shows when it is armed. The existing latch state and status text continue to convey what capture is doing.
 
+Reserve the same scroll and focus space on both sides of a Loop Mode toggle so shared Learn controls and tabs keep their horizontal positions. Use the same heading row height so Source Capture and Loop Mode stay anchored vertically. Document the Host-FX note labels beside their MIDI numbers in the user guide and the Rack example notes.
+
 Reuse the existing Recapture Audio switch row with Loop-specific help. Maintain Loop overwrite permission separately from Song recapture behavior. It starts off on load and is pinned when either UI or MIDI arms. An accepted Loop and Recapture off prevents another arm. Recapture on permits each subsequent fresh arm to replace the Loop only after successful settlement.
 
 ## Risks / Trade-offs

@@ -2,11 +2,13 @@
 
 Use Rack 2 with VCV Host-FX, Fundamental and Impromptu Modular. These patches point Host-FX to a local Windows VST3 bundle. They use the existing Host-FX Note Gate mapping on MIDI channel 1.
 
-| Control | MIDI note | Manual patch | Sequenced patch |
-| --- | ---: | --- | --- |
-| Clock | 23 | Clkd master clock | SEQ 3 clock, driven by Clkd |
-| Start/Arm | 24 | Learn Arm on | SEQ 3 Step 1 |
-| Stop | 25 | Learn Arm off | SEQ 3 Step 4 |
+| Control | Host-FX Note Gate | MIDI note | Manual patch | Sequenced patch |
+| --- | --- | ---: | --- | --- |
+| Clock | B0 | 23 | Clkd master clock | SEQ 3 clock, driven by Clkd |
+| Start/Arm | C1 | 24 | Learn Arm on | SEQ 3 Step 1 |
+| Stop | C#1 | 25 | Learn Arm off | SEQ 3 Step 4 |
+
+Use MIDI numbers in hosts with a different octave naming convention.
 
 The step gates are qualified by clock high to avoid an initial held step producing a command without a beat. The VCA channels give control and pulsed audio equal Rack path lengths. Green cables carry audible audio. Amber cables carry timing. The sequencer's next Step 1 supplies the closing beat after Step 4.
 

@@ -87,6 +87,8 @@ def create_patch(bundle, output, variant, audio_device=None):
         module("Core", "Notes", "2.6.6", 16, text=(
             f"REVERBARISE LOOP / {variant.upper()}\n\n"
             "Select your speakers in Audio 2 if needed. Click the Host-FX eye to open Learn.\n\n"
+            "Host-FX Note Gate (MIDI channel 1)\n"
+            "B0 (23) = Clock\nC1 (24) = Start/Arm\nC#1 (25) = Stop\n\n"
             f"{workflow}\n\n"
             "Recapture Audio off protects an accepted Loop. Switch it on to replace the Loop. "
             "If the clock stops before the closing beat, the incomplete take is discarded."
