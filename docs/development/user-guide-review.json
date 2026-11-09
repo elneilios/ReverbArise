@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Loop phrase capture specification against the offline guide. The existing instructions already cover the shared 4/4 timing setup, Duration, Arm and cancellation, accepted source replacement, automatic markers, and End signal limitations.",
+  "summary": "Reviewed the simplified Loop capture implementation and Learn preview. Updated the guide for one clock pulse per beat, external Start/Arm and Stop, method-specific completion and cancellation, and Recapture Audio protection.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -135,13 +135,18 @@
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 31964,
-      "sha256": "3f431daaa7b9265f881c1f93ad0202ed9bc4cb4023447f3d79602a96d24166dc"
+      "bytes": 32213,
+      "sha256": "670da198c5bd05714a29d27fed74827aa71bb19e324277ea5cb7969b96f26299"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 8977,
-      "sha256": "9a33a8178b96ccbd04e466aebc0b8e91f0421c22596d2e0dd823a2f73a5f0de0"
+      "bytes": 9136,
+      "sha256": "6b260f26aa1b88b220bbe206ee94916a70c7f7b6f2b4e1bb1fda6a3a700fd18b"
+    },
+    {
+      "path": "Source/Capture/LoopBeatClock.h",
+      "bytes": 1753,
+      "sha256": "b509eac06f67d0c31e7e73ee2d24b92caa8aa4d86e82ef445a0343a11d0cecc7"
     },
     {
       "path": "Source/Capture/LoopCapturePreference.h",
@@ -155,8 +160,8 @@
     },
     {
       "path": "Source/Capture/LoopMidiObservations.h",
-      "bytes": 2864,
-      "sha256": "abe41dc98bf9062d7dd51794b5b40dfefb73e7b4a46a41db326c6bd4e93e3a4c"
+      "bytes": 3109,
+      "sha256": "6aac38708128db51ac981b7ebb8f8f491db122b681d2c73940cf7a1dac492f56"
     },
     {
       "path": "Source/Capture/LoopPhraseClock.h",
@@ -165,8 +170,8 @@
     },
     {
       "path": "Source/Capture/LoopTake.h",
-      "bytes": 2264,
-      "sha256": "a5cf8a3b44b5f11891bc24e127ccf590eb42d99cf4c350ded19bf3106afe05df"
+      "bytes": 3168,
+      "sha256": "9f8c12b56db17b628bf01aa3824fb76b1299ebbebba26b2ab6d07ff1dc1798db"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -300,8 +305,8 @@
     },
     {
       "path": "Source/Core/WorkflowState.h",
-      "bytes": 9258,
-      "sha256": "7200dbbbd6e24b7a5e141d3926ef7e5eb7993b46a7edcbd6631c68e1617e430f"
+      "bytes": 9791,
+      "sha256": "9bbb44e6e13901ebbbda0df5563eb1b776a04c48520c9824e099dc28ddf1fa11"
     },
     {
       "path": "Source/DSP/AuditionMix.cpp",
@@ -530,8 +535,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 91938,
-      "sha256": "60d2ea71b405e23ab61e95e456cde5b1cde835c3a07d8d772454788fa321511e"
+      "bytes": 91963,
+      "sha256": "eded688dc42e259fcf2c683053cda8836658155cadcd47c0907ce37988f5cd50"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -550,13 +555,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 59057,
-      "sha256": "b7b131563b767a53a3d91712a28e38a729d0f481591bb87ee0c84a0e34d5eb26"
+      "bytes": 65059,
+      "sha256": "1debbe0566ff5c4dad0244b83fb3d155525a55376bd0fdd188a4bb1eb7d0495d"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 9799,
-      "sha256": "c65f249c027f789b29d2eae198a2db801743f7c9cf25beca38e00f83557e644e"
+      "bytes": 10605,
+      "sha256": "ef1c13b3125de02eb3e7466437d6147f57a628fdf2316f366af8c8b2b05988dc"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -800,8 +805,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 50196,
-      "sha256": "3ef89102d000b1379fb932044c0a32c3675d8f7a50d1816387e0dbc83bde72a7"
+      "bytes": 50578,
+      "sha256": "8fdf61ab8439afa508888b0041e08436453f61acc0989b3145eff697d9342c0d"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -915,8 +920,8 @@
     },
     {
       "path": "Source/UI/WorkspaceNotice.h",
-      "bytes": 4815,
-      "sha256": "a6ed333eeae750158c3c0759ed0dc94fef0df1b7cdfc22c7b1bd6062f271aedc"
+      "bytes": 4885,
+      "sha256": "8c38578596379f9f6b0661bd4e91f36d97bc37cdb0f7a75d7969029a45188b05"
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
@@ -950,8 +955,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30642,
-      "sha256": "565516796e380cceee909a1e77ecf6b04c2727d178b5b58290156bc723f9ff89"
+      "bytes": 30843,
+      "sha256": "d123ed62a535748c7cbc62c61a21959dc682f915de36600fee8fc19c29f8a43b"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1160,8 +1165,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 41713,
-      "sha256": "2a6467a45eae201ff57d458b82c50770a09f7b8bdf656f9ce8559e05ebb40247"
+      "bytes": 42343,
+      "sha256": "bc483738e03c6fafcd64ac9cedc78b52893610af7322eaf47631bee4003a7599"
     }
   ]
 }

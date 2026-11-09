@@ -74,15 +74,24 @@ public:
         // Bounded admission failure is explicit; never accept a truncated pass.
         startFailed.store(true);return 0;
     }
-    uint64_t reserveCapture() noexcept
+    uint64_t reserveCapture(uint64_t expectedPass) noexcept
     {
         auto old=word.load(std::memory_order_acquire);
         const auto s=decode(old);
-        if(s.mode!=Mode::capture || s.locked())return 0;
+        if(s.pass!=expectedPass || s.mode!=Mode::capture || s.locked())return 0;
         return word.compare_exchange_strong(old,pack(s.mode,Phase::armed,false,Result::none,s.pass+1,s.configurationSlot),
                                             std::memory_order_acq_rel) ? s.pass+1 : 0;
     }
     bool startReserved(uint64_t pass) noexcept {return changePhase(pass,Phase::armed,Phase::recording);}
+    bool cancelUnsettledCapture(uint64_t pass) noexcept
+    {
+        auto old=word.load(std::memory_order_acquire);
+        const auto s=decode(old);
+        if(s.pass!=pass || s.mode!=Mode::capture || (s.phase!=Phase::armed && s.phase!=Phase::recording))
+            return false;
+        return word.compare_exchange_strong(old,pack(s.mode,Phase::idle,false,Result::cancelled,s.pass+1,s.configurationSlot),
+                                            std::memory_order_acq_rel);
+    }
     bool rejectReserved(uint64_t pass) noexcept
     {
         auto old=word.load(std::memory_order_acquire);

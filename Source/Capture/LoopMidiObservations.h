@@ -9,7 +9,8 @@ namespace loop_capture
 enum MidiRole : uint16_t
 {
     gateRise = 1 << 0, gateLow = 1 << 1, phrase = 1 << 2, bar = 1 << 3, beat = 1 << 4,
-    reset = 1 << 5, cue = 1 << 6, stop = 1 << 7
+    reset = 1 << 5, cue = 1 << 6, stop = 1 << 7,
+    captureClock = 1 << 8, captureArm = 1 << 9, captureStop = 1 << 10
 };
 
 struct MidiObservation
@@ -61,6 +62,9 @@ inline void readLoopObservations(const juce::MidiBuffer& midi, int frames, MidiO
             case 22: if (high) role = reset; break;
             case 16: if (high) role = cue; break;
             case 17: if (high) role = stop; break;
+            case 23: if (high) role = captureClock; break;
+            case 24: if (high) role = captureArm; break;
+            case 25: if (high) role = captureStop; break;
             default: break;
         }
         if (role == 0)

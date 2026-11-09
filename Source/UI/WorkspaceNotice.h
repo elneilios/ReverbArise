@@ -29,7 +29,7 @@ private:
 // Presentation only: choose one current notice, without changing model state.
 inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot flow,
     const CaptureSessionSnapshot& capture,const EditorSnapshot& editor,
-    std::optional<controls::NoticeMessage> irPreparation={})
+    std::optional<controls::NoticeMessage> irPreparation={}, const juce::String& loopStatus={})
 {
     using controls::NoticeMessage;using controls::NoticeTone;
     if(flow.mode==workflow::Mode::capture && flow.admissionFailed)
@@ -52,7 +52,7 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
         return NoticeMessage{editor.liveStatus,editor.offlineStatus,NoticeTone::warning};
     switch(flow.phase)
     {
-        case workflow::Phase::recording:return NoticeMessage{"Recording - stop your DAW when finished",{},NoticeTone::information};
+        case workflow::Phase::recording:return NoticeMessage{loopStatus.isNotEmpty()?loopStatus:"Recording - stop your DAW when finished",{},NoticeTone::information};
         case workflow::Phase::draining:return NoticeMessage{"Committing captured source",{},NoticeTone::information};
         case workflow::Phase::validating:return NoticeMessage{"Validating captured source",{},NoticeTone::information};
         default:break;
