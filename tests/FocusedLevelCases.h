@@ -59,6 +59,29 @@ void Composition::verifyFocusedLevel()
     dial.mouseDrag(pointer(quarter,juce::ModifierKeys::leftButtonModifier,true));REQUIRE(current().shape.gainDb==6);
     dial.mouseDrag(pointer(0,juce::ModifierKeys::leftButtonModifier,true));
     dial.mouseUp(pointer(0,0,true));REQUIRE(current().shape.gainDb==0);
+    for(const float direction:{-1.f,1.f})
+    {
+        const auto pixelsPerDb=dial.getMouseDragSensitivity()/24.f;
+        const auto button=juce::ModifierKeys::leftButtonModifier;
+        load(direction);
+        dial.mouseDown(pointer(0,button,false));
+        dial.mouseDrag(pointer(-direction*.75f*pixelsPerDb,button,true));
+        REQUIRE(current().shape.gainDb==0); // A 0.25 dB candidate is within the widened band.
+        dial.mouseDrag(pointer(-direction*1.5f*pixelsPerDb,button,true));
+        REQUIRE(std::abs(current().shape.gainDb+direction*.5f)<.0001f);
+        dial.mouseDrag(pointer(-direction*.75f*pixelsPerDb,button,true));
+        REQUIRE(current().shape.gainDb==0);
+        dial.mouseUp(pointer(0,0,true));
+        enter(m3::ui::preciseValue(direction*.1f));
+        REQUIRE(current().shape.gainDb==direction*.1f);
+    }
+    load(.1f);
+    dial.mouseDown(pointer(0,juce::ModifierKeys::leftButtonModifier,false));
+    dial.mouseUp(pointer(0,0,false));
+    REQUIRE(current().shape.gainDb==.1f);
+    load(.000001f);
+    drag(1.f);
+    REQUIRE(current().shape.gainDb==0);
     {
         load(0);const auto before=current();const auto defaults=engine.savedSession().defaultIR;
         const auto neighbour=*m3::find(engine.savedSession(),secondId);const auto renders=engine.snapshot().renderCount;
@@ -79,6 +102,12 @@ void Composition::verifyFocusedLevel()
     load(-12);key(false);REQUIRE(current().shape.gainDb==-12);load(12);key(true);REQUIRE(current().shape.gainDb==12);
     load(0);key(true);key(true,true);REQUIRE(std::abs(current().shape.gainDb-1.1f)<1.e-6);
     load(0);scroll(true);scroll(true,true);REQUIRE(std::abs(current().shape.gainDb-1.1f)<1.e-6);
+    load(0);
+    {
+        juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;
+        dial.mouseWheelMove(pointer(0,juce::ModifierKeys::ctrlModifier,false),wheel);
+        REQUIRE(std::abs(current().shape.gainDb-.1f)<1.e-6);
+    }
     load(-12);scroll(false);REQUIRE(current().shape.gainDb==-12);
     load(12);scroll(true);REQUIRE(current().shape.gainDb==12);
     load(-30);REQUIRE(cell.displayedFraction()==0 && field.getText()=="-30");
@@ -105,6 +134,7 @@ void Composition::verifyFocusedLevel()
     accessible->setValue(-24);accessible->setValueAsString("-24");REQUIRE(current().shape.gainDb==-30);
     accessible->setValue(-12);REQUIRE(current().shape.gainDb==-12);
     accessible->setValueAsString("-6.12345");REQUIRE(current().shape.gainDb==-6.12345f);
+    accessible->setValue(.1);REQUIRE(current().shape.gainDb==.1f);
     load(-30.12345f);
     const auto exact=current().shape.gainDb;beginTyping();
     REQUIRE(field.getText()==m3::ui::preciseValue(exact));field.onReturnKey();REQUIRE(current().shape.gainDb==exact);

@@ -355,8 +355,8 @@ and read-only Diagnostics. Keyboard and accessibility focus show the aqua
 brackets while pointer editing keeps its caret and selection. Numeric editors
 filter letters on insertion, including paste. The timing entries still use the
 song-position parser. Standalone and embedded steppers share one-step wheel
-behavior. The P5 fixture direction is Ctrl+wheel for fine slider-track changes
-and ordinary drag with either modifier state.
+behavior. Slider tracks follow C5 for Ctrl+wheel and retain ordinary drag with
+either Ctrl state.
 
 Contract: reusable field composition extends these working mechanisms;
 it does not introduce another parser or universal commit policy. Each field must
@@ -388,10 +388,9 @@ coverage rather than infer it from the parent LookAndFeel.
 
 ## C5 — Knobs and sliders
 
-Observed owners: [KnobValue](../../Source/UI/KnobValue.h), SliderControl,
-[InvocationSlider](../../Source/UI/Controls/InvocationSlider.h), nested zoom
-sliders, legacy Settings sliders and display-height slider. Presentation-only
-zoom/height must never be confused with audio gain or saved parameter editing.
+Owners include [KnobValue](../../Source/UI/KnobValue.h),
+[TrackSlider](../../Source/UI/Controls/TrackSlider.h), and the companion
+numeric field in SliderControl. Zoom and Height use display-only bindings.
 
 Contract: each family owns coarse/fine drag, keyboard increments, wheel
 travel/direction and reset defaults once; bindings supply musical units, range,
@@ -407,13 +406,18 @@ same cases as current bindings. Silent display is not another input gesture.
 Pointer, wheel, key, stepper and accessible value changes follow the same binding
 authority. Wheel outside the value control retains normal surrounding scroll.
 
-States: I/H/F/D/E and dragging/invalid where applicable. Retain #46's owner-approved
-open corner knob focus geometry and exact Level steps. The zoom slider's parent
-focus and text-box-free presentation are named existing policies. Legacy theme
-rotary painting has a dimmed arc but undimmed position dot; linear painting has
-no custom focus treatment by itself. These are observed debt, not approved new
-defaults. Local SliderControl Theme versus responsive parent font inheritance must
-be checked with actual metrics, not inferred from shared ancestry.
+P5 uses quiet hover and held feedback along the dial arc or on the track body, aqua value ink, an off-white
+position marker and independent keyboard/accessibility focus brackets. Horizontal
+zoom keeps its text-box-free track. Ctrl+wheel fine-adjusts dials and tracks
+where their domain allows a smaller step. Timing Ctrl+wheel uses the existing
+unsnapped step, and Shift retains its established finer behavior. A configured
+home attracts raw pointer drag candidates within its band. Wheel, exact entry,
+accessibility and Reset follow their independent paths. The Level detent is
+centered at 0 dB with a ±0.3 dB band. Companion dial fields use the shared
+value width when it fits. Inline feedback aligns beneath the field and wraps
+within the value column. Target's hover-help footer and accessible field
+description explain the active entry units. Its validation stays beneath the
+field.
 
 Evidence: coarse/fine drag/wheel/key/reset, explicit/implicit edit cancellation,
 actual unit steps, exact value/display agreement, captured stale intent rejection,

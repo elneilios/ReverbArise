@@ -2,6 +2,8 @@
 #include <UI/Controls/PopupInteraction.h>
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/Controls/ChoiceSelector.h>
+#include <UI/Controls/DialTrackPresentation.h>
+#include <UI/KnobValue.h>
 #include "ActionMenuReview.h"
 #include "FieldFeedbackReview.h"
 #include "NumericTextFieldsReview.h"
@@ -10,6 +12,66 @@
 #include <windows.h>
 #endif
 using namespace m3::ui::controls;
+
+static void dialPointerPaintCases()
+{
+    const auto render=[](CommandState state)
+    {
+        constexpr int size=48;
+        constexpr auto pi=juce::MathConstants<float>::pi;
+        juce::Image image(juce::Image::ARGB,size,size,true);
+        juce::Graphics graphics(image);
+        DialTrackPresentation::dial(graphics,{size,size},state,.75f,{1.5f*pi,2.5f*pi,true},.5f,{});
+        return image;
+    };
+    const auto idle=render({true,false,false,false});
+    const auto hovered=render({true,true,false,false});
+    const auto held=render({true,true,true,false});
+    const auto keyboard=render({true,false,false,true});
+    const auto unavailable=render({false,true,true,true});
+
+    REQUIRE(idle.getPixelAt(24,3).getAlpha()==0);
+    REQUIRE(hovered.getPixelAt(24,3).getAlpha()>0);
+    REQUIRE(held.getPixelAt(24,3).getAlpha()>hovered.getPixelAt(24,3).getAlpha());
+    for(const auto point:{juce::Point<int>{24,24},{24,42},{1,1}})
+    {
+        REQUIRE(hovered.getPixelAt(point.x,point.y).getAlpha()==0);
+        REQUIRE(held.getPixelAt(point.x,point.y).getAlpha()==0);
+    }
+    REQUIRE(keyboard.getPixelAt(1,1)==m3::ui::aqua);
+    REQUIRE(unavailable.getPixelAt(24,3).getAlpha()==0);
+}
+
+static void knobValueWidthCases()
+{
+    for(const bool compact:{false,true})
+    {
+        m3::ui::KnobValue cell;
+        cell.configure("Level","level","Enter an exact level");
+        cell.setCompactPresentation(compact);
+        cell.setValidation("Enter a level from -12 to +12 dB.");
+        const juce::Component* feedback=nullptr;
+        for(const auto* child:cell.getChildren())
+            if(child->getName()=="levelFeedback")feedback=child;
+        REQUIRE(feedback);
+
+        for(const int width:{180,340})
+        {
+            cell.setValueBounds({0,0,width,58});
+            const auto entry=cell.valueField().getBounds();
+            const auto body=commandBodyBounds(entry);
+            REQUIRE(entry.getWidth()==m3::ui::controlGeometry::valueWidth);
+            REQUIRE(feedback->getX()==body.getX() && feedback->getY()>=body.getBottom());
+            REQUIRE(feedback->getWidth()>body.getWidth());
+            REQUIRE(cell.getLocalBounds().contains(feedback->getBounds()));
+        }
+
+        cell.setValueBounds({0,0,70,58});
+        const auto entry=cell.valueField().getBounds();
+        REQUIRE(entry.getWidth()>0 && entry.getWidth()<m3::ui::controlGeometry::valueWidth);
+        REQUIRE(cell.getLocalBounds().contains(entry));
+    }
+}
 
 static std::vector<PopupChoice> choices()
 {return {{11,"Accepted",{},true,true},{42,"Other",{},true,false},{73,"Unavailable","Not currently eligible",false,false}};}
@@ -762,6 +824,8 @@ int main(int argc,char** argv){return runTest([&]
     if(argc>1 && juce::String(argv[1])=="--test-field-feedback"){wrappedFeedbackCases();return;}
     if(argc>1 && juce::String(argv[1])=="--review-numeric-text-fields"){numericTextFieldsReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--test-numeric-text-fields"){numericTextFieldCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-dial-pointer-paint"){dialPointerPaintCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-knob-value-width"){knobValueWidthCases();return;}
     if(argc==3 && juce::String(argv[1])=="--capture-selectors")
     {
         selectorReview::Panel panel;panel.setSize(900,600);panel.addToDesktop(0);panel.setVisible(true);panel.toFront(true);
@@ -780,5 +844,7 @@ int main(int argc,char** argv){return runTest([&]
     std::cerr<<"Field feedback\n";fieldFeedbackCases();
     std::cerr<<"Wrapped field feedback\n";wrappedFeedbackCases();
     std::cerr<<"Numeric and text field variants\n";numericTextFieldCases();
+    dialPointerPaintCases();
+    knobValueWidthCases();
     std::cout<<"Selector popup state, native input, accessibility, focus, geometry and lifetime cases passed.\n";
 });}

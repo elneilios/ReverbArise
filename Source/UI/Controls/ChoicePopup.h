@@ -156,6 +156,7 @@ public:
         const auto result=interaction.complete(index);if(result!=0)finish(result,PopupDismissal::commit);
     }
     void dismiss(PopupDismissal why=PopupDismissal::cancel){if(interaction.done())return;interaction.cancel();finish(0,why);}
+    bool showFocusOnReturn()const noexcept{return dismissalFocusVisible;}
     bool keyPressed(const juce::KeyPress& key)override
     {
         visibility->keyboardInput();const auto code=key.getKeyCode();
@@ -217,6 +218,7 @@ private:
     {if(origin==nullptr || !origin->isShowing() || !origin->isEnabled())dismiss(PopupDismissal::ownerGone);else if(!juce::Process::isForegroundProcess())dismiss(PopupDismissal::outside);}
     void finish(int id,PopupDismissal why)
     {
+        dismissalFocusVisible=visibility->isVisible();
         stopTimer();exitModalState();setVisible(false);
         if(origin!=nullptr)origin->repaint();
         auto callback=std::move(completion);
@@ -231,6 +233,7 @@ private:
     juce::Component content;
     std::vector<std::unique_ptr<Row>> rows;
     juce::SharedResourcePointer<FocusVisibility> visibility;
+    bool dismissalFocusVisible=false;
     float magnification=1.f;
 };
 }

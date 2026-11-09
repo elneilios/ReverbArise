@@ -14,11 +14,12 @@
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
-static void wheelOver(juce::Component& target,float delta)
+static void wheelOver(juce::Component& target,float delta,juce::ModifierKeys modifiers={},
+                      std::optional<juce::Point<int>> at={})
 {
     static int64_t stamp=juce::Time::currentTimeMillis();
-    const auto point=target.getLocalBounds().getCentre().toFloat();const juce::Time time(++stamp);
-    juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,&target,&target,time,point,time,0,false);
+    const auto point=at.value_or(target.getLocalBounds().getCentre()).toFloat();const juce::Time time(++stamp);
+    juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),point,modifiers,0,0,0,0,0,&target,&target,time,point,time,0,false);
     juce::MouseWheelDetails wheel{};wheel.deltaY=delta;target.mouseWheelMove(event,wheel);
 }
 static juce::ComponentPeer* nativeInputPeer(juce::Component& owner)
@@ -765,6 +766,13 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(hot.getPixelAt(audiblePixel.x,sourcePixelY(.3f)).getBrightness()>.4f);
         REQUIRE(hot.getPixelAt(audiblePixel.x,static_cast<int>(wetLane.getCentreY()+wetLane.getHeight()*.3f))==m3::ui::aqua);
         snapshotPanel(probe,"shared-amplitude-zoom-plus6");probe.setWaveZoomDb(0);
+        auto* height=dynamic_cast<juce::Slider*>(named(probe,"waveZoom"));REQUIRE(height);
+        const auto heightTrack=height->getLookAndFeel().getSliderLayout(*height).sliderBounds.getCentre();
+        const auto beforeHeight=engine.savedSession();
+        wheelOver(*height,.1f,{},heightTrack);REQUIRE(probe.waveZoomDb()==3);
+        wheelOver(*height,.1f,juce::ModifierKeys::ctrlModifier,heightTrack);REQUIRE(probe.waveZoomDb()==4);
+        REQUIRE(engine.savedSession().swells.size()==beforeHeight.swells.size());
+        probe.setWaveZoomDb(0);
         // Level must change the visible height, even far below the old
         // normalisation floor; raw convolution still cannot set that height.
         for(const auto db:{-60.0f,-6.0f,6.0f})
@@ -1058,7 +1066,9 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(engine.savedSession().sensitivity==.425f && sensitivity->getValue()==42.5);
         sensitivity->setValue(37.5,juce::sendNotificationSync);editor.refresh();
         wheelOver(*sensitivity,1);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();
-        REQUIRE(sensitivity->getValue()>37.5 && engine.savedSession().sensitivity>.375f);
+        REQUIRE(sensitivity->getValue()==38.5 && engine.savedSession().sensitivity==.385f);
+        wheelOver(*sensitivity,1,juce::ModifierKeys::ctrlModifier);
+        REQUIRE(std::abs(sensitivity->getValue()-38.6)<1.e-8 && engine.savedSession().sensitivity==.386f);
         const auto beforeNumericWheel=sensitivity->getValue();wheelOver(*percentage,1);juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(sensitivity->getValue()>beforeNumericWheel);
         auto numeric=dynamic_cast<m3::ui::controls::NumericInputControl*>(percentage);REQUIRE(numeric);
         sensitivity->setValue(37.5,juce::sendNotificationSync);controlReview::pointerClick(numeric->incrementButton());editor.refresh();REQUIRE(sensitivity->getValue()==37.6 && engine.savedSession().sensitivity==.376f);
@@ -1178,8 +1188,10 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(levelField->isInvalid() && levelField->getDescription().contains("-12 to +12 dB"));
         REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==-3);
         auto* levelFeedback=named(editor,"swellLevelFeedback");REQUIRE(levelFeedback);
-        REQUIRE(levelFeedback->getWidth()==m3::ui::controls::commandBodyBounds(levelField->getBounds()).getWidth());
-        REQUIRE(levelFeedback->getBottom()<=levelField->getParentComponent()->getHeight());
+        const auto levelBody=m3::ui::controls::commandBodyBounds(levelField->getBounds());
+        REQUIRE(levelField->getWidth()==m3::ui::controlGeometry::valueWidth);
+        REQUIRE(levelFeedback->getX()==levelBody.getX() && levelFeedback->getWidth()>=levelBody.getWidth());
+        REQUIRE(levelField->getParentComponent()->getLocalBounds().contains(levelFeedback->getBounds()));
         levelField->selectAll();REQUIRE(levelField->keyPressed(juce::KeyPress('2',{},'2')));editor.refresh();REQUIRE(levelField->getText()=="2");
         levelField->onReturnKey();REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==2 && !levelField->isInvalid());
         enter("swellLevel","+6");REQUIRE(m3::find(engine.savedSession(),first)->shape.gainDb==6);enter("swellLevel","-3");
@@ -1254,6 +1266,9 @@ int main(int argc,char* argv[]){return runTest([&]
     auto tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==7 && tabs->getCurrentTabIndex()==0);
     REQUIRE(editor.settingsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.settingsPanel()));
     std::map<juce::String,int> settingsValueFields;
+    const std::map<juce::String,std::pair<double,double>> settingsSteps{
+        {"Live level (dB)",{1,.1}},{"Separation (ms)",{10,1}},{"Audition tail (s)",{.1,.01}},
+        {"Audition trim (dB)",{1,.1}},{"Test tone start bar",{1,1}},{"Test tone end bar (exclusive)",{1,1}}};
     for(int page:{0,1,3,4})
         for(auto* child:tabs->getTabContentComponent(page)->getChildren())
             if(auto* slider=dynamic_cast<m3::ui::controls::SliderControl*>(child))
@@ -1262,6 +1277,24 @@ int main(int argc,char* argv[]){return runTest([&]
                 REQUIRE(value && (!slider->isEnabled() || value->getWantsKeyboardFocus()) && value->getDescription().isNotEmpty());
                 REQUIRE(value->getNumChildComponents()==0);
                 ++settingsValueFields[value->getTitle()];
+                const auto steps=settingsSteps.find(value->getTitle());
+                REQUIRE(steps!=settingsSteps.end());
+                if(slider->isEnabled())
+                {
+                    const auto [coarse,fine]=steps->second;
+                    const auto original=slider->getValue();
+                    const auto callback=std::move(slider->onValueChange);
+                    slider->onValueChange={};
+                    const auto track=slider->getLookAndFeel().getSliderLayout(*slider).sliderBounds.getCentre();
+                    const auto baseline=slider->getMinimum();
+                    slider->setValue(baseline,juce::dontSendNotification);
+                    wheelOver(*slider,.1f,{},track);
+                    REQUIRE(std::abs(slider->getValue()-(baseline+coarse))<1.e-8);
+                    wheelOver(*slider,.1f,juce::ModifierKeys::ctrlModifier,track);
+                    REQUIRE(std::abs(slider->getValue()-(baseline+coarse+fine))<1.e-8);
+                    slider->setValue(original,juce::dontSendNotification);
+                    slider->onValueChange=callback;
+                }
             }
     REQUIRE(settingsValueFields.size()==6);
     for(const auto* title:{"Live level (dB)","Separation (ms)","Audition tail (s)","Audition trim (dB)",

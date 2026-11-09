@@ -19,6 +19,35 @@ void Composition::verifyResponsive(const juce::File& output)
         REQUIRE(actions==2);
     };
     const auto original=engine.savedSession();const auto sourceRevision=processor->getCaptureSnapshot().manifest.revision;
+    panel->setSize(900,600);panel->refresh();
+    auto& target=require<KnobValue>(*panel,"arrivalSampleCell");
+    auto& targetField=target.valueField();
+    auto& targetFeedback=require<juce::Component>(*panel,"arrivalSampleFeedback");
+    auto& hoverHelp=require<controls::EllipsisLabel>(*panel,"hoverHelp");
+    auto& sampleUnits=require<juce::ToggleButton>(swellSettings,"sampleUnits");
+    for(const bool samples:{false,true,false})
+    {
+        sampleUnits.setToggleState(samples,juce::dontSendNotification);
+        sampleUnits.onClick();
+        const auto* format=samples?"whole sample position":"bar.beat.fraction";
+        const auto* otherFormat=samples?"bar.beat.fraction":"whole sample position";
+        REQUIRE(targetFeedback.getBounds().isEmpty());
+        REQUIRE(targetField.isAccessible());
+        const auto description=targetField.getDescription();
+        REQUIRE(description.contains(format) && !description.contains(otherFormat));
+        for(auto* control:{static_cast<juce::Component*>(&targetField),static_cast<juce::Component*>(&target.valueKnob())})
+        {
+            const auto point=control->getLocalBounds().getCentre().toFloat();
+            const auto now=juce::Time::getCurrentTime();
+            panel->mouseEnter(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,{},0,0,0,0,0,control,control,now,point,now,0,false));
+            REQUIRE(hoverHelp.getText().contains(format) && !hoverHelp.getText().contains(otherFormat));
+        }
+    }
+    REQUIRE(hoverHelp.getText().contains("Right-click for reset options"));
+    targetField.setText("1",false);targetField.onReturnKey();panel->refresh();
+    REQUIRE(!targetFeedback.getBounds().isEmpty() && target.getLocalBounds().contains(targetFeedback.getBounds()));
+    target.setValidation({});panel->refresh();
+    REQUIRE(targetFeedback.getBounds().isEmpty() && targetField.getDescription().contains("bar.beat.fraction"));
     const auto checkVisible=[&](const char* name)
     {
         auto& child=require<juce::Component>(*panel,name);REQUIRE(child.isVisible());
