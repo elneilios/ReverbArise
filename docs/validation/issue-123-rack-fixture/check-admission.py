@@ -1,25 +1,28 @@
-"""Run contract scenarios and optionally replay a complete unmasked Rack trace."""
+"""Run contract scenarios and optionally replay a complete Rack trace."""
 
 import argparse
 import csv
+from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 
-from admission import Authority, FreshGate, PhrasePhase, State, capture_end_request, capture_end_sample
+from admission import Authority, FreshGate, PhrasePhase, PhraseTiming, State
+from admission import capture_end_request, capture_end_sample
 from admission import musical_grid, valid_offsets
 
 
 def check_scenarios():
-    phase = PhrasePhase(Fraction(21, 2), 1)
-    unrelated = PhrasePhase(21, 1)
+    timing = PhraseTiming(21, Fraction(120), (4, 4), 1)
+    phase = PhrasePhase(timing, 1)
+    unrelated = PhrasePhase(replace(timing, beats=2), 1)
     unavailable = Authority(State.NOT_CONFIGURED, "Connect the external command input")
     song = Authority(State.NOT_VERIFIED, "Host did not supply absolute samples")
     ready = Authority(State.READY)
-    assert not phase.cue(phase.period)
+    assert not phase.cue(0, timing, 10)
     for sample in (0, 10, 21):
         phase.observe(sample)
-    assert phase.authority == ready and phase.cue(phase.period)
-    assert phase.for_take(42).state == State.NOT_VERIFIED
+    assert phase.authority == ready and phase.cue(21, timing, 10)
+    assert phase.for_take(replace(timing, beats=4), 42).state == State.NOT_VERIFIED
     assert unrelated.authority.state == State.NOT_VERIFIED
     assert song.state == State.NOT_VERIFIED and unavailable.state == State.NOT_CONFIGURED
     assert musical_grid(ready, None).state == State.NOT_CONFIGURED
@@ -37,14 +40,15 @@ def check_scenarios():
     assert capture_end_sample(22, [21]) is None
 
     phase.observe(32)
-    phase.advance(43)
-    assert phase.authority == ready
-    phase.advance(44)
+    # The last possible marker is at 43. No heartbeat arrives between
+    # the marker at 32 and the Cue commands at 43 and 44.
+    assert phase.cue(43, timing, 10)
+    assert not phase.cue(44, timing, 10)
     assert phase.authority.state == State.SYNC_LOST and not phase.cued
     for sample in (50, 61, 71):
         phase.observe(sample)
     assert phase.authority == ready and not phase.cued
-    assert phase.cue(phase.period)
+    assert phase.cue(71, timing, 11)
     phase.revoke("Reset")
     assert phase.authority.state == State.SYNC_LOST and not phase.cued
 
@@ -67,13 +71,29 @@ def check_scenarios():
     assert not valid_offsets(128, [0] * 129)
 
 
-def replay(path, period, phase_error, masked):
-    phase = PhrasePhase(period, phase_error)
+def check_measured_take_lengths():
+    timing = PhraseTiming(48000, Fraction(137), (4, 4), 16)
+    phase = PhrasePhase(timing, 1)
+    for sample in (0, 336350, 672701):
+        phase.observe(sample)
+    assert phase.cue(672701, timing, 336350)
+    assert phase.cue(672701, timing, 336351)
+    assert phase.for_take(timing, 336349).state == State.NOT_VERIFIED
+    assert phase.for_take(timing, 336352).state == State.NOT_VERIFIED
+    assert phase.for_take(replace(timing, beats=4), 84088).state == State.NOT_VERIFIED
+    # An identical period can come from a different clock or meter.
+    assert phase.for_take(replace(timing, meter=(8, 8), beats=32), 336350).state == State.NOT_VERIFIED
+    assert phase.for_take(replace(timing, sample_rate=96000, tempo_bpm=274), 336350).state == State.NOT_VERIFIED
+
+
+def replay(path, timing, phase_error, masked):
+    phase = PhrasePhase(timing, phase_error)
     reset_sample = None
     markers = 0
     losses = 0
     cued_at_loss = False
     fresh_cue_after_loss = False
+
     def aligned_sample(row):
         # The masked patch has one extra engine sample on the phrase path.
         return int(row["sample"]) - int(masked and row["stream"] == "phrase")
@@ -92,30 +112,26 @@ def replay(path, period, phase_error, masked):
             continue
         if reset_sample is None or sample <= reset_sample:
             continue
+        previously_ready = phase.authority.state == State.READY
+        previously_cued = phase.cued
         if row["stream"] == "phrase" and row["value"] == "1":
-            previously_ready = phase.authority.state == State.READY
-            previously_cued = phase.cued
             phase.observe(sample)
             markers += 1
-            if previously_ready and phase.authority.state == State.SYNC_LOST:
-                losses += 1
-                cued_at_loss |= previously_cued
-                assert not phase.cued
             if not masked and markers >= 3:
                 assert phase.authority.state == State.READY, row
         elif row["stream"] == "callback":
-            previously_ready = phase.authority.state == State.READY
-            previously_cued = phase.cued
             phase.advance(sample)
-            if previously_ready and phase.authority.state == State.SYNC_LOST:
-                losses += 1
-                cued_at_loss |= previously_cued
-                assert not phase.cued
         elif row["stream"] == "cue" and row["value"] == "1":
-            admitted = phase.cue(period)
+            # This probe records markers and commands, so replay uses a
+            # reference take with the shorter legal length for this lane.
+            admitted = phase.cue(sample, timing, phase.lower)
             fresh_cue_after_loss |= losses > 0 and admitted
         elif row["stream"] == "stop" and row["value"] == "1":
             phase.cued = False
+        if previously_ready and phase.authority.state == State.SYNC_LOST:
+            losses += 1
+            cued_at_loss |= previously_cued
+            assert not phase.cued
     assert markers >= 5 and not phase.cued and bool(losses) == masked
     assert fresh_cue_after_loss == masked
     assert phase.authority.state == State.READY
@@ -126,13 +142,15 @@ def replay(path, period, phase_error, masked):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--trace", type=Path)
-    parser.add_argument("--period", type=Fraction)
+    parser.add_argument("--tempo", type=int, choices=(137, 280))
     parser.add_argument("--phase-error", type=Fraction, default=Fraction(1))
     parser.add_argument("--mask-phrase", action="store_true")
     args = parser.parse_args()
     check_scenarios()
+    check_measured_take_lengths()
     print("Admission scenarios passed")
     if args.trace is not None:
-        if args.period is None:
-            parser.error("--trace requires --period")
-        replay(args.trace, args.period, args.phase_error, args.mask_phrase)
+        if args.tempo is None:
+            parser.error("--trace requires --tempo")
+        timing = PhraseTiming(48000, Fraction(args.tempo), (4, 4), 16)
+        replay(args.trace, timing, args.phase_error, args.mask_phrase)

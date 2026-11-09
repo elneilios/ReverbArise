@@ -29,7 +29,7 @@ patches, build output and raw traces in local ignored output.
    event invalidates the result.
 5. Run `python -B check-admission.py` for the contract scenarios. To
    replay a continuous measured epoch, add `--trace <trace.csv>` and
-   `--period 46080000/137` or `--period 46080000/280`. For the masked
+   `--tempo 137` or `--tempo 280`. For the masked
    trace add `--mask-phrase` to apply its measured path offset and
    expect one loss and a fresh Cue after recovery.
 

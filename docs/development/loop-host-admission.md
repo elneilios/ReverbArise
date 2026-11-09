@@ -71,9 +71,20 @@ an individually valid interval from allowing drift to accumulate. The
 observed marker owns the actual boundary. A one-bar take needs a matching
 recurrence before live Cue, even when the host has valid four-bar markers.
 
+Match the take using its verified sample rate, stable tempo, explicit
+meter, and duration in beats of that meter. These fields must match the
+reference. Derive the nominal period as
+`sampleRate × 60 × beats × 4 / (tempoBpm × meterDenominator)`.
+Accept a recorded frame count equal to the floor or ceiling of that
+period. A four-bar take at 137 BPM and 48 kHz can therefore contain
+336,350 or 336,351 frames. Keep the recorded extent and verify the shared
+phrase origin independently.
+
 Declare sync lost when a required marker is absent after the previous
-marker plus the upper integer interval, arrives out of cadence, or the epoch loses required
-authority. Revoke on observed reset, interrupted processing or a
+marker plus the upper integer interval, arrives out of cadence, or the
+epoch loses required authority. Check the deadline at the Cue sample
+before admitting the command, including between trace heartbeats. Process
+a marker at the same sample before Cue. Revoke on observed reset, interrupted processing or a
 reference, tempo or sample-rate change. After restore or reactivation,
 start from new observations and require a fresh Cue after re-lock.
 Detection is limited by what the host makes observable. The historical

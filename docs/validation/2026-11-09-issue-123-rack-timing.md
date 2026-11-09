@@ -109,6 +109,14 @@ masked trace lanes. Replay uses callback observations from the trace,
 while the synthetic case checks the missing-marker deadline at sample
 precision.
 
+The PR review regression checks also passed. Cue at the last permitted
+sample was admitted, and Cue one sample later was rejected before the
+next heartbeat. At 137 BPM, both measured four-bar frame counts
+(336,350 and 336,351) matched the reference with verified take timing.
+A one-bar take, out-of-range frame counts and incompatible timing were
+rejected. Both continuous and both masked traces passed replay after
+these changes.
+
 ## Replayed spike observations
 
 The [#116 evidence and sources](https://github.com/elneilios/ReverbArise/tree/47cbed2/docs/validation/issue-116-spike-fixtures)

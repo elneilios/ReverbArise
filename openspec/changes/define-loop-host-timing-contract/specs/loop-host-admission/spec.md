@@ -36,6 +36,12 @@ Bars, beats and musical grids SHALL require verified beat timing and explicit me
 - **WHEN** a one-bar take is verified and the only verified recurrence is four bars
 - **THEN** the take remains valid and live Cue reports the missing matching phase reference
 
+#### Scenario: Verified take length rounds to an adjacent frame count
+- **WHEN** an accepted take matches the reference's verified sample rate, stable tempo, explicit meter, duration in meter beats and phrase origin
+- **AND** its recorded frame count is the floor or ceiling of the nominal period derived from those timing fields
+- **THEN** either frame count matches the recurrence without changing the recorded extent
+- **AND** an out-of-range frame count or mismatched musical timing leaves Cue unavailable
+
 ### Requirement: Verified inputs retain their sample offsets and roles
 The host input contract SHALL preserve valid callback-relative sample offsets and distinguish capture gate, phrase, bar, beat, reset, Cue and Perform Stop. Invalid offsets SHALL NOT be clamped into valid commands. Capture End signal SHALL require a verified request and, on a route with bar-quantised completion, a verified bar at or after the request.
 
@@ -63,6 +69,11 @@ Stable-tempo phase authority SHALL accept the bounded adjacent integer intervals
 #### Scenario: Reference slips away from its verified cadence
 - **WHEN** a required marker misses its supported arrival window or successive intervals leave the verified cadence
 - **THEN** phase becomes Sync lost with a timing explanation
+
+#### Scenario: Cue arrives after the missing marker deadline
+- **WHEN** Cue arrives after the last permitted sample for a required marker that has not arrived
+- **THEN** the reference becomes Sync lost before Cue is evaluated, including between diagnostic heartbeats
+- **AND** the command is rejected and a fresh Cue is required after re-lock
 
 ### Requirement: Discontinuities invalidate live authority
 A reset, incompatible tempo or sample rate, or observed interruption of a required route SHALL revoke the affected live authority. Restore and reactivation SHALL require fresh evidence. An interrupted capture SHALL NOT finish from missing observations, and Loop performance SHALL require a fresh Cue after phase is regained.

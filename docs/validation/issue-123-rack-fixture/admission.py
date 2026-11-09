@@ -63,11 +63,25 @@ def valid_offsets(frames, offsets):
     return len(offsets) <= 128 and all(0 <= offset < frames for offset in offsets)
 
 
+@dataclass(frozen=True)
+class PhraseTiming:
+    sample_rate: int
+    tempo_bpm: Fraction
+    meter: tuple[int, int]
+    beats: int
+
+    @property
+    def period(self):
+        # Beats are counted in units of the declared meter denominator.
+        return Fraction(self.sample_rate * 60 * 4 * self.beats, self.meter[1]) / self.tempo_bpm
+
+
 class PhrasePhase:
     """Only accepts samples from one verified, explicitly configured reference."""
 
-    def __init__(self, period, phase_error):
-        self.period = Fraction(period)
+    def __init__(self, timing, phase_error):
+        self.timing = timing
+        self.period = timing.period
         self.phase_error = Fraction(phase_error)
         self.lower = self.period.numerator // self.period.denominator
         self.upper = -(-self.period.numerator // self.period.denominator)
@@ -104,11 +118,13 @@ class PhrasePhase:
         if self.previous is not None and sample > self.previous + self.upper:
             self.revoke("Phrase marker missing. Restore the clock, then Cue again")
 
-    def for_take(self, expected_period):
-        if self.authority.state == State.READY and expected_period != self.period:
+    def for_take(self, timing, frames):
+        matches = timing == self.timing and frames in (self.lower, self.upper)
+        if self.authority.state == State.READY and not matches:
             return Authority(State.NOT_VERIFIED, "Connect a reference matching the captured phrase")
         return self.authority
 
-    def cue(self, expected_period):
-        self.cued = self.for_take(expected_period).state == State.READY
+    def cue(self, sample, timing, frames):
+        self.advance(sample)
+        self.cued = self.for_take(timing, frames).state == State.READY
         return self.cued
