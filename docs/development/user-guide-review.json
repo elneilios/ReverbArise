@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Loop capture timing fixes against the user guide. The guide already documents that Arm off or Stop cancels a Duration take, and that capture requires verified timing. The fixes enforce that behavior while a short take awaits cadence evidence. The guide text and screenshots remain accurate.",
+  "summary": "Reviewed the synced Loop capture and host admission specifications against the delivered guide. The guide covers the capture controls, Clock and optional MIDI roles, Duration cancellation, End Signal completion and Recapture Audio protection. Sync and archive preserve those instructions.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1020,13 +1020,13 @@
     },
     {
       "path": "openspec/specs/loop-host-admission/spec.md",
-      "bytes": 7068,
-      "sha256": "755482aa751ee228ff3085da3522dfcae1c07622527b750e4928a81b60a2f5f9"
+      "bytes": 9094,
+      "sha256": "5831468dfdae7b4e52649e5b13755de16e53364b9d4afbe83a4daac2d376b5a7"
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 7929,
-      "sha256": "8a86e6f822e1cbf97ac30c5fea02c6b3d1f175862a6f06f44ba889377907a608"
+      "bytes": 10763,
+      "sha256": "7ef5f67203b73c24747ed7f36e1a5c26e6f3aa1ba4d546d6ad7b8cd3c40618bb"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
