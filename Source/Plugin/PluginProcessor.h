@@ -89,8 +89,14 @@ public:
         juce::String rejection;
         SourceBarFields affected=SourceBarFields::none;
     };
-    SourceBarSubmission setSourceBars(int64_t start, int64_t end);
-    SourceBarSubmission checkSourceBars(int64_t start, int64_t end) const;
+    struct SourceBarTarget
+    {
+        uint64_t epoch;
+        juce::String primary;
+        bool operator==(const SourceBarTarget&) const = default;
+    };
+    SourceBarSubmission setSourceBars(int64_t start, int64_t end, std::optional<SourceBarTarget> target = {});
+    SourceBarSubmission checkSourceBars(int64_t start, int64_t end, const SourceBarTarget& target) const;
     void generatePreview() { swells->generate(); }
     bool auditionPreview() { return swells->audition(); }
     void setAuditionLevelDb(float db);

@@ -189,13 +189,8 @@ private:
     std::array<m3::ui::controls::FieldTextEditor,fieldCount> fields;
     m3::ui::controls::FieldTextEditor barStartEditor{"Bar start"},barEndEditor{"End excl."};
     m3::ui::controls::FieldFeedbackLabel sourceRangeFeedback;
-    struct SourceRangeRejection
-    {
-        uint64_t epoch;
-        juce::String primary;
-        PreverbAudioProcessor::SourceBarSubmission result;
-    };
-    std::optional<SourceRangeRejection> sourceRangeRejection;
+    std::optional<PreverbAudioProcessor::SourceBarTarget> sourceRangeDraftTarget;
+    PreverbAudioProcessor::SourceBarSubmission sourceRangeResult;
     juce::String sourceRangeMessage;
     bool sourceRangeHasError=false;
     uint64_t presentationSession=0;

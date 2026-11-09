@@ -48,6 +48,11 @@ Each field SHALL retain its subtype's edit and refresh rules, existing precision
 - **AND** the Settings bar pair submits together through Return or its explicit action
 - **AND** leaving the Settings bar pair or Name field runs validation while preserving explicit submission
 
+#### Scenario: Change swell or session with a source-bar draft
+- **WHEN** the selected swell or session changes before a source-bar draft is submitted
+- **THEN** the stale draft cannot validate or publish in the new context
+- **AND** the pair clears so the user can enter both bars for the new context
+
 #### Scenario: A displayed value is rounded
 - **WHEN** a numeric entry shows a rounded value and the user focuses or leaves it without editing
 - **THEN** the accepted exact value is preserved

@@ -225,24 +225,36 @@ void PreverbAudioProcessorEditor::layoutSettings()
 
 void PreverbAudioProcessorEditor::refreshSourceRangeFeedback(const m3::Swell* swell)
 {
-    if(sourceRangeRejection && (sourceRangeRejection->epoch!=state.sessionEpoch
-                               || sourceRangeRejection->primary!=state.session.primary))
-        sourceRangeRejection.reset();
+    const PreverbAudioProcessor::SourceBarTarget target{state.sessionEpoch,state.session.primary};
+    if(sourceRangeDraftTarget!=target)
+    {
+        // The pair belongs to the context in which it was displayed, even
+        // when input and a selection change arrive before the next refresh.
+        if(sourceRangeDraftTarget)
+        {
+            barStartEditor.setText({},false);
+            barEndEditor.setText({},false);
+        }
+        sourceRangeDraftTarget=target;
+        sourceRangeResult={};
+    }
 
-    const auto* result=sourceRangeRejection ? &sourceRangeRejection->result : nullptr;
-    const auto affected=result ? result->affected : SourceBarFields::none;
+    const auto hasError=sourceRangeResult.rejection.isNotEmpty();
+    const auto affected=sourceRangeResult.affected;
     barStartEditor.setInvalid(affected==SourceBarFields::start || affected==SourceBarFields::both);
     barEndEditor.setInvalid(affected==SourceBarFields::end || affected==SourceBarFields::both);
-    juce::String message=result ? result->rejection
+    juce::String message=hasError ? sourceRangeResult.rejection
         : !swell ? "Select a swell to apply its source range."
         : swell->frozen ? "Unfreeze the selected swell to change its source range."
-        : "The end bar is excluded.";
+        : barStartEditor.getText().isEmpty() && barEndEditor.getText().isEmpty()
+            ? "Enter both bars for the selected swell. The end bar is excluded."
+            : "The end bar is excluded.";
     if(affected==SourceBarFields::end)
         message+=". Enter a later bar, then choose Set source from bars to apply the corrected range.";
-    if(sourceRangeMessage==message && sourceRangeHasError==(result!=nullptr))return;
+    if(sourceRangeMessage==message && sourceRangeHasError==hasError)return;
 
     sourceRangeMessage=message;
-    sourceRangeHasError=result!=nullptr;
+    sourceRangeHasError=hasError;
     barStartEditor.setFieldDescription(message);
     barEndEditor.setFieldDescription(message);
     if(!settingsLabels[4].getBounds().isEmpty())layoutSourceRange();

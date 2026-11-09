@@ -511,27 +511,23 @@ void PreverbAudioProcessorEditor::curveChanged(bool in)
 }
 void PreverbAudioProcessorEditor::applyBarRange()
 {
-    auto result=processor.setSourceBars(barStartEditor.getText().getLargeIntValue(),
-                                        barEndEditor.getText().getLargeIntValue());
-    sourceRangeRejection.reset();
-    if(result.rejection.isNotEmpty())
-        sourceRangeRejection=SourceRangeRejection{state.sessionEpoch,state.session.primary,std::move(result)};
+    if(updating || destroying || !sourceRangeDraftTarget || sourceRangeDraftTarget->primary.isEmpty())return;
+    const auto start=barStartEditor.getText();
+    const auto end=barEndEditor.getText();
+    if(start.isEmpty() && end.isEmpty())return;
+    sourceRangeResult=processor.setSourceBars(start.getLargeIntValue(),end.getLargeIntValue(),sourceRangeDraftTarget);
     refresh();
 }
 void PreverbAudioProcessorEditor::validateBarRangeDraft()
 {
-    if(updating || destroying)return;
-    const auto session=processor.swellEngine().savedSession();
-    const auto* swell=m3::find(session,session.primary);
-    if(processor.swellEngine().assignmentEpoch()!=state.sessionEpoch || session.primary!=state.session.primary
-       || !swell || swell->frozen)
-        return;
-    auto result=processor.checkSourceBars(barStartEditor.getText().getLargeIntValue(),
-                                          barEndEditor.getText().getLargeIntValue());
-    sourceRangeRejection.reset();
-    if(result.rejection.isNotEmpty())
-        sourceRangeRejection=SourceRangeRejection{state.sessionEpoch,state.session.primary,std::move(result)};
-    refreshSourceRangeFeedback(swell);
+    if(updating || destroying || !sourceRangeDraftTarget)return;
+    const auto* swell=m3::find(state.session,sourceRangeDraftTarget->primary);
+    if(!swell || swell->frozen)return;
+    const auto start=barStartEditor.getText();
+    const auto end=barEndEditor.getText();
+    sourceRangeResult=start.isEmpty() && end.isEmpty() ? PreverbAudioProcessor::SourceBarSubmission{}
+        : processor.checkSourceBars(start.getLargeIntValue(),end.getLargeIntValue(),*sourceRangeDraftTarget);
+    refresh();
 }
 void PreverbAudioProcessorEditor::shapeReset(bool full)
 {

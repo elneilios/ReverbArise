@@ -254,9 +254,43 @@ static void sourceRangeFeedbackCases()
     end->setText("1",false);
     invokeCommand(*apply);
     REQUIRE(end->isInvalid() && acceptedEnd()==3000);
+    const auto secondEnd=[&]{return m3::find(engine.savedSession(),second)->sourceEnd;};
+    const auto originalSecondEnd=secondEnd();
+
+    // Validate a real draft under A, then submit before the editor observes B.
+    end->selectAll();
+    end->insertTextAtCaret("5");
+    end->onFocusLost();
+    REQUIRE(!end->isInvalid() && acceptedEnd()==3000);
     REQUIRE(engine.selectTargets({second},second));
+    invokeCommand(*apply);
+    REQUIRE(acceptedEnd()==3000 && secondEnd()==originalSecondEnd);
+    REQUIRE(start->getText().isEmpty() && end->getText().isEmpty());
+    REQUIRE(!end->isInvalid() && end->getDescription().contains("Enter both bars"));
+    submitReturn();
+    REQUIRE(secondEnd()==originalSecondEnd);
+
+    // Blur also discards the previous pair before it can validate against B.
+    REQUIRE(engine.selectTargets({first},first));
     editor->refresh();
-    REQUIRE(!end->isInvalid() && end->getDescription()=="The end bar is excluded.");
+    start->insertTextAtCaret("1");
+    end->insertTextAtCaret("1");
+    REQUIRE(engine.selectTargets({second},second));
+    end->onFocusLost();
+    REQUIRE(!end->isInvalid() && end->getText().isEmpty() && secondEnd()==originalSecondEnd);
+    start->insertTextAtCaret("2");
+    end->insertTextAtCaret("4");
+    submitReturn();
+    REQUIRE(secondEnd()==3000 && acceptedEnd()==3000);
+
+    // A restored session can have the same selected ID with a different epoch.
+    end->selectAll();
+    end->insertTextAtCaret("5");
+    const auto draftEpoch=engine.assignmentEpoch();
+    engine.restore(engine.savedSession());
+    REQUIRE(engine.assignmentEpoch()!=draftEpoch);
+    submitReturn();
+    REQUIRE(secondEnd()==3000 && start->getText().isEmpty() && end->getText().isEmpty());
     REQUIRE(engine.selectTargets({first},first));
     editor->refresh();
 
@@ -271,6 +305,8 @@ static void sourceRangeFeedbackCases()
     REQUIRE(!apply->isEnabled() && start->isEnabled() && end->isEnabled());
     REQUIRE(end->getDescription().contains("Unfreeze") && !end->isInvalid());
 
+    start->insertTextAtCaret("1");
+    end->insertTextAtCaret("1");
     submitReturn();
     REQUIRE(end->isInvalid());
     const auto epoch=engine.assignmentEpoch();

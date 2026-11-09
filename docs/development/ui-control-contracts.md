@@ -346,7 +346,7 @@ Observed mechanisms differ intentionally:
 | --- | --- |
 | KnobValue Entry | Return and typing focus-loss commit; Escape cancels; same-identity display preserves active text, identity change cancels; restore accepted canonical display after commit/rejection; exact text is separate from rounded display |
 | SliderControl FieldNumericInput | Shared numeric label and temporary FieldTextEditor retain JUCE's editor lifecycle, slider range and formatter. Where present, step buttons and wheel over the value or arrows use one configured step and capture invocation ownership. |
-| Settings bar range FieldTextEditor pair | Digits-only input. Focus loss checks the draft and updates feedback. Return or Set source from bars submits the pair. |
+| Settings bar range FieldTextEditor pair | Digits-only input. Focus loss checks the draft against its bound swell and session. Return or Set source from bars submits to that same context. A selection or session change clears the pair. |
 | Read-only diagnostic fields / placement | Copy/inspect accepted values, no edit publication; hidden Name seam remains hidden |
 | Rename dialog FieldTextEditor | Focus loss validates. OK/Return submits a nonempty name to the captured ID and epoch. Cancel/Escape discards the draft. |
 

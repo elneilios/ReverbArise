@@ -312,20 +312,26 @@ bool applySourceBarSamples(m3::Swell& swell,int64_t firstSample,int64_t endSampl
     return false;
 }
 }
-PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::checkSourceBars(int64_t start,int64_t end) const
+PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::checkSourceBars(
+    int64_t start,int64_t end,const SourceBarTarget& target) const
 {
+    auto session=swells->savedSession();
+    auto* swell=m3::find(session,target.primary);
+    if(!swell || session.primary!=target.primary || swells->assignmentEpoch()!=target.epoch)
+        return {};
     int64_t firstSample=0,endSample=0;
     auto result=resolveBarRange(start,end,firstSample,endSample);
     if(result.rejection.isEmpty())
-    {
-        auto session=swells->savedSession();
-        if(auto* swell=m3::find(session,session.primary))
-            applySourceBarSamples(*swell,firstSample,endSample,result.rejection,result.affected);
-    }
+        applySourceBarSamples(*swell,firstSample,endSample,result.rejection,result.affected);
     return result;
 }
-PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::setSourceBars(int64_t start,int64_t end)
+PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::setSourceBars(
+    int64_t start,int64_t end,std::optional<SourceBarTarget> target)
 {
+    const auto stale="The selected swell changed. Enter both bars for the current swell.";
+    auto state=swells->savedSession();
+    if(target && (target->primary.isEmpty() || state.primary!=target->primary || swells->assignmentEpoch()!=target->epoch))
+        return {stale};
     int64_t a=0,b=0;
     auto result=resolveBarRange(start,end,a,b);
     if(result.rejection.isNotEmpty())
@@ -333,14 +339,20 @@ PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::setSourceBars(
         swells->diagnostic(result.rejection);
         return result;
     }
-    auto state=swells->savedSession();
-    if(state.primary.isEmpty())
+    if(!target && state.primary.isEmpty())
     {
         if(!swells->addTarget(a,&result.rejection))return result;
         state=swells->savedSession();
     }
-    swells->edit(state.primary,[&](auto& swell,auto& reason)
-    {return applySourceBarSamples(swell,a,b,reason,result.affected);},0,&result.rejection);
+    swells->edit(target?target->primary:state.primary,[&](auto& swell,auto& reason)
+    {
+        if(target && swells->savedSession().primary!=target->primary)
+        {
+            reason=stale;
+            return false;
+        }
+        return applySourceBarSamples(swell,a,b,reason,result.affected);
+    },target?target->epoch:0,&result.rejection);
     return result;
 }
 void PreverbAudioProcessor::setAuditionLevelDb(float db)

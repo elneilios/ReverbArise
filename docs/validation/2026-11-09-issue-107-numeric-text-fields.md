@@ -78,3 +78,20 @@ standards guard, user-guide currency and whitespace checks passed.
 Coverage includes native desktop input and software UI scaling. FL Studio
 integration and physical DPI variation were outside this run. The shared warm
 build tree and evidence logs are retained for review.
+
+## PR #134 review follow-up
+
+Settings binds the source-bar pair to the displayed swell ID and session
+epoch. Changing either clears the pair and its old feedback. Validation
+checks the bound swell, and submission checks the epoch and the selected
+ID again at the edit boundary.
+
+The Windows Release `preverb_swell_ui_test --test-source-range-feedback`
+passed. It checks submission before the editor observes a changed selection,
+focus loss after that selection changes, fresh entry for the new swell, and
+session restore with the same selected ID.
+
+The full Windows Release wrapper with `-Test` passed 98/98 after the fix
+(`out/build-logs/Release/20261109-214045-a5db7ada`). The knob-reset fixture
+received foreground focus during the run. UI standards, strict OpenSpec,
+user-guide currency and whitespace checks passed.

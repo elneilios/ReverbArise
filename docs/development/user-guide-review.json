@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Documented Rename correction, paired bar-range validation on focus loss, exact inspector edits, and wheel steps over numeric steppers.",
+  "summary": "Documented that the Settings bar fields clear when the selected swell changes and verified explicit submission stays bound to the original swell and session.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 95746,
-      "sha256": "db87b37706ca9bfe429f9e6aef9751b3b6333c2b0b00d4608efb54406065c433"
+      "bytes": 95546,
+      "sha256": "f9a407b4174728aba248a225ed690b6227ceec375a967cf4d0d488d6dd9001fc"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15173,
-      "sha256": "13055a286c3170f621bc43d7e88e493884aa386b78e471121e14dc12f2145f25"
+      "bytes": 15101,
+      "sha256": "6f1d79c9d66c15f142a18780a4735a1c1d94b44c20a5b4c41998055d381a9b82"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -525,18 +525,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 47024,
-      "sha256": "5be6a7249fe5cdffefef08cb3965a6fd3423adf065dda04febc4aa091066c5b7"
+      "bytes": 47636,
+      "sha256": "42ef24bb30a45c33924396cb5ac2b622541c95dfab8841a282d14c5456a4499d"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8502,
-      "sha256": "ad5a05f49b50babe1763f43fb00db9e35a70ba1c27a31fdcbc5a7a16dfda4c2f"
+      "bytes": 8736,
+      "sha256": "12ad2d0b4e3bd0692c96d869af38e230e9ccc724e222c8aff24768e04a2e3abf"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 25548,
-      "sha256": "073fcaf9a638deccaa52d67375e50aaa0b513b47945573d5609394ffacde1dc5"
+      "bytes": 25975,
+      "sha256": "6fc089cac74c52301184883c4a62a7f4665530cd8aa98ade39fd13494b8be212"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -930,8 +930,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30030,
-      "sha256": "7adfa862b3e77ddbc0001aeca5a7068d1bf0525454382f2304eb34e578c40323"
+      "bytes": 30122,
+      "sha256": "97d107af33da7d2d8eed27b4ff124dc5a8ce1371f58908982c34fb53b6a19f66"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
