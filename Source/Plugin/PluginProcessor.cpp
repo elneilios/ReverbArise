@@ -7,6 +7,83 @@
 
 #include <algorithm>
 
+namespace
+{
+void writeLoopState(juce::XmlElement& state, const CaptureSessionSnapshot& capture, LoopCapturePreference preference)
+{
+    if (capture.sourceKind() == CaptureSourceKind::loop)
+    {
+        auto* source = state.createNewChildElement("AcceptedLoopSource");
+        source->setAttribute("version", 1);
+    }
+    if (preference == LoopCapturePreference{})
+        return;
+    auto* next = state.createNewChildElement("NextCapture");
+    next->setAttribute("version", 1);
+    next->setAttribute("enabled", preference.enabled ? "1" : "0");
+    next->setAttribute("method", preference.method == LoopCapturePreference::Method::duration ? "duration" : "endSignal");
+    next->setAttribute("unit", preference.unit == LoopCapturePreference::Unit::bars ? "bars" : "beats");
+    next->setAttribute("count", static_cast<int>(preference.count));
+}
+
+bool readLoopState(const juce::XmlElement& state, CaptureSourceKind& kind, LoopCapturePreference& preference)
+{
+    const juce::XmlElement* source = nullptr;
+    const juce::XmlElement* next = nullptr;
+    for (auto* child : state.getChildIterator())
+    {
+        if (child->hasTagName("AcceptedLoopSource"))
+        {
+            if (source != nullptr) return false;
+            source = child;
+        }
+        else if (child->hasTagName("NextCapture"))
+        {
+            if (next != nullptr) return false;
+            next = child;
+        }
+    }
+    if ((source || next) && state.getStringAttribute("stateVersion") != "8")
+        return false;
+    if (source)
+    {
+        if (source->getStringAttribute("version") != "1" || source->getNumAttributes() != 1
+            || source->getNumChildElements() != 0 || state.getStringAttribute("manifestReference").isEmpty()
+            || state.getStringAttribute("manifestRevision").getLargeIntValue() <= 0)
+            return false;
+        kind = CaptureSourceKind::loop;
+    }
+    if (!next)
+        return true;
+    const auto enabled = next->getStringAttribute("enabled"), method = next->getStringAttribute("method"),
+        unit = next->getStringAttribute("unit"), count = next->getStringAttribute("count");
+    if (next->getStringAttribute("version") != "1" || next->getNumAttributes() != 5 || next->getNumChildElements() != 0
+        || (enabled != "0" && enabled != "1") || (method != "duration" && method != "endSignal")
+        || (unit != "bars" && unit != "beats") || count != juce::String(count.getIntValue()))
+        return false;
+    preference = { enabled == "1", method == "duration" ? LoopCapturePreference::Method::duration : LoopCapturePreference::Method::endSignal,
+                   unit == "bars" ? LoopCapturePreference::Unit::bars : LoopCapturePreference::Unit::beats,
+                   static_cast<unsigned>(count.getIntValue()) };
+    return preference.valid();
+}
+}
+
+bool PreverbAudioProcessor::setLoopCapturePreference(LoopCapturePreference preference)
+{
+    const juce::ScopedLock stateGuard(storageStateLock);
+    if (!preference.valid() || loopCaptureArmed() || workflowState.snapshot().locked() || captureWorker.isLoading())
+        return false;
+    const auto previous=loopPreference.exchange(preference.packed(), std::memory_order_relaxed);
+    if (LoopCapturePreference::unpack(previous).enabled != preference.enabled)
+    {
+        invalidateLoopClock();
+        loopInterrupted.store(false,std::memory_order_relaxed);
+    }
+    if (previous != preference.packed())
+        persistentStateChanged();
+    return true;
+}
+
 juce::File PreverbAudioProcessor::defaultProjectsRoot()
 {
     return juce::File::getSpecialLocation(juce::File::windowsLocalAppData)
@@ -23,7 +100,9 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     swells = std::make_unique<m3::SwellEngine>(std::move(projectsRoot), [this]
     {
         auto capture=captureWorker.snapshot();if(captureWorker.isLoading())capture.status="Loading capture state";
-        return PreviewContext{std::move(capture), getSongTime(), captureWorker.captureGeneration()};
+        auto songTime=getSongTime();
+        if (capture.sourceKind()==CaptureSourceKind::loop) songTime.valid=false;
+        return PreviewContext{std::move(capture), songTime, captureWorker.captureGeneration()};
     },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
     swells->setAuditionWetOnly(false,swells->assignmentEpoch());
@@ -55,6 +134,7 @@ PreverbAudioProcessor::~PreverbAudioProcessor()
 
 void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 {
+    invalidateLoopClock();
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
     sampleRate.store(newSampleRate, std::memory_order_relaxed);
     captureWorker.setHostRate(newSampleRate);
@@ -62,11 +142,13 @@ void PreverbAudioProcessor::prepareToPlay(double newSampleRate, int)
 
 void PreverbAudioProcessor::releaseResources()
 {
+    invalidateLoopClock();
     wasOffline=false;swells->endOffline();swells->resetTransportClock();
 }
 
 void PreverbAudioProcessor::reset()
 {
+    invalidateLoopClock();
     // JUCE VST3 setProcessing(false) can reset without release/prepare.
     // Invalidate only ephemeral clock authority; the next valid callback
     // validates a fresh run and reuses eligible PCM at current Song time.
@@ -79,13 +161,195 @@ bool PreverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
         && layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
 
-void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void PreverbAudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    invalidateLoopClock();
+    AudioProcessor::processBlockBypassed(buffer,midiMessages);
+}
+
+void PreverbAudioProcessor::invalidateLoopClock() noexcept
+{
+    loopClockState.store(loop_capture::ClockAdmission::State::notVerified, std::memory_order_release);
+    loopReset.fetch_add(1, std::memory_order_release);
+}
+
+bool PreverbAudioProcessor::canArmLoopCapture() const
+{
+    using State = loop_capture::ClockAdmission::State;
+    const auto settings = getLoopCapturePreference();
+    const auto flow = workflowState.snapshot();
+    if (!settings.enabled || settings.method != LoopCapturePreference::Method::duration
+        || loopCaptureArmed() || flow.mode != workflow::Mode::capture || flow.locked()
+        || loopClockState.load(std::memory_order_acquire) != State::ready || !loopDurationFits(settings) || captureWorker.isLoading())
+        return false;
+    const auto source = captureWorker.snapshot();
+    return !source.unavailable && source.location && source.location->writable && !captureWorker.recoveryArmed();
+}
+
+bool PreverbAudioProcessor::loopDurationFits(LoopCapturePreference settings) const noexcept
+{
+    const auto tempo=loopTempo.load(std::memory_order_relaxed);
+    const auto rate=sampleRate.load(std::memory_order_relaxed);
+    const auto beats=settings.count*(settings.unit==LoopCapturePreference::Unit::bars?loop_capture::PhraseClock::beatsPerBar:1);
+    return tempo>0 && std::ceil(rate*60*beats/tempo)<=std::min<double>(loop_capture::Take::maximumFrames,rate*120);
+}
+
+bool PreverbAudioProcessor::armLoopCapture()
+{
+    const juce::ScopedLock guard(storageStateLock);
+    if (!canArmLoopCapture()) return false;
+    const auto pass=workflowState.reserveCapture();
+    if (!pass) return false;
+    loopInterrupted.store(false, std::memory_order_relaxed);
+    loopArm.store(pass, std::memory_order_release);
+    return true;
+}
+
+juce::String PreverbAudioProcessor::loopCaptureStatus() const
+{
+    using State = loop_capture::ClockAdmission::State;
+    const auto flow = workflowState.snapshot();
+    if (flow.phase == workflow::Phase::recording && loopCaptureArmed()) return "Recording Loop";
+    if (flow.phase == workflow::Phase::draining || flow.phase == workflow::Phase::validating) return "Checking captured audio";
+    if (loopCaptureArmed()) return "Armed. Waiting for the next phrase.";
+    if (flow.result == workflow::Result::failed) return captureWorker.snapshot().status;
+    if (loopInterrupted.load(std::memory_order_relaxed)) return "Capture interrupted. Check the clock and arm again.";
+    if (getLoopCapturePreference().method == LoopCapturePreference::Method::endSignal)
+        return "End signal needs a verified end input. It ends at the next bar.";
+    if (flow.result == workflow::Result::accepted && captureWorker.acceptedLoop()) return "Loop accepted";
+    if (flow.result == workflow::Result::cancelled) return "Capture cancelled";
+    if (loopClockState.load(std::memory_order_acquire) == State::ready)
+        return !loopDurationFits(getLoopCapturePreference()) ? "Duration exceeds the capture limit. Choose a shorter take."
+            : canArmLoopCapture() ? "Clock ready" : "Capture storage or Learn is unavailable";
+    if (loopClockState.load(std::memory_order_relaxed) == State::syncLost) return "Clock sync lost. Check the timing markers.";
+    if (loopClockState.load(std::memory_order_relaxed) == State::notConfigured) return "Waiting for supported 4/4 timing.";
+    return "Waiting for aligned beat, bar and phrase markers";
+}
+
+void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi,
+                                             const HostPositionDiagnostics& timing, bool inactive, uint64_t generation) noexcept
+{
+    using namespace loop_capture;
+    const auto flow = workflowState.snapshot();
+    if (loopPass != 0 && flow.pass != loopPass) loopPass = 0;
+    const auto requested = loopArm.load(std::memory_order_acquire);
+    if (requested != seenLoopArm)
+    {
+        seenLoopArm = requested;
+        loopTake = {};
+        if (requested != 0 && flow.pass == requested && flow.phase == workflow::Phase::armed)
+            loopTake.arm(getLoopCapturePreference());
+    }
+
+    const auto finish = [&](CaptureFailureReason reason)
+    {
+        if (loopPass && workflowState.snapshot().phase == workflow::Phase::recording)
+        {
+            if (reason != CaptureFailureReason::none)
+            {
+                CaptureFailureEvent failure;
+                failure.reason = reason;
+                failure.pass = loopPass;
+                failure.epoch = generation;
+                failure.start = loopRunSample;
+                failure.frames = buffer.getNumSamples();
+                captureWorker.failPass(failure);
+                droppedCaptureBlockCount.fetch_add(1, std::memory_order_relaxed);
+            }
+            workflowState.stop(loopPass);
+        }
+        if (reason != CaptureFailureReason::none && seenLoopArm)
+        {
+            loopInterrupted.store(true, std::memory_order_relaxed);
+            workflowState.rejectReserved(seenLoopArm);
+        }
+        auto expected = seenLoopArm;
+        loopArm.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
+        seenLoopArm = 0;
+        loopTake = {};
+    };
+    const auto frames = buffer.getNumSamples();
+    const auto rate=timing.sampleRate;
+    const auto reset = loopReset.load(std::memory_order_acquire);
+    const auto now = std::chrono::steady_clock::now();
+    const bool gap = previousLoopCallback.time_since_epoch().count() != 0
+        && now - previousLoopCallback > std::chrono::duration<double>(rate>0?std::max(.5,3*frames/rate):.5);
+    previousLoopCallback = now;
+    const bool interrupted = seenLoopReset != reset || gap;
+    seenLoopReset = reset;
+    if (interrupted)
+    {
+        loopClock.revoke();
+        finish(CaptureFailureReason::timingChanged);
+    }
+    if (frames == 0 && !inactive && midi.isEmpty())
+        return;
+    const bool compatibleMeter=!timing.meterAvailable || (timing.numerator==4 && timing.denominator==4);
+    const bool eligible=!inactive && !captureWorker.isLoading() && compatibleMeter && frames>0 && frames<=maxCaptureBlockFrames;
+    const ClockProfile declared=eligible && timing.tempoAvailable && timing.meterAvailable ? ClockProfile{rate,timing.bpm} : ClockProfile{};
+    const auto measured=eligible?measuredProfile(rate,frames):ClockProfile{};
+    if(loopClock.configure(declared,measured) && seenLoopArm)finish(CaptureFailureReason::timingChanged);
+    if ((!declared.valid() && !measured.valid()) || loopRunSample > INT64_MAX - frames)
+    {
+        loopClockState.store(ClockAdmission::State::notConfigured, std::memory_order_release);
+        return;
+    }
+    MidiObservations observations;
+    readLoopObservations(midi, frames, observations);
+    if (observations.error != MidiObservations::Error::none)
+    {
+        loopClock.revoke();
+        finish(CaptureFailureReason::timingChanged);
+    }
+    int first = 0;
+    const auto append = [&](int last)
+    {
+        if (last <= first) return true;
+        if (buffer.getNumChannels() < 2) { finish(CaptureFailureReason::channels); return false; }
+        if (loopRunSample + last - loopTake.start() > std::min<double>(Take::maximumFrames,rate*120))
+        { finish(CaptureFailureReason::range); return false; }
+        if (!captureQueue.tryPush(loopRunSample + first - loopTake.start(), rate, buffer.getReadPointer(0,first),
+                                  buffer.getReadPointer(1,first), last-first, generation, loopPass, {}, true))
+        { finish(CaptureFailureReason::queueFull); return false; }
+        return true;
+    };
+    for (unsigned index = 0; index < observations.size; ++index)
+    {
+        const auto [offset, roles] = observations.samples[index];
+        const auto at = loopRunSample + offset;
+        const auto boundary = loopClock.observe(at,roles);
+        // A raw gate release does not qualify as a capture end.
+        const auto edge = loopTake.observe(at,roles,boundary);
+        if (edge == Take::Edge::invalid) finish(CaptureFailureReason::timingChanged);
+        if (edge == Take::Edge::start)
+        {
+            if (loopArm.load(std::memory_order_acquire) == seenLoopArm && !captureWorker.isLoading()
+                && workflowState.startReserved(seenLoopArm))
+                loopPass = seenLoopArm;
+            if (!loopPass) finish(CaptureFailureReason::rejected);
+            first = offset;
+        }
+        if (edge == Take::Edge::end && append(offset))
+        {
+            const auto sent = captureQueue.tryFinishLoop(generation,loopPass,loopTake.timing(loopClock.tempo(),at));
+            finish(sent ? CaptureFailureReason::none : CaptureFailureReason::queueFull);
+        }
+    }
+    if (loopClock.advance(loopRunSample + frames - 1) && seenLoopArm)
+        finish(CaptureFailureReason::timingChanged);
+    if (loopTake.start() >= 0) append(frames);
+    loopRunSample += frames;
+    loopTempo.store(loopClock.tempo(),std::memory_order_relaxed);
+    loopClockState.store(loopClock.state(), std::memory_order_release);
+}
+
+void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
     updateHostPositionDiagnostics(buffer.getNumSamples());
     awaitingRestoredPosition.store(false,std::memory_order_release);
     const auto diagnostics = getHostPositionDiagnostics();
-    const TransportTime transport{{diagnostics.positionAvailable && diagnostics.samplePositionAvailable
+    TransportTime transport{{diagnostics.positionAvailable && diagnostics.samplePositionAvailable
         && diagnostics.ppqPositionAvailable && diagnostics.tempoAvailable && diagnostics.meterAvailable,
         diagnostics.samplePosition,diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,
         diagnostics.numerator,diagnostics.denominator},diagnostics.isPlaying,diagnostics.isLooping,diagnostics.loopStart,diagnostics.loopEnd};
@@ -94,7 +358,13 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     if(offline && !wasOffline)offlineWorkflowMode=workflowState.snapshot().mode;
     wasOffline=offline;
     auto workflow=workflowState.snapshot();
-    if(!offline && diagnostics.positionAvailable)
+    const bool loopSelected=getLoopCapturePreference().enabled;
+    const bool loopPath=workflow.phase==workflow::Phase::armed
+        || (workflow.locked() && loopPass!=0 && workflow.pass==loopPass) || (loopSelected && !workflow.locked());
+    if(loopPath || seenLoopArm!=0 || loopPass!=0)
+        processLoopCapture(buffer,midi,diagnostics,offline || !loopPath,captureGeneration);
+    if (loopPath && diagnostics.positionAvailable) previousHostPlaying=diagnostics.isPlaying;
+    if(!loopPath && !offline && diagnostics.positionAvailable)
     {
         if(diagnostics.isPlaying && workflow.mode==workflow::Mode::capture && !workflow.locked() && (!previousHostPlaying || previousWorkflowMode!=workflow::Mode::capture))
             if(workflowState.begin(transport.song.valid && captureWorker.canMap()))swells->captureStarted(transport.song.sample);
@@ -107,7 +377,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         diagnostics.ppqPositionAvailable,diagnostics.tempoAvailable,diagnostics.meterAvailable,diagnostics.isPlaying,
         diagnostics.isLooping,diagnostics.samplePosition,diagnostics.loopStart,diagnostics.loopEnd,
         diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,diagnostics.numerator,diagnostics.denominator};
-    if(!offline && workflow.phase==workflow::Phase::recording && observedCapturePass!=workflow.pass)
+    if(!loopPath && !offline && workflow.phase==workflow::Phase::recording && observedCapturePass!=workflow.pass)
     {capturePassTime=transport.song;observedCapturePass=workflow.pass;capturePassDiagnosticBaseline=captureTiming;passQueuedBlocks=passDroppedBlocks=0;}
     const auto rejectCapture=[&](CaptureFailureReason reason)
     {
@@ -116,9 +386,9 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         event.start=diagnostics.samplePosition;event.frames=buffer.getNumSamples();event.queued=passQueuedBlocks;event.dropped=passDroppedBlocks;
         event.timing=captureTiming;event.baseline=capturePassDiagnosticBaseline;captureWorker.failPass(event);
     };
-    if(!offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
+    if(!loopPath && !offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
         rejectCapture(CaptureFailureReason::timingUnavailable);
-    if (!offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
+    if (!loopPath && !offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
         && diagnostics.isPlaying)
     {
         const bool compatiblePass=transportMappingMatches(capturePassTime,transport.song);
@@ -141,8 +411,10 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         }
     }
 
+    const bool loopSource=captureWorker.acceptedLoop();
+    if (loopSource) transport.song.valid=false;
     auto tonePeak = 0.0f;
-    if (workflow.mode==workflow::Mode::live && testToneEnabled.load(std::memory_order_relaxed)
+    if (!loopSource && workflow.mode==workflow::Mode::live && testToneEnabled.load(std::memory_order_relaxed)
         && diagnostics.positionAvailable
         && diagnostics.isPlaying
         && diagnostics.samplePositionAvailable
@@ -228,7 +500,7 @@ bool PreverbAudioProcessor::isMappingEnabled() const noexcept
 
 void PreverbAudioProcessor::requestClearCapture()
 {
-    if(workflowState.snapshot().mode!=workflow::Mode::capture || workflowState.snapshot().locked())
+    if(workflowState.snapshot().mode!=workflow::Mode::capture || workflowState.snapshot().locked() || loopCaptureArmed())
     {swells->diagnostic("Clear requires stopped idle Learn mode");return;}
     swells->clear();
     droppedCaptureBlockCount.store(0, std::memory_order_relaxed);
@@ -239,7 +511,8 @@ void PreverbAudioProcessor::requestClearCapture()
 bool PreverbAudioProcessor::setRecaptureExisting(bool enabled)
 {
     const juce::ScopedLock guard(storageStateLock);
-    if(workflowState.snapshot().mode!=workflow::Mode::capture)return false;
+    if(workflowState.snapshot().mode!=workflow::Mode::capture || getLoopCapturePreference().enabled)return false;
+    if (captureWorker.acceptedLoop() && captureWorker.snapshot().unavailable) return false;
     if(enabled && captureWorker.snapshot().unavailable){
         m3::storage::portable::Input current;juce::String error;
         if(!pinPortableAssets(current,error,true) || !beginRelearning(current,error)){swells->diagnostic(error);return false;}
@@ -249,6 +522,7 @@ bool PreverbAudioProcessor::setRecaptureExisting(bool enabled)
 void PreverbAudioProcessor::cancelCapturePass()
 {
     const juce::ScopedLock guard(storageStateLock);const auto previous=workflowState.snapshot().mode;
+    loopArm.store(0,std::memory_order_release);
     if(recoveryIntent)cancelRelearning();else captureWorker.cancelWorkflowPass();
     if(previous!=workflow::Mode::capture)persistentStateChanged();
 }
@@ -267,12 +541,14 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
     const auto solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     const auto ready=[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo) && m3::hasCompatibleReadyRender(w,time);};
     const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.frozen && ready(w);});
+    if (capture.sourceKind()==CaptureSourceKind::loop) return {captureWorker.hasUsefulSource(),false,false,false};
     return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
         && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
         swells->hasExportableWet(time),frozen};
 }
 bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
 {
+    if (loopCaptureArmed()) return false;
     const auto previous=workflowState.snapshot().mode;
     const auto readiness=getWorkflowReadiness();
     if(const auto block=workflow::entryBlock(workflowState.snapshot(),mode,readiness);block!=workflow::EntryBlock::none)
@@ -289,6 +565,11 @@ void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::setSourceBars(int64_t start,int64_t end)
 {
     SourceBarSubmission result;
+    if (captureWorker.acceptedLoop())
+    {
+        result.rejection="Song source bars require an accepted Song";
+        return result;
+    }
     int64_t a,b;
     std::string error;
     const auto time=getSongTime();
@@ -482,7 +763,7 @@ const juce::String PreverbAudioProcessor::getName() const
 
 bool PreverbAudioProcessor::acceptsMidi() const
 {
-    return false;
+    return true;
 }
 
 bool PreverbAudioProcessor::producesMidi() const
@@ -544,6 +825,7 @@ void PreverbAudioProcessor::getStateInformation(juce::MemoryBlock& destinationDa
     state.setAttribute("instanceId", juce::String(capture.manifest.instanceId));
     state.setAttribute("manifestReference", capture.reference);
     state.setAttribute("manifestRevision", juce::String(static_cast<juce::int64>(capture.manifest.revision)));
+    writeLoopState(state, capture, getLoopCapturePreference());
     juce::String json,error;
     if(!m3::encode(session,json,error)) {swells->diagnostic("Save failed: "+error);return;}
     state.createNewChildElement("SwellSession")->addTextElement(json);
@@ -614,16 +896,26 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         {swells->diagnostic("State rejected: invalid capture reference");return;}
     }
 
+    auto acceptedKind = CaptureSourceKind::song;
+    LoopCapturePreference preference;
+    if (!readLoopState(*state, acceptedKind, preference))
+    {swells->diagnostic("State rejected: invalid Loop source or next-capture preference");return;}
+
     CaptureSessionSnapshot hostCapture;hostCapture.manifestKnown=false;
     hostCapture.manifest.projectId=state->getStringAttribute("projectId").toStdString();
     hostCapture.manifest.instanceId=state->getStringAttribute("instanceId").toStdString();
     hostCapture.reference=state->getStringAttribute("manifestReference");hostCapture.manifest.revision=static_cast<uint64_t>(state->getStringAttribute("manifestRevision").getLargeIntValue());
     if(embeddedManifest.isNotEmpty()){
         CaptureManifest captured;if(!parseCaptureManifest(embeddedManifest,captured,error) || captured.projectId!=hostCapture.manifest.projectId
-            || captured.instanceId!=hostCapture.manifest.instanceId || captured.revision!=hostCapture.manifest.revision){swells->diagnostic("State rejected: mismatched associated capture metadata");return;}
+            || captured.instanceId!=hostCapture.manifest.instanceId || captured.revision!=hostCapture.manifest.revision
+            || captured.kind()!=acceptedKind){swells->diagnostic("State rejected: mismatched associated capture metadata");return;}
         hostCapture.manifest=std::move(captured);hostCapture.manifestKnown=true;
     }else if(hostCapture.reference.isEmpty())hostCapture.manifestKnown=true;
+    if (!hostCapture.manifestKnown) hostCapture.savedKind=acceptedKind;
     pendingHostCapture=hostCapture;pendingHostAssociation=association;
+    loopArm.store(0,std::memory_order_release);
+    invalidateLoopClock();
+    loopPreference.store(preference.packed(), std::memory_order_relaxed);
     recoveryIntent.reset();
     awaitingRestoredPosition.store(true,std::memory_order_release);
     auto startBar = std::clamp(state->getIntAttribute("toneStartBar", 8), 1, 511);
@@ -637,7 +929,7 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     if (version >= 2)
     {
         const auto revision = state->getStringAttribute("manifestRevision").getLargeIntValue();
-        CaptureWorker::StorageRestore storage;storage.savedManifest=embeddedManifest;storage.allowMissingSource=true;
+        CaptureWorker::StorageRestore storage;storage.savedManifest=embeddedManifest;storage.allowMissingSource=true;storage.expectedKind=acceptedKind;
         if(association.present()){
             const auto registry=legacyProjectsRoot;const auto base=state->toString();
             storage.resolve=[association,registry,base,embeddedManifest]{std::shared_ptr<m3::storage::portable::WorkingFolder> folder;juce::String error;
@@ -688,6 +980,7 @@ bool PreverbAudioProcessor::pinPortableAssets(m3::storage::portable::Input& outp
     state.setAttribute("toneEnabled",isTestToneEnabled());state.setAttribute("toneStartBar",getToneStartBar());state.setAttribute("toneEndBar",getToneEndBar());
     state.setAttribute("projectId",juce::String(capture.manifest.projectId));state.setAttribute("instanceId",juce::String(capture.manifest.instanceId));
     state.setAttribute("manifestReference",capture.reference);state.setAttribute("manifestRevision",juce::String(static_cast<juce::int64>(capture.manifest.revision)));
+    writeLoopState(state, capture, getLoopCapturePreference());
     state.createNewChildElement("SwellSession")->addTextElement(creative);
     juce::String stateXml=state.toString();
     if(capture.location && capture.location->association.present()){

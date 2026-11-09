@@ -7,7 +7,7 @@
 namespace workflow
 {
 enum class Mode : uint8_t { capture, live, finalise };
-enum class Phase : uint8_t { idle, recording, draining, validating, failed };
+enum class Phase : uint8_t { idle, recording, draining, validating, failed, armed };
 enum class Result : uint8_t { none, accepted, empty, failed, cancelled };
 struct Readiness { bool usefulSource=false, compatible=false, readySwell=false,frozenWet=false; };
 struct Snapshot
@@ -15,7 +15,7 @@ struct Snapshot
     Mode mode=Mode::capture;Phase phase=Phase::idle;Result result=Result::none;
     bool recapture=false;uint64_t pass=0;uint8_t configurationSlot=0;bool admissionFailed=false;
     bool generationCommit=false;
-    bool locked() const noexcept {return generationCommit || phase==Phase::recording || phase==Phase::draining || phase==Phase::validating;}
+    bool locked() const noexcept {return generationCommit || phase==Phase::armed || phase==Phase::recording || phase==Phase::draining || phase==Phase::validating;}
 };
 struct Capabilities {bool capture=false,scheduledWet=false,edit=false,preview=false,switchMode=false;};
 inline Capabilities capabilities(const Snapshot& s,Readiness r) noexcept
@@ -73,6 +73,23 @@ public:
         }
         // Bounded admission failure is explicit; never accept a truncated pass.
         startFailed.store(true);return 0;
+    }
+    uint64_t reserveCapture() noexcept
+    {
+        auto old=word.load(std::memory_order_acquire);
+        const auto s=decode(old);
+        if(s.mode!=Mode::capture || s.locked())return 0;
+        return word.compare_exchange_strong(old,pack(s.mode,Phase::armed,false,Result::none,s.pass+1,s.configurationSlot),
+                                            std::memory_order_acq_rel) ? s.pass+1 : 0;
+    }
+    bool startReserved(uint64_t pass) noexcept {return changePhase(pass,Phase::armed,Phase::recording);}
+    bool rejectReserved(uint64_t pass) noexcept
+    {
+        auto old=word.load(std::memory_order_acquire);
+        const auto s=decode(old);
+        return s.pass==pass && s.phase==Phase::armed
+            && word.compare_exchange_strong(old,pack(s.mode,Phase::idle,false,Result::none,s.pass,s.configurationSlot),
+                                            std::memory_order_acq_rel);
     }
     bool stop(uint64_t pass) noexcept {return changePhase(pass,Phase::recording,Phase::draining);}
     bool validating(uint64_t pass) noexcept {return changePhase(pass,Phase::draining,Phase::validating);}

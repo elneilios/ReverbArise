@@ -9,7 +9,8 @@ CandidateIdentity SwellEngine::learnIdentity(const PreviewContext& context,bool 
     identity.sourceRevision=context.capture.manifest.revision;identity.sourceReference=context.capture.reference;
     identity.scope=juce::String(context.capture.manifest.projectId)+"/"+context.capture.manifest.instanceId;
     identity.settings=markerGeneration.load();identity.sensitivity=model.sensitivity;identity.separationSeconds=model.separationSeconds;
-    identity.boundaries=acceptedPassSequence;
+    identity.loop=context.capture.manifest.loop;
+    identity.boundaries=identity.loop?0:acceptedPassSequence;
     identity.timing=context.time;identity.provisional=provisional;identity.pass=provisional?pass:0;return identity;
 }
 void SwellEngine::useProvisionalSource(std::function<std::optional<ProvisionalCandidateSource>()> provider)
@@ -36,6 +37,8 @@ LearnGenerationView SwellEngine::learnViewLocked()const
     else if(view.updating || !learnCandidates || learnCandidates->identity.provisional
         || learnCandidates->identity.session!=sessionGeneration.load() || learnCandidates->identity.settings!=markerGeneration.load())
         view.reason=learnReason.isNotEmpty()?learnReason:"Analysing captured audio... markers updating.";
+    else if(learnCandidates->identity.loop)
+        view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers in the Loop.";
     else if(defaultPending)view.reason="Finish preparing the Default IR before generating swells.";
     else if(!model.defaultIR.present())view.reason="Choose a valid Default IR before generating swells.";
     else {view.canGenerate=true;view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers found. Generate Swells to apply.";}
@@ -54,10 +57,12 @@ bool SwellEngine::requestLearnLocked(const PreviewContext& context,uint64_t sess
 {
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     const auto view=learnViewLocked();
-    if(session!=sessionGeneration.load() || flow.pass!=pass || !view.canGenerate || !learnCandidates
+    if(context.capture.sourceKind()==CaptureSourceKind::loop
+        || session!=sessionGeneration.load() || flow.pass!=pass || !view.canGenerate || !learnCandidates
         || learnCandidates->serial!=serial || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {
-        learnNotice=view.canGenerate?"Automatic markers changed. Wait for current analysis and try again.":view.reason;
+        learnNotice=context.capture.sourceKind()==CaptureSourceKind::loop?"Generate Swells is unavailable for Loop audio."
+            :view.canGenerate?"Automatic markers changed. Wait for current analysis and try again.":view.reason;
         learnFailed=false;return false;
     }
     actionError.clear();LearnRequest request;request.candidates=learnCandidates;request.expected=model;request.source=context.capture.manifest;
@@ -112,7 +117,8 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
     if(flow.mode!=workflow::Mode::capture)
     {const juce::ScopedLock guard(lock);stopIntent.reset();return false;}
     PreviewContext context=accepted;
-    const bool provisional=flow.locked();
+    const bool loop=accepted.capture.sourceKind()==CaptureSourceKind::loop;
+    const bool provisional=flow.locked() && !loop;
     std::function<std::optional<ProvisionalCandidateSource>()> provider;
     {const juce::ScopedLock guard(lock);provider=provisionalSource;}
     if(provisional && provider)if(const auto staged=provider();staged && staged->pass==flow.pass && staged->epoch==accepted.captureGeneration)
@@ -123,9 +129,10 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
         identity=learnIdentity(context,provisional,flow.pass);
         if(!provisional && learnCandidates && learnCandidates->identity.provisional)
         {learnCandidates=settledLearnCandidates;learnAttempt.reset();}
-        learnUsable=!context.capture.unavailable && !context.capture.status.startsWith("Loading") && context.time.valid
+        const bool compatible=loop?context.capture.manifest.loop.has_value():context.time.valid
             && context.capture.manifest.sampleRate==context.time.rate
-            && (!model.timing.valid || transportMappingMatches(model.timing,context.time))
+            && (!model.timing.valid || transportMappingMatches(model.timing,context.time));
+        learnUsable=!context.capture.unavailable && !context.capture.status.startsWith("Loading") && compatible
             && std::any_of(context.capture.manifest.ranges.begin(),context.capture.manifest.ranges.end(),[](const auto& range)
                 {return range.kind==CaptureCoverageKind::audio;});
         if(!model.automaticProcessing || !model.autoMarkersEnabled)
@@ -148,7 +155,9 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
         {learnUpdating=false;learnReason.clear();return false;}
         learnUpdating=true;learnReason="Analysing captured audio... markers updating.";
         if(juce::Time::getMillisecondCounterHiRes()<nextMarkerAnalysis || (learnAttempt && sameCandidateIdentity(*learnAttempt,identity)))return false;
-        learnAttempt=identity;completed=applicableCompletedPasses(context.capture.manifest);cancellation=learnAnalysisCancellation.load();
+        learnAttempt=identity;
+        if(!loop)completed=applicableCompletedPasses(context.capture.manifest);
+        cancellation=learnAnalysisCancellation.load();
     }
     const auto cancel=[&]{return threadShouldExit() || identity.session!=sessionGeneration.load()
         || identity.settings!=markerGeneration.load() || cancellation!=learnAnalysisCancellation.load()

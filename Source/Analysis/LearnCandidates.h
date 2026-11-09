@@ -12,6 +12,7 @@ struct CandidateIdentity
     int policy=attackPolicyVersion;
     juce::String sourceReference,scope;
     SongTime timing;
+    std::optional<LoopPhraseTiming> loop;
     float sensitivity=.5f;
     double separationSeconds=.08;
     bool provisional=false;
@@ -21,7 +22,7 @@ inline bool sameCandidateIdentity(const CandidateIdentity& a,const CandidateIden
     return a.session==b.session && a.captureGeneration==b.captureGeneration && a.sourceRevision==b.sourceRevision
         && a.settings==b.settings && a.pass==b.pass && a.boundaries==b.boundaries && a.policy==b.policy && a.sourceReference==b.sourceReference && a.scope==b.scope
         && a.sensitivity==b.sensitivity && a.separationSeconds==b.separationSeconds && a.provisional==b.provisional
-        && transportMappingMatches(a.timing,b.timing);
+        && a.loop==b.loop && (a.loop.has_value() || transportMappingMatches(a.timing,b.timing));
 }
 struct LearnCandidateSnapshot
 {

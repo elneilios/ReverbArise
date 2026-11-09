@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Settings Swell source-range submission and local error feedback against the existing command and approved C3 design. Updated the guide with the exclusive end bar, explicit submission, and correction steps.",
+  "summary": "Reviewed the Loop Mode and Arm toggles, host-neutral timing and MIDI routing, Duration capture, retained accepted audio, and phrase-local marker detection against the native editor and processor tests. Added a separate Loop flow and kept Song playback guidance.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 32743,
-      "sha256": "ddd279b65f305c2085a64300fccc1224c8fd064ac3faab1e5bfc49e41221ea0b"
+      "bytes": 32742,
+      "sha256": "46368cf2da18b78da6dbc4a6c8f884c548c86188cdf484bd30aa21e0bc1c4ea0"
     },
     {
       "path": "CMakePresets.json",
@@ -40,13 +40,13 @@
     },
     {
       "path": "Source/Analysis/LearnCandidates.cpp",
-      "bytes": 2819,
-      "sha256": "6dccef6ea7d52f5183e58be313d7c89dc4fa2a73d5bea114b674c7763d9bc240"
+      "bytes": 2977,
+      "sha256": "f998366e041243a489aaa77cdeddfb36e4ec8dcfc65819b74aa19b95c0d3cea3"
     },
     {
       "path": "Source/Analysis/LearnCandidates.h",
-      "bytes": 1730,
-      "sha256": "0b9d491812559e37326a6cea3a5ddde1e7dd86b69fe99061431cffc10e6558ed"
+      "bytes": 1814,
+      "sha256": "b3070a8a1b3ecfa3d6d303c37d339241d69e4491ac22f868e390ecd5125098ad"
     },
     {
       "path": "Source/Analysis/OnsetAnalysis.cpp",
@@ -60,8 +60,8 @@
     },
     {
       "path": "Source/Capture/AudioCaptureQueue.h",
-      "bytes": 2901,
-      "sha256": "12722feab2be1ddb57a4bfc2e42e2bbb74b7ca711c1b9d087d3ba3094cfe62a2"
+      "bytes": 3675,
+      "sha256": "4ba3da2643bbb463acddc38709b2a380846c7ea6d5b160385e9c8235db7a12c4"
     },
     {
       "path": "Source/Capture/CaptureAssetStore.cpp",
@@ -110,13 +110,13 @@
     },
     {
       "path": "Source/Capture/CaptureManifest.cpp",
-      "bytes": 10705,
-      "sha256": "df5f78b8b7884d780276fecae68c250900764c612bc66a0bd9b75d32f2b2c8b1"
+      "bytes": 14143,
+      "sha256": "8d51ad019b1fab71e0b34da3220f152f370ca9becca3fd36ea91a68166e3dbb7"
     },
     {
       "path": "Source/Capture/CaptureManifest.h",
-      "bytes": 1467,
-      "sha256": "e9bd29ee94ae885484ef9c7bd0f2bacae966b9dc5b3e1ccaea2d325c38c8ba80"
+      "bytes": 2079,
+      "sha256": "f43d0b51db2eef845d43aa47e8eb117e747ba1f602db8ec5df0a990f310a1048"
     },
     {
       "path": "Source/Capture/CaptureProgress.h",
@@ -125,23 +125,43 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 20742,
-      "sha256": "584c37cd9fcd7b94fb76cbd5d00d1c378e8fe76cc211daf4b692eb0b8be01954"
+      "bytes": 22793,
+      "sha256": "01cbe099ba2d86973718b7679c30816f06bd02df70c398e495d9e63195cb1fa0"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 4786,
-      "sha256": "fa5b7134d7cf29157aaf00bb2b55870720d0f776a1a8c48f8f1df204bfb85fcc"
+      "bytes": 5225,
+      "sha256": "02926260ee2700832c05728be19e324ee0d3363daebdde1b95a198d11a603569"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 29942,
-      "sha256": "98007ec6aa1975fe235b76971e7e73444e5cee1cfa13882a4464c59bce1b28ed"
+      "bytes": 31317,
+      "sha256": "c4b3bc1443be2bc8f0b00478c062a6d0bde5faf11e4e9aed89d842d188d84c61"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 8674,
-      "sha256": "22eeec19e4944aa408022b21bdb61f6abb67075d5b140770347a6288dbc70d3d"
+      "bytes": 8938,
+      "sha256": "56aa207249569ea206e6c4f021b43d15a13a530ba7503c58d806dce6492c35bf"
+    },
+    {
+      "path": "Source/Capture/LoopCapturePreference.h",
+      "bytes": 1137,
+      "sha256": "178aeb8685f847b291b46dd2768e0e091420af40a28c1314f5c269d5eddc0844"
+    },
+    {
+      "path": "Source/Capture/LoopMidiObservations.h",
+      "bytes": 2864,
+      "sha256": "abe41dc98bf9062d7dd51794b5b40dfefb73e7b4a46a41db326c6bd4e93e3a4c"
+    },
+    {
+      "path": "Source/Capture/LoopPhraseClock.h",
+      "bytes": 5939,
+      "sha256": "12241214d3e952d94f71dd430a352cd61ebe298ec373948516ca04e497414f94"
+    },
+    {
+      "path": "Source/Capture/LoopTake.h",
+      "bytes": 2264,
+      "sha256": "a5cf8a3b44b5f11891bc24e127ccf590eb42d99cf4c350ded19bf3106afe05df"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -160,8 +180,8 @@
     },
     {
       "path": "Source/Capture/SourceRangeReader.cpp",
-      "bytes": 3884,
-      "sha256": "b6d94c0787ca85546603007442c8fca0d272214964df3de75d27780702928a06"
+      "bytes": 3956,
+      "sha256": "7587286c0fe07c6c7c301efe400370c252ad50831b54a0fb57ecbf85e67b6bd3"
     },
     {
       "path": "Source/Capture/SourceRangeReader.h",
@@ -275,8 +295,8 @@
     },
     {
       "path": "Source/Core/WorkflowState.h",
-      "bytes": 7677,
-      "sha256": "3057c66aeffde719aaae28dc900d2d051af3bc1f752c74f03f786afc9bee8207"
+      "bytes": 8613,
+      "sha256": "95bf30ea267d5d826f5084a71adb931eb4841ff9c8e3fdf836ba3623421e5ea3"
     },
     {
       "path": "Source/DSP/AuditionMix.cpp",
@@ -345,8 +365,8 @@
     },
     {
       "path": "Source/DSP/LearnGeneration.cpp",
-      "bytes": 16971,
-      "sha256": "6abbb55c8b99f630e46aa08c95d59ae266333830eecdf07177d1db60e8c307b8"
+      "bytes": 17583,
+      "sha256": "03c053e430e52b0b6e4117503b6af372e590d449336cf4003caf3a3da2be4c1f"
     },
     {
       "path": "Source/DSP/PreviewEngine.cpp",
@@ -410,8 +430,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 84925,
-      "sha256": "f0681cdd29c543da76b07940d021870bc9d96f62ac57c9bc616c6ac137b3d3ef"
+      "bytes": 85061,
+      "sha256": "e437d0a377d3663d5a851709d9a20cf151460d1d9c9e09556355c6ee2dc98d5b"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -505,8 +525,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 91148,
-      "sha256": "7296d9d31c83b2d841ed97e5982555a343474ab6e1c458dbb3970b40355b4422"
+      "bytes": 91920,
+      "sha256": "f288271e7413b4ed366b603f4a6c6bc4b66238afb9f0f0fd1e73cdd0f9150447"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -525,13 +545,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 46014,
-      "sha256": "97f37bc5505e8f87aef4e148d549ab35ebf0a0e3f4b8f5ee6bce0abf160d57ac"
+      "bytes": 60727,
+      "sha256": "b6d434ad0aee6fd99db0da224f327c4741211b65454ae1693dab97363067716d"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8313,
-      "sha256": "4e28063c497c00f5f186ad1ec134c0dcade2c39930934d132748850b9703f286"
+      "bytes": 9756,
+      "sha256": "b98c842eda686a374991985d632a3ab12bb569ae451cb29577a8dfb0a1b9670e"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -770,13 +790,13 @@
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
-      "bytes": 6803,
-      "sha256": "a5c90d06c5973b82cbb3ea8013d23885feb96c7ef0cb4794186cd291a97a1db8"
+      "bytes": 6999,
+      "sha256": "05530ad2534219b55f9abf2189092b0e5ef446e63d650a3f72e236b6c8fea879"
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 35316,
-      "sha256": "a853d7780d65ae03c9bc7422682c55135261a3544762106d28ef68163f1dd435"
+      "bytes": 50182,
+      "sha256": "c377344759d7a2b6d8303c2e7a96d66490716f10ad8dd448222b35eb9a04c6b7"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -875,8 +895,8 @@
     },
     {
       "path": "Source/UI/WorkflowPresentation.h",
-      "bytes": 3188,
-      "sha256": "dfdb1ba32bb2a60cbe301db713e95cba6958ef88b5d91a58bb0eb2c9bd4f11ce"
+      "bytes": 3270,
+      "sha256": "fe08eb9cd17085871eb04027053eb7f5cdebe396d8202d0a28f68ec04491d9f4"
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
@@ -925,8 +945,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 29463,
-      "sha256": "5434bc7f461d9f85fe307345a2f48242ff2b8e7d09dd4a176aeb3471867a074c"
+      "bytes": 30642,
+      "sha256": "565516796e380cceee909a1e77ecf6b04c2727d178b5b58290156bc723f9ff89"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -987,6 +1007,11 @@
       "path": "openspec/specs/local-windows-validation/spec.md",
       "bytes": 6584,
       "sha256": "69d1af646d8568ec3c322c67df058115994dc89208407a4038d666bae2fa4c27"
+    },
+    {
+      "path": "openspec/specs/loop-host-admission/spec.md",
+      "bytes": 7068,
+      "sha256": "755482aa751ee228ff3085da3522dfcae1c07622527b750e4928a81b60a2f5f9"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
@@ -1125,8 +1150,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32784,
-      "sha256": "83153e866cb9d740d7ba6a4e3c0b1d3bc9892aba7c3a49299684d8e9f20f2205"
+      "bytes": 41713,
+      "sha256": "2a6467a45eae201ff57d458b82c50770a09f7b8bdf656f9ce8559e05ebb40247"
     }
   ]
 }

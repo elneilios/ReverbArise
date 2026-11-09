@@ -1013,6 +1013,8 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
 }
 bool SwellEngine::prepareSourceWave(const Swell& requested,const PreviewContext& context,uint64_t extra,std::shared_ptr<Waveform>& output,juce::String& error)
 {
+    if (context.capture.sourceKind()==CaptureSourceKind::loop)
+    {error="Song source detail requires an accepted Song";return false;}
     const auto budget=available(extra+64ULL*1024*1024);
     if(!budget){error="Working budget unavailable for source detail";return false;}
     CaptureAssetStore assets(instanceRoot(context.capture.manifest));SourceInterval source;

@@ -6,9 +6,13 @@
 #include "Controls/SliderControl.h"
 #include "ConvolutionIrBinding.h"
 #include "Controls/ActionButton.h"
+#include "Controls/LatchingActionButton.h"
 #include "Controls/SegmentedSelector.h"
+#include "Controls/ChoiceSelector.h"
+#include "Controls/FocusViewport.h"
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
+#include <Capture/LoopCapturePreference.h>
 
 namespace m3::ui
 {
@@ -57,15 +61,61 @@ public:
         sensitivity.beforeInvocation=[this]{sensitivityPass=flowNow().pass;};
         sensitivity.onValueChange=[this]{if(!refreshing){const auto s=engine.savedSession();engine.setPreferences(s.auditionDb,static_cast<float>(sensitivity.getValue()/100),s.separationSeconds,s.autoRegenerate,sensitivityPass.value_or(flowNow().pass));}};
         irBinding.onRefresh=[this]{if(onRefresh)onRefresh();};
+        setupLoopControls();
+        loopPoliciesViewport.setName("learnLoopPolicies");
+        loopPoliciesViewport.setViewedComponent(&loopPolicies,false);
+        loopPoliciesViewport.setScrollBarsShown(true,false);
+        loopPoliciesViewport.setFocusRevealEnabled(true);
+        addChildComponent(loopPoliciesViewport);
     }
     std::function<void(bool)> onRecapture;
     std::function<void()> onRefresh;
+    std::function<void(LoopCapturePreference)> onLoopPreference;
+    std::function<void(bool)> onLoopArm;
+    void displayLoop(LoopCapturePreference preference, bool canArm, bool armed, bool busy, const juce::String& status)
+    {
+        loopSettings=preference;
+        loopMode.display(preference.enabled);
+        loopMethod.setSelectedId(preference.method==LoopCapturePreference::Method::duration?1:2,juce::dontSendNotification);
+        loopUnit.setSelectedId(preference.unit==LoopCapturePreference::Unit::bars?1:2,juce::dontSendNotification);
+        if (!loopCount.isBeingEdited())
+            loopCount.setText(juce::String(static_cast<int>(preference.count)),juce::dontSendNotification);
+        for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount})
+            control->setEnabled(!busy);
+        loopArm.display(armed);
+        loopArm.setEnabled(armed || canArm);
+        const auto explanation=armed?status+"\nSwitch Arm off to cancel.":status;
+        loopArm.setHelpText(explanation);
+        loopArm.setTooltip(explanation);
+        loopStatus.setText(explanation,juce::dontSendNotification);
+        loopStatus.setTooltip(explanation);
+    }
     void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,workflow::Snapshot flow,bool position,const CaptureProgress& pending={})
     {
-        refreshing=true;capture=source;clock=time;playhead=position;automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
+        const bool loopSource=source.sourceKind()==CaptureSourceKind::loop;
+        const bool coordinateChange=source.sourceKind()!=capture.sourceKind() || (loopSource && source.reference!=capture.reference);
+        refreshing=true;capture=source;clock=time;playhead=position && source.sourceKind()==CaptureSourceKind::song;
+        if (loopSource) clock.valid=false;
+        automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
         generationView=editor.learnGeneration;displaySession=editor.sessionEpoch;displayPass=flow.pass;
+        if(generationView.displayed)
+        {
+            const auto& identity=generationView.displayed->identity;
+            if((loopSource && (identity.loop!=source.manifest.loop || identity.sourceRevision!=source.manifest.revision
+                || identity.sourceReference!=source.reference || source.unavailable))
+                || (!loopSource && identity.loop))
+                generationView.displayed.reset();
+        }
+        if(loopSource)
+        {
+            generationView.canGenerate=false;
+            generationView.reason=generationView.displayed && !generationView.updating
+                ? juce::String(static_cast<int>(generationView.displayed->positions.size()))+" markers. Generate Swells requires Song audio."
+                : "Generate Swells requires Song audio.";
+        }
         autoStop.setToggleState(editor.session.autoGenerateOnStop,juce::dontSendNotification);
-        autoStop.setEnabled(!flow.locked() || editor.session.autoGenerateOnStop);
+        autoStop.setEnabled(!usesLoopPolicies() && (!flow.locked() || editor.session.autoGenerateOnStop));
+        autoStop.setTooltip(usesLoopPolicies()?"Generate on Stop applies to Song capture.":juce::String{});
         generate.setEnabled(generationView.canGenerate);
         generateReason.setText(wrappedHelper(generationView.canGenerate?"Ready to generate":generationView.reason),juce::dontSendNotification);
         generate.setDescription(generationView.reason);generate.setHelpText(generationView.reason);
@@ -85,12 +135,20 @@ public:
         // increment alone must retain the pin throughout recording/settlement.
         const auto modeReset=flow.phase==workflow::Phase::idle && flow.result==workflow::Result::none && flow.pass!=inspectionWorkflow;
         inspectionWorkflow=flow.pass;
-        if(scope!=viewScope || session!=inspectionSession || modeReset){
-            if(scope!=viewScope)view.reset();clearInspection();viewScope=scope;inspectionSession=session;}
+        if(scope!=viewScope || session!=inspectionSession || modeReset || coordinateChange){
+            if(scope!=viewScope || coordinateChange)view.reset();clearInspection();viewScope=scope;inspectionSession=session;}
         view.update(capture,progress,clock);first=view.first;last=view.last;
-        const auto rate=clock.rate>0?clock.rate:capture.manifest.sampleRate;
+        const auto rate=loopSource || clock.rate<=0?capture.manifest.sampleRate:clock.rate;
         const auto duration=[&](long double frames){return rate>0?juce::String(static_cast<double>(frames/rate),1)+" s":juce::String(static_cast<double>(frames),0)+" samples";};
         totalsText="Mapped "+duration(learnMappedFrames(capture.manifest))+" | Recording "+duration(learnProvisionalFrames(progress))+" | Extent "+duration(learnExtentFrames(capture,progress,clock));
+        if (source.sourceKind()==CaptureSourceKind::loop || loopSettings.enabled)
+        {
+            const bool accepted=source.reference.isNotEmpty() || !source.manifest.ranges.empty();
+            totalsText=accepted?(source.sourceKind()==CaptureSourceKind::loop?"Accepted Loop":"Accepted Song"):"No accepted source";
+            if (accepted && source.unavailable) totalsText+=" | Audio unavailable";
+            else if (source.manifest.loop) totalsText+=" | "+duration(source.manifest.loop->endSample);
+            else if (accepted) totalsText+=" | "+duration(learnMappedFrames(source.manifest));
+        }
         statusText=phase==workflow::Phase::recording?"Recording":phase==workflow::Phase::draining || phase==workflow::Phase::validating?"Finishing capture":phase==workflow::Phase::failed?"Capture failed; previous audio kept":flow.result==workflow::Result::cancelled?"Capture cancelled":source.unavailable?"Some audio unavailable":hasSource()?"Captured":"Ready to capture";
         if(hasSource() && rate>0)statusText+=" | "+duration(flow.locked()?learnProvisionalFrames(progress):learnMappedFrames(capture.manifest));
         if(automaticOn && generationView.displayed)statusText+=" | "+juce::String(static_cast<int>(generationView.displayed->positions.size()))+" events"
@@ -122,9 +180,9 @@ public:
     void focusLost(juce::Component::FocusChangeType)override{repaint(chart);}
     bool hasPinnedInspection()const noexcept{return inspectionPinned;}
     std::optional<int64_t> inspectedSample()const noexcept{return inspection;}
-    juce::String inspectionText()const{return inspection?learnInspectionReadout(*inspection,coverageAt(*inspection),clock,capture.manifest.sampleRate).text:coverageKey;}
-    juce::String visibleInspectionText()const{return inspection?learnInspectionReadout(*inspection,coverageAt(*inspection),clock,capture.manifest.sampleRate).musical:juce::String{};}
-    juce::String diagnosticDetails()const{return totalsText+"\n"+(inspection?learnInspectionReadout(*inspection,coverageAt(*inspection),clock,capture.manifest.sampleRate).details:coverageKey);}
+    juce::String inspectionText()const{return inspection?inspectionReadout().text:coverageKey;}
+    juce::String visibleInspectionText()const{return inspection?inspectionReadout().musical:juce::String{};}
+    juce::String diagnosticDetails()const{return totalsText+"\n"+(inspection?inspectionReadout().details:coverageKey);}
     bool keyPressed(const juce::KeyPress& key)override
     {
         if(!hasKeyboardFocus(false))return false;
@@ -172,6 +230,7 @@ public:
         if(responsive){layoutResponsive();return;}
         auto a=getLocalBounds();left=a.removeFromLeft(workspaceGeometry::learnSettingsWidth);a.removeFromLeft(workspaceGeometry::columnGap);right=a;
         auto controls=left.withTrimmedTop(spacing::related);
+        placePolicyControls(usesLoopPolicies());
         const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& label,juce::Label& description)
         {
             auto row=controls.removeFromTop(controlGeometry::switchHeight);toggle.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(spacing::related);
@@ -180,8 +239,20 @@ public:
             description.setBounds(row.getX(),label.getBottom()+spacing::labelHelp,row.getWidth(),lines*learnTypography::secondaryLineHeight);
             controls.removeFromTop(std::max(0,description.getBottom()-controls.getY()));
         };
+        if(usesLoopPolicies())
+        {
+            auto heading=controls.removeFromTop(controlGeometry::headingHeight).reduced(policyFocusMargin,0);
+            captureTitle.setBounds(heading);
+            controls.removeFromTop(spacing::related);
+            layoutLoopPolicies(controls);
+        }
+        else
+        {
         captureTitle.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
+        layoutLoopControls(controls,true);
         toggleGroup(recapture,recaptureLabel,recaptureHelp);
+        for (auto* control : std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel,&manualHelp})
+            control->setVisible(true);
         controls.removeFromTop(spacing::related);divider=controls.getY();controls.removeFromTop(spacing::related);
         automaticLabel.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
         toggleGroup(automatic,automaticToggleLabel,automaticHelp);
@@ -192,6 +263,7 @@ public:
             controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
         controls.removeFromTop(automaticOn?spacing::labelHelp:spacing::group);
         manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
+        }
         auto canvas=right.reduced(0,spacing::related);timelineHeading=canvas.removeFromTop(controlGeometry::headingHeight);canvas.removeFromTop(spacing::tight);
         timelineCaption=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::metadataGap);
         timelineRuler=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::rulerViewportGap);
@@ -203,10 +275,12 @@ public:
     void paint(juce::Graphics& g)override
     {
         g.setColour(separator);
-        if(responsive){g.drawVerticalLine(left.getRight(),static_cast<float>(responsiveGeometry::dividerClearance),static_cast<float>(getHeight()-responsiveGeometry::dividerClearance));if(selectedSection==1)g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()-responsiveGeometry::dividerClearance));}
-        else{g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));}
+        if(responsive){g.drawVerticalLine(left.getRight(),static_cast<float>(responsiveGeometry::dividerClearance),static_cast<float>(getHeight()-responsiveGeometry::dividerClearance));if(selectedSection==1 && !usesLoopPolicies())g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()-responsiveGeometry::dividerClearance));}
+        else{g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));if(!usesLoopPolicies())g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));}
         applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Audio",timelineHeading,juce::Justification::left);
-        applyTextRole(g,*this,TextRole::helper);g.drawText(statusText,timelineCaption,juce::Justification::left);
+        const bool loopSource=capture.sourceKind()==CaptureSourceKind::loop;
+        applyTextRole(g,*this,TextRole::helper);
+        g.drawText(loopSettings.enabled || loopSource?totalsText:statusText,timelineCaption,juce::Justification::left);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         const auto x=[&](double sample){return chart.getX()+static_cast<float>((sample-first)/(last-first)*chart.getWidth());};
         applyTextRole(g,*this,TextRole::ruler);
@@ -216,7 +290,8 @@ public:
         if(readable)for(const auto& tick:ticks)
         {const auto width=std::min(static_cast<float>(controlGeometry::rulerLabelWidth),static_cast<float>(chart.getWidth())),at=std::clamp(x(tick.samplePosition)-width*.5f,static_cast<float>(chart.getX()),static_cast<float>(chart.getRight())-width);
             g.drawText(juce::String(tick.bar)+".1",juce::Rectangle<float>(at,static_cast<float>(timelineRuler.getY()),width,static_cast<float>(timelineRuler.getHeight())),juce::Justification::centred);}
-        else g.drawText("Time unavailable",timelineRuler,juce::Justification::left);
+        else if(loopSource)g.drawText("Phrase-local audio",timelineRuler,juce::Justification::left);
+        else if(!loopSettings.enabled || hasSource())g.drawText("Time unavailable",timelineRuler,juce::Justification::left);
         const auto mid=static_cast<float>(chart.getCentreY()),height=chart.getHeight()*.4f;
         const auto drawSource=[&](const auto& regions,bool provisional)
         {
@@ -269,8 +344,14 @@ public:
             g.setColour(learnTypography::descriptionColour);
             constexpr std::array<float,9> bars{8,17,29,13,38,22,32,16,7};
             for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
-            applyTextRole(g,*this,TextRole::emptyHeading);g.drawFittedText("Play audio in your DAW",regions[1],juce::Justification::centred,1);
-            applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",regions[2],juce::Justification::centredTop,2);
+            applyTextRole(g,*this,TextRole::emptyHeading);
+            g.drawFittedText(loopSettings.enabled
+                ? (phase==workflow::Phase::armed?"Waiting for the next phrase":"Arm to capture a loop")
+                : "Play audio in your DAW",regions[1],juce::Justification::centred,1);
+            applyTextRole(g,*this,TextRole::emptyBody);
+            g.drawFittedText(loopSettings.enabled?"Duration capture starts on a verified phrase marker."
+                : automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",
+                regions[2],juce::Justification::centredTop,2);
         }
         if(hasKeyboardFocus(false)){
             g.setColour(aqua.withAlpha(.7f));g.drawRoundedRectangle(controlGeometry::insideStroke(chart.reduced(3),rule),radius,rule);}
@@ -285,6 +366,163 @@ public:
         applyTextRole(g,*this,TextRole::helper);g.drawText(visibleInspectionText(),timelineStatus,juce::Justification::left);
     }
 private:
+    LearnInspectionReadout inspectionReadout()const
+    {
+        const auto rate=capture.manifest.sampleRate;
+        auto time=clock;
+        if(const auto& phrase=capture.manifest.loop)
+            time={true,0,0,rate,phrase->tempoBpm,phrase->meterNumerator,phrase->meterDenominator};
+        return learnInspectionReadout(*inspection,coverageAt(*inspection),time,rate);
+    }
+    void setupLoopControls()
+    {
+        for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount,&loopArm,&loopSetup,&loopStatus})
+            addChildComponent(control);
+        loopMode.setName("learnLoopMode");
+        loopMode.setTooltip("Select Loop for the next capture.");
+        loopMethod.setName("learnLoopMethod");loopMethod.setTitle("Capture method");
+        loopUnit.setName("learnLoopUnit");loopUnit.setTitle("Duration unit");
+        loopCount.setName("learnLoopCount");loopCount.setTitle("Duration count");
+        loopArm.setName("learnLoopArm");loopStatus.setName("learnLoopStatus");
+        for (auto* label : {&loopSetup,&loopStatus})
+            applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+        for (auto* label : {&loopSetup,&loopStatus}) label->setBorderSize({});
+        loopSetup.setText("4/4 with shared clock and reset.\nArm confirms audio is aligned.",juce::dontSendNotification);
+        loopSetup.setTooltip("Route stereo audio and the Loop MIDI markers to this plug-in. Audio and the beat, bar and phrase markers must share one clock and reset.");
+        loopMethod.addItem("Duration",1);loopMethod.addItem("End signal",2);
+        loopUnit.addItem("Bars",1);loopUnit.addItem("Beats",2);
+        loopCount.setEditable(true,true,false);
+        loopCount.setKeyboardType(juce::TextInputTarget::numericKeyboard);
+        loopCount.setColour(juce::Label::textColourId,text);
+        loopCount.setColour(juce::Label::outlineColourId,outline);
+        const auto submit=[this](LoopCapturePreference next)
+        {
+            if (onLoopPreference) onLoopPreference(next);
+            if (onRefresh) onRefresh();
+        };
+        loopMode.onClick=[this,submit]{auto next=loopSettings;next.enabled=loopMode.getToggleState();submit(next);};
+        loopMethod.onChange=[this,submit]{
+            auto next=loopSettings;
+            next.method=loopMethod.getSelectedId()==1?LoopCapturePreference::Method::duration:LoopCapturePreference::Method::endSignal;
+            submit(next);
+        };
+        loopUnit.onChange=[this,submit]{
+            auto next=loopSettings;
+            next.unit=loopUnit.getSelectedId()==1?LoopCapturePreference::Unit::bars:LoopCapturePreference::Unit::beats;
+            submit(next);
+        };
+        loopCount.onTextChange=[this,submit]{
+            auto next=loopSettings;
+            const auto entry=loopCount.getText().trim();
+            if (entry.isNotEmpty() && entry.containsOnly("0123456789")) next.count=static_cast<unsigned>(entry.getIntValue());
+            submit(next.valid()?next:loopSettings);
+        };
+        loopCount.onStep=[this,submit](int change){
+            auto next=loopSettings;
+            next.count=static_cast<unsigned>(std::clamp(static_cast<int>(next.count)+change,1,static_cast<int>(LoopCapturePreference::maximumCount)));
+            submit(next);
+        };
+        loopArm.beforeInvocation=[this]{loopArmPass=flowNow().pass;};
+        loopArm.onClick=[this]{
+            const auto flow=flowNow();
+            const auto pass=loopArmPass.value_or(flow.pass);
+            loopArmPass.reset();
+            if(onLoopArm && pass==flow.pass && (loopArm.getToggleState() || flow.locked()))
+                onLoopArm(loopArm.getToggleState());
+            if(onRefresh)onRefresh();
+        };
+    }
+    void layoutLoopControls(juce::Rectangle<int>& column, bool visible)
+    {
+        const bool show=visible && static_cast<bool>(onLoopPreference);
+        const bool loop=show && loopSettings.enabled;
+        const bool duration=loop && loopSettings.method==LoopCapturePreference::Method::duration;
+        loopMode.setVisible(show);
+        for (auto* control : std::initializer_list<juce::Component*>{&loopMethod,&loopArm,&loopSetup,&loopStatus})
+            control->setVisible(loop);
+        loopUnit.setVisible(duration);loopCount.setVisible(duration);
+        if (!show) return;
+        auto row=column.removeFromTop(controlGeometry::height);
+        loopMode.setBounds(loopMode.getParentComponent()==&loopPolicies?row.expanded(policyFocusMargin,0):row);
+        if (!loop) return;
+        column.removeFromTop(spacing::related);
+        loopMethod.setRowBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
+        if (duration)
+        {
+            column.removeFromTop(spacing::related);
+            auto values=column.removeFromTop(controlGeometry::height);
+            loopCount.setBounds(values.removeFromLeft(controlGeometry::valueWidth)
+                                    .withSizeKeepingCentre(controlGeometry::valueWidth,controlGeometry::valueHeight));
+            values.removeFromLeft(spacing::related+policyFocusMargin);
+            loopUnit.setRowBounds(values.expanded(policyFocusMargin,0));
+        }
+        column.removeFromTop(spacing::related);
+        loopSetup.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
+        column.removeFromTop(spacing::labelHelp);
+        loopArm.setBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
+        column.removeFromTop(spacing::labelHelp);
+        loopStatus.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
+    }
+    LoopCapturePreference loopSettings;
+    controls::LatchingActionButton loopMode{"Loop Mode"},loopArm{"Arm"};
+    controls::ChoiceSelector loopMethod,loopUnit;
+    controls::NumericInputControl loopCount;
+    juce::Label loopSetup,loopStatus;
+    std::optional<uint64_t> loopArmPass;
+    static constexpr int policyFocusMargin=controls::SelectorPresentation::focusMargin;
+    juce::Component loopPolicies;
+    controls::FocusViewport loopPoliciesViewport;
+    bool usesLoopPolicies()const noexcept
+    {return loopSettings.enabled || capture.sourceKind()==CaptureSourceKind::loop;}
+    void placePolicyControls(bool inViewport)
+    {
+        auto* parent=inViewport?&loopPolicies:static_cast<juce::Component*>(this);
+        for (auto* control : std::initializer_list<juce::Component*>{&captureGroup,&loopMode,&loopMethod,&loopUnit,&loopCount,
+             &loopArm,&loopSetup,&loopStatus,&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,
+             &automaticToggleLabel,&autoStop,&autoStopLabel,&sensitivityLabel,&sensitivity,&generate,&generateReason})
+            if (control->getParentComponent()!=parent) parent->addChildComponent(control);
+        loopPoliciesViewport.setVisible(inViewport && (!responsive || selectedSection==1));
+    }
+    void layoutLoopPolicies(juce::Rectangle<int> bounds)
+    {
+        loopPoliciesViewport.setBounds(bounds);
+        const auto width=std::max(0,bounds.getWidth()-loopPoliciesViewport.getScrollBarThickness());
+        auto column=juce::Rectangle<int>{0,0,width,bounds.getHeight()}.reduced(policyFocusMargin,0);
+        const auto row=[&](int height){auto rect=column.withHeight(height);column.setY(column.getY()+height);return rect;};
+        const auto toggle=[&](controls::Switch& value,juce::Label& label){
+            auto rect=row(controlGeometry::switchHeight);
+            value.setBounds(rect.removeFromRight(controlGeometry::switchWidth));rect.removeFromRight(spacing::related);
+            label.setBounds(rect);
+        };
+        captureGroup.setVisible(responsive);
+        if(responsive)captureGroup.setBounds(row(controlGeometry::headingHeight));
+        // Use an unbounded vertical budget so the viewport can reveal the whole policy.
+        auto captureRows=column.withHeight(8*controlGeometry::switchHeight);
+        layoutLoopControls(captureRows,true);column.setY(captureRows.getY());
+        for(auto* control : std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp})
+            control->setVisible(!loopSettings.enabled);
+        if(!loopSettings.enabled){toggle(recapture,recaptureLabel);recaptureHelp.setBounds(row(learnTypography::secondaryLineHeight));}
+        row(spacing::group);
+        automaticLabel.setBounds(row(controlGeometry::headingHeight));
+        toggle(automatic,automaticToggleLabel);
+        for(auto* control : std::initializer_list<juce::Component*>{&automaticLabel,&automatic,&automaticToggleLabel})
+            control->setVisible(true);
+        for(auto* control : std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel,&generate,&generateReason})
+            control->setVisible(automaticOn);
+        if(automaticOn)
+        {
+            sensitivityLabel.setBounds(row(controlGeometry::labelHeight));
+            sensitivity.setBounds(row(controlGeometry::height));
+            toggle(autoStop,autoStopLabel);
+            row(spacing::related);
+            generate.setBounds(row(controlGeometry::height).expanded(policyFocusMargin,0));
+            generateReason.setBounds(row(2*learnTypography::secondaryLineHeight));
+        }
+        for(auto* control : std::initializer_list<juce::Component*>{&automaticHelp,&autoStopHelp,&manualHelp})
+            control->setVisible(false);
+        if(!responsive)irEditor.setVisible(false);
+        loopPolicies.setSize(width,std::max(bounds.getHeight(),column.getY()+spacing::related));
+    }
     bool responsive=false;int selectedSection=1;
     controls::SegmentedSelector sections;
     juce::Label captureGroup,soundScope;
@@ -294,24 +532,38 @@ private:
     {
         using namespace responsiveGeometry;
         auto area=getLocalBounds();left=area.removeFromLeft(284);area.removeFromLeft(16);right=area;
-        auto column=left.withTrimmedRight(groupGap);captureTitle.setBounds(column.removeFromTop(headingHeight));column.removeFromTop(spacing::tight);
-        sections.setBounds(column.removeFromTop(tabsHeight));column.removeFromTop(contentPadding);
+        auto column=left.withTrimmedRight(groupGap);
+        const bool loopPanel=usesLoopPolicies();
+        placePolicyControls(loopPanel);
+        auto heading=column.removeFromTop(headingHeight);
+        if(loopPanel)heading=heading.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
+        captureTitle.setBounds(heading);column.removeFromTop(spacing::tight);
+        auto tabRow=column.removeFromTop(tabsHeight);
+        if(loopPanel)tabRow=tabRow.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
+        sections.setBounds(tabRow);column.removeFromTop(contentPadding);
+        const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
+        if(loopPanel)layoutLoopPolicies(column);
+        else
+        {
         auto actions=column.removeFromBottom(132);actions.removeFromTop(contentPadding);
         generate.setBounds(actions.removeFromTop(controlHeight));actions.removeFromTop(spacing::tight);
         generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
-        const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
         captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
         const auto toggleRow=[&](controls::Switch& value,juce::Label& label)
         {auto row=column.removeFromTop(36);value.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(contentPadding);label.setBounds(row);};
-        toggleRow(recapture,recaptureLabel);recaptureHelp.setBounds(column.removeFromTop(20));column.removeFromTop(contentPadding);divider=column.getY();column.removeFromTop(contentPadding);
+        layoutLoopControls(column,captureVisible);
+        if(!loopSettings.enabled){toggleRow(recapture,recaptureLabel);recaptureHelp.setBounds(column.removeFromTop(20));}
+        column.removeFromTop(contentPadding);divider=column.getY();column.removeFromTop(contentPadding);
         automaticLabel.setBounds(column.removeFromTop(headingHeight));toggleRow(automatic,automaticToggleLabel);toggleRow(autoStop,autoStopLabel);
         column.removeFromTop(contentPadding);sensitivityLabel.setBounds(column.removeFromTop(24));sensitivity.setBounds(column.removeFromTop(controlHeight));
-        for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible);
+        for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible && !loopSettings.enabled);
         for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
+        automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
+        manualHelp.setVisible(true);
+        }
         auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
         soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
         irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
-        automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
         timelineRuler=canvas.removeFromTop(20);canvas.removeFromTop(spacing::tight);chart=canvas.removeFromTop(std::max(0,std::min(canvas.getHeight()-32,canvas.getWidth()/2)));
         canvas.removeFromTop(contentPadding);timelineStatus=canvas.removeFromTop(20);

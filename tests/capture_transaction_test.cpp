@@ -147,6 +147,48 @@ int main(){return runTest([]{
         const auto restoreElapsed=juce::Time::getMillisecondCounterHiRes()-restoreStart;holdPin=false;
         REQUIRE(restoreElapsed<1000 && worker.flush());
         REQUIRE(worker.snapshot().reference==second.reference && captureContextAt(worker.snapshot().manifest,0)->id==b.id && audioChanges==1 && acceptedChanges==2);
+
+        const auto loopEpoch=worker.captureGeneration();
+        constexpr int extent=10286;
+        const LoopPhraseTiming timing{280,4,4,1,501,extent};
+        const std::vector<float> phrase(extent,.25f);
+        const auto stageLoop=[&]
+        {
+            const auto token=mode.reserveCapture();
+            REQUIRE(token && mode.startReserved(token));
+            REQUIRE(queue->tryPush(0,48000,phrase.data(),phrase.data(),8192,loopEpoch,token,{},true));
+            REQUIRE(queue->tryPush(8192,48000,phrase.data()+8192,phrase.data()+8192,extent-8192,loopEpoch,token,{},true));
+            REQUIRE(worker.flush());
+            REQUIRE(queue->tryFinishLoop(loopEpoch,token,timing));
+            return token;
+        };
+        chooseB=true;
+        auto loopPass=stageLoop();
+        chooseB=false;
+        worker.throwNextStageForTesting();
+        REQUIRE(mode.stop(loopPass) && worker.flush());
+        REQUIRE(mode.snapshot().result==workflow::Result::failed && worker.snapshot().reference==second.reference);
+
+        loopPass=stageLoop();
+        worker.holdValidationForTesting(true);
+        REQUIRE(mode.stop(loopPass));
+        const auto cancellationDeadline=juce::Time::getMillisecondCounter()+5000;
+        while(mode.snapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<cancellationDeadline)
+            juce::Thread::sleep(1);
+        REQUIRE(mode.snapshot().phase==workflow::Phase::validating && worker.snapshot().reference==second.reference);
+        worker.cancelWorkflowPass();
+        worker.holdValidationForTesting(false);
+        REQUIRE(worker.flush() && worker.snapshot().reference==second.reference);
+        REQUIRE(!mode.startReserved(loopPass) && acceptedChanges==2);
+
+        chooseB=true;
+        loopPass=stageLoop();
+        chooseB=false;
+        REQUIRE(mode.stop(loopPass) && worker.flush());
+        const auto loop=worker.snapshot();
+        REQUIRE(loop.sourceKind()==CaptureSourceKind::loop && loop.manifest.loop==timing);
+        REQUIRE(loop.manifest.revision==second.manifest.revision+1 && captureContextAt(loop.manifest,0)->id==b.id);
+        REQUIRE(audioChanges==1 && acceptedChanges==3);
         worker.stopThread(-1);
     }
 });}

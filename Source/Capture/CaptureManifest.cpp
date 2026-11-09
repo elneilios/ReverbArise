@@ -82,6 +82,39 @@ bool readDouble(const juce::var& value, double& result)
     return std::isfinite(result);
 }
 
+bool readPositiveInt(const juce::var& value, int& result)
+{
+    int64_t number = 0;
+    if (!readInteger(value, number) || number <= 0 || number > std::numeric_limits<int>::max())
+        return false;
+    result = static_cast<int>(number);
+    return true;
+}
+
+bool readLoopTiming(const juce::var& value, LoopPhraseTiming& timing)
+{
+    return value.isObject()
+        && readDouble(value["tempoBpm"], timing.tempoBpm)
+        && readPositiveInt(value["meterNumerator"], timing.meterNumerator)
+        && readPositiveInt(value["meterDenominator"], timing.meterDenominator)
+        && readPositiveInt(value["beats"], timing.beats)
+        && readInteger(value["originSample"], timing.originSample)
+        && readInteger(value["endSample"], timing.endSample);
+}
+
+bool validLoopTiming(const LoopPhraseTiming& timing, double sampleRate)
+{
+    if (!std::isfinite(timing.tempoBpm) || timing.tempoBpm <= 0
+        || timing.meterNumerator <= 0 || timing.meterDenominator <= 0 || timing.beats <= 0
+        || timing.originSample < 0 || timing.endSample <= 0
+        || timing.originSample > std::numeric_limits<int64_t>::max() - timing.endSample)
+        return false;
+
+    const auto period = static_cast<long double>(sampleRate) * 240 * timing.beats
+        / (static_cast<long double>(timing.tempoBpm) * timing.meterDenominator);
+    return timing.endSample == std::floor(period) || timing.endSample == std::ceil(period);
+}
+
 juce::var makeRangeObject(const CaptureManifestRange& range)
 {
     auto object = juce::var(new juce::DynamicObject());
@@ -134,7 +167,15 @@ bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error
         return false;
     }
 
-    int64_t previousEnd = std::numeric_limits<int64_t>::min();
+    if ((manifest.schemaVersion == CaptureManifest::loopSchemaVersion) != manifest.loop.has_value()
+        || (manifest.loop && (!manifest.revision || !validLoopTiming(*manifest.loop, manifest.sampleRate))))
+    {
+        error = "Capture manifest Loop timing is invalid";
+        return false;
+    }
+
+    int64_t previousEnd = manifest.loop ? 0 : std::numeric_limits<int64_t>::min();
+    bool usefulAudio = false;
     for (const auto& range : manifest.ranges)
     {
         if (range.frameCount == 0
@@ -145,12 +186,18 @@ bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error
             error = "Capture manifest ranges must be non-empty, ordered, and non-overlapping";
             return false;
         }
+        if (manifest.loop && (range.startSample != previousEnd || range.revision != manifest.revision))
+        {
+            error = "Loop coverage must be contiguous and belong to the accepted revision";
+            return false;
+        }
 
         const auto endSample = range.startSample + static_cast<int64_t>(range.frameCount);
         previousEnd = endSample;
 
         if (range.kind == CaptureCoverageKind::audio)
         {
+            usefulAudio = true;
             if (! isSafeCaptureAssetPath(range.assetPath) || ! isChecksum(range.checksum))
             {
                 error = "Audio ranges require a safe relative asset path and SHA-256 checksum";
@@ -170,6 +217,12 @@ bool isValidCaptureManifest(const CaptureManifest& manifest, juce::String& error
             error = "Capture manifest contains an unknown coverage kind";
             return false;
         }
+    }
+
+    if (manifest.loop && (previousEnd != manifest.loop->endSample || !usefulAudio))
+    {
+        error = "Loop coverage must contain audio and match the exclusive phrase end";
+        return false;
     }
 
     if(!validateCaptureContexts(manifest,error))return false;
@@ -198,11 +251,23 @@ bool serializeCaptureManifest(const CaptureManifest& manifest, juce::String& jso
         ranges.add(makeRangeObject(range));
 
     properties->setProperty("ranges", juce::var(ranges));
-    if(manifest.schemaVersion==2)
+    if (manifest.schemaVersion >= CaptureManifest::currentSchemaVersion)
     {
         const auto metadata=captureContextMetadata(manifest);
         properties->setProperty("generationContexts",metadata["generationContexts"]);
         properties->setProperty("contextSpans",metadata["contextSpans"]);
+    }
+    if (manifest.loop)
+    {
+        auto timing = juce::var(new juce::DynamicObject());
+        auto& fields = *timing.getDynamicObject();
+        fields.setProperty("tempoBpm", manifest.loop->tempoBpm);
+        fields.setProperty("meterNumerator", manifest.loop->meterNumerator);
+        fields.setProperty("meterDenominator", manifest.loop->meterDenominator);
+        fields.setProperty("beats", manifest.loop->beats);
+        fields.setProperty("originSample", manifest.loop->originSample);
+        fields.setProperty("endSample", manifest.loop->endSample);
+        properties->setProperty("loop", timing);
     }
     json = juce::JSON::toString(root, true);
     error.clear();
@@ -300,10 +365,26 @@ bool parseCaptureManifest(const juce::String& json, CaptureManifest& manifest, j
         parsed.ranges.push_back(std::move(range));
     }
 
-    if(parsed.schemaVersion==2)
+    if (parsed.schemaVersion == CaptureManifest::loopSchemaVersion)
+    {
+        LoopPhraseTiming timing;
+        if (!readLoopTiming(properties->getProperty("loop"), timing))
+        {
+            error = "Capture manifest is missing verified Loop timing";
+            return false;
+        }
+        parsed.loop = timing;
+    }
+    else if (properties->hasProperty("loop"))
+    {
+        error = "Loop timing requires the Loop capture schema";
+        return false;
+    }
+
+    if(parsed.schemaVersion >= CaptureManifest::currentSchemaVersion)
     {if(!parseCaptureContexts(root,parsed,error))return false;}
     else if(properties->hasProperty("generationContexts") || properties->hasProperty("contextSpans"))
-    {error="Generation context fields require capture schema 2";return false;}
+    {error="Generation context fields require a context-aware capture schema";return false;}
     if (! isValidCaptureManifest(parsed, error))
         return false;
 
