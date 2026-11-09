@@ -22,7 +22,24 @@ void Composition::verifyEditorBindings()
     for(const auto size:{juce::Point<int>{1100,850},{1199,900},{1200,900},{1400,900},{1400,1000},{1600,1000}})
     {panel->setSize(size.x,size.y);checkLayout();}
     panel->setSize(1100,850);panel->refresh();
-    zoom.beforeInvocation();zoom.onZoomFraction(.65);const auto userView=panel->timelineComponent().viewport();
+    zoom.beforeInvocation();zoom.onZoomFraction(.65);
+    auto& zoomTrack=zoom.zoomSlider();
+    const auto zoomPoint=zoomTrack.getLocalBounds().getCentre().toFloat();
+    auto stamp=juce::Time::currentTimeMillis();
+    const auto zoomWheel=[&](juce::ModifierKeys modifiers)
+    {
+        const juce::Time now(++stamp);
+        const juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),zoomPoint,modifiers,
+            0,0,0,0,0,&zoomTrack,&zoomTrack,now,zoomPoint,now,0,false);
+        juce::MouseWheelDetails amount{};amount.deltaY=.1f;
+        zoomTrack.mouseWheelMove(event,amount);
+    };
+    const auto beforeWheel=zoomTrack.getValue();
+    zoomWheel({});
+    REQUIRE(std::abs(zoomTrack.getValue()-beforeWheel-.05)<.001);
+    zoomWheel(juce::ModifierKeys::ctrlModifier);
+    REQUIRE(std::abs(zoomTrack.getValue()-beforeWheel-.055)<.001);
+    const auto userView=panel->timelineComponent().viewport();
     REQUIRE(engine.savedSession().performUi.hasView);
     REQUIRE(engine.selectTargets({secondId},secondId));panel->refresh();
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);

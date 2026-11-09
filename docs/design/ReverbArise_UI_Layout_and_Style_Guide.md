@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.18 · **Production standards revision:** 18 · **Purpose:** Production UI authority and design reference. Revision 18 adopts shared numeric and text fields. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
+**Version:** 1.19 · **Production standards revision:** 19 · **Purpose:** Production UI authority and design reference. Revision 19 adopts shared knob and slider-track interaction. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -235,6 +235,7 @@ production standards revision; this revision does not change plugin/state versio
 | 16 | #107 native action-menu family approved 2026-11-07 | Swells Rename/Delete opens from the row or its three dots. Per-knob Reset uses the same presenter and its captured action. Explicit neutral and destructive roles use transient hover, held feedback and separate keyboard inspection. |
 | 17 | #107 native field feedback approved 2026-11-07 | Settings Swell puts captions above the source-range inputs and wraps one local help or validation message below them. The existing field metrics, error ink and focus geometry apply. |
 | 18 | #107 native numeric and text fields approved 2026-11-09 | Shared editable, embedded and read-only field surfaces. Existing field metrics apply to wrapped inspector and Rename feedback. Compact embedded entries keep context help and configured stepper behavior. |
+| 19 | #107 native knobs and sliders review | Aqua value arc or track, off-white position marker, and shared outer focus brackets. Quiet pointer feedback follows the dial arc or the slider track body. Ctrl+wheel uses the control's fine step. Level has a drag-only 0 dB detent with a ±0.3 dB band and a quiet tick at 12 o'clock. |
 
 ### Stable Perform transport information
 
@@ -424,7 +425,7 @@ are historical evidence, not the current font-selection policy.
 | Inter **Medium** | Learn control labels (500), subsequently approved in #11; see production section above |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
-Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.
+Prefer clear type size/weight contrast over decorative typography and align captions, knobs and their numeric fields on a consistent grid. Dial value fields use the shared 74-unit width where it fits. Inline feedback aligns beneath the field and wraps within its value column. Target's entry format lives in the hover-help footer and accessible field description. Keep the empty-state headline prominent but not oversized.
 
 ### 8. Controls and interaction styling
 

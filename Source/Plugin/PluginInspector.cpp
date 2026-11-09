@@ -98,11 +98,12 @@ void PreverbAudioProcessorEditor::rebaseValueEdit(int index)
     if(!valueIntentCurrent(index)){valueControls[index].cancel();return;}
     const auto current=processor.swellEngine().savedSession();valueAnchors[index]=*m3::find(current,current.primary);
 }
-void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps)
+void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps,bool fineWheel)
 {
     if(!valueIntentCurrent(index) || !std::isfinite(steps) || steps==0 || !valueAnchors[index])return;
     const auto& anchor=*valueAnchors[index];const auto& invocation=valueInvocations[index];
-    const bool fine=(juce::ModifierKeys::shiftModifier&valueModifierFlags)!=0;
+    const bool fine=(juce::ModifierKeys::shiftModifier&valueModifierFlags)!=0
+        || (fineWheel && (index==levelValue || index==inCurveValue || index==outCurveValue));
     const auto direction=steps>0?1:-1;
     double displacement=steps*(fine?.1:1.);
     if(index==levelValue)displacement=steps*(fine?m3::swellLevelFineStepDb:m3::swellLevelStepDb);
@@ -252,8 +253,6 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
         if(index<=sourceEndValue || index==placementValue)
             valueControls[index].valueField().setNumericCharacters(sampleUnitsButton.getToggleState()?"0123456789-":
                 index<=sourceEndValue?"0123456789.-":"0123456789+.-");
-        if(index==targetValue)
-            valueControls[index].setInlineHelp(sampleUnitsButton.getToggleState()?"Enter whole samples.":"Use bar.beat.fraction.");
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
         const auto enabled=valid && (index<=sourceEndValue?(!w->frozen):shaped);
         const auto valueAvailable=valid && ((index!=preRollValue && index!=endOffsetValue) || shaped);

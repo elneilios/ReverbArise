@@ -53,6 +53,16 @@
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
     },
     {
+      "id": "ui107-p5-001",
+      "path": "Source/UI/Controls/TrackSlider.h",
+      "rule": "interaction-default",
+      "occurrence": "setVelocityModeParameters(1.0,1,0,false)",
+      "count": 1,
+      "scope": "shared control default",
+      "reason": "Continuous tracks retain ordinary drag with either Ctrl state. Fine adjustment belongs to the wheel.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/107; approved P5 native preview"
+    },
+    {
       "id": "ui37-006",
       "path": "Source/UI/KnobValue.h",
       "rule": "interaction-default",

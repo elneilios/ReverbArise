@@ -91,6 +91,87 @@ inline void cases(bool withIcons=false)
         value.setEnabled(false);pointerClick(field->incrementButton());REQUIRE(value.getValue()==0);value.setEnabled(true);
         REQUIRE(field->getLocalBounds().contains(field->incrementButton().getBounds()) && field->getLocalBounds().contains(field->decrementButton().getBounds()));
     }
+    {
+        using namespace m3::ui::controls;
+        SliderControl track{{"Sensitivity (%)","Controls event detection."}};
+        track.setRange(0,100,.1);track.setWheelSteps(1,.1);
+        track.setSize(304,34);track.setValue(50,juce::dontSendNotification);
+        auto stamp=juce::Time::currentTimeMillis();
+        const auto event=[&](juce::Component& target,juce::Point<float> point,juce::Point<float> start,int flags)
+        {
+            const juce::Time now(++stamp);
+            return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,flags,
+                0,0,0,0,0,&target,&target,now,start,now,1,point!=start);
+        };
+        unsigned invocations=0;
+        track.beforeInvocation=[&]{++invocations;};
+        const auto wheelAt=[&](juce::Component& target,juce::Point<float> point,int flags,bool reversed=false)
+        {
+            juce::MouseWheelDetails wheel{};
+            wheel.deltaY=.15f;
+            wheel.isReversed=reversed;
+            target.mouseWheelMove(event(target,point,point,flags),wheel);
+        };
+        const auto ctrl=juce::ModifierKeys::ctrlModifier;
+        wheelAt(track,{80,17},0);
+        REQUIRE(track.getValue()==51 && invocations==1);
+        wheelAt(track,{80,17},ctrl,true);
+        REQUIRE(std::abs(track.getValue()-50.9)<1.e-8 && invocations==2);
+        wheelAt(track,{-2,17},ctrl);
+        REQUIRE(std::abs(track.getValue()-50.9)<1.e-8 && invocations==2);
+        auto* field=dynamic_cast<FieldNumericInput*>(track.getChildComponent(0));REQUIRE(field);
+        wheelAt(*field,{15,10},0);
+        REQUIRE(std::abs(track.getValue()-51)<1.e-8 && invocations==3);
+        const auto drag=[&](int modifiers)
+        {
+            track.setValue(50,juce::dontSendNotification);
+            const juce::Point<float> start{80,17},end{130,17};
+            track.mouseDown(event(track,start,start,modifiers|juce::ModifierKeys::leftButtonModifier));
+            track.mouseDrag(event(track,end,start,modifiers|juce::ModifierKeys::leftButtonModifier));
+            track.mouseUp(event(track,end,start,modifiers));
+            return track.getValue();
+        };
+        REQUIRE(drag(0)==drag(ctrl));
+        track.setValue(99.9,juce::dontSendNotification);
+        wheelAt(track,{80,17},0);REQUIRE(track.getValue()==100);
+        track.addToDesktop(juce::ComponentPeer::windowIsTemporary);
+        track.setVisible(true);
+        track.setEnabled(false);
+        auto* handler=track.getAccessibilityHandler();REQUIRE(handler && handler->getTitle()=="Sensitivity (%)");
+        auto* accessible=handler->getValueInterface();REQUIRE(accessible && accessible->isReadOnly());
+        accessible->setValue(60);wheelAt(track,{80,17},ctrl,true);REQUIRE(track.getValue()==100);
+        track.setEnabled(true);
+        handler=track.getAccessibilityHandler();
+        REQUIRE(handler && handler->getActions().invoke(juce::AccessibilityActionType::focus));
+        REQUIRE(track.isFocusVisible());
+        accessible=handler->getValueInterface();
+        const auto beforeAccessible=invocations;
+        accessible->setValue(60);REQUIRE(track.getValue()==60 && invocations==beforeAccessible+1);
+        track.setRange(0,100,1);track.setWheelSteps(1,1);
+        wheelAt(track,{80,17},ctrl);REQUIRE(track.getValue()==61);
+        auto press=event(track,{80,17},{80,17},juce::ModifierKeys::leftButtonModifier);
+        track.mouseDown(press);track.mouseUp(event(track,{80,17},{80,17},0));
+        REQUIRE(track.hasKeyboardFocus(false) && !track.isFocusVisible());
+        track.removeFromDesktop();
+
+        const auto surface=[&](CommandState state)
+        {
+            const juce::Rectangle<int> bounds{100,34};
+            juce::Image image(juce::Image::ARGB,bounds.getWidth(),bounds.getHeight(),true);
+            juce::Graphics g(image);
+            DialTrackPresentation::track(g,bounds,state,10,90,50);
+            return image;
+        };
+        const auto idle=surface({true,false,false,false});
+        const auto hovered=surface({true,true,false,false});
+        const auto held=surface({true,true,true,false});
+        const auto focused=surface({true,false,false,true});
+        const auto disabled=surface({false,true,true,true});
+        REQUIRE(idle.getPixelAt(30,8).getAlpha()==0 && hovered.getPixelAt(30,8).getAlpha()>0);
+        REQUIRE(held.getPixelAt(30,8).getAlpha()>hovered.getPixelAt(30,8).getAlpha());
+        REQUIRE(focused.getPixelAt(1,1)==m3::ui::aqua && disabled.getPixelAt(1,1).getAlpha()==0);
+        REQUIRE(disabled.getPixelAt(50,17).getAlpha()<idle.getPixelAt(50,17).getAlpha());
+    }
     m3::ui::WorkspaceTheme theme;Panel panel;panel.setLookAndFeel(&theme);panel.addToDesktop(0);panel.setVisible(true);
     auto& selector=panel.groups[0];unsigned requests=0;int last=0;
     selector.grabKeyboardFocus();selector.moveKeyboardFocusToSibling(true);REQUIRE(panel.icons[0]->hasKeyboardFocus(true));

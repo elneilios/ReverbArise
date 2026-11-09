@@ -187,6 +187,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     {control.setRange(a,b,step);control.setSliderStyle(juce::Slider::LinearHorizontal);control.setTextBoxStyle(juce::Slider::TextBoxRight,false,78,22);control.setTextValueSuffix(suffix);addAndMakeVisible(control);};
     slider(auditionSlider,-60,0,0.1," dB");auditionSlider.setName("auditionLevel");
     slider(separationSlider,1,2000,1," ms");slider(toneStartSlider,1,511,1,"");slider(toneEndSlider,2,512,1,"");
+    auditionSlider.setWheelSteps(1,.1);
+    separationSlider.setWheelSteps(10,1);
+    toneStartSlider.setWheelSteps(1,1);
+    toneEndSlider.setWheelSteps(1,1);
     for(size_t n=0;n<m3::gridChoices.size();++n)gridBox.addItem(juce::String(m3::gridChoices[n].label.data()),static_cast<int>(n)+1);
     gridBox.setSelectedId(3,juce::dontSendNotification);gridBox.setTitle("Snap grid division");
     for(auto* box:{&inCurveBox,&outCurveBox}){box->addItem("Linear",1);box->addItem("Smooth",2);box->addItem("Exponential",3);}
@@ -263,6 +267,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     liveRoutingBox.addItem("Dry + Wet",1);liveRoutingBox.addItem("Wet Only",2);
     liveLevelLabel.setText("Live wet",juce::dontSendNotification);
     liveLevel.setRange(-60,0,.1);liveLevel.setTextValueSuffix(" dB");liveLevel.setSliderStyle(juce::Slider::LinearHorizontal);
+    liveLevel.setWheelSteps(1,.1);
     liveLevel.setTextBoxStyle(juce::Slider::TextBoxRight,false,75,24);
     gainPolicyLabel.setText("Gain staging",juce::dontSendNotification);gainPolicyBox.setName("gainPolicy");
     gainPolicyBox.addItem("Legacy (original projects)",1);gainPolicyBox.addItem("Musical (source energy +6 dB)",2);
@@ -295,6 +300,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addAndMakeVisible(inspectorViewport);diagnosticsViewport.setVisible(true);
     for(auto* control:std::array<juce::Component*,8>{&selectedStatus,&enabledButton,&muteButton,&soloButton,&fullButton,&resetButton,&inCurveBox,&outCurveBox,})inspectorContent.addAndMakeVisible(control);
     slider(tailSlider,0,5,.01," s");tailSlider.setName("auditionTail");tailSlider.setTooltip("Captured Dry + Wet context after the later of the original arrival and wet endpoint. Dry audio is unchanged.");
+    tailSlider.setWheelSteps(.1,.01);
     tailSlider.onValueChange=[this]{if(!updating)processor.swellEngine().setPostRoll(tailSlider.getValue());};
     addAndMakeVisible(tailLabel);tailLabel.setText("Listen after",juce::dontSendNotification);
     for(auto* label:{&markerLabel,&markerState}){addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
@@ -367,13 +373,14 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         cell.onBegin=[this,index]{beginValueEdit(index);};cell.onEnd=[this,index]{valueAnchors[index].reset();};
         cell.onDelta=[this,index](double delta){commitValueEdit(index,{},delta);};
         cell.onRebase=[this,index]{rebaseValueEdit(index);};
-        cell.onStep=[this,index](double amount){stepValueEdit(index,amount);};
+        cell.onStep=[this,index](double amount,bool fineWheel){stepValueEdit(index,amount,fineWheel);};
         cell.setResetAction([this,index]{return prepareValueReset(index);});
         cell.onModifierInput=[this](const juce::ModifierKeys& mods){modifierKeysChanged(mods);};
         cell.onCommit=[this,index](const auto& text){return commitValueEdit(index,text);};
         cell.onFeedbackChanged=[this]{valueFeedbackChanged=true;};
         if(index==levelValue)
         {
+            cell.setHomeDetent({0,m3::ui::levelAdjustment::homeBandDb});
             cell.onAbsolute=[this](double db){commitValueEdit(levelValue,m3::ui::preciseValue(db));};
             cell.onDialPress=[this]
             {

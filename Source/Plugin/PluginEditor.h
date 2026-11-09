@@ -123,7 +123,7 @@ private:
     enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
     void beginValueEdit(int);
     void rebaseValueEdit(int);
-    void stepValueEdit(int,double);
+    void stepValueEdit(int,double,bool fineWheel);
     m3::ui::KnobValue::ResetAction prepareValueReset(int);
     struct InitialValuePositions {int64_t arrival=0,start=0,end=1;};
     void resetValueEdit(int,InitialValuePositions);

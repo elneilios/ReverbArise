@@ -103,7 +103,11 @@ notch (JUCE delta 0.1) and an arrow press use the steps below, independent of zo
 unsnapped fractional wheel deltas remain proportional. Shift divides a step by
 ten, rounded internally to at least one sample for timing. With effective Snap On,
 timing wheel/arrows move to the adjacent grid point; Shift retains that grid.
-Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
+Ctrl+wheel uses the unsnapped timing step for that event. Ctrl+Shift uses the
+finer unsnapped step. Curve and Level use Ctrl+wheel for fine adjustment.
+Level drag settles at the 0 dB tick within ±0.3 dB and continues past it as the
+pointer moves beyond the band. Exact entry, other input and Reset keep their
+separate paths.
 
 | Control | User-facing unit | Snap-Off wheel/arrow step | Display precision | Accepted storage |
 | --- | --- | --- | --- | --- |
@@ -111,7 +115,7 @@ Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
 | Pre-roll, End Offset | Seconds (s), signed | 0.001 s | 6 decimal places | Checked integer sample timing |
 | Move Wet | Milliseconds (ms), signed | 1 ms | 3 decimal places | Checked integer sample placement |
 | Fade In/Out | Milliseconds (ms), nonnegative | 1 ms | 3 decimal places | Checked integer sample duration |
-| Level | dB, -60 to +12 | 1 dB (Shift: 0.1 dB) | 2 decimal places | Existing finite float gain |
+| Level | dB, -12 to +12 for new edits | 1 dB (Ctrl+wheel or Shift: 0.1 dB) | Compact readout, exact edit value | Existing finite float gain and legacy value compatibility |
 | Curve In/Out | Unitless, -1 to +1 | 0.01 | 3 decimal places | Existing finite double tension |
 
 Formatting does not reduce accepted typed/saved precision. Decimal timing input

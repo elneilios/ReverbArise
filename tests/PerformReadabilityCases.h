@@ -19,7 +19,7 @@ void Composition::verifyReadability()
     for(const auto* name:{"arrivalSample","sourceSampleStart","sourceSampleEnd","wetPlacement","preRoll","endOffset","fadeInMs","fadeOutMs","curveInTension","curveOutTension","swellLevel"})
     {
         auto& cell=require<KnobValue>(*panel,juce::String(name)+"Cell");REQUIRE(content->getLocalBounds().contains(cell.getBounds()));
-        REQUIRE(cell.getLocalBounds().contains(cell.valueField().getBounds()) && cell.valueField().getWidth()>=controlGeometry::valueWidth);
+        REQUIRE(cell.getLocalBounds().contains(cell.valueField().getBounds()) && cell.valueField().getWidth()==controlGeometry::valueWidth);
         viewport.setViewPosition(0,std::clamp(cell.getY(),0,std::max(0,content->getHeight()-viewport.getHeight())));
         REQUIRE(viewport.getViewArea().intersects(cell.getBounds()));
     }

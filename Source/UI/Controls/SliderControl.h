@@ -1,12 +1,12 @@
 #pragma once
-#include "InvocationSlider.h"
+#include "TrackSlider.h"
 #include "FieldNumericInput.h"
 
 namespace m3::ui::controls
 {
 // Shared slider + numeric-stepper family. All input paths use the same Slider
 // range/interval/formatter and existing invocation ownership/notification path.
-class SliderControl:public InvocationSlider
+class SliderControl:public TrackSlider
 {
 public:
     struct FieldMetadata
@@ -47,8 +47,8 @@ private:
     };
 public:
     SliderControl():SliderControl(FieldMetadata{}) {}
-    explicit SliderControl(FieldMetadata metadata):theme(std::make_unique<Theme>(*this,std::move(metadata)))
-    {setLookAndFeel(theme.get());setScrollWheelEnabled(true);setSliderStyle(juce::Slider::LinearHorizontal);setTextBoxStyle(juce::Slider::TextBoxRight,false,controlGeometry::valueWidth,controlGeometry::valueHeight);setValueFont(interFont(controlSize));}
+    explicit SliderControl(FieldMetadata metadata):theme(std::make_unique<Theme>(*this,metadata))
+    {setTitle(metadata.caption);setLookAndFeel(theme.get());setScrollWheelEnabled(true);setSliderStyle(juce::Slider::LinearHorizontal);setTextBoxStyle(juce::Slider::TextBoxRight,false,controlGeometry::valueWidth,controlGeometry::valueHeight);setValueFont(interFont(controlSize));}
     ~SliderControl()override{setLookAndFeel(nullptr);}
 private:std::unique_ptr<Theme> theme;
 };

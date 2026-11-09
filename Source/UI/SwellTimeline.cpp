@@ -47,7 +47,7 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
     setTooltip("Dry: captured source. Double-click dry audio to add a target. Wet: audible shaped audio; grey is the raw reference. Both lanes share a display amplitude scale. Drag the wet body to move audio and envelope.");
     setName("swellTimeline");scrollbar.addListener(this);addAndMakeVisible(scrollbar);setMouseCursor(juce::MouseCursor::CrosshairCursor);
     waveZoom.setName("waveZoom");waveZoom.setSliderStyle(juce::Slider::LinearHorizontal);
-    waveZoom.setRange(-24,48,1);waveZoom.setValue(0,juce::dontSendNotification);
+    waveZoom.setRange(-24,48,1);waveZoom.setWheelSteps(3,1);waveZoom.setValue(0,juce::dontSendNotification);
     waveZoom.setTextBoxStyle(juce::Slider::TextBoxRight,false,60,20);waveZoom.setTextValueSuffix(" dB");
     waveZoom.setDoubleClickReturnValue(true,0);waveZoom.setTooltip("Display zoom for both source and audible wet. Does not change audio gain. Double-click to reset.");
     waveZoom.onValueChange=[this]{invalidateWaveforms();repaint();};addAndMakeVisible(waveZoom);

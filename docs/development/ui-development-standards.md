@@ -19,6 +19,15 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 19 adopts the approved P5 dial and track states.
+Use the shared dial or track surface and the same corner-bracket geometry as
+command controls. Configure wheel steps in the control's own units. Ctrl+wheel
+uses the fine step, and neighboring numeric boxes retain the P4 stepper policy.
+The optional home detent applies to raw dial drag candidates. Level is the
+first consumer, with its home at 0 dB and a ±0.3 dB band. See the
+[C5 contract](ui-control-contracts.md#c5--knobs-and-sliders) and
+[P5 evidence](../validation/2026-11-09-issue-107-knobs-sliders.md).
+
 Production standards revision 18 adopts the owner-approved P4 field family.
 Use `FieldTextEditor` for editable and read-only text and `FieldNumericInput`
 for numeric value boxes. Keep each binding's commit, cancellation, range and

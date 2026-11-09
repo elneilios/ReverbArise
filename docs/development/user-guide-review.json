@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Verified the approved P4 field behavior against the synced UI design system spec. The existing guide covers the delivered behavior.",
+  "summary": "Reviewed fixed-width dial fields and removal of duplicate Target inline help. The existing footer still explains the format and the guide already points to it.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,18 +505,18 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 95546,
-      "sha256": "f9a407b4174728aba248a225ed690b6227ceec375a967cf4d0d488d6dd9001fc"
+      "bytes": 95877,
+      "sha256": "0de41bd959ee45e8288239944b28faa5f72c2c742c1c0e928aac62df867e2880"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15101,
-      "sha256": "6f1d79c9d66c15f142a18780a4735a1c1d94b44c20a5b4c41998055d381a9b82"
+      "bytes": 15116,
+      "sha256": "8244e9a5652abc19effc587413802f9975abd0f4a931e18384676b93cb563751"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 24943,
-      "sha256": "8121ef47554826b28e6468f054f6711992dac1f10b3af226b3d2a792d0e22294"
+      "bytes": 24888,
+      "sha256": "30ff2134ecd68e7949e0a14be06a638e2980e9dcc1208de0436acafe49ac6e2d"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -575,8 +575,8 @@
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 13961,
-      "sha256": "8656294cd9125bcc77ca416c9ef19864da6230911f581de2d37a83cf5dff74f4"
+      "bytes": 14128,
+      "sha256": "69824f74968e4fa653673c14aac54966d64ef05c33fb0b10d97a8e335c398e4a"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
@@ -594,14 +594,19 @@
       "sha256": "31b0b4b2b72517cada9789dee18b4d4bfb23c1e1011bc393dc77967ae0381a80"
     },
     {
+      "path": "Source/UI/Controls/DialTrackPresentation.h",
+      "bytes": 3381,
+      "sha256": "78e7e3ba263f6065fcd06b162cc1401ddc694112f5f0524306ca8b3c0f3131a8"
+    },
+    {
       "path": "Source/UI/Controls/EllipsisLabel.h",
       "bytes": 503,
       "sha256": "63aacc09b13b36a836d16a8368d301f489b72e72ecd2e74a51398cadca352bec"
     },
     {
       "path": "Source/UI/Controls/ExportLevelsControl.h",
-      "bytes": 4924,
-      "sha256": "ec15d31ea4aed50644fe010b9f81f3212de5e54e13761bddc14ebf6be64e3230"
+      "bytes": 4952,
+      "sha256": "323d9749426cb469a9f508b05db71e06a8f7ddcaff4accb893e32848f0269fe2"
     },
     {
       "path": "Source/UI/Controls/ExternalFileDrag.h",
@@ -710,8 +715,8 @@
     },
     {
       "path": "Source/UI/Controls/SliderControl.h",
-      "bytes": 2515,
-      "sha256": "6dd2d01566675c6167a81664b3b38df385317aad20e52fc5cfee5793291cfba9"
+      "bytes": 2521,
+      "sha256": "e39f8e3f9635e195835dffe52a420d683f88985e3dde29f24a5a8f0395d76e81"
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
@@ -735,8 +740,13 @@
     },
     {
       "path": "Source/UI/Controls/TimelineZoomControls.h",
-      "bytes": 4007,
-      "sha256": "7d6a4872110a3158602f8c52e0c71160c0e2388d816dd9461d0b19bd3a23c8e1"
+      "bytes": 3685,
+      "sha256": "3e42bd3d662f14efff2025e7a8a5d0c509850494b3e6e7b7822cab508fc13299"
+    },
+    {
+      "path": "Source/UI/Controls/TrackSlider.h",
+      "bytes": 5577,
+      "sha256": "7886a3781ad0a16dfeec99a0fa24aec0e137e0b0bab2418fbba9add983834b87"
     },
     {
       "path": "Source/UI/Controls/TransportReadout.h",
@@ -770,8 +780,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 18491,
-      "sha256": "fc27a45e1e01cbc9b993ad3269eae665fe423ff8455416eaf1a9208f9c916654"
+      "bytes": 20801,
+      "sha256": "41e52fac06b3ca7f2878895d390ef01fe75a6d0cd3092b78f7b44c5bb37f2473"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
@@ -780,13 +790,13 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 35406,
-      "sha256": "afc46f9d11f0911f5eb39fd6e42373c46423112ed010fbf1db8fbb86b31f068f"
+      "bytes": 35447,
+      "sha256": "36212da87c9347b4fa004c5b97f0d3c6127e88f33069fe463eaf803bbfb4945e"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
-      "bytes": 715,
-      "sha256": "656a4685da2c48ce1d0e8006129853a45b57c5857e9107820f80170cda2c2a9d"
+      "bytes": 814,
+      "sha256": "0b90a53a39a1aa3a16a861dd9f53700ecdf5d2fd1934df13300bb564e81e4808"
     },
     {
       "path": "Source/UI/LiveDiagnosticsText.h",
@@ -840,8 +850,8 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 49523,
-      "sha256": "e97701fc91b6b889e725d9e7e159e640ea06d600e881ec481e4d8d78d6025e18"
+      "bytes": 49551,
+      "sha256": "632b95ceb11c448c9eb2046a4a726459b0e2824546fa78e7a7b16370f18e2cb8"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
@@ -900,8 +910,8 @@
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 17034,
-      "sha256": "f9cb6a568756e21fcf451caeccfebba1bff118dda3aa338af66ad959b83f9ae1"
+      "bytes": 17110,
+      "sha256": "15949f03dfd2725a193f823aa011ca0093ffeb3ebe4b7ab29b367c6f748af9a5"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -930,8 +940,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30122,
-      "sha256": "97d107af33da7d2d8eed27b4ff124dc5a8ce1371f58908982c34fb53b6a19f66"
+      "bytes": 30419,
+      "sha256": "ccd7baab4634a4955a410d71c5dcaf5d44cd87f15ea4dd30311cc3d556ecf05e"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
