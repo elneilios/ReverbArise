@@ -471,7 +471,8 @@ private:
     }
     LoopCapturePreference loopSettings;
     bool loopRecaptureOn=false;
-    controls::LatchingActionButton loopMode{"Loop Mode"},loopArm{"Arm"};
+    controls::LatchingActionButton loopMode{"Loop Mode"};
+    controls::LatchingActionButton loopArm{"Arm",controls::CommandVariant::destructive};
     controls::ChoiceSelector loopMethod,loopUnit;
     controls::NumericInputControl loopCount;
     juce::Label loopSetup,loopStatus;

@@ -19,3 +19,5 @@ The Release processor test verifies UI and external Arm admission, variable call
 The warm Windows Release wrapper passed all 98 tests in 353.41 seconds on the final product sources. The preceding Release run passed 97 tests and reported the previously observed Windows foreground-focus failure in the Perform knob reset fixture. The full rerun passed that fixture. An incremental Release rebuild and focused processor test then passed additional assertions for Stop while waiting and callback suspension while End Signal was pending.
 
 The Recapture Audio on replacement case used the native processor fixture with the same Step 1 and Step 4 MIDI roles. The Rack sequencer proof verified first capture and protection with Recapture Audio off. Other DAW integrations remain unverified.
+
+The owner approved the red Arm treatment in the native End Signal preview on 2026-11-09. Focused Release tests exercised the red armed fill in Learn and the shared command state rendering, including disabled and focused states. The original Rack measurements above used the preceding visual treatment.

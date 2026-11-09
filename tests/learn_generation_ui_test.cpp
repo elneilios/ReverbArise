@@ -170,6 +170,12 @@ static void loopUiCases(bool review)
         button.invokeCommand();
         juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     };
+    const auto buttonFill=[](m3::ui::controls::ActionButton& button){
+        juce::Image image(juce::Image::ARGB,button.getWidth(),button.getHeight(),true,juce::SoftwareImageType{});
+        juce::Graphics graphics(image);
+        button.paintButton(graphics,false,false);
+        return image.getPixelAt(12,button.getHeight()/2);
+    };
     REQUIRE(visible(toggle) && toggle->getButtonText()=="Loop Mode" && !toggle->getToggleState());
     REQUIRE(visible(named(editor,"recaptureExisting")) && !visible(arm));
     activate(*toggle);
@@ -180,6 +186,7 @@ static void loopUiCases(bool review)
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && toggle->getToggleState());
     REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
+    REQUIRE(buttonFill(*arm)==m3::ui::background && buttonFill(*toggle)==m3::ui::aqua);
     REQUIRE(visible(automatic) && automatic->isEnabled());
     automatic->setToggleState(true,juce::dontSendNotification);
     automatic->onClick();
@@ -197,6 +204,7 @@ static void loopUiCases(bool review)
     REQUIRE(arm->isEnabled());
     activate(*arm);
     REQUIRE(processor.loopCaptureArmed() && arm->getButtonText()=="Arm" && arm->getToggleState() && !count->isEnabled());
+    REQUIRE(buttonFill(*arm)==m3::ui::danger);
     REQUIRE(status->getText().contains("Waiting") && !toggle->isEnabled());
     auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
     REQUIRE(workspace && workspace->coverageTotalsText()=="No accepted source");

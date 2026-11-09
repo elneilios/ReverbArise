@@ -42,6 +42,8 @@ Before recording, Stop withdraws the arm. During Duration, Stop cancels, includi
 
 Reuse the existing shared Arm latch, method selector, setup help and status text. Describe the method-dependent Arm-off behavior before the owner arms, then distinguish waiting for the clock, recording, finishing at the end of the bar and automatic cancellation. Keep the controls and layout within the approved Learn surface. Present a native preview for owner approval of the changed interaction and status before final delivery.
 
+Use the shared destructive command role for Learn's Loop Arm latch. A red outline and label identify the recording control when off, and a solid red fill shows when it is armed. The existing latch state and status text continue to convey what capture is doing.
+
 Reuse the existing Recapture Audio switch row with Loop-specific help. Maintain Loop overwrite permission separately from Song recapture behavior. It starts off on load and is pinned when either UI or MIDI arms. An accepted Loop and Recapture off prevents another arm. Recapture on permits each subsequent fresh arm to replace the Loop only after successful settlement.
 
 ## Risks / Trade-offs

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the simplified Loop capture implementation and Learn preview. Updated the guide for one clock pulse per beat, external Start/Arm and Stop, method-specific completion and cancellation, and Recapture Audio protection.",
+  "summary": "Reviewed the simplified Loop capture instructions and Learn binding for issue #133. The guide covers one clock pulse per beat, Start/Arm and Stop, method-specific completion and cancellation, and Recapture Audio protection. The red Arm treatment uses the same control label and behavior, so the guide remains accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -690,8 +690,8 @@
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
-      "bytes": 593,
-      "sha256": "bbbe1a07550ddf523e2ddf8ed14584c2b67cc5069ea62c4d328fa077b636a7a2"
+      "bytes": 675,
+      "sha256": "028444bc1ef2ab1d52d9acf2d5f54424fa8011fbb3efcf4548409835283c37a1"
     },
     {
       "path": "Source/UI/Controls/ModeIcon.h",
@@ -805,8 +805,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 50578,
-      "sha256": "8fdf61ab8439afa508888b0041e08436453f61acc0989b3145eff697d9342c0d"
+      "bytes": 50652,
+      "sha256": "112a2d5a32aeeede29a38b2b988f6804abd5ca1de635883ca63b8b4748644adf"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -925,8 +925,8 @@
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 17034,
-      "sha256": "f9cb6a568756e21fcf451caeccfebba1bff118dda3aa338af66ad959b83f9ae1"
+      "bytes": 17178,
+      "sha256": "3875a1ff8b6880e785b4d6ce1d1ebf25589f21411b6b29044954362e70d87f6b"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -1165,8 +1165,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 42343,
-      "sha256": "bc483738e03c6fafcd64ac9cedc78b52893610af7322eaf47631bee4003a7599"
+      "bytes": 42817,
+      "sha256": "352f27d7cfbaf3ef06439ee25e2e8cb962be2475bdd6ff28ac77f7b4300b8056"
     }
   ]
 }

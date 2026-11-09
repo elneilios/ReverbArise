@@ -8,7 +8,8 @@ namespace m3::ui::controls
 class LatchingActionButton final:public ActionButton
 {
 public:
-    explicit LatchingActionButton(const juce::String& label):ActionButton(label)
+    explicit LatchingActionButton(const juce::String& label,CommandVariant variant=CommandVariant::neutral)
+        :ActionButton(label,CommandIcon::none,variant)
     {setClickingTogglesState(true);}
     void display(bool effective){setToggleState(effective,juce::dontSendNotification);}
 protected:
