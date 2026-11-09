@@ -72,9 +72,11 @@ public:
     std::function<void()> onRefresh;
     std::function<void(LoopCapturePreference)> onLoopPreference;
     std::function<void(bool,uint64_t)> onLoopArm;
-    void displayLoop(LoopCapturePreference preference, bool canArm, bool armed, bool busy, const juce::String& status)
+    void displayLoop(LoopCapturePreference preference, bool canArm, bool armed, bool busy,
+                     bool finishing, bool recaptureEnabled, const juce::String& status)
     {
         loopSettings=preference;
+        loopRecaptureOn=recaptureEnabled;
         loopMode.display(preference.enabled);
         loopMethod.setSelectedId(preference.method==LoopCapturePreference::Method::duration?1:2,juce::dontSendNotification);
         loopUnit.setSelectedId(preference.unit==LoopCapturePreference::Unit::bars?1:2,juce::dontSendNotification);
@@ -82,13 +84,15 @@ public:
             loopCount.setText(juce::String(static_cast<int>(preference.count)),juce::dontSendNotification);
         for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount})
             control->setEnabled(!busy);
-        loopArm.display(armed);
-        loopArm.setEnabled(armed || canArm);
-        const auto explanation=armed?status+"\nSwitch Arm off to cancel.":status;
-        loopArm.setHelpText(explanation);
-        loopArm.setTooltip(explanation);
-        loopStatus.setText(explanation,juce::dontSendNotification);
-        loopStatus.setTooltip(explanation);
+        loopArm.display(armed && !finishing);
+        loopArm.setEnabled(!finishing && (armed || canArm));
+        const auto stopHelp=preference.method==LoopCapturePreference::Method::endSignal
+            ? "Arm off finishes at the end of the bar." : "Arm off cancels the take.";
+        loopSetup.setText(juce::String("4/4. One clock pulse per beat.\n")+stopHelp,juce::dontSendNotification);
+        loopArm.setHelpText(status);
+        loopArm.setTooltip(status);
+        loopStatus.setText(status,juce::dontSendNotification);
+        loopStatus.setTooltip(status);
     }
     void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,workflow::Snapshot flow,bool position,const CaptureProgress& pending={})
     {
@@ -122,10 +126,13 @@ public:
         generate.setTooltip("Create or replace automatically detected swells using the markers shown. Manual and frozen swells are preserved.\n"+generationView.reason);
         generateReason.setTooltip(generationView.reason);
         phase=flow.phase;progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
-        recapture.setToggleState(flow.recapture,juce::dontSendNotification);automatic.setToggleState(automaticOn,juce::dontSendNotification);
+        const bool recaptureOn=loopSettings.enabled?loopRecaptureOn:flow.recapture;
+        recapture.setToggleState(recaptureOn,juce::dontSendNotification);automatic.setToggleState(automaticOn,juce::dontSendNotification);
         recapture.setEnabled(!flow.locked());automatic.setEnabled(!flow.locked());sensitivity.setEnabled(!flow.locked());
         if(!sensitivity.isMouseButtonDown() && !sensitivity.hasKeyboardFocus(true))sensitivity.setValue(editor.session.sensitivity*100,juce::dontSendNotification);
-        recaptureHelp.setText(flow.recapture?"Replace audio next pass.":"Keep captured audio.",juce::dontSendNotification);
+        recaptureHelp.setText(loopSettings.enabled
+            ? (recaptureOn?"Allow replacing the accepted Loop.":"Keep the accepted Loop.")
+            : (recaptureOn?"Replace audio next pass.":"Keep captured audio."),juce::dontSendNotification);
         irBinding.displayDefault(editor);
         if(!responsive)irEditor.setVisible(automaticOn);
         for(auto* c:std::array<juce::Component*,7>{&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
@@ -346,10 +353,10 @@ public:
             for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
             applyTextRole(g,*this,TextRole::emptyHeading);
             g.drawFittedText(loopSettings.enabled
-                ? (phase==workflow::Phase::armed?"Waiting for the next phrase":"Arm to capture a loop")
+                ? (phase==workflow::Phase::armed?"Waiting for capture timing":"Arm to capture a loop")
                 : "Play audio in your DAW",regions[1],juce::Justification::centred,1);
             applyTextRole(g,*this,TextRole::emptyBody);
-            g.drawFittedText(loopSettings.enabled?"Duration capture starts on a verified phrase marker."
+            g.drawFittedText(loopSettings.enabled?"Use the same clock for the audio and capture."
                 : automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",
                 regions[2],juce::Justification::centredTop,2);
         }
@@ -387,8 +394,7 @@ private:
         for (auto* label : {&loopSetup,&loopStatus})
             applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
         for (auto* label : {&loopSetup,&loopStatus}) label->setBorderSize({});
-        loopSetup.setText("4/4 with shared clock and reset.\nArm confirms audio is aligned.",juce::dontSendNotification);
-        loopSetup.setTooltip("Route stereo audio and the Loop MIDI markers to this plug-in. Audio and the beat, bar and phrase markers must share one clock and reset.");
+        loopSetup.setTooltip("Route stereo audio and one Clock pulse per beat. Arm confirms the audio and clock are aligned. Start/Arm and Stop triggers are optional.");
         loopMethod.addItem("Duration",1);loopMethod.addItem("End signal",2);
         loopUnit.addItem("Bars",1);loopUnit.addItem("Beats",2);
         loopCount.setEditable(true,true,false);
@@ -443,7 +449,7 @@ private:
         loopUnit.setVisible(duration);loopCount.setVisible(duration);
         if (!show) return;
         auto row=column.removeFromTop(controlGeometry::height);
-        loopMode.setBounds(loopMode.getParentComponent()==&loopPolicies?row.expanded(policyFocusMargin,0):row);
+        loopMode.setBounds(responsive || usesLoopPolicies()?row.expanded(policyFocusMargin,0):row);
         if (!loop) return;
         column.removeFromTop(spacing::related);
         loopMethod.setRowBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
@@ -464,7 +470,9 @@ private:
         loopStatus.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
     }
     LoopCapturePreference loopSettings;
-    controls::LatchingActionButton loopMode{"Loop Mode"},loopArm{"Arm"};
+    bool loopRecaptureOn=false;
+    controls::LatchingActionButton loopMode{"Loop Mode"};
+    controls::LatchingActionButton loopArm{"Arm",controls::CommandVariant::destructive};
     controls::ChoiceSelector loopMethod,loopUnit;
     controls::NumericInputControl loopCount;
     juce::Label loopSetup,loopStatus;
@@ -474,6 +482,8 @@ private:
     controls::FocusViewport loopPoliciesViewport;
     bool usesLoopPolicies()const noexcept
     {return loopSettings.enabled || capture.sourceKind()==CaptureSourceKind::loop;}
+    juce::Rectangle<int> policyContentBounds(juce::Rectangle<int> bounds)const
+    {return bounds.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);}
     void placePolicyControls(bool inViewport)
     {
         auto* parent=inViewport?&loopPolicies:static_cast<juce::Component*>(this);
@@ -487,7 +497,7 @@ private:
     {
         loopPoliciesViewport.setBounds(bounds);
         const auto width=std::max(0,bounds.getWidth()-loopPoliciesViewport.getScrollBarThickness());
-        auto column=juce::Rectangle<int>{0,0,width,bounds.getHeight()}.reduced(policyFocusMargin,0);
+        auto column=policyContentBounds(bounds.withZeroOrigin());
         const auto row=[&](int height){auto rect=column.withHeight(height);column.setY(column.getY()+height);return rect;};
         const auto toggle=[&](controls::Switch& value,juce::Label& label){
             auto rect=row(controlGeometry::switchHeight);
@@ -495,13 +505,13 @@ private:
             label.setBounds(rect);
         };
         captureGroup.setVisible(responsive);
-        if(responsive)captureGroup.setBounds(row(controlGeometry::headingHeight));
+        if(responsive)captureGroup.setBounds(row(responsiveGeometry::headingHeight));
         // Use an unbounded vertical budget so the viewport can reveal the whole policy.
         auto captureRows=column.withHeight(8*controlGeometry::switchHeight);
         layoutLoopControls(captureRows,true);column.setY(captureRows.getY());
         for(auto* control : std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp})
-            control->setVisible(!loopSettings.enabled);
-        if(!loopSettings.enabled){toggle(recapture,recaptureLabel);recaptureHelp.setBounds(row(learnTypography::secondaryLineHeight));}
+            control->setVisible(true);
+        toggle(recapture,recaptureLabel);recaptureHelp.setBounds(row(learnTypography::secondaryLineHeight));
         row(spacing::group);
         automaticLabel.setBounds(row(controlGeometry::headingHeight));
         toggle(automatic,automaticToggleLabel);
@@ -535,18 +545,15 @@ private:
         auto column=left.withTrimmedRight(groupGap);
         const bool loopPanel=usesLoopPolicies();
         placePolicyControls(loopPanel);
-        auto heading=column.removeFromTop(headingHeight);
-        if(loopPanel)heading=heading.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
-        captureTitle.setBounds(heading);column.removeFromTop(spacing::tight);
-        auto tabRow=column.removeFromTop(tabsHeight);
-        if(loopPanel)tabRow=tabRow.withTrimmedRight(loopPoliciesViewport.getScrollBarThickness()).reduced(policyFocusMargin,0);
-        sections.setBounds(tabRow);column.removeFromTop(contentPadding);
+        captureTitle.setBounds(policyContentBounds(column.removeFromTop(headingHeight)));column.removeFromTop(spacing::tight);
+        sections.setBounds(policyContentBounds(column.removeFromTop(tabsHeight)));column.removeFromTop(contentPadding);
         const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
         if(loopPanel)layoutLoopPolicies(column);
         else
         {
+        column=policyContentBounds(column);
         auto actions=column.removeFromBottom(132);actions.removeFromTop(contentPadding);
-        generate.setBounds(actions.removeFromTop(controlHeight));actions.removeFromTop(spacing::tight);
+        generate.setBounds(actions.removeFromTop(controlHeight).expanded(policyFocusMargin,0));actions.removeFromTop(spacing::tight);
         generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
         captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
         const auto toggleRow=[&](controls::Switch& value,juce::Label& label)
@@ -561,7 +568,7 @@ private:
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         manualHelp.setVisible(true);
         }
-        auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
+        auto sound=policyContentBounds(left.withTrimmedRight(groupGap)).withTrimmedTop(sections.getBottom()+contentPadding);
         soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
         irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);

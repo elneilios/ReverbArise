@@ -30,9 +30,12 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addAndMakeVisible(hoverHelp);hoverHelp.setName("hoverHelp");m3::ui::applyTextRole(hoverHelp,m3::ui::TextRole::helper);hoverHelp.setInterceptsMouseClicks(false,false);
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
-    learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
+    learnWorkspace.onRecapture=[this](bool enabled){
+        if(processor.getLoopCapturePreference().enabled)processor.setLoopRecapture(enabled);
+        else processor.setRecaptureExisting(enabled);
+    };learnWorkspace.onRefresh=[this]{refresh();};
     learnWorkspace.onLoopPreference=[this](LoopCapturePreference preference){processor.setLoopCapturePreference(preference);};
-    learnWorkspace.onLoopArm=[this](bool arm,uint64_t pass){if(arm)processor.armLoopCapture();else processor.cancelLoopCapture(pass);};
+    learnWorkspace.onLoopArm=[this](bool arm,uint64_t pass){if(arm)processor.armLoopCapture();else processor.requestLoopStop(pass);};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
     recaptureExisting.setName("legacyRecaptureExisting");
@@ -843,7 +846,7 @@ void PreverbAudioProcessorEditor::refresh()
     const auto loopStatus=loopSettings.enabled?processor.loopCaptureStatus():juce::String{};
     workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),loopSettings.enabled?loopStatus:capture.status);
     noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
-        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes())));
+        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes()),loopStatus));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
@@ -882,10 +885,9 @@ void PreverbAudioProcessorEditor::refresh()
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
     if(learningLayout)
     {
-        const bool loopSettling=loopSettings.enabled
-            && (flow.phase==workflow::Phase::draining || flow.phase==workflow::Phase::validating);
         learnWorkspace.displayLoop(loopSettings,processor.canArmLoopCapture(),
-            processor.loopCaptureArmed() || loopSettling,flow.locked(),loopStatus);
+            processor.loopCaptureArmed(),flow.locked(),processor.loopFinishing(),
+            processor.loopRecaptureEnabled(),loopStatus);
         learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
     }
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}

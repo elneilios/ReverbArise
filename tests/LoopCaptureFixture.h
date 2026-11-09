@@ -37,11 +37,18 @@ struct LoopCaptureFixture
         if (marker(nextBeat) < cursor+frames)
         {
             const auto offset=static_cast<int>(marker(nextBeat)-cursor);
-            note(21,offset);
-            if (nextBeat%4==0) note(19,offset);
-            if (nextBeat%16==0) note(12,offset);
+            if (clockEnabled)
+            {
+                note(simpleClock?23:21,offset);
+                if (!simpleClock && nextBeat%4==0) note(19,offset);
+                if (!simpleClock && nextBeat%16==0) note(12,offset);
+                if (simpleClock && nextBeat==armBeat) note(24,offset);
+                if (simpleClock && nextBeat==stopBeat) note(25,offset);
+            }
             ++nextBeat;
         }
+        if (commandSample >= cursor && commandSample < cursor + frames)
+            note(commandNote, static_cast<int>(commandSample - cursor));
         if (reset) note(22,0);
         for (int sample=0;sample<frames;++sample)
         {
@@ -72,6 +79,9 @@ struct LoopCaptureFixture
     juce::AudioBuffer<float> audio;
     juce::MidiBuffer midi;
     int nextBeat=0;
+    int armBeat=-1, stopBeat=-1;
+    int commandNote=24;
+    int64_t commandSample=-1;
     int64_t cursor=0;
-    bool percussive=false;
+    bool percussive=false, simpleClock=false, clockEnabled=true;
 };

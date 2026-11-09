@@ -154,7 +154,7 @@ int main(){return runTest([]{
         const std::vector<float> phrase(extent,.25f);
         const auto stageLoop=[&]
         {
-            const auto token=mode.reserveCapture();
+            const auto token=mode.reserveCapture(mode.snapshot().pass);
             REQUIRE(token && mode.startReserved(token));
             REQUIRE(queue->tryPush(0,48000,phrase.data(),phrase.data(),8192,loopEpoch,token,{},true));
             REQUIRE(queue->tryPush(8192,48000,phrase.data()+8192,phrase.data()+8192,extent-8192,loopEpoch,token,{},true));

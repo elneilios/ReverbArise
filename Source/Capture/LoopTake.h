@@ -50,13 +50,32 @@ public:
     }
 
     int64_t start() const noexcept { return origin; }
+    unsigned beatCount() const noexcept { return beats; }
+    bool stopPending() const noexcept { return stopSample >= 0; }
+    bool duration() const noexcept { return preference.method == LoopCapturePreference::Method::duration; }
+    void requestStop(int64_t sample) noexcept
+    {
+        if (!stopPending())
+            stopSample = sample;
+    }
+    Edge observeClock(int64_t sample) noexcept
+    {
+        if (!armed) return Edge::none;
+        if (origin < 0) { origin = sample; return Edge::start; }
+        ++beats;
+        const auto target = preference.count
+            * (preference.unit == LoopCapturePreference::Unit::bars ? PhraseClock::beatsPerBar : 1);
+        const auto complete = duration() ? beats == target
+            : stopPending() && sample > stopSample && beats % PhraseClock::beatsPerBar == 0;
+        return complete ? finish(Edge::end) : Edge::none;
+    }
     LoopPhraseTiming timing(double tempo, int64_t end) const noexcept
     { return {tempo, PhraseClock::beatsPerBar, 4, static_cast<int>(beats), origin, end - origin}; }
 
 private:
     Edge finish(Edge edge) noexcept { armed = false; return edge; }
     LoopCapturePreference preference;
-    int64_t origin = -1;
+    int64_t origin = -1, stopSample = -1;
     unsigned beats = 0;
     bool armed = false, sawLow = false, pendingEnd = false;
 };

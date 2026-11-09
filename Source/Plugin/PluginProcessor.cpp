@@ -37,6 +37,7 @@ bool PreverbAudioProcessor::setLoopCapturePreference(LoopCapturePreference prefe
     const auto previous=loopPreference.exchange(preference.packed(), std::memory_order_relaxed);
     if (LoopCapturePreference::unpack(previous).enabled != preference.enabled)
     {
+        loopRouteHint.store(LoopRoute::waiting, std::memory_order_release);
         invalidateLoopClock();
         loopInterrupted.store(false,std::memory_order_relaxed);
     }
@@ -134,18 +135,20 @@ void PreverbAudioProcessor::invalidateLoopClock() noexcept
     loopReset.fetch_add(1, std::memory_order_release);
 }
 
-bool PreverbAudioProcessor::canArmLoopCapture() const
+bool PreverbAudioProcessor::loopArmAllowed(workflow::Snapshot flow, bool external) const noexcept
 {
     using State = loop_capture::ClockAdmission::State;
     const auto settings = getLoopCapturePreference();
-    const auto flow = workflowState.snapshot();
-    if (!settings.enabled || settings.method != LoopCapturePreference::Method::duration
-        || loopCaptureArmed() || flow.mode != workflow::Mode::capture || flow.locked()
-        || loopClockState.load(std::memory_order_acquire) != State::ready || !loopDurationFits(settings) || captureWorker.isLoading())
+    if (!settings.enabled || loopCaptureArmed() || flow.mode != workflow::Mode::capture || flow.locked()
+        || !captureWorker.canCaptureLoop() || (captureWorker.acceptedLoop() && !loopRecaptureEnabled()))
         return false;
-    const auto source = captureWorker.snapshot();
-    return !source.unavailable && source.location && source.location->writable && !captureWorker.recoveryArmed();
+    if (!external && loopRouteHint.load(std::memory_order_acquire) == LoopRoute::marker)
+        return settings.method == LoopCapturePreference::Method::duration
+            && loopClockState.load(std::memory_order_acquire) == State::ready && loopDurationFits(settings);
+    return true;
 }
+
+bool PreverbAudioProcessor::canArmLoopCapture() const { return loopArmAllowed(workflowState.snapshot(), false); }
 
 bool PreverbAudioProcessor::loopDurationFits(LoopCapturePreference settings) const noexcept
 {
@@ -158,11 +161,41 @@ bool PreverbAudioProcessor::loopDurationFits(LoopCapturePreference settings) con
 bool PreverbAudioProcessor::armLoopCapture()
 {
     const juce::ScopedLock guard(storageStateLock);
-    if (!canArmLoopCapture()) return false;
-    const auto pass=workflowState.reserveCapture();
-    if (!pass) return false;
+    return reserveLoopArm(false) != 0;
+}
+
+uint64_t PreverbAudioProcessor::reserveLoopArm(bool external) noexcept
+{
+    const auto flow = workflowState.snapshot();
+    if (!loopArmAllowed(flow, external)) return 0;
+    const auto generation = captureWorker.captureGeneration();
+    const auto resetEpoch = loopReset.load(std::memory_order_acquire);
+    const auto pass = workflowState.reserveCapture(flow.pass);
+    if (!pass) return 0;
+    if (generation != captureWorker.captureGeneration() || !captureWorker.canCaptureLoop()
+        || (captureWorker.acceptedLoop() && !loopRecaptureEnabled()) || !getLoopCapturePreference().enabled)
+    {
+        workflowState.rejectReserved(pass);
+        return 0;
+    }
     loopInterrupted.store(false, std::memory_order_relaxed);
+    loopArmResetEpoch.store(resetEpoch, std::memory_order_relaxed);
     loopArm.store(pass, std::memory_order_release);
+    return pass;
+}
+
+bool PreverbAudioProcessor::setLoopRecapture(bool enabled)
+{
+    const juce::ScopedLock guard(storageStateLock);
+    if (!getLoopCapturePreference().enabled || workflowState.snapshot().locked()) return false;
+    loopRecapture.store(enabled, std::memory_order_release);
+    return true;
+}
+
+bool PreverbAudioProcessor::requestLoopStop(uint64_t pass) noexcept
+{
+    if (pass == 0 || loopArm.load(std::memory_order_acquire) != pass || loopFinishing()) return false;
+    loopStop.store(pass, std::memory_order_release);
     return true;
 }
 
@@ -178,15 +211,22 @@ juce::String PreverbAudioProcessor::loopCaptureStatus() const
 {
     using State = loop_capture::ClockAdmission::State;
     const auto flow = workflowState.snapshot();
+    if (loopFinishing()) return "Finishing at the end of the bar";
     if (flow.phase == workflow::Phase::recording && loopCaptureArmed()) return "Recording Loop";
     if (flow.phase == workflow::Phase::draining || flow.phase == workflow::Phase::validating) return "Checking captured audio";
-    if (loopCaptureArmed()) return "Armed. Waiting for the next phrase.";
+    const auto route = loopRouteHint.load(std::memory_order_acquire);
+    if (loopCaptureArmed()) return route == LoopRoute::marker ? "Armed. Waiting for the next phrase."
+                                                            : "Armed. Waiting for the next beat.";
     if (flow.result == workflow::Result::failed) return captureWorker.snapshot().status;
-    if (loopInterrupted.load(std::memory_order_relaxed)) return "Capture interrupted. Check the clock and arm again.";
-    if (getLoopCapturePreference().method == LoopCapturePreference::Method::endSignal)
-        return "End signal needs a verified end input. It ends at the next bar.";
-    if (flow.result == workflow::Result::accepted && captureWorker.acceptedLoop()) return "Loop accepted";
+    if (loopInterrupted.load(std::memory_order_relaxed)) return "Capture cancelled. Clock or timing was interrupted.";
     if (flow.result == workflow::Result::cancelled) return "Capture cancelled";
+    if (captureWorker.acceptedLoop() && !loopRecaptureEnabled())
+        return "Loop protected. Turn on Recapture Audio to replace it.";
+    if (flow.result == workflow::Result::accepted && captureWorker.acceptedLoop()) return "Loop accepted";
+    if (route != LoopRoute::marker)
+        return captureWorker.canCaptureLoop() ? "Ready to arm" : "Capture storage is unavailable";
+    if (getLoopCapturePreference().method == LoopCapturePreference::Method::endSignal)
+        return "End Signal needs a Clock input and a deliberate Stop.";
     if (loopClockState.load(std::memory_order_acquire) == State::ready)
         return !loopDurationFits(getLoopCapturePreference()) ? "Duration exceeds the capture limit. Choose a shorter take."
             : canArmLoopCapture() ? "Clock ready" : "Capture storage or Learn is unavailable";
@@ -199,15 +239,70 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
                                              const HostPositionDiagnostics& timing, bool inactive, uint64_t generation) noexcept
 {
     using namespace loop_capture;
+    const auto frames = buffer.getNumSamples();
+    const auto rate = timing.sampleRate;
+    const auto resetEpoch = loopReset.load(std::memory_order_acquire);
+    const auto now = std::chrono::steady_clock::now();
+    const bool gap = previousLoopCallback.time_since_epoch().count() != 0
+        && now - previousLoopCallback > std::chrono::duration<double>(rate > 0 ? std::max(.5, 3 * frames / rate) : .5);
+    previousLoopCallback = now;
+
+    const auto clearAttempt = [&]
+    {
+        auto expected = seenLoopArm;
+        loopArm.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
+        seenLoopArm = 0;
+        loopTake = {};
+        loopTakeRoute = LoopRoute::waiting;
+        pendingLoopEnd = -1;
+        loopFinishPending.store(false, std::memory_order_release);
+    };
+    const auto cancel = [&](bool interrupted)
+    {
+        if (!seenLoopArm) return;
+        if (workflowState.cancelUnsettledCapture(seenLoopArm))
+            loopInterrupted.store(interrupted, std::memory_order_relaxed);
+        clearAttempt();
+        loopPass = 0;
+    };
+    if (seenLoopReset != resetEpoch || gap)
+    {
+        loopClock.revoke();
+        cancel(true);
+    }
+    seenLoopReset = resetEpoch;
+
+    const auto requested = loopArm.load(std::memory_order_acquire);
     const auto flow = workflowState.snapshot();
     if (loopPass != 0 && flow.pass != loopPass) loopPass = 0;
-    const auto requested = loopArm.load(std::memory_order_acquire);
+    const auto adoptArm = [&](uint64_t pass, LoopRoute route)
+    {
+        seenLoopArm = pass;
+        loopPass = 0;
+        loopTake.arm(getLoopCapturePreference());
+        loopTakeRoute = route;
+        captureBeatClock.begin(rate);
+        pendingLoopEnd = -1;
+        loopFinishPending.store(false, std::memory_order_release);
+    };
     if (requested != seenLoopArm)
     {
-        seenLoopArm = requested;
-        loopTake = {};
-        if (requested != 0 && flow.pass == requested && flow.phase == workflow::Phase::armed)
-            loopTake.arm(getLoopCapturePreference());
+        if (requested && flow.pass == requested && flow.phase == workflow::Phase::armed)
+        {
+            const auto hint = loopRouteHint.load(std::memory_order_acquire);
+            adoptArm(requested, hint == LoopRoute::marker ? LoopRoute::marker : LoopRoute::waiting);
+            if (loopArmResetEpoch.load(std::memory_order_relaxed) != resetEpoch)
+                cancel(true);
+        }
+        else
+        {
+            clearAttempt();
+            if (requested && flow.pass != requested)
+            {
+                auto stale = requested;
+                loopArm.compare_exchange_strong(stale, 0, std::memory_order_acq_rel);
+            }
+        }
     }
 
     const auto finish = [&](CaptureFailureReason reason)
@@ -227,49 +322,46 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
             }
             workflowState.stop(loopPass);
         }
-        if (reason != CaptureFailureReason::none && seenLoopArm)
-        {
-            loopInterrupted.store(true, std::memory_order_relaxed);
-            workflowState.rejectReserved(seenLoopArm);
-        }
-        auto expected = seenLoopArm;
-        loopArm.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
-        seenLoopArm = 0;
-        loopTake = {};
+        if (reason != CaptureFailureReason::none) workflowState.rejectReserved(seenLoopArm);
+        clearAttempt();
     };
-    const auto frames = buffer.getNumSamples();
-    const auto rate=timing.sampleRate;
-    const auto reset = loopReset.load(std::memory_order_acquire);
-    const auto now = std::chrono::steady_clock::now();
-    const bool gap = previousLoopCallback.time_since_epoch().count() != 0
-        && now - previousLoopCallback > std::chrono::duration<double>(rate>0?std::max(.5,3*frames/rate):.5);
-    previousLoopCallback = now;
-    const bool interrupted = seenLoopReset != reset || gap;
-    seenLoopReset = reset;
-    if (interrupted)
-    {
-        loopClock.revoke();
-        finish(CaptureFailureReason::timingChanged);
-    }
     if (frames == 0 && !inactive && midi.isEmpty())
         return;
     const bool compatibleMeter=!timing.meterAvailable || (timing.numerator==4 && timing.denominator==4);
-    const bool eligible=!inactive && !captureWorker.isLoading() && compatibleMeter && frames>0 && frames<=maxCaptureBlockFrames;
-    const ClockProfile declared=eligible && timing.tempoAvailable && timing.meterAvailable ? ClockProfile{rate,timing.bpm} : ClockProfile{};
-    const auto measured=eligible?measuredProfile(rate,frames):ClockProfile{};
-    if(loopClock.configure(declared,measured) && seenLoopArm)finish(CaptureFailureReason::timingChanged);
-    if ((!declared.valid() && !measured.valid()) || loopRunSample > INT64_MAX - frames)
+    if (inactive || captureWorker.isLoading() || !compatibleMeter || frames <= 0 || frames > maxCaptureBlockFrames
+        || !(rate >= 8000 && rate <= 192000) || loopRunSample > INT64_MAX - frames)
     {
+        loopClock.revoke();
+        cancel(true);
         loopClockState.store(ClockAdmission::State::notConfigured, std::memory_order_release);
         return;
     }
+    const ClockProfile declared=timing.tempoAvailable && timing.meterAvailable ? ClockProfile{rate,timing.bpm} : ClockProfile{};
+    if (loopClock.configure(declared, measuredProfile(rate, frames)) && loopTakeRoute == LoopRoute::marker)
+        cancel(true);
     MidiObservations observations;
     readLoopObservations(midi, frames, observations);
     if (observations.error != MidiObservations::Error::none)
     {
         loopClock.revoke();
-        finish(CaptureFailureReason::timingChanged);
+        cancel(true);
     }
+    const auto stopAt = [&](int64_t at)
+    {
+        if (!seenLoopArm) return;
+        if (loopTake.start() < 0 || loopTake.duration())
+            cancel(false);
+        else if (pendingLoopEnd < 0)
+        {
+            loopTake.requestStop(at);
+            loopFinishPending.store(true, std::memory_order_release);
+        }
+    };
+    const auto uiStop = loopStop.exchange(0, std::memory_order_acq_rel);
+    const bool stopAtBlockStart = uiStop != 0 && uiStop == seenLoopArm;
+    if (stopAtBlockStart)
+        stopAt(loopRunSample);
+
     int first = 0;
     const auto append = [&](int last)
     {
@@ -282,14 +374,58 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
         { finish(CaptureFailureReason::queueFull); return false; }
         return true;
     };
+    const auto publishEnd = [&](int64_t at, double tempo)
+    {
+        if (tempo <= 0) { cancel(true); return; }
+        const auto sent = captureQueue.tryFinishLoop(generation,loopPass,loopTake.timing(tempo,at));
+        finish(sent ? CaptureFailureReason::none : CaptureFailureReason::queueFull);
+    };
     for (unsigned index = 0; index < observations.size; ++index)
     {
         const auto [offset, roles] = observations.samples[index];
         const auto at = loopRunSample + offset;
         const auto boundary = loopClock.observe(at,roles);
-        // A raw gate release does not qualify as a capture end.
-        const auto edge = loopTake.observe(at,roles,boundary);
-        if (edge == Take::Edge::invalid) finish(CaptureFailureReason::timingChanged);
+        const bool simpleBeat = (roles & captureClock) != 0;
+        const bool marker = (roles & (beat | bar | phrase)) != 0;
+        if (simpleBeat)
+            loopRouteHint.store(LoopRoute::clock, std::memory_order_release);
+        else if (marker && loopRouteHint.load(std::memory_order_relaxed) == LoopRoute::waiting)
+            loopRouteHint.store(LoopRoute::marker, std::memory_order_release);
+        if ((roles & loop_capture::reset) || (simpleBeat && marker)
+            || (loopTakeRoute == LoopRoute::clock && marker)
+            || (loopTakeRoute == LoopRoute::marker && (simpleBeat || boundary.revoked)))
+        {
+            cancel(true);
+            continue;
+        }
+        if ((roles & captureStop) || (stopAtBlockStart && offset == 0))
+            stopAt(at);
+        else if ((roles & captureArm) && !seenLoopArm && generation == captureWorker.captureGeneration())
+        {
+            if (const auto pass = reserveLoopArm(true))
+                adoptArm(pass, LoopRoute::clock);
+        }
+        if (!seenLoopArm) continue;
+
+        auto edge = Take::Edge::none;
+        if (simpleBeat)
+        {
+            loopTakeRoute = LoopRoute::clock;
+            if (!captureBeatClock.observe(at)) { cancel(true); continue; }
+            if (pendingLoopEnd >= 0)
+            {
+                if (captureBeatClock.verified())
+                    publishEnd(pendingLoopEnd, captureBeatClock.tempo(pendingLoopEnd - loopTake.start(), loopTake.beatCount()));
+                continue;
+            }
+            edge = loopTake.observeClock(at);
+        }
+        else if (loopTakeRoute != LoopRoute::clock && loopTake.duration())
+        {
+            edge = loopTake.observe(at,roles,boundary);
+            if (edge == Take::Edge::invalid) { cancel(true); continue; }
+            if (edge == Take::Edge::start) loopTakeRoute = LoopRoute::marker;
+        }
         if (edge == Take::Edge::start)
         {
             if (loopArm.load(std::memory_order_acquire) == seenLoopArm && !captureWorker.isLoading()
@@ -300,13 +436,20 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
         }
         if (edge == Take::Edge::end && append(offset))
         {
-            const auto sent = captureQueue.tryFinishLoop(generation,loopPass,loopTake.timing(loopClock.tempo(),at));
-            finish(sent ? CaptureFailureReason::none : CaptureFailureReason::queueFull);
+            if (loopTakeRoute == LoopRoute::marker)
+                publishEnd(at, loopClock.tempo());
+            else if (captureBeatClock.verified())
+                publishEnd(at, captureBeatClock.tempo(at - loopTake.start(), loopTake.beatCount()));
+            else
+                pendingLoopEnd = at;
         }
     }
-    if (loopClock.advance(loopRunSample + frames - 1) && seenLoopArm)
-        finish(CaptureFailureReason::timingChanged);
-    if (loopTake.start() >= 0) append(frames);
+    const auto lastSample = loopRunSample + frames - 1;
+    if (loopClock.advance(lastSample) && loopTakeRoute == LoopRoute::marker)
+        cancel(true);
+    if (loopTakeRoute == LoopRoute::clock && captureBeatClock.expired(lastSample))
+        cancel(true);
+    if (loopTake.start() >= 0 && pendingLoopEnd < 0) append(frames);
     loopRunSample += frames;
     loopTempo.store(loopClock.tempo(),std::memory_order_relaxed);
     loopClockState.store(loopClock.state(), std::memory_order_release);
@@ -883,6 +1026,10 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     if (!hostCapture.manifestKnown) hostCapture.savedKind=acceptedKind;
     pendingHostCapture=hostCapture;pendingHostAssociation=association;
     loopArm.store(0,std::memory_order_release);
+    loopStop.store(0,std::memory_order_release);
+    loopRecapture.store(false,std::memory_order_release);
+    loopFinishPending.store(false,std::memory_order_release);
+    loopRouteHint.store(LoopRoute::waiting,std::memory_order_release);
     invalidateLoopClock();
     loopPreference.store(preference.packed(), std::memory_order_relaxed);
     recoveryIntent.reset();

@@ -31,6 +31,8 @@ public:
     void holdWorkerForTesting(bool hold) noexcept {workerHold.store(hold);}
     bool workerHeldForTesting() const noexcept {return workerHeld.load(std::memory_order_acquire);}
     bool canMap() const noexcept { return mappingAllowed.load(std::memory_order_acquire); }
+    bool canCaptureLoop() const noexcept
+    { return loopWritable.load(std::memory_order_acquire) && !isLoading() && !recoveryArmed(); }
     bool hasUsefulSource() const noexcept {return usefulSource.load(std::memory_order_acquire);}
     void setChangeTolerance(double tolerance) noexcept {changeTolerance.store(tolerance);}
     bool isRestoring() const noexcept {return restoring.load();}
@@ -143,7 +145,7 @@ private:
     uint64_t activePass=0,activeEpoch=0;
     bool activeLoop = false;
     std::optional<LoopPhraseTiming> loopEnd;
-    std::atomic<bool> loopSource{false};
+    std::atomic<bool> loopSource{false}, loopWritable{false};
     std::atomic<uint64_t> failedPass{0};
     std::atomic<bool> validationHold{false},workerHold{false},workerHeld{false};
 };

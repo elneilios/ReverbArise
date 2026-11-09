@@ -12,8 +12,9 @@ struct Event
     int value=0, note=-1, channel=0;
 };
 constexpr int capacity=4096, limit=120000, maxMidiEvents=128;
-constexpr std::array<int,7> notes{14,12,19,21,22,16,17};
-constexpr std::array<const char*,7> labels{"capture","phrase","bar","beat","reset-signal","cue","stop"};
+constexpr std::array<int,10> notes{14,12,19,21,22,16,17,23,24,25};
+constexpr std::array<const char*,10> labels{"capture","phrase","bar","beat","reset-signal","cue","stop",
+                                          "capture-clock","capture-arm","capture-stop"};
 
 class Trace final : public ProbeProcessor, private juce::Thread
 {

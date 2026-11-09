@@ -2,6 +2,7 @@
 #include "AudioTestFiles.h"
 #include "AllocationGuard.h"
 #include <Capture/LoopMidiObservations.h>
+#include <Capture/LoopBeatClock.h>
 #include <Capture/LoopPhraseClock.h>
 #include <Capture/SourceRangeReader.h>
 #include "LoopCaptureFixture.h"
@@ -44,6 +45,14 @@ static void loopMidiCases()
     REQUIRE(observations.samples[0].sampleOffset == 0 && observations.samples[0].roles == (bar | beat | phrase | reset));
     REQUIRE(observations.samples[1].sampleOffset == 17 && observations.samples[1].roles == (cue | stop));
     REQUIRE(observations.samples[2].sampleOffset == 127 && observations.samples[2].roles == gateLow);
+
+    midi.clear();
+    on(23, 3); on(24, 3); on(25, 39); on(17, 39);
+    midi.addEvent(juce::MidiMessage::noteOff(1, 25), 50);
+    read();
+    REQUIRE(observations.size == 2);
+    REQUIRE(observations.samples[0].sampleOffset == 3 && observations.samples[0].roles == (captureClock | captureArm));
+    REQUIRE(observations.samples[1].sampleOffset == 39 && observations.samples[1].roles == (captureStop | stop));
 
     on(14, 128);
     read();
@@ -106,6 +115,52 @@ static void loopPhraseClockCases()
     admission.observe(21022,beat);
     admission.observe(42044,beat);
     REQUIRE(admission.state()==ClockAdmission::State::ready && admission.tempo()==137);
+}
+
+static void loopBeatClockCases()
+{
+    loop_capture::BeatClock clock;
+    clock.begin(48000);
+    REQUIRE(clock.observe(0) && !clock.verified());
+    REQUIRE(clock.observe(21022) && !clock.verified());
+    REQUIRE(clock.observe(42044) && clock.verified());
+    REQUIRE(clock.observe(63066));
+    REQUIRE(clock.observe(84088));
+    REQUIRE(std::abs(clock.tempo(84088, 4) - 137) < 0.01);
+    REQUIRE(!clock.expired(105110));
+    REQUIRE(clock.expired(105112));
+
+    clock.begin(44100);
+    REQUIRE(clock.observe(19));
+    REQUIRE(clock.observe(22069));
+    REQUIRE(!clock.observe(45000));
+
+    clock.begin(48000);
+    REQUIRE(clock.observe(0));
+    REQUIRE(clock.observe(24000));
+    REQUIRE(!clock.observe(24020));
+
+    for (const auto firstInterval : {24000, 24002})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0));
+        REQUIRE(clock.observe(firstInterval));
+        REQUIRE(!clock.observe(48002) && !clock.verified());
+    }
+    for (const auto firstInterval : {24000, 24001})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0));
+        REQUIRE(clock.observe(firstInterval));
+        REQUIRE(clock.observe(48001) && clock.verified());
+        REQUIRE(clock.tempo(48001, 2) > 0);
+    }
+    for (const auto period : {9600, 96000})
+    {
+        clock.begin(48000);
+        REQUIRE(clock.observe(0) && clock.observe(period) && clock.observe(2 * period));
+        REQUIRE(clock.verified() && clock.tempo(2 * period, 2) > 0);
+    }
 }
 
 static void loopTakeCases()
@@ -225,7 +280,7 @@ static void loopProcessorCases()
             preference.count=3;
             REQUIRE(processor.setLoopCapturePreference(preference));
         }
-        REQUIRE(!processor.armLoopCapture());
+        REQUIRE(processor.canArmLoopCapture());
         fixture.through(fixture.marker(2));
         if (declaredTempo>0)
         {
@@ -259,12 +314,13 @@ static void loopProcessorCases()
         REQUIRE(pcm.samples[pcm.samples.size()-2]==fixture.signal(end-1));
         REQUIRE(pcm.samples.back()==-fixture.signal(end-1));
 
-        REQUIRE(processor.armLoopCapture());
+        REQUIRE(!processor.armLoopCapture());
+        REQUIRE(processor.setLoopRecapture(true) && processor.armLoopCapture());
         juce::MemoryBlock bytes;processor.getStateInformation(bytes);
         auto reopened=std::make_unique<PreverbAudioProcessor>(fixture.root.file);
         reopened->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
         REQUIRE(reopened->flushCaptureForTesting());
-        REQUIRE(!reopened->loopCaptureArmed() && !reopened->getWorkflowSnapshot().locked());
+        REQUIRE(!reopened->loopCaptureArmed() && !reopened->loopRecaptureEnabled() && !reopened->getWorkflowSnapshot().locked());
         REQUIRE(reopened->getCaptureSnapshot().reference==accepted.reference && reopened->getLoopCapturePreference()==preference);
         if (frames==128)
         {
@@ -304,10 +360,156 @@ static void loopProcessorCases()
             fixture.host.position.setBpm(122);
             fixture.tick();
             REQUIRE(processor.flushCaptureForTesting());
-            REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::failed);
+            REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
             REQUIRE(processor.getCaptureSnapshot().reference==accepted.reference);
         }
     }
+}
+
+static void simpleLoopProcessorCases()
+{
+    LoopCaptureFixture fixture(512, 44100, 121.5);
+    fixture.simpleClock = true;
+    auto& processor = *fixture.processor;
+    auto preference = processor.getLoopCapturePreference();
+    preference.method = LoopCapturePreference::Method::endSignal;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    REQUIRE(processor.armLoopCapture());
+    fixture.through(fixture.marker(0));
+    REQUIRE(processor.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.frames = 768;
+    fixture.audio.setSize(2, fixture.frames);
+    { AudioAllocationGuard guard; fixture.tick(); }
+    REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+    fixture.through(fixture.marker(3), true);
+    REQUIRE(processor.requestLoopStop(processor.getWorkflowSnapshot().pass));
+    fixture.tick();
+    REQUIRE(processor.loopFinishing());
+    fixture.through(fixture.marker(4), true);
+    const auto first = processor.getCaptureSnapshot();
+    REQUIRE(first.sourceKind() == CaptureSourceKind::loop && first.manifest.loop);
+    REQUIRE(first.manifest.loop->originSample == fixture.marker(0));
+    REQUIRE(first.manifest.loop->endSample == fixture.marker(4) - fixture.marker(0));
+    REQUIRE(first.manifest.loop->beats == 4);
+    REQUIRE(!processor.armLoopCapture());
+
+    fixture.armBeat = 5;
+    fixture.stopBeat = 8;
+    fixture.through(fixture.marker(9), true);
+    REQUIRE(!processor.loopCaptureArmed() && processor.getCaptureSnapshot().reference == first.reference);
+
+    REQUIRE(processor.setLoopRecapture(true));
+    fixture.armBeat = 10;
+    fixture.stopBeat = 13;
+    fixture.through(fixture.marker(14), true);
+    const auto replacement = processor.getCaptureSnapshot();
+    REQUIRE(replacement.reference != first.reference && replacement.manifest.loop);
+    REQUIRE(replacement.manifest.loop->originSample == fixture.marker(10));
+    REQUIRE(replacement.manifest.loop->endSample == fixture.marker(14) - fixture.marker(10));
+
+    fixture.armBeat = 15;
+    fixture.stopBeat = 18;
+    fixture.through(fixture.marker(18), true);
+    REQUIRE(processor.loopFinishing());
+    fixture.clockEnabled = false;
+    fixture.through(fixture.marker(19) + 1024, true);
+    REQUIRE(processor.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(processor.getCaptureSnapshot().reference == replacement.reference);
+
+    preference.method = LoopCapturePreference::Method::duration;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    fixture.clockEnabled = true;
+    fixture.armBeat = 20;
+    fixture.stopBeat = 24;
+    fixture.through(fixture.marker(24), true);
+    REQUIRE(processor.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(processor.getCaptureSnapshot().reference == replacement.reference);
+
+    preference.method = LoopCapturePreference::Method::endSignal;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    fixture.armBeat = 25;
+    fixture.stopBeat = 29;
+    fixture.through(fixture.marker(29), true);
+    REQUIRE(processor.loopFinishing());
+    REQUIRE(processor.getCaptureSnapshot().reference == replacement.reference);
+    fixture.through(fixture.marker(33), true);
+    const auto eightBeats = processor.getCaptureSnapshot();
+    REQUIRE(eightBeats.manifest.loop->beats == 8);
+    REQUIRE(eightBeats.manifest.loop->endSample == fixture.marker(33) - fixture.marker(25));
+    juce::MemoryBlock state;
+    processor.getStateInformation(state);
+    auto reopened = std::make_unique<PreverbAudioProcessor>(fixture.root.file);
+    reopened->setStateInformation(state.getData(), static_cast<int>(state.getSize()));
+    REQUIRE(reopened->flushCaptureForTesting());
+    REQUIRE(reopened->getCaptureSnapshot().reference == eightBeats.reference);
+    REQUIRE(!reopened->loopCaptureArmed() && !reopened->loopRecaptureEnabled());
+
+    LoopCaptureFixture shortTake(512, 48000);
+    shortTake.simpleClock = true;
+    auto& cold = *shortTake.processor;
+    auto oneBeat = cold.getLoopCapturePreference();
+    oneBeat.unit = LoopCapturePreference::Unit::beats;
+    REQUIRE(cold.setLoopCapturePreference(oneBeat) && cold.armLoopCapture());
+    shortTake.through(shortTake.marker(1), true);
+    REQUIRE(cold.getCaptureSnapshot().sourceKind() == CaptureSourceKind::song);
+    shortTake.through(shortTake.marker(2), true);
+    REQUIRE(cold.getCaptureSnapshot().manifest.loop->endSample == shortTake.marker(1) - shortTake.marker(0));
+    const auto acceptedShortTake = cold.getCaptureSnapshot().reference;
+    REQUIRE(cold.setLoopRecapture(true));
+    for (const bool midiStop : {false, true})
+    {
+        const int startBeat = shortTake.nextBeat;
+        REQUIRE(cold.armLoopCapture());
+        shortTake.through(shortTake.marker(startBeat + 1), true);
+        const auto pending = cold.getWorkflowSnapshot();
+        REQUIRE(pending.phase == workflow::Phase::recording && cold.loopCaptureArmed());
+        if (midiStop)
+        {
+            shortTake.commandNote = 25;
+            shortTake.commandSample = shortTake.marker(startBeat + 1) + 1024;
+            shortTake.through(shortTake.commandSample, true);
+        }
+        else
+        {
+            REQUIRE(cold.requestLoopStop(pending.pass));
+            shortTake.tick();
+        }
+        REQUIRE(!cold.loopCaptureArmed());
+        shortTake.through(shortTake.marker(startBeat + 2), true);
+        REQUIRE(cold.getWorkflowSnapshot().result == workflow::Result::cancelled);
+        REQUIRE(cold.getCaptureSnapshot().reference == acceptedShortTake);
+    }
+
+    LoopCaptureFixture between(512, 44100);
+    between.simpleClock = true;
+    auto& midBeat = *between.processor;
+    REQUIRE(midBeat.setLoopCapturePreference(preference));
+    between.commandSample = between.marker(0) + 1000;
+    between.through(between.commandSample);
+    REQUIRE(midBeat.getWorkflowSnapshot().phase == workflow::Phase::armed);
+    REQUIRE(!midBeat.requestLoopStop(midBeat.getWorkflowSnapshot().pass + 1));
+    between.stopBeat = 4;
+    between.through(between.marker(5), true);
+    const auto observed = midBeat.getCaptureSnapshot();
+    REQUIRE(observed.manifest.loop && observed.manifest.loop->originSample == between.marker(1));
+    REQUIRE(observed.manifest.loop->endSample == between.marker(5) - between.marker(1));
+
+    REQUIRE(midBeat.setLoopRecapture(true));
+    REQUIRE(midBeat.armLoopCapture());
+    between.commandSample = between.cursor + 7;
+    between.commandNote = 25;
+    between.tick();
+    REQUIRE(midBeat.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(midBeat.getCaptureSnapshot().reference == observed.reference);
+
+    between.armBeat = 6;
+    between.stopBeat = 7;
+    between.through(between.marker(7), true);
+    REQUIRE(midBeat.loopFinishing());
+    juce::Thread::sleep(550);
+    between.tick();
+    REQUIRE(midBeat.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(midBeat.getCaptureSnapshot().reference == observed.reference);
 }
 
 int main(int argc,char* argv[]){return runTest([&]{
@@ -336,7 +538,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopTakeCases();loopStateCases();loopProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     {
         REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);

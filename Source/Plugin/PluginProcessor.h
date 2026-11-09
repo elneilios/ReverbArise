@@ -10,6 +10,7 @@
 #include <Capture/CaptureWorker.h>
 #include <Capture/LoopCapturePreference.h>
 #include <Capture/LoopTake.h>
+#include <Capture/LoopBeatClock.h>
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
@@ -79,6 +80,10 @@ public:
     {return LoopCapturePreference::unpack(loopPreference.load(std::memory_order_relaxed));}
     bool setLoopCapturePreference(LoopCapturePreference preference);
     bool armLoopCapture();
+    bool requestLoopStop(uint64_t pass) noexcept;
+    bool loopRecaptureEnabled() const noexcept { return loopRecapture.load(std::memory_order_acquire); }
+    bool setLoopRecapture(bool enabled);
+    bool loopFinishing() const noexcept { return loopFinishPending.load(std::memory_order_acquire); }
     bool cancelLoopCapture(uint64_t pass);
     bool loopCaptureArmed() const noexcept { return loopArm.load(std::memory_order_acquire) != 0; }
     bool canArmLoopCapture() const;
@@ -141,16 +146,24 @@ private:
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     std::atomic<uint32_t> loopPreference{LoopCapturePreference{}.packed()};
-    std::atomic<uint64_t> loopArm{0}, loopReset{0};
+    enum class LoopRoute { waiting, marker, clock };
+    std::atomic<uint64_t> loopArm{0}, loopStop{0}, loopReset{0}, loopArmResetEpoch{0};
+    std::atomic<bool> loopRecapture{false}, loopFinishPending{false};
+    std::atomic<LoopRoute> loopRouteHint{LoopRoute::waiting};
     std::atomic<loop_capture::ClockAdmission::State> loopClockState{loop_capture::ClockAdmission::State::notConfigured};
     std::atomic<double> loopTempo{0};
     std::atomic<bool> loopInterrupted{false};
     loop_capture::ClockAdmission loopClock;
+    loop_capture::BeatClock captureBeatClock;
     loop_capture::Take loopTake;
+    LoopRoute loopTakeRoute=LoopRoute::waiting;
     uint64_t seenLoopArm=0, seenLoopReset=0, loopPass=0;
     int64_t loopRunSample=0;
+    int64_t pendingLoopEnd=-1;
     std::chrono::steady_clock::time_point previousLoopCallback;
     void invalidateLoopClock() noexcept;
+    bool loopArmAllowed(workflow::Snapshot, bool external) const noexcept;
+    uint64_t reserveLoopArm(bool external) noexcept;
     bool loopDurationFits(LoopCapturePreference) const noexcept;
     void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;

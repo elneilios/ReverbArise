@@ -4,7 +4,10 @@
 #include <stdexcept>
 
 CaptureWorker::CaptureWorker(PluginCaptureQueue& q, juce::File root)
-    : Thread("Preverb Capture"), queue(q), session(std::move(root)), published(session.snapshot()) {}
+    : Thread("Preverb Capture"), queue(q), session(std::move(root)), published(session.snapshot())
+{
+    loopWritable.store(!published.unavailable && published.location && published.location->writable);
+}
 
 CaptureWorker::~CaptureWorker() { stopThread(-1); }
 
@@ -192,6 +195,8 @@ void CaptureWorker::updateSnapshot()
     const auto& current = session.snapshot();
     const auto isLoop = current.sourceKind() == CaptureSourceKind::loop;
     loopSource.store(isLoop, std::memory_order_release);
+    loopWritable.store(!current.unavailable && current.location && current.location->writable,
+                       std::memory_order_release);
     usefulSource.store(!current.unavailable && std::any_of(current.overview.begin(),current.overview.end(),[](const auto& r){return r.available && r.range.kind==CaptureCoverageKind::audio;}),std::memory_order_release);
     committedRate.store(current.manifest.ranges.empty() ? 0 : current.manifest.sampleRate);
     if (!isLoop && ! current.manifest.ranges.empty() && rate > 0
