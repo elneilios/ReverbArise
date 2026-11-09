@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Target hover and accessible help in musical and exact-sample modes. The guide already points to the footer and needs no wording change.",
+  "summary": "Synced the approved P5 dial and slider contracts. The guide already covers the delivered Ctrl+wheel, Level detent and footer help, and its prose remains current.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1060,8 +1060,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 35161,
-      "sha256": "3f2b7302a83473d76716dc5737ddf3b6b29ac625db16ae660e0623c868f72c19"
+      "bytes": 40180,
+      "sha256": "a6d53427d7973b03c5e70f375702521958da5a3c19b8e653eba16991bba45b55"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

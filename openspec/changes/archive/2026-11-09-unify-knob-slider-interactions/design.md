@@ -2,7 +2,7 @@
 
 ## Context
 
-The [C5 contract](../../../docs/development/ui-control-contracts.md#c5--knobs-and-sliders) and [P5 inventory](../../../docs/design/ui-control-inventory.md#delivery-packets) define the family boundary. Main includes #108 Level and P4 through PR #134. The owner approved the P5 native dial and track preview, then approved the revised Level detent on 9 November 2026. The fixture exercised sample values in a standalone JUCE window.
+The [C5 contract](../../../../docs/development/ui-control-contracts.md#c5--knobs-and-sliders) and [P5 inventory](../../../../docs/design/ui-control-inventory.md#delivery-packets) define the family boundary. Main includes #108 Level and P4 through PR #134. The owner approved the P5 native dial and track preview, then approved the revised Level detent on 9 November 2026. The fixture exercised sample values in a standalone JUCE window.
 
 ## Goals / Non-Goals
 
