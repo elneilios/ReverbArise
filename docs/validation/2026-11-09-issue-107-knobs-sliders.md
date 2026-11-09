@@ -67,3 +67,10 @@ keyboard brackets on return, their absence after a pointer selection, and
 captured Reset behavior. The readability retry covered all eleven fixed-width
 fields and exact entry. UI standards, guide currency, strict OpenSpec and
 whitespace checks passed. Physical DPI and FL Studio coverage remain open.
+
+PR #136 review follow-up made Target's hover help and accessible description
+follow the active units. The Windows Release VST3 and editor fixture built.
+The focused `preverb_responsive_editor_test` passed in CTest, including both
+hover targets, a bars-to-samples-to-bars switch, and retained inline validation.
+The final focused log is `target-help-test-offscreen.log` under
+`20261109-233243-e0a169d1`. The full suite was run on the original PR revision.

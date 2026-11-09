@@ -365,7 +365,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(int index=0;index<valueCount;++index)
     {
         auto& cell=valueControls[index];inspectorContent.addAndMakeVisible(cell);
-        cell.configure(valueTitles[index],valueNames[index],index<=sourceEndValue?"Absolute musical position: bar.beat.fraction. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.":
+        cell.configure(valueTitles[index],valueNames[index],index==targetValue?"":index<=sourceEndValue?"Absolute musical position: bar.beat.fraction. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.":
             index==preRollValue?"Seconds before the fixed dry target. Negative values start after it. Placement is inverted when editing.":
             index==endOffsetValue?"Signed seconds from the dry target. Negative creates a gap; positive overlaps unchanged dry audio.":
             index==placementValue?"Move wet audio and envelope together in milliseconds; dry stays fixed. Typed entry is never snapped.":

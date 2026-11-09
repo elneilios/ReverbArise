@@ -171,8 +171,14 @@ public:
         label.setTooltip(title);
         entry.setName(name);knob.setName(name+"Knob");
         setTitle(title);entry.setTitle(title+" exact value");knob.setTitle(title);
-        entry.setTooltip(tooltip);entry.setFieldDescription(tooltip);knob.setTooltip(tooltip);
+        setValueHelp(tooltip);
         feedback.setName(name+"Feedback");
+    }
+    void setValueHelp(const juce::String& tooltip)
+    {
+        entry.setTooltip(tooltip);
+        if(validation.isEmpty())entry.setFieldDescription(tooltip);
+        knob.setTooltip(onResetInvocation?tooltip+"\nDouble-click to reset. Right-click for reset options.":tooltip);
     }
     void display(const juce::String& owner,const juce::String& valueText,double fraction,bool enabled,const juce::String& exactText={})
     {
@@ -210,7 +216,7 @@ public:
     }
     double displayedFraction()const noexcept{return canonicalFraction;}
     void setResetAction(std::function<ResetAction()> prepare)
-    {onResetInvocation=std::move(prepare);knob.setTooltip(knob.getTooltip()+"\nDouble-click to reset. Right-click for reset options.");}
+    {onResetInvocation=std::move(prepare);setValueHelp(entry.getTooltip());}
     ResetAction prepareResetAction()
     {
         if(!isEnabled() || !onResetInvocation)return {"Reset unavailable",{}};

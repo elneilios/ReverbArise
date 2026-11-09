@@ -253,6 +253,14 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
         if(index<=sourceEndValue || index==placementValue)
             valueControls[index].valueField().setNumericCharacters(sampleUnitsButton.getToggleState()?"0123456789-":
                 index<=sourceEndValue?"0123456789.-":"0123456789+.-");
+        if(index==targetValue)
+        {
+            static const juce::String musicalHelp="Absolute musical position: bar.beat.fraction. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.";
+            static const juce::String sampleHelp="Enter a whole sample position. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.";
+            auto& cell=valueControls[index];
+            const auto& help=sampleUnitsButton.getToggleState()?sampleHelp:musicalHelp;
+            if(cell.valueField().getTooltip()!=help)cell.setValueHelp(help);
+        }
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
         const auto enabled=valid && (index<=sourceEndValue?(!w->frozen):shaped);
         const auto valueAvailable=valid && ((index!=preRollValue && index!=endOffsetValue) || shaped);

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed fixed-width dial fields and removal of duplicate Target inline help. The existing footer still explains the format and the guide already points to it.",
+  "summary": "Reviewed Target hover and accessible help in musical and exact-sample modes. The guide already points to the footer and needs no wording change.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 95877,
-      "sha256": "0de41bd959ee45e8288239944b28faa5f72c2c742c1c0e928aac62df867e2880"
+      "bytes": 95899,
+      "sha256": "51da1ce629f5eefad2ac12f3a5a76e31a876789381455a78f37d0c3a52c961ce"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -515,8 +515,8 @@
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 24888,
-      "sha256": "30ff2134ecd68e7949e0a14be06a638e2980e9dcc1208de0436acafe49ac6e2d"
+      "bytes": 25489,
+      "sha256": "24903e75533a498580c9aba24b09ebadd3b72f54e45f93a4b50907b791b48763"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -780,8 +780,8 @@
     },
     {
       "path": "Source/UI/KnobValue.h",
-      "bytes": 20801,
-      "sha256": "41e52fac06b3ca7f2878895d390ef01fe75a6d0cd3092b78f7b44c5bb37f2473"
+      "bytes": 20961,
+      "sha256": "22fae1ebc15a20087359e2f2d3de73c06803725a888eae3cf1e4633efad190e2"
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",

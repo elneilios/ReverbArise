@@ -415,8 +415,9 @@ home attracts raw pointer drag candidates within its band. Wheel, exact entry,
 accessibility and Reset follow their independent paths. The Level detent is
 centered at 0 dB with a ±0.3 dB band. Companion dial fields use the shared
 value width when it fits. Inline feedback aligns beneath the field and wraps
-within the value column. Target's format hint uses the hover-help footer and
-accessible field description. Its validation stays beneath the field.
+within the value column. Target's hover-help footer and accessible field
+description explain the active entry units. Its validation stays beneath the
+field.
 
 Evidence: coarse/fine drag/wheel/key/reset, explicit/implicit edit cancellation,
 actual unit steps, exact value/display agreement, captured stale intent rejection,

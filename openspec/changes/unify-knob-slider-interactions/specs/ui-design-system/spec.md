@@ -25,8 +25,8 @@ Migrated knobs and slider tracks SHALL use an aqua value arc or fill, an off-whi
 
 #### Scenario: Discover the Target entry format
 - **WHEN** the user hovers over the Target dial or field
-- **THEN** the hover-help footer explains the entry format without adding height to the Timing row
-- **AND** the accessible field description exposes the format and validation errors still appear beneath the field
+- **THEN** the hover-help footer explains the current entry format, using bar.beat.fraction in musical mode and whole samples in exact-sample mode
+- **AND** the accessible field description follows the same units, the format hint adds no height to the Timing row, and validation errors still appear beneath the field
 
 ### Requirement: Knob and slider wheel adjustment has a fine mode
 Migrated dials and tracks SHALL define coarse and fine wheel steps in their domain. Ctrl+wheel SHALL use the fine step where a smaller legal step exists. A discrete control SHALL keep its minimum legal step. Wheel adjustment SHALL honor direction, range and eligibility. Wheel input over numeric steppers or outside the dial or track SHALL follow its existing policy.
