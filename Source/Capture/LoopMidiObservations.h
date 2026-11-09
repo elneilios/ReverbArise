@@ -31,7 +31,8 @@ struct MidiObservations
 // JUCE MIDI iteration exposes bytes directly. Creating MidiMessage objects
 // here could allocate for SysEx. Keep the budget over all events, including
 // unrelated channels and messages, and discard the whole batch on failure.
-inline void readLoopObservations(const juce::MidiBuffer& midi, int frames, MidiObservations& out) noexcept
+inline void readLoopObservations(const juce::MidiBuffer& midi, int frames, MidiObservations& out,
+                                 bool includeCapture = true) noexcept
 {
     using Error = MidiObservations::Error;
     out.size = 0;
@@ -67,6 +68,7 @@ inline void readLoopObservations(const juce::MidiBuffer& midi, int frames, MidiO
             case 25: if (high) role = captureStop; break;
             default: break;
         }
+        if (!includeCapture && (role & (gateRise | gateLow | captureClock | captureArm | captureStop))) continue;
         if (role == 0)
             continue;
         // MidiBuffer iterates in ascending sample order. Preserve simultaneous

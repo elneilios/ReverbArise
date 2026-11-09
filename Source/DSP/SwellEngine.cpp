@@ -157,7 +157,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
     model=std::move(session);publishGenerationLocked(model,UINT64_MAX,true);regeneration=model.regenerationSensitivity; for(auto& w:model.swells) { w.phase=Phase::restoring; w.status="Restoring dependencies"; }
-    invalidateLiveLocked();live.reset();liveCache.clear();hostObserved=false;
+    invalidateLiveLocked();live.reset();liveCache.clear();hostObserved=false;loopPlayback.invalidateReference();
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=true;
     liveEnabled=model.liveEnabled;live.configure(model.liveEnabled,model.liveRouting,model.liveWetDb);
@@ -178,7 +178,7 @@ void SwellEngine::clear()
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
     for(auto& w:model.swells) { ++w.inputGeneration; w.phase=w.frozen?Phase::restoring:Phase::stale; w.status=w.frozen?"Restoring frozen render":"Capture cleared; recapture source"; }
     runtime.clear(); message="Capture cleared; saved assets retained";
-    invalidateLiveLocked();live.reset();liveCache.clear();
+    invalidateLiveLocked();live.reset();liveCache.clear();loopPlayback.invalidateReference();
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=false;
 }
@@ -578,7 +578,7 @@ void SwellEngine::recaptureCompleted(int64_t a,int64_t b)
 }
 uint64_t SwellEngine::occupiedLocked() const
 {
-    uint64_t bytes=voice.pinnedBytes()+live.pinnedBytes()+(offlinePlayer?offlinePlayer->pinnedBytes():0); std::set<const WetRender*> counted;
+    uint64_t bytes=voice.pinnedBytes()+live.pinnedBytes()+loopPlayback.pinnedBytes()+(offlinePlayer?offlinePlayer->pinnedBytes():0); std::set<const WetRender*> counted;
     for(const auto& [id,r]:runtime)
     {
         if(r.raw && counted.insert(r.raw.get()).second) bytes+=r.raw->samples.capacity()*sizeof(float);
@@ -601,7 +601,7 @@ uint64_t SwellEngine::residentBytes() const { const juce::ScopedLock guard(lock)
 uint64_t SwellEngine::available(uint64_t extra)
 {
     const juce::ScopedLock guard(lock); voice.collect();
-    live.collect();
+    live.collect();loopPlayback.collect();
     uint64_t peakBytes=0;std::vector<std::pair<uint64_t,juce::String>> peakOrder;
     for(auto& [id,r]:runtime)
     {
@@ -967,7 +967,8 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     { report(requested,session,Phase::stale,"Source/timing changed during generation; retry"); return; }
     std::shared_ptr<Waveform> sourceWave;
     bool selected=false;{const juce::ScopedLock guard(lock);selected=model.primary==requested.id;}
-    if(selected && !prepareSourceWave(requested,latest,raw->samples.capacity()*sizeof(float),sourceWave,error)) {failure(error);return;}
+    if(selected && latest.capture.sourceKind()==CaptureSourceKind::song
+        && !prepareSourceWave(requested,latest,raw->samples.capacity()*sizeof(float),sourceWave,error)) {failure(error);return;}
     Session calibrationSession;int64_t referenceEnd=requested.sourceEnd;
     {const juce::ScopedLock guard(lock);calibrationSession=model;
         for(const auto& other:model.swells)if(other.id!=requested.id && other.arrival>requested.arrival)referenceEnd=std::min(referenceEnd,other.arrival);}
@@ -1097,7 +1098,8 @@ void SwellEngine::run()
                         if(!context.time.valid && w.phase==Phase::restoring) continue;
                         work=w;restoreOrCheck=w.phase!=Phase::queued; break;
                     }
-                    if(!work) if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
+                    if(!work && context.capture.sourceKind()==CaptureSourceKind::song)
+                    if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
                     {
                         const auto& r=runtime[w->id]; if(!r.shaped || r.preparedShape!=w->shapeGeneration || r.preparedRender!=w->render.content) shape=*w;
                         else if(r.preparedMonitor!=monitoringGeneration){monitor=*w;settings=monitoringGeneration;}

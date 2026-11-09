@@ -95,7 +95,7 @@ add_library(preverb_assets STATIC Source/DSP/ExportFiles.cpp Source/DSP/SongMix.
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
-add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/LearnGeneration.cpp Source/DSP/SwellMonitoring.cpp)
+add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/Playback/LoopWetPlan.cpp Source/Playback/LoopPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/LearnGeneration.cpp Source/DSP/SwellMonitoring.cpp)
 target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
@@ -206,6 +206,13 @@ if(BUILD_TESTING)
     add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
     target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
     add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
+    add_executable(preverb_loop_playback_test tests/loop_playback_test.cpp)
+    target_link_libraries(preverb_loop_playback_test PRIVATE preverb_preview)
+    add_test(NAME preverb_loop_playback_test COMMAND preverb_loop_playback_test)
+    foreach (bpm 137 280)
+        add_test(NAME preverb_loop_rack_replay_${bpm} COMMAND preverb_loop_playback_test
+            "${CMAKE_SOURCE_DIR}/docs/validation/issue-125-rack-replay/alignment-${bpm}.txt" "${bpm}")
+    endforeach()
     add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
     target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
     add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)

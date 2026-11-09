@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Loop capture and host admission specifications against the delivered guide. The guide covers the capture controls, Clock and optional MIDI roles, Duration cancellation, End Signal completion and Recapture Audio protection. Sync and archive preserve those instructions.",
+  "summary": "Reviewed the headless Loop scheduler against the offline guide. Existing Learn controls and capture instructions still apply. The scheduler is exposed to the processor and tests, with Perform UI bindings and host routing covered by later issues, so the musician-facing guide text remains accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 32742,
-      "sha256": "46368cf2da18b78da6dbc4a6c8f884c548c86188cdf484bd30aa21e0bc1c4ea0"
+      "bytes": 33277,
+      "sha256": "78082a0d721af3e25dc105bfea858d1fa0c4db25417ea5f40165491088a78e9f"
     },
     {
       "path": "CMakePresets.json",
@@ -135,13 +135,13 @@
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 32213,
-      "sha256": "670da198c5bd05714a29d27fed74827aa71bb19e324277ea5cb7969b96f26299"
+      "bytes": 32327,
+      "sha256": "d9326dc1591608b4a012b300cdcbfb91695f4ac037966e6633f0f701616ac294"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 9136,
-      "sha256": "6b260f26aa1b88b220bbe206ee94916a70c7f7b6f2b4e1bb1fda6a3a700fd18b"
+      "bytes": 9287,
+      "sha256": "a9d217aef1d5d334fa16e1035071b5303fb8f4eca824c0f8663e1d41a6e7e7a8"
     },
     {
       "path": "Source/Capture/LoopBeatClock.h",
@@ -160,8 +160,8 @@
     },
     {
       "path": "Source/Capture/LoopMidiObservations.h",
-      "bytes": 3109,
-      "sha256": "6aac38708128db51ac981b7ebb8f8f491db122b681d2c73940cf7a1dac492f56"
+      "bytes": 3284,
+      "sha256": "745500f4de594c967f9d3dae6af0780b1a0fa2deacfc22e3dfd814c5f02c78ed"
     },
     {
       "path": "Source/Capture/LoopPhraseClock.h",
@@ -440,13 +440,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 85061,
-      "sha256": "e437d0a377d3663d5a851709d9a20cf151460d1d9c9e09556355c6ee2dc98d5b"
+      "bytes": 85322,
+      "sha256": "d1456a8d16de84e2b23e02e91ba2084bd9dd427838914c7530c69c76e0df9b45"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 24342,
-      "sha256": "c5a45e3618764e868de0483f65a9930330eaada7994801fca216d52b4b32108e"
+      "bytes": 24830,
+      "sha256": "4b94a5072bca5e9d6cd211aba4361c5b09833c41b357b3a600482fdf31e221ce"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -470,8 +470,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38173,
-      "sha256": "1ac4503b8d27c940b304d574431b0aff008f99d5d2a13dbc497cc77493e8d3a8"
+      "bytes": 45768,
+      "sha256": "830ffd4697575333cd0896fbbd056813331aa6b66e55e7b6498da899fc2c6fb8"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -512,6 +512,36 @@
       "path": "Source/Playback/LiveTransportClock.h",
       "bytes": 2764,
       "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
+    },
+    {
+      "path": "Source/Playback/LoopCueScheduler.h",
+      "bytes": 4544,
+      "sha256": "b19bbadb5a7602a4f5566dd6ca72600ca4dd79c767d1479ff1dfeb0991f44991"
+    },
+    {
+      "path": "Source/Playback/LoopLiveReference.h",
+      "bytes": 5038,
+      "sha256": "9f13d5280315e599b00a2649cf2b00fae93bbfb1e9418e9df4fe9d2ca4753862"
+    },
+    {
+      "path": "Source/Playback/LoopPlayback.cpp",
+      "bytes": 7818,
+      "sha256": "34ee0ecfa3dac35e9d750572826d55fdeab3ff6555ade9c8dc5076220b02dcdc"
+    },
+    {
+      "path": "Source/Playback/LoopPlayback.h",
+      "bytes": 2543,
+      "sha256": "5194e677ea85bc1d4f3ec10f6751581567eb58b9c749bd28e1bc6666bfb5e7f7"
+    },
+    {
+      "path": "Source/Playback/LoopWetPlan.cpp",
+      "bytes": 3721,
+      "sha256": "a03727b8c079cef15d90b24814efe048756e1ac389dc6f675f5b8f46eef2eea6"
+    },
+    {
+      "path": "Source/Playback/LoopWetPlan.h",
+      "bytes": 1585,
+      "sha256": "cb43df5d932e25cfffc4ddca22a419284735aa255c1e95e0db506a8281592a60"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -555,13 +585,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 65060,
-      "sha256": "4d643e7e33cb960a7f7a348e9420ffdd0388dfbc8049bf8bca9d332cec7d212b"
+      "bytes": 68683,
+      "sha256": "dd978432c3bc1e9adf169ca9be8af3b6edfa9abe1c8cd5d4289d39c07be824d9"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 10605,
-      "sha256": "ef1c13b3125de02eb3e7466437d6147f57a628fdf2316f366af8c8b2b05988dc"
+      "bytes": 11208,
+      "sha256": "5e4e12f315789c725ec00d93c2d18a9e4ab50642247c87770b4fb127690dd166"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",

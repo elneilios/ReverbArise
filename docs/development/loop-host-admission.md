@@ -77,6 +77,12 @@ belongs to [#127](https://github.com/elneilios/ReverbArise/issues/127).
 
 ## Stable fractional periods and recovery
 
+Live Loop readiness uses an independently configured phrase length and shared
+origin. A capture grid can be ready while live phase is unconfigured, waiting,
+mismatched or lost. The accepted sample extent provides a rounding check for
+matching a measured capture tempo to the live reference. Live marker cadence
+uses the independently verified reference tempo throughout its epoch.
+
 The reference policy uses two complete matching intervals to acquire
 phase. For a verified fixed configuration, use its fractional period and
 accept the two adjacent integer interval lengths. On the measured 48 kHz

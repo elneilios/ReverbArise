@@ -194,6 +194,7 @@ void CaptureWorker::updateSnapshot()
     const auto rate = hostRate.load();
     const auto& current = session.snapshot();
     const auto isLoop = current.sourceKind() == CaptureSourceKind::loop;
+    loopRevision.store(isLoop && !current.unavailable ? current.manifest.revision : 0,std::memory_order_release);
     loopSource.store(isLoop, std::memory_order_release);
     loopWritable.store(!current.unavailable && current.location && current.location->writable,
                        std::memory_order_release);

@@ -104,6 +104,7 @@ void SwellEngine::invalidateLiveLocked(const juce::String& id)
 {
     if(id.isEmpty())retainedIR.clear();else retainedIR.erase(id);
     ++liveRevision;
+    loopPlayback.invalidatePrepared();
     if(id.isEmpty()){for(const auto& [key,slot]:liveSlots)live.invalidate(slot,++liveGenerations[slot]);}
     else if(const auto at=liveSlots.find(id);at!=liveSlots.end())live.invalidate(at->second,++liveGenerations[at->second]);
     notify();
@@ -113,6 +114,7 @@ void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
     const juce::ScopedLock guard(lock);
     if(!std::isfinite(db) || db< -60 || db>(model.gainPolicy==GainPolicy::musical?12:0) || static_cast<int>(routing)<0 || static_cast<int>(routing)>1)return;
     const auto gainChanged=model.liveWetDb!=db;
+    if(model.liveRouting!=routing || gainChanged){loopPlayback.invalidatePrepared();preparedLoopRender=0;}
     if(model.liveEnabled!=enabled || model.liveRouting!=routing || gainChanged)persistentChangedLocked();
     model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
     if(gainChanged && model.auditionFollowsLive)++monitoringGeneration;
@@ -130,7 +132,8 @@ bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const
 bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,const juce::String& requestedName)
 {
     const auto clock=liveClock.snapshot(sessionGeneration.load());
-    const auto useLive=!offlineActive.load() && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live)
+    const auto useLive=context.capture.sourceKind()!=CaptureSourceKind::loop && !offlineActive.load()
+        && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live)
         && clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted;
     const auto* liveContext=useLive?&*clock:nullptr;
     if(auto found=retainedIR.find(w.id);found!=retainedIR.end()){
@@ -285,6 +288,11 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
 }
 void SwellEngine::prepareTransport(const PreviewContext& context)
 {
+    if (context.capture.sourceKind() == CaptureSourceKind::loop)
+    {
+        prepareLoopTransport(context);
+        return;
+    }
     LivePreparationObservation observation;
     {const juce::ScopedLock guard(lock);observation=livePreparation;
         ++observation.service;observation.observed=context.time;observation.source=model.timing;
@@ -446,5 +454,148 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         preparedLoopStart=loopFrom;preparedLoopEnd=loopTo;
         liveAttenuationDb=juce::Decibels::gainToDecibels(attenuation);liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}
     else {liveStatus="Live publication queue busy";observation.result=liveStatus;}
+}
+
+void SwellEngine::prepareLoopTransport(const PreviewContext& context)
+{
+    const auto& manifest = context.capture.manifest;
+    if (!manifest.loop || context.capture.unavailable || !manifest.revision) return;
+    const auto flow = workflowState ? workflowState->snapshot() : workflow::Snapshot{workflow::Mode::live};
+    const auto inLive = flow.mode == workflow::Mode::live && liveEnabled.load();
+    auto publication = std::make_unique<LoopPlaybackPublication>();
+    publication->captureGeneration = context.captureGeneration;
+    publication->sourceRevision = manifest.revision;
+    publication->rate = manifest.sampleRate;
+    publication->timing = *manifest.loop;
+    uint64_t revision, session;
+    Session snapshot;
+    std::vector<juce::String> replacements;
+    std::set<juce::String> retained;
+    {
+        const juce::ScopedLock guard(lock);
+        loopPlayback.collect();
+        const bool newSource = preparedLoopGeneration != context.captureGeneration || preparedLoopSource != manifest.revision;
+        publication->dependencies = loopPlayback.dependencies();
+        if (newSource)
+        {
+            if (!loopPlayback.publish(std::make_unique<LoopPlaybackPublication>(*publication))) return;
+            preparedLoopGeneration = context.captureGeneration;
+            preparedLoopSource = manifest.revision;
+            preparedLoopRender = 0;
+        }
+        if (!inLive || !context.time.valid || preparedLoopRender == liveRevision) return;
+        revision = liveRevision;
+        session = sessionGeneration.load();
+        snapshot = model;
+        for (auto& w : snapshot.swells)
+        {
+            const auto kept = retainedIR.find(w.id);
+            if (kept == retainedIR.end()) continue;
+            if (!retainedCompatible(kept->second,w,context))
+            {
+                invalidateLiveLocked(w.id);
+                return;
+            }
+            if (w.phase != Phase::ready || w.render == kept->second.accepted.render)
+            {
+                const auto enabled = w.enabled, muted = w.muted, solo = w.solo;
+                w = kept->second.accepted;
+                w.phase = Phase::ready;
+                w.enabled = enabled; w.muted = muted; w.solo = solo;
+                retained.insert(w.id);
+            }
+            else replacements.push_back(w.id);
+        }
+    }
+
+    using Preparation = LoopPlaybackPublication::Preparation;
+    const auto cancel = [&]{
+        const juce::ScopedLock guard(lock);
+        return threadShouldExit() || liveRevision != revision || sessionGeneration.load() != session
+            || publication->dependencies != loopPlayback.dependencies();
+    };
+    const auto anySolo = std::any_of(snapshot.swells.begin(),snapshot.swells.end(),[](const auto& w){return w.solo;});
+    SwellAssetStore store(instanceRoot(manifest));
+    juce::String error;
+    auto result = Preparation::noWet;
+    uint64_t reserved = 8ULL * 1024 * 1024;
+    for (auto& w : snapshot.swells)
+    {
+        if (cancel()) return;
+        if (!w.enabled || w.muted || (anySolo && !w.solo)) continue;
+        if (w.phase != Phase::ready || !w.render.present())
+        {
+            if (w.phase == Phase::queued || w.phase == Phase::restoring || w.phase == Phase::checking || w.phase == Phase::rendering)
+                result = Preparation::waiting;
+            if (result == Preparation::waiting) break;
+            continue;
+        }
+        if (snapshot.gainPolicy == GainPolicy::legacy) w.calibration = {};
+        int64_t first, end;
+        if (w.render.rate != manifest.sampleRate || w.render.bpm != manifest.loop->tempoBpm
+            || w.render.numerator != manifest.loop->meterNumerator || w.render.denominator != manifest.loop->meterDenominator
+            || !shapeBounds(w,w.render.start,w.render.sourceEnd,first,end,error)) continue;
+        const auto frames = static_cast<uint64_t>(end) - static_cast<uint64_t>(first);
+        if (frames > available(reserved) / (2 * sizeof(float))) { result = Preparation::budget; break; }
+        const auto key = memberKey(w);
+        std::shared_ptr<const WetRender> render;
+        {
+            const juce::ScopedLock guard(lock);
+            const auto resolved = runtime.find(w.id);
+            if (!retained.contains(w.id) && (resolved == runtime.end() || resolved->second.cachedWetOnly
+                || resolved->second.verifiedRender != w.render
+                || (!w.frozen && resolved->second.revision != juce::String(sourceDependency(manifest,w.sourceStart,renderInputEnd(w))))))
+                continue;
+            const auto cached = liveCache.find(w.id);
+            if (cached != liveCache.end() && cached->second.key == key) render = cached->second.main.lock();
+        }
+        if (!render || render->start != first || render->frames() != frames)
+        {
+            auto shaped = std::make_shared<WetRender>();
+            float peak = 0;
+            if ((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)
+                || !readShaped(w,store,first,end,shaped.get(),peak,error,cancel))
+            { result = Preparation::noWet; publication->plan.audio.entries.clear(); break; }
+            render = std::move(shaped);
+            const juce::ScopedLock guard(lock);
+            liveCache[w.id] = {key,render->peak,render,{}};
+        }
+        reserved += render->samples.capacity() * sizeof(float);
+        const auto slot = publication->plan.audio.entries.size();
+        publication->plan.audio.entries.push_back({slot,0,first,end,render->peak,std::move(render),{},0});
+    }
+    if (cancel()) return;
+    if (result == Preparation::noWet && !publication->plan.audio.entries.empty())
+    {
+        result = publication->plan.prepare(manifest.loop->endSample,available(),error) ? Preparation::ready : Preparation::budget;
+        if (result == Preparation::ready)
+        {
+            publication->gain = juce::Decibels::decibelsToGain(snapshot.liveWetDb);
+            if (publication->plan.peakBound > 0)
+                publication->gain = std::min(publication->gain,
+                    juce::Decibels::decibelsToGain(gainCeilingDb(snapshot)) / publication->plan.peakBound);
+            publication->wetOnly = snapshot.liveRouting == LiveRouting::wetOnly;
+        }
+    }
+    publication->preparation = result;
+    if (result != Preparation::ready) publication->plan = {};
+    if (livePublicationHold.load())
+    {
+        livePublicationWaiting = true;
+        while (livePublicationHold.load() && !cancel()) juce::Thread::sleep(2);
+        livePublicationWaiting = false;
+    }
+    const auto latest = contextProvider();
+    if (latest.captureGeneration != context.captureGeneration || latest.capture.reference != context.capture.reference) return;
+    const juce::ScopedLock guard(lock);
+    if (cancel() || (workflowState && workflowState->snapshot().mode != workflow::Mode::live)) return;
+    if (result == Preparation::ready && !replacements.empty())
+    {
+        loopPlayback.invalidatePrepared();
+        publication->dependencies = loopPlayback.dependencies();
+    }
+    if (!loopPlayback.publish(std::move(publication))) return;
+    if (result == Preparation::ready) for (const auto& id : replacements) retainedIR.erase(id);
+    preparedLoopRender = revision;
 }
 }
