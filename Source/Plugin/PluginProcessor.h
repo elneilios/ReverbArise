@@ -84,7 +84,12 @@ public:
     bool captureWorkerHeldForTesting() const noexcept {return captureWorker.workerHeldForTesting();}
     PreviewSnapshot getPreviewSnapshot() const;
     void loadPreviewIR(const juce::File& file);
-    void setSourceBars(int64_t start, int64_t end);
+    struct SourceBarSubmission
+    {
+        juce::String rejection;
+        SourceBarFields affected=SourceBarFields::none;
+    };
+    SourceBarSubmission setSourceBars(int64_t start, int64_t end);
     void generatePreview() { swells->generate(); }
     bool auditionPreview() { return swells->audition(); }
     void setAuditionLevelDb(float db);

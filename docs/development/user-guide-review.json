@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced action-menu requirements against the approved Swells and per-knob Reset bindings and the offline guide. The existing Perform instructions remain accurate after the spec archive.",
+  "summary": "Reviewed Settings Swell source-range submission and local error feedback against the existing command and approved C3 design. Updated the guide with the exclusive end bar, explicit submission, and correction steps.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -255,8 +255,8 @@
     },
     {
       "path": "Source/Core/SongTime.h",
-      "bytes": 2103,
-      "sha256": "d8aa9ac292f38610a3ee8470710a56926c7e693dbe9f770a1a649c31d543e137"
+      "bytes": 2471,
+      "sha256": "79ee023ae8d16cf9a0626c0520d805ad50db7141d9dd1dd0cac8f18c0446b153"
     },
     {
       "path": "Source/Core/SwellSession.cpp",
@@ -410,13 +410,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 84379,
-      "sha256": "3709441d419193c9cd481320875ab98b9ff5f247b9590cb8f60d706fcdefb69c"
+      "bytes": 84925,
+      "sha256": "f0681cdd29c543da76b07940d021870bc9d96f62ac57c9bc616c6ac137b3d3ef"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 24178,
-      "sha256": "40618a8d7abe58170e51c9cef8acb9bd866b42cdaa6ec428ff040607cb6a75aa"
+      "bytes": 24342,
+      "sha256": "c5a45e3618764e868de0483f65a9930330eaada7994801fca216d52b4b32108e"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 90924,
-      "sha256": "59bce1c81fac981aa77645f66e8a43d59e895e3f65cb5ca2795920cd9e882179"
+      "bytes": 91148,
+      "sha256": "7296d9d31c83b2d841ed97e5982555a343474ab6e1c458dbb3970b40355b4422"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 13608,
-      "sha256": "a80ab892349ea5ae1a8ecd85959340f1e7f0547354697fbb84c23da590ddf7a4"
+      "bytes": 14132,
+      "sha256": "72787789658b82629350591c9c9abe5da9c73d41b5fda1428b39c4892b3e0355"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -525,18 +525,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 45439,
-      "sha256": "235dd0576c86e0b0fbff64074a8111688e89a18b91d41518104f6b6766a80181"
+      "bytes": 46014,
+      "sha256": "97f37bc5505e8f87aef4e148d549ab35ebf0a0e3f4b8f5ee6bce0abf160d57ac"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8166,
-      "sha256": "ae54098ec70dda5efbd6830b03b1c5b72b974f0972b9ce5b34ab3b950e90510d"
+      "bytes": 8313,
+      "sha256": "4e28063c497c00f5f186ad1ec134c0dcade2c39930934d132748850b9703f286"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 22489,
-      "sha256": "1d84b4ba16fffe9deb44e10fb3c7be0481bbdf0c994ede05cf2a0a539ed91ee2"
+      "bytes": 25548,
+      "sha256": "073fcaf9a638deccaa52d67375e50aaa0b513b47945573d5609394ffacde1dc5"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -610,8 +610,13 @@
     },
     {
       "path": "Source/UI/Controls/FieldPresentation.h",
-      "bytes": 891,
-      "sha256": "0f79114ef495363b721906159129f1030a83287d536802d7b1a6048119fd347e"
+      "bytes": 3156,
+      "sha256": "eb3fc423900a9e5a6c56aa9efef538d4e416c2efcb2703bfa5b2de0fb762f0c9"
+    },
+    {
+      "path": "Source/UI/Controls/FieldTextEditor.h",
+      "bytes": 2286,
+      "sha256": "f102b768245fff9cfa7f4c20daa2b7f3111924497c9814a175b4b961fa0139f3"
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
@@ -920,8 +925,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 28981,
-      "sha256": "6113523990ce1e10f16accf27ac7dab4fd62d5bb2a18ed4be648476c1500c19f"
+      "bytes": 29463,
+      "sha256": "5434bc7f461d9f85fe307345a2f48242ff2b8e7d09dd4a176aeb3471867a074c"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

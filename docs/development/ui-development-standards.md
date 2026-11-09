@@ -259,12 +259,17 @@ the numeric up/down component received owner look/feel approval on 2026-11-03.
 Preserve that accepted component; revised families still require approval before
 wider rollout.
 
-For each UI issue, inventory the affected controls and identify which library
-components or specialized controls own them. Extract a family once, migrate its
-affected consumers, and remove their duplicate setup. Include corresponding
-Settings/Diagnostics consumers when they share that affected interaction.
-Record untouched consumers and follow-up work honestly in the issue/change;
-do not label a family fully migrated while alternate implementations remain.
+For each design-system family, inventory its consumers across the whole plugin,
+including Learn, Perform, Export, Settings, Diagnostics and dialogs. Use the
+approved shared control or variant for every applicable consumer and remove the
+superseded setup. Record existing shared consumers and any owner-approved
+specialized variants in the inventory. A family may land in reviewable slices
+and stays open until the inventory accounts for every consumer.
+
+Local field feedback is part of the owning family's rollout wherever its
+controls have a position for help or validation. Use the shared C3 presentation
+and preserve the binding's existing edit and validation behavior. The family
+inventory records which fields have a feedback position and what belongs there.
 
 Keep extraction and intentional behavior changes reviewable separately. Preserve
 approved layout, audio behavior, source protection, saved values and plugin/state/

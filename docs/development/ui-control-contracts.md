@@ -280,8 +280,9 @@ ResponsiveScale cases and their existing native preview paths.
 Observed owners: semantic TextRole policies, plain labels,
 [EllipsisLabel](../../Source/UI/Controls/EllipsisLabel.h), HeaderInformation,
 [NoticeBar](../../Source/UI/Controls/NoticeBar.h), TransportReadout and the editor
-context-help footer. Label help/validation composition remains screen-built outside
-#109's shared IR field. Noninteractive text has no activation or pressed state.
+context-help footer. Settings Swell source range and the shared IR field have
+dedicated feedback composition. Other label/help layouts remain screen-built.
+Noninteractive text has no activation or pressed state.
 
 Contract composition: a reusable field presents a caption, existing input,
 optional helper and optional binding-supplied validation message. Associate the
@@ -323,11 +324,19 @@ and separate. Helper/error text wraps without shrinking and stays readable when
 the input is disabled. Disabled state alone is not a validation error. Do not
 introduce a new validation, parsing or commit rule through this presentation.
 
-The initial `FieldPresentation` policy is exercised by the C2 selector preview
-(12-height Inter, 17-height line box, 4-unit gap). This records shared design
-intent for dropdowns and inputs; it does not migrate C4 editors, change #108
-Level behavior or override reviewed density/legibility policies. Text/numeric
-input adoption and any compact-role adjustment belong to their own scoped jobs.
+`FieldPresentation` provides the approved 12-height Inter, 17-unit line box
+and 4-unit gap. The first C3 adopter is Settings → Swell → Source range (bars).
+Each editor has its own caption above and exposes the shared, full description.
+The visible message wraps within the two input bodies and their gap, and the
+controls below follow its measured height. The command owns rejection and
+affected-field metadata. Correction, selection change and session replacement
+clear the local error. Return and the explicit button submit the pair.
+
+The source-range group established the shared presentation. Adopt local help
+and validation as part of each field family's plugin-wide rollout wherever the
+control has a feedback position. Document whether that position carries help,
+validation or both. The owning binding continues to decide how an edit commits
+or fails. The approved IR field is another example of local feedback.
 
 ## C4 — Numeric and text fields
 

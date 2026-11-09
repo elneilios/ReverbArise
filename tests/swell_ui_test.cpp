@@ -138,9 +138,148 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "SwellListBindingCases.h"
 #include "SwellListCaptureCases.h"
 #include "RegenerationCases.h"
+static void sourceRangeFeedbackCases()
+{
+    using namespace m3::ui;
+    using namespace m3::ui::controls;
+    TestDirectory root;
+    UIPlayHead head;
+    auto processor=std::make_unique<PreverbAudioProcessor>(root.file);
+    auto& engine=processor->swellEngine();
+    engine.setAutomaticProcessing(false);
+    REQUIRE(engine.setGainPolicy(m3::GainPolicy::legacy));
+    processor->prepareToPlay(1000,1000);
+    processor->setPlayHead(&head);
+    head.position.setBpm(240);
+    head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    head.position.setIsPlaying(true);
+    processor->setMappingEnabled(true);
+    juce::AudioBuffer<float> buffer(2,1000);
+    juce::MidiBuffer midi;
+    for(int block=0;block<4;++block)
+    {
+        head.position.setTimeInSamples(block*1000);
+        head.position.setPpqPosition(block*4.0);
+        buffer.clear();
+        buffer.setSample(0,0,.25f);
+        processor->processBlock(buffer,midi);
+    }
+    finishCaptureFixture(*processor,head.position);
+    REQUIRE(processor->flushCaptureForTesting());
+    REQUIRE(engine.addTarget(0));
+    const auto first=engine.savedSession().primary;
+    REQUIRE(engine.addTarget(2000));
+    const auto second=engine.savedSession().primary;
+    REQUIRE(engine.selectTargets({first},first));
+
+    auto editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);
+    editor->enableResponsiveReview({},PresentationFitContext{{1920,1200},{}});
+    editor->refresh();
+    auto* settings=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));
+    REQUIRE(settings);
+    settings->onClick();
+    auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());
+    REQUIRE(tabs);
+    tabs->setCurrentTabIndex(2);
+    auto* start=dynamic_cast<FieldTextEditor*>(named(*editor,"sourceStart"));
+    auto* end=dynamic_cast<FieldTextEditor*>(named(*editor,"sourceEnd"));
+    auto* feedback=named(*editor,"sourceRangeFeedback");
+    auto* apply=button(*editor,"Set source from bars");
+    auto* full=button(*editor,"Full response");
+    REQUIRE(start && end && feedback && apply && full && apply->isEnabled());
+    auto* page=tabs->getTabContentComponent(2);
+    const auto captionFor=[page](const FieldTextEditor& input)
+    {
+        for(auto* child:page->getChildren())
+            if(auto* label=dynamic_cast<juce::Label*>(child);label && label->getText()==input.getTitle())
+                return label;
+        return static_cast<juce::Label*>(nullptr);
+    };
+    const auto* startCaption=captionFor(*start);
+    const auto* endCaption=captionFor(*end);
+    REQUIRE(startCaption && endCaption);
+    REQUIRE(start->getAccessibilityHandler()->getTitle()=="Bar start");
+    REQUIRE(end->getAccessibilityHandler()->getTitle()=="End excl.");
+    const auto acceptedEnd=[&]{return m3::find(engine.savedSession(),first)->sourceEnd;};
+    const auto submitReturn=[&]
+    {
+        REQUIRE(end->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
+    };
+    const auto normalHeight=feedback->getHeight();
+    const auto original=acceptedEnd();
+    start->setText("0",false);
+    invokeCommand(*apply);
+    REQUIRE(acceptedEnd()==original && start->isInvalid() && !end->isInvalid());
+    REQUIRE(start->getDescription().contains("start bar must be 1 or later"));
+    start->setText("1",false);
+    end->setText("1",false);
+    submitReturn();
+    REQUIRE(acceptedEnd()==original && end->isInvalid() && !start->isInvalid());
+    REQUIRE(engine.snapshot().message=="Source end bar must be after start bar");
+    REQUIRE(end->getAccessibilityHandler()->getDescription().contains("Enter a later bar"));
+    REQUIRE(end->getDescription()==start->getDescription() && feedback->getHeight()>normalHeight);
+    const auto checkLayout=[&]
+    {
+        const auto pair=commandBodyBounds(start->getBounds()).getUnion(commandBodyBounds(end->getBounds()));
+        REQUIRE(feedback->getX()==pair.getX() && feedback->getWidth()==pair.getWidth());
+        REQUIRE(feedback->getY()==pair.getBottom()+FieldPresentation::helperGap);
+        REQUIRE(apply->getY()>feedback->getBottom() && full->getY()>apply->getBottom());
+        REQUIRE(page->getLocalBounds().contains(full->getBounds()));
+        REQUIRE(startCaption->getX()==pair.getX() && startCaption->getBottom()<=start->getY());
+        REQUIRE(endCaption->getX()==commandBodyBounds(end->getBounds()).getX() && endCaption->getBottom()<=end->getY());
+    };
+    for(const auto size:{juce::Point<int>{900,600},{1100,850}})
+        for(const int scale:{100,125})
+        {
+            editor->setPresentationSize(size.x,size.y);
+            editor->setPresentationScale(scale);
+            const auto effective=editor->presentationState()->effective().effective;
+            REQUIRE(effective.width==size.x && effective.height==size.y && effective.scalePercent==scale);
+            checkLayout();
+        }
+
+    end->setText("3",false);
+    invokeCommand(*apply);
+    REQUIRE(acceptedEnd()==2000 && !end->isInvalid() && feedback->getHeight()==normalHeight);
+    REQUIRE(end->getDescription()=="The end bar is excluded.");
+    checkLayout();
+    end->setText("4",false);
+    submitReturn();
+    REQUIRE(acceptedEnd()==3000);
+    end->setText("1",false);
+    invokeCommand(*apply);
+    REQUIRE(end->isInvalid() && acceptedEnd()==3000);
+    REQUIRE(engine.selectTargets({second},second));
+    editor->refresh();
+    REQUIRE(!end->isInvalid() && end->getDescription()=="The end bar is excluded.");
+    REQUIRE(engine.selectTargets({first},first));
+    editor->refresh();
+
+    const auto response=root.file.getChildFile("source-range-ir.wav");
+    writeTestWav(response,1,1000,{1.f,.5f,.25f});
+    engine.loadIR(response);
+    waitUI([&]{const auto current=engine.savedSession();return m3::find(current,first)->irName==response.getFileName();});
+    engine.generate();
+    waitUI([&]{const auto current=engine.savedSession();return m3::find(current,first)->phase==m3::Phase::ready;});
+    REQUIRE(engine.setFrozen(first,true));
+    editor->refresh();
+    REQUIRE(!apply->isEnabled() && start->isEnabled() && end->isEnabled());
+    REQUIRE(end->getDescription().contains("Unfreeze") && !end->isInvalid());
+
+    submitReturn();
+    REQUIRE(end->isInvalid());
+    const auto epoch=engine.assignmentEpoch();
+    engine.restore(engine.savedSession());
+    editor->refresh();
+    REQUIRE(engine.assignmentEpoch()!=epoch && !end->isInvalid() && end->getDescription().contains("Unfreeze"));
+    processor->setPlayHead(nullptr);
+}
+
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--test-source-range-feedback"){sourceRangeFeedbackCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
     {
@@ -160,6 +299,7 @@ int main(int argc,char* argv[]){return runTest([&]
     {regenerationCases(juce::String(argv[1])=="--review-regeneration");return;}
     regenerationCases();
     if(argc>1 && juce::String(argv[1])=="--review-perform-warning"){noticeReview::run();return;}
+    if(argc==1)sourceRangeFeedbackCases();
     {m3::EditorSnapshot diagnosticState;
         REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
         m3::LiveCallbackObservation callback;callback.block=17;callback.revision=42;callback.hasPublication=true;

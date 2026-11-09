@@ -286,15 +286,37 @@ void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
     if(swells->savedSession().primary.isEmpty())setSourceBars(1,2);
     swells->loadIR(file);
 }
-void PreverbAudioProcessor::setSourceBars(int64_t start,int64_t end)
+PreverbAudioProcessor::SourceBarSubmission PreverbAudioProcessor::setSourceBars(int64_t start,int64_t end)
 {
-    int64_t a,b;std::string error;const auto time=getSongTime();
-    if(!resolveSourceBars(time,captureWorker.snapshot().manifest.sampleRate,start,end,a,b,error))
-    {swells->diagnostic(error);return;}
+    SourceBarSubmission result;
+    int64_t a,b;
+    std::string error;
+    const auto time=getSongTime();
+    if(!resolveSourceBars(time,captureWorker.snapshot().manifest.sampleRate,start,end,a,b,error,&result.affected))
+    {
+        swells->diagnostic(error);
+        result.rejection=result.affected==SourceBarFields::start
+            ? juce::String("Source start bar must be 1 or later") : juce::String(error);
+        return result;
+    }
     auto state=swells->savedSession();
-    if(state.primary.isEmpty()) {if(!swells->addTarget(a))return;state=swells->savedSession();}
-    swells->edit(state.primary,[&](auto& w,auto& text)
-    {if(!m3::moveArrival(w,a,text))return false;return m3::setSource(w,a,b,text);});
+    if(state.primary.isEmpty())
+    {
+        if(!swells->addTarget(a,&result.rejection))return result;
+        state=swells->savedSession();
+    }
+    swells->edit(state.primary,[&](auto& swell,auto& reason)
+    {
+        if(!m3::moveArrival(swell,a,reason))
+        {
+            result.affected=SourceBarFields::start;
+            return false;
+        }
+        if(m3::setSource(swell,a,b,reason))return true;
+        result.affected=SourceBarFields::both;
+        return false;
+    },0,&result.rejection);
+    return result;
 }
 void PreverbAudioProcessor::setAuditionLevelDb(float db)
 {const auto state=swells->savedSession();swells->setPreferences(db,state.sensitivity,state.separationSeconds,state.autoRegenerate);}

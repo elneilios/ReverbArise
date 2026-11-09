@@ -3,6 +3,7 @@
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/Controls/ChoiceSelector.h>
 #include "ActionMenuReview.h"
+#include "FieldFeedbackReview.h"
 #include "SelectorReview.h"
 #if JUCE_WINDOWS
 #include <windows.h>
@@ -380,11 +381,121 @@ static void fieldFeedbackCases()
     std::cerr<<"Field clearing passed\n";
     window.setLookAndFeel(nullptr);
 }
+static void wrappedFeedbackCases()
+{
+    using namespace m3::ui;
+    const auto verify = [](const FieldPresentation::WrappedFeedback& feedback, juce::Rectangle<int> body)
+    {
+        const auto bounds = feedback.getBounds();
+        const auto& layout = feedback.getLayout();
+        REQUIRE(bounds.getX() == body.getX());
+        REQUIRE(bounds.getWidth() == body.getWidth());
+        REQUIRE(bounds.getY() == body.getBottom() + FieldPresentation::helperGap);
+        REQUIRE(bounds.getHeight() >= layout.getHeight());
+        for (const auto& line : layout)
+        {
+            REQUIRE(line.getLineBounds().getX() >= -0.01f);
+            REQUIRE(line.getLineBounds().getRight() <= bounds.getWidth() + 0.01f);
+            REQUIRE(line.getLineBounds().getBottom() <= bounds.getHeight() + 0.01f);
+            for (const auto* run : line.runs)
+                REQUIRE(run->font.getHeight() == FieldPresentation::helperHeight);
+        }
+    };
+
+    FieldPresentation::WrappedFeedback sample;
+    const juce::Rectangle<int> body{12, 40, 100, 34};
+    sample.setMessage("Short help", false, body);
+    verify(sample, body);
+    REQUIRE(sample.getLayout().getNumLines() == 1);
+    const auto unbroken = juce::String::repeatedString("LongFileName", 9);
+    const juce::String words = "A longer field message should use all the lines that it needs to show its final instruction.";
+    for (const auto& message : {words, unbroken})
+    {
+        sample.setMessage(message, true, body);
+        verify(sample, body);
+        REQUIRE(sample.getLayout().getNumLines() > 2);
+        REQUIRE(sample.getLayout().getLine(sample.getLayout().getNumLines() - 1).stringRange.getEnd() == message.length());
+    }
+    sample.setMessage({}, false, body);
+    REQUIRE(sample.getBounds().isEmpty() && sample.getLayout().getNumLines() == 0);
+
+    using namespace fieldFeedbackReview;
+    Panel panel;
+    auto& preview = panel.fixture;
+    for (const auto size : {juce::Point<int>{900, 600}, {1100, 850}})
+        for (const int scale : {100, 125})
+        {
+            panel.setSize(size.x, size.y);
+            panel.setScale(scale);
+            const auto pair = commandBodyBounds(preview.start.getBounds()).getUnion(commandBodyBounds(preview.end.getBounds()));
+            preview.setScene(Scene::normal);
+            const auto normalActionY = preview.apply.getY();
+            for (const auto scene : {Scene::longHelp, Scene::validation, Scene::unavailable})
+            {
+                preview.setScene(scene);
+                verify(preview.singleFeedback, commandBodyBounds(preview.ir.getBounds()));
+                verify(preview.pairFeedback, pair);
+                REQUIRE(preview.pairFeedback.getBounds().getBottom() < preview.apply.getY());
+                REQUIRE(preview.getLocalBounds().contains(preview.apply.getBounds()));
+                REQUIRE(preview.apply.isEnabled() == (scene != Scene::unavailable));
+                if (scene != Scene::unavailable)
+                    REQUIRE(preview.apply.getY() > normalActionY);
+            }
+        }
+
+    panel.setSize(900, 600);
+    panel.setScale(100);
+    panel.addToDesktop(0);
+    panel.setVisible(true);
+    panel.toFront(true);
+    preview.setScene(Scene::validation);
+    auto* endHandler = preview.end.getAccessibilityHandler();
+    REQUIRE(endHandler && endHandler->getTitle() == "End excl.");
+    REQUIRE(endHandler->getTextInterface() != nullptr);
+    REQUIRE(endHandler->getDescription().contains("Enter a later bar"));
+    REQUIRE(preview.start.getAccessibilityHandler()->getDescription() == endHandler->getDescription());
+    REQUIRE(preview.ir.getAccessibilityHandler()->getDescription().contains("could not be read"));
+    REQUIRE(preview.end.isInvalid() && !preview.start.isInvalid());
+
+    juce::SharedResourcePointer<FocusVisibility> visibility;
+    visibility->pointerInput();
+    endHandler->grabFocus();
+    pump();
+    REQUIRE(preview.end.isFocusVisible() && preview.end.isInvalid());
+    juce::Image painted(juce::Image::ARGB, preview.end.getWidth(), preview.end.getHeight(), true, juce::SoftwareImageType{});
+    juce::Graphics graphics(painted);
+    graphics.fillAll(background);
+    preview.end.paintEntireComponent(graphics, false);
+    const auto edge = commandBodyBounds(preview.end.getLocalBounds());
+    REQUIRE(painted.getPixelAt(edge.getX(), edge.getCentreY()) == danger);
+    REQUIRE(painted.getPixelAt(1, 1) == aqua);
+    visibility->pointerInput();
+    REQUIRE(!preview.end.isFocusVisible() && preview.end.isInvalid());
+    preview.start.grabKeyboardFocus();
+    visibility->pointerInput();
+    preview.start.moveKeyboardFocusToSibling(true);
+    pump();
+    REQUIRE(preview.end.isFocusVisible());
+
+    preview.end.setText("8", false);
+    preview.end.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+    pump();
+    REQUIRE(!preview.end.isInvalid() && !endHandler->getDescription().contains("Enter a later bar"));
+    preview.ir.setSelectedId(2, juce::sendNotificationSync);
+    REQUIRE(preview.ir.getValidationMessage().isEmpty());
+    preview.setScene(Scene::unavailable);
+    REQUIRE(endHandler->getDescription().contains("Unfreeze"));
+    REQUIRE(preview.start.isEnabled() && preview.end.isEnabled() && !preview.apply.isEnabled());
+    panel.removeFromDesktop();
+}
+
 int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--review-selectors"){selectorReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-action-menus"){actionMenuReview::run();return;}
+    if(argc>1 && juce::String(argv[1])=="--review-field-feedback"){fieldFeedbackReview::run();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-field-feedback"){wrappedFeedbackCases();return;}
     if(argc==3 && juce::String(argv[1])=="--capture-selectors")
     {
         selectorReview::Panel panel;panel.setSize(900,600);panel.addToDesktop(0);panel.setVisible(true);panel.toFront(true);
@@ -401,5 +512,6 @@ int main(int argc,char** argv){return runTest([&]
     std::cerr<<"Selector input and lifetime\n";selectorCases();
     std::cerr<<"Presentation and geometry\n";presentationCases();
     std::cerr<<"Field feedback\n";fieldFeedbackCases();
+    std::cerr<<"Wrapped field feedback\n";wrappedFeedbackCases();
     std::cout<<"Selector popup state, native input, accessibility, focus, geometry and lifetime cases passed.\n";
 });}

@@ -1,4 +1,5 @@
 #pragma once
+#include <UI/Controls/FieldTextEditor.h>
 #include "PluginProcessor.h"
 #include <UI/SwellTimeline.h>
 #include <UI/WorkspaceTheme.h>
@@ -112,6 +113,8 @@ private:
     void curveChanged(bool);
     void setPreferences();
     void applyBarRange();
+    void refreshSourceRangeFeedback(const m3::Swell*);
+    void layoutSourceRange();
     void armSelected();
     void refreshPerformNavigation();
     void publishPerformNavigation();
@@ -175,7 +178,17 @@ private:
     m3::ui::controls::ChoiceSelector inCurveBox,outCurveBox;
     std::array<juce::Label,fieldCount> fieldLabels;
     std::array<juce::TextEditor,fieldCount> fields;
-    juce::TextEditor barStartEditor,barEndEditor;
+    m3::ui::controls::FieldTextEditor barStartEditor{"Bar start"},barEndEditor{"End excl."};
+    m3::ui::controls::FieldFeedbackLabel sourceRangeFeedback;
+    struct SourceRangeRejection
+    {
+        uint64_t epoch;
+        juce::String primary;
+        PreverbAudioProcessor::SourceBarSubmission result;
+    };
+    std::optional<SourceRangeRejection> sourceRangeRejection;
+    juce::String sourceRangeMessage;
+    bool sourceRangeHasError=false;
     uint64_t presentationSession=0;
     std::optional<int64_t> chosenCandidate;
     bool updating=false,destroying=false;
