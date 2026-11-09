@@ -14,6 +14,13 @@ struct LearnDryView
     void reset()noexcept{initialized=false;}
     void update(const CaptureSessionSnapshot& source,const CaptureProgress& progress,const SongTime& time)
     {
+        if(source.manifest.loop)
+        {
+            first=0;
+            last=static_cast<double>(source.manifest.loop->endSample);
+            initialized=false;
+            return;
+        }
         long double origin=0;const auto musical=songOrigin(time,origin);
         const auto rate=std::isfinite(time.rate) && time.rate>0?time.rate:source.manifest.sampleRate>0?source.manifest.sampleRate:48000.;
         const auto bar=musical?rate*60/time.bpm*time.numerator*4/time.denominator:rate*4;

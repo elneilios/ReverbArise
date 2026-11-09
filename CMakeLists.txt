@@ -108,7 +108,7 @@ juce_add_plugin(preverb_plugin
     PRODUCT_NAME "ReverbArise"
     FORMATS VST3
     IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_INPUT TRUE
     VST3_CATEGORIES Fx Stereo
 )
 

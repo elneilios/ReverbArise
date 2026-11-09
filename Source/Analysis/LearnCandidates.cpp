@@ -7,12 +7,15 @@ bool scanLearnCandidates(CaptureAssetStore& store,const CaptureManifest& source,
     const CompletedPasses& completed,LearnCandidateSnapshot& output,juce::String& error,
     const std::function<bool()>& cancelled)
 {
-    if(!identity.timing.valid || source.sampleRate!=identity.timing.rate
+    const bool compatible = source.loop
+        ? identity.loop==source.loop && !identity.provisional
+        : !identity.loop && identity.timing.valid && source.sampleRate==identity.timing.rate;
+    if(!compatible
         || !std::isfinite(identity.sensitivity) || identity.sensitivity<0 || identity.sensitivity>1
         || !std::isfinite(identity.separationSeconds) || identity.separationSeconds<.001 || identity.separationSeconds>2)
     {error="Candidate analysis needs compatible captured source and host timing";return false;}
     LearnCandidateSnapshot prepared;prepared.identity=identity;
-    prepared.completedPasses=usableCompletedPasses(source,completed);
+    if(!source.loop)prepared.completedPasses=usableCompletedPasses(source,completed);
     for(const auto& range:source.ranges)
     {
         int64_t end;

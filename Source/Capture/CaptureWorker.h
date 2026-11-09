@@ -24,7 +24,7 @@ public:
     void delayNextStageForTesting(unsigned milliseconds) noexcept {stageDelay.store(milliseconds);}
     void throwNextStageForTesting() noexcept {stageThrow.store(true);}
     // Non-RT cancellation fences the actual source publication as well as mode.
-    void cancelWorkflowPass();
+    bool cancelWorkflowPass(std::optional<uint64_t> expectedPass={});
     bool armRecovery(std::vector<std::pair<int64_t,int64_t>> required);
     bool recoveryArmed()const noexcept{return recoveryCaptureArmed.load();}
     void holdValidationForTesting(bool hold) noexcept {validationHold.store(hold);}
@@ -48,12 +48,14 @@ public:
     void setPassContextProvider(std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider)
     {const juce::ScopedLock guard(commandLock);passContextProvider=std::move(provider);}
     uint64_t captureGeneration() const noexcept { return generation.load(); }
+    bool acceptedLoop() const noexcept { return loopSource.load(std::memory_order_acquire); }
     struct StorageRestore
     {
         std::shared_ptr<const CaptureStorageLocation> location;
         std::function<std::shared_ptr<const CaptureStorageLocation>()> resolve;
         juce::String savedManifest;
         bool allowMissingSource=false;
+        std::optional<CaptureSourceKind> expectedKind;
     };
     void requestRestore(const std::string& project, const std::string& instance,
                         const juce::String& reference, uint64_t revision,workflow::Mode mode=workflow::Mode::capture,bool preserveOnFailure=false,std::optional<StorageRestore> storage=std::nullopt);
@@ -139,6 +141,9 @@ private:
     juce::String passStartFailure;
     workflow::State* workflowState=nullptr;
     uint64_t activePass=0,activeEpoch=0;
+    bool activeLoop = false;
+    std::optional<LoopPhraseTiming> loopEnd;
+    std::atomic<bool> loopSource{false};
     std::atomic<uint64_t> failedPass{0};
     std::atomic<bool> validationHold{false},workerHold{false},workerHeld{false};
 };

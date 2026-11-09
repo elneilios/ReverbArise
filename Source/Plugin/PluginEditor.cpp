@@ -31,6 +31,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
+    learnWorkspace.onLoopPreference=[this](LoopCapturePreference preference){processor.setLoopCapturePreference(preference);};
+    learnWorkspace.onLoopArm=[this](bool arm,uint64_t pass){if(arm)processor.armLoopCapture();else processor.cancelLoopCapture(pass);};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
     recaptureExisting.setName("legacyRecaptureExisting");
@@ -837,7 +839,9 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureStatus.setText(recapture,juce::dontSendNotification);recaptureStatus.setTooltip(recapture);
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
-    workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),capture.status);
+    const auto loopSettings=processor.getLoopCapturePreference();
+    const auto loopStatus=loopSettings.enabled?processor.loopCaptureStatus():juce::String{};
+    workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),loopSettings.enabled?loopStatus:capture.status);
     noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
         processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes())));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
@@ -876,7 +880,14 @@ void PreverbAudioProcessorEditor::refresh()
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
-    if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
+    if(learningLayout)
+    {
+        const bool loopSettling=loopSettings.enabled
+            && (flow.phase==workflow::Phase::draining || flow.phase==workflow::Phase::validating);
+        learnWorkspace.displayLoop(loopSettings,processor.canArmLoopCapture(),
+            processor.loopCaptureArmed() || loopSettling,flow.locked(),loopStatus);
+        learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
+    }
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);

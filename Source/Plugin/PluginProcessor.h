@@ -2,11 +2,14 @@
 
 #include <atomic>
 #include <cstdint>
+#include <chrono>
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include <Capture/AudioCaptureQueue.h>
 #include <Capture/CaptureWorker.h>
+#include <Capture/LoopCapturePreference.h>
+#include <Capture/LoopTake.h>
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
@@ -43,6 +46,7 @@ public:
     void reset() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     HostPositionDiagnostics getHostPositionDiagnostics() const noexcept;
     void setMappingEnabled(bool enabled);
     bool isMappingEnabled() const noexcept;
@@ -71,6 +75,14 @@ public:
     bool reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error);
     CaptureSessionSnapshot getCaptureSnapshot() const { return captureWorker.snapshot(); }
     CaptureProgress getCaptureProgress() const {return captureWorker.progressSnapshot();}
+    LoopCapturePreference getLoopCapturePreference() const noexcept
+    {return LoopCapturePreference::unpack(loopPreference.load(std::memory_order_relaxed));}
+    bool setLoopCapturePreference(LoopCapturePreference preference);
+    bool armLoopCapture();
+    bool cancelLoopCapture(uint64_t pass);
+    bool loopCaptureArmed() const noexcept { return loopArm.load(std::memory_order_acquire) != 0; }
+    bool canArmLoopCapture() const;
+    juce::String loopCaptureStatus() const;
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
     SongTime getSongTime() const noexcept;
@@ -128,6 +140,19 @@ private:
     mutable juce::CriticalSection storageStateLock;
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
+    std::atomic<uint32_t> loopPreference{LoopCapturePreference{}.packed()};
+    std::atomic<uint64_t> loopArm{0}, loopReset{0};
+    std::atomic<loop_capture::ClockAdmission::State> loopClockState{loop_capture::ClockAdmission::State::notConfigured};
+    std::atomic<double> loopTempo{0};
+    std::atomic<bool> loopInterrupted{false};
+    loop_capture::ClockAdmission loopClock;
+    loop_capture::Take loopTake;
+    uint64_t seenLoopArm=0, seenLoopReset=0, loopPass=0;
+    int64_t loopRunSample=0;
+    std::chrono::steady_clock::time_point previousLoopCallback;
+    void invalidateLoopClock() noexcept;
+    bool loopDurationFits(LoopCapturePreference) const noexcept;
+    void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
