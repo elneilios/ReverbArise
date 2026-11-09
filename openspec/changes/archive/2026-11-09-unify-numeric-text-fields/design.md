@@ -2,7 +2,7 @@
 
 ## Context
 
-The [C4 contract](../../../docs/development/ui-control-contracts.md#c4--numeric-and-text-fields) records separate lifecycles for persistent editors, temporary slider editors and read-only values. The [control inventory](../../../docs/design/ui-control-inventory.md#delivery-packets) provides the consumer IDs below. Production standards revision 17 and merged #122 provide the approved C3 metrics, error treatment, focus policy and Settings source-range reference.
+The [C4 contract](../../../../docs/development/ui-control-contracts.md#c4--numeric-and-text-fields) records separate lifecycles for persistent editors, temporary slider editors and read-only values. The [control inventory](../../../../docs/design/ui-control-inventory.md#delivery-packets) provides the consumer IDs below. Production standards revision 17 and merged #122 provide the approved C3 metrics, error treatment, focus policy and Settings source-range reference.
 
 ## Goals / Non-Goals
 
