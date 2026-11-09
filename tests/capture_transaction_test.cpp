@@ -176,18 +176,24 @@ int main(){return runTest([]{
         while(mode.snapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<cancellationDeadline)
             juce::Thread::sleep(1);
         REQUIRE(mode.snapshot().phase==workflow::Phase::validating && worker.snapshot().reference==second.reference);
-        worker.cancelWorkflowPass();
+        REQUIRE(worker.cancelWorkflowPass(loopPass));
         worker.holdValidationForTesting(false);
         REQUIRE(worker.flush() && worker.snapshot().reference==second.reference);
         REQUIRE(!mode.startReserved(loopPass) && acceptedChanges==2);
 
         chooseB=true;
+        bool cancelledAfterCommit=true;
+        worker.setAcceptedStateHandler([&]{
+            ++acceptedChanges;
+            cancelledAfterCommit=worker.cancelWorkflowPass(mode.snapshot().pass);
+        });
         loopPass=stageLoop();
         chooseB=false;
         REQUIRE(mode.stop(loopPass) && worker.flush());
         const auto loop=worker.snapshot();
         REQUIRE(loop.sourceKind()==CaptureSourceKind::loop && loop.manifest.loop==timing);
         REQUIRE(loop.manifest.revision==second.manifest.revision+1 && captureContextAt(loop.manifest,0)->id==b.id);
+        REQUIRE(!cancelledAfterCommit && mode.snapshot().pass==loopPass && mode.snapshot().result==workflow::Result::accepted);
         REQUIRE(audioChanges==1 && acceptedChanges==3);
         worker.stopThread(-1);
     }

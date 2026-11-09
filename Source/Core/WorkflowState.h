@@ -120,6 +120,22 @@ public:
     {resetTo(mode,Result::none);}
     void cancel() noexcept
     {resetTo(Mode::capture,Result::cancelled);}
+    bool cancelCapture(uint64_t pass) noexcept
+    {
+        auto old=word.load(std::memory_order_acquire);
+        for(;;)
+        {
+            const auto current=decode(old);
+            if(current.pass!=pass || current.mode!=Mode::capture || !current.locked() || current.generationCommit)
+                return false;
+            const auto cancelled=pack(Mode::capture,Phase::idle,false,Result::cancelled,pass+1,current.configurationSlot);
+            if(word.compare_exchange_weak(old,cancelled,std::memory_order_acq_rel))
+            {
+                startFailed.store(false);
+                return true;
+            }
+        }
+    }
 private:
     static constexpr uint64_t commitBit=uint64_t{1}<<11;
     static_assert(std::atomic<uint64_t>::is_always_lock_free);

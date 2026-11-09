@@ -32,7 +32,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
     learnWorkspace.onLoopPreference=[this](LoopCapturePreference preference){processor.setLoopCapturePreference(preference);};
-    learnWorkspace.onLoopArm=[this](bool arm){if(arm)processor.armLoopCapture();else processor.cancelCapturePass();};
+    learnWorkspace.onLoopArm=[this](bool arm,uint64_t pass){if(arm)processor.armLoopCapture();else processor.cancelLoopCapture(pass);};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
     recaptureExisting.setName("legacyRecaptureExisting");

@@ -79,6 +79,7 @@ public:
     {return LoopCapturePreference::unpack(loopPreference.load(std::memory_order_relaxed));}
     bool setLoopCapturePreference(LoopCapturePreference preference);
     bool armLoopCapture();
+    bool cancelLoopCapture(uint64_t pass);
     bool loopCaptureArmed() const noexcept { return loopArm.load(std::memory_order_acquire) != 0; }
     bool canArmLoopCapture() const;
     juce::String loopCaptureStatus() const;

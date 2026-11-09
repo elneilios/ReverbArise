@@ -74,13 +74,18 @@ void CaptureWorker::recoverWorkerException(const char* message)
     }
 }
 
-void CaptureWorker::cancelWorkflowPass()
+bool CaptureWorker::cancelWorkflowPass(std::optional<uint64_t> expectedPass)
 {
     const juce::ScopedLock guard(commandLock);
-    if(workflowState)workflowState->cancel();
+    if(expectedPass)
+    {
+        if(!workflowState || !workflowState->cancelCapture(*expectedPass))return false;
+    }
+    else if(workflowState)workflowState->cancel();
     if(recoveryCaptureArmed.exchange(false))mappingAllowed.store(false);refreshAdmission=true;notify();
     // Pass identity invalidates queued/provisional work. The accepted source
     // epoch must stay fixed: cancelling is not Clear or a source revision.
+    return true;
 }
 
 bool CaptureWorker::armRecovery(std::vector<std::pair<int64_t,int64_t>> required)
@@ -432,15 +437,27 @@ void CaptureWorker::settleWorkflowPass()
         else session.abortPass();
         if(result.success && recoveryCaptureArmed.load()){recoveryCaptureArmed=false;recoveryRequired.clear();}
         activePass=0;hasPendingCapture=false;
-        if (!settlingLoop) handler=commitHandler;
         updateSnapshot();
         if(!result.success){const juce::ScopedLock snapshotGuard(snapshotLock);published.status=result.error;}
+        if(settlingLoop)
+        {
+            // Cancellation takes the same lock. Once the accepted snapshot can
+            // be read, the pass must already reject a late cancellation.
+            if(workflowState->complete(state.pass,result.success,result.useful,result.replaced)
+                && result.success && (result.changed || result.useful))acceptedHandler=acceptedStateHandler;
+        }
+        else handler=commitHandler;
+    }
+    if(settlingLoop)
+    {
+        if(acceptedHandler)acceptedHandler();
+        return;
     }
     if(result.success && handler)for(const auto [a,b]:result.changedIntervals)handler(a,b,committedGeneration,result.replaced);
     {
         const juce::ScopedLock guard(commandLock);
         usefulMaterial=result.useful || (state.recapture && result.replaced && usefulSource.load());
-        if(generation.load()==committedGeneration && result.success && !settlingLoop)settled=settlementHandler;
+        if(generation.load()==committedGeneration && result.success)settled=settlementHandler;
     }
     // Pin optional generation intent while the pass is still locked. Engine
     // metadata/locks never enter the source publication fence or audio callback.

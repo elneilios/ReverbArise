@@ -20,3 +20,11 @@ The native processor fixture exercised the two external clock profiles and a hos
 The host-neutral timing path requires a host that delivers the stereo input and the Loop MIDI markers at their actual sample offsets. The Rack run verifies the external clock route. The declared host timing path has native fixture coverage. FL Studio Loop routing and coverage for other DAWs remain under #127. Raw gate release cannot qualify End signal. Loop playback and export remain separate work.
 
 The full Windows wrapper, `scripts/build.ps1 -Configuration Release -Test`, passed configuration, build and all 98 CTest cases in 394.99 seconds. This included the Song capture and playback regressions and the Perform readability case that timed out on the previous baseline. The completed run reused the build output and used four build jobs. Logs are retained in `out/build-logs/Release/20261109-201126-8614f6a5/`.
+
+## PR #132 review fixes
+
+The native working-folder regression saves and reopens a Song project with a Loop preference, then saves and reopens an accepted Loop in the same working folder. It verifies the source identity, timing, preference and disarmed restore. It also rejects duplicate, unknown and malformed XML children with valid snapshot digests. The capture transaction regression checks cancellation before acceptance and rejection of cancellation after commit.
+
+The revised Release wrapper configured and built successfully. CTest passed 97 of 98 cases in 419.57 seconds, including both review regressions. The only failure was `preverb_perform_knob_reset_test`. The fixture had a native peer and could not acquire Windows foreground focus at `PerformKnobResetCases.h:59`. An isolated retry reproduced the same failure. The earlier working-folder validation recorded the same class of focus failure. This revision has no change to that test or the Perform knob UI. Rack hosting was verified before these fixes. [Earlier focus evidence](2026-11-06-issue-8-working-folder.md)
+
+Logs are retained in `out/build-logs/Release/20261109-204259-8820c3ce/` and `out/issue-124/review-knob-focus-retry.log`.

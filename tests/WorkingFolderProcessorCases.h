@@ -1,6 +1,91 @@
 #pragma once
+#include "LoopCaptureFixture.h"
 #include <Storage/WorkingFolder.h>
 #include <future>
+
+static void workingFolderLoopCases()
+{
+    TestDirectory destination;
+    LoopCaptureFixture fixture;
+    REQUIRE(destination.file.createDirectory().wasOk());
+    auto& processor=*fixture.processor;
+    const auto preference=processor.getLoopCapturePreference();
+    REQUIRE(processor.setLoopCapturePreference({}));
+    auto& position=fixture.host.position;
+    position.setTimeInSamples(0);position.setPpqPosition(0.0);position.setBpm(120);
+    position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    position.setIsPlaying(true);
+    processor.setPlayHead(&fixture.host);
+    juce::AudioBuffer<float> song(2,128);
+    juce::MidiBuffer midi;
+    for(int channel=0;channel<2;++channel)std::fill_n(song.getWritePointer(channel),128,.25f);
+    processor.processBlock(song,midi);
+    position.setIsPlaying(false);
+    processor.processBlock(song,midi);
+    REQUIRE(processor.flushCaptureForTesting() && processor.getCaptureSnapshot().reference.isNotEmpty());
+    processor.setPlayHead(nullptr);
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    waitFor([&]{return processor.swellEngine().savedSession().defaultIR.present();});
+    juce::String error;
+    Input input;
+    waitFor([&]{return processor.pinPortableAssets(input,error);});
+    std::shared_ptr<WorkingFolder> folder;
+    if(!prepareWorkingFolder(input,destination.file,processor.assetRegistryRoot(),folder,error))
+        throw std::runtime_error(error.toStdString());
+    if(!processor.useWorkingFolder(folder,input,error))
+        throw std::runtime_error(error.toStdString());
+    const auto roundTrip=[&](CaptureSourceKind kind)
+    {
+        const auto accepted=processor.getCaptureSnapshot();
+        juce::MemoryBlock bytes;
+        processor.getStateInformation(bytes);
+        const auto envelope=juce::AudioProcessor::getXmlFromBinary(bytes.getData(),static_cast<int>(bytes.getSize()));
+        REQUIRE(envelope && envelope->getStringAttribute("stateVersion")=="9");
+        m3::storage::Association association;
+        juce::String base,manifest;
+        REQUIRE(m3::storage::decodeAssociatedState(envelope->toString(),association,base,manifest,error));
+        const auto decoded=juce::XmlDocument::parse(base);
+        REQUIRE(decoded && decoded->getChildByName("NextCapture"));
+        REQUIRE((decoded->getChildByName("AcceptedLoopSource")!=nullptr)==(kind==CaptureSourceKind::loop));
+        auto reopened=std::make_unique<PreverbAudioProcessor>(fixture.root.file);
+        reopened->setStateInformation(bytes.getData(),static_cast<int>(bytes.getSize()));
+        REQUIRE(reopened->flushCaptureForTesting());
+        const auto restored=reopened->getCaptureSnapshot();
+        REQUIRE(restored.location->association.store==association.store && !restored.unavailable);
+        REQUIRE(restored.sourceKind()==kind && restored.reference==accepted.reference);
+        REQUIRE(restored.manifest.loop==accepted.manifest.loop && restored.manifest.revision==accepted.manifest.revision);
+        REQUIRE(reopened->getLoopCapturePreference()==preference && !reopened->loopCaptureArmed());
+
+        // Recompute the envelope digest to check shape rejection independently
+        // of the integrity check.
+        const auto invalid=[&](const auto& mutate)
+        {
+            auto altered=juce::XmlDocument::parse(base);
+            mutate(*altered);
+            auto bad=association;
+            juce::String output;
+            REQUIRE(!m3::storage::encodeAssociatedState(altered->toString(),manifest,bad,output,error));
+            const auto digest=m3::storage::associationSnapshot(altered->toString(),manifest);
+            auto* node=new juce::XmlElement(*envelope->getChildByName("WorkingFolder"));
+            node->setAttribute("snapshot",digest);
+            altered->addChildElement(node);
+            altered->setAttribute("stateVersion",9);
+            juce::String ignoredBase,ignoredManifest;
+            REQUIRE(!m3::storage::decodeAssociatedState(altered->toString(),bad,ignoredBase,ignoredManifest,error));
+        };
+        invalid([](auto& state){state.createNewChildElement("Unknown");});
+        invalid([](auto& state){state.addChildElement(new juce::XmlElement(*state.getChildByName("NextCapture")));});
+        invalid([](auto& state){state.getChildByName("NextCapture")->setAttribute("count",0);});
+        if(kind==CaptureSourceKind::loop)
+            invalid([](auto& state){state.getChildByName("AcceptedLoopSource")->setAttribute("version",2);});
+    };
+    roundTrip(CaptureSourceKind::song);
+    fixture.through(fixture.marker(2));
+    REQUIRE(processor.armLoopCapture());
+    fixture.through(fixture.marker(20),true);
+    roundTrip(CaptureSourceKind::loop);
+}
+
 static void workingFolderProcessorCases()
 {
     Fixture fixture;TestDirectory destination,forkDestination;juce::String error;

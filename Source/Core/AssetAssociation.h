@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/ContentHash.h>
+#include <Capture/LoopCaptureState.h>
 
 namespace m3::storage
 {
@@ -70,12 +71,29 @@ inline juce::String associationSnapshot(const juce::String& legacy,const juce::S
     ContentHash hash;const auto domain=juce::String("ReverbArise working metadata v1\n");
     for(const auto& text:{domain,legacy,juce::String("\n"),manifest})hash.update(text.toRawUTF8(),text.getNumBytesAsUTF8());return hash.finish();
 }
+inline bool associatedStateChildrenValid(const juce::XmlElement& base)
+{
+    bool sawSession=false;
+    for(const auto* child:base.getChildIterator())
+    {
+        if(child->hasTagName("SwellSession"))
+        {
+            if(sawSession)return false;
+            sawSession=true;
+        }
+        else if(!child->hasTagName("NextCapture") && !child->hasTagName("AcceptedLoopSource"))
+            return false;
+    }
+    auto kind=CaptureSourceKind::song;
+    LoopCapturePreference preference;
+    return sawSession && readLoopState(base,kind,preference);
+}
 inline bool encodeAssociatedState(const juce::String& legacy,const juce::String& manifest,Association& association,juce::String& output,juce::String& error)
 {
     if(!associationXmlShape(legacy)){error="Malformed or oversized accepted metadata";return false;}
     auto xml=juce::XmlDocument::parse(legacy);
     if(!xml || !xml->hasTagName("PreverbState") || xml->getStringAttribute("stateVersion")!="8" || legacy.getNumBytesAsUTF8()>49*1024*1024
-        || xml->getChildByName("WorkingFolder") || manifest.getNumBytesAsUTF8()>8*1024*1024)
+        || !associatedStateChildrenValid(*xml) || manifest.getNumBytesAsUTF8()>8*1024*1024)
     {error="Invalid accepted metadata for folder association";return false;}
     auto next=association;next.snapshot=associationSnapshot(xml->toString(),manifest);
     if(!associationValid(next)){error="Invalid working-folder identity";return false;}
@@ -99,7 +117,7 @@ inline bool decodeAssociatedState(const juce::String& text,Association& associat
     if(!xml || !xml->hasTagName("PreverbState") || xml->getStringAttribute("stateVersion")!=juce::String(associatedEnvelopeVersion))
     {error="Unsupported associated processor envelope";return false;}
     auto* node=xml->getChildByName("WorkingFolder");
-    if(!node || xml->getNumChildElements()!=2 || !xml->getChildByName("SwellSession") || node->getNumAttributes()!=(node->hasAttribute("recovery")?6:5)
+    if(!node || node->getNumAttributes()!=(node->hasAttribute("recovery")?6:5)
         || node->getStringAttribute("version")!="1" || node->getNumChildElements()!=(node->hasAttribute("recovery")?2:1)
         || !node->getChildByName("CaptureManifest"))
     {error="Malformed working-folder metadata";return false;}
@@ -124,7 +142,9 @@ inline bool decodeAssociatedState(const juce::String& text,Association& associat
     const auto captured=node->getChildByName("CaptureManifest")->getAllSubText();
     if(!associationValid(next) || !associationJsonShape(captured))
     {error="Unsupported or oversized working-folder identity";return false;}
-    xml->removeChildElement(node,true);xml->setAttribute("stateVersion",8);const auto base=xml->toString();
+    xml->removeChildElement(node,true);xml->setAttribute("stateVersion",8);
+    if(!associatedStateChildrenValid(*xml)){error="Malformed associated capture or session metadata";return false;}
+    const auto base=xml->toString();
     if(associationSnapshot(base,captured)!=next.snapshot){error="Working snapshot does not match accepted metadata";return false;}
     association=std::move(next);legacy=base;manifest=captured;error.clear();return true;
 }

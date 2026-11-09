@@ -71,7 +71,7 @@ public:
     std::function<void(bool)> onRecapture;
     std::function<void()> onRefresh;
     std::function<void(LoopCapturePreference)> onLoopPreference;
-    std::function<void(bool)> onLoopArm;
+    std::function<void(bool,uint64_t)> onLoopArm;
     void displayLoop(LoopCapturePreference preference, bool canArm, bool armed, bool busy, const juce::String& status)
     {
         loopSettings=preference;
@@ -428,7 +428,7 @@ private:
             const auto pass=loopArmPass.value_or(flow.pass);
             loopArmPass.reset();
             if(onLoopArm && pass==flow.pass && (loopArm.getToggleState() || flow.locked()))
-                onLoopArm(loopArm.getToggleState());
+                onLoopArm(loopArm.getToggleState(),pass);
             if(onRefresh)onRefresh();
         };
     }
