@@ -19,6 +19,14 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 24 adopts the approved P8 waveform gestures.
+Reuse `WaveformGestures` for input classification, pointer-wheel zoom and
+focus rendering. Each main canvas keeps its own bounds and model binding.
+Left-click or drag positions the local marker or edits a Perform handle.
+Middle-drag pans and right input is idle. Perform's compact Overview uses
+left-drag alone to pan at the current zoom. See the
+[native and production evidence](../validation/2026-11-10-issue-107-waveform-gestures.md).
+
 Production standards revision 20 uses labeled switches in Learn and Settings
 and inline checkboxes for Enabled, Solo and Freeze. Use `Switch` and the
 checkbox form of `BooleanToggle` for their shared pointer, focus and activation

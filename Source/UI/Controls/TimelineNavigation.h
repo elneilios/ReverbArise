@@ -1,6 +1,5 @@
 #pragma once
-#include <UI/WorkspaceTheme.h>
-#include <UI/SwellViewport.h>
+#include "WaveformGestures.h"
 #include <limits>
 namespace m3::ui::controls
 {
@@ -8,13 +7,11 @@ namespace m3::ui::controls
 class TimelineNavigation final:public juce::Component,public juce::SettableTooltipClient
 {
 public:
-    enum class PanGesture {leftOrShiftLeft,rightDrag};
-    TimelineNavigation(){setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
-        setTitle("Read-only waveform navigation");setTooltip("Wheel: zoom at pointer. Drag or Shift-wheel: pan. +/-: zoom. Arrows: pan. Home or double-click: Fit.");}
+    TimelineNavigation(){setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(false);
+        setTitle("Export preview waveform");setTooltip("Left-click or drag: position ready preview. Wheel: zoom at pointer. Middle-drag: pan. Home: Fit.");}
     std::function<void()> onChange;
     std::function<void(int64_t)> onPosition;
     void cancelGesture(){positioning=false;panning=false;}
-    void setPanGesture(PanGesture gesture){cancelGesture();panGesture=gesture;}
     void setPositioningEnabled(bool enabled){if(positioningEnabled && !enabled)cancelGesture();positioningEnabled=enabled;}
     const SwellViewport& viewport()const noexcept{return view;}
     double minimumSpan()const noexcept{return std::min(minimum,limits.span());}
@@ -34,36 +31,47 @@ public:
     void fit(){view=fitView;clamp();changed();}
     void zoom(double factor,double anchor=.5){view.zoom(factor,std::clamp(anchor,0.,1.));clamp();changed();}
     void pan(double fraction){view.shift(fraction);clamp();changed();}
-    void mouseDown(const juce::MouseEvent& e)override{grabKeyboardFocus();down=view;
-        panning=isPanGesture(e.mods);
-        positioning=e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown() && !e.mods.isShiftDown() && !panning && onPosition!=nullptr && positioningEnabled;
-        if(positioning && e.getNumberOfClicks()==1)position(e.position.x);}
+    void mouseDown(const juce::MouseEvent& e)override
+    {
+        cancelGesture();
+        panning=waveformButton(e.mods,juce::ModifierKeys::middleButtonModifier);
+        const auto left=waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier);
+        if(!panning && !left)return;
+        focus->pointerInput();
+        if(isShowing())grabKeyboardFocus();
+        down=view;
+        positioning=left && onPosition && positioningEnabled;
+        if(positioning)position(e.position.x);
+    }
     void mouseDrag(const juce::MouseEvent& e)override
-    {if(getWidth()<=0)return;if(positioning){if(e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown())position(e.position.x);return;}
-        if(!panning || !isPanGesture(e.mods))return;view=down;view.shift(-static_cast<double>(e.getDistanceFromDragStartX())/getWidth());clamp();changed();}
+    {
+        if(getWidth()<=0)return;
+        if(positioning && waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier))position(e.position.x);
+        if(!panning || !waveformButton(e.mods,juce::ModifierKeys::middleButtonModifier))return;
+        view=down;view.shift(-static_cast<double>(e.getDistanceFromDragStartX())/getWidth());clamp();changed();
+    }
     void mouseUp(const juce::MouseEvent&)override{cancelGesture();}
-    void mouseDoubleClick(const juce::MouseEvent& e)override{if(e.mods.isLeftButtonDown() && !e.mods.isRightButtonDown())fit();}
     void mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)override
-    {if(e.mods.isShiftDown() || std::abs(wheel.deltaX)>std::abs(wheel.deltaY))pan(-2*(std::abs(wheel.deltaX)>std::abs(wheel.deltaY)?wheel.deltaX:wheel.deltaY));
-        else zoom(std::pow(1.25,-wheel.deltaY*4),getWidth()>0?e.position.x/getWidth():.5);}
+    {if(getWidth()>0 && zoomWaveform(view,wheel.deltaY,e.position.x/getWidth(),limits,minimum))changed();}
     bool keyPressed(const juce::KeyPress& key)override
     {
+        focus->keyboardInput();
         if(key==juce::KeyPress::homeKey || key.getTextCharacter()=='f' || key.getTextCharacter()=='F'){fit();return true;}
         if(key==juce::KeyPress::leftKey){pan(-.1);return true;}if(key==juce::KeyPress::rightKey){pan(.1);return true;}
         if(key.getTextCharacter()=='+' || key.getTextCharacter()=='='){zoom(.8);return true;}
         if(key.getTextCharacter()=='-'){zoom(1.25);return true;}return false;
     }
-    void focusGained(FocusChangeType)override{repaint();}void focusLost(FocusChangeType)override{repaint();}
-    void paint(juce::Graphics& g)override{if(hasKeyboardFocus(false)){g.setColour(aqua);g.drawRoundedRectangle(controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke),radius,controlGeometry::focusStroke);}}
+    void focusGained(FocusChangeType cause)override{if(cause==focusChangedByTabKey)focus->keyboardInput();repaint();}
+    void focusLost(FocusChangeType)override{cancelGesture();repaint();}
+    void visibilityChanged()override{if(!isVisible())cancelGesture();}
+    void paint(juce::Graphics& g)override{paintWaveformFocus(g,*this,getLocalBounds(),*focus);}
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override{return waveformAccessibility(*this,*focus);}
 private:
-    bool isPanGesture(juce::ModifierKeys keys)const{return panGesture==PanGesture::rightDrag?
-        keys.isRightButtonDown() && !keys.isLeftButtonDown():keys.isLeftButtonDown() && (keys.isShiftDown() || onPosition==nullptr);}
+    juce::SharedResourcePointer<FocusVisibility> focus;
     void position(float x){if(positioningEnabled && onPosition && getWidth()>0)onPosition(view.sample(std::clamp(x,0.f,static_cast<float>(getWidth())),0,getWidth()));}
     void changed(){repaint();if(onChange)onChange();}
-    void clamp(){const auto span=std::clamp(view.span(),std::min(minimum,limits.span()),limits.span());
-        view.first=std::clamp(view.first,limits.first,std::max(limits.first,limits.last-span));view.last=view.first+span;}
+    void clamp(){view.constrain(limits,minimum);}
     SwellViewport view,down,fitView,limits;double minimum=1;
     bool positioningEnabled=false,positioning=false,panning=false;
-    PanGesture panGesture=PanGesture::leftOrShiftLeft;
 };
 }

@@ -14,6 +14,13 @@
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
+static juce::MouseEvent waveformPointer(juce::Component& target,juce::Point<float> point,
+                                       juce::ModifierKeys mods={},std::optional<juce::Point<float>> start={})
+{
+    const auto now=juce::Time::getCurrentTime();
+    return {juce::Desktop::getInstance().getMainMouseSource(),point,mods,0,0,0,0,0,&target,&target,
+        now,start.value_or(point),now,1,start.has_value()};
+}
 static void wheelOver(juce::Component& target,float delta,juce::ModifierKeys modifiers={},
                       std::optional<juce::Point<int>> at={})
 {
@@ -406,18 +413,16 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(seeks==2 && positioned==panel.viewport().sample(point.x+25,0,navigation->getWidth()));
         REQUIRE(panel.viewport().first==inspected.first && panel.viewport().last==inspected.last);
         navigation->mouseDown(pointer(point.x,juce::ModifierKeys::rightButtonModifier));REQUIRE(seeks==2);
-        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::rightButtonModifier));
         navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::rightButtonModifier));
-        REQUIRE(seeks==2 && panel.viewport().first!=inspected.first);
-        const auto rightPan=panel.viewport();
-        navigation->mouseDoubleClick(pointer(point.x,juce::ModifierKeys::rightButtonModifier));
-        REQUIRE(panel.viewport().first==rightPan.first);
+        REQUIRE(seeks==2 && panel.viewport().first==inspected.first);
         navigation->mouseUp(pointer(point.x+25,{}));
-        navigation->mouseDrag(pointer(point.x+50,juce::ModifierKeys::rightButtonModifier));
-        REQUIRE(panel.viewport().first==rightPan.first && seeks==2);
-        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
-        navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier|juce::ModifierKeys::shiftModifier));
-        REQUIRE(panel.viewport().first==rightPan.first && seeks==2);
+        navigation->mouseDown(pointer(point.x,juce::ModifierKeys::middleButtonModifier));
+        navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::middleButtonModifier));
+        REQUIRE(seeks==2 && panel.viewport().first!=inspected.first);
+        const auto middlePan=panel.viewport();
+        navigation->mouseUp(pointer(point.x+25,{}));
+        navigation->mouseDrag(pointer(point.x+50,juce::ModifierKeys::middleButtonModifier));
+        REQUIRE(panel.viewport().first==middlePan.first && seeks==2);
         navigation->fit();navigation->mouseWheelMove(wheelEvent,wheel);navigation->keyPressed(juce::KeyPress(juce::KeyPress::rightKey));
         snapshot.songExport.previous=prepared;snapshot.songExport.prepared.reset();snapshot.songExport.phase=m3::ExportPhase::preparing;
         panel.display(snapshot);REQUIRE(!named(panel,"exportPlay")->isEnabled() && !named(panel,"exportSave")->isEnabled());
@@ -436,9 +441,9 @@ int main(int argc,char* argv[]){return runTest([&]
         navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==4);
         snapshot.songExport.phase=m3::ExportPhase::preparing;panel.display(snapshot);
         navigation->mouseDrag(pointer(point.x+25,juce::ModifierKeys::leftButtonModifier));REQUIRE(seeks==4);
-        navigation->zoom(.8);navigation->mouseDown(pointer(point.x,juce::ModifierKeys::rightButtonModifier));
-        navigation->mouseDrag(pointer(point.x+10,juce::ModifierKeys::rightButtonModifier));const auto pendingPan=panel.viewport();
-        panel.display(snapshot);navigation->mouseDrag(pointer(point.x+20,juce::ModifierKeys::rightButtonModifier));
+        navigation->zoom(.8);navigation->mouseDown(pointer(point.x,juce::ModifierKeys::middleButtonModifier));
+        navigation->mouseDrag(pointer(point.x+10,juce::ModifierKeys::middleButtonModifier));const auto pendingPan=panel.viewport();
+        panel.display(snapshot);navigation->mouseDrag(pointer(point.x+20,juce::ModifierKeys::middleButtonModifier));
         REQUIRE(seeks==4 && panel.viewport().first!=pendingPan.first);
         navigation->mouseDown(pointer(point.x,juce::ModifierKeys::leftButtonModifier));
         snapshot.songExport.phase=m3::ExportPhase::ready;panel.display(snapshot);
@@ -740,6 +745,57 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(std::abs(probe.viewport().first+20)<1e-6 && std::abs(probe.viewport().last-520)<1e-6);
         REQUIRE(processor->getSongTime().sample==hostBefore);
         snapshotPanel(overview,"sparse-overview-oracle");
+        {
+            auto accepted=sparse;
+            accepted.manifest.ranges.push_back({96000,96000,CaptureCoverageKind::audio});
+            display.sessionEpoch=engine.assignmentEpoch();
+            probe.setData(accepted,display,{true,0,0,48000,120,4,4},false);
+            probe.setViewport({0,192000});
+            const auto point=probe.sourceLane().getCentre();
+            const auto source=probe.sourceLane();
+            const auto anchor=probe.viewport().sample(point.x,source.getX(),source.getWidth());
+            const auto left=juce::ModifierKeys::leftButtonModifier;
+            const auto right=juce::ModifierKeys::rightButtonModifier;
+            const auto middle=juce::ModifierKeys::middleButtonModifier;
+            probe.mouseDown(waveformPointer(probe,point,left));
+            REQUIRE(probe.localPlayheadSample()==anchor);
+            probe.mouseDrag(waveformPointer(probe,point.translated(12,0),left,point));
+            const auto marker=probe.localPlayheadSample();
+            REQUIRE(marker!=anchor);
+            probe.mouseUp(waveformPointer(probe,point));
+            wheelOver(probe,.5f,{},point.roundToInt());
+            REQUIRE(std::abs(probe.viewport().sample(point.x,source.getX(),source.getWidth())-anchor)<200);
+            const auto zoomed=probe.viewport();
+            REQUIRE(zoomed.span()<192000 && probe.localPlayheadSample()==marker);
+            probe.mouseDown(waveformPointer(probe,point,middle));
+            probe.mouseDrag(waveformPointer(probe,point.translated(20,0),middle,point));
+            const auto panned=probe.viewport();
+            REQUIRE(panned.first<zoomed.first && probe.localPlayheadSample()==marker);
+            probe.mouseUp(waveformPointer(probe,point));
+            probe.mouseDrag(waveformPointer(probe,point.translated(40,0),middle,point));
+            probe.mouseDown(waveformPointer(probe,point,right));
+            probe.mouseDrag(waveformPointer(probe,point.translated(40,0),right,point));
+            REQUIRE(probe.viewport().first==panned.first && probe.localPlayheadSample()==marker);
+            const auto start=overview.waveformBounds().getCentre();
+            overview.mouseDown(waveformPointer(overview,start,left));
+            overview.mouseUp(waveformPointer(overview,start));
+            for(const auto button:{middle,right})
+            {
+                overview.mouseDown(waveformPointer(overview,start,button));
+                overview.mouseDrag(waveformPointer(overview,start.translated(20,0),button,start));
+                overview.mouseUp(waveformPointer(overview,start));
+            }
+            wheelOver(overview,1,{},start.roundToInt());
+            REQUIRE(probe.viewport().first==panned.first);
+            overview.mouseDown(waveformPointer(overview,start,left));
+            overview.mouseDrag(waveformPointer(overview,start.translated(20,0),left,start));
+            overview.mouseUp(waveformPointer(overview,start));
+            REQUIRE(probe.viewport().first>panned.first && std::abs(probe.viewport().span()-panned.span())<.001);
+            REQUIRE(probe.localPlayheadSample()==marker && processor->getSongTime().sample==hostBefore);
+            auto replaced=display;++replaced.sessionEpoch;
+            probe.setData(accepted,replaced,{true,0,0,48000,120,4,4},false);
+            REQUIRE(!probe.localPlayheadSample());
+        }
         m3::Swell edit;edit.arrival=96000;edit.sourceStart=96000;edit.sourceEnd=120000;edit.shape.automaticStart=false;edit.shape.startOffset=-48000;edit.shape.endOffset=16800;
         display.session.swells={edit};display.session.primary=edit.id;display.session.selected={edit.id};
         auto raw=std::make_shared<m3::Waveform>();raw->start=0;raw->end=200000;display.raw=raw;display.sourceDetail.reset();
@@ -1077,10 +1133,31 @@ int main(int argc,char* argv[]){return runTest([&]
             click(point.translated(75,0),juce::ModifierKeys::leftButtonModifier);
             REQUIRE(learning->hasPinnedInspection() && learning->inspectedSample()!=pinSample && learning->hasKeyboardFocus(false));
             auto relocated=learning->inspectedSample();
+            const auto plotPoint=learning->timelineBounds().getCentre();
+            juce::SharedResourcePointer<m3::ui::controls::FocusVisibility> waveformFocus;
+            REQUIRE(!waveformFocus->isVisible());
+            pointerTo(editor,point.translated(10,0));REQUIRE(!waveformFocus->isVisible());
+            REQUIRE(learning->getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::focus));
+            REQUIRE(waveformFocus->isVisible() && learning->hasKeyboardFocus(false));
+            const auto sampleUnderPointer=[&]{const auto [a,b]=learning->dryViewport();const auto lane=learning->timelineBounds();
+                return m3::SwellViewport{a,b}.sample(plotPoint.x,lane.getX(),lane.getWidth());};
+            const auto anchor=sampleUnderPointer();
+            wheelOver(*learning,.5f,{},plotPoint);
+            REQUIRE(sampleUnderPointer()==anchor && learning->inspectedSample()==relocated);
+            const auto zoomed=learning->dryViewport();REQUIRE(zoomed.second-zoomed.first<view.second-view.first);
+            const auto middle=juce::ModifierKeys::middleButtonModifier;
+            const auto down=plotPoint.toFloat();
+            learning->mouseDown(waveformPointer(*learning,down,middle));
+            learning->mouseDrag(waveformPointer(*learning,down.translated(30,0),middle,down));
+            const auto panned=learning->dryViewport();
+            REQUIRE(panned.first<zoomed.first && learning->inspectedSample()==relocated);
+            learning->mouseUp(waveformPointer(*learning,down));
+            learning->mouseDrag(waveformPointer(*learning,down.translated(70,0),middle,down));
+            REQUIRE(learning->dryViewport()==panned);
             auto expanded=mixed;expanded.manifest.ranges.push_back({960000,96000,CaptureCoverageKind::audio});
             auto sought=time;sought.sample=48000;sought.ppq=2;
             learning->display(expanded,engine.snapshot(),sought,flow,true);
-            REQUIRE(learning->inspectedSample()==relocated && learning->dryViewport().second>=view.second);
+            REQUIRE(learning->inspectedSample()==relocated && learning->dryViewport()==panned);
             for(const auto phase:{workflow::Phase::recording,workflow::Phase::draining,workflow::Phase::validating}){
                 auto active=flow;active.phase=phase;learning->display(expanded,engine.snapshot(),sought,active,true);
                 REQUIRE(learning->hasPinnedInspection() && learning->inspectedSample()==relocated);
@@ -1839,7 +1916,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(engine.savedSession().swells[0].sourceStart==-12240);editor.modifierKeysChanged({});
         const auto beforeInsert=engine.savedSession();const juce::Point<float> insertPoint{at(13000),lane.getY()+20};
         const auto stamp=juce::Time::getCurrentTime();
-        juce::MouseEvent insert(juce::Desktop::getInstance().getMainMouseSource(),insertPoint,{},0,0,0,0,0,&canvas,&canvas,stamp,insertPoint,stamp,2,false);
+        juce::MouseEvent insert(juce::Desktop::getInstance().getMainMouseSource(),insertPoint,juce::ModifierKeys::leftButtonModifier,0,0,0,0,0,&canvas,&canvas,stamp,insertPoint,stamp,2,false);
         canvas.mouseDoubleClick(insert);REQUIRE(engine.savedSession().swells.size()==beforeInsert.swells.size()+1);
         REQUIRE(engine.savedSession().timing.sample==session.timing.sample && engine.savedSession().timing.ppq==session.timing.ppq);
         REQUIRE(m3::find(engine.savedSession(),engine.savedSession().primary)->arrival==12000);

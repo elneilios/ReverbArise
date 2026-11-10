@@ -8,6 +8,7 @@
 
 namespace m3
 {
+using ui::controls::waveformButton;
 namespace
 {
 bool sameCaptureDisplay(const CaptureSessionSnapshot& a,const CaptureSessionSnapshot& b)
@@ -44,7 +45,8 @@ bool sameWetDisplay(const EditorSnapshot& a,const EditorSnapshot& b)
 }
 SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
 {
-    setTooltip("Dry: captured source. Double-click dry audio to add a target. Wet: audible shaped audio; grey is the raw reference. Both lanes share a display amplitude scale. Drag the wet body to move audio and envelope.");
+    setTooltip("Left-click or drag open waveform to position the local playhead. Wheel zooms at the pointer. Middle-drag pans.");
+    setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(false);
     setName("swellTimeline");scrollbar.addListener(this);addAndMakeVisible(scrollbar);setMouseCursor(juce::MouseCursor::CrosshairCursor);
     waveZoom.setName("waveZoom");waveZoom.setSliderStyle(juce::Slider::LinearHorizontal);
     waveZoom.setRange(-24,48,1);waveZoom.setWheelSteps(3,1);waveZoom.setValue(0,juce::dontSendNotification);
@@ -56,7 +58,8 @@ SwellTimeline::SwellTimeline(SwellEngine& e):engine(e)
 void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t,bool available,bool hostPlaying)
 {
     const auto nextClock=gridClockContext(s.gridClock,hostPlaying);
-    if(drag!=Drag::none && drag!=Drag::overview)
+    if(s.sessionEpoch!=data.sessionEpoch){localPlayhead.reset();pointerGesture=PointerGesture::none;}
+    if(drag!=Drag::none)
     {
         const bool wetDrag=drag!=Drag::arrival && drag!=Drag::sourceStart && drag!=Drag::sourceEnd;
         const auto owner=find(s.session,dragId);
@@ -82,7 +85,7 @@ void SwellTimeline::setGestureModifiers(bool fine,bool bypassed)
 {if(fineDrag!=fine || snapBypassed!=bypassed){rebaseDrag();fineDrag=fine;snapBypassed=bypassed;}}
 void SwellTimeline::rebaseDrag()
 {
-    if(drag==Drag::none || drag==Drag::overview)return;
+    if(drag==Drag::none)return;
     const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return;}
     dragOrigin=lastPointer;initialEnvelope=w->shape;initialPlacement=w->placement;
     initialTension=drag==Drag::inTension?w->shape.inTension:w->shape.outTension;
@@ -415,15 +418,24 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(ui::previewCursor);g.drawVerticalLine(static_cast<int>(play),source.getY(),wet.getBottom());
         g.drawText("Audition",juce::Rectangle<float>(play+4,source.getY()+3,65,16),juce::Justification::left);}}
 
+    if(localPlayhead)
+    {
+        const auto play=x(*localPlayhead);
+        if(play>=source.getX() && play<source.getRight())
+        {
+            g.setColour(ui::previewCursor);
+            const float dashes[]{4,4};
+            for(const auto& lane:{source,wet})g.drawDashedLine({play,lane.getY(),play,lane.getBottom()},dashes,2,ui::rule);
+        }
+    }
+    ui::controls::paintWaveformFocus(g,*this,source.getUnion(wet).getSmallestIntegerContainer().expanded(ui::controlGeometry::focusPadding),*focus);
 }
 bool SwellTimeline::beginDrag(juce::Point<float> point)
+{return beginEdit(point)==Press::handled;}
+
+SwellTimeline::Press SwellTimeline::beginEdit(juce::Point<float> point)
 {
-    if(!editingEnabled)return false;
     drag=Drag::none;
-    if(overview.contains(point))
-    {
-        drag=Drag::overview;dragTo(point);return true;
-    }
     if(const auto w=find(data.session,data.session.primary))
     {
         dragId=w->id;
@@ -442,21 +454,25 @@ bool SwellTimeline::beginDrag(juce::Point<float> point)
         if(drag==Drag::none && wet.contains(point) && data.raw)
         {int64_t a,b;if(requestedShapeBounds(*w,data.raw->start,a,b) && point.x>=x(a) && point.x<=x(b))
             {drag=Drag::move;hover.reset();}}
-        if(drag!=Drag::none)return prepareDrag(point);
+        if(drag!=Drag::none)
+        {
+            if(editingEnabled && prepareDrag(point))return Press::handled;
+            drag=Drag::none;return Press::blocked;
+        }
     }
     if(source.contains(point))
     {
         for(const auto& w:data.session.swells)if(std::abs(point.x-x(w.arrival))<7)
-        {if(!engine.selectTargets({w.id},w.id,data.sessionEpoch))return false;dragId=w.id;drag=Drag::arrival;data.session=engine.savedSession();return prepareDrag(point);}
+        {if(!editingEnabled || !engine.selectTargets({w.id},w.id,data.sessionEpoch))return Press::blocked;
+            dragId=w.id;drag=Drag::arrival;data.session=engine.savedSession();return prepareDrag(point)?Press::handled:Press::blocked;}
         for(size_t i=0;i<data.candidates.size();++i)if(std::abs(point.x-x(data.candidates[i].sample))<7)
-        {if(onCandidateSelected)onCandidateSelected(static_cast<int>(i));return true;}
+        {if(!editingEnabled)return Press::blocked;
+            if(onCandidateSelected)onCandidateSelected(static_cast<int>(i));return Press::handled;}
     }
-    return false;
+    return Press::open;
 }
 void SwellTimeline::dragTo(juce::Point<float> point)
 {
-    if(drag==Drag::overview)
-    {const auto [a,b]=globalBounds();const auto at=a+std::clamp((point.x-overview.getX())/overview.getWidth(),0.0f,1.0f)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();return;}
     if(drag==Drag::none)return;
     if(!std::isfinite(point.x) || !std::isfinite(point.y) || source.getWidth()<=0 || point==lastPointer)return;
     lastPointer=point;const auto kind=drag;const bool vertical=kind==Drag::inTension || kind==Drag::outTension;
@@ -510,11 +526,19 @@ void SwellTimeline::mouseMove(const juce::MouseEvent& e)
         else if(std::abs(e.position.x-x(w->arrival))<7)help="Target / Arrival (yellow; drag its top marker)";
     }
     if(help!=sourceHover){sourceHover=help;repaint();}
-    setTooltip(help.isNotEmpty()?help:wet.contains(e.position)?juce::String("Audible shaped wet; grey is the raw reference. Shared amplitude scale with dry. Drag the wet body to move audio and envelope. Ctrl bypasses Snap; Shift fine-adjusts."):source.contains(e.position)?juce::String("Captured dry source at its original position. Double-click to add a target; drag the source handles to edit bounds. The highlighted span is captured audition context."):juce::String("Musical ruler: bars and denominator beats, aligned with both lanes. Height changes display amplitude only."));
+    if(source.contains(e.position) || wet.contains(e.position))
+    {
+        const auto detail=help.isNotEmpty()?help:wet.contains(e.position)
+            ?juce::String("Audible shaped wet. Grey is the raw reference. Both lanes share a display amplitude scale. Drag the wet body to move audio and envelope. Ctrl bypasses Snap. Shift fine-adjusts.")
+            :juce::String("Captured dry source. Double-click to add a target or drag its source handles.");
+        setTooltip(detail+" Left-click or drag open waveform to place the local playhead. Wheel zooms. Middle-drag pans.");
+    }
+    else setTooltip("Musical ruler: bars and denominator beats, aligned with both lanes. Height changes display amplitude only.");
     setTitle(help.isEmpty()?juce::String("Dry/wet waveform editor"):help);setMouseCursor(help.isNotEmpty()?juce::MouseCursor::LeftRightResizeCursor:juce::MouseCursor::NormalCursor);
 }
 bool SwellTimeline::keyPressed(const juce::KeyPress& key)
 {
+    focus->keyboardInput();
     if(key.getKeyCode()!=juce::KeyPress::leftKey && key.getKeyCode()!=juce::KeyPress::rightKey)return false;
     setGestureModifiers(key.getModifiers().isShiftDown(),key.getModifiers().isCtrlDown());
     for(const auto& p:grabPoints())if(hover && p.kind==*hover){if(!beginDrag(p.point))return false;
@@ -530,11 +554,50 @@ bool SwellTimeline::keyPressed(const juce::KeyPress& key)
         }
         drag=Drag::none;return true;}return false;
 }
-void SwellTimeline::mouseDown(const juce::MouseEvent& e){setWantsKeyboardFocus(true);grabKeyboardFocus();setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());beginDrag(e.position);repaint();}
-void SwellTimeline::mouseDrag(const juce::MouseEvent& e){setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
+void SwellTimeline::mouseDown(const juce::MouseEvent& e)
+{
+    endPointerGesture();
+    const auto left=waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier);
+    const auto middle=waveformButton(e.mods,juce::ModifierKeys::middleButtonModifier);
+    if(left && inlineOverview && overview.contains(e.position))
+    {
+        pointerGesture=PointerGesture::overviewPan;panStart=view;return;
+    }
+    if((!left && !middle) || (!source.contains(e.position) && !wet.expanded(left?8.f:0.f).contains(e.position)))return;
+    focus->pointerInput();
+    if(isShowing())grabKeyboardFocus();
+    if(middle){pointerGesture=PointerGesture::detailPan;panStart=view;return;}
+    setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
+    if(beginEdit(e.position)==Press::open && (source.contains(e.position) || wet.contains(e.position)))
+    {pointerGesture=PointerGesture::position;positionPlayhead(e.position.x);}
+    repaint();
+}
+void SwellTimeline::mouseDrag(const juce::MouseEvent& e)
+{
+    const auto dx=static_cast<double>(e.getDistanceFromDragStartX());
+    if(pointerGesture==PointerGesture::detailPan && waveformButton(e.mods,juce::ModifierKeys::middleButtonModifier) && source.getWidth()>0)
+        panFrom(panStart,-dx/source.getWidth());
+    if(!waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier))return;
+    if(pointerGesture==PointerGesture::overviewPan && overview.getWidth()>0)
+    {
+        const auto [first,last]=globalBounds();
+        panFrom(panStart,dx/overview.getWidth()*(last-first)/panStart.span());
+    }
+    else if(pointerGesture==PointerGesture::position)positionPlayhead(e.position.x);
+    else {setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
+}
+void SwellTimeline::positionPlayhead(float at)
+{
+    localPlayhead=view.sample(std::clamp(at,source.getX(),source.getRight()),source.getX(),source.getWidth());
+    repaint();
+}
+void SwellTimeline::panFrom(SwellViewport initial,double fraction)
+{
+    view=initial;view.shift(fraction);constrainNavigation();navigationChanged();
+}
 void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
 {
-    if(!editingEnabled || data.sessionEpoch!=engine.assignmentEpoch())return;
+    if(!waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier) || !editingEnabled || data.sessionEpoch!=engine.assignmentEpoch())return;
     setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(!source.contains(e.position))return;
     for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
@@ -550,14 +613,41 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
     else engine.addTarget(candidate);
 }
 void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
-{if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}navigationChanged();}
+{
+    if((source.contains(e.position) || wet.contains(e.position)) && ui::controls::zoomWaveform(view,wheel.deltaY,
+        (e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan()))navigationChanged();
+}
 void SwellTimeline::navigateOverview(double fraction)
 {if(!std::isfinite(fraction))return;const auto [a,b]=globalBounds();const auto at=a+std::clamp(fraction,0.0,1.0)*(b-a),size=view.span();view.first=at-size/2;view.last=at+size/2;constrainNavigation();navigationChanged();}
 SwellOverview::SwellOverview(SwellTimeline& value):timeline(value)
 {
-    setTooltip("Click the overview to navigate the waveform view without moving the DAW playhead.");
+    setTooltip("Left-drag the Overview to pan the detail waveform at its current zoom.");
     setName("songOverview");addAndMakeVisible(heading);heading.setName("overviewHeading");heading.setText("Overview",juce::dontSendNotification);
     ui::applyTextRole(heading,ui::TextRole::sectionHeading);heading.setInterceptsMouseClicks(false,false);
+}
+void SwellOverview::mouseDown(const juce::MouseEvent& e)
+{
+    panning=waveformBounds().contains(e.position) && waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier);
+    if(!panning)return;
+    panStart=timeline.view;panEpoch=timeline.data.sessionEpoch;
+    setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+}
+void SwellOverview::mouseDrag(const juce::MouseEvent& e)
+{
+    const auto width=waveformBounds().getWidth();
+    if(!panning || !waveformButton(e.mods,juce::ModifierKeys::leftButtonModifier) || width<=0
+        || panEpoch!=timeline.data.sessionEpoch || panEpoch!=timeline.engine.assignmentEpoch())return;
+    const auto [first,last]=timeline.globalBounds();
+    timeline.panFrom(panStart,static_cast<double>(e.getDistanceFromDragStartX())/width*(last-first)/panStart.span());
+    repaint();
+}
+void SwellOverview::mouseUp(const juce::MouseEvent& e)
+{
+    panning=false;mouseMove(e);
+}
+void SwellOverview::mouseMove(const juce::MouseEvent& e)
+{
+    setMouseCursor(waveformBounds().contains(e.position)?juce::MouseCursor::LeftRightResizeCursor:juce::MouseCursor::NormalCursor);
 }
 void SwellOverview::resized()
 {
