@@ -25,15 +25,25 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
                            inputModuleId=target, inputId=inlet,
                            color="#ffb437" if timing else "#1ebc8b"))
 
+    clocked_end_signal = variant == "clocked-end-signal"
+    clocked_repeat = variant == "clocked-end-on-repeat"
+    clocked = clocked_end_signal or clocked_repeat
     perform_sequence = variant == "perform-sequenced"
     perform = variant == "perform" or perform_sequence
-    manual = variant == "manual" or perform
+    manual = variant == "manual" or perform or clocked
     probe = variant == "probe"
-    clock_params = [(1, -17), (2, -5), (3, 137)] if variant == "perform" else [(3, 137)]
-    clock = module("ImpromptuModular", "Clocked-Clkd", "2.5.0", 10, clock_params,
-                   running=variant in ("manual", "perform", "probe"),
-                   trigOuts=[False, False, True, False] if variant == "perform" else [False] * 4,
-                   resetClockOutputsHigh=False)
+    if clocked:
+        # Master at 137 BPM, CLK 1 and 2 divided by 8, CLK 3 divided by 4.
+        # CLK 2's last delay setting offsets Stop by three quarters of its cycle.
+        clock_params = [(0, 137), (1, -9), (2, -9), (3, -5), (16, 7)]
+        clock = module("ImpromptuModular", "Clocked", "2.5.0", 20, clock_params,
+                       running=False, resetClockOutputsHigh=False, displayDelayNoteMode=False)
+    else:
+        clock_params = [(1, -17), (2, -5), (3, 137)] if variant == "perform" else [(3, 137)]
+        clock = module("ImpromptuModular", "Clocked-Clkd", "2.5.0", 10, clock_params,
+                       running=variant in ("manual", "probe"),
+                       trigOuts=[False, False, True, False] if variant == "perform" else [False] * 4,
+                       resetClockOutputsHigh=False)
     source, beat = clock, 0
     if not manual:
         sequencer = module("Fundamental", "SEQ3", "2.6.4", 22, [(3, 4)], running=True,
@@ -53,7 +63,7 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
                            [(66, 0), (71, 1)], running=True, pulsesPerStep=1,
                            sequences=[steps], attributes2=attributes)
         connect(clock, 0, sequencer, 0)
-    if perform:
+    if perform or clocked:
         noise = module("Fundamental", "Noise", "2.6.4", 5)
         envelope = module("Fundamental", "ADSR", "2.6.4", 12,
                           [(0, 0.0), (1, 0.42), (2, 0.0), (3, 0.2)])
@@ -79,8 +89,12 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
 
     if perform_sequence:
         notes = [23, 24, 25, 12]
-    elif perform:
+    elif clocked_repeat:
         notes = [23, 12]
+    elif clocked_end_signal:
+        notes = [23, 24, 25]
+    elif perform:
+        notes = [23]
     else:
         notes = [23] if manual else [23, 24, 25]
     if probe:
@@ -93,9 +107,11 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
     if perform_sequence:
         for inlet, track in enumerate((2, 0, 1, 0)):
             connect(sequencer, track, host, inlet)
+    elif clocked:
+        for channel in range(2 if clocked_repeat else 3):
+            connect(clock, channel, host, channel)
     elif perform:
-        connect(clock, 0, host, 0)  # Clock sets the Learn capture grid.
-        connect(clock, 2, host, 1)  # Phrase /16 sets live wet phase.
+        connect(clock, 0, host, 0)  # Clock supplies the beat in Learn and Perform.
     else:
         connect(level, 1, host, 0)
     if not manual:
@@ -117,10 +133,10 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
             connect(level, 0, host, 16 + channel, False)
             connect(host, channel, output_module, channel, False)
         workflow = (
-            "In Learn, turn on Loop Mode and select End Signal. Click Arm to start. "
+            "In Learn, turn on Loop Mode and select End on Signal. Click Arm to start. "
             "Click Arm off while recording to finish at the end of the bar."
             if manual else
-            "In Learn, turn on Loop Mode and select End Signal, then press Run on Clkd. SEQ3 Step 1 arms the take. "
+            "In Learn, turn on Loop Mode and select End on Signal, then press Run on Clkd. SEQ3 Step 1 arms the take. "
             "Step 4 requests finish. The next Step 1 closes the bar."
         )
         instructions = (
@@ -132,17 +148,37 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
             "Recapture Audio off protects an accepted Loop. Switch it on to replace the Loop. "
             "If the clock stops before the closing beat, the incomplete take is discarded."
         )
-        if perform_sequence:
+        if clocked_repeat:
+            instructions = (
+                "REVERBARISE / END ON REPEAT\n\n"
+                "Select your output in Audio 2 at 48 kHz. Open the Host-FX eye. "
+                "In Learn, turn on Loop Mode, select End on repeat, and click Arm.\n\n"
+                "Press Run on Clocked. Master goes to B0 (Clock). "
+                "CLK 1 /8 goes to C0 (Phrase) and marks each two-bar repeat. "
+                "The next Phrase pulse closes the take. CLK 3 plays the snare once per bar."
+            )
+        elif clocked_end_signal:
+            instructions = (
+                "REVERBARISE / TWO-BAR CLOCKED END SIGNAL\n\n"
+                "Select your output in Audio 2 at 48 kHz. Open the Host-FX eye. "
+                "In Learn, turn on Loop Mode, select End on Signal, and leave Arm off.\n\n"
+                "Press Run on Clocked and keep it running through the take. "
+                "Master goes to B0 (Clock), CLK 1 /8 goes to C1 (Start/Arm), "
+                "and CLK 2 /8 with 3/4 delay goes to C#1 (Stop). Beat 9 closes the take. "
+                "CLK 3 plays the snare once per bar.\n\n"
+                "Leave Recapture Audio off to keep the first accepted take."
+            )
+        elif perform_sequence:
             instructions = (
                 f"REVERBARISE / {steps}-STEP END SIGNAL\n\n"
                 "Select 48 kHz audio. Open the Host-FX eye. In Learn, turn on Loop Mode "
-                "and choose End Signal if needed.\n\n"
+                "and choose End on Signal if needed.\n\n"
                 "Press RUN on Clkd and wait for Step 1. The sequencer does the arming. "
                 "The Arm button in Learn starts a manual take on the next beat.\n\n"
                 f"Step 1 arms and sets Phrase. Step {steps} requests Stop. "
                 f"The next Step 1 closes the {steps // 4}-bar take. "
                 "Recapture Audio off keeps the accepted take on later cycles.\n\n"
-                "Keep Clkd running while you generate swells in Learn so Phrase can verify. "
+                "Keep Clkd running while you generate swells in Learn. "
                 "Go to Perform and click Cue Loop when Ready."
             )
         elif perform:
@@ -150,12 +186,11 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
                 "REVERBARISE / LOOP PERFORM\n\n"
                 "Use 48 kHz and leave Clkd at 137 BPM. Select your output device in Audio 2. "
                 "You should hear a short snare-like hit once per bar. Open ReverbArise with the Host-FX eye.\n\n"
-                "Learn: turn on Loop Mode, set Duration to 4 Bars and click Arm. "
+                "Learn: turn on Loop Mode, set Duration to 4 Bars, click Arm and press Run on Clkd. "
                 "After Loop accepted, review the detected markers and click Generate Swells.\n\n"
                 "Perform: wait for Ready, then click Cue Loop. While waiting you can click Cancel Loop. "
-                "Once it plays, Stop Loop fades the swells and the dry hits keep going.\n\n"
-                "Leave both Host-FX timing cables connected. Input 1: Clock (B0). "
-                "Input 2: Phrase (C0). Green cables carry audio."
+                "Stop Loop finishes the current pass. Click Stop Now for an immediate fade.\n\n"
+                "Host-FX input 1: Clock (B0). Green cables carry audio."
             )
         module("Core", "Notes", "2.6.6", 16, text=instructions)
     patch = dict(version="2.6.6", path="", zoom=0.85, gridOffset=[0, 0], modules=modules, cables=cables)
@@ -167,7 +202,8 @@ def create_patch(bundle, output, variant, audio_device=None, steps=16):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("variant", choices=["manual", "sequenced", "probe", "perform", "perform-sequenced"])
+    parser.add_argument("variant", choices=["manual", "sequenced", "probe", "perform", "perform-sequenced",
+                                            "clocked-end-signal", "clocked-end-on-repeat"])
     parser.add_argument("--bundle", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--asio-device")

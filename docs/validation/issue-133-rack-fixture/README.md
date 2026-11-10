@@ -27,22 +27,28 @@ python -B docs/validation/issue-133-rack-fixture/make-patches.py sequenced --bun
 Use the `perform` variant to try the #126 Cue, Cancel and Stop commands. It uses
 the measured 137 BPM, 48 kHz, four-bar live profile in Host-FX. Clkd triggers
 a short snare-like hit once per bar. Two timing cables reach Host-FX.
-**Input 1 (B0, MIDI 23)** gets one pulse per beat for Learn.
-**Input 2 (C0, MIDI 12)** gets the /16 Phrase pulse for Perform.
-Leave both connected. Green cables carry audio into Host-FX and out to Audio 2.
+**Input 1 (B0, MIDI 23)** gets one Clock pulse per beat for Learn and Perform.
+The first pulse starts the four-beat count. Green cables carry audio into Host-FX and out to Audio 2.
 
 ```powershell
 $bundle = 'out/build/windows-msvc/preverb_plugin_artefacts/Release/VST3/ReverbArise.vst3'
-python -B docs/validation/issue-133-rack-fixture/make-patches.py perform --bundle $bundle --output 'out/issue-126/Loop Perform - Clock and Phrase.vcv'
+python -B docs/validation/issue-133-rack-fixture/make-patches.py perform --bundle $bundle --output 'out/issue-127/fixture/Loop Perform - Clock Only.vcv'
 ```
 
 Select your Audio 2 device at 48 kHz, open the Host-FX eye, and capture four bars
-using Learn's **Loop Mode**, **Duration**, and **Arm**. Review the markers and click
+using Learn's **Loop Mode**, **Duration**, and **Arm**, then press **Run** on Clkd.
+To retake while Clkd is running, enable **Recapture audio** and click **Arm**
+mid-bar. Recording starts at the next downbeat. Review the markers and click
 **Generate Swells**. In Perform, use **Dry + Wet** routing and wait for **Ready**.
 Cue and cancel one queued start, then cue again and let the swells repeat. Click
-**Stop Loop** and listen for the dry hits to continue. To exercise sync loss,
-unplug the phrase cable while the clock and audio continue, then reconnect it.
-After **Ready** returns, Cue again to resume wet playback.
+**Stop Loop** to finish that pass without the next lead-in. Click **Stop Now**
+while finishing to fade immediately. To exercise sync loss, unplug Clock.
+Reconnect it and wait for **Ready**, then Cue again.
+
+To sequence these actions, add Host-FX Note Gate inputs on channel 1:
+E0 (16) cues, F0 (17) finishes the current pass, and F#0 (18) stops with a
+short fade. Keep the Clock input connected. Perform's footer shows position
+within the captured Loop, with the captured BPM and meter.
 
 ### Sequencer with End Signal
 
@@ -57,11 +63,62 @@ wait for Step 1 to arm Learn. Clicking **Arm** in Learn starts a manual take on
 the next beat, so leave the button to the sequencer in this test. The last step
 requests Stop and the next Step 1 closes the take. The 4-, 8- and 16-step patches capture
 one, two and four bars respectively. Leave **Recapture Audio** off to preserve
-the first accepted take. All three lengths can be cued in Perform when the
-Phrase signal repeats at the captured length. Leave Clkd running after the
-take is accepted. The plug-in verifies two matching Phrase intervals while
-you work in Learn, and Cue becomes available in Perform once both the
-reference and wet audio are ready.
+the first accepted take. Leave Clkd running while you generate swells, then Cue
+in Perform when Ready. Step 1's optional Phrase pulse can align the bar count
+to the sequencer while playback is idle. Clock supplies the running timing.
+
+### Use a clock to automate End Signal
+
+A beat clock by itself does not issue Start or Stop. Use a clock with
+phase-offset divided outputs, or drive a resettable pulse counter from the
+same clock. For a two-bar phrase in 4/4:
+
+| Host-FX Note Gate | Send |
+| --- | --- |
+| B0 (23), Clock | Every beat |
+| C1 (24), Learn Start/Arm | The first beat of the phrase |
+| C#1 (25), Learn Stop | During the last bar, before the closing downbeat |
+
+For example, pulse Start with beat 1 and Stop with beat 8. Keep the beat
+clock running; beat 9 closes the take. Leave the Learn Arm button off so
+the patch controls the start. Leave Recapture Audio off to keep the first
+accepted take. A Phrase cable is optional and only sets the playback origin.
+For a known fixed length with only a beat cable and manual Arm, use Duration.
+With the full [Impromptu Clocked module](https://marcboule.github.io/ImpromptuModular/#clockedclkd),
+the equivalent two-bar setup is master Clock, a /8 output with no delay
+for Start/Arm, and another /8 output delayed by 3/4 of its cycle for Stop.
+This sends Stop on beat 7, still in time for beat 9 to close the take.
+Reset the clock before starting, with its stopped outputs set to low.
+Clkd lacks the sub-clock delay control. On 10 November 2026, this three-cable
+Clocked setup accepted an eight-beat, 168,176-frame take at 48 kHz and 137 BPM
+in Rack Free 2.6.6 with Host-FX 2.1.0. It used no sequencer or Phrase cable.
+The local patch, host log and manifest are in `out/issue-127/clocked-end-signal/`.
+
+Generate a fresh copy without saved plug-in state or asset references:
+
+```powershell
+python -B docs/validation/issue-133-rack-fixture/make-patches.py clocked-end-signal --bundle $bundle --output 'out/issue-127/clocked-end-signal/Clocked End Signal - Clean.vcv'
+```
+
+In the fresh instance, turn on Loop Mode and choose End signal in Learn.
+Leave Arm off, then start Clocked.
+
+### End on repeat with two control cables
+
+With the current worktree VST3, generate a fresh test patch:
+
+```powershell
+python -B docs/validation/issue-133-rack-fixture/make-patches.py clocked-end-on-repeat --bundle $bundle --output 'out/issue-127/fixture/Loop End on Repeat - Clock and Phrase.vcv'
+```
+
+Clocked Master goes to Host-FX **B0 (23)** for Clock. **CLK 1** is set
+to divide by 8 with zero delay and goes to **C0 (12)** for Phrase.
+Choose **End on repeat** in Learn, click **Arm**, then start Clocked.
+The first coincident Clock and Phrase starts capture and the next
+closes it after two bars. For a sequencer, use a Step 1 pulse from the
+same clock instead of the divided output.
+
+### Sequencer fixture evidence
 
 On 10 November 2026, headless Rack Free 2.6.6 with Host-FX 2.1.0,
 Fundamental 2.6.4 and Impromptu 2.5.0 delivered 128-frame callbacks at

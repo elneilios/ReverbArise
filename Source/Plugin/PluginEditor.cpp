@@ -19,7 +19,10 @@ juce::String phaseName(m3::Phase phase)
     }return {};
 }
 juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gainToDecibels(peak),1)+" dBFS":juce::String("silent");}
-
+juce::String sampleRateText(double rate)
+{
+    return juce::String(rate/1000,3).trimCharactersAtEnd("0").trimCharactersAtEnd(".")+" kHz";
+}
 
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p,std::function<void(const juce::String&)> writer)
@@ -117,7 +120,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
     removeButton.onClick=[this]{processor.swellEngine().removeSelected();refresh();};
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
-    auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
+    auditionButton.onClick=[this]{
+        if(!processor.auditionPreview())auditionRetryAfter=juce::Time::getMillisecondCounterHiRes()+2000;
+        refresh();
+    };stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
     separationSlider.beforeInvocation=[this]{separationPass=processor.getWorkflowSnapshot().pass;};
     separationSlider.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,separationSlider.getValue()/1000,s.autoRegenerate,separationPass.value_or(processor.getWorkflowSnapshot().pass));}};
@@ -222,7 +228,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
     auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop; safety protection remains active.");
     enabledButton.setTooltip("Include this swell in wet playback and audition.");soloButton.setTooltip("Solo this swell: exclude other non-solo swells from wet playback and audition.");
-    auditionButton.setTooltip("Loop the selected audition window until Stop; does not start the DAW");stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
+    stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
     inspectorViewport.setViewedComponent(&inspectorContent,false);diagnosticsViewport.setViewedComponent(&diagnosticsContent,false);
     inspectorViewport.setName("inspectorViewport");diagnosticsViewport.setName("diagnosticsViewport");
     inspectorViewport.setScrollBarsShown(true,false);diagnosticsViewport.setScrollBarsShown(true,false);
@@ -663,7 +669,8 @@ void PreverbAudioProcessorEditor::layoutLoopPlayback(juce::Rectangle<int> row)
     playback.removeFromLeft(spacing::related);loopPlaybackStatus.setBounds(playback);
 }
 
-void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnabled)
+void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnabled,double capturedRate,
+                                                     const HostPositionDiagnostics& diagnostics)
 {
     using Phase=m3::LoopLiveReference::State;
     using Prep=m3::LoopPlaybackPublication::Preparation;
@@ -673,26 +680,40 @@ void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnab
     const auto playback=processor.loopPlaybackStatus();
     timeline.setLoopPlayhead(playback.playhead);
     const auto active=playback.playback!=Playing::standby && playback.playback!=Playing::stopping;
-    const auto ready=liveEnabled && playback.phase==Phase::ready && playback.preparation==Prep::ready;
+    const auto playlist=processor.usesFlStudioLoopTiming();
+    const auto transportPlaying=!playlist || diagnostics.isPlaying;
+    const auto rateMismatch=capturedRate>0 && diagnostics.sampleRate>0 && capturedRate!=diagnostics.sampleRate;
+    const auto ready=liveEnabled && transportPlaying && !rateMismatch
+        && playback.phase==Phase::ready && playback.preparation==Prep::ready;
     juce::String label="Cue Loop",text,help;
-    if(playback.playback==Playing::queued){label="Cancel Loop";text="Waiting for phrase";help="Cancel the queued Loop before it starts.";}
+    if(playback.playback==Playing::queued){label="Cancel Loop";text="Waiting for bar";help="Cancel the queued Loop before it starts.";}
     else if(playback.playback==Playing::leadIn || playback.playback==Playing::repeating)
     {
         label="Stop Loop";
         text=playback.playback==Playing::leadIn?"Playing lead-in":"Playing loop";
-        help="Stop the Loop with a short fade. Dry audio continues.";
+        help="Finish this pass and skip the next lead-in.";
     }
+    else if(playback.playback==Playing::finishing){label="Stop Now";text="Finishing loop";help="Stop immediately with a short fade. Dry audio continues.";}
     else if(playback.playback==Playing::stopping){label="Stop Loop";text="Fading out";help="Loop playback is fading out. Dry audio continues.";}
     else if(!liveEnabled){text="Live output off";help="Enable Live playback in Settings.";}
-    else if(playback.phase==Phase::unconfigured){text="Connect phrase reference";help="Send a supported recurring phrase marker to enable Loop Cue.";}
+    else if(rateMismatch)
+    {
+        const auto expected=sampleRateText(capturedRate);
+        text="Loop needs "+expected;
+        help="Set the host sample rate to "+expected+" to play this Loop.";
+    }
+    else if(!transportPlaying){text="Start Playlist playback";help="Press Play in FL Studio to enable Cue Loop.";}
+    else if(playlist && playback.phase!=Phase::ready){text="Playlist timing unavailable";help="Use steady 4/4 Playlist timing at the Loop's sample rate.";}
+    else if(playback.phase==Phase::unconfigured){text="Start the clock";help="Send one Clock pulse per beat to enable Cue Loop.";}
+    else if(playback.phase==Phase::waitingForClock){text="Waiting for clock";help="Keep the Clock running so Cue Loop can find the next bar.";}
     else if(playback.phase==Phase::unsupported){text="Unsupported phrase input";help="Use a verified phrase input configuration for this sample rate and callback size.";}
     else if(playback.phase==Phase::mismatch){text="Reference differs from Loop";help="Match the accepted Loop length, tempo, meter and sample rate.";}
     else if(playback.phase==Phase::lost){text="Sync lost";help="Restore the recurring phrase markers, then Cue again.";}
     else if(playback.phase==Phase::waiting){text="Verifying phrase sync";help="Keep the phrase reference running through two matching intervals.";}
-    else if(playback.preparation==Prep::noWet){text="No prepared wet";help="Prepare at least one enabled, audible swell.";}
+    else if(playback.preparation==Prep::noWet){text=playlist?"Generate swells first":"No prepared wet";help="Prepare at least one enabled, audible swell.";}
     else if(playback.preparation==Prep::budget){text="Wet exceeds limit";help="Reduce wet overlap or the amount of prepared audio.";}
     else if(playback.preparation==Prep::waiting){text="Preparing wet";help="Wait for the current swell renders.";}
-    else {text="Ready";help="Cue at the first phrase with room for the full wet lead-in.";}
+    else {text="Ready";help="Cue the next start that has room for the full lead-in.";}
     loopButtonStops=active;
     loopCue.setButtonText(label);
     loopCue.setVariant(playback.playback==Playing::standby?m3::ui::controls::CommandVariant::neutral:m3::ui::controls::CommandVariant::destructive);
@@ -771,7 +792,7 @@ void PreverbAudioProcessorEditor::refresh()
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
     else if(loopLayoutChanged)resized();
-    refreshLoopPlayback(loopPerformLayout,state.session.liveEnabled);
+    refreshLoopPlayback(loopPerformLayout,state.session.liveEnabled,capture.manifest.sampleRate,diagnostics);
     if(!nextSpecial){timeline.setData(capture,state,time,loopSource?time.valid:diagnostics.samplePositionAvailable,!loopSource && diagnostics.isPlaying);
         timeline.setSongPlayheadAvailable(songPlayheadAvailable);
         if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
@@ -782,8 +803,9 @@ void PreverbAudioProcessorEditor::refresh()
         ? (addAtViewStart?"Add a swell at the start of the visible loop. Double-click the waveform to choose a different point."
                          :"Add a swell at the loop playhead. Double-click the waveform to choose a different point.")
         : "Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
-    hostInfo.display(m3::ui::transportPresentation(hostTime,diagnostics.samplePositionAvailable,
-        diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
+    hostInfo.display(loopPerformLayout ? m3::ui::loopTransportPresentation(time,addPlayhead)
+        : m3::ui::transportPresentation(hostTime,diagnostics.samplePositionAvailable,
+            diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
     liveRoutingBox.setSelectedId(state.session.liveRouting==m3::LiveRouting::wetOnly?2:1,juce::dontSendNotification);
     gainPolicyBox.setSelectedId(state.session.gainPolicy==m3::GainPolicy::musical?(state.session.gainRevision==m3::approvedGainRevision?2:3):1,juce::dontSendNotification);
@@ -901,7 +923,7 @@ void PreverbAudioProcessorEditor::refresh()
         {selectedIR=selectedIR || swell.ir.present();selectedImport=selectedImport || swell.status=="Importing IR";}
     }
     removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
-    auditionButton.setEnabled(state.auditionReady && !(state.session.liveEnabled && diagnostics.isPlaying));stopButton.setEnabled(state.playing || state.auditionReady);fullButton.setEnabled(w && state.raw);
+    fullButton.setEnabled(w && state.raw);
     freezeButton.setEnabled(w && (w->frozen || w->phase==m3::Phase::ready));
     for(auto* control:std::array<juce::Component*,6>{&enabledButton,&muteButton,&soloButton,&inCurveBox,&outCurveBox,&setBarsButton})control->setEnabled(w!=nullptr);
     if(w && w->frozen){for(int field:{arrival,sourceA,sourceB})fields[field].setEnabled(false);setBarsButton.setEnabled(false);}
@@ -916,8 +938,8 @@ void PreverbAudioProcessorEditor::refresh()
     const auto timingEvidence=(mode==workflow::Mode::live?m3::ui::gridDiagnosticsText(timeline.gridEvidence())
         :juce::String("Fixed grid: not evaluated outside Perform\n"))+"\n"+m3::ui::liveDiagnosticsText(state);
     liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);layoutLiveDiagnostics();
-    juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(time.sample):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(time.ppq,3):"unavailable")
-        <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
+    juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(diagnostics.samplePosition):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(diagnostics.ppqPosition,3):"unavailable")
+        <<" | "<<(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+"/"+juce::String(diagnostics.denominator):"meter unavailable")<<" | "<<juce::String(diagnostics.sampleRate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
     juce::String captured="Capture / assets\n";captured<<capture.status<<" | revision "<<juce::String(static_cast<juce::int64>(capture.manifest.revision))<<" | dropped "<<juce::String(static_cast<juce::int64>(processor.getDroppedCaptureBlockCount()))<<" | discontinuities "<<juce::String(static_cast<juce::int64>(processor.getTimelineDiscontinuityCount()));
     if(capture.failure)captured<<"\n"<<m3::ui::captureFailureText(capture.failure,capture.failure.event.pass==processor.getWorkflowSnapshot().pass
@@ -991,21 +1013,44 @@ void PreverbAudioProcessorEditor::refresh()
     if(!edit)for(auto& control:valueControls)if(control.editing())control.cancel();
     inspectorContent.setEnabled(edit);addButton.setEnabled(edit);removeButton.setEnabled(edit && hasSelection);
     for(auto* button:{&generateButton,&allButton,&analyzeButton,&confirmButton,&timingButton})button->setEnabled(edit && button->isEnabled());
-    const auto livePriority=state.session.liveEnabled && (loopSource
-        ? processor.loopPlaybackStatus().playback!=m3::LoopCueScheduler::State::standby : diagnostics.isPlaying);
-    auditionButton.setEnabled(caps.preview && state.auditionReady && !(flow.mode==workflow::Mode::live && livePriority));
-    stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
+    using LoopState=m3::LoopCueScheduler::State;
+    const auto loopPlayback=processor.loopPlaybackStatus().playback;
     auditionWetOnly.setEnabled(flow.mode==workflow::Mode::live && !flow.locked());
-    juce::String monitoring;
-    if(!w)monitoring="Select a swell to audition";
-    else if(state.auditionReady)monitoring=state.playing?"Looping":"Ready";
-    else if(state.auditionPreparing && w->phase==m3::Phase::ready)monitoring="Preparing audition";
-    else if(state.dryStatus.isNotEmpty())monitoring=state.dryStatus.contains("Dry source not captured")?
+    const auto capturedRate=capture.manifest.sampleRate;
+    const bool auditionRateMismatch=loopSource && capturedRate>0 && diagnostics.sampleRate>0
+        && capturedRate!=diagnostics.sampleRate;
+    juce::String unavailable, auditionHelp;
+    if(!w)unavailable="Select a swell to audition";
+    else if(auditionRateMismatch)
+    {
+        const auto requiredRate=sampleRateText(capturedRate);
+        unavailable="Audition needs "+requiredRate;
+        auditionHelp="Set the host sample rate to "+requiredRate+" to audition this Loop.";
+    }
+    else if(flow.mode!=workflow::Mode::live)unavailable="Open Perform to audition";
+    else if(loopSource && loopPlayback==LoopState::queued)unavailable="Cancel the queued Loop to audition";
+    else if(loopSource && loopPlayback==LoopState::stopping)unavailable="Wait for Loop playback to stop";
+    else if(loopSource && loopPlayback!=LoopState::standby)unavailable="Stop Loop to audition";
+    else if(!loopSource && state.session.liveEnabled && diagnostics.isPlaying)
+        unavailable="Stop DAW playback to audition";
+    else if(!caps.preview)
+        unavailable=workflowReady.compatible?"Capture audio in Learn to audition":"Restore compatible timing to audition";
+    else if(!state.auditionReady)
+    {
+        if(state.auditionPreparing && w->phase==m3::Phase::ready)unavailable="Preparing audition";
+        else if(state.dryStatus.isNotEmpty())unavailable=state.dryStatus.contains("Dry source not captured")?
         "Unavailable: capture the dry listening window in Learn":"Unavailable: "+state.dryStatus;
-    else if(w->phase==m3::Phase::empty || w->phase==m3::Phase::error || w->phase==m3::Phase::stale)monitoring="Unavailable: "+w->status;
-    else monitoring="Preparing audition";
-    if(w && state.auditionReady && !state.playing && livePriority)monitoring=loopSource?"Stop Loop to audition":"DAW playback active - stop transport to audition";
-    if(w){
+        else if(w->phase==m3::Phase::empty || w->phase==m3::Phase::error || w->phase==m3::Phase::stale)
+            unavailable="Unavailable: "+w->status;
+        else unavailable="Preparing audition";
+    }
+    else if(juce::Time::getMillisecondCounterHiRes()<auditionRetryAfter)unavailable="Audition couldn't start. Try again shortly.";
+    auditionButton.setEnabled(unavailable.isEmpty());
+    if(auditionHelp.isEmpty())auditionHelp=unavailable.isEmpty()?"Loop the selected audition window until Stop.":unavailable;
+    auditionButton.setTooltip(auditionHelp);auditionButton.setHelpText(auditionHelp);
+    stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
+    juce::String monitoring=unavailable.isNotEmpty()?unavailable:(state.playing?"Looping":"Ready");
+    if(w && unavailable.isEmpty()){
         if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
         if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
         if(!state.session.auditionFollowsLive)monitoring<<" | saved balance";

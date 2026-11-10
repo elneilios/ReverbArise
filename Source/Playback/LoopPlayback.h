@@ -2,6 +2,7 @@
 
 #include "LoopWetPlan.h"
 #include <Capture/CaptureSession.h>
+#include <Core/TransportTime.h>
 
 namespace m3
 {
@@ -12,8 +13,8 @@ struct LoopPlaybackPublication
     double rate = 0;
     LoopPhraseTiming timing;
     Preparation preparation = Preparation::waiting;
-    float gain = 1;
-    bool wetOnly = false;
+    float gain = 1, fixedGridGain = 1;
+    bool wetOnly = false, intentionallySilent = false;
     LoopWetPlan plan;
     std::shared_ptr<const std::vector<CapturePeak>> leadInPeaks;
     bool prepareLeadInPeaks(const std::function<bool()>& cancelled);
@@ -39,6 +40,7 @@ public:
     {
         std::optional<int64_t> start;
         std::shared_ptr<const std::vector<CapturePeak>> peaks;
+        float gain = 1;
         bool operator==(const LeadInDisplay&) const = default;
     };
 
@@ -54,12 +56,14 @@ public:
     void invalidateReference() noexcept { resetEpoch.fetch_add(1,std::memory_order_release); }
     void requestCue() noexcept { commands.fetch_or(loop_capture::cue,std::memory_order_release); }
     void requestStop() noexcept { commands.fetch_or(loop_capture::stop,std::memory_order_release); }
+    void requestFinish() noexcept { commands.fetch_or(LoopCueScheduler::finishCommand,std::memory_order_release); }
     Status status() const noexcept;
     // Call under the same control lock as publish and collect.
     LeadInDisplay leadInDisplay() const noexcept;
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
                  double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                 const LoopReferenceSetup& observedReference = {}) noexcept;
+                 const LoopReferenceSetup& observedReference = {},
+                 std::optional<SongTime> playlist = {}) noexcept;
 
 private:
     enum SlotState { free, published, retained, retired };
@@ -70,8 +74,10 @@ private:
     };
     std::array<Slot,4> slots;
     std::atomic<int> pending{-1};
-    int latest = -1, held = -1;
+    int latest = -1, held = -1, fadingFrom = -1;
+    int editFadeRemaining = 0, editFadeLength = 0;
     void takePublication() noexcept;
+    void releaseEditFade() noexcept;
     void releaseHeld() noexcept;
     void retireLatestWithoutSource(uint64_t revision) noexcept;
 
@@ -82,8 +88,11 @@ private:
     std::atomic<bool> phraseInput{false}, external{false};
     std::atomic<uint16_t> commands{0};
     // A supported phrase fits in 23 bits. A signed cursor also covers
-    // up to 64 phrases of pre-roll. Keep the display's slot in the same word.
+    // up to 64 phrases of pre-roll. A nonzero lead-in encodes the display's
+    // slot and gain route in the same word.
     static constexpr int playheadShift = 8, leadInShift = 38, displaySlotShift = 61;
+    static constexpr uint64_t fixedGridDisplay = uint64_t{1} << 63;
+    static constexpr uint64_t displaySlotMask = 3;
     static constexpr int64_t playheadBias = int64_t{1} << (leadInShift - playheadShift - 1);
     static constexpr uint64_t playheadMask = (uint64_t{1} << (leadInShift - playheadShift)) - 1;
     static constexpr uint64_t leadInMask = (uint64_t{1} << (displaySlotShift - leadInShift)) - 1;
@@ -91,6 +100,7 @@ private:
     std::atomic<uint64_t> statusWord{0};
 
     LoopCueScheduler scheduler;
+    std::optional<double> playlistPhrasePpq;
     int64_t cursor = 0;
     LoopWetSample lastWet;
     float dry = 1;

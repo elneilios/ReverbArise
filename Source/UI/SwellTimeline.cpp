@@ -248,7 +248,7 @@ void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& m
         {
             juce::Graphics::ScopedSaveState clip(g);
             g.reduceClipRegion(leadIn.getSmallestIntegerContainer());
-            drawWave(g,*data.loopLeadIn.peaks,wet,ui::aqua.withAlpha(.38f),waveGain,metrics,capture.manifest.loop->endSample);
+            drawWave(g,*data.loopLeadIn.peaks,wet,ui::aqua.withAlpha(.38f),waveGain * data.loopLeadIn.gain,metrics,capture.manifest.loop->endSample);
         }
         for(const auto& [id,wave]:data.wetSummaries)if(id!=data.session.primary && wave)
             drawWave(g,wave->peaks,wet,ui::otherWet.withAlpha(.22f),.45f/std::max(.000001f,wave->peak),metrics,find(data.session,id)?find(data.session,id)->placement:0);
@@ -359,6 +359,8 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(ui::aqua.withAlpha(.12f));
         g.fillRect(leadIn);
     }
+    // The cached waveforms already carry their individual opacities.
+    g.setOpacity(1.0f);
     wetWaveformLayer.paint(g,getWidth(),getHeight(),view.first,view.last,[this](auto& drawing,float,auto& metrics){paintWaveforms(drawing,metrics,true);});
     if (!leadIn.isEmpty())
     {

@@ -19,6 +19,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     fixture.simpleClock=true;
     fixture.simplePhrase=true;
     auto& processor=*fixture.processor;
+    processor.setLoopPlaybackReference({{48000,137},16,4,4,true},true);
     auto& engine=processor.swellEngine();
     engine.setAutomaticProcessing(false);
     auto preference=processor.getLoopCapturePreference();
@@ -64,8 +65,16 @@ static void loopPerformReview(bool review,const juce::File& output)
     editor.refresh();
     auto& cue=require<controls::ActionButton>(editor,"loopCue");
     auto& status=require<juce::Label>(editor,"loopPlaybackStatus");
+    auto& audition=require<controls::ActionButton>(editor,"audition");
+    auto& auditionStatus=require<juce::Label>(editor,"auditionStatus");
+    auto& readout=require<controls::TransportReadout>(editor,"hostInfo");
+    const auto& values=readout.presentation().values;
+    const auto positionUnavailable=[&]{return values[0]=="unavailable" && values[1]=="unavailable";};
+    REQUIRE(readout.presentation().loopRelative && positionUnavailable());
+    REQUIRE(values[2]=="137" && values[3]=="4 / 4");
     REQUIRE(cue.isVisible() && status.isVisible() && find(editor,"loopStop")==nullptr);
     REQUIRE(!cue.isEnabled() && cue.getButtonText()=="Cue Loop" && status.getText().isNotEmpty());
+    REQUIRE(audition.isEnabled());
     REQUIRE(editor.timelineComponent().gridAvailable());
     auto& placement=require<KnobValue>(editor,"wetPlacementCell");
     placement.valueField().setText("-25",false);placement.valueField().onReturnKey();
@@ -130,7 +139,8 @@ static void loopPerformReview(bool review,const juce::File& output)
     fixture.tick();
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::queued && cue.isEnabled() && cue.getButtonText()=="Cancel Loop");
-    REQUIRE(status.getText()=="Waiting for phrase");
+    REQUIRE(!audition.isEnabled() && audition.getTooltip()=="Cancel the queued Loop to audition");
+    REQUIRE(status.getText()=="Waiting for bar");
     REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("Cancel"));
     if(output!=juce::File{})
         writeLoopPreview(output.getChildFile("loop-queued.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
@@ -144,12 +154,15 @@ static void loopPerformReview(bool review,const juce::File& output)
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::leadIn && cue.getButtonText()=="Stop Loop" && cue.isEnabled());
     REQUIRE(status.getText()=="Playing lead-in");
+    REQUIRE(positionUnavailable());
     REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
     fixture.through(fixture.marker(96));
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::repeating && cue.getButtonText()=="Stop Loop" && cue.isEnabled());
     REQUIRE(status.getText()=="Playing loop");
-    REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("fade"));
+    REQUIRE(!audition.isEnabled() && audition.getTooltip()=="Stop Loop to audition");
+    REQUIRE(values[0]=="1" && values[1].getDoubleValue()>=1 && values[1].getDoubleValue()<2);
+    REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("next lead-in"));
     if(output!=juce::File{})
         writeLoopPreview(output.getChildFile("loop-stop-active.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
     const auto previousView=timeline.viewport();
@@ -160,6 +173,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     editor.refresh();
     const auto playing=processor.loopPlaybackStatus();
     REQUIRE(playing.playhead && playing.nextLeadInStart && *playing.playhead > *playing.nextLeadInStart);
+    REQUIRE(values[0]=="4");
     const auto leadIn=engine.snapshot().loopLeadIn;
     REQUIRE(leadIn.peaks && std::any_of(leadIn.peaks->begin(),leadIn.peaks->end(),
         [](const auto& peak){return peak.maximum > peak.minimum;}));
@@ -179,11 +193,15 @@ static void loopPerformReview(bool review,const juce::File& output)
     timeline.setViewport(previousView);
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
-    for(int block=0;block<3;++block)fixture.tick();
+    fixture.tick();editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now");
+    REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
+    fixture.through(fixture.marker(112)+512);
     until([&]{const auto state=processor.loopPlaybackStatus();
         return state.playback==Playing::standby && state.preparation==Prep::ready && state.phase==Phase::ready;});
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::standby && cue.isEnabled());
+    REQUIRE(positionUnavailable() && values[2]=="137");
 
     if(output!=juce::File{})
     {
@@ -222,7 +240,10 @@ static void loopPerformReview(bool review,const juce::File& output)
         auto& add=require<controls::ActionButton>(editor,"Add at playhead");
         REQUIRE(add.getTitle()=="Add at view start");
         REQUIRE(processor.requestLoopCue());
-        fixture.through(fixture.marker(missedPhraseBeat+68)+1024);
+        fixture.through(fixture.marker(missedPhraseBeat+80)+512);
+        editor.refresh();
+        REQUIRE(values[0]=="1" && values[1].getDoubleValue()>=1 && values[1].getDoubleValue()<2);
+        fixture.through(fixture.marker(missedPhraseBeat+84)+1024);
         editor.refresh();
         const auto playhead=timeline.transportPlayhead();
         REQUIRE(playhead && *playhead>84088 && add.getTitle()=="Add at playhead");
@@ -232,6 +253,8 @@ static void loopPerformReview(bool review,const juce::File& output)
         const auto* inserted=m3::find(playingSession,playingSession.primary);
         REQUIRE(playingSession.swells.size()==3 && inserted && inserted->arrival==*playhead);
 
+        processor.requestLoopPlaybackStop();
+        fixture.tick();
         processor.requestLoopPlaybackStop();
         for(int block=0;block<3;++block)fixture.tick();
         editor.refresh();
@@ -250,6 +273,32 @@ static void loopPerformReview(bool review,const juce::File& output)
         engine.restore(saved);
         REQUIRE(!engine.addTarget(50000,nullptr,stale));
         REQUIRE(engine.savedSession().swells.size()==saved.swells.size());
+
+        REQUIRE(engine.selectTargets({first},first));
+        until([&]{return engine.snapshot().auditionReady;});
+        processor.prepareToPlay(44100,fixture.frames);
+        fixture.tick();
+        editor.refresh();
+        REQUIRE(!cue.isEnabled() && status.getText()=="Loop needs 48 kHz");
+        REQUIRE(status.getTooltip().contains("Set the host sample rate to 48 kHz"));
+        REQUIRE(!audition.isEnabled() && auditionStatus.getText()=="Audition needs 48 kHz");
+        REQUIRE(!processor.auditionPreview());
+        auto& help=require<juce::Label>(editor,"hoverHelp");
+        const auto hover=[&](juce::Component& control){
+            const auto now=juce::Time::getCurrentTime();
+            const auto point=control.getLocalBounds().getCentre().toFloat();
+            editor.mouseMove(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),
+                point,{},0,0,0,0,0,&control,&control,now,point,now,0,false));
+        };
+        hover(audition);
+        REQUIRE(help.getText()=="Set the host sample rate to 48 kHz to audition this Loop.");
+        hover(cue);
+        REQUIRE(help.getText()=="Set the host sample rate to 48 kHz to play this Loop.");
+        processor.prepareToPlay(48000,fixture.frames);
+        fixture.tick();
+        editor.refresh();
+        REQUIRE(audition.isEnabled() && processor.auditionPreview());
+        engine.stop();
         return;
     }
 
@@ -265,7 +314,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     {
     public:
         Window(PreverbAudioProcessorEditor& editor,LoopCaptureFixture& source)
-            :DocumentWindow("ReverbArise #126 - Loop Perform preview",background,closeButton),fixture(source)
+            :DocumentWindow("ReverbArise - Loop Perform readout preview",background,closeButton),fixture(source)
         {
             setUsingNativeTitleBar(true);setContentNonOwned(&editor,true);
             centreWithSize(editor.getWidth(),editor.getHeight());setVisible(true);toFront(true);

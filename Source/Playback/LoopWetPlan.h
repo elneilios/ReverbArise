@@ -10,10 +10,11 @@ struct LoopWetSample { float left = 0, right = 0; };
 struct LoopWetPlan
 {
     LivePublication audio;
-    float peakBound = 0;
+    float peakBound = 0, fixedGridPeak = 0;
     int pastCycles = 0, futureCycles = 0;
 
-    bool prepare(int64_t phraseFrames, uint64_t budget, juce::String& error);
+    bool prepare(int64_t phraseFrames, uint64_t budget, juce::String& error,
+                 const RenderCancellation& cancelled = {});
 
     template <typename PositionAt>
     LoopWetSample sample(int64_t near, int64_t first, int64_t last, PositionAt&& position) const noexcept

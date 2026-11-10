@@ -81,7 +81,7 @@ private:
     m3::ui::controls::SegmentedSelector inspectorSections;
     void layoutResponsive();
     void layoutLoopPlayback(juce::Rectangle<int>);
-    void refreshLoopPlayback(bool visible,bool liveEnabled);
+    void refreshLoopPlayback(bool visible,bool liveEnabled,double capturedRate,const HostPositionDiagnostics&);
     void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::controls::EllipsisLabel hoverHelp;
@@ -239,6 +239,7 @@ private:
     juce::Label tailLabel;
     bool diagnosticsOpen=false;
     double diagnosticsRefreshedAt=-1;
+    double auditionRetryAfter=0;
     m3::ui::controls::ActionButton timingButton{"Source and audible timing..."};
     bool advancedTiming=false;
 };

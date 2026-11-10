@@ -236,22 +236,71 @@ void compositorCases()
     REQUIRE(!plan.prepare(101,1024*1024,error) && error.contains("simultaneous"));
 }
 
+void fixedGridPeakCases()
+{
+    LoopWetPlan plan;
+    auto left = std::make_shared<WetRender>();
+    auto right = std::make_shared<WetRender>();
+    left->start = -12;
+    right->start = 8;
+    left->samples.resize(8);
+    right->samples.resize(8);
+    left->samples[0] = .7f;
+    right->samples[2] = -.7f;
+    left->peak = right->peak = .7f;
+    plan.audio.entries = {{0,0,-12,-8,.7f,left},{1,0,8,12,.7f,right}};
+    juce::String error;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.peakBound - 1.4f) < 1e-6f);
+    REQUIRE(std::abs(plan.fixedGridPeak - .7f) < 1e-6f);
+
+    // These two passes now hit the same phase. Opposite polarities cancel in
+    // the repeating mix, but a single pass at Cue or Stop still peaks at .7.
+    right->samples[2] = 0;
+    right->samples[0] = -.7f;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.fixedGridPeak - .7f) < 1e-6f);
+    right->samples[0] = .7f;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.fixedGridPeak - 1.4f) < 1e-6f);
+
+    plan.audio.entries = {testEntry(0,-121,360,.01f),testEntry(1,-30,96,.02f),testEntry(2,62,213,.03f)};
+    constexpr int64_t period = 101, near = 5;
+    REQUIRE(plan.prepare(period,1024*1024,error));
+    float measured = 0;
+    for (int64_t phase = 0; phase < period; ++phase)
+    for (int64_t first = 0; first < 10; ++first)
+    for (auto last = first; last < 10; ++last)
+    {
+        const auto mix = plan.sample(near, first, last,
+            [&](int64_t cycle){ return std::optional{(near - cycle) * period + phase}; });
+        measured = std::max({measured, std::abs(mix.left), std::abs(mix.right)});
+    }
+    REQUIRE(measured <= plan.fixedGridPeak && plan.fixedGridPeak - measured < 1e-5f);
+    REQUIRE(!plan.prepare(period,1024*1024,error,[]{return true;}) && error.contains("superseded"));
+}
+
 void publicationCases()
 {
     using Prep = LoopPlaybackPublication::Preparation;
     using PlaybackState = LoopCueScheduler::State;
     LoopPlayback playback;
-    const auto publish = [&](float level, uint64_t revision = 1){
+    const auto publish = [&](float level, uint64_t revision = 1, bool silent = false){
         auto next = std::make_unique<LoopPlaybackPublication>();
         next->captureGeneration = 1;
         next->sourceRevision = revision;
         next->rate = 8000;
         next->timing = {300,4,4,4,123,6400};
         next->dependencies = playback.dependencies();
-        next->preparation = Prep::ready;
-        next->plan.audio.entries.push_back(testEntry(0,-16,80,level,8000));
-        juce::String error;
-        REQUIRE(next->plan.prepare(6400,1024*1024,error));
+        next->preparation = silent ? Prep::noWet : Prep::ready;
+        next->fixedGridGain = .5f; // The variable-phase route uses the conservative gain instead.
+        next->intentionallySilent = silent;
+        if (!silent)
+        {
+            next->plan.audio.entries.push_back(testEntry(0,-16,80,level,8000));
+            juce::String error;
+            REQUIRE(next->plan.prepare(6400,1024*1024,error));
+        }
         REQUIRE(playback.publish(std::move(next)));
     };
     publish(.01f);
@@ -289,38 +338,151 @@ void publicationCases()
     REQUIRE(std::abs(advance(19184)-.11f)<1e-6f);
     REQUIRE(playback.status().playhead == -16);
     REQUIRE(!playback.status().nextLeadInStart);
-    publish(.05f); // A compatible successor waits while the old revision is pinned.
     REQUIRE(std::abs(advance(19200)-.13f)<1e-6f);
     REQUIRE(playback.status().playback == PlaybackState::repeating);
     REQUIRE(playback.status().playhead == 0);
     REQUIRE(playback.status().nextLeadInStart == 6384);
+    playback.invalidatePrepared();
+    REQUIRE(std::abs(advance(19207)-.13f)<1e-6f);
+    REQUIRE(playback.status().preparation == Prep::waiting);
+    REQUIRE(playback.status().playhead == 7);
+    publish(.05f);
+    REQUIRE(std::abs(advance(19227)-.16f)<1e-6f); // Halfway through the 40-sample fade.
+    REQUIRE(playback.status().playhead == 27);
+    REQUIRE(std::abs(advance(19247)-.15f)<1e-6f); // Only the successor remains.
+    const auto both = playback.pinnedBytes();
+    playback.collect();
+    REQUIRE(playback.pinnedBytes() < both);
     advance(25599);
     REQUIRE(playback.status().playhead == 6399);
-    REQUIRE(advance(25600)>.1f && playback.status().playhead == 0);
-    const auto both = playback.pinnedBytes();
     playback.invalidatePrepared();
-    REQUIRE(advance(25650)==.1f && playback.status().playback == PlaybackState::standby);
-    REQUIRE(!playback.status().playhead);
+    REQUIRE(std::abs(advance(25600)-.25f)<1e-6f && playback.status().playhead == 0);
+    publish(0,1,true);
+    REQUIRE(advance(25650)==.1f && playback.status().playback == PlaybackState::repeating);
+    REQUIRE(playback.status().playhead == 50);
     REQUIRE(!playback.status().nextLeadInStart);
-    playback.collect();
-    REQUIRE(playback.pinnedBytes() < both && playback.status().preparation == Prep::waiting);
+    REQUIRE(playback.status().preparation == Prep::noWet);
+    playback.invalidatePrepared();
+    publish(.05f);
+    REQUIRE(std::abs(advance(32000)-.25f)<1e-6f && playback.status().playhead == 0);
     publish(.05f,2);
-    REQUIRE(advance(25651,-1,0,2)==.1f);
+    REQUIRE(advance(32050,-1,0,2)==.1f);
     REQUIRE(playback.status().phase != LoopLiveReference::State::ready); // Same length, different accepted source.
-    REQUIRE(advance(44800,-1,0,2)==.1f);
-    REQUIRE(playback.status().playback == PlaybackState::standby);
+    REQUIRE(advance(51200,-1,0,2)==.1f);
+    REQUIRE(playback.status().playback == PlaybackState::standby && playback.status().phase == LoopLiveReference::State::ready);
     playback.requestCue();
-    REQUIRE(advance(51200,-1,0,2)>.1f);
+    REQUIRE(advance(57600,-1,0,2)>.1f);
     playback.collect();
     const auto acceptedBytes = playback.pinnedBytes();
     REQUIRE(acceptedBytes > 0);
     publish(.02f,2);
     REQUIRE(playback.pinnedBytes() == 2 * acceptedBytes);
-    REQUIRE(advance(51264,-1,0,0)==.1f && playback.status().playback == PlaybackState::standby);
+    REQUIRE(advance(57664,-1,0,0)==.1f && playback.status().playback == PlaybackState::standby);
     playback.collect();
     REQUIRE(playback.pinnedBytes() == acceptedBytes); // The final Loop callback released the adopted plan.
     playback.discardPending();
     REQUIRE(playback.pinnedBytes() == 0);
+}
+
+void gridCueCases()
+{
+    using State = LoopCueScheduler::State;
+    constexpr int64_t beatLength = 24000;
+    constexpr int64_t loopLength = 4 * beatLength;
+    for (const bool playlist : {true,false})
+    {
+        LoopPlayback playback;
+        auto publication = std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration = publication->sourceRevision = 1;
+        publication->rate = 48000;
+        publication->timing = {120,4,4,4,0,loopLength};
+        publication->preparation = LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries = {testEntry(0,-16,80,.01f)};
+        publication->gain = .25f;
+        publication->fixedGridGain = .75f;
+        juce::String error;
+        REQUIRE(publication->plan.prepare(loopLength,1024*1024,error));
+        REQUIRE(publication->prepareLeadInPeaks([]{return false;}));
+        REQUIRE(playback.publish(std::move(publication)));
+
+        int64_t cursor = 0;
+        const auto through = [&](int64_t until, uint16_t midi = 0, bool clockRunning = true,
+                                 LoopPlayback::Access access = LoopPlayback::Access::perform, bool seek = false)
+        {
+            float sample = 0;
+            while (cursor <= until)
+            {
+                std::array<float,128> left{},right{};
+                const auto frames = static_cast<int>(std::min<int64_t>(left.size(),until-cursor+1));
+                MidiObservations events;
+                for (int offset = 0; offset < frames; ++offset)
+                {
+                    const auto at = cursor + offset;
+                    uint16_t roles = !playlist && clockRunning && at % beatLength == 0 ? captureClock : 0;
+                    if (at == until) roles |= midi;
+                    if (roles) events.samples[events.size++] = {offset,roles};
+                }
+                const SongTime grid{true,cursor,static_cast<double>(cursor)/beatLength,48000,120,4,4};
+                { AudioAllocationGuard guard;
+                    playback.process(left.data(),right.data(),frames,events,48000,1,1,
+                        access,seek,{},playlist ? std::optional{grid} : std::nullopt); }
+                seek = false;
+                REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+                sample = left[frames-1];
+                cursor += frames;
+            }
+            return sample;
+        };
+
+        REQUIRE(through(2*beatLength) == 0);
+        REQUIRE(playback.status().phase == LoopLiveReference::State::ready);
+        playback.requestCue();
+        REQUIRE(through(loopLength-17) == 0 && playback.status().playback == State::queued);
+        REQUIRE(std::abs(through(loopLength-16) - .0075f) < 1e-6f && playback.status().playhead == -16);
+        REQUIRE(through(loopLength) > 0 && playback.status().playhead == 0);
+        const auto display = playback.leadInDisplay();
+        REQUIRE(display.start == loopLength - 16 && display.peaks && display.gain == .75f);
+        REQUIRE(through(loopLength+1,finish) > 0 && playback.status().playback == State::finishing);
+        REQUIRE(through(loopLength+2,finish) > 0 && playback.status().playback == State::finishing);
+        REQUIRE(!playback.status().nextLeadInStart);
+        REQUIRE(through(2*loopLength-16) == 0); // The next pass would have sounded here.
+        REQUIRE(through(2*loopLength+240) == 0 && playback.status().playback == State::standby);
+
+        REQUIRE(through(3*loopLength-10,cue) == 0); // Too late for the next downbeat.
+        REQUIRE(through(3*loopLength) == 0 && playback.status().playback == State::queued);
+        REQUIRE(through(4*loopLength-16) > 0 && playback.status().playhead == -16);
+        playback.requestFinish();
+        REQUIRE(through(4*loopLength-15) > 0 && playback.status().playback == State::finishing);
+        playback.requestFinish();
+        REQUIRE(through(4*loopLength-14) > 0 && playback.status().playback == State::stopping);
+        REQUIRE(through(4*loopLength+240) == 0 && playback.status().playback == State::standby);
+        REQUIRE(through(4*loopLength+241,cue | finish) == 0 && playback.status().playback == State::standby);
+        REQUIRE(through(4*loopLength+242,cue) == 0 && playback.status().playback == State::queued);
+        REQUIRE(through(4*loopLength+243,finish) == 0 && playback.status().playback == State::standby);
+        if (playlist)
+        {
+            const auto shifted = 5*loopLength + beatLength + 57;
+            REQUIRE(through(shifted,phrase,true,LoopPlayback::Access::observe) == 0);
+            REQUIRE(through(shifted+1,cue) == 0 && playback.status().playback == State::queued);
+            REQUIRE(through(shifted+beatLength,phrase) == 0); // A queued launch keeps its origin.
+            REQUIRE(through(shifted+loopLength-17) == 0);
+            REQUIRE(through(shifted+loopLength-16) > 0 && playback.status().playhead == -16);
+            REQUIRE(through(shifted+loopLength) > 0 && playback.status().playhead == 0);
+            REQUIRE(through(shifted+loopLength+1,stop | finish | cue) > 0
+                    && playback.status().playback == State::stopping);
+            REQUIRE(through(shifted+loopLength+240) == 0 && playback.status().playback == State::standby);
+            REQUIRE(through(shifted+loopLength+241,0,true,LoopPlayback::Access::perform,true) == 0);
+            REQUIRE(through(shifted+loopLength+242,cue) == 0);
+            REQUIRE(through(7*loopLength) > 0 && playback.status().playhead == 0);
+        }
+        else
+        {
+            playback.requestCue();
+            through(5*loopLength,false,false);
+            REQUIRE(playback.status().playback == State::standby);
+            REQUIRE(playback.status().phase == LoopLiveReference::State::waitingForClock);
+        }
+    }
 }
 
 void rateChangeFadeCases()
@@ -499,6 +661,6 @@ int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); publicationCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); rateChangeFadeCases();}
     });
 }

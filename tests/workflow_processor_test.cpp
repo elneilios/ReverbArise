@@ -29,21 +29,21 @@ static void loopMidiCases()
     using namespace loop_capture;
     juce::MidiBuffer midi;
     MidiObservations observations;
-    const auto read = [&]
+    const auto read = [&](MidiProtocol protocol = MidiProtocol::rack)
     {
-        { AudioAllocationGuard guard; readLoopObservations(midi, 128, observations); }
+        { AudioAllocationGuard guard; readLoopObservations(midi, 128, observations, true, protocol); }
         REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
     };
     const auto on = [&](int note, int offset, int channel = 1)
     { midi.addEvent(juce::MidiMessage::noteOn(channel, note, static_cast<juce::uint8>(100)), offset); };
     on(19, 0); on(21, 0); on(12, 0); on(22, 0);
-    on(16, 17); on(17, 17);
+    on(16, 17); on(17, 17); on(18, 17);
     on(21, 22, 2);
     midi.addEvent(juce::MidiMessage::noteOff(1, 14), 127);
     read();
     REQUIRE(observations.error == MidiObservations::Error::none && observations.size == 3);
     REQUIRE(observations.samples[0].sampleOffset == 0 && observations.samples[0].roles == (bar | beat | phrase | reset));
-    REQUIRE(observations.samples[1].sampleOffset == 17 && observations.samples[1].roles == (cue | stop));
+    REQUIRE(observations.samples[1].sampleOffset == 17 && observations.samples[1].roles == (cue | finish | stop));
     REQUIRE(observations.samples[2].sampleOffset == 127 && observations.samples[2].roles == gateLow);
 
     midi.clear();
@@ -52,7 +52,7 @@ static void loopMidiCases()
     read();
     REQUIRE(observations.size == 2);
     REQUIRE(observations.samples[0].sampleOffset == 3 && observations.samples[0].roles == (captureClock | captureArm));
-    REQUIRE(observations.samples[1].sampleOffset == 39 && observations.samples[1].roles == (captureStop | stop));
+    REQUIRE(observations.samples[1].sampleOffset == 39 && observations.samples[1].roles == (captureStop | finish));
 
     on(14, 128);
     read();
@@ -69,6 +69,21 @@ static void loopMidiCases()
     midi.addEvent(juce::MidiMessage::noteOff(1, 14), 10);
     read();
     REQUIRE(observations.error == MidiObservations::Error::ambiguousGate && observations.size == 0);
+
+    midi.clear();
+    on(23, 0); on(60, 1); on(62, 1);
+    on(12, 4); on(16, 8); on(17, 12); on(18, 16); on(24, 20); on(25, 24);
+    midi.addEvent(juce::MidiMessage::noteOff(1, 18), 28);
+    for (const auto protocol : {MidiProtocol::flStudio, MidiProtocol::rack})
+    {
+        read(protocol);
+        const auto first = protocol == MidiProtocol::rack ? 1u : 0u;
+        REQUIRE(observations.error == MidiObservations::Error::none && observations.size == first + 6);
+        constexpr std::array<uint16_t,6> shared{phrase,cue,finish,stop,captureArm,captureStop};
+        for (unsigned i = 0; i < shared.size(); ++i)
+            REQUIRE(observations.samples[first+i].sampleOffset == 4 * static_cast<int>(i+1)
+                    && observations.samples[first+i].roles == shared[i]);
+    }
 }
 
 static void loopPhraseClockCases()
@@ -248,6 +263,16 @@ static void loopStateCases()
     juce::AudioProcessor::copyXmlToBinary(*invalid, fixture);
     other->setStateInformation(fixture.getData(), static_cast<int>(fixture.getSize()));
     REQUIRE(other->getLoopCapturePreference() == next && other->getCaptureSnapshot().reference == reference);
+
+    auto repeat = next;
+    repeat.method = LoopCapturePreference::Method::endOnRepeat;
+    repeat.count = LoopCapturePreference::maximumCount;
+    REQUIRE(processor->setLoopCapturePreference(repeat));
+    juce::MemoryBlock repeatState;
+    processor->getStateInformation(repeatState);
+    other->setStateInformation(repeatState.getData(), static_cast<int>(repeatState.getSize()));
+    REQUIRE(other->flushCaptureForTesting() && other->getLoopCapturePreference() == repeat);
+    REQUIRE(other->getCaptureSnapshot().reference == reference);
 
     REQUIRE(sourceRoot.getChildFile(loop.ranges.front().assetPath).deleteFile());
     other->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
@@ -487,15 +512,15 @@ static void simpleLoopProcessorCases()
     REQUIRE(cold.setLoopRecapture(true));
     for (const bool midiStop : {false, true})
     {
-        const int startBeat = shortTake.nextBeat;
+        const int startBeat = (shortTake.nextBeat + 3) / 4 * 4;
         REQUIRE(cold.armLoopCapture());
-        shortTake.through(shortTake.marker(startBeat + 1), true);
+        shortTake.through(shortTake.marker(startBeat), true);
         const auto pending = cold.getWorkflowSnapshot();
         REQUIRE(pending.phase == workflow::Phase::recording && cold.loopCaptureArmed());
         if (midiStop)
         {
             shortTake.commandNote = 25;
-            shortTake.commandSample = shortTake.marker(startBeat + 1) + 1024;
+            shortTake.commandSample = shortTake.marker(startBeat) + 1024;
             shortTake.through(shortTake.commandSample, true);
         }
         else
@@ -542,6 +567,415 @@ static void simpleLoopProcessorCases()
     REQUIRE(midBeat.getCaptureSnapshot().reference == observed.reference);
 }
 
+static void rackDurationAlignmentCases()
+{
+    LoopCaptureFixture fixture;
+    fixture.simpleClock = true;
+    auto& plugin = *fixture.processor;
+    REQUIRE(plugin.armLoopCapture());
+    fixture.through(fixture.marker(0));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.through(fixture.marker(4),true);
+    const auto original = plugin.getCaptureSnapshot();
+    REQUIRE(original.manifest.loop && original.manifest.loop->originSample == fixture.marker(0));
+
+    REQUIRE(plugin.enterLoopStandby());
+    fixture.through(fixture.marker(6));
+    REQUIRE(plugin.requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(plugin.setLoopRecapture(true) && plugin.armLoopCapture());
+    fixture.through(fixture.marker(7));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::armed);
+    REQUIRE(plugin.getCaptureSnapshot().reference == original.reference);
+    fixture.through(fixture.marker(8));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.through(fixture.marker(12),true);
+    const auto retake = plugin.getCaptureSnapshot();
+    REQUIRE(retake.reference != original.reference && retake.manifest.loop);
+    REQUIRE(retake.manifest.loop->endSample == fixture.marker(12) - fixture.marker(8));
+
+    fixture.clockEnabled = false;
+    fixture.through(fixture.marker(14) + 1024);
+    REQUIRE(plugin.armLoopCapture());
+    fixture.clockEnabled = true;
+    fixture.through(fixture.marker(15));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.through(fixture.marker(19),true);
+    const auto restarted = plugin.getCaptureSnapshot();
+    REQUIRE(restarted.reference != retake.reference && restarted.manifest.loop);
+    REQUIRE(restarted.manifest.loop->endSample == fixture.marker(19) - fixture.marker(15));
+}
+
+static void rackRepeatCaptureCases()
+{
+    LoopCaptureFixture fixture;
+    fixture.simpleClock = true;
+    fixture.phraseBeats = 4;
+    auto& plugin = *fixture.processor;
+    auto preference = plugin.getLoopCapturePreference();
+    preference.method = LoopCapturePreference::Method::endOnRepeat;
+    REQUIRE(plugin.setLoopCapturePreference(preference) && plugin.armLoopCapture());
+    fixture.through(fixture.marker(2));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::armed);
+    fixture.simplePhrase = true;
+    fixture.through(fixture.marker(4));
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.commandNote = 12;
+    fixture.commandSample = fixture.marker(7) + 1;
+    fixture.through(fixture.commandSample,true);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.through(fixture.marker(8),true);
+    const auto accepted = plugin.getCaptureSnapshot();
+    REQUIRE(accepted.manifest.loop && accepted.manifest.loop->beats == 4);
+    REQUIRE(accepted.manifest.loop->originSample == fixture.marker(4));
+    REQUIRE(accepted.manifest.loop->endSample == fixture.marker(8) - fixture.marker(4));
+
+    REQUIRE(plugin.setLoopRecapture(true) && plugin.armLoopCapture());
+    fixture.through(fixture.marker(12),true);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    fixture.tick(false,true);
+    REQUIRE(plugin.flushCaptureForTesting());
+    REQUIRE(plugin.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(plugin.getCaptureSnapshot().reference == accepted.reference);
+}
+
+static void rackLoopWithPartialHostTransport()
+{
+    using Phase = m3::LoopLiveReference::State;
+    using Prep = m3::LoopPlaybackPublication::Preparation;
+    using Playing = m3::LoopCueScheduler::State;
+    LoopCaptureFixture fixture(128,44100);
+    fixture.simpleClock = true;
+    fixture.armBeat = 0;
+    fixture.stopBeat = 6;
+    auto& plugin = *fixture.processor;
+    auto& engine = plugin.swellEngine();
+    engine.setAutomaticProcessing(false);
+    fixture.host.position.setIsPlaying(true);
+    fixture.host.position.setTimeInSamples(0);
+    plugin.setPlayHead(&fixture.host);
+    auto preference = plugin.getLoopCapturePreference();
+    preference.method = LoopCapturePreference::Method::endSignal;
+    REQUIRE(plugin.setLoopCapturePreference(preference));
+    fixture.through(fixture.marker(8),true);
+    const auto accepted = plugin.getCaptureSnapshot();
+    REQUIRE(accepted.manifest.loop && accepted.manifest.loop->beats == 8);
+    REQUIRE(accepted.manifest.sampleRate == 44100);
+    REQUIRE(plugin.enterLoopStandby());
+
+    REQUIRE(engine.addTarget(512));
+    const auto ir = fixture.root.file.getChildFile("rack-clock-ir.wav");
+    writeTestWav(ir,1,44100,{.5f,0,0,0,.25f});
+    engine.loadIR(ir);
+    const auto waitFor = [&](const auto& predicate)
+    {
+        const auto deadline = juce::Time::getMillisecondCounter() + 8000;
+        while (!predicate() && juce::Time::getMillisecondCounter() < deadline)
+        {
+            fixture.tick();
+            juce::Thread::sleep(2);
+        }
+        REQUIRE(predicate());
+    };
+    waitFor([&]{return engine.savedSession().swells.front().irName == ir.getFileName();});
+    REQUIRE(engine.generate(true).accepted);
+    waitFor([&]{return plugin.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(plugin.loopPlaybackStatus().phase == Phase::ready);
+    REQUIRE(plugin.requestLoopCue());
+    fixture.through(fixture.marker(fixture.nextBeat+8));
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.getCaptureSnapshot().reference == accepted.reference);
+}
+
+static void flStudioLoopProcessorCases()
+{
+    using Phase = m3::LoopLiveReference::State;
+    TestDirectory root;
+    LoopCaptureFixture::TimingHost host;
+    auto processor = std::make_unique<PreverbAudioProcessor>(root.file, true);
+    auto& plugin = *processor;
+    host.position.setBpm(120);
+    host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4, 4});
+    host.position.setIsPlaying(false);
+    plugin.setPlayHead(&host);
+    plugin.prepareToPlay(48000, 250);
+    plugin.swellEngine().setAutomaticProcessing(false);
+    auto settings = plugin.getLoopCapturePreference();
+    settings.enabled = true;
+    settings.count = 2;
+    REQUIRE(plugin.setLoopCapturePreference(settings));
+
+    constexpr int64_t quarter = 24000;
+    constexpr int64_t bar = 4 * quarter;
+    int64_t cursor = 0;
+    juce::AudioBuffer<float> audio(2, 250);
+    juce::MidiBuffer midi;
+    midi.ensureSize(128);
+    unsigned blocks = 0;
+    const auto tick = [&](int64_t noteAt = -1, int note = 0)
+    {
+        constexpr int sizes[]{250, 104, 146};
+        const int frames = sizes[blocks % 3];
+        audio.setSize(2, frames, false, false, true);
+        for (int channel = 0; channel < 2; ++channel)
+            std::fill_n(audio.getWritePointer(channel), frames, .25f);
+        host.position.setTimeInSamples(cursor);
+        host.position.setPpqPosition(static_cast<double>(cursor) / quarter);
+        midi.clear();
+        if (noteAt >= cursor && noteAt < cursor + frames)
+        {
+            const int offset = static_cast<int>(noteAt - cursor);
+            midi.addEvent(juce::MidiMessage::noteOn(1, note, juce::uint8{100}), offset);
+            midi.addEvent(juce::MidiMessage::noteOn(1, note, juce::uint8{100}), offset);
+        }
+        { AudioAllocationGuard guard; plugin.processBlock(audio, midi); }
+        REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+        cursor += frames;
+        if (++blocks % 16 == 0) REQUIRE(plugin.flushCaptureForTesting());
+    };
+    const auto through = [&](int64_t sample, int64_t noteAt = -1, int note = 0)
+    {
+        while (cursor <= sample) tick(noteAt, note);
+        REQUIRE(plugin.flushCaptureForTesting());
+    };
+
+    REQUIRE(plugin.armLoopCapture());
+    tick();
+    cursor = 0;
+    plugin.reset(); // FL Studio resets the effect as transport starts.
+    host.position.setIsPlaying(true);
+    tick();
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    through(2 * bar);
+    const auto duration = plugin.getCaptureSnapshot();
+    REQUIRE(duration.manifest.loop && duration.manifest.loop->endSample == 2 * bar);
+    REQUIRE(duration.manifest.loop->originSample == 0);
+    REQUIRE(duration.manifest.loop->beats == 8 && duration.manifest.loop->tempoBpm == 120);
+    REQUIRE(!plugin.requestLoopCue()); // Learn never accepts Perform commands.
+
+    REQUIRE(plugin.setLoopRecapture(true));
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.armLoopCapture());
+    cursor = 0;
+    host.position.setIsPlaying(true);
+    tick();
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    cursor += 2 * bar;
+    tick();
+    REQUIRE(plugin.flushCaptureForTesting());
+    REQUIRE(plugin.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(plugin.getCaptureSnapshot().reference == duration.reference);
+
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.armLoopCapture());
+    cursor = 2 * quarter; // Bar 1 beat 3.
+    host.position.setIsPlaying(true);
+    through(bar - 500);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::armed);
+    through(bar);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    through(3 * bar);
+    const auto midBar = plugin.getCaptureSnapshot();
+    REQUIRE(midBar.reference != duration.reference && midBar.manifest.loop);
+    REQUIRE(midBar.manifest.loop->endSample == 2 * bar);
+
+    // FL Studio Pattern 2 declares the one-bar cycle and splits its callback
+    // at the endpoint, then reports sample and PPQ zero while still playing.
+    host.position.setIsLooping(true);
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    const auto startPattern = [&]{
+        host.position.setIsPlaying(false);
+        tick();
+        REQUIRE(plugin.setLoopCapturePreference(settings) && plugin.armLoopCapture());
+        cursor = 0;
+        host.position.setIsPlaying(true);
+        tick();
+        REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    };
+    const auto wrapPattern = [&]{
+        through(bar - 1);
+        REQUIRE(cursor == bar);
+        cursor = 0;
+        through(0);
+    };
+    settings.count = 1;
+    startPattern();
+    wrapPattern();
+    const auto oneBarPattern = plugin.getCaptureSnapshot();
+    REQUIRE(oneBarPattern.reference != midBar.reference && oneBarPattern.manifest.loop);
+    REQUIRE(oneBarPattern.manifest.loop->endSample == bar && oneBarPattern.manifest.loop->beats == 4);
+
+    settings.count = 2;
+    startPattern();
+    wrapPattern();
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    wrapPattern();
+    const auto twoBarPattern = plugin.getCaptureSnapshot();
+    REQUIRE(twoBarPattern.reference != oneBarPattern.reference && twoBarPattern.manifest.loop);
+    REQUIRE(twoBarPattern.manifest.loop->endSample == 2 * bar && twoBarPattern.manifest.loop->beats == 8);
+
+    startPattern();
+    through(quarter);
+    cursor = 0; // A backward seek short of the declared endpoint is still a discontinuity.
+    through(0);
+    REQUIRE(plugin.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(plugin.getCaptureSnapshot().reference == twoBarPattern.reference);
+
+    settings.method = LoopCapturePreference::Method::endSignal;
+    startPattern();
+    through(2 * quarter, 2 * quarter, 25);
+    REQUIRE(plugin.loopFinishing());
+    wrapPattern();
+    const auto endedPattern = plugin.getCaptureSnapshot();
+    REQUIRE(endedPattern.reference != twoBarPattern.reference && endedPattern.manifest.loop);
+    REQUIRE(endedPattern.manifest.loop->endSample == bar && endedPattern.manifest.loop->beats == 4);
+
+    settings.method = LoopCapturePreference::Method::endOnRepeat;
+    startPattern();
+    wrapPattern();
+    const auto repeated = plugin.getCaptureSnapshot();
+    REQUIRE(repeated.reference != endedPattern.reference && repeated.manifest.loop);
+    REQUIRE(repeated.manifest.loop->endSample == bar && repeated.manifest.loop->beats == 4);
+    REQUIRE(plugin.armLoopCapture());
+    through(quarter);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::armed);
+    wrapPattern();
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    wrapPattern();
+    const auto nextRepeat = plugin.getCaptureSnapshot();
+    REQUIRE(nextRepeat.reference != repeated.reference && nextRepeat.manifest.loop);
+    REQUIRE(nextRepeat.manifest.loop->endSample == bar && nextRepeat.manifest.loop->beats == 4);
+
+    startPattern();
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});
+    tick();
+    REQUIRE(plugin.flushCaptureForTesting());
+    REQUIRE(plugin.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(plugin.getCaptureSnapshot().reference == nextRepeat.reference);
+    host.position.setIsLooping(false);
+
+    settings.method = LoopCapturePreference::Method::endSignal;
+    REQUIRE(plugin.setLoopCapturePreference(settings));
+    host.position.setIsPlaying(false);
+    tick();
+    cursor = 18 * bar;
+    host.position.setIsPlaying(true);
+    through(18 * bar, 18 * bar, 24);
+    REQUIRE(plugin.getWorkflowSnapshot().phase == workflow::Phase::recording);
+    through(18 * bar + quarter, 18 * bar + quarter, 17);
+    REQUIRE(!plugin.loopFinishing());
+    through(18 * bar + 2 * quarter, 18 * bar + 2 * quarter, 25);
+    REQUIRE(plugin.loopFinishing());
+    through(19 * bar);
+    const auto ended = plugin.getCaptureSnapshot();
+    REQUIRE(ended.reference != midBar.reference && ended.manifest.loop);
+    REQUIRE(ended.manifest.loop->endSample == bar && ended.manifest.loop->beats == 4);
+
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.armLoopCapture());
+    plugin.reset();
+    host.position.setIsPlaying(true);
+    through(20 * bar + quarter);
+    REQUIRE(plugin.requestLoopStop(plugin.getWorkflowSnapshot().pass));
+    tick();
+    REQUIRE(plugin.loopFinishing());
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.flushCaptureForTesting());
+    REQUIRE(plugin.getWorkflowSnapshot().result == workflow::Result::cancelled);
+    REQUIRE(plugin.getCaptureSnapshot().reference == ended.reference);
+
+    auto& engine = plugin.swellEngine();
+    host.position.setIsPlaying(true);
+    REQUIRE(plugin.enterLoopStandby());
+    REQUIRE(engine.addTarget(quarter / 2));
+    const auto ir = root.file.getChildFile("FL Studio Loop IR.wav");
+    writeTestWav(ir, 1, 48000, {.5f, 0, 0, .25f});
+    engine.loadIR(ir);
+    const auto waitFor = [&](const auto& predicate)
+    {
+        const auto deadline = juce::Time::getMillisecondCounter() + 8000;
+        while (!predicate() && juce::Time::getMillisecondCounter() < deadline)
+        {
+            tick();
+            juce::Thread::sleep(2);
+        }
+        REQUIRE(predicate());
+    };
+    waitFor([&]{return engine.savedSession().swells.front().irName == ir.getFileName();});
+    REQUIRE(engine.generate(true).accepted);
+    waitFor([&]{return plugin.loopPlaybackStatus().preparation == m3::LoopPlaybackPublication::Preparation::ready;});
+    using Playing = m3::LoopCueScheduler::State;
+    REQUIRE(plugin.loopPlaybackStatus().phase == Phase::ready);
+    host.position.setIsPlaying(false);
+    tick(cursor,16);
+    REQUIRE(!plugin.requestLoopCue());
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+    host.position.setIsPlaying(true);
+    cursor = 24 * bar + 100;
+    tick();
+    const auto cue = cursor + 23;
+    through(cue, cue, 16);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    const auto firstBar = ((cursor + bar - 1) / bar) * bar;
+    through(firstBar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    const auto stop = firstBar + quarter;
+    through(stop, stop, 25);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    through(stop + quarter, stop + quarter, 17);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::finishing);
+    through(firstBar + bar + 1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    const auto marker = firstBar + bar + quarter + 57;
+    through(marker, marker, 12);
+    const auto laterCue = marker + quarter;
+    through(laterCue, laterCue, 16);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    through(marker + bar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.loopPlaybackStatus().playhead && *plugin.loopPlaybackStatus().playhead < 512);
+    const auto stopNow = marker + bar + 1000;
+    through(stopNow, stopNow, 18);
+    through(stopNow + 1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    REQUIRE(plugin.requestLoopCue());
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    cursor += 3 * bar;
+    through(cursor + 1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby && plugin.requestLoopCue());
+
+    // Pattern playback keeps playing at the declared boundary, even though
+    // FL Studio resets the absolute transport sample and PPQ to zero.
+    host.position.setIsPlaying(false);
+    tick();
+    host.position.setIsLooping(true);
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    host.position.setIsPlaying(true);
+    cursor = 0;
+    through(quarter);
+    REQUIRE(plugin.requestLoopCue());
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    wrapPattern();
+    REQUIRE(plugin.loopPlaybackStatus().playback != Playing::standby);
+    wrapPattern();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    wrapPattern();
+    const auto patternPlayhead = plugin.loopPlaybackStatus().playhead;
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating && patternPlayhead && *patternPlayhead < 250);
+
+    through(quarter);
+    cursor = 0; // Same destination as a repeat, but the previous block did not reach the endpoint.
+    through(1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+}
+
 static void loopPlaybackProcessorCases()
 {
     using Phase = m3::LoopLiveReference::State;
@@ -550,6 +984,7 @@ static void loopPlaybackProcessorCases()
     LoopCaptureFixture fixture;
     fixture.simpleClock = true;
     auto& p = *fixture.processor;
+    p.setLoopPlaybackReference({{48000,137},4,4,4,true},true);
     auto& engine = p.swellEngine();
     engine.setAutomaticProcessing(false);
     REQUIRE(p.armLoopCapture());
@@ -584,9 +1019,8 @@ static void loopPlaybackProcessorCases()
     until("Loop IR import",[&]{return engine.savedSession().swells.front().irName == "loop-fixture.wav";});
     engine.generate(true);
     until("Loop wet preparation",[&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
-    REQUIRE(p.loopPlaybackStatus().phase == Phase::unconfigured && !p.requestLoopCue());
+    REQUIRE(p.loopPlaybackStatus().phase != Phase::ready && !p.requestLoopCue());
     REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));
-    p.setLoopPlaybackReference({{48000,137},4,4,4,true},true);
 
     int64_t cursor = 0;
     int beat = 0;
@@ -628,6 +1062,8 @@ static void loopPlaybackProcessorCases()
     through(marker(13)+1000,marker(13)+512,25);
     REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
     through(marker(14)+1000,marker(14)+512,17);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::finishing);
+    through(marker(14)+2000,marker(14)+1512,18);
     REQUIRE(p.loopPlaybackStatus().playback == Playing::standby);
     REQUIRE(!through(marker(15)));
 
@@ -650,7 +1086,27 @@ static void loopPlaybackProcessorCases()
     REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
     engine.holdRenderPublicationForTesting(false);
     waitOnClock([&]{return engine.savedSession().swells.front().phase == m3::Phase::ready
-        && p.loopPlaybackStatus().preparation == Prep::ready && p.loopPlaybackStatus().playback == Playing::standby;});
+        && p.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating && p.loopPlaybackStatus().playhead);
+    REQUIRE(engine.edit(swell,[](auto& w,auto&){w.placement += 128;return true;}));
+    through(cursor);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    waitOnClock([&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(engine.edit(swell,[](auto& w,auto&){w.sourceEnd -= 128;return true;}));
+    waitOnClock([&]{return engine.renderPublicationWaitingForTesting()
+        && p.loopPlaybackStatus().preparation == Prep::waiting;});
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    engine.holdRenderPublicationForTesting(false);
+    waitOnClock([&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    p.requestLoopPlaybackStop();
+    through(cursor);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::finishing);
+    p.requestLoopPlaybackStop();
+    through(cursor+512);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::standby);
     REQUIRE(p.requestLoopCue());
     through(cursor);
     REQUIRE(p.loopPlaybackStatus().playback == Playing::queued);
@@ -680,6 +1136,10 @@ static void loopPlaybackProcessorCases()
 }
 
 int main(int argc,char* argv[]){return runTest([&]{
+    if(argc==2 && std::string_view(argv[1])=="--rack-loop-transport"){
+        juce::ScopedJuceInitialiser_GUI gui;rackLoopWithPartialHostTransport();return;}
+    if(argc==2 && std::string_view(argv[1])=="--fl-studio-loop"){
+        juce::ScopedJuceInitialiser_GUI gui;flStudioLoopProcessorCases();return;}
     if(argc>1 && juce::String(argv[1])=="--loop-playback"){
         juce::ScopedJuceInitialiser_GUI gui;loopPlaybackProcessorCases();return;}
     if(argc==2 && juce::String(argv[1])=="--shared-engine"){juce::ScopedJuceInitialiser_GUI gui;commonEngineCases();return;}
@@ -707,7 +1167,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();loopPlaybackProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();rackDurationAlignmentCases();rackRepeatCaptureCases();rackLoopWithPartialHostTransport();flStudioLoopProcessorCases();loopPlaybackProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     {
         REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);

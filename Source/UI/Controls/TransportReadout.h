@@ -24,7 +24,7 @@ public:
     const Geometry& geometry()const{return layout;}
     void display(const TransportPresentation& next)
     {
-        if(current.values==next.values && current.exactPosition==next.exactPosition && getTitle().isNotEmpty())return;
+        if(current==next && getTitle().isNotEmpty())return;
         current=next;setTitle(current.description());setDescription(current.help());setTooltip(current.help());repaint();
     }
     static int textWidth(const juce::String& value)
