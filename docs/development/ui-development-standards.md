@@ -571,6 +571,11 @@ Export retains its own complete-audible-composition Fit policy and does not adop
 Perform's Snap/grid or editing handles. See the [Export handover](../design/export-workspace.md#deferred-integration-handover-to-issue-46--agent-2).
 ## Swells list family — issue #4
 
+Production standards revision 23 gives the primary row two Tab stops, Enabled
+and More actions, before the inspector. Use the shared checkbox and command
+focus treatment. Delete from a selected row with multiple swells selected
+requires confirmation for the captured IDs, with Cancel focused.
+
 `Controls/SwellList.h` is the processor-independent, virtualized Swells list
 family. It retains the existing Perform row appearance and `swellList` identity;
 no new typography, colour, geometry or density value is established. It owns

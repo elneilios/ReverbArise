@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.22 · **Production standards revision:** 22 · **Purpose:** Production UI authority and design reference. Revision 22 adopts the approved Export WAV drag feedback. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
+**Version:** 1.23 · **Production standards revision:** 23 · **Purpose:** Production UI authority and design reference. Revision 23 adopts the approved Swells row actions and disabled popup hover. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -254,6 +254,7 @@ production standards revision; this revision does not change plugin/state versio
 | 20 | #107 native switches and checkboxes approved 2026-11-10 | Labeled switches in Learn and Settings. Enabled, Solo and Freeze use inline checkboxes. Both forms share quiet hover, held feedback, readable disabled state and outer aqua keyboard/accessibility brackets. |
 | 21 | #107 native connected tabs approved 2026-11-10 | Editor and Settings use connected tabs with quiet pointer states, independent keyboard/accessibility focus and About last in Settings. |
 | 22 | #107 native Export file interaction approved 2026-11-10 | The ready WAV tile starts a native copy gesture. Windows shows the approved WAV badge over accepting targets and the stop cursor over rejecting targets. The pointer drag uses a solid outline and restores the dotted affordance at the end. The cursor badge's 8.5 logical-unit label belongs to this artwork. |
+| 23 | #107 native Swells list and scrolling approved 2026-11-10 | The virtualized list uses square Enabled checkboxes and keyboard-accessible row actions. Group Delete requires confirmation with Cancel focused. Rename is dimmed during multiselect. Unavailable popup rows stay quiet under the pointer and short popup highlights reach the inner edge. |
 
 ### Stable Perform transport information
 

@@ -92,8 +92,10 @@ void Composition::verifyEditorBindings()
         const auto p=juce::Point<int>{x,list.getRowPosition(row,true).getCentreY()};
         auto* component=list.getComponentAt(p);REQUIRE(component);
         const auto local=component->getLocalPoint(&list,p).toFloat();const auto now=juce::Time::getCurrentTime();
-        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),local,mods,0,0,0,0,0,component,component,now,local,now,1,false);
-        component->mouseDown(event);component->mouseUp(event);
+        const auto mouse=[&](juce::ModifierKeys keys)
+        {return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),local,keys,0,0,0,0,0,component,component,now,local,now,1,false);};
+        component->mouseDown(mouse(mods.withFlags(juce::ModifierKeys::leftButtonModifier)));
+        component->mouseUp(mouse(mods));
     };
     const auto reveals=[&](int64_t arrival)
     {
@@ -116,8 +118,27 @@ void Composition::verifyEditorBindings()
     clickRow(firstId,juce::ModifierKeys::ctrlModifier);reveals(48000);REQUIRE(engine.savedSession().selected.size()==2);
     clickRow(secondId,juce::ModifierKeys::shiftModifier);reveals(245760);REQUIRE(engine.savedSession().selected.size()==2);
     // Checkbox enablement remains a separate action and does not request reveal.
-    timeline.setViewport({100000,140000});clickRow(secondId,{},12);
-    REQUIRE(timeline.viewport().first==100000);clickRow(secondId,{},12);
+    timeline.setViewport({100000,140000});
+    const auto checkboxRow=list.rowFor(secondId);
+    list.scrollToEnsureRowIsOnscreen(checkboxRow);
+    auto* rowSurface=list.getComponentForRowNumber(checkboxRow);
+    REQUIRE(rowSurface);
+    auto* checkbox=dynamic_cast<controls::BooleanToggle*>(rowSurface->getChildComponent(0));
+    REQUIRE(checkbox);
+    const auto rowWasEnabled=m3::find(engine.savedSession(),secondId)->enabled;
+    const auto clickEnabled=[&]
+    {
+        const auto point=checkbox->indicatorBounds().getCentre().toFloat();
+        const auto now=juce::Time::getCurrentTime();
+        const auto mouse=[&](juce::ModifierKeys keys)
+        {return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,keys,0,0,0,0,0,checkbox,checkbox,now,point,now,1,false);};
+        checkbox->mouseDown(mouse(juce::ModifierKeys::leftButtonModifier));
+        checkbox->mouseUp(mouse({}));
+    };
+    clickEnabled();
+    REQUIRE(timeline.viewport().first==100000 && m3::find(engine.savedSession(),secondId)->enabled!=rowWasEnabled);
+    clickEnabled();
+    REQUIRE(m3::find(engine.savedSession(),secondId)->enabled==rowWasEnabled);
     REQUIRE(engine.edit(firstId,[](auto& swell,auto&){swell.name="Renamed navigation target";return true;}));panel->refresh();
     clickRow(firstId);reveals(48000);
     revealed=timeline.viewport();panel->refresh();panel->refresh();REQUIRE(timeline.viewport().first==revealed.first);

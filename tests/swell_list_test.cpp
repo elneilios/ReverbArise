@@ -15,6 +15,7 @@ static void click(juce::Component& root,juce::Point<int> point,juce::ModifierKey
     auto* target=root.getComponentAt(point);REQUIRE(target);const auto p=target->getLocalPoint(&root,point).toFloat();
     const auto time=juce::Time::getCurrentTime();
     const auto event=[&](juce::ModifierKeys keys){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),p,keys,0,0,0,0,0,target,target,time,p,time,1,false);};
+    if(!mods.isPopupMenu())mods=mods.withFlags(juce::ModifierKeys::leftButtonModifier);
     target->mouseDown(event(mods));target->mouseUp(event({}));
 }
 static void cases()
@@ -26,7 +27,7 @@ static void cases()
     list.onReveal=[&](auto id,uint64_t){revealed=id;++reveals;};
     list.onSelection=[&](auto ids,auto id){++notifications;selection=std::move(ids);primary=id;};
     list.onToggleEnabled=[&](auto id){toggled=id;};
-    list.onMenu=[&](auto row,const auto& e){menuId=row.id;REQUIRE(SwellList::menuAnchor(e).getPosition()==e.getScreenPosition());};
+    list.onMenu=[&](const SwellList::MenuRequest& request){menuId=request.id;REQUIRE(!request.anchor.isEmpty());};
     list.display(rows,{first},first);REQUIRE(notifications==0 && list.rowAt(0)->id==first);
     REQUIRE(list.getModel()->getNameForRow(0)=="Custom 50");
     click(list,{12,18});REQUIRE(toggled==first && reveals==0);
@@ -36,6 +37,9 @@ static void cases()
     const auto beforeMenu=reveals;
     click(list,{list.getWidth()-12,148});REQUIRE(menuId=="id-0002" && reveals==beforeMenu);
     list.display(rows,{"id-0001","id-0002"},"id-0002");
+    menuId.clear();
+    click(list,{80,20},juce::ModifierKeys::rightButtonModifier);
+    REQUIRE(menuId==first && list.getNumSelectedRows()==2 && list.primaryId()=="id-0002" && reveals==beforeMenu);
     const auto before=notifications;
     rows.back().arrival=10000000; // Original row zero now becomes the last row.
     list.display(rows,{"id-0001","id-0002"},"id-0002");
@@ -77,7 +81,7 @@ static void cases()
     const auto heldPress=[&](int x=12)
     {
         const juce::Component::SafePointer<juce::Component> component(list.getComponentAt(juce::Point<int>{x,20}));REQUIRE(component);
-        const auto at=juce::Time::getCurrentTime();const juce::Point<float> p{static_cast<float>(x),20};
+        const auto at=juce::Time::getCurrentTime();const auto p=component->getLocalPoint(&list,juce::Point<int>{x,20}).toFloat();
         juce::MouseEvent e(juce::Desktop::getInstance().getMainMouseSource(),p,juce::ModifierKeys::leftButtonModifier,0,0,0,0,0,component,component,at,p,at,1,false);
         component->mouseDown(e);return std::make_pair(component,e);
     };
@@ -93,6 +97,70 @@ static void cases()
     auto heldDeletion=heldPress();std::erase_if(rows,[&](const auto& row){return row.id==first;});list.display(rows,{}, {},5);toggled.clear();
     if(heldDeletion.first)heldDeletion.first->mouseUp(heldDeletion.second);REQUIRE(toggled.isEmpty());
     list.setLookAndFeel(nullptr);
+}
+
+static void rowFocusCases()
+{
+    juce::Component host;
+    SwellList list;
+    juce::TextButton inspector("Inspector");
+    host.setSize(460,320);
+    host.addAndMakeVisible(list);
+    host.addAndMakeVisible(inspector);
+    list.setBounds(0,0,260,300);
+    inspector.setBounds(280,0,130,35);
+    inspector.setWantsKeyboardFocus(true);
+    list.setInspectorTabTarget(inspector);
+    list.display(fixture(),{"id-0001","id-0002"},"id-0002",8);
+    host.addToDesktop(0);
+    host.setVisible(true);
+    host.toFront(true);
+    auto* peer=host.getPeer();
+    REQUIRE(peer);
+    peer->grabFocus();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    list.grabKeyboardFocus();
+    const auto tab=[&](bool backwards=false)
+    {
+        const auto mods=backwards?juce::ModifierKeys::shiftModifier:0;
+        REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::tabKey,mods,0)));
+    };
+    auto* row=list.getComponentForRowNumber(2);
+    REQUIRE(row);
+    auto* toggle=dynamic_cast<BooleanToggle*>(row->getChildComponent(0));
+    auto* more=dynamic_cast<CommandButton*>(row->getChildComponent(1));
+    REQUIRE(toggle && more && toggle->indicatorBounds().getWidth()==18 && toggle->indicatorBounds().getHeight()==18);
+    int reveals=0,toggles=0,menus=0;
+    list.onReveal=[&](auto,auto){++reveals;};
+    list.onToggleEnabled=[&](auto id){REQUIRE(id=="id-0002");++toggles;};
+    list.onMenu=[&](auto request){REQUIRE(request.id=="id-0002" && request.epoch==8 && request.keyboard);++menus;};
+
+    tab();REQUIRE(toggle->hasKeyboardFocus(false) && toggle->isFocusVisible());
+    REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::spaceKey)));
+    tab();REQUIRE(more->hasKeyboardFocus(false) && more->isFocusVisible());
+    REQUIRE(peer->handleKeyPress(juce::KeyPress(juce::KeyPress::returnKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    REQUIRE(toggles==1 && menus==1 && reveals==0 && list.getNumSelectedRows()==2);
+
+    tab();REQUIRE(inspector.hasKeyboardFocus(false));
+    tab(true);REQUIRE(more->hasKeyboardFocus(false));
+    tab(true);REQUIRE(toggle->hasKeyboardFocus(false));
+    tab(true);REQUIRE(list.hasKeyboardFocus(false));
+
+    auto* toggleHandler=toggle->getAccessibilityHandler();
+    auto* menuHandler=more->getAccessibilityHandler();
+    REQUIRE(toggleHandler && menuHandler && toggleHandler->getTitle().startsWith("Enabled for ")
+        && menuHandler->getTitle().startsWith("Actions for "));
+    REQUIRE(toggleHandler->getActions().invoke(juce::AccessibilityActionType::toggle));
+    REQUIRE(menuHandler->getActions().invoke(juce::AccessibilityActionType::press));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    REQUIRE(toggles==2 && menus==2 && reveals==0);
+    auto* other=list.getComponentForRowNumber(0);
+    REQUIRE(other);
+    auto* otherAction=other->getChildComponent(0);
+    REQUIRE(otherAction->getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::focus));
+    REQUIRE(otherAction->hasKeyboardFocus(false) && list.getNumSelectedRows()==2 && reveals==0);
+    host.removeFromDesktop();
 }
 
 // Lightweight native review, using the exact reusable list without a processor.
@@ -112,11 +180,11 @@ public:
         buttons[3].onClick=[this]{if(auto* top=getTopLevelComponent())top->setSize(top->getWidth()<1200?1400:1100,top->getWidth()<1200?900:850);};
         list.onSelection=[this](auto ids,auto id){selected=std::move(ids);primary=id;refresh();};
         list.onToggleEnabled=[this](auto id){for(auto& row:rows)if(row.id==id)row.enabled=!row.enabled;refresh();};
-        list.onMenu=[this](auto row,const auto& e)
+        list.onMenu=[this](const SwellList::MenuRequest& request)
         {
             juce::PopupMenu menu;menu.addItem(1,"Rename selected");menu.addItem(2,"Delete this swell");
-            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(e.eventComponent).withTargetScreenArea(SwellList::menuAnchor(e)),
-                [safe=juce::Component::SafePointer<Review>(this),id=row.id](int result)
+            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&list).withTargetScreenArea(request.anchor),
+                [safe=juce::Component::SafePointer<Review>(this),id=request.id](int result)
                 {if(!safe)return;if(result==1)for(auto& w:safe->rows)if(w.id==id)w.name="Menu rename";
                     if(result==2){std::erase_if(safe->rows,[&](const auto& w){return w.id==id;});std::erase(safe->selected,id);if(safe->primary==id)safe->primary={};}safe->refresh();});
         };
@@ -165,6 +233,6 @@ public:
 int main(int argc,char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
-    return runTest([&]{cases();if(argc>1 && juce::String(argv[1])=="--review")
+    return runTest([&]{cases();rowFocusCases();if(argc>1 && juce::String(argv[1])=="--review")
         {ReviewWindow window;juce::MessageManager::getInstance()->runDispatchLoop();}});
 }

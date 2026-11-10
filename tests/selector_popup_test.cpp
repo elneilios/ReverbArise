@@ -107,8 +107,30 @@ static juce::MouseEvent at(ChoicePopup& popup,int index,juce::ModifierKeys mods=
     const auto time=juce::Time::getCurrentTime();
     return {juce::Desktop::getInstance().getMainMouseSource(),p.toFloat(),mods,0,0,0,0,0,&popup,&popup,time,p.toFloat(),time,1,false};
 }
+static void popupWidthCases()
+{
+    juce::Component origin;
+    origin.setSize(240,40);
+    for (const auto scale : {1.f,1.25f})
+    {
+        origin.setTransform(juce::AffineTransform::scale(scale));
+        ChoicePopup shortMenu(origin,choices(),{});
+        shortMenu.setSize(240,400);
+        const auto& row=shortMenu.rowComponent(0);
+        const auto full=shortMenu.getLocalArea(&row,row.getLocalBounds());
+        REQUIRE(full.getX()==1 && full.getRight()==shortMenu.getWidth()-1);
+        shortMenu.mouseMove(at(shortMenu,0));
+        const auto pixels=shortMenu.createComponentSnapshot(shortMenu.getLocalBounds());
+        REQUIRE(pixels.getPixelAt(full.getRight()-1,full.getCentreY())==SelectorPresentation::raised());
+
+        ChoicePopup scrolling(origin,choices(),{});
+        scrolling.setSize(240,full.getHeight()+12);
+        REQUIRE(scrolling.rowComponent(0).getWidth()<full.getWidth());
+    }
+}
 static void popupCases()
 {
+    popupWidthCases();
     using m3::ui::WorkspaceTheme;
     const juce::Rectangle<int> work{100,100,800,600};
     for(const auto anchor:{juce::Rectangle<int>{100,100,250,34},{850,660,100,34},{0,0,20,20}})
@@ -122,6 +144,9 @@ static void popupCases()
         ChoicePopup popup(origin,choices(),completion);popup.show(origin.getScreenBounds(),false);
         REQUIRE(popup.state().inspected()==-1);
         popup.mouseMove(at(popup,1));REQUIRE(popup.state().inspected()==1);
+        popup.mouseMove(at(popup,2));REQUIRE(popup.state().inspected()==-1);
+        popup.mouseDown(at(popup,2,juce::ModifierKeys::leftButtonModifier));
+        popup.mouseUp(at(popup,2));REQUIRE(popup.state().heldIndex()==-1 && calls==0 && popup.state().items()[0].selected);
         popup.mouseMove(at(popup,-1));REQUIRE(popup.state().inspected()==-1);
         popup.inspect(0);popup.mouseMove(at(popup,1));REQUIRE(popup.state().inspected()==1);
         popup.mouseExit(at(popup,-1));REQUIRE(popup.state().inspected()==0);
@@ -216,6 +241,9 @@ static void actionMenuCases()
         auto* handler = unavailable.getAccessibilityHandler();
         REQUIRE(handler && !unavailable.isEnabled() && handler->getDescription() == reason);
         REQUIRE(unavailable.getHeight() > controlGeometry::height);
+        popup.mouseMove(at(popup, 1));
+        popup.mouseMove(at(popup, 2));
+        REQUIRE(popup.state().inspected() == 0 && fill(image(2)) == background);
         popup.mouseDown(at(popup, 2, juce::ModifierKeys::leftButtonModifier));
         popup.mouseUp(at(popup, 2));
         REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::focus));
