@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, updated 7 November 2026; production standards revision 14.**
+**Owner-approved contracts, updated 10 November 2026, production standards revision 24.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -157,15 +157,23 @@ selectable accessibility metadata. Neutral actions use the quiet selector
 hover/held fills and aqua edge. The destructive role uses `danger` text and
 edge ink, with popup-only hover and held blends. Labels are display text.
 
-Supply the complete label, eligibility and visible/accessibility explanation
-from the action provider. Unavailable rows remain inspectable. The binding
+Supply the complete label, eligibility and any needed visible and accessible
+explanation from the action provider. Swells Rename during multiselect uses
+only its dimmed label and exposes its unavailable state accessibly. Unavailable
+rows in shared action menus and dropdowns stay quiet under the mouse and remain
+inspectable with the keyboard. Short popup rows extend to the inside edge.
+Scrolling popups reserve space for a visible scrollbar. The binding
 captures the original action and target before opening and checks eligibility
 again on one-shot delivery. Outside dismissal preserves the focus recipient.
 
 The owner approved the native fixture on 7 November 2026. In production, the
 Swells menu opens via right-click or the row's three-dot icon. The list owns
-the popup across row recycling, and Rename/Delete use the clicked item's
-captured ID and epoch. Per-knob Reset uses the same neutral presentation at
+the popup across row recycling. The menu captures the invoked row, selection,
+session and Perform pass. Delete from a selected row with multiple swells
+selected requires confirmation for the captured group. An unselected row is
+a single deletion target. The engine accepts or rejects a group atomically.
+Settings Delete captures the selected IDs, session and Perform pass at
+invocation, before any queued command runs. Per-knob Reset uses the same neutral presentation at
 the right-click anchor. It displays the provider's label and eligibility,
 and invokes the captured `ResetAction`. Pointer return to the dial keeps
 keyboard access with its focus decoration suppressed. Keyboard or accessibility
@@ -228,9 +236,10 @@ storage/working-folder controls, C1 buttons and action-menu adoption are separat
 
 ## C6 — Switches and toggles
 
-Observed owners: [Switch](../../Source/UI/Controls/Switch.h), InvocationToggle,
-and legacy ToggleButton theme checkboxes. Track/thumb Learn switches and labeled
-checkboxes are distinct existing presentations; C1 action latches are separate.
+Owners include [BooleanToggle](../../Source/UI/Controls/BooleanToggle.h) and
+[Switch](../../Source/UI/Controls/Switch.h). Learn and Settings use labeled
+tracks, while Enabled, Solo and Freeze use inline checkboxes. C1 owns action
+latches. Hidden compatibility controls retain their existing owners.
 
 Contract: define explicit boolean-setting versus accepted-effective-latch
 semantics. Boolean controls expose accessible name/state, pointer/Space activation
@@ -247,23 +256,38 @@ programmatic refresh. Evidence: pointer/key/accessibility toggling, D+F/S cases,
 stale pass rejection, no extra display callbacks, hit/focus bounds and caption fit.
 Reuse ControlLibrary/UiStandards and Learn pass policy plus actual editor bindings.
 
+P6 uses two labeled forms of the same boolean control.
+The track and checkbox share quiet hover, held feedback and independent outer
+aqua brackets. Pointer clicks hide the brackets and keep actual focus. The
+label and indicator share a single Tab stop and guarded activation. Space,
+existing Return behavior and accessibility use the same invocation path.
+The disabled form keeps the accepted state readable. The owner approved the
+native JUCE preview on 10 November 2026.
+
 ## C7 — Navigation, lists, tabs and scroll containers
 
 Observed owners: [SegmentedSelector](../../Source/UI/Controls/SegmentedSelector.h),
+[SettingsTabs](../../Source/UI/SettingsTabs.h),
 [SwellList](../../Source/UI/Controls/SwellList.h), TimelineZoomControls,
-[FocusViewport](../../Source/UI/Controls/FocusViewport.h), plus Settings tabs.
-Segmented selection already distinguishes accepted selection from keyboard
-inspection: arrows/Home/End inspect; Return/Space requests; wheel does not choose.
-Unavailable choices expose reasons and are not committed. Keep joined-edge paint
-ordering and accessible selected state. Ordinary tab policy can remain distinct
-from segmented workflow navigation when named and reviewed.
+[FocusViewport](../../Source/UI/Controls/FocusViewport.h).
+
+The connected tab strip separates keyboard inspection from accepted selection.
+Arrows and Home/End inspect, Return/Space request activation, and wheel input
+passes through. Unavailable choices expose their reasons and reject activation.
+The selected fill, pointer hover and held feedback, and outer focus brackets
+are independent. Pointer clicks hide focus decoration while retaining focus.
+Settings routes programmatic selection by stable page identity and keeps About
+last, with Appearance before Storage when available.
 
 Contract: focus, inspected option, accepted selection, scroll and reveal
 are separate state. Refresh must preserve stable row identity/primary selection
 and scroll intent; explicit list navigation may reveal the existing contextual
-Fit, as approved for #93. Row Enabled/menu hit regions need keyboard/accessibility
-coverage as well as pointer geometry; an inaccessible RowSurface is not proof of
-accessible row commands. Preserve parent ListBox policy and audit actual gaps.
+Fit, as approved for #93. The primary row adds a square Enabled checkbox and
+More actions as Tab stops on the way to the inspector. Both controls expose
+named accessible actions for their row. Focus and action binding follow the
+stable ID across recycled rows while ListBox owns selection.
+After a menu closes, restore focus to its action only if the viewport contains
+the action. A clipped row returns focus to the list without scrolling.
 
 Focused controls must be reachable inside scroll content and full focus strokes
 contained. FocusViewport reveal is an explicit usage policy; the type alone does
@@ -348,10 +372,18 @@ Observed mechanisms differ intentionally:
 | Existing subtype | Commit/cancel/refresh authority to preserve |
 | --- | --- |
 | KnobValue Entry | Return and typing focus-loss commit; Escape cancels; same-identity display preserves active text, identity change cancels; restore accepted canonical display after commit/rejection; exact text is separate from rounded display |
-| SliderControl NumericInputControl | Editable Label/temporary JUCE TextEditor and shared slider range/interval/formatter; step buttons use invocation-aware slider gestures; JUCE editor lifecycle must be characterized before wrapping |
-| Settings bar range TextEditors | Digits-only restriction; explicit Return or Set source from bars command commits the pair; no locally installed focus-loss or Escape commit handlers; do not silently add a new trigger |
+| SliderControl FieldNumericInput | Shared numeric label and temporary FieldTextEditor retain JUCE's editor lifecycle, slider range and formatter. Where present, step buttons and wheel over the value or arrows use one configured step and capture invocation ownership. |
+| Settings bar range FieldTextEditor pair | Digits-only input. Focus loss checks the draft against its bound swell and session. Return or Set source from bars submits to that same context. A selection or session change clears the pair. |
 | Read-only diagnostic fields / placement | Copy/inspect accepted values, no edit publication; hidden Name seam remains hidden |
-| Rename dialog TextEditor | Explicit OK/Return and Cancel/Escape; only nonempty accepted rename, ID/epoch guarded; no focus-loss commit |
+| Rename dialog FieldTextEditor | Focus loss validates. OK/Return submits a nonempty name to the captured ID and epoch. Cancel/Escape discards the draft. |
+
+P4 uses the shared field surface for the inspector, embedded entries, Rename
+and read-only Diagnostics. Keyboard and accessibility focus show the aqua
+brackets while pointer editing keeps its caret and selection. Numeric editors
+filter letters on insertion, including paste. The timing entries still use the
+song-position parser. Standalone and embedded steppers share one-step wheel
+behavior. Slider tracks follow C5 for Ctrl+wheel and retain ordinary drag with
+either Ctrl state.
 
 Contract: reusable field composition extends these working mechanisms;
 it does not introduce another parser or universal commit policy. Each field must
@@ -383,10 +415,9 @@ coverage rather than infer it from the parent LookAndFeel.
 
 ## C5 — Knobs and sliders
 
-Observed owners: [KnobValue](../../Source/UI/KnobValue.h), SliderControl,
-[InvocationSlider](../../Source/UI/Controls/InvocationSlider.h), nested zoom
-sliders, legacy Settings sliders and display-height slider. Presentation-only
-zoom/height must never be confused with audio gain or saved parameter editing.
+Owners include [KnobValue](../../Source/UI/KnobValue.h),
+[TrackSlider](../../Source/UI/Controls/TrackSlider.h), and the companion
+numeric field in SliderControl. Zoom and Height use display-only bindings.
 
 Contract: each family owns coarse/fine drag, keyboard increments, wheel
 travel/direction and reset defaults once; bindings supply musical units, range,
@@ -402,13 +433,18 @@ same cases as current bindings. Silent display is not another input gesture.
 Pointer, wheel, key, stepper and accessible value changes follow the same binding
 authority. Wheel outside the value control retains normal surrounding scroll.
 
-States: I/H/F/D/E and dragging/invalid where applicable. Retain #46's owner-approved
-open corner knob focus geometry and exact Level steps. The zoom slider's parent
-focus and text-box-free presentation are named existing policies. Legacy theme
-rotary painting has a dimmed arc but undimmed position dot; linear painting has
-no custom focus treatment by itself. These are observed debt, not approved new
-defaults. Local SliderControl Theme versus responsive parent font inheritance must
-be checked with actual metrics, not inferred from shared ancestry.
+P5 uses quiet hover and held feedback along the dial arc or on the track body, aqua value ink, an off-white
+position marker and independent keyboard/accessibility focus brackets. Horizontal
+zoom keeps its text-box-free track. Ctrl+wheel fine-adjusts dials and tracks
+where their domain allows a smaller step. Timing Ctrl+wheel uses the existing
+unsnapped step, and Shift retains its established finer behavior. A configured
+home attracts raw pointer drag candidates within its band. Wheel, exact entry,
+accessibility and Reset follow their independent paths. The Level detent is
+centered at 0 dB with a ±0.3 dB band. Companion dial fields use the shared
+value width when it fits. Inline feedback aligns beneath the field and wraps
+within the value column. Target's hover-help footer and accessible field
+description explain the active entry units. Its validation stays beneath the
+field.
 
 Evidence: coarse/fine drag/wheel/key/reset, explicit/implicit edit cancellation,
 actual unit steps, exact value/display agreement, captured stale intent rejection,
@@ -431,12 +467,19 @@ envelope math, timing guards or viewport selection policy in a presentation slic
 Document unsupported keyboard/accessibility actions as gaps for scoped child work,
 not as behavior proven by a painted highlight.
 
-Keep Learn inspection pin and transient hover distinct; Escape clears only in its
-existing focus context. Keep Perform drag anchor/frozen/session policy and display
-height separate from gain. Export navigation remains left-position/right-pan,
-wheel zoom/Shift-wheel pan and Home Fit. FileDragTile's dashed/solid focus border,
-drag threshold and suppression of click after drag are an explicit #6 variant.
-Its binding retains file/revision/session eligibility; the control owns no path.
+Keep Learn inspection pin and transient hover distinct. Escape clears only with
+waveform focus. On the Learn, Export and Perform main waveforms, left-click or
+drag positions the local marker or edits a Perform handle, wheel zooms at the
+pointer, middle-drag pans, and right input is idle. Perform's compact Overview
+pans only on left-drag. Main waveform focus uses shared aqua brackets for
+keyboard/accessibility focus. Preserve Perform drag anchor/frozen/session policy,
+display height independent of gain, and Export ready positioning and Home Fit.
+FileDragTile's dotted idle border, solid pointer drag and separate keyboard focus
+are the approved Export variant. The primary press crosses the threshold once
+and suppresses its own click-to-save. The binding pins the current session, pass
+and WAV, and Windows sets the WAV or stop cursor using target feedback. The tile
+restores its pointer-idle border when the native drag returns. The engine owns
+ready-file eligibility and the background integrity check.
 
 Native file choosers and window chrome remain native. Application launch and
 completion must retain lifetime, target, cancellation and session/pass checks.
@@ -462,7 +505,7 @@ native review must use the actual prepared fixture and retain one review window.
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
 | Stable fixed transport typography and bounded notice wrapping | Production guide revisions 6/7 and no-forced-speech spec; not generic text shrink permission |
-| File-drag tile dashed affordance | Existing #6 Export family; retain separate native-file semantics |
+| File-drag tile dotted affordance and WAV cursor | #6 Export family, updated at revision 22 under #107; Windows target feedback and guarded Save fallback |
 | Grouped local actionable error/collapsed empty IR feedback | #109 scoped field approval; merged and present here; C3/C4 extension candidates need their own family checkpoint |
 | Comfortable auxiliary typography, main responsive roles, single transform | Production guide revision 7; physical DPI/host coverage remains separately recorded |
 

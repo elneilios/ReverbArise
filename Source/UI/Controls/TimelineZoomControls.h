@@ -1,6 +1,6 @@
 #pragma once
 #include "ActionButton.h"
-#include "InvocationSlider.h"
+#include "TrackSlider.h"
 #include <cmath>
 
 namespace m3::ui::controls
@@ -25,6 +25,7 @@ public:
         slider.setSliderStyle(juce::Slider::LinearHorizontal);
         slider.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
         slider.setRange(0,1,.001);slider.setWantsKeyboardFocus(true);
+        slider.setWheelSteps(.05,.005);
         auto begin=[this]{if(beforeInvocation)beforeInvocation();};
         minus.beforeInvocation=plus.beforeInvocation=fit.beforeInvocation=slider.beforeInvocation=begin;
         minus.onClick=[this]{if(isEnabled() && state.canZoomOut && onZoomStep)onZoomStep(1.25);};
@@ -59,19 +60,13 @@ public:
         plus.setBounds(area.removeFromRight(std::min(area.getWidth(),controlGeometry::height)));
         area.removeFromRight(std::min(area.getWidth(),spacing::related));slider.setBounds(area);
     }
-    void focusOfChildComponentChanged(FocusChangeType)override{repaint();}
-    void paintOverChildren(juce::Graphics& g)override
-    {
-        if(slider.hasKeyboardFocus(false))
-        {g.setColour(aqua);g.drawRoundedRectangle(controlGeometry::insideStroke(slider.getBounds(),controlGeometry::focusStroke),radius,controlGeometry::focusStroke);}
-    }
     ActionButton& zoomOutButton()noexcept{return minus;}
     ActionButton& zoomInButton()noexcept{return plus;}
     ActionButton& fitButton()noexcept{return fit;}
     InvocationSlider& zoomSlider()noexcept{return slider;}
 private:
     ActionButton minus{"-"},plus{"+"},fit{"Fit"};
-    InvocationSlider slider;
+    TrackSlider slider;
     ZoomControlState state;
     double displayedFraction=0;
 };

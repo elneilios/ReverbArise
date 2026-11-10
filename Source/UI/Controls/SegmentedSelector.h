@@ -1,6 +1,8 @@
 #pragma once
 #include <UI/WorkspaceTheme.h>
+#include "FocusVisibility.h"
 #include "ModeIcon.h"
+#include <optional>
 #include <vector>
 
 namespace m3::ui::controls
@@ -22,14 +24,51 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
     public:
         Segment(SegmentedSelector& group,size_t position):juce::Button(juce::String{}),owner(group),index(position)
         {setWantsKeyboardFocus(false);setMouseClickGrabsKeyboardFocus(false);onClick=[this]{owner.request(index);};}
-        void mouseDown(const juce::MouseEvent& e)override{owner.focusChoice(index);juce::Button::mouseDown(e);}
+        void mouseDown(const juce::MouseEvent& e)override
+        {
+            if(pressedSource || !isEnabled() || !e.mods.isLeftButtonDown())return;
+            pressedSource=e.source;
+            owner.focusVisibility->pointerInput();
+            owner.focusChoice(index);
+            juce::Button::mouseDown(e);
+        }
+        void mouseDrag(const juce::MouseEvent& e)override
+        {
+            if(pressedSource==e.source && e.mods.isLeftButtonDown())
+                juce::Button::mouseDrag(e);
+        }
+        void mouseUp(const juce::MouseEvent& e)override
+        {
+            if(pressedSource!=e.source)return;
+            pressedSource.reset();
+            if(e.mods.isAnyMouseButtonDown() || !getLocalBounds().toFloat().contains(e.position))
+                juce::Button::mouseExit(e);
+            else
+                juce::Button::mouseUp(e);
+        }
+        void enablementChanged()override
+        {
+            if(!isEnabled())pressedSource.reset();
+            juce::Button::enablementChanged();
+        }
+        void visibilityChanged()override
+        {
+            if(!isShowing())pressedSource.reset();
+            juce::Button::visibilityChanged();
+        }
         void buttonStateChanged()override{owner.repaint();}
-        void paintButton(juce::Graphics& g,bool,bool)override
+        void paintButton(juce::Graphics& g,bool over,bool down)override
         {
             const auto& choice=owner.choices[index];const auto activeChoice=choice.id==owner.selected;
             const auto alpha=isEnabled()?1.0f:.4f;const auto box=getLocalBounds().toFloat().reduced(.5f);
             const auto path=owner.outlineFor(index,box);
-            g.setColour(activeChoice?aqua.withAlpha(alpha):background);g.fillPath(path);
+            auto fill=activeChoice?aqua:background;
+            if(isEnabled())
+            {
+                if(activeChoice)fill=down?hover:over?aqua.interpolatedWith(m3::ui::text,.23f):aqua;
+                else fill=background.interpolatedWith(outline,down?.39f:over?.23f:.07f);
+            }
+            g.setColour(activeChoice?fill.withAlpha(alpha):fill);g.fillPath(path);
             g.setColour((activeChoice?background:m3::ui::text).withAlpha(alpha));g.setFont(owner.labelFont());
             const auto content=getLocalBounds().toFloat().reduced(5,0);
             if(choice.icon==ModeIcon::none)g.drawText(choice.label,content,juce::Justification::centred);
@@ -48,19 +87,31 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
             {
             public:
                 explicit Handler(Segment& value):juce::AccessibilityHandler(value,juce::AccessibilityRole::radioButton,
-                    juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press,[&value]{value.owner.request(value.index);})),segment(value){}
+                    actions(value)),segment(value){}
                 juce::AccessibleState getCurrentState()const override
                 {
                     auto state=juce::AccessibilityHandler::getCurrentState().withCheckable().withSelectable();
                     if(segment.owner.choices[segment.index].id==segment.owner.selected)state=state.withChecked().withSelected();
                     return state;
                 }
-            private:Segment& segment;
+            private:
+                static juce::AccessibilityActions actions(Segment& value)
+                {
+                    return juce::AccessibilityActions()
+                        .addAction(juce::AccessibilityActionType::press,[&value]{value.owner.request(value.index);})
+                        .addAction(juce::AccessibilityActionType::focus,[&value]
+                        {
+                            value.owner.focusVisibility->accessibilityInput();
+                            value.owner.focusChoice(value.index);
+                        });
+                }
+                Segment& segment;
             };
             return std::make_unique<Handler>(*this);
         }
     private:
         SegmentedSelector& owner;size_t index;
+        std::optional<juce::MouseInputSource> pressedSource;
     };
 public:
     SegmentedSelector()
@@ -91,51 +142,78 @@ public:
         }
         setDescription(description);setHelpText("Left/right: inspect choices. Enter/Space: activate an available choice. "+description);
         updateHint();resized();repaint();
+        if(rebuild)updateAccessibleFocus();
     }
     int selectedId()const noexcept{return selected;}
     int focusedId()const noexcept{return choices.empty()?0:choices[focused].id;}
+    bool isFocusVisible()const noexcept{return hasKeyboardFocus(false) && focusVisibility->isVisible();}
     juce::Button* segment(int id)const noexcept
     {for(size_t i=0;i<choices.size();++i)if(choices[i].id==id)return buttons[i].get();return nullptr;}
     bool keyPressed(const juce::KeyPress& key)override
     {
         if(choices.empty())return false;
+        focusVisibility->keyboardInput();
         if(key.isKeyCode(juce::KeyPress::leftKey) || key.isKeyCode(juce::KeyPress::rightKey)
             || key.isKeyCode(juce::KeyPress::homeKey) || key.isKeyCode(juce::KeyPress::endKey))
         {
             if(key.isKeyCode(juce::KeyPress::homeKey))focused=0;
             else if(key.isKeyCode(juce::KeyPress::endKey))focused=choices.size()-1;
             else focused=(focused+choices.size()+(key.isKeyCode(juce::KeyPress::leftKey)?-1:1))%choices.size();
-            updateHint();repaint();return true;
+            updateHint();updateAccessibleFocus();repaint();return true;
         }
         if(key.isKeyCode(juce::KeyPress::returnKey) || key.isKeyCode(juce::KeyPress::spaceKey)){request(focused);return true;}
         return false;
     }
-    void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&)override{} // Navigation is deliberate, never wheel-selected.
-    void focusGained(FocusChangeType)override{updateHint();repaint();}
+    void focusGained(FocusChangeType cause)override
+    {
+        if(cause==focusChangedByTabKey)focusVisibility->keyboardInput();
+        updateHint();repaint();
+        // JUCE gives the strip's handler focus after this callback returns.
+        // Forward it to the inspected tab once that focus change is complete.
+        juce::MessageManager::callAsync([safe=juce::Component::SafePointer<SegmentedSelector>(this)]
+        {
+            if(safe!=nullptr)safe->updateAccessibleFocus();
+        });
+    }
     void focusLost(FocusChangeType)override{repaint();}
     void resized()override
     {
         if(buttons.empty())return;
-        for(size_t i=0;i<buttons.size();++i){const auto a=juce::roundToInt(double(i)*getWidth()/buttons.size());
-            const auto b=juce::roundToInt(double(i+1)*getWidth()/buttons.size());buttons[i]->setBounds(a,0,b-a+(i+1<buttons.size()?1:0),getHeight());}
+        const auto area=commandBodyBounds(getLocalBounds());
+        for(size_t i=0;i<buttons.size();++i)
+        {
+            const auto a=juce::roundToInt(double(i)*area.getWidth()/buttons.size());
+            const auto b=juce::roundToInt(double(i+1)*area.getWidth()/buttons.size());
+            buttons[i]->setBounds(area.getX()+a,area.getY(),b-a+(i+1<buttons.size()?1:0),area.getHeight());
+        }
     }
     void paintOverChildren(juce::Graphics& g)override
     {
-        // The joined children overlap by one pixel. Paint their borders here,
-        // with hover/press last, so a neighbouring selected fill cannot erase
-        // the shared edge. Keep child/accessibility order and hit areas stable.
-        const auto highlighted=[&](size_t index){const auto& button=*buttons[index];return button.isEnabled()
-            && (button.getState()==juce::Button::buttonOver || button.getState()==juce::Button::buttonDown);};
-        const auto border=[&](size_t index){const auto& button=*buttons[index];g.setColour((highlighted(index)?aqua:outline).withAlpha(button.isEnabled()?1.0f:.4f));
-            g.strokePath(outlineFor(index,controlGeometry::insideStroke(button.getBounds(),rule)),juce::PathStrokeType(rule));};
-        for(size_t i=0;i<buttons.size();++i)if(!highlighted(i))border(i);
-        for(size_t i=0;i<buttons.size();++i)if(highlighted(i))border(i);
-        if(hasKeyboardFocus(true) && focused<buttons.size())
-        {g.setColour(choices[focused].id==selected?background:aqua);g.strokePath(outlineFor(focused,buttons[focused]->getBounds().toFloat().reduced(2)),juce::PathStrokeType(2));}
+        paintConnectedEdges(g);
     }
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override
     {return std::make_unique<juce::AccessibilityHandler>(*this,juce::AccessibilityRole::group);}
 private:
+    static constexpr int focusMargin=static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke);
+    void paintConnectedEdges(juce::Graphics& g)const
+    {
+        // Paint an active edge over its neighbour at the single shared seam.
+        for(auto state:{juce::Button::buttonNormal,juce::Button::buttonOver,juce::Button::buttonDown})
+        {
+            for(size_t i=0;i<buttons.size();++i)
+            {
+                const auto& button=*buttons[i];
+                const auto actual=button.isEnabled()?button.getState():juce::Button::buttonNormal;
+                if(actual!=state)continue;
+                const auto ink=state==juce::Button::buttonDown?secondary:
+                    state==juce::Button::buttonOver?outline.interpolatedWith(m3::ui::text,.5f):outline;
+                g.setColour(ink.withAlpha(button.isEnabled()?1.f:.4f));
+                g.strokePath(outlineFor(i,controlGeometry::insideStroke(button.getBounds(),rule)),juce::PathStrokeType(rule));
+            }
+        }
+        if(isFocusVisible() && focused<buttons.size() && !buttons[focused]->getBounds().isEmpty())
+            paintCornerBrackets(g,buttons[focused]->getBounds().expanded(focusMargin),aqua);
+    }
     juce::Font labelFont()const{return interFont(textHeight,InterFace::semibold);}
     juce::Path outlineFor(size_t index,juce::Rectangle<float> box)const
     {
@@ -143,7 +221,21 @@ private:
         path.addRoundedRectangle(box.getX(),box.getY(),box.getWidth(),box.getHeight(),radius,radius,first,last,first,last);
         return path;
     }
-    void focusChoice(size_t index){focused=index;updateHint();if(isShowing())grabKeyboardFocus();repaint();}
+    void focusChoice(size_t index)
+    {
+        focused=index;
+        updateHint();
+        if(isShowing())grabKeyboardFocus();
+        updateAccessibleFocus();
+        repaint();
+    }
+    void updateAccessibleFocus()
+    {
+        if(!hasKeyboardFocus(false) || focused>=buttons.size())return;
+        // Segments are not keyboard tab stops. Their handlers can still own
+        // native accessibility focus while the strip receives navigation keys.
+        if(auto* handler=buttons[focused]->getAccessibilityHandler())handler->grabFocus();
+    }
     void request(size_t index)
     {
         if(!isEnabled() || index>=choices.size())return;
@@ -152,6 +244,7 @@ private:
     }
     void updateHint(){if(focused<choices.size()){const auto& item=choices[focused];setTooltip(item.label+": "+(item.available?item.help:item.unavailableReason));}}
     std::vector<SegmentChoice> choices;
+    juce::SharedResourcePointer<FocusVisibility> focusVisibility;
     ModeIconCache iconCache;
     std::vector<std::unique_ptr<Segment>> buttons;
     int selected=0;size_t focused=0;

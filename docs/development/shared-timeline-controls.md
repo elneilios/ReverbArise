@@ -69,14 +69,14 @@ timing message. Fixed accepted tempo/meter only; no tempo-map inference or Snap.
 ## Integration boundaries
 
 - Export retains its read-only waveform, click/drag preview positioning,
-  pointer-anchored zoom, right-drag pan, keyboard navigation, current-file readiness,
+  pointer-anchored wheel zoom, middle-drag pan, keyboard navigation, current-file readiness,
   last-good pending view, and once-per-accepted-mix Fit. Fit covers the accepted
   audible mix plus margins, independent of WAV song-origin duration.
 - Perform owns editable dry/wet lanes, envelope gestures and Snap/grid, with
   separately approved compact layout and latching button checkpoints. Its Height
   control scales display amplitude independently of horizontal timeline zoom.
-- Learn retains captured dry coverage and inspection. No controls or generation
-  behavior are migrated by this PR.
+- Learn retains captured dry coverage and read-only inspection, with bounded zoom
+  and pan over its capture-driven full extent.
 
 Keep waveform rendering/overlays in their existing focused components. There is
 no generalized waveform viewer, transport controller, render cache, persistence
@@ -92,8 +92,8 @@ binding; it starts no audio device. This isolated family review does not approve
 Perform compact layout metrics or Export integration. Native visual/feel acceptance
 must precede wider rollout; retain Export's existing accepted composition.
 
-Export selects `TimelineNavigation::PanGesture::rightDrag`: right-drag pans without
-positioning preview, left-drag positions, and only left-double-click invokes Fit.
-The default left/Shift-left pan policy is unchanged for other consumers. Mouse-up
-and ownership/range changes cancel active gestures. Horizontal/Shift-wheel and
-keyboard navigation are unchanged. The gesture policy has no audio/model dependency.
+The three main waveforms share mouse-button classification and pointer-anchored
+wheel zoom. Middle-drag pans at the current detail scale. Right input is idle.
+Export's left click or drag positions the ready preview. The previous waveform
+can still be navigated during preparation. Release and ownership changes cancel
+gestures. Export Fit remains available on the toolbar and from the keyboard.

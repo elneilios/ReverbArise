@@ -23,16 +23,6 @@
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
     },
     {
-      "id": "ui37-003",
-      "path": "Source/Plugin/PluginSettings.cpp",
-      "rule": "literal-style",
-      "occurrence": "setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack",
-      "count": 1,
-      "scope": "retained legacy consumer",
-      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
-      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
-    },
-    {
       "id": "ui37-004",
       "path": "Source/UI/Controls/DeliberateSelector.h",
       "rule": "interaction-default",
@@ -51,6 +41,16 @@
       "scope": "shared control default",
       "reason": "Existing accepted interaction default consolidated in its shared family; no behaviour change.",
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
+    },
+    {
+      "id": "ui107-p5-001",
+      "path": "Source/UI/Controls/TrackSlider.h",
+      "rule": "interaction-default",
+      "occurrence": "setVelocityModeParameters(1.0,1,0,false)",
+      "count": 1,
+      "scope": "shared control default",
+      "reason": "Continuous tracks retain ordinary drag with either Ctrl state. Fine adjustment belongs to the wheel.",
+      "review": "https://github.com/elneilios/ReverbArise/issues/107; approved P5 native preview"
     },
     {
       "id": "ui37-006",

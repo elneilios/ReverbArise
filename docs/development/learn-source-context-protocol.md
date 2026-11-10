@@ -234,5 +234,8 @@ The Learn timeline reads accepted overview peaks and separate pass/epoch-fenced
 progress. Mapped duration is the source union, provisional duration counts only
 currently admitted input, and extent excludes viewport headroom. Silence is exact
 coverage metadata, never an amplitude threshold. The pure `LearnTimelineModel`
-owns dry bounds, stable stepped fit, region inspection and honest fallback labels;
-it has no reference to wet bounds, host seeking or persistent state.
+owns dry bounds, stable stepped fit, region inspection and honest fallback labels.
+Its main waveform uses left-click or drag to pin, pointer-wheel zoom and
+middle-drag pan. Manual navigation and the absolute pin survive ordinary
+capture updates. Coverage reads use the full captured extent and stay independent
+of wet bounds, host seeking and persistent state.

@@ -37,9 +37,9 @@ void Composition::verifyResponsiveScale()
     auto& reset=require<m3::ui::controls::ActionButton>(*panel,"resetWetShape");
     auto& footer=require<controls::TransportReadout>(*panel,"hostInfo");
     auto& cell=require<KnobValue>(*panel,"endOffsetCell");auto& field=cell.valueField();
-    auto& tabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
-    REQUIRE(tabs.getNumTabs()==8);
-    auto& appearance=*tabs.getTabContentComponent(6);
+    using Page=m3::ui::SettingsPage;auto& tabs=*panel->settingsPanel();
+    REQUIRE(tabs.selector().getNumChildComponents()==8);
+    auto& appearance=*tabs.page(Page::appearance);
     auto& scaleChoice=require<controls::DeliberateSelector>(appearance,"presentationScale");
     auto& sizeChoice=require<controls::DeliberateSelector>(appearance,"presentationSize");
     const auto saved=engine.savedSession();const auto capture=processor->getCaptureSnapshot().manifest.revision;
@@ -116,13 +116,23 @@ void Composition::verifyResponsiveScale()
     auto& header=require<WorkflowHeader>(*panel,"workflowHeader");header.onSettings();
     auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(panel->settingsPanel()->getTopLevelComponent());REQUIRE(settingsWindow);
     settingsWindow->setVisible(false);
-    auto& ownedTabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());ownedTabs.setCurrentTabIndex(5);
+    auto& ownedTabs=*panel->settingsPanel();
+    ownedTabs.selectPage(Page::about);
     auto& auxiliary=require<controls::PresentationSurface>(*settingsWindow,"presentationSurface");
     for(int scale:{100,125,100})
     {
         REQUIRE(panel->setPresentationScale(scale));
         REQUIRE(auxiliary.contentRoot().getWidth()==640 && auxiliary.contentRoot().getHeight()==570);
         REQUIRE(std::abs(auxiliary.contentRoot().getTransform().mat00-scale/100.f)<.001f);
+        REQUIRE(ownedTabs.selectedPage()==Page::about);
+        const auto& strip=ownedTabs.selector();
+        for(auto* child:strip.getChildren())
+        {
+            const auto& button=dynamic_cast<const juce::Button&>(*child);
+            const auto width=juce::GlyphArrangement::getStringWidth(interFont(bodySize,InterFace::semibold),button.getButtonText());
+            REQUIRE(width+10<=button.getWidth());
+            REQUIRE(strip.getLocalBounds().contains(button.getBounds().expanded(static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke))));
+        }
         auto& viewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
         auto& copy=require<juce::Component>(*panel->settingsPanel(),"copyBuildInformation");viewport.reveal(copy);
         REQUIRE(viewport.getViewArea().intersects(auxiliary.getLocalArea(&copy,copy.getLocalBounds())));
@@ -134,10 +144,54 @@ void Composition::verifyResponsiveScale()
     auto& focusViewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
     REQUIRE(copyAction.hasKeyboardFocus(true));
     REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
+    const auto revealVertically=[](controls::FocusViewport& viewport,juce::Component& target)
+    {
+        auto* viewed=viewport.getViewedComponent();
+        REQUIRE(viewed && viewed->isParentOf(&target));
+        viewport.setViewPosition(0,0);
+        viewport.reveal(target);
+        const auto targetBounds=viewed->getLocalArea(&target,target.getLocalBounds());
+        const auto visible=viewport.getViewArea();
+        REQUIRE(targetBounds.getY()>=visible.getY() && targetBounds.getBottom()<=visible.getBottom());
+    };
+    for (const auto percent : {100,125})
+    {
+        REQUIRE(panel->setPresentationScale(percent));
+        ownedTabs.selectPage(Page::storage);
+        panel->refresh();
+        auto& nested=require<controls::FocusViewport>(*panel->settingsPanel(),"storageContentViewport");
+        auto& destination=require<juce::Label>(*panel->settingsPanel(),"portableRestoreDestination");
+        const auto before=destination.getText();
+        revealVertically(nested,destination);
+        REQUIRE(destination.getText()==before);
+        auto& outer=require<controls::FocusViewport>(*panel->settingsPanel(),"storageViewport");
+        revealVertically(outer,require<juce::Component>(*panel->settingsPanel(),"locateAssets"));
+
+        for (const auto size : {juce::Point<int>{900,600},juce::Point<int>{1100,850}})
+        {
+            REQUIRE(panel->setPresentationSize(size.x,size.y));
+            require<controls::SegmentedSelector>(*panel,"inspectorSections").onRequest(2);
+            panel->refresh();
+            auto& inspector=require<controls::FocusViewport>(*panel,"inspectorViewport");
+            auto& currentField=require<KnobValue>(*panel,"endOffsetCell").valueField();
+            auto& pinnedReset=require<juce::Component>(*panel,"resetWetShape");
+            const auto value=currentField.getText();
+            const auto resetBounds=pinnedReset.getBounds();
+            revealVertically(inspector,currentField);
+            REQUIRE(currentField.getText()==value && pinnedReset.getBounds()==resetBounds
+                && !inspector.isParentOf(&pinnedReset));
+        }
+    }
     settingsWindow->setVisible(false);
-    ownedTabs.setCurrentTabIndex(4);
+    ownedTabs.selectPage(Page::recovery);
     require<m3::ui::controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
     auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
+    for(const auto percent : {100,125})
+    {
+        REQUIRE(panel->setPresentationScale(percent));
+        auto& diagnostics=require<controls::FocusViewport>(*diagnosticsWindow,"diagnosticsViewport");
+        revealVertically(diagnostics,require<juce::Component>(*diagnosticsWindow,"copyDiagnostics"));
+    }
     diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());
     REQUIRE(panel->setPresentationScale(125));panel->refresh();
     REQUIRE(!diagnosticsWindow->isVisible());

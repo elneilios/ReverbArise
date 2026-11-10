@@ -34,6 +34,14 @@ int main(){return runTest([]{
     const auto pending=engine.savedSession();REQUIRE(pending.exportState.wet==.65f && pending.exportState.completedPath.isEmpty());
     engine.holdExportForTesting(false);waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
     auto ready=engine.snapshot().songExport.prepared;juce::String error;REQUIRE(ready && ready->file.wet==.65f && verifyExportFile(engine.assetDirectory(),ready->file,error));
+    const auto readyPass=flow.snapshot().pass, readySession=engine.assignmentEpoch();
+    const auto readyPath=engine.assetDirectory().getChildFile(ready->file.path);
+    REQUIRE(engine.readyExportFile(readySession,readyPass,ready->file)==readyPath);
+    REQUIRE(engine.readyExportFile(readySession+1,readyPass,ready->file)==juce::File{});
+    REQUIRE(engine.readyExportFile(readySession,readyPass+1,ready->file)==juce::File{});
+    auto unrelatedFile=ready->file;unrelatedFile.path="exports/not-current.wav";
+    REQUIRE(engine.readyExportFile(readySession,readyPass,unrelatedFile)==juce::File{});
+    REQUIRE(!engine.snapshot().songExport.delivering && engine.snapshot().songExport.prepared==ready);
     const auto auditionOracle=[&](const std::shared_ptr<const PreparedExport>& ready){
     constexpr int quantum=127; // Unaligned pages; the separate seek oracle below also covers 37-frame blocks.
     const auto requestedStart=engine.snapshot().songExport.previewPosition.value_or(*ready->metrics.audibleStart);

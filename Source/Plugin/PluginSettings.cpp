@@ -105,14 +105,13 @@ void PreverbAudioProcessorEditor::showRegenerationResult(const m3::RegenerationR
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
     settingsTabs.getProperties().set("contextHelp","Choose a settings tab. These settings apply to this plugin instance.");
-    settingsTabs.setName("settingsTabs");settingsTabs.setTabBarDepth(36);
-    settingsTabs.setColour(juce::TabbedComponent::backgroundColourId,m3::ui::background);
-    settingsTabs.setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack);
+    using Page=m3::ui::SettingsPage;
     const juce::StringArray titles{"Playback","Processing","Swell","Audition","Recovery","About"};
+    constexpr std::array ids{Page::playback,Page::processing,Page::swell,Page::audition,Page::recovery,Page::about};
     for(int i=0;i<6;++i)
     {
         settingsPages[i].setName("settings"+titles[i]);
-        settingsTabs.addTab(titles[i],m3::ui::background,&settingsPages[i],false);
+        settingsTabs.addPage(ids[i],settingsPages[i]);
         settingsPages[i].addAndMakeVisible(settingsHelp[i]);
         settingsHelp[i].setColour(juce::Label::textColourId,m3::ui::secondary);settingsHelp[i].setFont(juce::FontOptions(m3::ui::bodySize));
         settingsHelp[i].setJustificationType(juce::Justification::topLeft);
@@ -124,7 +123,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     storageInventory->onRestored=[this](const auto& input,auto& error){return processor.reloadRecoveredAssets(input,error);};
     storageViewport.setName("storageViewport");storageViewport.setFocusRevealEnabled(true);
     storageViewport.setViewedComponent(storageInventory.get(),false);
-    settingsTabs.addTab("Storage",m3::ui::background,&storageViewport,false);
+    settingsTabs.addPage(Page::storage,storageViewport);
     const auto move=[&](int page,std::initializer_list<juce::Component*> controls)
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
     move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
@@ -188,14 +187,15 @@ void PreverbAudioProcessorEditor::layoutSettings()
     const auto row=[&](juce::Component& label,juce::Component& value,int y)
     {label.setBounds(left,y,labelWidth,32);const juce::Rectangle<int> body{left+labelWidth,y,width-labelWidth,32};
         if(auto* selector=dynamic_cast<m3::ui::controls::ChoiceSelector*>(&value))selector->setRowBounds(body);else value.setBounds(body);};
-    row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
-    mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
+    const auto switchHeight=m3::ui::controlGeometry::switchHeight;
+    row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,switchHeight);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
+    mappingButton.setBounds(left,24,width,switchHeight);automaticButton.setBounds(left,64,width,switchHeight);autoButton.setBounds(left,104,width,switchHeight);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
-    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
+    muteButton.setBounds(left,20,150,switchHeight);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
     row(settingsLabels[2],inCurveBox,60);row(settingsLabels[3],outCurveBox,100);
     settingsLabels[4].setBounds(left,146,width,24);
     layoutSourceRange();
-    settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,30);isolateDryButton.setBounds(left+265,56,300,30);
+    settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,switchHeight);isolateDryButton.setBounds(left+265,56,300,switchHeight);
     row(tailLabel,tailSlider,106);row(auditionLabel,auditionSlider,152);
     settingsLabels[6].setBounds(left,12,160,26);generateButton.setBounds(left+175,12,200,30);allButton.setBounds(left+390,12,200,30);
     const auto feedbackBand=m3::ui::controlGeometry::feedbackHeight+m3::ui::spacing::related;
@@ -205,7 +205,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     settingsLabels[8].setBounds(left,132+feedbackBand,160,26);recaptureButton.setBounds(left+175,132+feedbackBand,200,30);cancelButton.setBounds(left+390,132+feedbackBand,200,30);
     recaptureStatus.setBounds(left,170+feedbackBand,width,38);
     clearButton.setBounds(left,214+feedbackBand,220,30);suppressionButton.setBounds(left+240,214+feedbackBand,350,30);
-    toneButton.setBounds(left,258+feedbackBand,width,30);
+    toneButton.setBounds(left,258+feedbackBand,width,switchHeight);
     toneStartLabel.setBounds(left,300+feedbackBand,90,30);toneStartSlider.setBounds(left+95,300+feedbackBand,190,30);toneEndLabel.setBounds(left+300,300+feedbackBand,100,30);toneEndSlider.setBounds(left+405,300+feedbackBand,185,30);
     openDiagnosticsButton.setBounds(left,346+feedbackBand,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
@@ -225,24 +225,36 @@ void PreverbAudioProcessorEditor::layoutSettings()
 
 void PreverbAudioProcessorEditor::refreshSourceRangeFeedback(const m3::Swell* swell)
 {
-    if(sourceRangeRejection && (sourceRangeRejection->epoch!=state.sessionEpoch
-                               || sourceRangeRejection->primary!=state.session.primary))
-        sourceRangeRejection.reset();
+    const PreverbAudioProcessor::SourceBarTarget target{state.sessionEpoch,state.session.primary};
+    if(sourceRangeDraftTarget!=target)
+    {
+        // The pair belongs to the context in which it was displayed, even
+        // when input and a selection change arrive before the next refresh.
+        if(sourceRangeDraftTarget)
+        {
+            barStartEditor.setText({},false);
+            barEndEditor.setText({},false);
+        }
+        sourceRangeDraftTarget=target;
+        sourceRangeResult={};
+    }
 
-    const auto* result=sourceRangeRejection ? &sourceRangeRejection->result : nullptr;
-    const auto affected=result ? result->affected : SourceBarFields::none;
+    const auto hasError=sourceRangeResult.rejection.isNotEmpty();
+    const auto affected=sourceRangeResult.affected;
     barStartEditor.setInvalid(affected==SourceBarFields::start || affected==SourceBarFields::both);
     barEndEditor.setInvalid(affected==SourceBarFields::end || affected==SourceBarFields::both);
-    juce::String message=result ? result->rejection
+    juce::String message=hasError ? sourceRangeResult.rejection
         : !swell ? "Select a swell to apply its source range."
         : swell->frozen ? "Unfreeze the selected swell to change its source range."
-        : "The end bar is excluded.";
+        : barStartEditor.getText().isEmpty() && barEndEditor.getText().isEmpty()
+            ? "Enter both bars for the selected swell. The end bar is excluded."
+            : "The end bar is excluded.";
     if(affected==SourceBarFields::end)
         message+=". Enter a later bar, then choose Set source from bars to apply the corrected range.";
-    if(sourceRangeMessage==message && sourceRangeHasError==(result!=nullptr))return;
+    if(sourceRangeMessage==message && sourceRangeHasError==hasError)return;
 
     sourceRangeMessage=message;
-    sourceRangeHasError=result!=nullptr;
+    sourceRangeHasError=hasError;
     barStartEditor.setFieldDescription(message);
     barEndEditor.setFieldDescription(message);
     if(!settingsLabels[4].getBounds().isEmpty())layoutSourceRange();
@@ -331,7 +343,8 @@ void PreverbAudioProcessorEditor::showAssetRecoveryWarning(const m3::storage::po
         if(!safe || safe->destroying || action==0)return;
         m3::storage::portable::Input current;juce::String error;
         if(!safe->processor.pinPortableAssets(current,error,true) || current.instanceRoot!=expected.instanceRoot || current.controlEpoch!=expected.controlEpoch)return;
-        safe->setSettingsOpen(true);for(int i=0;i<safe->settingsTabs.getNumTabs();++i)if(safe->settingsTabs.getTabNames()[i]=="Storage")safe->settingsTabs.setCurrentTabIndex(i);
+        safe->setSettingsOpen(true);
+        safe->settingsTabs.selectPage(m3::ui::SettingsPage::storage);
         if(action==1)safe->storageInventory->locateOriginalAssets();else if(action==2)safe->storageInventory->restoreBackup();
     }),false);
 }

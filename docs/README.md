@@ -12,6 +12,7 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Connected tabs — issue #107](validation/2026-11-10-issue-107-connected-tabs.md) — native preview approval, editor and Settings adoption, and About last.
 - [Shared command buttons — issue #107](validation/2026-11-06-issue-107-buttons.md) — owner-approved native family revision 4, explicit command roles and independent aqua corner focus; production migration, automated checks and integrated acceptance are recorded separately. Knobs and independently owned #108/#8 implementation remain outside this migration.
 - [Shared selectors — issue #107](validation/2026-11-07-issue-107-selectors.md) — approved quiet inspection/explicit commit, independent aqua focus and small local help/red error feedback; named consumer adoption and native verification. Action menus remain a separate child.
 - [Shared field feedback — issue #107](validation/2026-11-07-issue-107-field-feedback.md) — native approval and the Settings Swell source-range adoption.

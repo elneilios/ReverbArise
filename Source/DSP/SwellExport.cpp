@@ -48,6 +48,21 @@ bool SwellEngine::hasExportableWet(const SongTime& time)const
     }return false;
 }
 
+juce::File SwellEngine::readyExportFile(uint64_t expectedSession,uint64_t expectedPass,const ExportFile& file) const
+{
+    const juce::ScopedLock guard(lock);
+    if(!workflowState || expectedSession!=sessionGeneration.load())return {};
+    const auto flow=workflowState->snapshot();
+    if(flow.mode!=workflow::Mode::finalise || flow.pass!=expectedPass || exportState.pass!=expectedPass
+       || exportState.session!=expectedSession || exportState.phase!=ExportPhase::ready || exportState.delivering
+       || !exportState.prepared || exportState.prepared->file!=file)return {};
+    const auto active=storageLocation.load();
+    const auto location=exportState.prepared->storage?exportState.prepared->storage:active;
+    if(!active->writable || !location->writable)return {};
+    const auto& source=exportState.prepared->plan->source;
+    return location->projectsRoot.getChildFile(source.projectId).getChildFile(source.instanceId).getChildFile(file.path);
+}
+
 uint64_t SwellEngine::deliverExport(uint64_t expectedSession,const ExportFile& file,const juce::File& destination,bool overwrite,bool drag,uint64_t expectedPass)
 {
     const juce::ScopedLock guard(lock);

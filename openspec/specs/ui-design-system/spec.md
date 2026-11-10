@@ -231,10 +231,10 @@ Migrated dropdown selectors SHALL provide distinguishable idle, hover, held and 
 - **AND** its focus ink remains contained and no mouse emphasis makes it appear enabled
 
 ### Requirement: Choice inspection is distinct from accepted selection
-Migrated choice menus SHALL use the quiet row highlight for pointer or keyboard inspection, with distinct held feedback. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains, including after pointer hover leaves. Accepted selection SHALL use a checkmark independent of inspection; selection alone SHALL NOT retain a row background or edge highlight.
+Migrated choice menus SHALL use the quiet row highlight for eligible pointer targets and for keyboard inspection, with distinct held feedback. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains, including after pointer hover leaves. Accepted selection SHALL use a checkmark independent of inspection; selection alone SHALL NOT retain a row background or edge highlight.
 
 #### Scenario: Pointer leaves an inspected choice
-- **WHEN** the pointer enters and then leaves a choice without keyboard navigation focus
+- **WHEN** the pointer enters and then leaves an eligible choice without keyboard navigation focus
 - **THEN** the quiet background and edge appear only during hover and clear on leaving, including leaving into menu padding
 - **AND** the accepted checkmark and value remain unchanged, including after pointer activation and subsequent departure
 
@@ -243,6 +243,11 @@ Migrated choice menus SHALL use the quiet row highlight for pointer or keyboard 
 - **THEN** hover feedback clears and the keyboard-navigation highlight remains on the actually focused choice
 - **AND** no value is committed by inspection, pointer movement or opening the menu
 - **AND** leaving keyboard navigation focus clears its highlight without removing the accepted checkmark
+
+#### Scenario: Pointer crosses an unavailable dropdown choice
+- **WHEN** the pointer moves from an available choice onto an unavailable choice or clicks the unavailable choice
+- **THEN** the prior pointer highlight clears and the unavailable choice receives no pointer hover or held highlight
+- **AND** keyboard inspection remains available, the unavailable reason stays discoverable and the accepted checkmark and value remain unchanged
 
 ### Requirement: Choice content remains readable and unavailable reasons inspectable
 Migrated selectors SHALL preserve full accessible choice names and accepted values. Closed long values SHALL ellipsize with discoverable full text; open long choices SHALL wrap within the available menu width without shrinking text or losing their checkmark. Unavailable choices SHALL expose a reason through visible and accessible presentation and support keyboard inspection without permission to select them. Entirely disabled fields SHALL explain their unavailability.
@@ -273,7 +278,7 @@ Migrated selectors SHALL preserve stable choice identities, captured invocation 
 - **AND** Learn defaults, selected-swell IR and Export gain-pair semantics remain isolated and unchanged
 
 ### Requirement: Action menus separate pointer hover from keyboard inspection
-Migrated action/context menus SHALL reuse quiet row feedback for neutral actions and distinguish held feedback from hover. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains and reappear after temporary pointer hover leaves. Ordinary actions SHALL NOT retain a selection checkmark, background or edge merely because they were invoked.
+Migrated action/context menus SHALL reuse quiet row feedback for eligible neutral actions and distinguish held feedback from hover. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains and reappear after temporary pointer hover leaves. Ordinary actions SHALL NOT retain a selection checkmark, background or edge merely because they were invoked.
 
 #### Scenario: Pointer leaves an action
 - **WHEN** the pointer hovers Rename or a reset action and then leaves, including after a pointer click
@@ -285,11 +290,16 @@ Migrated action/context menus SHALL reuse quiet row feedback for neutral actions
 - **THEN** the keyboard-navigation highlight identifies the actually focused action until its navigation focus leaves or the menu is dismissed
 - **AND** pointer input does not remove actual keyboard eligibility when it clears pointer-induced focus decoration
 
+#### Scenario: Pointer crosses a disabled action
+- **WHEN** the pointer moves from an eligible action onto a disabled action or clicks the disabled action
+- **THEN** the prior pointer highlight clears and the disabled action receives no pointer hover or held highlight
+- **AND** keyboard inspection remains available and no action runs
+
 ### Requirement: Action menu roles are explicit and readable
-Migrated action menus SHALL declare semantic roles independently of labels and component names. Neutral rows SHALL retain off-white content with quiet feedback; destructive rows SHALL retain red content and red hover/held emphasis. Long action labels SHALL remain readable without shrinking. Unavailable actions SHALL expose visible and accessible reasons and permit keyboard inspection without permission to invoke them.
+Migrated action menus SHALL declare semantic roles independently of labels and component names. Neutral rows SHALL retain off-white content with quiet feedback; destructive rows SHALL retain red content and red hover/held emphasis. Long action labels SHALL remain readable without shrinking. Unavailable actions SHALL permit keyboard inspection without activation. Reasons SHALL be visible and accessible where needed. Disabled Rename during multiselect SHALL show its label alone.
 
 #### Scenario: Inspect Delete versus Rename
-- **WHEN** Rename and Delete are hovered, held or keyboard-inspected
+- **WHEN** eligible Rename and Delete actions are hovered, held or keyboard-inspected
 - **THEN** Rename uses quiet neutral feedback and Delete uses its explicit destructive red treatment
 - **AND** changing either label does not select or remove its semantic role
 - **AND** these popup roles do not reclassify existing command buttons
@@ -299,8 +309,12 @@ Migrated action menus SHALL declare semantic roles independently of labels and c
 - **THEN** the complete binding-supplied action and explanation are visible or discoverable through pointer, keyboard and accessibility inspection
 - **AND** no inspection or activation path grants permission to execute the unavailable action
 
+#### Scenario: Inspect Rename during multiselect
+- **WHEN** the Swells menu opens while multiple swells are selected
+- **THEN** Rename is disabled with its dimmed label alone and its unavailable state is exposed accessibly
+
 ### Requirement: Menu presentation preserves captured action authority
-Migrated menus SHALL preserve existing action effects, captured target/session/input/pass authority, reset-revision guards, lifetime checks and asynchronous acceptance. One eligible pointer, keyboard or accessibility activation SHALL invoke at most one captured action. Cancellation or stale, disabled and destroyed contexts SHALL invoke none. Presentation SHALL NOT recalculate reset values, widen eligibility or replace action providers.
+Migrated menus SHALL preserve existing action effects, captured target/session/input/pass authority, reset-revision guards, lifetime checks and asynchronous acceptance. One eligible pointer, keyboard or accessibility activation SHALL invoke at most one captured action, including a request for confirmation. Cancellation or stale, disabled and destroyed contexts SHALL invoke none. Presentation SHALL NOT recalculate reset values, widen eligibility or replace action providers.
 
 #### Scenario: Target changes while a reset menu is open
 - **WHEN** selection, session, source/input, workflow pass or reset revision supersedes an open reset menu, or the owner is destroyed
@@ -315,4 +329,243 @@ Migrated menus SHALL preserve existing action effects, captured target/session/i
 
 #### Scenario: Open a Swells item menu from either pointer entry point
 - **WHEN** the user right-clicks a Swells item or clicks that item's three-dot icon
-- **THEN** the same Rename/Delete menu opens for the clicked item at the pointer anchor
+- **THEN** the same Rename/Delete menu opens from either entry point with actions scoped to the clicked row and its selection membership
+
+### Requirement: Numeric and text fields share presentation by editing role
+Numeric and text fields SHALL use the approved appearance and accessible naming for their role across the plugin. Editable, unavailable and read-only states SHALL remain distinguishable. Keyboard and accessibility focus SHALL use separate aqua brackets. Pointer input SHALL suppress the brackets while preserving focus, caret and selection.
+
+#### Scenario: Traverse editable and read-only fields
+- **WHEN** a user tabs through inspector, Settings, dialog or Diagnostics fields
+- **THEN** focus identifies the active field and its accessible name identifies its caption and applicable units
+- **AND** read-only values remain available for inspection and copying according to their existing policy, without publishing an edit
+
+#### Scenario: Edit a value embedded in a knob or slider
+- **WHEN** the user clicks or types in the numeric entry
+- **THEN** typing and selection remain usable with the same units and input constraints
+- **AND** the entry retains its own focus treatment without changing the adjacent dial, track or stepper action
+
+#### Scenario: Type into a numeric field
+- **WHEN** a user types or pastes into a numeric field
+- **THEN** the field blocks letters and preserves the selection when the entire insertion is blocked
+
+#### Scenario: Scroll over a numeric stepper
+- **WHEN** the user scrolls over the value or arrows of a numeric stepper
+- **THEN** the field moves by one configured step in the wheel direction, within the existing range
+
+### Requirement: Numeric and text field feedback follows the binding
+Where a numeric or text field has a feedback position, it SHALL show its applicable help or binding-supplied validation directly below the field or group. The message SHALL wrap within that width and be available through the associated accessible description. Validation SHALL take precedence over routine help, with red text and an affected field border independent of focus.
+
+#### Scenario: An inspector entry rejects a typed value
+- **WHEN** a user submits invalid timing or an out-of-range Level in a field with a feedback position
+- **THEN** the binding's explanation appears beside the affected field, the accepted value is preserved, and unrelated drafts remain intact
+- **AND** an accepted correction or a change of the affected context clears the obsolete explanation
+
+#### Scenario: A compact input has no local feedback position
+- **WHEN** an embedded field has only its compact value entry
+- **THEN** its existing units, context help and accessible description remain available without a new row or a new validation rule
+
+#### Scenario: A long message wraps in a group
+- **WHEN** help or validation is wider than the input area
+- **THEN** the message wraps within the field or group's body bounds at the approved text size, and nearby controls remain readable and reachable
+
+### Requirement: Numeric and text fields preserve subtype edit authority
+Each field SHALL retain its subtype's edit and refresh rules, existing precision and clamp or reject behavior. The binding SHALL own the accepted value and captured edit context. Routine refresh SHALL issue no edit. Replacing the session or target SHALL prevent a stale draft from changing another value.
+
+#### Scenario: Use the existing commit and cancel paths
+- **WHEN** the user presses Return or Escape, changes focus or invokes an explicit submit action
+- **THEN** the field follows its documented subtype behavior and commits at most once
+- **AND** the Settings bar pair submits together through Return or its explicit action
+- **AND** leaving the Settings bar pair or Name field runs validation while preserving explicit submission
+
+#### Scenario: Change swell or session with a source-bar draft
+- **WHEN** the selected swell or session changes before a source-bar draft is submitted
+- **THEN** the stale draft cannot validate or publish in the new context
+- **AND** the pair clears so the user can enter both bars for the new context
+
+#### Scenario: A displayed value is rounded
+- **WHEN** a numeric entry shows a rounded value and the user focuses or leaves it without editing
+- **THEN** the accepted exact value is preserved
+- **AND** a valid typed value follows the binding's existing precision and range rules
+
+#### Scenario: Update one value in an independent pair
+- **WHEN** the user edits Export Dry or Wet
+- **THEN** only the edited level changes and the existing Character derivation remains authoritative
+
+### Requirement: Empty Rename submissions remain recoverable
+Rename SHALL keep its captured target and explicit OK, Return, Cancel and Escape behavior. An empty submission SHALL keep the dialog open with local validation until the user enters an accepted name or cancels.
+
+#### Scenario: Submit an empty name then correct it
+- **WHEN** the user submits an empty name using OK or Return
+- **THEN** the original name remains accepted and the focused Name field shows the local reason
+- **AND** an accepted correction renames the captured swell once, while Cancel or Escape closes without publishing a rename
+
+#### Scenario: The Rename target is no longer current
+- **WHEN** the captured swell or session ceases to be valid before submission
+- **THEN** the existing ownership guard prevents publication to a different swell or session
+
+### Requirement: Knob and slider feedback separates value, pointer and focus
+Migrated knobs and slider tracks SHALL use an aqua value arc or fill, an off-white position indicator, and quiet pointer hover and held feedback. Keyboard and accessibility focus SHALL show thin outer aqua corner brackets with a gap outside the control body. Pointer focus SHALL retain interaction without the brackets. Unavailable controls SHALL remain readable and ineligible for edits.
+
+#### Scenario: Compare the same control by pointer and keyboard
+- **WHEN** the user hovers, holds, clicks or tabs to a dial or slider track
+- **THEN** hover and held feedback identify pointer interaction, and only keyboard or accessibility focus shows the outer brackets
+- **AND** the indicator continues to reflect the accepted value
+
+#### Scenario: Hover or hold a dial at any value
+- **WHEN** the user hovers over or holds a dial with the pointer
+- **THEN** quiet feedback follows the arc's sweep and leaves its centre and the gap between its ends clear
+
+#### Scenario: Focus a track that has a numeric field
+- **WHEN** focus moves between a slider track, its value field or its steppers
+- **THEN** focus feedback identifies the actual focused control, with the P4 field and stepper behavior preserved
+
+#### Scenario: Resize a dial with a companion value field
+- **WHEN** a dial with an exact-entry field is laid out at different widths
+- **THEN** the field uses the shared value width wherever space allows
+- **AND** inline feedback aligns beneath the field and wraps within its value column
+
+#### Scenario: Discover the Target entry format
+- **WHEN** the user hovers over the Target dial or field
+- **THEN** the hover-help footer explains the current entry format, using bar.beat.fraction in musical mode and whole samples in exact-sample mode
+- **AND** the accessible field description follows the same units, the format hint adds no height to the Timing row, and validation errors still appear beneath the field
+
+### Requirement: Knob and slider wheel adjustment has a fine mode
+Migrated dials and tracks SHALL define coarse and fine wheel steps in their domain. Ctrl+wheel SHALL use the fine step where a smaller legal step exists. A discrete control SHALL keep its minimum legal step. Wheel adjustment SHALL honor direction, range and eligibility. Wheel input over numeric steppers or outside the dial or track SHALL follow its existing policy.
+
+#### Scenario: Fine-adjust Level or a percentage track
+- **WHEN** the user compares a normal wheel step with Ctrl+wheel over Level, Learn Event sensitivity, Export Dry or Export Wet
+- **THEN** Level steps by 1 dB or 0.1 dB, and the percentage tracks step by 1 or 0.1 percentage points respectively
+- **AND** Ctrl on a continuous track does not change ordinary pointer drag
+
+#### Scenario: Fine-adjust snapped timing
+- **WHEN** a timing dial is eligible and Snap is on
+- **THEN** plain wheel follows adjacent grid points, while Ctrl+wheel uses an unsnapped increment for that gesture
+- **AND** the Snap setting, existing Ctrl-drag bypass and established Shift fine behavior remain available
+
+### Requirement: A knob can have an optional drag-only home detent
+A knob configured with a home value SHALL attract a drag to that value within its configured band. Continued movement beyond the band SHALL continue the drag. A knob without a home SHALL keep its existing drag behavior. A home detent SHALL apply only to pointer drag and SHALL preserve the control's independent Reset action.
+
+#### Scenario: Drag Perform Level through neutral
+- **WHEN** the user drags Level toward 0 dB from either direction
+- **THEN** the dial settles at the marked 12 o'clock position when the drag candidate is within ±0.3 dB
+- **AND** dragging beyond the band moves past the detent
+
+#### Scenario: Enter a Level close to neutral using another input
+- **WHEN** the user enters or steps to a valid Level within the detent band using the wheel, keyboard, accessibility or exact entry
+- **THEN** the value follows that input method's normal rules
+- **AND** the detent does not round the value to 0 dB
+
+### Requirement: Knob and slider gestures preserve their existing authority
+Migrated controls SHALL preserve captured invocation authority, value limits, supported saved values, and reset, cancel and refresh rules. Stale or unavailable gestures SHALL publish no edit. Display-only controls SHALL change only the presentation they own.
+
+#### Scenario: Selection or session changes during a gesture
+- **WHEN** a drag, wheel action or Reset loses its captured swell, session, timing or workflow authority
+- **THEN** it cannot change a replacement target or session
+- **AND** refresh displays the accepted state without publishing an edit
+
+#### Scenario: Adjust a display control or reopen a legacy Level
+- **WHEN** a user changes zoom or Height, or opens a project with an older saved Level
+- **THEN** zoom and Height affect only the display, and the saved Level follows the established display and first-touch behavior
+
+### Requirement: Boolean controls use presentation suited to their layout
+Learn capture options and visible Settings on/off controls SHALL use labeled switches where the layout has room. The Swell Inspector SHALL use inline checkboxes for Enabled, Solo and Freeze. Each control SHALL display its accepted state with a thumb position or checkmark in addition to colour.
+
+#### Scenario: Review spacious settings and compact inspector flags
+- **WHEN** a user views Learn, Settings or the Swell Inspector at a supported editor size and scale
+- **THEN** Learn and Settings switches keep their labels close to the track, and Enabled, Solo and Freeze stay together on one inspector row
+- **AND** labels, hit targets and focus decoration remain readable, contained and independently operable
+- **AND** choosing the checkbox presentation for an inspector flag preserves its immediate effect
+
+### Requirement: Switches and checkboxes share independent pointer and focus states
+Both forms SHALL distinguish quiet hover and held feedback on the indicator surface. Keyboard and accessibility focus SHALL show thin aqua corner brackets with a small gap around the indicator. A pointer click SHALL hide the brackets while retaining actual focus and keyboard eligibility.
+
+#### Scenario: Hover and press an enabled control
+- **WHEN** the user hovers, holds or releases the pointer on a switch or checkbox
+- **THEN** the indicator's border and background show distinct hover and held states without obscuring its accepted value
+- **AND** the label and indicator activate the same control, and cancelling the press before activation leaves the value unchanged
+- **AND** a pointer release can activate the control only after an eligible primary press from the same pointer
+
+#### Scenario: Change focus input method
+- **WHEN** the user tabs to a control or explicitly focuses it through accessibility
+- **THEN** the brackets appear independently of pointer feedback and without changing the value
+- **AND** pointer movement alone leaves those brackets visible
+- **WHEN** the user clicks the control, including when it already has focus
+- **THEN** the pointer feedback remains available and the brackets disappear
+
+#### Scenario: An on or off control becomes unavailable
+- **WHEN** an on/off control is unavailable, including Isolate dry source during wet-only audition
+- **THEN** its disabled presentation keeps its accepted state readable and exposes the binding's reason through the applicable help and accessible description
+- **AND** hover or press does not make it appear eligible and activation does not change its value
+
+### Requirement: Boolean activation preserves binding authority
+Migrated switches and checkboxes SHALL expose a stable accessible name and state. Eligible pointer, Space and accessibility activation SHALL issue at most one existing guarded request. Existing Return behavior SHALL be preserved per binding. Programmatic refresh SHALL silently display accepted state. Disabled, stale or destroyed contexts SHALL not mutate a model.
+
+#### Scenario: A Learn or Settings invocation outlives its capture pass
+- **WHEN** the workflow or capture pass changes between invocation and delivery
+- **THEN** the existing guard rejects the stale request, and the displayed value reconciles to accepted state without issuing another request
+- **AND** a disabled pre-invocation hook that is required by the binding does not make the request eligible
+
+#### Scenario: A selected swell changes while a flag is being activated
+- **WHEN** a queued Enabled, Solo or Freeze activation loses its selected swell or session
+- **THEN** it cannot change a replacement swell
+- **AND** valid flag changes retain their existing selection, audition and render behavior
+
+### Requirement: Editor and Settings use connected tabs
+
+The workflow header, Learn sections, Perform Swell Inspector sections and Settings SHALL use joined tab bodies with aqua fill and readable content for the accepted selection. Hover and held press SHALL have distinct body feedback. Keyboard and explicit accessibility focus SHALL show thin aqua corner brackets separated from the tab body by a small gap.
+
+#### Scenario: Hover and press either a selected or an unselected tab
+- **WHEN** the pointer hovers over a tab or holds it down
+- **THEN** quiet hover and stronger held feedback appear on its border and background
+- **AND** the accepted tab remains recognizable until another selection is accepted
+- **AND** adjacent tabs share one seam with legible selected and held edges
+- **AND** releasing outside or leaving clears the relevant pointer feedback without selecting a tab
+
+#### Scenario: Switch between keyboard and pointer input
+- **WHEN** a tab gains keyboard or explicit accessibility focus
+- **THEN** the aqua brackets appear around that tab independently of accepted selection and hover
+- **AND** pointer movement alone leaves the brackets visible
+- **AND** a pointer click on a tab hides the brackets while retaining actual focus and keyboard operation
+
+#### Scenario: Use the tabs at compact or scaled sizes
+- **WHEN** the editor uses its supported compact or larger layout, or Settings uses supported UI scaling
+- **THEN** the labels, existing workflow icons, and complete focus decoration remain readable and clear of nearby content
+- **AND** all Settings tabs, including Appearance when available, remain visible and reachable at the supported Settings size
+
+### Requirement: Tab inspection and activation are separate
+
+Connected tabs SHALL preserve accepted selection separately from focus and expose tab names, selected state, and availability to accessibility clients. Left and Right arrows and Home and End SHALL inspect choices. Return and Space SHALL request activation of an eligible inspected choice. Pointer or accessibility activation SHALL issue at most one request per invocation. Wheel input SHALL preserve selection and surrounding scrolling.
+
+#### Scenario: Inspect a tab before switching pages
+- **WHEN** a user enters the tab strip with the keyboard and navigates to a different tab
+- **THEN** the inspected tab receives focus while the accepted tab and visible page remain unchanged
+- **AND** assistive technology can query the inspected tab as the focused element independently of the selected tab
+- **AND** Return or Space on an eligible tab requests its activation once
+- **AND** the displayed selection and page change only after acceptance
+
+#### Scenario: Inspect an unavailable workflow destination
+- **WHEN** a workflow destination is unavailable or its existing guard rejects activation
+- **THEN** the accepted mode and page remain unchanged
+- **AND** an unavailable destination remains inspectable and exposes its existing reason through context help and accessibility
+
+### Requirement: Settings keeps About last and preserves page bindings
+
+Settings SHALL present Playback, Processing, Swell, Audition, Recovery, Appearance (when available), Storage and About in that order. About SHALL remain the last tab as the Settings strip evolves. Each tab and programmatic navigation action SHALL open its corresponding existing page independently of tab position.
+
+#### Scenario: Visit Storage and About through the strip
+- **WHEN** a user opens the final two Settings tabs
+- **THEN** Storage opens the existing storage inventory and About opens the build information page
+- **AND** the order is the same for pointer, keyboard and accessibility navigation
+
+#### Scenario: Open Settings from the Storage shortcut
+- **WHEN** an existing action opens Storage directly
+- **THEN** Settings shows Storage and marks its tab selected
+- **AND** ordinary refresh and resizing preserve the current page, its values and existing scroll and focus behavior
+
+### Requirement: Popup highlights fill the available row
+Shared action and choice popups SHALL fill the available row width for eligible hover and held feedback and for keyboard inspection. A scrollbar gutter SHALL be reserved only when rows overflow.
+
+#### Scenario: Highlight short and scrolling popups
+- **WHEN** a user inspects a row in a short popup or in a popup with overflowing content
+- **THEN** the highlight reaches the inner right edge in the short popup and the visible row edge in the scrolling popup
+- **AND** text, selection markers and the scrollbar remain readable and usable

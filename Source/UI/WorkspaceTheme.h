@@ -43,23 +43,28 @@ inline CommandInk commandInk(CommandVariant variant,CommandState state)
 // Reserve the bracket stroke and gap inside the component, outside its body.
 inline juce::Rectangle<int> commandBodyBounds(juce::Rectangle<int> bounds)
 {return bounds.reduced(static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke));}
+inline void paintCornerBrackets(juce::Graphics& g,juce::Rectangle<int> bounds,juce::Colour ink)
+{
+    const auto focus=controlGeometry::insideStroke(bounds,controlGeometry::focusStroke);
+    const auto leg=std::min(focus.getWidth(),focus.getHeight())*.2f;
+    juce::Path brackets;
+    for(const auto corner:{focus.getTopLeft(),focus.getTopRight(),focus.getBottomLeft(),focus.getBottomRight()})
+    {
+        const auto dx=corner.x==focus.getX()?leg:-leg,dy=corner.y==focus.getY()?leg:-leg;
+        brackets.startNewSubPath(corner.x+dx,corner.y);
+        brackets.lineTo(corner);
+        brackets.lineTo(corner.x,corner.y+dy);
+    }
+    g.setColour(ink);
+    g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
+}
 inline void paintCommandSurface(juce::Graphics& g,juce::Rectangle<int> bounds,CommandVariant variant,CommandState state)
 {
     const auto ink=commandInk(variant,state);
     const auto body=commandBodyBounds(bounds);
     g.setColour(ink.fill);g.fillRoundedRectangle(controlGeometry::insideStroke(body,rule),radius);
     g.setColour(ink.border);g.drawRoundedRectangle(controlGeometry::insideStroke(body,ink.stroke),radius,ink.stroke);
-    if(state.focused)
-    {
-        const auto focus=controlGeometry::insideStroke(bounds,controlGeometry::focusStroke);
-        const auto leg=std::min(focus.getWidth(),focus.getHeight())*.2f;juce::Path brackets;
-        for(const auto corner:std::array<juce::Point<float>,4>{{focus.getTopLeft(),focus.getTopRight(),focus.getBottomLeft(),focus.getBottomRight()}})
-        {
-            const auto dx=corner.x==focus.getX()?1.f:-1.f,dy=corner.y==focus.getY()?1.f:-1.f;
-            brackets.startNewSubPath(corner.x+dx*leg,corner.y);brackets.lineTo(corner);brackets.lineTo(corner.x,corner.y+dy*leg);
-        }
-        g.setColour(ink.focus);g.strokePath(brackets,juce::PathStrokeType(controlGeometry::focusStroke,juce::PathStrokeType::mitered,juce::PathStrokeType::butt));
-    }
+    if(state.focused)paintCornerBrackets(g,bounds,ink.focus);
 }
 }
 

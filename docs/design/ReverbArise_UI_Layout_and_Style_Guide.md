@@ -1,11 +1,25 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.18 · **Production standards revision:** 18 · **Purpose:** Production UI authority and design reference. Revision 18 applies the shared destructive button role to the Loop Arm latch. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
+**Version:** 1.24 · **Production standards revision:** 24 · **Purpose:** Production UI authority and design reference. Revision 24 adopts the approved shared waveform gestures and Perform Overview exception. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
 [approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
 Legacy debt remains explicit; family migrations retain scoped native approval.
+
+## Connected tabs — issue #107
+
+The workflow header, Learn sections, Swell Inspector sections and Settings use
+the same connected strip. The accepted tab has an aqua fill. Quiet hover and
+stronger held feedback change the tab's border and background. Adjacent tabs
+share one edge, with rounded ends at the outside of the strip. Keyboard and
+accessibility focus show aqua corner brackets with a gap outside the tab body.
+Clicking keeps actual focus and hides the brackets.
+
+Settings keeps About last, immediately after Storage. The existing Appearance
+page remains available before Storage in the responsive layout. See the
+[C7 contract](../development/ui-control-contracts.md#c7--navigation-lists-tabs-and-scroll-containers)
+for selection and focus behavior.
 
 
 ## Selector family — issue #107 (native approved)
@@ -170,6 +184,7 @@ a general accent variant. Copy, severity and real coverage supplement colour.
 | Control / label / heading heights | 34 / 24 / 30 | `controlGeometry` |
 | Numeric value / step strip | 74 x 28 / 18 wide | `controlGeometry` |
 | Switch track / component | 44 x 24 / 56 x 36 | `Switch` and control geometry |
+| Inline checkbox indicator | 18 x 18 | `BooleanToggle` and the existing focus clearance |
 | Focus | 2 stroke, 3 outset, 6 padding | Control geometry; contain the full stroke |
 | Rule / ordinary radius | 1 / 4 | Theme; switches and joined segments retain their own geometry |
 | Learn settings / column gap | 304 / 28 | `workspaceGeometry` |
@@ -234,7 +249,15 @@ production standards revision; this revision does not change plugin/state versio
 | 15 | #108 standard Level knob approved 2026-11-07 | Fixed -12 to +12 dB edits and 0 dB at 12 o'clock. The ordinary input preserves older gains until Level is operated |
 | 16 | #107 native action-menu family approved 2026-11-07 | Swells Rename/Delete opens from the row or its three dots. Per-knob Reset uses the same presenter and its captured action. Explicit neutral and destructive roles use transient hover, held feedback and separate keyboard inspection. |
 | 17 | #107 native field feedback approved 2026-11-07 | Settings Swell puts captions above the source-range inputs and wraps one local help or validation message below them. The existing field metrics, error ink and focus geometry apply. |
-| 18 | #133 native Loop Arm colour approved 2026-11-09 | Loop Arm uses the existing red text and outline when off and a red fill with dark text when armed. The label and status convey capture state, with independent aqua keyboard focus. |
+| 18 | #107 native numeric and text fields approved 2026-11-09 | Shared editable, embedded and read-only field surfaces. Existing field metrics apply to wrapped inspector and Rename feedback. Compact embedded entries keep context help and configured stepper behavior. |
+| 19 | #107 native knobs and sliders review | Aqua value arc or track, off-white position marker, and shared outer focus brackets. Quiet pointer feedback follows the dial arc or the slider track body. Ctrl+wheel uses the control's fine step. Level has a drag-only 0 dB detent with a ±0.3 dB band and a quiet tick at 12 o'clock. |
+| 20 | #107 native switches and checkboxes approved 2026-11-10 | Labeled switches in Learn and Settings. Enabled, Solo and Freeze use inline checkboxes. Both forms share quiet hover, held feedback, readable disabled state and outer aqua keyboard/accessibility brackets. |
+| 21 | #107 native connected tabs approved 2026-11-10 | Editor and Settings use connected tabs with quiet pointer states, independent keyboard/accessibility focus and About last in Settings. |
+| 22 | #107 native Export file interaction approved 2026-11-10 | The ready WAV tile starts a native copy gesture. Windows shows the approved WAV badge over accepting targets and the stop cursor over rejecting targets. The pointer drag uses a solid outline and restores the dotted affordance at the end. The cursor badge's 8.5 logical-unit label belongs to this artwork. |
+| 23 | #107 native Swells list and scrolling approved 2026-11-10 | The virtualized list uses square Enabled checkboxes and keyboard-accessible row actions. Group Delete requires confirmation with Cancel focused. Rename is dimmed during multiselect. Unavailable popup rows stay quiet under the pointer and short popup highlights reach the inner edge. |
+| 24 | #107 P8 native waveform gestures approved 2026-11-10 | Main waveforms share pointer-anchored wheel zoom, middle-drag pan and aqua keyboard/accessibility brackets. Left positions the local marker or edits a Perform handle. The compact Perform Overview uses left-drag alone to pan the detail range. |
+
+Loop Arm retains the owner-approved #133 destructive latch appearance (2026-11-09): red text and outline when off, red fill with dark text when armed, and independent aqua keyboard focus. This reuses the existing command variant.
 
 ### Stable Perform transport information
 
@@ -424,7 +447,7 @@ are historical evidence, not the current font-selection policy.
 | Inter **Medium** | Learn control labels (500), subsequently approved in #11; see production section above |
 | Inter *Italic* | Tagline and occasional supplemental instructions |
 
-Prefer clear type size/weight contrast over decorative typography; align captions, knobs and their numeric fields on a consistent grid. Keep the empty-state headline prominent but not oversized.
+Prefer clear type size/weight contrast over decorative typography and align captions, knobs and their numeric fields on a consistent grid. Dial value fields use the shared 74-unit width where it fits. Inline feedback aligns beneath the field and wraps within its value column. Target's entry format lives in the hover-help footer and accessible field description. Keep the empty-state headline prominent but not oversized.
 
 ### 8. Controls and interaction styling
 
