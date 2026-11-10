@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced live output peak guard and offline Loop fade contract against the implemented guide. Existing prose covers the implemented realtime ceiling, Live wet level control and separate offline protection.",
+  "summary": "Reviewed the eight owner-approved timing storyboards against Loop capture preferences and Learn/Perform bindings, loop-host-admission, loop-phrase-capture and transport-swell-playback requirements. Added embedded static SVG diagrams beside Song capture, all three Loop capture methods, marker generation, Loop cue/stop and Phrase alignment instructions. Captions distinguish FL Studio and Rack start boundaries, full lead-in cueing and incoming live dry. Existing screenshots and release identity slots are preserved.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1000,8 +1000,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 52052,
-      "sha256": "5625f8ca7287d2261ab9284eeca6a69367d5f79c7ca042622852006b529fcd2b"
+      "bytes": 117189,
+      "sha256": "b18ed43456e9c3e8f88b0158e8c3d089c443572ed2530edf4b2ec23cf8a9a3a0"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
