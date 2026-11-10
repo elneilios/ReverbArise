@@ -92,8 +92,6 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
                 {
                     auto state=juce::AccessibilityHandler::getCurrentState().withCheckable().withSelectable();
                     if(segment.owner.choices[segment.index].id==segment.owner.selected)state=state.withChecked().withSelected();
-                    if(segment.owner.hasKeyboardFocus(false) && segment.owner.focused==segment.index)
-                        state=state.withFocused();
                     return state;
                 }
             private:
@@ -144,6 +142,7 @@ public:
         }
         setDescription(description);setHelpText("Left/right: inspect choices. Enter/Space: activate an available choice. "+description);
         updateHint();resized();repaint();
+        if(rebuild)updateAccessibleFocus();
     }
     int selectedId()const noexcept{return selected;}
     int focusedId()const noexcept{return choices.empty()?0:choices[focused].id;}
@@ -160,7 +159,7 @@ public:
             if(key.isKeyCode(juce::KeyPress::homeKey))focused=0;
             else if(key.isKeyCode(juce::KeyPress::endKey))focused=choices.size()-1;
             else focused=(focused+choices.size()+(key.isKeyCode(juce::KeyPress::leftKey)?-1:1))%choices.size();
-            updateHint();repaint();return true;
+            updateHint();updateAccessibleFocus();repaint();return true;
         }
         if(key.isKeyCode(juce::KeyPress::returnKey) || key.isKeyCode(juce::KeyPress::spaceKey)){request(focused);return true;}
         return false;
@@ -169,6 +168,12 @@ public:
     {
         if(cause==focusChangedByTabKey)focusVisibility->keyboardInput();
         updateHint();repaint();
+        // JUCE gives the strip's handler focus after this callback returns.
+        // Forward it to the inspected tab once that focus change is complete.
+        juce::MessageManager::callAsync([safe=juce::Component::SafePointer<SegmentedSelector>(this)]
+        {
+            if(safe!=nullptr)safe->updateAccessibleFocus();
+        });
     }
     void focusLost(FocusChangeType)override{repaint();}
     void resized()override
@@ -216,7 +221,21 @@ private:
         path.addRoundedRectangle(box.getX(),box.getY(),box.getWidth(),box.getHeight(),radius,radius,first,last,first,last);
         return path;
     }
-    void focusChoice(size_t index){focused=index;updateHint();if(isShowing())grabKeyboardFocus();repaint();}
+    void focusChoice(size_t index)
+    {
+        focused=index;
+        updateHint();
+        if(isShowing())grabKeyboardFocus();
+        updateAccessibleFocus();
+        repaint();
+    }
+    void updateAccessibleFocus()
+    {
+        if(!hasKeyboardFocus(false) || focused>=buttons.size())return;
+        // Segments are not keyboard tab stops. Their handlers can still own
+        // native accessibility focus while the strip receives navigation keys.
+        if(auto* handler=buttons[focused]->getAccessibilityHandler())handler->grabFocus();
+    }
     void request(size_t index)
     {
         if(!isEnabled() || index>=choices.size())return;

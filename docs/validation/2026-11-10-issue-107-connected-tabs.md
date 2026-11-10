@@ -46,3 +46,16 @@ build output.
 The full Debug log is `out/build-logs/Debug/20261110-014400-45ce20fc/test.log`.
 The focused results are in `out/build-logs/p7-connected-tabs-ctest-retry.log`
 and `out/build-logs/p7-connected-tabs-release-focused-test.log`.
+
+## PR #139 accessibility follow-up
+
+The shared strip keeps one keyboard tab stop and gives the inspected tab's
+handler native accessibility focus. Windows UI Automation can query that tab
+through the same `getChildFocus()` path used by the provider. The regression
+checks entry, Left and Right, Home and End, explicit accessibility focus,
+unavailable inspection and focus leaving the strip. It checks the native
+handler separately from the accepted page and the painted brackets.
+
+The focused Windows MSVC Release rebuild passed both CTest entries
+(`preverb_swell_ui_test` and `preverb_storage_settings_test`). Results are in
+`out/build-logs/p7-uia-release-test.log`.

@@ -75,6 +75,7 @@ inline void connectedTabCases()
         void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&)override{++scrolls;}
     } host;
     SegmentedSelector tabs;
+    host.setWantsKeyboardFocus(true);
     host.addAndMakeVisible(tabs);
     host.setSize(340,50);
     tabs.setBounds(0,0,330,36);
@@ -83,6 +84,19 @@ inline void connectedTabCases()
     tabs.display(choices(),1);
     int requests=0,last=0;
     tabs.onRequest=[&](int id){++requests;last=id;};
+    auto* root=host.getAccessibilityHandler();
+    auto* strip=tabs.getAccessibilityHandler();
+    REQUIRE(root && strip);
+    const auto checkNativeFocus=[&](int id)
+    {
+        auto* inspected=tabs.segment(id)->getAccessibilityHandler();
+        REQUIRE(inspected && inspected->hasFocus(false) && !strip->hasFocus(false));
+        REQUIRE(strip->getChildFocus()==inspected && root->getChildFocus()==inspected);
+        REQUIRE(tabs.hasKeyboardFocus(false) && tabs.selectedId()==1);
+    };
+    tabs.grabKeyboardFocus();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+    checkNativeFocus(1);
     auto& middle=*tabs.segment(2);
     auto& button=static_cast<juce::Component&>(middle);
     const auto centre=button.getLocalBounds().getCentre().toFloat();
@@ -103,6 +117,7 @@ inline void connectedTabCases()
     REQUIRE(!middle.isDown() && requests==0);
     pointerClick(middle);
     REQUIRE(requests==1 && last==2 && tabs.selectedId()==1 && !tabs.isFocusVisible());
+    checkNativeFocus(2);
 
     const auto body=middle.getBounds();
     const auto focusMargin=static_cast<int>(m3::ui::controlGeometry::focusOutset+m3::ui::controlGeometry::focusStroke);
@@ -123,25 +138,36 @@ inline void connectedTabCases()
     REQUIRE(over.getPixelAt(body.getX(),body.getCentreY())==m3::ui::outline.interpolatedWith(m3::ui::text,.5f));
     middle.setState(juce::Button::buttonNormal);
 
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::homeKey));
+    checkNativeFocus(1);
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::rightKey));
+    checkNativeFocus(2);
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::leftKey));
+    checkNativeFocus(1);
     tabs.keyPressed(juce::KeyPress(juce::KeyPress::endKey));
+    checkNativeFocus(3);
     REQUIRE(tabs.isFocusVisible() && tabs.focusedId()==3 && tabs.selectedId()==1);
     tabs.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));
     REQUIRE(requests==2 && last==3 && tabs.selectedId()==1);
     auto* accessible=middle.getAccessibilityHandler();
     REQUIRE(accessible && accessible->getActions().invoke(juce::AccessibilityActionType::focus));
     REQUIRE(tabs.isFocusVisible() && tabs.focusedId()==2 && accessible->getCurrentState().isFocused());
+    checkNativeFocus(2);
     REQUIRE(!accessible->getCurrentState().isSelected());
     const auto focused=tabs.createComponentSnapshot(tabs.getLocalBounds());
     REQUIRE(focused.getPixelAt(body.getX()-focusMargin,0)==m3::ui::aqua);
     REQUIRE(accessible->getActions().invoke(juce::AccessibilityActionType::press));
     REQUIRE(requests==3 && last==2 && tabs.selectedId()==1);
     tabs.display(choices(false),1);
+    checkNativeFocus(2);
     tabs.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
     REQUIRE(requests==3 && tabs.focusedId()==2 && tabs.getTooltip().contains("Learn useful"));
     tabs.display(choices(),1);
     juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;
     button.mouseWheelMove(mouse(centre,{}),wheel);
     REQUIRE(host.scrolls==1 && requests==3 && tabs.selectedId()==1);
+    host.grabKeyboardFocus();
+    REQUIRE(strip->getChildFocus()==nullptr && !accessible->hasFocus(false));
     host.removeFromDesktop();
 }
 inline void cases(bool withIcons=false)

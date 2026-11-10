@@ -31,6 +31,7 @@ Connected tabs SHALL preserve accepted selection separately from focus and expos
 #### Scenario: Inspect a tab before switching pages
 - **WHEN** a user enters the tab strip with the keyboard and navigates to a different tab
 - **THEN** the inspected tab receives focus while the accepted tab and visible page remain unchanged
+- **AND** assistive technology can query the inspected tab as the focused element independently of the selected tab
 - **AND** Return or Space on an eligible tab requests its activation once
 - **AND** the displayed selection and page change only after acceptance
 

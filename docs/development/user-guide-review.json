@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed connected editor and Settings tabs, keyboard inspection and activation, and About last after Storage against the approved behavior and production bindings. Updated the offline guide instructions.",
+  "summary": "Reviewed the synced connected-tab contract and the Windows accessibility focus fix. The offline guide already describes inspection and activation accurately.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -710,8 +710,8 @@
     },
     {
       "path": "Source/UI/Controls/SegmentedSelector.h",
-      "bytes": 11826,
-      "sha256": "09042a8b19c1ebefbbd6fc5dbca6ba199407528e2ed7c3ea5c6985581d2de2df"
+      "bytes": 12523,
+      "sha256": "d42e46e7a8d9ba24530ea2218789a7f6a8b61b9a0c6e6ef01938ff6c15c93b99"
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
@@ -1070,8 +1070,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 43925,
-      "sha256": "5755b9cfbb42a7d8fdb0f9f0959ff4e6b8a2a06bb25aac60b4756984cf8fca19"
+      "bytes": 47913,
+      "sha256": "21347134f29ec68d4c13bc793ed22331bb42067809907b7b4765f0f91e9fe080"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
