@@ -102,6 +102,21 @@ public:
         return epochWindow(cycle);
     }
 
+    std::optional<Window> cueWindow(int64_t cycle) const noexcept
+    {
+        auto forecast = window(cycle);
+        if (!forecast || cycle <= cycles) return {};
+        const auto remaining = cycle - cycles;
+        const auto minimum = static_cast<int64_t>(std::floor(period()));
+        const auto maximum = static_cast<int64_t>(std::ceil(period()));
+        const auto headroom = INT64_MAX - last;
+        if (remaining > headroom / minimum) return {};
+        forecast->earliest = std::max(forecast->earliest,last + remaining * minimum);
+        if (remaining <= headroom / maximum)
+            forecast->latest = std::min(forecast->latest,last + remaining * maximum);
+        return forecast->earliest <= forecast->latest ? forecast : std::nullopt;
+    }
+
 private:
     void updateDeadline() noexcept
     {

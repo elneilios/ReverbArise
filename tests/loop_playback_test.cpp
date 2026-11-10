@@ -68,6 +68,7 @@ void schedulerCases()
     using State = LoopCueScheduler::State;
     using Phase = LoopLiveReference::State;
     LoopCueScheduler scheduler;
+    scheduler.setProcessingRate(48000);
     constexpr int64_t beatFrames = 24000, period = 4 * beatFrames;
     const auto configure = [&]{ scheduler.configure({{48000,120},4,4,4,true},48000,
                                                   LoopPhraseTiming{120,4,4,4,8337,period}); };
@@ -111,6 +112,22 @@ void schedulerCases()
     REQUIRE(scheduler.phase() == Phase::ready && scheduler.state() == State::standby);
     sample(8 * period + 1,cue);
     REQUIRE(scheduler.phase() == Phase::lost && scheduler.state() == State::standby);
+}
+
+void earliestCueCase()
+{
+    using State = LoopCueScheduler::State;
+    LoopCueScheduler scheduler;
+    const auto tempo = 8000. * 60 / 2000.5;
+    scheduler.configure({{8000,tempo},1,4,4,true},8000,LoopPhraseTiming{tempo,4,4,1,0,2000});
+    for (const auto marker : {0,2001,4002}) scheduler.processSample(marker,phrase,true,1000);
+    REQUIRE(scheduler.phase() == LoopLiveReference::State::ready);
+    scheduler.processSample(5002,cue,true,1000);
+    REQUIRE(scheduler.firstCycle() == 3 && scheduler.state() == State::leadIn);
+    REQUIRE(scheduler.positionFor(3,5002) == -1000);
+    REQUIRE(scheduler.positionFor(3,6001) == -1);
+    scheduler.processSample(6002,phrase,true,1000);
+    REQUIRE(scheduler.state() == State::repeating && scheduler.positionFor(3,6002) == 0);
 }
 
 LiveEntry testEntry(size_t slot, int64_t start, int64_t frames, float scale, double rate=48000)
@@ -197,7 +214,7 @@ void publicationCases()
                 if (at == commandSample) bits |= roles;
                 if (bits) events.samples[events.size++] = {offset,bits};
             }
-            { AudioAllocationGuard guard; playback.process(left.data(),right.data(),count,events,8000,1,source,true,false); }
+            { AudioAllocationGuard guard; playback.process(left.data(),right.data(),count,events,8000,1,source,source!=0,false); }
             REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
             for (int n = 0; n < count; ++n) REQUIRE(std::abs(left[n]+right[n]-.3f)<1e-6f);
             sample = left[count-1];
@@ -220,6 +237,64 @@ void publicationCases()
     publish(.05f,2);
     REQUIRE(advance(25600,-1,0,2)==.1f);
     REQUIRE(playback.status().playback == PlaybackState::standby);
+    playback.requestCue();
+    REQUIRE(advance(32000,-1,0,2)>.1f);
+    playback.collect();
+    const auto acceptedBytes = playback.pinnedBytes();
+    REQUIRE(acceptedBytes > 0);
+    publish(.02f,2);
+    REQUIRE(playback.pinnedBytes() == 2 * acceptedBytes);
+    REQUIRE(advance(32064,-1,0,0)==.1f && playback.status().playback == PlaybackState::standby);
+    playback.collect();
+    REQUIRE(playback.pinnedBytes() == acceptedBytes); // The final Loop callback released the adopted plan.
+    playback.discardPending();
+    REQUIRE(playback.pinnedBytes() == 0);
+}
+
+void rateChangeFadeCases()
+{
+    using PlaybackState = LoopCueScheduler::State;
+    for (const auto alreadyStopping : {false,true})
+    {
+        constexpr int64_t period = 19200;
+        LoopPlayback playback;
+        auto publication = std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration = publication->sourceRevision = 1;
+        publication->rate = 96000;
+        publication->timing = {300,4,4,1,0,period};
+        publication->preparation = LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries = {testEntry(0,0,1024,.01f,96000)};
+        juce::String error;
+        REQUIRE(publication->plan.prepare(period,1024*1024,error));
+        REQUIRE(playback.publish(std::move(publication)));
+        playback.setReference({{96000,300},1,4,4,true},true);
+        std::vector<float> left(3 * period + 1),right(left.size());
+        MidiObservations events;
+        events.samples[events.size++] = {0,phrase};
+        events.samples[events.size++] = {period,phrase};
+        events.samples[events.size++] = {2 * period,phrase | cue};
+        events.samples[events.size++] = {3 * period,phrase};
+        { AudioAllocationGuard guard; playback.process(left.data(),right.data(),static_cast<int>(left.size()),events,96000,1,1,true,false); }
+        REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+        REQUIRE(playback.status().playback == PlaybackState::repeating && left.back() > 0);
+        auto last = left.back();
+        std::array<float,241> fadeLeft{},fadeRight{};
+        if (alreadyStopping)
+        {
+            playback.requestStop();
+            { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),64,{},96000,1,1,true,false); }
+            REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+            REQUIRE(playback.status().playback == PlaybackState::stopping && fadeLeft[63] > 0);
+            last = fadeLeft[63];
+            fadeLeft.fill(0);
+            fadeRight.fill(0);
+        }
+        { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),241,{},48000,1,1,true,false); }
+        REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+        const auto end = alreadyStopping ? 208 : 240;
+        REQUIRE(fadeLeft.front() <= last && fadeLeft[end-2] > 0 && fadeLeft[end-1] == 0 && fadeLeft.back() == 0);
+        REQUIRE(playback.status().playback == PlaybackState::standby);
+    }
 }
 
 void measuredReplay(const char* path, double bpm)
@@ -279,14 +354,18 @@ void measuredReplay(const char* path, double bpm)
         if (std::distance(origin,phrases.end())<3 || origin[2]>=stopAt) continue;
         const auto cueAt = std::lower_bound(cues.begin(),cues.end(),origin[2]);
         if (cueAt==cues.end() || *cueAt>=stopAt) continue;
-        const auto firstPossible = [&](int64_t ordinal){ return *origin + static_cast<int64_t>(std::ceil(distance(ordinal)-1)); };
+        const auto epochEarliest = [&](int64_t ordinal){ return *origin + static_cast<int64_t>(std::ceil(distance(ordinal)-1)); };
+        const auto lastBeforeCue = std::upper_bound(origin,phrases.end(),*cueAt) - 1;
+        const auto launchEarliest = [&](auto anchor){
+            return std::max(epochEarliest(anchor-origin),*lastBeforeCue + (anchor-lastBeforeCue)*capturedFrames);
+        };
         auto first = std::upper_bound(origin,phrases.end(),*cueAt);
-        while (first!=phrases.end() && firstPossible(first-origin)-lead<*cueAt) ++first;
-        if (first==phrases.end() || firstPossible(first-origin)-lead>=stopAt) continue;
+        while (first!=phrases.end() && launchEarliest(first)-lead<*cueAt) ++first;
+        if (first==phrases.end() || launchEarliest(first)-lead>=stopAt) continue;
         ++launches;
         for (auto anchor=first; anchor!=phrases.end(); ++anchor)
         {
-            const auto early = firstPossible(anchor-origin);
+            const auto early = anchor==first ? launchEarliest(anchor) : epochEarliest(anchor-origin);
             if (early-lead>=stopAt) break;
             const auto observed = *anchor != dropped;
             if (*anchor<stopAt && observed) ++downbeats;
@@ -348,6 +427,6 @@ int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); schedulerCases(); compositorCases(); publicationCases();}
+        else {liveReferenceCases(); schedulerCases(); earliestCueCase(); compositorCases(); publicationCases(); rateChangeFadeCases();}
     });
 }

@@ -12,6 +12,13 @@ void LoopPlayback::collect()
         }
 }
 
+void LoopPlayback::discardPending()
+{
+    const auto discarded = pending.exchange(-1,std::memory_order_acq_rel);
+    if (discarded >= 0) slots[discarded].state.store(retired,std::memory_order_release);
+    collect();
+}
+
 uint64_t LoopPlayback::pinnedBytes() const noexcept
 {
     uint64_t result = 0;
@@ -50,6 +57,13 @@ void LoopPlayback::releaseHeld() noexcept
     held = -1;
 }
 
+void LoopPlayback::retireLatestWithoutSource(uint64_t revision) noexcept
+{
+    if (revision || latest < 0 || scheduler.state() != LoopCueScheduler::State::standby) return;
+    slots[latest].state.store(retired,std::memory_order_release);
+    latest = -1;
+}
+
 void LoopPlayback::setReference(const LoopReferenceSetup& setup, bool externalCommands) noexcept
 {
     configSequence.fetch_add(1,std::memory_order_acq_rel);
@@ -77,8 +91,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
     if (frames <= 0) return;
-    const auto oldSlot = latest;
-    takePublication();
+    // Without an accepted Loop, the worker owns any unadopted publication.
+    if (revision) takePublication();
     const auto current = latest >= 0 ? slots[latest].data.get() : nullptr;
     const auto sameSource = [&](const LoopPlaybackPublication* p){
         return p && p->captureGeneration == generation && p->sourceRevision == revision;
@@ -97,6 +111,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     std::atomic_thread_fence(std::memory_order_acquire);
     if ((before & 1) || configSequence.load(std::memory_order_acquire) != before) setup = {};
     if (currentMatches && current->rate != rate) setup.clock.rate = rate;
+    scheduler.setProcessingRate(rate);
     scheduler.configure(setup,currentMatches ? current->rate : 0,currentMatches ? std::optional{current->timing} : std::nullopt);
     const auto reset = resetEpoch.load(std::memory_order_acquire);
     const bool validFrames = frames > 0 && cursor <= INT64_MAX - frames;
@@ -115,11 +130,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     if (!canObserve && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {
         releaseHeld();
-        if (revision == 0 && latest >= 0 && latest == oldSlot)
-        {
-            slots[latest].state.store(retired,std::memory_order_release);
-            latest = -1;
-        }
+        retireLatestWithoutSource(revision);
         cursor += frames;
         publishStatus();
         return;
@@ -162,6 +173,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if (dry != 1 || wet.left != 0) left[offset] = dry * left[offset] + wet.left;
         if (dry != 1 || wet.right != 0) right[offset] = dry * right[offset] + wet.right;
     }
+    retireLatestWithoutSource(revision);
     cursor += frames;
     publishStatus();
 }

@@ -27,6 +27,7 @@ public:
     };
 
     bool publish(std::unique_ptr<LoopPlaybackPublication>);
+    void discardPending();
     void collect();
     uint64_t pinnedBytes() const noexcept;
     void invalidatePrepared() noexcept { dependencyEpoch.fetch_add(1,std::memory_order_release); }
@@ -53,6 +54,7 @@ private:
     int latest = -1, held = -1;
     void takePublication() noexcept;
     void releaseHeld() noexcept;
+    void retireLatestWithoutSource(uint64_t revision) noexcept;
 
     std::atomic<uint64_t> dependencyEpoch{0}, resetEpoch{0}, configSequence{0};
     uint64_t seenReset = 0;

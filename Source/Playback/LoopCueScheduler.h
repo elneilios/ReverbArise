@@ -18,7 +18,20 @@ public:
         if (!reference.configure(setup,sourceRate,source)) return;
         stop();
         anchors.fill({});
-        fadeLength = std::clamp(static_cast<int>(std::floor(setup.clock.valid() ? setup.clock.rate * .005 : 1)),1,960);
+    }
+
+    void setProcessingRate(double rate) noexcept
+    {
+        const auto nextRate = std::isfinite(rate) && rate > 0 ? rate : 0;
+        if (nextRate == processingRate) return;
+        fadeLength = static_cast<int>(std::clamp(nextRate * .005,1.0,960.0));
+        if (fadeRemaining > 0)
+        {
+            fadeStart *= static_cast<float>(fadeRemaining) / static_cast<float>(fadeTotal);
+            const auto remaining = processingRate > 0 ? fadeRemaining * (nextRate / processingRate) : 1.0;
+            fadeRemaining = fadeTotal = static_cast<int>(std::clamp(remaining,1.0,static_cast<double>(fadeLength)));
+        }
+        processingRate = nextRate;
     }
 
     void processSample(int64_t sample, uint16_t roles, bool prepared, int64_t lead) noexcept
@@ -53,6 +66,7 @@ public:
         if (playback == State::leadIn || playback == State::repeating)
         {
             fadeRemaining = fadeTotal = fadeLength;
+            fadeStart = 1;
             playback = State::stopping;
         }
         else if (playback == State::queued) playback = State::standby;
@@ -62,7 +76,7 @@ public:
     float fadeWeight() noexcept
     {
         if (playback != State::stopping) return 0;
-        const auto weight = static_cast<float>(--fadeRemaining) / static_cast<float>(fadeTotal);
+        const auto weight = fadeStart * static_cast<float>(--fadeRemaining) / static_cast<float>(fadeTotal);
         if (fadeRemaining == 0) playback = State::standby;
         return weight;
     }
@@ -82,7 +96,8 @@ public:
         if (first < 0 || cycle < first) return {};
         const auto& anchor = anchors[static_cast<size_t>(cycle % anchorCapacity)];
         if (anchor.cycle == cycle) return sample - anchor.sample;
-        const auto forecast = reference.window(cycle);
+        // Keep the launch prediction fixed after Cue so later markers cannot shift a lead already in progress.
+        const auto forecast = cycle == first ? std::optional{firstWindow} : reference.window(cycle);
         if (!forecast || sample > forecast->latest) return {};
         // A late but valid marker extends only the last negative sample.
         return std::min(int64_t{-1},sample - forecast->earliest);
@@ -97,11 +112,12 @@ private:
         auto cycle = std::max(reference.ordinal() + 1,
                               static_cast<int64_t>(std::ceil((threshold - origin->earliest) / reference.period())));
         if (cycle > reference.ordinal() + 1)
-            if (const auto earlier = reference.window(cycle-1); earlier && earlier->earliest >= threshold) --cycle;
-        auto candidate = reference.window(cycle);
-        if (candidate && candidate->earliest < threshold) candidate = reference.window(++cycle);
+            if (const auto earlier = reference.cueWindow(cycle-1); earlier && earlier->earliest >= threshold) --cycle;
+        auto candidate = reference.cueWindow(cycle);
+        if (candidate && candidate->earliest < threshold) candidate = reference.cueWindow(++cycle);
         if (!candidate || candidate->earliest < threshold) return;
         first = cycle;
+        firstWindow = *candidate;
         leadStart = candidate->earliest - lead;
         playback = State::queued;
     }
@@ -109,8 +125,11 @@ private:
     struct Anchor { int64_t cycle = -1, sample = 0; };
     LoopLiveReference reference;
     std::array<Anchor,anchorCapacity> anchors{};
+    LoopLiveReference::Window firstWindow{};
     int64_t first = -1, leadStart = 0;
     int fadeLength = 1, fadeTotal = 1, fadeRemaining = 0;
+    double processingRate = 0;
+    float fadeStart = 1;
     State playback = State::standby;
 };
 }

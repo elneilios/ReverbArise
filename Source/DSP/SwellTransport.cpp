@@ -295,6 +295,11 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     }
     LivePreparationObservation observation;
     {const juce::ScopedLock guard(lock);observation=livePreparation;
+        if (preparedLoopSource)
+        {
+            loopPlayback.discardPending();
+            preparedLoopGeneration = preparedLoopSource = preparedLoopRender = 0;
+        }
         ++observation.service;observation.observed=context.time;observation.source=model.timing;
         observation.latest={};observation.clock.reset();observation.revision=liveRevision;observation.preparedRevision=preparedLiveRevision;
         observation.start=liveWindowStart;observation.end=liveWindowEnd;
