@@ -91,3 +91,26 @@ strict OpenSpec validation, user-guide currency and `git diff --check` passed.
 FL Studio, physical Windows DPI changes and a live screen reader were not
 retested for this presentation-only change. Accessible metadata and unchanged
 refresh are covered by component assertions; that is not a live reader claim.
+
+## PR #148 review correction F1
+
+The review found that Settings reflow moved every page back to origin, resetting
+the active viewport when any page's content height changed. `SettingsTabs`
+now preserves the current viewport position around reflow; JUCE still clamps it
+to the available range if content becomes shorter. Page-switch behavior and the
+existing keyboard focus-reveal owner remain unchanged.
+
+The shared text native case now checks the exact scroll position after an
+inactive page update, active-page growth and a window resize, then verifies
+bottom clamping and return to zero as content shrinks. This extends automated
+coverage without requiring another owner design review.
+
+F1 verification passed: the supported Release wrapper rebuilt successfully at
+`c12a12a` plus the correction, using the retained dependency cache and rebuilding
+previously cleaned task objects. Logs are in
+`out/build-logs/Release/20261110-233420-363b3dcd/`. All four affected native CTest
+cases passed in 68.15 seconds: Swell UI (including the new reflow assertions),
+responsive editor, responsive scale and Storage Settings. The focused log is
+`out/build-logs/p3-text-review-tests.log`. UI standards, guide currency, strict
+OpenSpec validation and diff checks also passed. The earlier full-suite and
+host/DPI coverage distinctions above still apply.

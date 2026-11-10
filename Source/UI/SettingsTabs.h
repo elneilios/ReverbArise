@@ -53,6 +53,7 @@ public:
     void paint(juce::Graphics& g) override { g.fillAll(background); }
     void resized() override
     {
+        const auto viewPosition = viewport.getViewPosition();
         auto area = getLocalBounds();
         strip.setBounds(area.removeFromTop(tabDepth));
         viewport.setBounds(area);
@@ -64,6 +65,7 @@ public:
                 const auto width=area.getWidth()-(height>area.getHeight()?viewport.getScrollBarThickness():0);
                 content->setBounds(0,0,width,height);
             }
+        viewport.setViewPosition(viewPosition);
     }
 
 private:

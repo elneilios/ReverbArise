@@ -47,7 +47,19 @@ inline void textPresentationCases()
     REQUIRE(!viewport->getWantsKeyboardFocus());
     REQUIRE(first.getHeight()==900 && viewport->getViewedComponent()->getHeight()>viewport->getHeight());
     viewport->setViewPosition(0,500);
+    REQUIRE(viewport->getViewPositionY()==500);
+    // Reflowing an inactive page must leave the current reading position alone.
+    tabs.setPageContentHeight(SettingsPage::processing,800);
+    REQUIRE(viewport->getViewPositionY()==500);
+    tabs.setPageContentHeight(SettingsPage::playback,1000);
+    REQUIRE(viewport->getViewPositionY()==500);
+    tabs.setSize(600,360);
+    REQUIRE(viewport->getViewPositionY()==500);
+    tabs.setPageContentHeight(SettingsPage::playback,450);
+    REQUIRE(viewport->getViewPositionY()==first.getHeight()-viewport->getViewHeight());
     REQUIRE(viewport->getViewPositionY()>0);
+    tabs.setPageContentHeight(SettingsPage::playback,0);
+    REQUIRE(viewport->getViewPositionY()==0);
     tabs.selectPage(SettingsPage::processing);
     REQUIRE(viewport->getViewedComponent()==&second && !first.isVisible());
     prose.setLookAndFeel(nullptr);

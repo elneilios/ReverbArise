@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed P3 text wrapping, aqua footer help and scroll access. The Settings text viewport preserves direct Tab navigation into the selected page. Existing guide instructions remain accurate after that focus correction.",
+  "summary": "Reviewed PR #148 F1 Settings scroll-position preservation during content reflow and resizing; existing scrolling guidance remains accurate, so no prose change is needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -875,8 +875,8 @@
     },
     {
       "path": "Source/UI/SettingsTabs.h",
-      "bytes": 3484,
-      "sha256": "2f4862ea09cf6b690d58528e8fca1ef9605255cf4a8ca57f1bfbe639e03d461a"
+      "bytes": 3594,
+      "sha256": "c2e3fdf03342cbb7d6ca10aa0f32fc67348726088be7e200439cca596a48343c"
     },
     {
       "path": "Source/UI/SongBarRuler.h",
