@@ -130,6 +130,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
+    Source/UI/Controls/NativeWavDrag.cpp
 )
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
@@ -141,6 +142,9 @@ target_link_libraries(preverb_plugin PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )
+if(WIN32)
+    target_link_libraries(preverb_plugin PRIVATE ole32 shell32 uuid)
+endif()
 
 add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources"

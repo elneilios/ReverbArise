@@ -108,7 +108,7 @@ Sources: [ExportWorkspace](../../Source/UI/ExportWorkspace.h),
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | E1 `play`, `stop`, `save`, `back` | C1 ActionButton; primary play, neutral commands | I/H/P/F/D/B; icon-only play/stop versus text+icon Save/Return; state/callback eligibility remains export-owned | P1 retained reference; no export command redesign |
-| E2 `tile` | C1/C8 FileDragTile, native-file gesture variant | I/H/P/F/D/B; dashed aqua boundary becomes solid on focus, H/P changes border ink; click/Return saves, drag threshold suppresses subsequent click | P8 explicit approved #6 exception, do not flatten to ordinary button |
+| E2 `tile` | C1/C8 FileDragTile, native-file gesture variant | I/H/P/F/D/B; dotted aqua pointer-idle boundary, solid active drag or visible keyboard focus; threshold starts one ready-file drag and suppresses that press's Save; click/Return saves | P8 Export file slice adopted at revision 22; retained #6 file tile variant |
 | E3 `mix.selector` | C2 ChoiceSelector, Character preset | Independent H/P/F/S/D; no wheel, exact canonical pair defines inspectable unavailable Custom; preset emits paired edit | Migrated in `unify-selector-states`; #51 atomic pair validation and silent refresh retained |
 | E4 `zoom.minus`, `.plus`, `.fit`, `.slider` | C1/C5 TimelineZoomControls | I/H/P/F/D. Shared track and command states. Export retains its own zoom scope and pass guards. | P1/P5 adopted. |
 
@@ -168,7 +168,7 @@ treated as production primary controls.
 | --- | --- | --- | --- |
 | N1 `showSwellMenu` Rename/Delete and modal Name field with OK/Cancel | C2 ChoicePopup, C4 FieldTextEditor, C1 ActionButton | Right-click or three dots opens the menu. Rename validates on focus loss. OK/Return submits to the captured ID and epoch. Cancel/Escape discards. | Popup adopted in revision 16. Rename field and buttons adopted in P4. |
 | N2 `KnobValue` reset popup per value cell | C2 `ChoicePopup` neutral action and C5 reset provider | Right-click anchor, provider label/eligibility and captured Reset closure. Pointer return preserves focus with brackets suppressed. Inspector `resetMenu` is the separate Reset All command | Popup adopted at revision 16 on the merged #108 Level baseline |
-| N3 Learn/selected ConvolutionIrBinding `chooser` (Settings default import routes through Learn binding), Export save `chooser`, native external file drag and editor host resize chrome | C8 platform surfaces; application owns launch/completion | OS-managed focus/selection/cancel; async lifetime/epoch/pass/file identity stays binding-owned | Retain native; P8 invocation ownership only, no themed chooser replacement |
+| N3 Learn/selected ConvolutionIrBinding `chooser` (Settings default import routes through Learn binding), Export save `chooser`, native external file drag and editor host resize chrome | C8 platform surfaces; application owns launch/completion | OS-managed chooser focus, overwrite and cancel. Export captures session/pass/file; Windows copy drag shows WAV or stop feedback from the target's drop effect. | Export N3 adopted at revision 22; IR chooser and resize-chrome review remain in P8. |
 
 | ID / actual consumers | Owner / semantics | States / differences | Disposition |
 | --- | --- | --- | --- |
@@ -234,7 +234,8 @@ Keep the family open until every consumer has a recorded disposition.
 | P6 Switches and toggles | L4, P4 and S4/S5 adopted by `unify-switch-toggle-states`. D3 retained hidden. | Shared toggle states. Labeled switches in Learn and Settings, inline checkboxes in the Swell Inspector, and preserved pass and binding authority. |
 | P7 Connected tabs | H2/L5/P5 and S7 adopted by `unify-connected-tabs`. | One connected strip and deliberate selection contract, with About last in Settings. |
 | P7 Lists and scrolling | P9/P10, D7 viewport and N5 scroll viewport remain a separate child under #107. | Preserve row identity, scroll, multiselection and #93 contextual reveal. Review row keyboard/accessibility gaps and explicit focus-reveal use. |
-| P8 Specialized interactions and auxiliary shells | L8 canvas, E2/E6 navigation/canvas, N3/N4/N5; C8 existing timeline/overview/navigation/file/window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and file drag/save guards, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
+| P8 Export file gestures | E2 and Export N3 Save WAV, tile Save fallback and ready-file drag | Adopted at revision 22. See the [Export validation record](../validation/2026-11-10-issue-107-export-file-invocations.md). |
+| P8 Remaining specialized interactions and auxiliary shells | L8 and E6 navigation/canvas, non-Export N3, N4 and N5; C8 timeline, overview, native file and window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and captured ownership, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
 
 Each remaining packet requires its own proposal/design/tasks and a
 consumer-specific diff, tests, review evidence and documentation update.

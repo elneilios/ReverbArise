@@ -18,7 +18,7 @@ public:
     }
     std::function<void()> beforeInvocation;
     bool isFocusVisible()const noexcept{return hasKeyboardFocus(true) && focusVisibility->isVisible();}
-    void invokeCommand()
+    virtual void invokeCommand()
     {
         if(!isEnabled())return;
         const juce::Component::SafePointer<CommandButton> safe(this);

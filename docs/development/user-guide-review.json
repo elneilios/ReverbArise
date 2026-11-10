@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced connected-tab contract and the Windows accessibility focus fix. The offline guide already describes inspection and activation accurately.",
+  "summary": "Reviewed the Export workspace and engine readiness, Save chooser and overwrite handling, and Windows file drag. Updated the Export instructions for immediate ready-WAV drag, the WAV and stop cursors, and dotted border restoration.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 33182,
-      "sha256": "2b78ed5c99db67ed9e9bc710b62c5ebf16795ed9feb2ff594c3c3005f0b61fa4"
+      "bytes": 33310,
+      "sha256": "2132cfd8acde5c2626c0effbbf57503720473f2c8d1ad5187281f249b3ee637a"
     },
     {
       "path": "CMakePresets.json",
@@ -415,13 +415,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 24369,
-      "sha256": "11ce29fbf91f80fe9ce758c5b29ee3baee251eca1ec1b99f9d82aed5e3f8e11f"
+      "bytes": 24473,
+      "sha256": "b400393812cd4728ebdca9d4fb364bb673eb4b88c9357029997310919aa4a9d7"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 24822,
-      "sha256": "c7500ab8da3f959a9feaf1be60d3c063e46432ab72550479ef2c2b27a984cff8"
+      "bytes": 25784,
+      "sha256": "b5e10d80473e85e23ba7fd9c8affd9bce1e3681445cceb652ae24804eea46f45"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -570,8 +570,8 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 7901,
-      "sha256": "bbaae8202e61f32e7470ceada0c3ca24dd926021eb9386957baf8115499cc077"
+      "bytes": 7909,
+      "sha256": "e58c052611b290e67cffcabfba0c130819c9b0a9a14038fc289478f968bc4fef"
     },
     {
       "path": "Source/UI/Controls/BooleanToggle.h",
@@ -635,8 +635,13 @@
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
-      "bytes": 3484,
-      "sha256": "23674bfab23a47d7d7cbbafe1a85fd47c0cfd103ee58e80fe72ccb63095c83a5"
+      "bytes": 4412,
+      "sha256": "6f9341b6e067304bee9246a8ddcca9cd87627387d89f21a2ac68013c5b087f12"
+    },
+    {
+      "path": "Source/UI/Controls/FileSaveAction.h",
+      "bytes": 3368,
+      "sha256": "b6a85ab075a3d0285b1fc55a2e480e47f053affd49c23198992ba0ed080a690a"
     },
     {
       "path": "Source/UI/Controls/FocusViewport.h",
@@ -687,6 +692,16 @@
       "path": "Source/UI/Controls/MusicalTimelineRuler.h",
       "bytes": 4495,
       "sha256": "15d60f2068a62a66f9a88d8835135a8c931d9e7b13a3a1ec92785697db76d235"
+    },
+    {
+      "path": "Source/UI/Controls/NativeWavDrag.cpp",
+      "bytes": 7006,
+      "sha256": "d809e6876ad099c418bc521381bad68a2a91c8a51f6e580ab130c84c65ac0b79"
+    },
+    {
+      "path": "Source/UI/Controls/NativeWavDrag.h",
+      "bytes": 403,
+      "sha256": "49b58390058797948686fb8c50b17dfad95ce800e059920cb08e6aaf6f41ab50"
     },
     {
       "path": "Source/UI/Controls/NoticeBar.h",
@@ -774,9 +789,14 @@
       "sha256": "b86c18d77ccdf96b69a70aa11cb2b00c336e354d3fdec13702f61c9cc86c3aea"
     },
     {
+      "path": "Source/UI/ExportFileInvocations.h",
+      "bytes": 6790,
+      "sha256": "7624dabca536eaa4fbef143e94af4a58e7b126f48306ee8318a1a90fec53afd6"
+    },
+    {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 24054,
-      "sha256": "fd79b5f6b095cabf12da462d791a2e549bf812fa0eace7933e3fba5702cca66c"
+      "bytes": 23199,
+      "sha256": "47eea14b9828dd5f1f24c774ce221cc30f9aa7740b42deec974f202c3127d426"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -950,8 +970,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30693,
-      "sha256": "79267a0d46126d5905d55bee34e864e753d97948f893d58d5b37b70636bd7e54"
+      "bytes": 30887,
+      "sha256": "d11ca045a7a01c0a8660dff3938ef9fffc8f23c81e74068b6299f217065786e9"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
