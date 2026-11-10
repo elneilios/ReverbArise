@@ -83,15 +83,9 @@ public:
                                             std::memory_order_acq_rel) ? s.pass+1 : 0;
     }
     bool startReserved(uint64_t pass) noexcept {return changePhase(pass,Phase::armed,Phase::recording);}
+    bool cancelReservedCapture(uint64_t pass) noexcept {return cancelUnsettledCapture(pass,Phase::armed);}
     bool cancelUnsettledCapture(uint64_t pass) noexcept
-    {
-        auto old=word.load(std::memory_order_acquire);
-        const auto s=decode(old);
-        if(s.pass!=pass || s.mode!=Mode::capture || (s.phase!=Phase::armed && s.phase!=Phase::recording))
-            return false;
-        return word.compare_exchange_strong(old,pack(s.mode,Phase::idle,false,Result::cancelled,s.pass+1,s.configurationSlot),
-                                            std::memory_order_acq_rel);
-    }
+    {return cancelUnsettledCapture(pass,Phase::recording);}
     bool rejectReserved(uint64_t pass) noexcept
     {
         auto old=word.load(std::memory_order_acquire);
@@ -146,6 +140,15 @@ public:
         }
     }
 private:
+    bool cancelUnsettledCapture(uint64_t pass,Phase lastPhase) noexcept
+    {
+        auto old=word.load(std::memory_order_acquire);
+        const auto s=decode(old);
+        if(s.pass!=pass || s.mode!=Mode::capture || (s.phase!=Phase::armed && s.phase!=lastPhase))
+            return false;
+        return word.compare_exchange_strong(old,pack(s.mode,Phase::idle,false,Result::cancelled,s.pass+1,s.configurationSlot),
+                                            std::memory_order_acq_rel);
+    }
     static constexpr uint64_t commitBit=uint64_t{1}<<11;
     static_assert(std::atomic<uint64_t>::is_always_lock_free);
     static_assert(std::atomic<bool>::is_always_lock_free);

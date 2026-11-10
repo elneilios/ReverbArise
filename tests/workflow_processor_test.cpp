@@ -305,7 +305,11 @@ static void loopProcessorCases()
         REQUIRE(accepted.manifest.loop->beats==(frames==256?3:4));
         REQUIRE(accepted.manifest.sampleRate==rate);
         REQUIRE(accepted.manifest.loop->tempoBpm==fixture.tempo);
-        REQUIRE(!processor.requestWorkflowMode(workflow::Mode::live));
+        const auto grid=processor.getSourceEditTime(accepted);
+        REQUIRE(grid.valid && grid.sample==0 && grid.ppq==0 && grid.bpm==fixture.tempo);
+        REQUIRE(processor.requestWorkflowMode(workflow::Mode::live) && !processor.requestLoopCue());
+        REQUIRE(!processor.requestWorkflowMode(workflow::Mode::finalise));
+        REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
         const auto storeRoot=accepted.location->projectsRoot.getChildFile(accepted.manifest.projectId).getChildFile(accepted.manifest.instanceId);
         CaptureAssetStore store(storeRoot);
         SourceInterval pcm;juce::String error;
@@ -368,8 +372,33 @@ static void loopProcessorCases()
 
 static void simpleLoopProcessorCases()
 {
+    for (const int steps : {4, 8, 16})
+    {
+        LoopCaptureFixture sequence;
+        sequence.simpleClock = sequence.simplePhrase = true;
+        sequence.phraseBeats = steps;
+        sequence.armBeat = 0;
+        sequence.stopBeat = steps - 1;
+        sequence.commandSample = sequence.marker(steps); // The next Step 1 also sends Arm.
+        auto& plugin = *sequence.processor;
+        auto settings = plugin.getLoopCapturePreference();
+        settings.method = LoopCapturePreference::Method::endSignal;
+        REQUIRE(plugin.setLoopCapturePreference(settings));
+        sequence.through(sequence.marker(steps - 1), true);
+        REQUIRE(plugin.loopFinishing());
+        sequence.through(sequence.marker(steps), true);
+        const auto take = plugin.getCaptureSnapshot();
+        REQUIRE(take.manifest.loop && take.manifest.loop->beats == steps);
+        REQUIRE(take.manifest.loop->originSample == sequence.marker(0));
+        REQUIRE(take.manifest.loop->endSample == sequence.marker(steps) - sequence.marker(0));
+        REQUIRE(!plugin.loopCaptureArmed());
+    }
+
     LoopCaptureFixture fixture(512, 44100, 121.5);
     fixture.simpleClock = true;
+    fixture.simplePhrase = true;
+    fixture.commandNote = 12;
+    fixture.commandSample = fixture.marker(2) + 17;
     auto& processor = *fixture.processor;
     auto preference = processor.getLoopCapturePreference();
     preference.method = LoopCapturePreference::Method::endSignal;
@@ -472,6 +501,7 @@ static void simpleLoopProcessorCases()
         else
         {
             REQUIRE(cold.requestLoopStop(pending.pass));
+            REQUIRE(!cold.loopCaptureArmed() && cold.getWorkflowSnapshot().result==workflow::Result::cancelled);
             shortTake.tick();
         }
         REQUIRE(!cold.loopCaptureArmed());
@@ -555,6 +585,7 @@ static void loopPlaybackProcessorCases()
     engine.generate(true);
     until("Loop wet preparation",[&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
     REQUIRE(p.loopPlaybackStatus().phase == Phase::unconfigured && !p.requestLoopCue());
+    REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));
     p.setLoopPlaybackReference({{48000,137},4,4,4,true},true);
 
     int64_t cursor = 0;
@@ -585,7 +616,12 @@ static void loopPlaybackProcessorCases()
         }
         return heardWet;
     };
-    REQUIRE(!through(marker(8)));
+    REQUIRE(!through(marker(4)));
+    REQUIRE(p.loopPlaybackStatus().phase == Phase::waiting && !p.requestLoopCue());
+    REQUIRE(!through(marker(8),marker(8),16)); // External Cue in Learn cannot queue wet.
+    REQUIRE(p.loopPlaybackStatus().phase == Phase::ready && !p.requestLoopCue());
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::standby && !p.loopPlaybackStatus().playhead);
+    REQUIRE(p.enterLoopStandby());
     REQUIRE(p.loopPlaybackStatus().phase == Phase::ready && p.requestLoopCue());
     REQUIRE(through(marker(12)+5000));
     REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);

@@ -71,6 +71,7 @@ struct EditorSnapshot
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
+    LoopPlayback::LeadInDisplay loopLeadIn;
     juce::String message;
     juce::String actionError;
     std::optional<int64_t> auditionSample;
@@ -128,16 +129,22 @@ public:
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
-    bool addTarget(int64_t arrival,juce::String* rejection=nullptr);
+    struct TargetIdentity
+    {
+        uint64_t session, revision;
+        juce::String reference;
+        CaptureSourceKind sourceKind;
+    };
+    bool addTarget(int64_t arrival,juce::String* rejection=nullptr,std::optional<TargetIdentity> expected={});
     bool confirmCandidate(size_t index);
-    bool confirmCandidateAt(int64_t sample);
+    bool confirmCandidateAt(int64_t sample,std::optional<TargetIdentity> expected={});
     void removeSelected();
     bool removeTarget(const juce::String&,uint64_t expectedSession);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession,
-              juce::String* rejection=nullptr);
+              juce::String* rejection=nullptr,uint64_t expectedLoop=0);
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
@@ -207,6 +214,7 @@ public:
     void stop();
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
     void processAudio(float*,float*,int,const SongTime&) noexcept;
+    void processLoopAudition(float*,float*,int,double,uint64_t,uint64_t,bool) noexcept;
     void processTransportAudio(float*,float*,int,const TransportTime&) noexcept;
     LoopPlayback& loopTransport() noexcept { return loopPlayback; }
     const LoopPlayback& loopTransport() const noexcept { return loopPlayback; }
@@ -314,7 +322,7 @@ private:
     void importJob(const Import&);
     void resetJob(const Reset&);
     bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,
-                     uint64_t expectedSession=0,juce::String* rejection=nullptr);
+                     uint64_t expectedSession=0,juce::String* rejection=nullptr,uint64_t expectedLoop=0);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
     void shapeJob(Swell,uint64_t session);
@@ -371,6 +379,7 @@ private:
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};
     std::atomic<bool> audioAllowed{false},timingChanged{false};
     std::atomic<double> expectedRate{0},expectedBpm{0};
+    std::atomic<uint64_t> auditionLoopRevision{0},auditionLoopGeneration{0};
     std::atomic<int> expectedNumerator{0},expectedDenominator{0};
     AuditionVoice voice;
     std::atomic<bool> livePublicationHold{false},livePublicationWaiting{false},livePublicationFail{false};

@@ -80,6 +80,8 @@ private:
     int inspectorSection=1;
     m3::ui::controls::SegmentedSelector inspectorSections;
     void layoutResponsive();
+    void layoutLoopPlayback(juce::Rectangle<int>);
+    void refreshLoopPlayback(bool visible,bool liveEnabled);
     void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
     m3::ui::controls::EllipsisLabel hoverHelp;
@@ -135,7 +137,7 @@ private:
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};
     std::array<int64_t,valueCount> valueRawStarts{},valueRawEnds{};
-    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;m3::GridClockContext clock;};
+    struct ValueInvocation {uint64_t epoch=0;std::vector<juce::String> selected;SongTime time,accepted;double rate=0;bool sampleAvailable=false;juce::String render;m3::GridClockContext clock;uint64_t loopRevision=0;};
     std::array<ValueInvocation,valueCount> valueInvocations;
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;
@@ -216,6 +218,12 @@ private:
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,helper;
     m3::ui::controls::EllipsisLabel monitorStatus;
+    m3::ui::controls::ActionButton loopCue{"Cue Loop"};
+    m3::ui::controls::EllipsisLabel loopPlaybackStatus;
+    bool loopPerformLayout=false;
+    bool loopButtonStops=false;
+    std::optional<std::pair<uint64_t,bool>> loopButtonInvocation;
+    std::optional<std::pair<int64_t,m3::SwellEngine::TargetIdentity>> addTargetInvocation;
     m3::ui::controls::EllipsisLabel selectedStatus,performSoundScope;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};

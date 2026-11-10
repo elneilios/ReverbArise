@@ -85,6 +85,23 @@ public:
     LoopLiveReference::State phase() const noexcept { return reference.state(); }
     bool active() const noexcept { return playback == State::queued || playback == State::leadIn || playback == State::repeating; }
     int64_t firstCycle() const noexcept { return first; }
+    std::optional<int64_t> playheadAt(int64_t sample) const noexcept
+    {
+        if (playback == State::leadIn) return positionFor(first,sample);
+        if (playback == State::repeating) return positionFor(reference.ordinal(),sample);
+        return {};
+    }
+
+    std::optional<int64_t> nextLeadInStart(int64_t wetStart) const noexcept
+    {
+        if (playback != State::repeating || wetStart >= 0) return {};
+        const auto cycle = reference.ordinal();
+        const auto next = reference.window(cycle + 1);
+        const auto& anchor = anchors[static_cast<size_t>(cycle % anchorCapacity)];
+        if (!next || anchor.cycle != cycle) return {};
+        return std::max(int64_t{0}, (next->earliest - anchor.sample) + wetStart);
+    }
+
     int64_t nearCycle(int64_t sample) const noexcept
     {
         const auto origin = reference.window(0);

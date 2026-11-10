@@ -580,10 +580,16 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
                 publication->gain = std::min(publication->gain,
                     juce::Decibels::decibelsToGain(gainCeilingDb(snapshot)) / publication->plan.peakBound);
             publication->wetOnly = snapshot.liveRouting == LiveRouting::wetOnly;
+            if (!publication->prepareLeadInPeaks(cancel)) return;
+            if (publication->bytes() > available()) result = Preparation::budget;
         }
     }
     publication->preparation = result;
-    if (result != Preparation::ready) publication->plan = {};
+    if (result != Preparation::ready)
+    {
+        publication->plan = {};
+        publication->leadInPeaks.reset();
+    }
     if (livePublicationHold.load())
     {
         livePublicationWaiting = true;

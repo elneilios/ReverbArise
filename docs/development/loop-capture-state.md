@@ -8,9 +8,13 @@ Loop Mode selects the next capture path. The Audio canvas identifies the accepte
 
 Route stereo audio and aligned clock pulses to the same plug-in instance. The simplified route uses explicit 4/4 with one pulse per beat on MIDI channel 1 note 23. Optional notes 24 and 25 request Start/Arm and Stop. The existing marker-based Duration route remains available. See the [timing contract](loop-host-admission.md) for its mapping and measured configurations.
 
+Learn shows setup details in the footer when you point at Loop Mode, the capture method or Arm. The empty Loop view explains manual and sequencer starts. The status below Arm appears for capture progress, a result or a problem that needs attention.
+
 An arm reserves one capture and pins its configuration. The simplified route records from the first observed beat at or after the arm, with that beat as the local downbeat. Duration uses the selected Bars or Beats. Arm off or Stop cancels a waiting attempt or a recording Duration take. During End Signal recording, it requests a finish at the first observed downbeat strictly after the request. The ending sample is excluded. Loss of timing before that sample cancels the take.
 
-Automatic Swells keeps Detect events and Event sensitivity available in Loop Learn. Markers are analysed from the accepted phrase and remain tied to its exact managed revision while a replacement is pending. Generate Swells and Generate on Stop require Song audio.
+The Learn Arm toggle can cancel a waiting attempt or a recording Duration take even while the host is idle. Cancellation invalidates the pending pass before the next audio callback can start or publish it.
+
+Automatic Swells keeps Detect events and Event sensitivity available in Loop Learn. Markers are analysed from the accepted phrase and remain tied to its exact managed revision while a replacement is pending. Explicit Generate Swells uses the current accepted Loop markers and bounds its automatic source windows at the exclusive phrase end. Generate on Stop remains a Song capture option.
 
 Recording uses the shared bounded queue with a limit of two minutes or 5,760,000 frames, whichever comes first. Clock or callback interruptions, queue overflow, invalid audio and storage failures discard the replacement. The previous source and arrangement remain available until the worker verifies and accepts a new revision. The worker writes and checks immutable assets before its short publication step. Cancel and restore invalidate the attempt through the same publication fence.
 

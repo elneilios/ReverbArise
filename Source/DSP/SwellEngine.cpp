@@ -122,6 +122,7 @@ EditorSnapshot SwellEngine::snapshot() const
     s.offlineBlocks=offlineBlockCount.load();s.offlineStatus=offlineStatus;
     s.analysisCount=automaticAnalysisCount;s.pendingIntervals=dirty.size()+passDirty.size();s.analyzing=analyzing || automaticBusy.load();
     for(const auto& [id,r]:runtime)if(r.rawWave)s.wetSummaries.emplace(id,r.rawWave);
+    s.loopLeadIn=loopPlayback.leadInDisplay();
     const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
     if(w)if(const auto kept=retainedIR.find(w->id);kept!=retainedIR.end()){
         s.retainedIRName=kept->second.accepted.irName;s.requestedIRName=kept->second.requestedName;}
@@ -182,10 +183,27 @@ void SwellEngine::clear()
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=false;
 }
-bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection)
+bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection,std::optional<TargetIdentity> expected)
 {
+    const auto expectedSession=expected?expected->session:sessionGeneration.load();
+    // The capture snapshot takes the worker's command lock. Keep it outside
+    // the engine lock and recheck its atomic generation before editing.
+    const auto context=contextProvider();
+    const juce::ScopedLock guard(lock);
     if(!permitCreative(rejection))return false;
-    const auto context=contextProvider(); const juce::ScopedLock guard(lock);
+    const bool loopSource=context.capture.sourceKind()==CaptureSourceKind::loop;
+    if(expectedSession!=sessionGeneration.load() || (loopSource && captureEpochProvider && captureEpochProvider()!=context.captureGeneration)
+        || (expected && (expected->revision!=context.capture.manifest.revision || expected->reference!=context.capture.reference
+                         || expected->sourceKind!=context.capture.sourceKind())))
+    {
+        if(rejection)*rejection="The session or captured source changed";
+        return false;
+    }
+    if(loopSource && (!context.capture.manifest.loop || !context.time.valid))
+    {
+        if(rejection)*rejection="The accepted Loop is unavailable";
+        return false;
+    }
     std::vector<int64_t> arrivals; for(const auto& c:candidates) arrivals.push_back(c.sample);
     const auto& targetTime=sameMusicalMapping(model.timing,context.time)?model.timing:context.time;
     if(!add(model,arrival,context.capture.manifest,targetTime,arrivals,message))
@@ -207,11 +225,14 @@ bool SwellEngine::confirmCandidate(size_t index)
     { const juce::ScopedLock guard(lock); if(index>=candidates.size()) return false; arrival=candidates[index].sample; }
     return confirmCandidateAt(arrival);
 }
-bool SwellEngine::confirmCandidateAt(int64_t arrival)
+bool SwellEngine::confirmCandidateAt(int64_t arrival,std::optional<TargetIdentity> expected)
 {
     {const juce::ScopedLock guard(lock);if(std::none_of(candidates.begin(),candidates.end(),[&](const auto& c){return c.sample==arrival;})){message="Suggestion changed; choose a current candidate";return false;}}
-    if(!addTarget(arrival)) return false;
-    const juce::ScopedLock guard(lock); std::erase_if(candidates,[&](const auto& c){return c.sample==arrival;}); return true;
+    if(!addTarget(arrival,nullptr,expected)) return false;
+    const juce::ScopedLock guard(lock);
+    if(!expected || expected->session==sessionGeneration.load())
+        std::erase_if(candidates,[&](const auto& c){return c.sample==arrival;});
+    return true;
 }
 void SwellEngine::removeSelected()
 {
@@ -243,8 +264,8 @@ bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce:
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation)
 {return editChecked(id,operation);}
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
-                       uint64_t expectedSession,juce::String* rejection)
-{return editChecked(id,operation,false,expectedSession,rejection);}
+                       uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop)
+{return editChecked(id,operation,false,expectedSession,rejection,expectedLoop);}
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
     if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
@@ -275,7 +296,7 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
     persistentChangedLocked();notify();return true;
 }
 bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
-                             bool allowReset,uint64_t expectedSession,juce::String* rejection)
+                             bool allowReset,uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop)
 {
     if(!permitCreative(rejection))return false;
     const auto context=contextProvider();
@@ -287,6 +308,8 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     };
     if(expectedSession && expectedSession!=sessionGeneration.load())
         return reject("The swell session changed");
+    if(expectedLoop && (!context.capture.manifest.loop || !context.time.valid || context.capture.manifest.revision!=expectedLoop))
+        return reject("Accepted Loop changed");
     auto w=find(model,id);
     if(!w) return reject("The selected swell is unavailable");
     actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return reject(message);
@@ -294,6 +317,10 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     if(candidate.arrival==w->arrival && (candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd))candidate.supportOffset=0;
     const auto support=candidate.arrival==w->arrival && candidate.sourceStart==w->sourceStart && candidate.sourceEnd==w->sourceEnd
         && renderInputEnd(candidate)!=renderInputEnd(*w);
+    if(const auto& phrase=context.capture.manifest.loop; phrase && (support || candidate.arrival!=w->arrival
+        || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd)
+        && (candidate.sourceStart<0 || renderInputEnd(candidate)>phrase->endSample))
+    {message="Source range must stay within the captured Loop";return reject(message);}
     const auto input=(allowReset && w->frozen && !candidate.frozen) || support || candidate.arrival!=w->arrival || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir;
     if(!allowReset && (candidate.frozen!=w->frozen || (w->frozen && input))){message="Unfreeze before changing source, IR or render support";return reject(message);}
     const auto shape=candidate.shape!=w->shape || candidate.placement!=w->placement;
@@ -510,14 +537,17 @@ bool SwellEngine::audition()
 {
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise)return playExport(sessionGeneration.load());
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return false;
-    if((!workflowState || workflowState->snapshot().mode==workflow::Mode::live) && liveEnabled.load() && transportActive.load())return false;
     const juce::ScopedLock guard(lock); const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
     if(!w || at==runtime.end() || !at->second.monitor || at->second.preparedMonitor!=monitoringGeneration
         || at->second.preparedShape!=w->shapeGeneration || at->second.preparedRender!=w->render.content) return false;
     auto playable=*w;if(at->second.cachedWetOnly && model.auditionMode==AuditionMode::wetOnly)playable.phase=Phase::ready;
     if(playable.phase!=Phase::ready || (model.auditionMode==AuditionMode::dryWet && !at->second.dryAvailable))return false;
     const auto context=contextProvider();
+    const bool loop=context.capture.sourceKind()==CaptureSourceKind::loop;
+    if(liveEnabled.load() && (loop ? loopPlayback.status().playback!=LoopCueScheduler::State::standby : transportActive.load()))return false;
     if(!sameMusicalMapping(model.timing,context.time) || context.capture.manifest.sampleRate!=context.time.rate) return false;
+    auditionLoopGeneration.store(context.captureGeneration,std::memory_order_relaxed);
+    auditionLoopRevision.store(loop?context.capture.manifest.revision:0,std::memory_order_relaxed);
     setExpected(context.time); audioAllowed=true;
     return voice.start(at->second.monitor,1,true);
 }
@@ -536,6 +566,13 @@ void SwellEngine::processAudio(float* left,float* right,int frames,const SongTim
         && time.valid && time.rate==expectedRate.load() && time.bpm==expectedBpm.load()
         && time.numerator==expectedNumerator.load() && time.denominator==expectedDenominator.load();
     exportVoice->process(left,right,frames,time.rate,exportAllowed);
+}
+void SwellEngine::processLoopAudition(float* left,float* right,int frames,double rate,uint64_t generation,uint64_t revision,bool allowed) noexcept
+{
+    allowed=allowed && audioAllowed.load() && revision && revision==auditionLoopRevision.load(std::memory_order_relaxed)
+        && generation==auditionLoopGeneration.load(std::memory_order_relaxed) && rate==expectedRate.load()
+        && loopPlayback.status().playback==LoopCueScheduler::State::standby;
+    voice.process(left,right,frames,rate,allowed);
 }
 void SwellEngine::processTransportAudio(float* left,float* right,int frames,const TransportTime& time) noexcept
 {
@@ -967,7 +1004,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     { report(requested,session,Phase::stale,"Source/timing changed during generation; retry"); return; }
     std::shared_ptr<Waveform> sourceWave;
     bool selected=false;{const juce::ScopedLock guard(lock);selected=model.primary==requested.id;}
-    if(selected && latest.capture.sourceKind()==CaptureSourceKind::song
+    if(selected
         && !prepareSourceWave(requested,latest,raw->samples.capacity()*sizeof(float),sourceWave,error)) {failure(error);return;}
     Session calibrationSession;int64_t referenceEnd=requested.sourceEnd;
     {const juce::ScopedLock guard(lock);calibrationSession=model;
@@ -1014,8 +1051,6 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
 }
 bool SwellEngine::prepareSourceWave(const Swell& requested,const PreviewContext& context,uint64_t extra,std::shared_ptr<Waveform>& output,juce::String& error)
 {
-    if (context.capture.sourceKind()==CaptureSourceKind::loop)
-    {error="Song source detail requires an accepted Song";return false;}
     const auto budget=available(extra+64ULL*1024*1024);
     if(!budget){error="Working budget unavailable for source detail";return false;}
     CaptureAssetStore assets(instanceRoot(context.capture.manifest));SourceInterval source;
@@ -1098,7 +1133,7 @@ void SwellEngine::run()
                         if(!context.time.valid && w.phase==Phase::restoring) continue;
                         work=w;restoreOrCheck=w.phase!=Phase::queued; break;
                     }
-                    if(!work && context.capture.sourceKind()==CaptureSourceKind::song)
+                    if(!work)
                     if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
                     {
                         const auto& r=runtime[w->id]; if(!r.shaped || r.preparedShape!=w->shapeGeneration || r.preparedRender!=w->render.content) shape=*w;

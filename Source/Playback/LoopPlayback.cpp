@@ -2,14 +2,54 @@
 
 namespace m3
 {
+bool LoopPlaybackPublication::prepareLeadInPeaks(const std::function<bool()>& cancelled)
+{
+    const auto start = std::max(plan.audio.start,-timing.endSample);
+    if (start >= 0) return true;
+    constexpr int64_t maximumBuckets = 2048;
+    const auto stride = std::max(int64_t{1},(-start + maximumBuckets - 1) / maximumBuckets);
+    auto peaks = std::make_shared<std::vector<CapturePeak>>();
+    peaks->reserve(static_cast<size_t>((-start + stride - 1) / stride));
+    for (auto at = start; at < 0; at += stride)
+        peaks->push_back({at,static_cast<uint32_t>(std::min(stride,-at)),0,0});
+    for (const auto& segment : plan.audio.segments)
+    {
+        const auto first = std::max(start,segment.start);
+        const auto end = std::min(int64_t{0},segment.end);
+        for (auto at = first; at < end; ++at)
+        {
+            if ((at - first) % 4096 == 0 && cancelled()) return false;
+            LoopWetSample mix;
+            for (size_t member = 0; member < segment.count; ++member)
+            {
+                const auto& render = *plan.audio.entries[segment.members[member]].audio;
+                const auto offset = static_cast<size_t>(at - render.start) * 2;
+                mix.left += render.samples[offset];
+                mix.right += render.samples[offset + 1];
+            }
+            auto& peak = (*peaks)[static_cast<size_t>((at - start) / stride)];
+            peak.minimum = std::min({peak.minimum,mix.left * gain,mix.right * gain});
+            peak.maximum = std::max({peak.maximum,mix.left * gain,mix.right * gain});
+        }
+    }
+    leadInPeaks = std::move(peaks);
+    return true;
+}
+
 void LoopPlayback::collect()
 {
-    for (auto& slot : slots)
-        if (slot.state.load(std::memory_order_acquire) == retired)
+    for (size_t index = 0; index < slots.size(); ++index)
+    {
+        auto& slot = slots[index];
+        // After retirement the callback can no longer publish this slot.
+        // Its last displayed word may remain until the end of that block.
+        if (slot.state.load(std::memory_order_acquire) == retired
+            && (statusWord.load(std::memory_order_acquire) >> displaySlotShift) != index + 1)
         {
             slot.data.reset();
             slot.state.store(free,std::memory_order_release);
         }
+    }
 }
 
 void LoopPlayback::discardPending()
@@ -22,7 +62,7 @@ void LoopPlayback::discardPending()
 uint64_t LoopPlayback::pinnedBytes() const noexcept
 {
     uint64_t result = 0;
-    for (const auto& slot : slots) if (slot.data) result += slot.data->plan.audio.bytes();
+    for (const auto& slot : slots) if (slot.data) result += slot.data->bytes();
     return result;
 }
 
@@ -72,21 +112,40 @@ void LoopPlayback::setReference(const LoopReferenceSetup& setup, bool externalCo
     referenceBeats.store(setup.beats,std::memory_order_relaxed);
     referenceNumerator.store(setup.numerator,std::memory_order_relaxed);
     referenceDenominator.store(setup.denominator,std::memory_order_relaxed);
-    originConfirmed.store(setup.sharedOrigin,std::memory_order_relaxed);
+    phraseInput.store(setup.phraseInput,std::memory_order_relaxed);
     external.store(externalCommands,std::memory_order_relaxed);
     configSequence.fetch_add(1,std::memory_order_release);
+}
+
+std::optional<int64_t> LoopPlayback::decodeLeadIn(uint64_t word) noexcept
+{
+    const auto leadIn = static_cast<int64_t>((word >> leadInShift) & leadInMask);
+    return leadIn == 0 ? std::nullopt : std::optional{leadIn - 1};
+}
+
+LoopPlayback::LeadInDisplay LoopPlayback::leadInDisplay() const noexcept
+{
+    const auto word = statusWord.load(std::memory_order_acquire);
+    const auto displaySlot = word >> displaySlotShift;
+    if (displaySlot == 0) return {};
+    const auto& publication = slots[displaySlot - 1].data;
+    return {decodeLeadIn(word),publication ? publication->leadInPeaks : nullptr};
 }
 
 LoopPlayback::Status LoopPlayback::status() const noexcept
 {
     const auto word = statusWord.load(std::memory_order_acquire);
+    const auto position = static_cast<int64_t>((word >> playheadShift) & playheadMask);
     return {static_cast<LoopLiveReference::State>(word & 7),
             static_cast<LoopCueScheduler::State>((word >> 3) & 7),
-            static_cast<LoopPlaybackPublication::Preparation>((word >> 6) & 3)};
+            static_cast<LoopPlaybackPublication::Preparation>((word >> 6) & 3),
+            position == 0 ? std::nullopt : std::optional{position - playheadBias},
+            decodeLeadIn(word)};
 }
 
 void LoopPlayback::process(float* left, float* right, int frames, const loop_capture::MidiObservations& observations,
-                           double rate, uint64_t generation, uint64_t revision, bool allowed, bool discontinuity) noexcept
+                           double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
+                           const LoopReferenceSetup& observedReference) noexcept
 {
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
@@ -106,29 +165,78 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const auto before = configSequence.load(std::memory_order_acquire);
     LoopReferenceSetup setup{{referenceRate.load(std::memory_order_relaxed),referenceTempo.load(std::memory_order_relaxed)},
         referenceBeats.load(std::memory_order_relaxed),referenceNumerator.load(std::memory_order_relaxed),
-        referenceDenominator.load(std::memory_order_relaxed),originConfirmed.load(std::memory_order_relaxed)};
-    const auto externalAllowed = external.load(std::memory_order_relaxed);
+        referenceDenominator.load(std::memory_order_relaxed),phraseInput.load(std::memory_order_relaxed)};
+    auto externalAllowed = external.load(std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     if ((before & 1) || configSequence.load(std::memory_order_acquire) != before) setup = {};
+    else if (before == 0)
+    {
+        setup = observedReference;
+        externalAllowed = setup.clock.valid();
+        if (setup.phraseInput && currentMatches)
+        {
+            constexpr int beatsPerBar = loop_capture::PhraseClock::beatsPerBar;
+            const auto beats = current->timing.beats;
+            if (beats == beatsPerBar || beats == 2 * beatsPerBar || beats == 4 * beatsPerBar)
+            {
+                setup.beats = beats;
+                setup.observeCadence = true;
+            }
+        }
+    }
     if (currentMatches && current->rate != rate) setup.clock.rate = rate;
     scheduler.setProcessingRate(rate);
     scheduler.configure(setup,currentMatches ? current->rate : 0,currentMatches ? std::optional{current->timing} : std::nullopt);
     const auto reset = resetEpoch.load(std::memory_order_acquire);
     const bool validFrames = frames > 0 && cursor <= INT64_MAX - frames;
-    const bool canObserve = allowed && validFrames && observations.error == MidiObservations::Error::none;
-    const bool interrupted = discontinuity || (wasAllowed && !canObserve) || reset != seenReset;
+    const bool canObserve = access != Access::disabled && validFrames && observations.error == MidiObservations::Error::none;
+    const bool canPlay = canObserve && access == Access::perform;
+    const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
+    const bool interrupted = discontinuity || sourceChanged || (wasObserving && !canObserve) || reset != seenReset;
     seenReset = reset;
-    wasAllowed = canObserve;
+    seenGeneration = generation;
+    seenRevision = revision;
+    wasObserving = canObserve;
     if (interrupted || !validFrames) scheduler.invalidateReference();
     if (!validFrames) { cursor = 0; return; }
     const auto local = commands.exchange(0,std::memory_order_acq_rel);
     const auto preparation = currentMatches && current->dependencies == epoch ? current->preparation : Preparation::waiting;
     const auto publishStatus = [&]{
+        auto position = scheduler.playheadAt(cursor - 1);
+        uint64_t leadIn = 0;
+        if (held >= 0)
+        {
+            const auto& pinned = *slots[held].data;
+            if (position && *position >= 0)
+                *position = std::min(*position,pinned.timing.endSample - 1);
+            const auto start = scheduler.nextLeadInStart(pinned.plan.audio.start);
+            if (start && *start < pinned.timing.endSample && static_cast<uint64_t>(*start) < leadInMask)
+                leadIn = static_cast<uint64_t>(*start + 1);
+        }
+        const auto encoded = position && *position > -playheadBias && *position < playheadBias
+            ? static_cast<uint64_t>(*position + playheadBias) : 0;
         statusWord.store(static_cast<unsigned>(scheduler.phase()) | (static_cast<unsigned>(scheduler.state()) << 3)
-            | (static_cast<unsigned>(preparation) << 6),std::memory_order_release);
+            | (static_cast<unsigned>(preparation) << 6) | (encoded << playheadShift)
+            | (leadIn << leadInShift)
+            | ((leadIn ? static_cast<uint64_t>(held + 1) : 0) << displaySlotShift),std::memory_order_release);
     };
-    if (!canObserve && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
+    if (!canPlay && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {
+        // In Learn, verify the bounded event batch without processing dry samples.
+        if (canObserve)
+        {
+            for (unsigned event = 0; event < observations.size; ++event)
+            {
+                const auto& edge = observations.samples[event];
+                const auto roles = edge.roles & (phrase | reset);
+                if (!roles || (interrupted && edge.sampleOffset == 0)) continue;
+                const auto sample = cursor + edge.sampleOffset;
+                if (edge.sampleOffset != 0)
+                    scheduler.processSample(sample - 1,0,false,0);
+                scheduler.processSample(sample,roles,false,0);
+            }
+            scheduler.processSample(cursor + frames - 1,0,false,0);
+        }
         releaseHeld();
         retireLatestWithoutSource(revision);
         cursor += frames;
@@ -143,11 +251,11 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         uint16_t roles = 0;
         if (canObserve && event < observations.size && observations.samples[event].sampleOffset == offset)
             roles = observations.samples[event++].roles;
-        if (!externalAllowed) roles &= ~(cue | stop);
-        if (offset == 0 && !interrupted && canObserve) roles |= local;
+        if (!canPlay || !externalAllowed) roles &= ~(cue | stop);
+        if (offset == 0 && !interrupted && canPlay) roles |= local;
         if (offset == 0 && interrupted) roles = 0;
         const auto plan = held >= 0 ? slots[held].data.get() : current;
-        const auto ready = canObserve && prepared(plan);
+        const auto ready = canPlay && prepared(plan);
         scheduler.processSample(sample,roles,ready,ready ? -plan->plan.audio.start : 0);
         if (scheduler.active() && held < 0) held = latest;
         const auto state = scheduler.state();
