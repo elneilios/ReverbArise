@@ -1,7 +1,7 @@
 #pragma once
 #include <Storage/WorkingFolder.h>
 #include <UI/Controls/ActionButton.h>
-#include <UI/Controls/EllipsisLabel.h>
+#include <UI/Controls/WrappedLabel.h>
 #include <UI/Controls/FocusViewport.h>
 
 namespace m3::ui
@@ -104,7 +104,7 @@ public:
         const auto contentWidth=std::max(1,viewport.getWidth()-viewport.getScrollBarThickness());
         auto top=spacing::section;const auto inner=std::max(1,contentWidth-2*spacing::section);
         const auto place=[&](juce::Label& label,int height){label.setBounds(spacing::section,top,inner,height);top+=height+spacing::related;};
-        const auto messageHeight=[&](const juce::Label& label){juce::AttributedString text(label.getText());text.setFont(label.getFont());juce::TextLayout layout;layout.createLayout(text,static_cast<float>(inner));return std::max(learnTypography::secondaryLineHeight,static_cast<int>(std::ceil(layout.getHeight())));};
+        const auto messageHeight=[&](const controls::WrappedLabel& label){return std::max(learnTypography::secondaryLineHeight,label.preferredHeight(inner));};
         place(heading,controlGeometry::headingHeight);place(current,controlGeometry::labelHeight);place(help,messageHeight(help));
         selected.setVisible(candidate!=nullptr);if(candidate)place(selected,controlGeometry::labelHeight);
         status.setVisible(status.getText().isNotEmpty());if(status.isVisible())place(status,messageHeight(status));content.setSize(contentWidth,top);
@@ -145,7 +145,7 @@ private:
     void timerCallback()override{poll();}
     Provider provider;juce::File registryRoot;Commit publish;Input operation;bool choosing=false,externalFooter=false,available=true,recoveryNeeded=false;
     Worker worker;std::shared_ptr<Folder> candidate;std::shared_ptr<const Reply> shown;std::unique_ptr<juce::FileChooser> chooser;
-    FlatSurface content;controls::FocusViewport viewport;juce::Label heading,help,status;controls::EllipsisLabel current,selected;
+    FlatSurface content;controls::FocusViewport viewport;controls::EllipsisLabel heading;controls::WrappedLabel help,status;controls::EllipsisLabel current,selected;
     controls::ActionButton choose{"Choose folder..."},use{"Use This Folder"},stop{"Stop operation"};
 };
 }

@@ -19,6 +19,19 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     window.setVisible(true);wait([&]{return panel.displayedReport()!=nullptr;});
     REQUIRE(requested==1 && panel.displayedReport()->physicalFiles==2 && panel.displayedReport()->reclaimableBytes==0);
     for(auto* child:panel.getChildren())REQUIRE(panel.getLocalBounds().contains(child->getBounds()));
+    for(auto* child:panel.getChildren())if(child->getName()=="storageProtection")
+    {
+        auto* help=dynamic_cast<m3::ui::controls::WrappedLabel*>(child);REQUIRE(help);
+        const auto original=help->getText();const auto font=help->getFont();
+        const auto longText=original+"\n"+juce::String::repeatedString("Long_asset_filename_",20);
+        help->setText(longText,juce::dontSendNotification);
+        panel.setSize(640,panel.preferredHeight(640));panel.resized();
+        REQUIRE(help->getHeight()==help->preferredHeight(help->getWidth()));
+        REQUIRE(help->getDescription()==longText && help->getFont()==font);
+        REQUIRE(panel.getLocalBounds().contains(help->getBounds()));
+        help->setText(original,juce::dontSendNotification);
+        panel.setSize(640,std::max(540,panel.preferredHeight(640)));panel.resized();
+    }
     for(int i=0;i<20;++i)panel.poll();REQUIRE(requested==1);
     const auto before=panel.displayedReport()->physicalBytes;window.setVisible(false);panel.poll();REQUIRE(!panel.scanning() && panel.displayedReport());
     const auto* retained=panel.displayedReport();window.setVisible(true);REQUIRE(panel.displayedReport()==retained);wait([&]{return panel.displayedReport()!=retained;});REQUIRE(requested==2 && panel.displayedReport()->physicalBytes==before);

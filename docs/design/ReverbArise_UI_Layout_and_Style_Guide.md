@@ -1,11 +1,26 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.24 · **Production standards revision:** 24 · **Purpose:** Production UI authority and design reference. Revision 24 adopts the approved shared waveform gestures and Perform Overview exception. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
+**Version:** 1.25 · **Production standards revision:** 25 · **Purpose:** Production UI authority and design reference. Revision 25 adopts shared measured text wrapping and softer aqua context help across the plugin. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
 [approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
 Legacy debt remains explicit; family migrations retain scoped native approval.
+
+## Text and contextual help — issue #107
+
+Use semantic text roles for captions, explanations, empty states and status.
+`WrappedLabel` measures and paints the same layout, including unbroken paths.
+Allocate its preferred height and reflow or scroll following content.
+`EllipsisLabel` retains the full ordinary text in its accessible description
+and contextual help while a single visible line shortens with an ellipsis.
+Bindings can provide a more specific description.
+
+The shared hover-help footer uses `contextHelpInk`, the existing softer aqua
+`#00C2CC`, at the helper text size. Permanent helper prose keeps its ordinary
+text role. Local validation remains red and workspace notices retain their
+severity. The fixed transport readout and bounded notice typography are
+established specialized presentations.
 
 ## Connected tabs — issue #107
 
@@ -256,6 +271,7 @@ production standards revision; this revision does not change plugin/state versio
 | 22 | #107 native Export file interaction approved 2026-11-10 | The ready WAV tile starts a native copy gesture. Windows shows the approved WAV badge over accepting targets and the stop cursor over rejecting targets. The pointer drag uses a solid outline and restores the dotted affordance at the end. The cursor badge's 8.5 logical-unit label belongs to this artwork. |
 | 23 | #107 native Swells list and scrolling approved 2026-11-10 | The virtualized list uses square Enabled checkboxes and keyboard-accessible row actions. Group Delete requires confirmation with Cancel focused. Rename is dimmed during multiselect. Unavailable popup rows stay quiet under the pointer and short popup highlights reach the inner edge. |
 | 24 | #107 P8 native waveform gestures approved 2026-11-10 | Main waveforms share pointer-anchored wheel zoom, middle-drag pan and aqua keyboard/accessibility brackets. Left positions the local marker or edits a Perform handle. The compact Perform Overview uses left-drag alone to pan the detail range. |
+| 25 | #107 P3 native text and aqua footer approved 2026-11-10 | Shared measured wrapping and complete label descriptions across the plugin. Context help uses the existing softer aqua #00C2CC. Existing local errors, notice severity and transport geometry retain their established roles. |
 
 ### Stable Perform transport information
 

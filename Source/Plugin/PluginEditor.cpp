@@ -162,7 +162,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
 {
     buildInformationWriter=writer?std::move(writer):[](const juce::String& text){juce::SystemClipboard::copyTextToClipboard(text);};
     setLookAndFeel(&workspaceTheme);addMouseListener(this,true);
-    addAndMakeVisible(hoverHelp);hoverHelp.setName("hoverHelp");m3::ui::applyTextRole(hoverHelp,m3::ui::TextRole::helper);hoverHelp.setInterceptsMouseClicks(false,false);
+    addAndMakeVisible(hoverHelp);hoverHelp.setName("hoverHelp");m3::ui::applyTextRole(hoverHelp,m3::ui::TextRole::helper);
+    hoverHelp.setColour(juce::Label::textColourId,m3::ui::contextHelpInk);hoverHelp.setInterceptsMouseClicks(false,false);
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){processor.setRecaptureExisting(enabled);};learnWorkspace.onRefresh=[this]{refresh();};
@@ -172,9 +173,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     workflowHeader.onModeRequested=[this](workflow::Mode mode){if(!updating && !destroying){processor.requestWorkflowMode(mode);refresh();}};
     recaptureExisting.onClick=[this]{processor.setRecaptureExisting(recaptureExisting.getToggleState());refresh();};
     setResizable(true,true);setResizeLimits(1100,850,2000,1400);
-    for(auto* label:{&status,&detail,&listLabel,&auditionLabel,&separationLabel,&spanLabel,&barStartLabel,&barEndLabel,&recaptureStatus,&toneStartLabel,&toneEndLabel})
+    for(auto* label:std::initializer_list<juce::Label*>{&status,&detail,&listLabel,&auditionLabel,&separationLabel,&spanLabel,&barStartLabel,&barEndLabel,&recaptureStatus,&toneStartLabel,&toneEndLabel})
     {label->setColour(juce::Label::textColourId,m3::ui::text);label->setJustificationType(juce::Justification::centredLeft);addAndMakeVisible(label);}
-    status.setFont(juce::FontOptions(m3::ui::smallSize));detail.setFont(juce::FontOptions(m3::ui::smallSize));detail.setJustificationType(juce::Justification::topLeft);
+    m3::ui::applyTextRole(status,m3::ui::TextRole::helper,juce::Justification::topLeft);
+    m3::ui::applyTextRole(detail,m3::ui::TextRole::helper,juce::Justification::topLeft);
     listLabel.setText("Swells",juce::dontSendNotification);auditionLabel.setText("Audition level",juce::dontSendNotification);
     separationLabel.setText("Min. separation",juce::dontSendNotification);
     spanLabel.setText("Bars",juce::dontSendNotification);
@@ -217,7 +219,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     const std::array<juce::String,fieldCount> names{"swellName","arrivalSample","sourceSampleStart","sourceSampleEnd","audibleStart","audibleEnd","fadeInMs","fadeOutMs"};
     for(int i=0;i<fieldCount;++i)
     {
-        fieldLabels[i].setText(labels[i],juce::dontSendNotification);fieldLabels[i].setColour(juce::Label::textColourId,m3::ui::secondary);fieldLabels[i].setFont(juce::FontOptions(m3::ui::smallSize));addAndMakeVisible(fieldLabels[i]);
+        fieldLabels[i].setText(labels[i],juce::dontSendNotification);m3::ui::applyTextRole(fieldLabels[i],m3::ui::TextRole::controlLabel);addAndMakeVisible(fieldLabels[i]);
         fields[i].setName(names[i]);fields[i].setTitle(labels[i]);fields[i].setReadOnly(true);addAndMakeVisible(fields[i]);
     }
     barStartEditor.setName("sourceStart");barEndEditor.setName("sourceEnd");barStartEditor.setText("1",false);barEndEditor.setText("2",false);
@@ -386,7 +388,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     tailSlider.setWheelSteps(.1,.01);
     tailSlider.onValueChange=[this]{if(!updating)processor.swellEngine().setPostRoll(tailSlider.getValue());};
     addAndMakeVisible(tailLabel);tailLabel.setText("Listen after",juce::dontSendNotification);
-    for(auto* label:{&markerLabel,&markerState}){addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
+    for(auto* label:std::initializer_list<juce::Label*>{&markerLabel,&markerState}){addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
     markerLabel.setText("Marker sensitivity",juce::dontSendNotification);markerKnob.setName("markerSensitivity");markerButton.setName("autoMarkers");isolateButton.setName("isolateSelected");
     slider(markerKnob,0,100,.1," %");markerKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     markerKnob.setTooltip("Lower: fewer, stronger attacks. Higher: finer detail. Changes reanalyse captured audio and preserve manual edits. This does not detect musical keys.");
@@ -424,14 +426,14 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     for(auto* control:std::array<juce::Component*,28>{&status,&detail,&generateButton,&allButton,&analyzeButton,&confirmButton,&candidateBox,&separationLabel,&separationSlider,&autoButton,&recaptureButton,&cancelButton,&recaptureStatus,&mappingButton,&toneButton,&toneStartLabel,&toneStartSlider,&toneEndLabel,&toneEndSlider,&clearButton,&assetInfoButton,&barStartLabel,&barEndLabel,&barStartEditor,&barEndEditor,&setBarsButton,&auditionLabel,&auditionSlider})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,4>{&automaticButton,&sampleUnitsButton,&defaultIRButton,&suppressionButton})diagnosticsContent.addAndMakeVisible(control);
     for(auto* control:std::array<juce::Component*,10>{&removeButton,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel,&isolateButton,&isolateDryButton,&tailSlider,&tailLabel,&helper})diagnosticsContent.addAndMakeVisible(control);
-    for(auto* label:{&inspectorHeading,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
+    for(auto* label:std::initializer_list<juce::Label*>{&inspectorHeading,&listEmpty,&inspectorEmpty,&auditionHeading,&editorReadout})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::text);label->setInterceptsMouseClicks(false,false);}
-    inspectorHeading.setText("Selected Swell",juce::dontSendNotification);inspectorHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
-    auditionHeading.setText("Audition",juce::dontSendNotification);auditionHeading.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
+    inspectorHeading.setText("Selected Swell",juce::dontSendNotification);m3::ui::applyTextRole(inspectorHeading,m3::ui::TextRole::sectionHeading);
+    auditionHeading.setText("Audition",juce::dontSendNotification);m3::ui::applyTextRole(auditionHeading,m3::ui::TextRole::sectionHeading);
     addAndMakeVisible(hostInfo);hostInfo.setInterceptsMouseClicks(false,false);
-    listEmpty.setText("No swells yet\n\nUse Learn to capture source.\nIn Perform, add a swell with +.",juce::dontSendNotification);listEmpty.setJustificationType(juce::Justification::centred);listEmpty.setFont(juce::FontOptions(18));
-    inspectorEmpty.setText("No swell selected\n\nSelect a swell to adjust\nits settings.",juce::dontSendNotification);inspectorEmpty.setJustificationType(juce::Justification::centred);inspectorEmpty.setFont(juce::FontOptions(18));
-    listLabel.setFont(juce::FontOptions(m3::ui::headingSize,juce::Font::bold));
+    listEmpty.setText("No swells yet\n\nUse Learn to capture source.\nIn Perform, add a swell with +.",juce::dontSendNotification);listEmpty.setJustificationType(juce::Justification::centred);m3::ui::applyTextRole(listEmpty,m3::ui::TextRole::emptyBody,juce::Justification::centred);
+    inspectorEmpty.setText("No swell selected\n\nSelect a swell to adjust\nits settings.",juce::dontSendNotification);inspectorEmpty.setJustificationType(juce::Justification::centred);m3::ui::applyTextRole(inspectorEmpty,m3::ui::TextRole::emptyBody,juce::Justification::centred);
+    m3::ui::applyTextRole(listLabel,m3::ui::TextRole::sectionHeading);
     headerStatus.setBorderSize(juce::BorderSize<int>(0));headerStatus.setFont(juce::FontOptions(m3::ui::smallSize));
     headerStatus.setJustificationType(juce::Justification::centredRight);
     workflowHeader.settingsAction().setTooltip("Settings: playback, processing, selected swell, audition and recovery");
@@ -490,14 +492,17 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     inspectorContent.addAndMakeVisible(resetMenu);resetMenu.setName("resetSwellMenu");resetMenu.setButtonText("Reset All");
     resetMenu.setTooltip("Reset this whole swell back to creation defaults: wet shape plus dry source points, IR, enabled/solo/freeze and activity.");
     resetMenu.onClick=[this]{const auto id=state.session.primary;processor.swellEngine().resetSwell(id,true);refresh();};
-    for(auto* label:{&captureDiagnostic,&playbackDiagnostic,&policyDiagnostic}){diagnosticsContent.addAndMakeVisible(label);label->setFont(juce::FontOptions(m3::ui::controlSize));label->setJustificationType(juce::Justification::topLeft);}
+    for(auto* label:std::initializer_list<juce::Label*>{&captureDiagnostic,&playbackDiagnostic,&policyDiagnostic}){diagnosticsContent.addAndMakeVisible(label);m3::ui::applyTextRole(*label,m3::ui::TextRole::helper,juce::Justification::topLeft);}
     diagnosticsContent.addAndMakeVisible(liveDiagnostic);liveDiagnostic.setName("diagnosticLiveAdmission");
     m3::ui::applyTextRole(liveDiagnostic,m3::ui::TextRole::helper,juce::Justification::topLeft);
     status.setName("diagnosticTiming");captureDiagnostic.setName("diagnosticCapture");playbackDiagnostic.setName("diagnosticPlayback");policyDiagnostic.setName("diagnosticPolicy");
     toneButton.setName("scheduledTone");
+    for(auto* label:std::initializer_list<juce::Label*>{&gainPolicyLabel,&liveLevelLabel,&tailLabel,&placementLabel})
+        m3::ui::applyTextRole(*label,m3::ui::TextRole::controlLabel);
     initialiseSettings();
     for(auto* heading:{&listLabel,&inspectorHeading,&auditionHeading})m3::ui::applyTextRole(*heading,m3::ui::TextRole::sectionHeading);
-    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&monitorStatus,&editorReadout,&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
+    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&monitorStatus,&editorReadout})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
+    for(auto* label:{&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::emptyBody,juce::Justification::centred);
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
@@ -841,22 +846,24 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
     const auto inset=m3::ui::spacing::section;
     const juce::Rectangle<int> panelBounds(0,0,960,850);auto diagnostic=panelBounds.reduced(20);
-    status.setBounds(diagnostic.removeFromTop(72));
-    juce::AttributedString captureText(captureDiagnostic.getText());captureText.setFont(captureDiagnostic.getFont());
-    juce::TextLayout captureLayout;captureLayout.createLayout(captureText,static_cast<float>(diagnostic.getWidth()));
-    const auto captureHeight=std::max(status.getHeight(),static_cast<int>(std::ceil(captureLayout.getHeight()))+m3::ui::spacing::related);
-    diagnostic.setHeight(diagnostic.getHeight()+captureHeight-status.getHeight());
-    captureDiagnostic.setBounds(diagnostic.removeFromTop(captureHeight));
-    detail.setBounds(diagnostic.removeFromTop(140));
-    playbackDiagnostic.setBounds(diagnostic.removeFromTop(80));policyDiagnostic.setBounds(diagnostic.removeFromTop(96));
+    const auto message=[&](m3::ui::controls::WrappedLabel& label,int minimum)
+    {
+        const auto height=std::max(minimum,label.preferredHeight(diagnostic.getWidth()));
+        label.setBounds(diagnostic.getX(),diagnostic.getY(),diagnostic.getWidth(),height);
+        diagnostic.setY(diagnostic.getY()+height);
+        diagnostic.setHeight(std::max(diagnostic.getHeight(),height));
+    };
+    message(status,72);
+    message(captureDiagnostic,72);
+    message(detail,140);
+    message(playbackDiagnostic,80);
+    message(policyDiagnostic,96);
     auto row=diagnostic.removeFromTop(36);timingButton.setBounds(row.removeFromLeft(290).reduced(1));assetInfoButton.setBounds(row.removeFromLeft(180).reduced(1));
     copyDiagnosticsButton.setBounds(row.removeFromLeft(200).reduced(1));
     for(int field=arrival;field<fieldCount;++field){row=diagnostic.removeFromTop(32);fieldLabels[field].setBounds(row.removeFromLeft(200));fields[field].setBounds(row.removeFromLeft(300).reduced(1,3));}
     row=diagnostic.removeFromTop(34);placementLabel.setBounds(row.removeFromLeft(200));placementEditor.setBounds(row.removeFromLeft(300));
     helper.setBounds({});
-    juce::AttributedString text(liveDiagnostic.getText());text.setFont(liveDiagnostic.getFont());
-    juce::TextLayout measured;measured.createLayout(text,static_cast<float>(status.getWidth()));
-    const auto height=static_cast<int>(std::ceil(measured.getHeight()))+inset;
+    const auto height=liveDiagnostic.preferredHeight(status.getWidth())+inset;
     liveDiagnostic.setBounds(status.getX(),placementEditor.getBottom()+inset,status.getWidth(),height);
     diagnosticsContent.setSize(panelBounds.getWidth(),liveDiagnostic.getBottom()+inset);
 }

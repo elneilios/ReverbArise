@@ -11,6 +11,7 @@
 #include "ExportLevelsCases.h"
 #include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
+#include "TextPresentationCases.h"
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -502,6 +503,7 @@ int main(int argc,char* argv[]){return runTest([&]
     exportFileInvocationReview::cases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
+    textPresentationCases();
     modeIconCases();
     controlReview::cases();
     controlReview::cases(true);

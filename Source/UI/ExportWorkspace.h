@@ -7,6 +7,7 @@
 #include "Controls/ExportLevelsControl.h"
 #include "Controls/NoticeBar.h"
 #include "Controls/TimelineNavigation.h"
+#include "Controls/WrappedLabel.h"
 #include "Controls/TimelineZoomControls.h"
 #include "Controls/MusicalTimelineRuler.h"
 #include <DSP/SwellEngine.h>
@@ -30,6 +31,12 @@ public:
     {
         setName("exportWorkspace");
         for(auto* c:std::initializer_list<juce::Component*>{&play,&stop,&mix,&tile,&save,&back,&zoom,&navigation})addAndMakeVisible(c);
+        addAndMakeVisible(captionLabel);addAndMakeVisible(statusLabel);
+        for(auto* label:{&captionLabel,&statusLabel})
+        {
+            applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+            label->setBorderSize({});label->setInterceptsMouseClicks(false,false);
+        }
         zoom.setName("exportZoom");zoom.fitButton().setName("exportFit");navigation.setName("exportNavigation");
         zoom.beforeInvocation=[this]{zoomInvocation.reset();if(displayed)zoomInvocation=ZoomScope{state.session,state.pass,displayed->plan->identity};};
         zoom.onZoomStep=[this](double factor){if(zoomIntentCurrent())navigation.zoom(factor);};
@@ -82,7 +89,12 @@ public:
         }
         if(ready)identity=state.prepared->plan->identity;
         updateZoom();
-        if(hadStatus!=statusText().isNotEmpty())resized();
+        const auto nextCaption=captionText();
+        const auto nextStatus=statusText();
+        const auto changed=captionLabel.getText()!=nextCaption || statusLabel.getText()!=nextStatus;
+        captionLabel.setText(nextCaption,juce::dontSendNotification);
+        statusLabel.setText(nextStatus,juce::dontSendNotification);
+        if(changed || hadStatus!=nextStatus.isNotEmpty())resized();
         repaint();
     }
     std::optional<controls::NoticeMessage> notice()const
@@ -108,7 +120,7 @@ public:
     void setResponsivePresentation(){responsive=true;mix.setResponsivePresentation();resized();}
     void resized()override
     {
-        if(responsive){layoutResponsive();return;}
+        if(responsive){layoutResponsive();layoutMessages();return;}
         auto body=getLocalBounds();right=body.removeFromRight((body.getWidth()-workspaceGeometry::columnGap)/3);
         body.removeFromRight(workspaceGeometry::columnGap);left=body;
         auto a=right;mixHeading=a.removeFromTop(controlGeometry::headingHeight);a.removeFromTop(spacing::related);
@@ -116,7 +128,7 @@ public:
         tile.setBounds(a.removeFromTop(std::min(a.getHeight()-2*controlGeometry::height-spacing::section-spacing::group,a.getWidth()*3/4)));a.removeFromTop(spacing::section);
         save.setBounds(a.removeFromTop(controlGeometry::height));a.removeFromTop(spacing::group);back.setBounds(a.removeFromTop(controlGeometry::height));
         a=left;heading=a.removeFromTop(controlGeometry::height);a.removeFromTop(spacing::labelHelp);
-        caption=a.removeFromTop(learnTypography::secondaryLineHeight);a.removeFromTop(spacing::related);
+        caption=a.removeFromTop(std::max(learnTypography::secondaryLineHeight,captionLabel.preferredHeight(a.getWidth())));a.removeFromTop(spacing::related);
         ruler=a.removeFromTop(controlGeometry::labelHeight);a.removeFromTop(learnGeometry::rulerViewportGap);
         a.removeFromBottom(spacing::related);
         auto buttons=a.removeFromBottom(controlGeometry::height);play.setBounds(buttons.removeFromLeft(controlGeometry::height));buttons.removeFromLeft(spacing::related);
@@ -124,13 +136,13 @@ public:
         a.removeFromBottom(spacing::related);
         statusArea={};
         if(statusText().isNotEmpty()){
-            statusArea=a.removeFromBottom(learnTypography::secondaryLineHeight);
+            statusArea=a.removeFromBottom(std::max(learnTypography::secondaryLineHeight,statusLabel.preferredHeight(a.getWidth())));
             a.removeFromBottom(spacing::labelHelp);
         }
         auto toolbar=a.removeFromBottom(controlGeometry::height);
         zoom.setBounds(toolbar.removeFromLeft(std::max(controls::TimelineZoomControls::minimumWidth(),toolbar.getWidth()/2)));
         toolbar.removeFromLeft(spacing::related);legend=toolbar.withSizeKeepingCentre(toolbar.getWidth(),controlGeometry::labelHeight);
-        a.removeFromBottom(spacing::related);chart=a;navigation.setBounds(chart);requestDetail();
+        a.removeFromBottom(spacing::related);chart=a;navigation.setBounds(chart);requestDetail();layoutMessages();
     }
     void paint(juce::Graphics& g)override
     {
@@ -138,10 +150,6 @@ public:
         applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Export Preview",heading,juce::Justification::left);g.drawText("Export Levels",mixHeading,juce::Justification::left);
         const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
         applyTextRole(g,*this,TextRole::helper);
-        const auto captionText=state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
-            :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
-            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Middle-drag: pan. Wheel: zoom.");
-        g.drawFittedText(captionText,caption,juce::Justification::topLeft,2);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         if(!displayed){if(state.phase!=ExportPhase::error && juce::Time::getMillisecondCounterHiRes()-pendingSince<600)return;applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Export unavailable. See the message above.":"Preparing your song-aligned mix",chart.reduced(spacing::section),juce::Justification::centred,2);return;}
         const auto& p=*displayed->plan;const auto& m=displayed->metrics;
@@ -178,7 +186,7 @@ public:
         applyTextRole(g,*this,TextRole::helper);
         const auto current=state.cursor.value_or(state.previewPosition.value_or(m.audibleStart.value_or(p.origin)));
         g.drawText("Preview (song)  "+seconds((current-p.origin)/p.timing.rate)+" / "+seconds((p.end-p.origin)/p.timing.rate)+" | WAV "+seconds((p.end-p.origin)/p.timing.rate),timeArea,juce::Justification::centredLeft);
-        g.drawFittedText(statusText(),statusArea,juce::Justification::topLeft,2);
+
     }
     void resetView(){fileInvocations.setCurrent({});navigation.cancelGesture();zoomInvocation.reset();state={};displayed.reset();identity.clear();rangeIdentity.clear();localMessage.clear();updateZoom();}
     const SwellViewport& viewport()const noexcept{return navigation.viewport();}
@@ -197,11 +205,19 @@ private:
         mix.setBounds(controls.removeFromTop(mix.preferredHeight()));controls.removeFromTop(groupGap);
         const auto tileHeight=std::max(0,std::min(exportTileHeight,controls.getHeight()-2*controlHeight-2*groupGap));tile.setBounds(controls.removeFromTop(tileHeight));
         controls.removeFromTop(groupGap);save.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);back.setBounds(controls.removeFromTop(controlHeight));
-        auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(40);
+        auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(std::max(40,captionLabel.preferredHeight(preview.getWidth())));
         ruler=preview.removeFromTop(24);preview.removeFromBottom(contentPadding);
         auto transport=preview.removeFromBottom(controlHeight);play.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);stop.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);timeArea=transport;
         preview.removeFromBottom(contentPadding);auto navigationRow=preview.removeFromBottom(controlHeight);zoom.setBounds(navigationRow.removeFromLeft(std::max(controls::TimelineZoomControls::minimumWidth(),navigationRow.getWidth()/2)));navigationRow.removeFromLeft(contentPadding);legend=navigationRow;
-        preview.removeFromBottom(contentPadding);statusArea=preview.removeFromBottom(statusText().isNotEmpty()?20:0);chart=preview;navigation.setBounds(chart);requestDetail();
+        preview.removeFromBottom(contentPadding);statusArea=preview.removeFromBottom(statusText().isNotEmpty()?std::max(20,statusLabel.preferredHeight(preview.getWidth())):0);chart=preview;navigation.setBounds(chart);requestDetail();
+    }
+    void layoutMessages(){captionLabel.setBounds(caption);statusLabel.setBounds(statusArea);}
+    juce::String captionText()const
+    {
+        const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
+        return state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
+            :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
+            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Middle-drag: pan. Wheel: zoom.");
     }
     juce::String statusText()const
     {
@@ -233,6 +249,7 @@ private:
     controls::ActionButton play{"",controls::CommandIcon::play,true},stop{"",controls::CommandIcon::stop},back{"Return to Perform",controls::CommandIcon::returnBack};
     controls::CapturedActionButton save{"Save WAV...",controls::CommandIcon::save};
     controls::TimelineZoomControls zoom;controls::TimelineNavigation navigation;std::optional<ZoomScope> zoomInvocation;
+    controls::WrappedLabel captionLabel,statusLabel;
     controls::ExportLevelsControl mix;controls::FileDragTile tile;
     juce::Rectangle<int> left,right,heading,caption,mixHeading,ruler,chart,legend,timeArea,statusArea;
     ExportFileInvocations fileInvocations;
