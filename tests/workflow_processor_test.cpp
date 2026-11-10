@@ -512,7 +512,140 @@ static void simpleLoopProcessorCases()
     REQUIRE(midBeat.getCaptureSnapshot().reference == observed.reference);
 }
 
+static void loopPlaybackProcessorCases()
+{
+    using Phase = m3::LoopLiveReference::State;
+    using Prep = m3::LoopPlaybackPublication::Preparation;
+    using Playing = m3::LoopCueScheduler::State;
+    LoopCaptureFixture fixture;
+    fixture.simpleClock = true;
+    auto& p = *fixture.processor;
+    auto& engine = p.swellEngine();
+    engine.setAutomaticProcessing(false);
+    REQUIRE(p.armLoopCapture());
+    fixture.through(fixture.marker(4),true);
+    const auto accepted = p.getCaptureSnapshot();
+    REQUIRE(accepted.manifest.loop && accepted.manifest.loop->endSample == 84088);
+    REQUIRE(p.enterLoopStandby());
+    REQUIRE(!p.requestLoopCue());
+    auto pref = p.getLoopCapturePreference(); pref.enabled = false;
+    REQUIRE(p.setLoopCapturePreference(pref));
+
+    const auto until = [&](const char* purpose, const auto& predicate){
+        const auto deadline = juce::Time::getMillisecondCounter() + 8000;
+        while (!predicate() && juce::Time::getMillisecondCounter() < deadline)
+        {
+            fixture.midi.clear();fixture.audio.clear();p.processBlock(fixture.audio,fixture.midi);
+            juce::Thread::sleep(2);
+        }
+        if (!predicate())
+        {
+            const auto snapshot = engine.snapshot();
+            throw std::runtime_error(std::string(purpose) + ": " + snapshot.message.toStdString()
+                + (snapshot.session.swells.empty() ? "" : " / " + snapshot.session.swells.front().status.toStdString())
+                + " / preparation " + std::to_string(static_cast<int>(p.loopPlaybackStatus().preparation)));
+        }
+    };
+    REQUIRE(engine.addTarget(512));
+    const auto swell = engine.savedSession().primary;
+    const auto ir = fixture.root.file.getChildFile("loop-fixture.wav");
+    writeTestWav(ir,1,48000,{.5f,0,0,0,.25f});
+    engine.loadIR(ir);
+    until("Loop IR import",[&]{return engine.savedSession().swells.front().irName == "loop-fixture.wav";});
+    engine.generate(true);
+    until("Loop wet preparation",[&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(p.loopPlaybackStatus().phase == Phase::unconfigured && !p.requestLoopCue());
+    p.setLoopPlaybackReference({{48000,137},4,4,4,true},true);
+
+    int64_t cursor = 0;
+    int beat = 0;
+    const auto marker = [](int n){return 37 + std::llround(48000.L * 60 * n / 137);};
+    const auto note = [&](int value,int offset){fixture.midi.addEvent(juce::MidiMessage::noteOn(1,value,juce::uint8{100}),offset);};
+    fixture.midi.ensureSize(2048);
+    const auto through = [&](int64_t sample, int64_t command=-1, int commandNote=0){
+        bool heardWet = false;
+        while (cursor <= sample)
+        {
+            fixture.midi.clear();
+            if (marker(beat) < cursor + fixture.frames)
+            {
+                const auto offset = static_cast<int>(marker(beat)-cursor);
+                note(21,offset);
+                if (beat % 4 == 0) { note(19,offset); note(12,offset); }
+                ++beat;
+            }
+            if (command >= cursor && command < cursor + fixture.frames)
+                note(commandNote,static_cast<int>(command-cursor));
+            for (int channel = 0; channel < 2; ++channel)
+                std::fill_n(fixture.audio.getWritePointer(channel),fixture.frames,.125f);
+            {AudioAllocationGuard guard;p.processBlock(fixture.audio,fixture.midi);}
+            REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+            for (int n = 0; n < fixture.frames; ++n) heardWet |= fixture.audio.getSample(0,n) != .125f;
+            cursor += fixture.frames;
+        }
+        return heardWet;
+    };
+    REQUIRE(!through(marker(8)));
+    REQUIRE(p.loopPlaybackStatus().phase == Phase::ready && p.requestLoopCue());
+    REQUIRE(through(marker(12)+5000));
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    through(marker(13)+1000,marker(13)+512,25);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    through(marker(14)+1000,marker(14)+512,17);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::standby);
+    REQUIRE(!through(marker(15)));
+
+    REQUIRE(p.requestLoopCue());
+    REQUIRE(through(marker(16)+5000));
+    const auto replacement = fixture.root.file.getChildFile("loop-fixture-replacement.wav");
+    writeTestWav(replacement,1,48000,{.25f,0,0,0,.5f});
+    engine.holdRenderPublicationForTesting(true);
+    engine.loadIR(replacement);
+    const auto waitOnClock = [&](const auto& predicate){
+        const auto deadline = juce::Time::getMillisecondCounter() + 8000;
+        while (!predicate() && juce::Time::getMillisecondCounter() < deadline)
+        {
+            through(cursor);
+            juce::Thread::sleep(2);
+        }
+        REQUIRE(predicate());
+    };
+    waitOnClock([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
+    engine.holdRenderPublicationForTesting(false);
+    waitOnClock([&]{return engine.savedSession().swells.front().phase == m3::Phase::ready
+        && p.loopPlaybackStatus().preparation == Prep::ready && p.loopPlaybackStatus().playback == Playing::standby;});
+    REQUIRE(p.requestLoopCue());
+    through(cursor);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::queued);
+    REQUIRE(engine.edit(swell,[](auto& w,auto&){w.placement += 128;return true;}));
+    through(cursor);
+    REQUIRE(p.loopPlaybackStatus().playback == Playing::standby);
+
+    REQUIRE(engine.addTarget(24000));
+    const auto other = engine.savedSession().primary;
+    REQUIRE(engine.edit(other,[](auto& w,auto&){w.muted=true;w.solo=true;return true;}));
+    until("Loop solo exclusion",[&]{return p.loopPlaybackStatus().preparation == Prep::noWet;});
+    REQUIRE(engine.edit(other,[](auto& w,auto&){w.solo=false;return true;}));
+    until("Loop solo release",[&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
+    REQUIRE(engine.edit(swell,[](auto& w,auto&){w.muted=true;return true;}));
+    until("Loop mute",[&]{return p.loopPlaybackStatus().preparation == Prep::noWet;});
+    REQUIRE(!p.requestLoopCue());
+    REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(p.getCaptureSnapshot().reference == accepted.reference);
+    REQUIRE(!p.requestLoopCue());
+    juce::MemoryBlock state;
+    p.getStateInformation(state);
+    auto restored = std::make_unique<PreverbAudioProcessor>(fixture.root.file);
+    restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(restored->flushCaptureForTesting() && restored->getCaptureSnapshot().reference == accepted.reference);
+    REQUIRE(restored->enterLoopStandby() && !restored->requestLoopCue());
+    REQUIRE(restored->loopPlaybackStatus().phase == Phase::unconfigured);
+}
+
 int main(int argc,char* argv[]){return runTest([&]{
+    if(argc>1 && juce::String(argv[1])=="--loop-playback"){
+        juce::ScopedJuceInitialiser_GUI gui;loopPlaybackProcessorCases();return;}
     if(argc==2 && juce::String(argv[1])=="--shared-engine"){juce::ScopedJuceInitialiser_GUI gui;commonEngineCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-reactivation"){
         juce::ScopedJuceInitialiser_GUI gui;processorReactivationCases();return;
@@ -538,7 +671,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();loopPlaybackProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     {
         REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);

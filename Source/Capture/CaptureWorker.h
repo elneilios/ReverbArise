@@ -51,6 +51,7 @@ public:
     {const juce::ScopedLock guard(commandLock);passContextProvider=std::move(provider);}
     uint64_t captureGeneration() const noexcept { return generation.load(); }
     bool acceptedLoop() const noexcept { return loopSource.load(std::memory_order_acquire); }
+    uint64_t acceptedLoopRevision() const noexcept { return loopRevision.load(std::memory_order_acquire); }
     struct StorageRestore
     {
         std::shared_ptr<const CaptureStorageLocation> location;
@@ -74,6 +75,7 @@ public:
     bool flush(int timeoutMilliseconds = 10000);
 
 private:
+    std::atomic<uint64_t> loopRevision{0};
     void run() override;
     void handleBlock(const AudioCaptureBlock& block);
     void flushPending();

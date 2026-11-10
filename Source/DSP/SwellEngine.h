@@ -1,4 +1,5 @@
 #pragma once
+#include <Playback/LoopPlayback.h>
 #include "PreviewEngine.h"
 #include "SwellAssetStore.h"
 #include "SwellShape.h"
@@ -185,7 +186,7 @@ public:
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
-    void resetTransportClock() noexcept {liveClock.reset();}
+    void resetTransportClock() noexcept {liveClock.reset();loopPlayback.invalidateReference();}
     std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
@@ -207,6 +208,9 @@ public:
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
     void processAudio(float*,float*,int,const SongTime&) noexcept;
     void processTransportAudio(float*,float*,int,const TransportTime&) noexcept;
+    LoopPlayback& loopTransport() noexcept { return loopPlayback; }
+    const LoopPlayback& loopTransport() const noexcept { return loopPlayback; }
+    bool livePlaybackEnabled() const noexcept { return liveEnabled.load(std::memory_order_acquire); }
     void processOfflineAudio(float*,float*,int,const TransportTime&);
     void endOffline() noexcept {offlineActive.store(false);}
     void recaptureCompleted(int64_t start,int64_t end);
@@ -316,6 +320,7 @@ private:
     void shapeJob(Swell,uint64_t session);
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     void prepareTransport(const PreviewContext&);
+    void prepareLoopTransport(const PreviewContext&);
     void invalidateLiveLocked(const juce::String& id={});
     bool prepareSourceWave(const Swell&,const PreviewContext&,uint64_t extra,std::shared_ptr<Waveform>&,juce::String& error);
     bool cancelled(const juce::String&,uint64_t input,uint64_t session) const;
@@ -414,6 +419,8 @@ private:
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     LivePreparationObservation livePreparation;
     uint64_t liveRevision=1,preparedLiveRevision=0;
+    LoopPlayback loopPlayback;
+    uint64_t preparedLoopGeneration=0, preparedLoopSource=0, preparedLoopRender=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";
     float liveAttenuationDb=0;

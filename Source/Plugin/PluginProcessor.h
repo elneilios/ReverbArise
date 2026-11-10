@@ -94,6 +94,11 @@ public:
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
     workflow::Readiness getWorkflowReadiness() const;
     bool requestWorkflowMode(workflow::Mode);
+    bool enterLoopStandby();
+    void setLoopPlaybackReference(const m3::LoopReferenceSetup&, bool externalCommands);
+    m3::LoopPlayback::Status loopPlaybackStatus() const noexcept;
+    bool requestLoopCue() noexcept;
+    void requestLoopPlaybackStop() noexcept { swells->loopTransport().requestStop(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
@@ -161,11 +166,15 @@ private:
     int64_t loopRunSample=0;
     int64_t pendingLoopEnd=-1;
     std::chrono::steady_clock::time_point previousLoopCallback;
+    std::chrono::steady_clock::time_point previousLoopPlaybackCallback;
+    std::optional<int64_t> loopPlaybackHostEnd;
+    bool previousLoopSource = false;
     void invalidateLoopClock() noexcept;
     bool loopArmAllowed(workflow::Snapshot, bool external) const noexcept;
     uint64_t reserveLoopArm(bool external) noexcept;
     bool loopDurationFits(LoopCapturePreference) const noexcept;
     void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
+    void processLoopPlayback(juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
