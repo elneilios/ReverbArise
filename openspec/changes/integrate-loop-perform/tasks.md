@@ -16,4 +16,4 @@
 ## 3. Rack handoff and delivery
 
 - [x] 3.1 After preview approval, build Release and verify the simple audible Rack patch against the production plug-in. Deliver the patch and local bundle path with short wiring and setup instructions. Record actual host versions and verify dry Standby, local Cue with full lead-in, repeat, Stop with dry continuing, and phase loss/reacquisition requiring a fresh Cue.
-- [ ] 3.2 Review the offline guide for the delivered Loop workflow. Run the full Windows Release suite, strict OpenSpec validation, and issue-scoped regression checks. Open a review-ready PR referencing #126 against feature/loop-mode with native UI and Rack evidence and remaining host limits.
+- [x] 3.2 Review the offline guide for the delivered Loop workflow. Run the full Windows Release suite, strict OpenSpec validation, and issue-scoped regression checks. Open a review-ready PR referencing #126 against feature/loop-mode with native UI and Rack evidence and remaining host limits.
