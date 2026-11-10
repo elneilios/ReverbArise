@@ -307,5 +307,33 @@ The installed Release VST3
 (`21E8988363D8BEA6DE11522F659D6C0844676DE85B76FE3436E6E8E4DA55F1A6`)
 restored the Pattern 2 proof project, cued across the Pattern wrap, played
 through subsequent passes and returned to standby on transport stop.
-The host smoke check covered scheduling and restoration. The owner's
-listening comparison in their project is still pending.
+The host smoke check covered scheduling and restoration. The owner confirmed
+that Loop playback sounded much better in FL Studio.
+
+### Rack Dry + wet listening check
+
+On 10 November 2026, Rack Free 2.6.6, Host-FX 2.1.0 and VCV Recorder 2.0.3
+used the same installed Release VST3. The test used the saved two-bar
+Clocked fixture at 44.1 kHz and 137 BPM with two enabled swells and Live
+Wet at 0 dB. The disposable patch kept only Clock connected for control.
+Recorder captured Host-FX left output and a separate dry input tap.
+Audition ran with Clocked stopped. Cue ran in live Dry + Wet with Clocked
+running. No plug-in gain or swell settings changed between the passes.
+
+The dry-only portion established a 256-sample Host-FX delay. The dry tap
+matched the recorded output exactly in that portion after alignment.
+Subtracting the aligned live dry let us compare the same bar-one swell
+from 300 ms to 57 ms before its target. Both recordings matched the saved
+wet shape with correlation above 0.9999.
+
+| Mode | Matched wet lead-in RMS | Wet gain relative to the shaped render |
+| --- | ---: | ---: |
+| Dry + wet Audition | −22.25 dBFS | −1.53 dB |
+| Cue Loop, Dry + Wet | −20.72 dBFS | 0.00 dB |
+
+Audition's combined-mix protection accounts for the 1.53 dB difference
+in this fixture. Cue preserved the lead-in shape across both measured
+passes. The live dry source is new noise on each hit, so this is a matched
+wet comparison with the Dry + Wet paths engaged. Local raw recordings,
+same-gain mono excerpts and the patch are under `out/issue-127/rack-balance/`.
+The Recorder setup follows the [VCV Recorder manual](https://vcvrack.com/Recorder#manual).
