@@ -210,6 +210,48 @@ int main() { return runTest([]
     waitFor([&]{const auto s=engine.savedSession();return s.swells[0].phase==Phase::error && s.swells.back().phase==Phase::ready;});
     REQUIRE(engine.savedSession().swells.size()==91 && !engine.snapshot().playing);
     {
+        const auto original=engine.savedSession();
+        auto mixed=original;
+        mixed.automaticProcessing=false;
+        REQUIRE(mixed.swells.size()>=3);
+        auto& manual=mixed.swells[0];
+        auto& detected=mixed.swells[1];
+        manual.provenance=Provenance::manualCreated;
+        detected.provenance=Provenance::automatic;
+        detected.detectorAnchor=detected.arrival;
+        const auto manualId=manual.id,detectedId=detected.id,retained=mixed.swells[2].id;
+        const auto anchor=detected.detectorAnchor;
+        mixed.selected={manualId,retained,detectedId};
+        mixed.primary=retained;
+        const std::vector<juce::String> group{manualId,detectedId};
+        mixed.suppressed.assign(maximumSwells,0);
+        engine.restore(mixed);
+        const auto obsolete=engine.assignmentEpoch();
+        REQUIRE(!engine.removeTargets(group,obsolete));
+        auto after=engine.savedSession();
+        REQUIRE(after.swells.size()==mixed.swells.size() && after.selected==mixed.selected
+            && after.primary==retained && after.suppressed==mixed.suppressed);
+
+        mixed.suppressed.clear();
+        engine.restore(mixed);
+        const auto current=engine.assignmentEpoch();
+        REQUIRE(!engine.removeTargets(group,obsolete));
+        REQUIRE(!engine.removeTargets({manualId,"missing"},current));
+        REQUIRE(!engine.removeTargets({manualId,manualId},current));
+        REQUIRE(engine.savedSession().selected==mixed.selected && engine.savedSession().swells.size()==mixed.swells.size());
+        REQUIRE(engine.removeTargets(group,current));
+        REQUIRE(!engine.removeTargets(group,current));
+        after=engine.savedSession();
+        REQUIRE(!find(after,manualId) && !find(after,detectedId) && find(after,retained));
+        REQUIRE(after.suppressed==std::vector<int64_t>{anchor} && after.selected==std::vector<juce::String>{retained}
+            && after.primary==retained);
+        juce::String encoded,error;
+        Session roundTrip;
+        REQUIRE(encode(after,encoded,error) && decode(encoded,roundTrip,error));
+        REQUIRE(!find(roundTrip,manualId) && !find(roundTrip,detectedId) && roundTrip.suppressed==after.suppressed);
+        engine.restore(original);
+    }
+    {
         TestDirectory editsRoot;CaptureSession editsCapture(editsRoot.file);
         std::vector<float> signal(4000,0);signal[0]=signal[1000]=.25f;
         REQUIRE(editsCapture.commit(0,1000,signal.data(),2000));

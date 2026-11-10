@@ -144,10 +144,54 @@ void Composition::verifyResponsiveScale()
     auto& focusViewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
     REQUIRE(copyAction.hasKeyboardFocus(true));
     REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
+    const auto revealVertically=[](controls::FocusViewport& viewport,juce::Component& target)
+    {
+        auto* viewed=viewport.getViewedComponent();
+        REQUIRE(viewed && viewed->isParentOf(&target));
+        viewport.setViewPosition(0,0);
+        viewport.reveal(target);
+        const auto targetBounds=viewed->getLocalArea(&target,target.getLocalBounds());
+        const auto visible=viewport.getViewArea();
+        REQUIRE(targetBounds.getY()>=visible.getY() && targetBounds.getBottom()<=visible.getBottom());
+    };
+    for (const auto percent : {100,125})
+    {
+        REQUIRE(panel->setPresentationScale(percent));
+        ownedTabs.selectPage(Page::storage);
+        panel->refresh();
+        auto& nested=require<controls::FocusViewport>(*panel->settingsPanel(),"storageContentViewport");
+        auto& destination=require<juce::Label>(*panel->settingsPanel(),"portableRestoreDestination");
+        const auto before=destination.getText();
+        revealVertically(nested,destination);
+        REQUIRE(destination.getText()==before);
+        auto& outer=require<controls::FocusViewport>(*panel->settingsPanel(),"storageViewport");
+        revealVertically(outer,require<juce::Component>(*panel->settingsPanel(),"locateAssets"));
+
+        for (const auto size : {juce::Point<int>{900,600},juce::Point<int>{1100,850}})
+        {
+            REQUIRE(panel->setPresentationSize(size.x,size.y));
+            require<controls::SegmentedSelector>(*panel,"inspectorSections").onRequest(2);
+            panel->refresh();
+            auto& inspector=require<controls::FocusViewport>(*panel,"inspectorViewport");
+            auto& currentField=require<KnobValue>(*panel,"endOffsetCell").valueField();
+            auto& pinnedReset=require<juce::Component>(*panel,"resetWetShape");
+            const auto value=currentField.getText();
+            const auto resetBounds=pinnedReset.getBounds();
+            revealVertically(inspector,currentField);
+            REQUIRE(currentField.getText()==value && pinnedReset.getBounds()==resetBounds
+                && !inspector.isParentOf(&pinnedReset));
+        }
+    }
     settingsWindow->setVisible(false);
     ownedTabs.selectPage(Page::recovery);
     require<m3::ui::controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
     auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
+    for(const auto percent : {100,125})
+    {
+        REQUIRE(panel->setPresentationScale(percent));
+        auto& diagnostics=require<controls::FocusViewport>(*diagnosticsWindow,"diagnosticsViewport");
+        revealVertically(diagnostics,require<juce::Component>(*diagnosticsWindow,"copyDiagnostics"));
+    }
     diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());
     REQUIRE(panel->setPresentationScale(125));panel->refresh();
     REQUIRE(!diagnosticsWindow->isVisible());

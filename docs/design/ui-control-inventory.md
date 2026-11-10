@@ -1,8 +1,8 @@
-# UI control inventory and family roadmap — issue #107
+# UI control inventory and family roadmap â€” issue #107
 
 Initial audit: `24cd287`; reconciled baseline: merged #80 at `717c890`,
 6 November 2026. Status: **owner-approved audit and contracts**, integrated as
-production standards revision 11 after #80's revisions 8–10. This document records
+production standards revision 11 after #80's revisions 8â€“10. This document records
 source inspection. The separate command-button child now records native family
 revision-4 approval and production adoption at standards revision 12; its
 [evidence](../validation/2026-11-06-issue-107-buttons.md) separates integrated
@@ -23,7 +23,7 @@ Each row identifies the actual member(s), source/owning policy, surface, semanti
 role, applicable state/interaction differences, approval reference and disposition.
 Member lists are explicit; grouped rows do not imply screen-wide compliance.
 Nested and dynamically created controls are included under their owning family.
-The [contracts](../development/ui-control-contracts.md) define family IDs C1–C8;
+The [contracts](../development/ui-control-contracts.md) define family IDs C1â€“C8;
 the packets below identify review and verification required before migration.
 
 State key: I idle, H hover, P pressed, F keyboard focus, D disabled,
@@ -42,7 +42,7 @@ Revision 13 adds keyboard/accessibility-only focus decoration to the shared
 command family, with actual focus and mouse feedback retained. The owner directed
 the same policy for other applicable controls during their own design-system
 jobs; see the [decision and boundaries](../development/ui-control-contracts.md#focus-visibility-policy).
-This is not an immediate migration of the remaining C2–C8 renderers.
+This is not an immediate migration of the remaining C2â€“C8 renderers.
 
 ## Header and shared workspace feedback
 
@@ -96,8 +96,8 @@ Approval: scoped #46/#49/#4/#68/#93/#58 evidence, not blanket legacy compliance.
 | --- | --- | --- | --- |
 | P7 `valueControls[0..10]`: Target, Source Start, Source End, Pre-roll, End Offset, Fade In, Fade Out, Level, Curve In, Curve Out, Move Wet | C5/C4 KnobValue, nested Dial/Caption/FieldTextEditor | I/H/F/D/E/V. Shared dial state, domain wheel steps, optional 0 dB Level detent, guarded Reset and exact entry. | P4 entries and P5 dials adopted. |
 | P8 `inspectorHeading`, `listEmpty`, `inspectorEmpty`, `auditionHeading`, `editorReadout`, `listCount`, `listLabel`, `inspectorGroups[0..2]`; `selectedStatus`, `monitorStatus`, `performSoundScope`; nested `irEditor.label`, `irEditor.status` | C3 roles/plain Labels, EllipsisLabel and IR FieldMessage | I/D/B/overflow; screen scope outside shared IR field; feedback collapse reflows Level while Reset stays fixed; remaining statuses ellipsize | P3 retain #80 revisions 8/10; do not duplicate field feedback |
-| P9 `list`, generated `RowSurface`, inherited ListBox viewport/scrollbars | C7 SwellList specialized identity list | I/H/F/S/D/B; row Enabled and menu are painted hit regions, not Button children; RowSurface explicitly inaccessible, parent ListBox owns selection; refresh preserves identity/scroll; explicit list navigation reveals context | P7 retain #4/#93; verify accessible row actions before any broader compliance claim |
-| P10 `inspectorViewport`, `inspectorContent` | C7 FocusViewport + screen layout | scroll/focus/overflow; reveal policy explicit, not implied by viewport type | P7 retain approved composition; check focus reveal enabled at each use |
+| P9 `list`, generated `RowSurface`, inherited ListBox viewport/scrollbars | C7 SwellList specialized identity list | I/H/P/F/S/D/B; real Enabled and More controls expose row actions, with Tab traversal for the primary row; ListBox owns selection and refresh preserves identity and scroll | P7 adopted at revision 23, with #4 and #93 behavior retained |
+| P10 `inspectorViewport`, `inspectorContent` | C7 FocusViewport + screen layout | scroll/focus/overflow; reveal policy explicit, not implied by viewport type | P7 verified with existing focus reveal and pinned Reset |
 
 ## Export
 
@@ -166,7 +166,7 @@ treated as production primary controls.
 
 | ID / actual consumers | Owner / semantics | States / differences | Disposition |
 | --- | --- | --- | --- |
-| N1 `showSwellMenu` Rename/Delete and modal Name field with OK/Cancel | C2 ChoicePopup, C4 FieldTextEditor, C1 ActionButton | Right-click or three dots opens the menu. Rename validates on focus loss. OK/Return submits to the captured ID and epoch. Cancel/Escape discards. | Popup adopted in revision 16. Rename field and buttons adopted in P4. |
+| N1 `showSwellMenu` Rename/Delete, modal Name field, and group confirmation | C2 ChoicePopup, C4 FieldTextEditor, C1 ActionButton | Right-click or three dots opens the same menu. Rename is unavailable during multiselect. Group Delete confirms the captured IDs with Cancel initially focused. Escape dismisses without an edit. | Popup and row-action integration verified at revision 23. Rename field retains its P4 binding. |
 | N2 `KnobValue` reset popup per value cell | C2 `ChoicePopup` neutral action and C5 reset provider | Right-click anchor, provider label/eligibility and captured Reset closure. Pointer return preserves focus with brackets suppressed. Inspector `resetMenu` is the separate Reset All command | Popup adopted at revision 16 on the merged #108 Level baseline |
 | N3 Learn/selected ConvolutionIrBinding `chooser` (Settings default import routes through Learn binding), Export save `chooser`, native external file drag and editor host resize chrome | C8 platform surfaces; application owns launch/completion | OS-managed chooser focus, overwrite and cancel. Export captures session/pass/file; Windows copy drag shows WAV or stop feedback from the target's drop effect. | Export N3 adopted at revision 22; IR chooser and resize-chrome review remain in P8. |
 
@@ -233,7 +233,7 @@ Keep the family open until every consumer has a recorded disposition.
 | P5 Knobs and sliders | L6, P6/E4, P7, E5, S8 and N4 adopted by `unify-knob-slider-interactions`. D6 retained as hidden compatibility seams. | Shared dial/track feedback and Ctrl+wheel, Level home detent, preserved gesture guards, Reset, independent pair edits and display-only values. |
 | P6 Switches and toggles | L4, P4 and S4/S5 adopted by `unify-switch-toggle-states`. D3 retained hidden. | Shared toggle states. Labeled switches in Learn and Settings, inline checkboxes in the Swell Inspector, and preserved pass and binding authority. |
 | P7 Connected tabs | H2/L5/P5 and S7 adopted by `unify-connected-tabs`. | One connected strip and deliberate selection contract, with About last in Settings. |
-| P7 Lists and scrolling | P9/P10, D7 viewport and N5 scroll viewport remain a separate child under #107. | Preserve row identity, scroll, multiselection and #93 contextual reveal. Review row keyboard/accessibility gaps and explicit focus-reveal use. |
+| P7 Lists and scrolling | P9/P10, D7 viewport and N5 scroll viewport covered by `unify-swells-list-and-scrolling`. | Row actions, confirmed group Delete, disabled popup feedback and existing focus reveal. See the [validation record](../validation/2026-11-10-issue-107-swells-list-and-scrolling.md). |
 | P8 Export file gestures | E2 and Export N3 Save WAV, tile Save fallback and ready-file drag | Adopted at revision 22. See the [Export validation record](../validation/2026-11-10-issue-107-export-file-invocations.md). |
 | P8 Remaining specialized interactions and auxiliary shells | L8 and E6 navigation/canvas, non-Export N3, N4 and N5; C8 timeline, overview, native file and window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and captured ownership, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
 
@@ -317,4 +317,4 @@ The first child is proposed as
 Its [design](../../openspec/changes/archive/2026-11-06-unify-command-button-states/design.md) fixes the
 20 remaining persistent legacy command consumers and two latch consumers, reuses
 merged #80 and retains scoped native approval before migration. It does not start
-P2–P8 or modify active #108/#8 work.
+P2â€“P8 or modify active #108/#8 work.

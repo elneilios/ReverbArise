@@ -1,13 +1,13 @@
 #pragma once
-#include "FileSaveAction.h"
+#include "CapturedActionButton.h"
 namespace m3::ui::controls
 {
 // Generic native-file gesture surface. Bindings own file/revision/session safety;
 // this control never opens, writes or retains a filesystem path.
-class FileDragTile final:public FileSaveAction
+class FileDragTile final:public CapturedActionButton
 {
 public:
-    FileDragTile():FileSaveAction("Drag WAV to Playlist")
+    FileDragTile():CapturedActionButton("Drag WAV to Playlist")
     {
         setTooltip("Drag the ready WAV to your Playlist. Click or press Enter to Save WAV.");setHelpText(getTooltip());
         onClick=[this]{if(!dragged && onSave)onSave();};
@@ -21,31 +21,31 @@ public:
     }
     bool hasSolidBorder() const
     {
-        return usesBoundSave() ? dragFeedbackActive || isFocusVisible() : hasKeyboardFocus(true);
+        return hasCapturedInvocation() ? dragFeedbackActive || isFocusVisible() : hasKeyboardFocus(true);
     }
     std::function<void()> onDrag,onSave;
     std::function<void(PressId)> onGuardedDrag;
     void mouseDown(const juce::MouseEvent& e)override
     {
-        if(!usesBoundSave())dragged=false;
-        FileSaveAction::mouseDown(e);
+        if(!hasCapturedInvocation())dragged=false;
+        CapturedActionButton::mouseDown(e);
     }
     bool keyPressed(const juce::KeyPress& key)override
     {
-        if(!usesBoundSave())dragged=false;
-        return FileSaveAction::keyPressed(key);
+        if(!hasCapturedInvocation())dragged=false;
+        return CapturedActionButton::keyPressed(key);
     }
     void mouseDrag(const juce::MouseEvent& e)override
     {
-        FileSaveAction::mouseDrag(e);
-        if(usesBoundSave())
+        CapturedActionButton::mouseDrag(e);
+        if(hasCapturedInvocation())
         {
             const auto press=pointerPress();
             if(isEnabled() && ownsPress(e) && e.mods.isLeftButtonDown() && press!=draggedPress
                && e.getDistanceFromDragStart()>=4)
             {
                 draggedPress=press;
-                suppressPointerSave();
+                suppressPointerInvocation();
                 if(onGuardedDrag)onGuardedDrag(press);
             }
             return;

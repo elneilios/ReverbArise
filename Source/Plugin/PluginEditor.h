@@ -19,6 +19,7 @@
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
 #include <UI/Controls/ActionButton.h>
+#include <UI/Controls/CapturedActionButton.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
 #include <UI/PortableStoragePanel.h>
@@ -110,7 +111,9 @@ private:
     bool recoveryInspected=false,recoveryWarned=false,metadataRecoveryWarned=false;
     std::unique_ptr<juce::AlertWindow> recoveryWarning;
 
-    void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
+    void showSwellMenu(m3::ui::controls::SwellList::MenuRequest);
+    void requestDeleteSwells(std::vector<juce::String>,uint64_t epoch,uint64_t pass,
+                             juce::String focusRow={},bool keyboard=false);
     void curveChanged(bool);
     void setPreferences();
     void applyBarRange();
@@ -162,8 +165,10 @@ private:
     m3::ui::controls::SwellList list;
     std::unique_ptr<m3::ui::controls::ChoicePopup> swellMenu;
     juce::Component::SafePointer<juce::AlertWindow> renameDialog;
+    std::unique_ptr<juce::AlertWindow> deleteSwellConfirmation;
     juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
-    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},removeButton{"Delete"},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
+    m3::ui::controls::CapturedActionButton removeButton{"Delete"};
+    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
     m3::ui::controls::TimelineZoomControls performZoom;
     m3::ui::controls::LatchingActionButton snapButton{"Snap"};

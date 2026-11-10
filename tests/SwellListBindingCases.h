@@ -89,6 +89,17 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
         REQUIRE(display && menu->getScreenBounds() == ChoicePopup::placedBounds(anchor, display->userArea, menu->getWidth(), menu->getHeight()));
         return menu;
     };
+    REQUIRE(engine.selectTargets({first,earlier},first));
+    editor.refresh();
+    auto* multiple=openMenu(*list,first,true);
+    REQUIRE(!multiple->state().items()[0].eligible && multiple->state().items()[0].reason.isEmpty()
+        && multiple->state().items()[1].label=="Delete 2 swells");
+    multiple->dismiss();
+    pump();
+    REQUIRE(engine.savedSession().selected.size()==2);
+    REQUIRE(engine.selectTargets({first},first));
+    editor.refresh();
+
     const auto renameDialog=[&](const juce::String& id, bool rightClick)
     {
         auto* menu = openMenu(*list, id, rightClick);
@@ -177,6 +188,92 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
     REQUIRE(!engine.selectTargets({second},second,oldEpoch));REQUIRE(!engine.removeTarget(first,oldEpoch));
     REQUIRE(!engine.edit(first,[](auto& w,auto&){w.name="obsolete";return true;},oldEpoch));
     verify();
+    REQUIRE(engine.addTarget(14000));
+    const auto unaffected=engine.savedSession().primary;
+    const std::vector<juce::String> group{first,second};
+    REQUIRE(engine.selectTargets(group,first));
+    editor.refresh();
+
+    // The Settings command queues keyboard and accessibility activation.
+    // Change selection before dispatch so a late lookup would delete the
+    // unrelated singleton without confirmation.
+    auto* settingsButton=dynamic_cast<juce::Button*>(named(editor,"diagnostics"));
+    REQUIRE(settingsButton);
+    settingsButton->onClick();
+    auto* settingsTabs=editor.settingsPanel();
+    const auto previousSettingsPage=settingsTabs->selectedPage();
+    settingsTabs->selectPage(m3::ui::SettingsPage::swell);
+    auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(settingsTabs->getTopLevelComponent());
+    auto* settingsDelete=dynamic_cast<CommandButton*>(named(*settingsTabs,"settingsDeleteSwells"));
+    REQUIRE(settingsWindow && settingsDelete && settingsDelete->isShowing());
+    for(const auto accessibility : {false,true})
+    {
+        REQUIRE(engine.selectTargets(group,first));
+        editor.refresh();
+        REQUIRE(settingsDelete->isEnabled());
+        if(accessibility)
+        {
+            auto* handler=settingsDelete->getAccessibilityHandler();
+            REQUIRE(handler && handler->getActions().invoke(juce::AccessibilityActionType::press));
+        }
+        else REQUIRE(settingsDelete->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+
+        REQUIRE(juce::Component::getCurrentlyModalComponent()==nullptr);
+        REQUIRE(engine.selectTargets({unaffected},unaffected));
+        editor.refresh();
+        pump();
+
+        auto* settingsConfirm=juce::Component::getCurrentlyModalComponent();
+        REQUIRE(settingsConfirm && settingsConfirm->getName()=="deleteSwellConfirmation");
+        REQUIRE(settingsConfirm->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));
+        pump();
+        const auto current=engine.savedSession();
+        REQUIRE(current.swells.size()==3 && current.primary==unaffected && m3::find(current,unaffected));
+    }
+    settingsTabs->selectPage(previousSettingsPage);
+    settingsWindow->closeButtonPressed();
+    editor.toFront(true);
+    REQUIRE(engine.selectTargets(group,first));
+    editor.refresh();
+    auto* single=openMenu(*list,unaffected,true);
+    REQUIRE(!single->state().items()[0].eligible && single->state().items()[1].label=="Delete");
+    single->dismiss();
+    pump();
+
+    const auto openGroupDelete=[&]
+    {
+        auto* actions=openMenu(*list,first,true);
+        REQUIRE(actions->state().items()[1].label=="Delete 2 swells");
+        REQUIRE(!actions->state().items()[0].eligible && actions->state().items()[0].reason.isEmpty());
+        actions->activate(0);
+        REQUIRE(!actions->state().done());
+        actions->activate(1);
+        pump();
+        auto* confirm=juce::Component::getCurrentlyModalComponent();
+        REQUIRE(confirm && confirm->getName()=="deleteSwellConfirmation");
+        auto* cancel=named(*confirm,"cancelSwellDeletion");
+        REQUIRE(cancel && cancel->hasKeyboardFocus(false));
+        return confirm;
+    };
+    auto* confirm=openGroupDelete();
+    REQUIRE(m3::find(engine.savedSession(),first) && m3::find(engine.savedSession(),second));
+    const auto viewY=list->getViewport()->getViewPositionY();
+    REQUIRE(confirm->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));
+    pump();
+    REQUIRE(engine.savedSession().swells.size()==3 && engine.savedSession().selected==group);
+    REQUIRE(list->getViewport()->getViewPositionY()==viewY);
+
+    confirm=openGroupDelete();
+    REQUIRE(engine.selectTargets({unaffected},unaffected));
+    editor.refresh();
+    auto* remove=dynamic_cast<CommandButton*>(named(*confirm,"confirmSwellDeletion"));
+    REQUIRE(remove);
+    remove->invokeCommand();
+    pump();
+    const auto after=engine.savedSession();
+    REQUIRE(after.swells.size()==1 && !m3::find(after,first) && !m3::find(after,second));
+    REQUIRE(after.selected==std::vector<juce::String>{unaffected} && after.primary==unaffected);
+
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));editor.refresh();REQUIRE(!list->isVisible());
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));editor.refresh();verify();
     snapshotEditor(editor,"chronological-list-integrated");

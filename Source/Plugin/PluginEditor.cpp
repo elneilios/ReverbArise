@@ -20,6 +20,51 @@ juce::String phaseName(m3::Phase phase)
 }
 juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gainToDecibels(peak),1)+" dBFS":juce::String("silent");}
 
+class DeleteSwellsDialog final : public juce::AlertWindow
+{
+public:
+    DeleteSwellsDialog(juce::Component& owner,int count)
+        : AlertWindow("Delete "+juce::String(count)+" selected swells?",
+                      "This removes all "+juce::String(count)+" selected swells from the list.",
+                      juce::MessageBoxIconType::NoIcon,&owner)
+    {
+        using namespace m3::ui;
+        setName("deleteSwellConfirmation");
+        setLookAndFeel(&theme);
+        setEscapeKeyCancels(true);
+        cancel.setName("cancelSwellDeletion");
+        remove.setName("confirmSwellDeletion");
+        actions.addAndMakeVisible(cancel);
+        actions.addAndMakeVisible(remove);
+        constexpr int buttonWidth=164;
+        const auto height=controlGeometry::height+2*controlGeometry::focusPadding;
+        actions.setSize(2*buttonWidth+spacing::related,juce::roundToInt(height));
+        cancel.setBounds(actions.getLocalBounds().removeFromLeft(buttonWidth));
+        remove.setBounds(actions.getLocalBounds().removeFromRight(buttonWidth));
+        cancel.onClick=[this]{exitModalState(0);};
+        remove.onClick=[this]{exitModalState(1);};
+        addCustomComponent(&actions);
+    }
+
+    ~DeleteSwellsDialog() override
+    {
+        removeCustomComponent(0);
+        setLookAndFeel(nullptr);
+    }
+
+    void show(std::function<void(int)> complete)
+    {
+        enterModalState(true,juce::ModalCallbackFunction::create(std::move(complete)),false);
+        cancel.grabKeyboardFocus();
+    }
+
+private:
+    m3::ui::WorkspaceTheme theme;
+    juce::Component actions;
+    m3::ui::controls::ActionButton cancel{"Cancel"};
+    m3::ui::controls::ActionButton remove{"Delete swells",m3::ui::controls::CommandIcon::none,m3::ui::controls::CommandVariant::destructive};
+};
+
 class RenameSwellDialog final : public juce::AlertWindow
 {
 public:
@@ -135,7 +180,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     spanLabel.setText("Bars",juce::dontSendNotification);
     barStartLabel.setText("Bar start",juce::dontSendNotification);barEndLabel.setText("End excl.",juce::dontSendNotification);
     toneStartLabel.setText("Tone start bar",juce::dontSendNotification);toneEndLabel.setText("End exclusive",juce::dontSendNotification);
-    for(auto* button:{&addButton,&removeButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
+    addAndMakeVisible(removeButton);
+    for(auto* button:{&addButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
     addAndMakeVisible(assetInfoButton);assetInfoButton.setTooltip("Copy the selected swell's managed asset paths for backup or validation.");
     assetInfoButton.onClick=[this]
     {
@@ -164,7 +210,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     };
     list.onToggleEnabled=[this](auto id)
     {if(updating || destroying)return;processor.swellEngine().edit(id,[](auto& w,auto&){w.enabled=!w.enabled;return true;},state.sessionEpoch);refresh();};
-    list.onMenu=[this](auto row,const auto& event){if(!updating && !destroying)showSwellMenu(row,event);};
+    list.onMenu=[this](auto request){if(!updating && !destroying)showSwellMenu(std::move(request));};
     addAndMakeVisible(list);addAndMakeVisible(timeline);
     addAndMakeVisible(songOverview);timeline.setInlineOverview(false);timeline.onEnvelopeEdited=[this]{refresh();};
     const std::array<juce::String,fieldCount> labels{"Name","Arrival (sample)","Source start (sample)","Source end exclusive","Audible start (sample)","Audible end exclusive","Fade in (ms)","Fade out (ms)"};
@@ -197,7 +243,18 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     snapButton.setToggleState(true,juce::dontSendNotification);
     addButton.onClick=[this]{processor.swellEngine().addTarget(processor.getSongTime().sample);refresh();};
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
-    removeButton.onClick=[this]{processor.swellEngine().removeSelected();refresh();};
+    removeButton.setName("settingsDeleteSwells");
+    removeButton.bindInvocation([this]() -> m3::ui::controls::CapturedActionButton::Invocation
+    {
+        if(updating || destroying)return {};
+        auto current=processor.swellEngine().snapshot();
+        const auto flow=processor.getWorkflowSnapshot();
+        if(current.session.selected.empty() || flow.mode!=workflow::Mode::live)return {};
+        return [this,ids=std::move(current.session.selected),epoch=current.sessionEpoch,pass=flow.pass]() mutable
+        {
+            requestDeleteSwells(std::move(ids),epoch,pass);
+        };
+    });
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
     auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
@@ -445,7 +502,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();if(renameDialog)renameDialog->exitModalState(0);recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();deleteSwellConfirmation.reset();if(renameDialog)renameDialog->exitModalState(0);recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     if(responsivePresentation){g.fillAll(m3::ui::background);return;}
@@ -473,54 +530,88 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
     for(const auto x:{perform.list.getRight()+m3::ui::performGeometry::columnGap/2,perform.inspector.getX()-m3::ui::performGeometry::columnGap/2})
         g.drawVerticalLine(x,static_cast<float>(perform.work.getY()+m3::ui::performGeometry::columnInset),static_cast<float>(perform.work.getBottom()-m3::ui::performGeometry::columnInset));
 }
-void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellListRow& w,const juce::MouseEvent& event)
+void PreverbAudioProcessorEditor::requestDeleteSwells(std::vector<juce::String> ids,uint64_t epoch,
+                                                      uint64_t pass,juce::String focusRow,bool keyboard)
+{
+    if(ids.empty() || destroying || deleteSwellConfirmation
+       || processor.swellEngine().assignmentEpoch()!=epoch || processor.getWorkflowSnapshot().pass!=pass
+       || processor.getWorkflowSnapshot().mode!=workflow::Mode::live)return;
+
+    const auto count=ids.size();
+    const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+    auto complete=[safe,ids=std::move(ids),epoch,pass,focusRow=std::move(focusRow),keyboard](int result)
+    {
+        if(!safe || safe->destroying)return;
+        safe->deleteSwellConfirmation.reset();
+        if(result==1)
+        {
+            safe->processor.swellEngine().removeTargets(ids,epoch,pass);
+            safe->refresh();
+        }
+        if(safe && focusRow.isNotEmpty() && safe->list.isShowing())
+            safe->list.restoreMenuFocus(focusRow,keyboard);
+    };
+    if(count==1){complete(1);return;}
+
+    auto dialog=std::make_unique<DeleteSwellsDialog>(*this,static_cast<int>(count));
+    auto* window=dialog.get();
+    deleteSwellConfirmation=std::move(dialog);
+    window->show(std::move(complete));
+}
+
+void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::MenuRequest request)
 {
     using namespace m3::ui::controls;
-    if (swellMenu || event.eventComponent == nullptr || !list.isShowing() || !list.isEnabled())
-        return;
+    if(swellMenu || deleteSwellConfirmation || !list.isShowing() || !list.isEnabled())return;
 
-    const auto anchor = swellMenuAnchor(event);
-    const auto epoch = state.sessionEpoch;
+    const auto snapshot=processor.swellEngine().snapshot();
+    const auto flow=processor.getWorkflowSnapshot();
+    const auto* swell=m3::find(snapshot.session,request.id);
+    if(!swell || snapshot.sessionEpoch!=request.epoch || flow.mode!=workflow::Mode::live)return;
+
+    const auto& selection=snapshot.session.selected;
+    auto targets=std::find(selection.begin(),selection.end(),request.id)!=selection.end()
+        ? selection : std::vector<juce::String>{request.id};
+    const auto deleteLabel=targets.size()>1?"Delete "+juce::String(static_cast<int>(targets.size()))+" swells":juce::String("Delete");
+    std::vector<PopupChoice> actions{{1,"Rename...",{},selection.size()<=1,false,PopupRowRole::action},
+                                     {2,deleteLabel,{},true,false,PopupRowRole::destructiveAction}};
     const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
-    std::vector<PopupChoice> actions{{1, "Rename...", {}, true, false, PopupRowRole::action},
-                                     {2, "Delete", {}, true, false, PopupRowRole::destructiveAction}};
-    // The list owns the popup across row recycling. The action still owns the
-    // clicked row's ID and epoch, regardless of later selection or reorder.
-    swellMenu = std::make_unique<ChoicePopup>(list, std::move(actions),
-        [safe, id = w.id, name = w.name, epoch](int result, PopupDismissal why)
+    swellMenu=std::make_unique<ChoicePopup>(list,std::move(actions),
+        [safe,request,name=swell->name,pass=flow.pass,targets=std::move(targets)](int result,PopupDismissal why)
         {
-            if (!safe || safe->destroying)
-                return;
+            if(!safe || safe->destroying)return;
+            const auto keyboard=safe->swellMenu && safe->swellMenu->showFocusOnReturn();
             safe->swellMenu.reset();
-            if (!safe || why == PopupDismissal::outside || why == PopupDismissal::ownerGone
-                || !safe->list.isShowing() || !safe->list.isEnabled())
-                return;
+            if(!safe || why==PopupDismissal::outside || why==PopupDismissal::ownerGone
+               || !safe->list.isShowing() || !safe->list.isEnabled())return;
 
-            safe->list.grabKeyboardFocus();
-            if (!safe || safe->destroying)
-                return;
-            if (why == PopupDismissal::tabForward || why == PopupDismissal::tabBackward)
+            if(why==PopupDismissal::tabForward)
             {
-                safe->list.moveKeyboardFocusToSibling(why == PopupDismissal::tabForward);
+                safe->inspectorSections.grabKeyboardFocus();
+                return;
+            }
+            if(why==PopupDismissal::tabBackward)
+            {
+                safe->list.restoreMenuFocus(request.id,true,false);
+                return;
+            }
+            safe->list.restoreMenuFocus(request.id,keyboard);
+
+            auto& engine=safe->processor.swellEngine();
+            if(engine.assignmentEpoch()!=request.epoch || safe->processor.getWorkflowSnapshot().pass!=pass)return;
+            if(result==2)
+            {
+                safe->requestDeleteSwells(targets,request.epoch,pass,request.id,keyboard);
                 return;
             }
 
-            auto& engine = safe->processor.swellEngine();
-            if (engine.assignmentEpoch() != epoch)
-                return;
-            if (result == 2)
+            const auto current=engine.savedSession();
+            if(result!=1 || safe->renameDialog || current.selected.size()>1 || !m3::find(current,request.id))return;
+            auto* dialog=new RenameSwellDialog(*safe,name,[safe,request,pass](const juce::String& value)
             {
-                engine.removeTarget(id, epoch);
-                if (safe) safe->refresh();
-                return;
-            }
-            if (result != 1 || safe->renameDialog || !m3::find(engine.savedSession(), id))
-                return;
-
-            auto* dialog=new RenameSwellDialog(*safe,name,[safe,id,epoch](const juce::String& text)
-            {
-                if(!safe || safe->destroying)return false;
-                const bool accepted=safe->processor.swellEngine().edit(id,[&](auto& swell,auto&){swell.name=text;return true;},epoch);
+                if(!safe || safe->destroying || safe->processor.getWorkflowSnapshot().pass!=pass
+                   || safe->processor.swellEngine().savedSession().selected.size()>1)return false;
+                const bool accepted=safe->processor.swellEngine().edit(request.id,[&](auto& swell,auto&){swell.name=value;return true;},request.epoch);
                 if(safe)safe->refresh();
                 return accepted;
             });
@@ -528,10 +619,8 @@ void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellLis
             dialog->show();
         });
     swellMenu->setName("swellActionMenu");
-    swellMenu->setTitle("Actions for " + w.name);
-    juce::SharedResourcePointer<FocusVisibility> visibility;
-    visibility->pointerInput();
-    swellMenu->show(anchor, false);
+    swellMenu->setTitle("Actions for "+swell->name);
+    swellMenu->show(request.anchor,request.keyboard);
 }
 void PreverbAudioProcessorEditor::setPreferences()
 {const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(static_cast<float>(auditionSlider.getValue()),s.sensitivity,s.separationSeconds,s.autoRegenerate);}
@@ -646,6 +735,7 @@ void PreverbAudioProcessorEditor::enableResponsivePresentation(std::shared_ptr<m
 {
     if(responsivePresentation)return;
     inspectorSections.setName("inspectorSections");addAndMakeVisible(inspectorSections);
+    list.setInspectorTabTarget(inspectorSections);
     inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();};
     // Fixed actions and flags belong to the editor, outside the scrolling fields.
     for(auto* child:std::initializer_list<juce::Component*>{&selectedStatus,&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})

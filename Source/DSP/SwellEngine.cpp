@@ -228,6 +228,37 @@ bool SwellEngine::removeTarget(const juce::String& id,uint64_t expectedSession)
     if(!selectTargets({id},id,expectedSession))return false;
     removeSelected();return find(model,id)==nullptr;
 }
+bool SwellEngine::removeTargets(const std::vector<juce::String>& ids,uint64_t expectedSession,uint64_t expectedPass)
+{
+    const juce::ScopedLock guard(lock);
+    if(ids.empty() || expectedSession!=sessionGeneration.load() || !permitCreative())return false;
+    if(expectedPass!=UINT64_MAX && (!workflowState || workflowState->snapshot().pass!=expectedPass))return false;
+
+    // Stage existing deletion and detector suppression together. Failure on a
+    // later member must leave the live session and its selection intact.
+    Session next=model;
+    juce::String rejection;
+    for(const auto& id:ids)
+        if(!suppressAndErase(next,id,rejection))
+        {
+            if(rejection.isNotEmpty())message=rejection;
+            return false;
+        }
+
+    stopLocked();
+    ++monitoringGeneration;
+    model=std::move(next);
+    message.clear();
+    protectedGenerationCalibration.clear();
+    for(const auto& id:ids)
+    {
+        invalidateLiveLocked(id);
+        runtime.erase(id);
+        forceRefresh.erase(id);
+    }
+    persistentChangedLocked();
+    return true;
+}
 bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce::String& primary,uint64_t expectedSession)
 {
     const juce::ScopedLock guard(lock);

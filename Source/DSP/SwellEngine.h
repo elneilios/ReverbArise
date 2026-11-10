@@ -132,6 +132,7 @@ public:
     bool confirmCandidateAt(int64_t sample);
     void removeSelected();
     bool removeTarget(const juce::String&,uint64_t expectedSession);
+    bool removeTargets(const std::vector<juce::String>&,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);

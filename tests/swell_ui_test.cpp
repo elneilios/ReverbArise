@@ -855,7 +855,7 @@ int main(int argc,char* argv[]){return runTest([&]
         {
             using m3::ui::ExportFileInvocations;
             using m3::ui::controls::FileDragTile;
-            using m3::ui::controls::FileSaveAction;
+            using m3::ui::controls::CapturedActionButton;
             const auto ready = engine.snapshot();
             const auto& state = ready.songExport;
             const auto expected = engine.assetDirectory().getChildFile(state.prepared->file.path);
@@ -879,7 +879,7 @@ int main(int argc,char* argv[]){return runTest([&]
             workspace.setAlwaysOnTop(true);
             workspace.display(ready);
             auto* tile = dynamic_cast<FileDragTile*>(named(workspace, "exportDrag"));
-            auto* save = dynamic_cast<FileSaveAction*>(named(workspace, "exportSave"));
+            auto* save = dynamic_cast<CapturedActionButton*>(named(workspace, "exportSave"));
             auto* peer = workspace.getPeer();
             REQUIRE(tile && save && peer && expected.existsAsFile());
             auto stamp = juce::Time::currentTimeMillis();

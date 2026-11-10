@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Song Export spec against the delivered ready-WAV drag, target cursors, dotted border restoration and guarded Save flow. The offline guide already describes these behaviors and needed no prose changes.",
+  "summary": "Reviewed the synced Swells workspace and shared UI specs against the delivered row actions, confirmed deletion, disabled popup hover and focus scrolling. The Perform guide already describes the delivered interaction.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -410,13 +410,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 84925,
-      "sha256": "f0681cdd29c543da76b07940d021870bc9d96f62ac57c9bc616c6ac137b3d3ef"
+      "bytes": 86005,
+      "sha256": "158959aa225afe989e2e46f591de2fe899eeb66faf29ecaabd51e965b4d98416"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 24473,
-      "sha256": "b400393812cd4728ebdca9d4fb364bb673eb4b88c9357029997310919aa4a9d7"
+      "bytes": 24589,
+      "sha256": "53942460393f5089a526bf2db555fbd94260caf283af240c1993ae0eb43cc126"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 97917,
-      "sha256": "d3f12512d0daa48178ed2764f84589d85e01d519648bb75be5d7dffb96f19ad1"
+      "bytes": 102241,
+      "sha256": "61c8c299a94d2811d316998dd539d764ffa2df04357f84d6e0328629466da0b1"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15458,
-      "sha256": "8a4bd791dc865b9e93b32d05825a4fd631c1d55e1b5729a35d6c29a9c0c68dd3"
+      "bytes": 15752,
+      "sha256": "4949fbc3d95c3a91c0d9e70fc2f537f7b209ab9eb145fb832d6c9c7ace359056"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -579,9 +579,14 @@
       "sha256": "c858103174a485e245fdaddbe2f3f7429b567e15158c7e867942a9e7d84e7c20"
     },
     {
+      "path": "Source/UI/Controls/CapturedActionButton.h",
+      "bytes": 3517,
+      "sha256": "2d67096247b259f5a34da61cfb0e61ab98f2f1f133879ab0e5f5f50a7bc21adb"
+    },
+    {
       "path": "Source/UI/Controls/ChoicePopup.h",
-      "bytes": 14128,
-      "sha256": "69824f74968e4fa653673c14aac54966d64ef05c33fb0b10d97a8e335c398e4a"
+      "bytes": 14382,
+      "sha256": "4779cc50b8fefcbae755d69274da16b35c9a024c39c9f7a6968ddc94d7715513"
     },
     {
       "path": "Source/UI/Controls/ChoiceSelector.h",
@@ -635,13 +640,8 @@
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
-      "bytes": 4412,
-      "sha256": "6f9341b6e067304bee9246a8ddcca9cd87627387d89f21a2ac68013c5b087f12"
-    },
-    {
-      "path": "Source/UI/Controls/FileSaveAction.h",
-      "bytes": 3368,
-      "sha256": "b6a85ab075a3d0285b1fc55a2e480e47f053affd49c23198992ba0ed080a690a"
+      "bytes": 4486,
+      "sha256": "25074247a307d916c4e1474b74f30725d42af96d9688177c7723805cd3b97cd6"
     },
     {
       "path": "Source/UI/Controls/FocusViewport.h",
@@ -715,8 +715,8 @@
     },
     {
       "path": "Source/UI/Controls/PopupInteraction.h",
-      "bytes": 2131,
-      "sha256": "7155e66efbf9e5239db501f35a37d828d16778ac0ac736e7c4494a265b23d2a3"
+      "bytes": 2304,
+      "sha256": "fa51963c52188bf07f43f9ac2a7116a61248e4c5bd81ee4030053a724ec95d05"
     },
     {
       "path": "Source/UI/Controls/PresentationSurface.h",
@@ -740,8 +740,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 9931,
-      "sha256": "d377358b66b1328bb6b8dac8bb8b7150bdadc6e7d0413fb02f4b3bdf832b8491"
+      "bytes": 19762,
+      "sha256": "a3e1a2b5ad39734910d181043c98e7ab0b1a6dd291af958b9bf5e59a6626f159"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -790,13 +790,13 @@
     },
     {
       "path": "Source/UI/ExportFileInvocations.h",
-      "bytes": 6790,
-      "sha256": "7624dabca536eaa4fbef143e94af4a58e7b126f48306ee8318a1a90fec53afd6"
+      "bytes": 6826,
+      "sha256": "9cbc3d1db6aa9926428837b8ff2c52477ed7d7e6e8304c8e8e10381985a4f8d3"
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 23199,
-      "sha256": "47eea14b9828dd5f1f24c774ce221cc30f9aa7740b42deec974f202c3127d426"
+      "bytes": 23205,
+      "sha256": "9a5e1e2e5bbdcdc6d20de3c8823bffddf0ccec12b17bd768230f539dee38f66d"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -970,8 +970,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30887,
-      "sha256": "d11ca045a7a01c0a8660dff3938ef9fffc8f23c81e74068b6299f217065786e9"
+      "bytes": 31188,
+      "sha256": "0ef2df41014747b65524eb8b6d1584aee56156bd0b464dfcf189bf5f599b58ba"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1080,8 +1080,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 110749,
-      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
+      "bytes": 113675,
+      "sha256": "70398185bc4bd33af66bacf9a05e30064abdcfed154b4bf7fac7c1c11cc5908b"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -1090,8 +1090,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 47913,
-      "sha256": "21347134f29ec68d4c13bc793ed22331bb42067809907b7b4765f0f91e9fe080"
+      "bytes": 49713,
+      "sha256": "10681b7f4839398e639e7107d26a415ca887e791249398c2c4fef28fd25861b8"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

@@ -20,9 +20,9 @@ public:
         reset.setTitle("Knob Reset actions");
         edge.setTitle("Screen-edge actions");
         swells.display({{"preview-swell", "Room swell", "Preverb Hall", "Ready"}}, {}, {});
-        swells.onMenu = [this](const SwellListRow&, const juce::MouseEvent& event)
+        swells.onMenu = [this](const SwellList::MenuRequest& request)
         {
-            open(*event.eventComponent, false, false, SwellList::menuAnchor(event));
+            open(swells, false, false, request.anchor);
         };
         reset.onClick = [this] { open(reset, true, false); };
         edge.onClick = [this] { open(edge, false, true); };
