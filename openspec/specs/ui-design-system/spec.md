@@ -231,10 +231,10 @@ Migrated dropdown selectors SHALL provide distinguishable idle, hover, held and 
 - **AND** its focus ink remains contained and no mouse emphasis makes it appear enabled
 
 ### Requirement: Choice inspection is distinct from accepted selection
-Migrated choice menus SHALL use the quiet row highlight for pointer or keyboard inspection, with distinct held feedback. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains, including after pointer hover leaves. Accepted selection SHALL use a checkmark independent of inspection; selection alone SHALL NOT retain a row background or edge highlight.
+Migrated choice menus SHALL use the quiet row highlight for eligible pointer targets and for keyboard inspection, with distinct held feedback. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains, including after pointer hover leaves. Accepted selection SHALL use a checkmark independent of inspection; selection alone SHALL NOT retain a row background or edge highlight.
 
 #### Scenario: Pointer leaves an inspected choice
-- **WHEN** the pointer enters and then leaves a choice without keyboard navigation focus
+- **WHEN** the pointer enters and then leaves an eligible choice without keyboard navigation focus
 - **THEN** the quiet background and edge appear only during hover and clear on leaving, including leaving into menu padding
 - **AND** the accepted checkmark and value remain unchanged, including after pointer activation and subsequent departure
 
@@ -243,6 +243,11 @@ Migrated choice menus SHALL use the quiet row highlight for pointer or keyboard 
 - **THEN** hover feedback clears and the keyboard-navigation highlight remains on the actually focused choice
 - **AND** no value is committed by inspection, pointer movement or opening the menu
 - **AND** leaving keyboard navigation focus clears its highlight without removing the accepted checkmark
+
+#### Scenario: Pointer crosses an unavailable dropdown choice
+- **WHEN** the pointer moves from an available choice onto an unavailable choice or clicks the unavailable choice
+- **THEN** the prior pointer highlight clears and the unavailable choice receives no pointer hover or held highlight
+- **AND** keyboard inspection remains available, the unavailable reason stays discoverable and the accepted checkmark and value remain unchanged
 
 ### Requirement: Choice content remains readable and unavailable reasons inspectable
 Migrated selectors SHALL preserve full accessible choice names and accepted values. Closed long values SHALL ellipsize with discoverable full text; open long choices SHALL wrap within the available menu width without shrinking text or losing their checkmark. Unavailable choices SHALL expose a reason through visible and accessible presentation and support keyboard inspection without permission to select them. Entirely disabled fields SHALL explain their unavailability.
@@ -273,7 +278,7 @@ Migrated selectors SHALL preserve stable choice identities, captured invocation 
 - **AND** Learn defaults, selected-swell IR and Export gain-pair semantics remain isolated and unchanged
 
 ### Requirement: Action menus separate pointer hover from keyboard inspection
-Migrated action/context menus SHALL reuse quiet row feedback for neutral actions and distinguish held feedback from hover. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains and reappear after temporary pointer hover leaves. Ordinary actions SHALL NOT retain a selection checkmark, background or edge merely because they were invoked.
+Migrated action/context menus SHALL reuse quiet row feedback for eligible neutral actions and distinguish held feedback from hover. Pointer highlight SHALL clear on leaving the row or menu. Keyboard-navigation highlight SHALL remain while its navigation focus remains and reappear after temporary pointer hover leaves. Ordinary actions SHALL NOT retain a selection checkmark, background or edge merely because they were invoked.
 
 #### Scenario: Pointer leaves an action
 - **WHEN** the pointer hovers Rename or a reset action and then leaves, including after a pointer click
@@ -285,11 +290,16 @@ Migrated action/context menus SHALL reuse quiet row feedback for neutral actions
 - **THEN** the keyboard-navigation highlight identifies the actually focused action until its navigation focus leaves or the menu is dismissed
 - **AND** pointer input does not remove actual keyboard eligibility when it clears pointer-induced focus decoration
 
+#### Scenario: Pointer crosses a disabled action
+- **WHEN** the pointer moves from an eligible action onto a disabled action or clicks the disabled action
+- **THEN** the prior pointer highlight clears and the disabled action receives no pointer hover or held highlight
+- **AND** keyboard inspection remains available and no action runs
+
 ### Requirement: Action menu roles are explicit and readable
-Migrated action menus SHALL declare semantic roles independently of labels and component names. Neutral rows SHALL retain off-white content with quiet feedback; destructive rows SHALL retain red content and red hover/held emphasis. Long action labels SHALL remain readable without shrinking. Unavailable actions SHALL expose visible and accessible reasons and permit keyboard inspection without permission to invoke them.
+Migrated action menus SHALL declare semantic roles independently of labels and component names. Neutral rows SHALL retain off-white content with quiet feedback; destructive rows SHALL retain red content and red hover/held emphasis. Long action labels SHALL remain readable without shrinking. Unavailable actions SHALL permit keyboard inspection without activation. Reasons SHALL be visible and accessible where needed. Disabled Rename during multiselect SHALL show its label alone.
 
 #### Scenario: Inspect Delete versus Rename
-- **WHEN** Rename and Delete are hovered, held or keyboard-inspected
+- **WHEN** eligible Rename and Delete actions are hovered, held or keyboard-inspected
 - **THEN** Rename uses quiet neutral feedback and Delete uses its explicit destructive red treatment
 - **AND** changing either label does not select or remove its semantic role
 - **AND** these popup roles do not reclassify existing command buttons
@@ -299,8 +309,12 @@ Migrated action menus SHALL declare semantic roles independently of labels and c
 - **THEN** the complete binding-supplied action and explanation are visible or discoverable through pointer, keyboard and accessibility inspection
 - **AND** no inspection or activation path grants permission to execute the unavailable action
 
+#### Scenario: Inspect Rename during multiselect
+- **WHEN** the Swells menu opens while multiple swells are selected
+- **THEN** Rename is disabled with its dimmed label alone and its unavailable state is exposed accessibly
+
 ### Requirement: Menu presentation preserves captured action authority
-Migrated menus SHALL preserve existing action effects, captured target/session/input/pass authority, reset-revision guards, lifetime checks and asynchronous acceptance. One eligible pointer, keyboard or accessibility activation SHALL invoke at most one captured action. Cancellation or stale, disabled and destroyed contexts SHALL invoke none. Presentation SHALL NOT recalculate reset values, widen eligibility or replace action providers.
+Migrated menus SHALL preserve existing action effects, captured target/session/input/pass authority, reset-revision guards, lifetime checks and asynchronous acceptance. One eligible pointer, keyboard or accessibility activation SHALL invoke at most one captured action, including a request for confirmation. Cancellation or stale, disabled and destroyed contexts SHALL invoke none. Presentation SHALL NOT recalculate reset values, widen eligibility or replace action providers.
 
 #### Scenario: Target changes while a reset menu is open
 - **WHEN** selection, session, source/input, workflow pass or reset revision supersedes an open reset menu, or the owner is destroyed
@@ -315,7 +329,7 @@ Migrated menus SHALL preserve existing action effects, captured target/session/i
 
 #### Scenario: Open a Swells item menu from either pointer entry point
 - **WHEN** the user right-clicks a Swells item or clicks that item's three-dot icon
-- **THEN** the same Rename/Delete menu opens for the clicked item at the pointer anchor
+- **THEN** the same Rename/Delete menu opens from either entry point with actions scoped to the clicked row and its selection membership
 
 ### Requirement: Numeric and text fields share presentation by editing role
 Numeric and text fields SHALL use the approved appearance and accessible naming for their role across the plugin. Editable, unavailable and read-only states SHALL remain distinguishable. Keyboard and accessibility focus SHALL use separate aqua brackets. Pointer input SHALL suppress the brackets while preserving focus, caret and selection.
@@ -547,3 +561,11 @@ Settings SHALL present Playback, Processing, Swell, Audition, Recovery, Appearan
 - **WHEN** an existing action opens Storage directly
 - **THEN** Settings shows Storage and marks its tab selected
 - **AND** ordinary refresh and resizing preserve the current page, its values and existing scroll and focus behavior
+
+### Requirement: Popup highlights fill the available row
+Shared action and choice popups SHALL fill the available row width for eligible hover and held feedback and for keyboard inspection. A scrollbar gutter SHALL be reserved only when rows overflow.
+
+#### Scenario: Highlight short and scrolling popups
+- **WHEN** a user inspects a row in a short popup or in a popup with overflowing content
+- **THEN** the highlight reaches the inner right edge in the short popup and the visible row edge in the scrolling popup
+- **AND** text, selection markers and the scrollbar remain readable and usable

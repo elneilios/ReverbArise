@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the PR #142 fixes for Settings Delete invocation capture and visible-only list focus restoration. The documented Delete and keyboard flows still apply. Export Save retains its existing guarded command behavior.",
+  "summary": "Reviewed the synced Swells workspace and shared UI specs against the delivered row actions, confirmed deletion, disabled popup hover and focus scrolling. The Perform guide already describes the delivered interaction.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1080,8 +1080,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 110749,
-      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
+      "bytes": 113675,
+      "sha256": "70398185bc4bd33af66bacf9a05e30064abdcfed154b4bf7fac7c1c11cc5908b"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -1090,8 +1090,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 47913,
-      "sha256": "21347134f29ec68d4c13bc793ed22331bb42067809907b7b4765f0f91e9fe080"
+      "bytes": 49713,
+      "sha256": "10681b7f4839398e639e7107d26a415ca887e791249398c2c4fef28fd25861b8"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
