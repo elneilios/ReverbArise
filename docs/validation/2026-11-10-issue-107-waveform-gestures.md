@@ -52,10 +52,28 @@ composition, Export, responsive editor and software-scale cases passed.
 Two pre-existing native focus gates failed before their interaction checks.
 `preverb_perform_knob_reset_test` reported a focused peer but a background
 process. `preverb_perform_readability_test` timed out at its matching native
-foreground wait. Both failures repeated in an isolated CTest run. These results
-do not establish passing popup or foreground text-edit coverage.
+foreground wait. Both failures repeated in an isolated CTest run.
 
 Full logs are under `out/build-logs/Release/20261110-215559-186820c6`.
 The isolated rerun is `out/build-logs/p8-waveform-foreground-rerun.log`.
 UI standards, user-guide currency, strict OpenSpec validation and Git whitespace
-checks passed. Foreground-dependent validation remains pending.
+checks passed.
+
+## Foreground validation follow-up
+
+The owner authorized visible native validation launches. Reset then passed its
+actual popup, default, initial-value and stale-action assertions. The readability
+case advanced beyond foreground setup and found that the new wet-lane context
+help had lost its raw-reference explanation. Restored that explanation and its
+shared amplitude-scale wording alongside the approved gesture help. The existing
+readability assertion detects this regression.
+
+The native Reset log is `out/build-logs/p8-waveform-owner-focus-reset.log`.
+
+The corrected supported Release rebuild passed under
+`out/build-logs/Release/20261110-222645-3046045f`. The visible native
+readability rerun then passed precision, ruler, grouping, mode and footer
+assertions. Its log is
+`out/build-logs/p8-waveform-owner-focus-readability-fixed.log`. The two cases
+that failed in the full CTest run now have passing individual native results.
+The full 99-case suite was not repeated for the help-text correction.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Updated the Learn, Export and Perform waveform gestures, including the Perform Overview exception. Reviewed the ready Export preview and retained WAV delivery, and the distinction between the local Perform playhead, DAW transport and audition.",
+  "summary": "Retained the approved waveform gesture instructions and restored the wet-lane raw-reference and shared display-scale explanation in context help. No guide prose change was needed for the restored explanation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -885,8 +885,8 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 52998,
-      "sha256": "23e7d9e978ca2d62bf879718c1d62ec60536b4049a74333f5e8b74d2708d9ea9"
+      "bytes": 53089,
+      "sha256": "2780d7afc404d7464f2ce09a0b4a635f81a55f40ca07947eab68455ce44d6135"
     },
     {
       "path": "Source/UI/SwellTimeline.h",

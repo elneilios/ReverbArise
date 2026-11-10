@@ -529,7 +529,7 @@ void SwellTimeline::mouseMove(const juce::MouseEvent& e)
     if(source.contains(e.position) || wet.contains(e.position))
     {
         const auto detail=help.isNotEmpty()?help:wet.contains(e.position)
-            ?juce::String("Drag the wet body to move audio and envelope. Ctrl bypasses Snap. Shift fine-adjusts.")
+            ?juce::String("Audible shaped wet. Grey is the raw reference. Both lanes share a display amplitude scale. Drag the wet body to move audio and envelope. Ctrl bypasses Snap. Shift fine-adjusts.")
             :juce::String("Captured dry source. Double-click to add a target or drag its source handles.");
         setTooltip(detail+" Left-click or drag open waveform to place the local playhead. Wheel zooms. Middle-drag pans.");
     }

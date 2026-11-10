@@ -15,5 +15,5 @@
 
 ## 3. Integrated verification
 
-- [ ] 3.1 Run `scripts/check-ui-standards.ps1` and the supported Windows build/test wrapper. Verify the integrated editor at minimum and larger sizes and 100%/125% scale with empty and populated waveforms. Record native component and integration evidence separately from FL Studio and physical-DPI coverage.
+- [x] 3.1 Run `scripts/check-ui-standards.ps1` and the supported Windows build/test wrapper. Verify the integrated editor at minimum and larger sizes and 100%/125% scale with empty and populated waveforms. Record native component and integration evidence separately from FL Studio and physical-DPI coverage.
 - [x] 3.2 Verify navigation and local markers do not affect accepted source, swells, renders, export content or host transport across mode/selection changes and editor reopen. Run strict OpenSpec validation and prepare the scoped review with the dependency/base record and test results.
