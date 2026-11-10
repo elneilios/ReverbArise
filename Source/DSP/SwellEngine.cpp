@@ -599,7 +599,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto modeAllows=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
     const auto priority=modeAllows && liveEnabled.load() && time.playing;
     if(priority && !songPriority)voice.stop();songPriority=priority;
-    live.process(left,right,frames,time,modeAllows,&clock);
+    live.process(left,right,frames,time,modeAllows,&clock,true);
     processAudio(left,right,frames,time.song);
 }
 void SwellEngine::captureStopped() noexcept

@@ -76,7 +76,8 @@ void TransportPlayback::observe(const LivePublication* pub,int count,const Trans
     if(clock)causalPublication.publish(causalHistory.observe(d));
     if(workflowAllows && on && time.playing && d.gate!=LiveGate::admitted)rejectionObservation.publish(d);
 }
-void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows,const LiveClockSnapshot* clock) noexcept
+void TransportPlayback::process(float* left,float* right,int count,const TransportTime& time,bool workflowAllows,
+                                const LiveClockSnapshot* clock,bool protectLiveOutput) noexcept
 {
     if(count<=0)return;
     const auto next=pending.exchange(-1,std::memory_order_acq_rel);bool publicationChanged=false;
@@ -95,14 +96,23 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
     const auto on=enabled.load();
     const auto running=workflowAllows && on && time.playing && mapping && validCount && !resetRequested;
     const auto discontinuity=!wasRunning || !running || expectedPosition!=time.song.sample || resetRequested;
+    const auto wetOnlyRoute=wetOnly.load();
+    const auto guardMix=protectLiveOutput && !wetOnlyRoute;
+    if(guardMix){
+        outputGuard.prepare(time.song.rate);
+        const auto wraps=time.looping && time.loopEnd>time.loopStart
+            && expectedPosition==time.loopEnd && time.song.sample==time.loopStart;
+        if(running && discontinuity && (!wasRunning || !wraps))outputGuard.reset();
+    }else outputGuard.reset();
     const auto ramp=static_cast<int>(std::clamp(std::round(std::isfinite(time.song.rate)?time.song.rate*.005:1),1.0,9600.0));
     for(auto& v:voices)if(v.remaining>ramp){v.remaining=ramp;v.fromL=v.lastL;v.fromR=v.lastR;}
-    const auto wantedDry=workflowAllows && enabled.load() && time.playing && wetOnly.load()?0.0f:1.0f;
+    const auto wantedDry=workflowAllows && on && time.playing && wetOnlyRoute?0.0f:1.0f;
     if(wantedDry!=dryTarget){dryTarget=wantedDry;dryRemaining=ramp;dryStep=(dryTarget-dry)/ramp;}
     const auto wantedGain=level.load();if(wantedGain!=gainTarget){gainTarget=wantedGain;gainRemaining=ramp;gainStep=(gainTarget-gain)/ramp;}
     badMapping.store(workflowAllows && enabled.load() && time.playing && pub && (!mapping || !validCount));
     bool anyMissing=workflowAllows && enabled.load() && time.playing && !pub;int segmentIndex=-1;
     if(!running && dryRemaining==0 && gainRemaining==0 && std::all_of(voices.begin(),voices.end(),[](const auto& v){return v.remaining==0 && v.lastL==0 && v.lastR==0;})){
+        outputGuard.reset();
         if(dry==0){std::fill_n(left,count,0.0f);std::fill_n(right,count,0.0f);}
         for(auto& v:voices){v.audible=false;v.entry=nullptr;}
         missed=anyMissing;liveActive=false;wasRunning=false;expectedPosition=validCount?end:time.song.sample;
@@ -135,16 +145,21 @@ void TransportPlayback::process(float* left,float* right,int count,const Transpo
                 if(v.slot<maximumSwells && v.slot!=e->slot)channels[v.slot]=-1;
                 v.slot=e->slot;channels[e->slot]=static_cast<int>(channel);v.generation=e->generation;v.version=e->version;v.entry=e;v.attenuation=pub->attenuation;v.audible=true;}}
         float l=0,r=0;
+        bool wetPresent=false;
         for(size_t n=0;n<voices.size();++n){auto& v=voices[n];float a=0,b=0;
             if(!assigned[n]){if(v.audible && v.remaining==0){v.fromL=v.lastL;v.fromR=v.lastR;v.remaining=ramp;}v.audible=false;v.entry=nullptr;}
             if(v.entry){const auto* audio=v.entry->audio.get();if(!audio || p<audio->start || static_cast<uint64_t>(p-audio->start)>=audio->frames())audio=v.entry->loopAudio.get();
                 const auto at=static_cast<size_t>(p-audio->start)*2;a=audio->samples[at]*pub->attenuation;b=audio->samples[at+1]*pub->attenuation;}
             if(v.remaining>0){const auto blend=static_cast<float>(v.remaining-1)/ramp;a=a*(1-blend)+v.fromL*blend;b=b*(1-blend)+v.fromR*blend;--v.remaining;}
+            wetPresent |= v.entry || a != 0.0f || b != 0.0f;
             v.lastL=a;v.lastR=b;l+=a;r+=b;
         }
         if(gainRemaining>0){gain+=gainStep;if(--gainRemaining==0)gain=gainTarget;}
         if(dryRemaining>0){dry+=dryStep;if(--dryRemaining==0)dry=dryTarget;}
-        left[frame]=left[frame]*dry+l*gain;right[frame]=right[frame]*dry+r*gain;
+        const auto wetLeft=l*gain,wetRight=r*gain;
+        left[frame]=left[frame]*dry+wetLeft;right[frame]=right[frame]*dry+wetRight;
+        if(guardMix)outputGuard.protectMix(left[frame],right[frame],wetLeft,wetRight,wetPresent);
+        else outputGuard.reset();
     }
     observe(pub,count,time,workflowAllows,on,validCount,running,anyMissing,mappingGate,clock);
     (void)publicationChanged;missed.store(anyMissing);liveActive.store(running);wasRunning=running;

@@ -63,7 +63,7 @@ public:
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
                  double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
                  const LoopReferenceSetup& observedReference = {},
-                 std::optional<SongTime> playlist = {}) noexcept;
+                 std::optional<SongTime> playlist = {}, bool protectLiveOutput = true) noexcept;
 
 private:
     enum SlotState { free, published, retained, retired };
@@ -103,6 +103,8 @@ private:
     std::optional<double> playlistPhrasePpq;
     int64_t cursor = 0;
     LoopWetSample lastWet;
+    LiveOutputPeakGuard outputGuard;
+    bool lastWetOnly = false;
     float dry = 1;
     bool wasObserving = false;
 };

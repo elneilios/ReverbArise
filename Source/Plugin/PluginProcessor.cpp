@@ -709,7 +709,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             if ((loopSource || observeLearnTiming) && !offline && !captureWorker.isLoading()
                 && (workflow.mode!=workflow::Mode::finalise || observeLearnTiming))
                 access=workflow.mode==workflow::Mode::live && swells->livePlaybackEnabled()?Access::perform:Access::observe;
-            processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration,rackEvents);
+            processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration,rackEvents,!offline);
             if(loopSource && !offline)swells->processLoopAudition(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),
                 diagnostics.sampleRate,captureGeneration,captureWorker.acceptedLoopRevision(),workflow.mode==workflow::Mode::live && !captureWorker.isLoading());
         }
@@ -728,7 +728,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 
 void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi,
     const HostPositionDiagnostics& timing, m3::LoopPlayback::Access access, uint64_t generation,
-    loop_capture::MidiObservations& observations) noexcept
+    loop_capture::MidiObservations& observations, bool protectLiveOutput) noexcept
 {
     using loop_capture::MidiProtocol;
     const auto frames = buffer.getNumSamples();
@@ -770,7 +770,7 @@ void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer
     if (hasPosition && timing.samplePosition <= INT64_MAX - frames) loopPlaybackHostEnd = timing.samplePosition + frames;
     swells->loopTransport().process(buffer.getWritePointer(0),buffer.getWritePointer(1),frames,observations,
         timing.sampleRate,generation,captureWorker.acceptedLoopRevision(),access,gap || seek || stopped || gridChanged,
-        observedLoopReference,playlist);
+        observedLoopReference,playlist,protectLiveOutput);
 }
 
 HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() const noexcept

@@ -2,6 +2,7 @@
 #include <Core/SwellSession.h>
 #include <Core/TransportTime.h>
 #include <DSP/ReverseConvolution.h>
+#include "LiveOutputPeakGuard.h"
 #include "LiveTransportClock.h"
 #include <array>
 #include <atomic>
@@ -53,7 +54,8 @@ public:
     // Offline start has no previous route to crossfade from.
     void primeForOffline() noexcept {gain=gainTarget=level.load();dry=dryTarget=enabled.load() && wetOnly.load()?0.0f:1.0f;gainRemaining=dryRemaining=0;}
     void reset() noexcept {epoch.fetch_add(1);}
-    void process(float*,float*,int,const TransportTime&,bool workflowAllows=true,const LiveClockSnapshot* clock=nullptr) noexcept;
+    void process(float*,float*,int,const TransportTime&,bool workflowAllows=true,
+                 const LiveClockSnapshot* clock=nullptr,bool protectLiveOutput=false) noexcept;
     bool missing() const noexcept {return missed.load();}
     bool incompatible() const noexcept {return badMapping.load();}
     bool active() const noexcept {return liveActive.load();}
@@ -89,6 +91,7 @@ private:
     int current=-1;
     int64_t expectedPosition=0;
     bool wasRunning=false;
+    LiveOutputPeakGuard outputGuard;
     float gain=1,gainTarget=1,gainStep=0,dry=1,dryTarget=1,dryStep=0;
     int gainRemaining=0,dryRemaining=0;
 };
