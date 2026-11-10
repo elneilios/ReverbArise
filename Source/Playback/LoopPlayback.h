@@ -13,7 +13,7 @@ struct LoopPlaybackPublication
     double rate = 0;
     LoopPhraseTiming timing;
     Preparation preparation = Preparation::waiting;
-    float gain = 1;
+    float gain = 1, fixedGridGain = 1;
     bool wetOnly = false, intentionallySilent = false;
     LoopWetPlan plan;
     std::shared_ptr<const std::vector<CapturePeak>> leadInPeaks;
@@ -40,6 +40,7 @@ public:
     {
         std::optional<int64_t> start;
         std::shared_ptr<const std::vector<CapturePeak>> peaks;
+        float gain = 1;
         bool operator==(const LeadInDisplay&) const = default;
     };
 
@@ -87,8 +88,11 @@ private:
     std::atomic<bool> phraseInput{false}, external{false};
     std::atomic<uint16_t> commands{0};
     // A supported phrase fits in 23 bits. A signed cursor also covers
-    // up to 64 phrases of pre-roll. Keep the display's slot in the same word.
+    // up to 64 phrases of pre-roll. A nonzero lead-in encodes the display's
+    // slot and gain route in the same word.
     static constexpr int playheadShift = 8, leadInShift = 38, displaySlotShift = 61;
+    static constexpr uint64_t fixedGridDisplay = uint64_t{1} << 63;
+    static constexpr uint64_t displaySlotMask = 3;
     static constexpr int64_t playheadBias = int64_t{1} << (leadInShift - playheadShift - 1);
     static constexpr uint64_t playheadMask = (uint64_t{1} << (leadInShift - playheadShift)) - 1;
     static constexpr uint64_t leadInMask = (uint64_t{1} << (displaySlotShift - leadInShift)) - 1;

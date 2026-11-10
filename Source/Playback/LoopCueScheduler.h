@@ -137,6 +137,7 @@ public:
         return reference.state();
     }
     bool usesClock() const noexcept { return clockGrid && rackClock.hasClock(); }
+    bool usesGrid() const noexcept { return playlistGrid || usesClock(); }
     bool active() const noexcept { return playback != State::standby && playback != State::stopping; }
     int64_t firstCycle() const noexcept { return first; }
     int64_t lastCycle() const noexcept { return playback == State::finishing ? finishCycle : INT64_MAX; }
@@ -184,8 +185,6 @@ public:
     }
 
 private:
-    bool usesGrid() const noexcept { return playlistGrid || usesClock(); }
-
     void queue(int64_t sample, int64_t lead) noexcept
     {
         const auto origin = reference.window(0);

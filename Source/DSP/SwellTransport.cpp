@@ -578,13 +578,15 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
     if (cancel()) return;
     if (result == Preparation::noWet && !publication->plan.audio.entries.empty())
     {
-        result = publication->plan.prepare(manifest.loop->endSample,available(),error) ? Preparation::ready : Preparation::budget;
+        result = publication->plan.prepare(manifest.loop->endSample,available(),error,cancel) ? Preparation::ready : Preparation::budget;
+        if (cancel()) return;
         if (result == Preparation::ready)
         {
-            publication->gain = juce::Decibels::decibelsToGain(snapshot.liveWetDb);
-            if (publication->plan.peakBound > 0)
-                publication->gain = std::min(publication->gain,
-                    juce::Decibels::decibelsToGain(gainCeilingDb(snapshot)) / publication->plan.peakBound);
+            const auto requested = juce::Decibels::decibelsToGain(snapshot.liveWetDb);
+            const auto ceiling = juce::Decibels::decibelsToGain(gainCeilingDb(snapshot));
+            const auto protectedGain = [&](float peak){ return peak > 0 ? std::min(requested, ceiling / peak) : requested; };
+            publication->gain = protectedGain(publication->plan.peakBound);
+            publication->fixedGridGain = protectedGain(publication->plan.fixedGridPeak);
             if (!publication->prepareLeadInPeaks(cancel)) return;
             if (publication->bytes() > available()) result = Preparation::budget;
         }

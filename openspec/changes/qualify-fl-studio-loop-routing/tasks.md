@@ -59,3 +59,7 @@
 ## 11. Keep Perform running across a declared FL Studio repeat
 
 - [x] 11.1 Keep queued Cue and active playback through the declared Pattern boundary. Verify bar alignment, cancellation on an early seek, the FL Studio Pattern fixture, and the Rack playback regressions.
+
+## 12. Protect the measured wet level in Loop Perform
+
+- [x] 12.1 Measure fixed-grid wet peaks across overlapping cycles, including Cue and Stop boundaries, so protection reduces only genuinely loud sums. Preserve the conservative guard for variable phase, verify the playback regression and record host fixture evidence.

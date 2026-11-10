@@ -35,6 +35,7 @@ The FL Studio test-install workflow provides a Release VST3 in the system scan l
 10. **Recognize FL Studio's declared repeat in Learn and Perform.** Accept a wrap only when consecutive playing callbacks match the same declared range and musical mapping, and their samples meet the exact end and start of that range. Learn counts elapsed capture beats across the wrap and can settle at its first beat. Perform applies the same boundary check to its own live observations and keeps the independent scheduler position.
 11. **Make automatic repeat capture opt-in.** Add End on repeat to the existing capture method selector. Start on a verified range start in FL Studio, or on a Phrase pulse aligned with Clock in Rack. Close on the next verified repeat boundary after whole bars of audio. If armed in the middle of a pass, wait for a complete pass. Reset, a premature seek, a changed repeat range or manual disarm cancels the take.
 12. **Describe capture the same way across hosts.** Learn explains when each capture method starts and ends. The guide appendices explain how to supply timing and external commands in each host.
+13. **Measure fixed-grid Loop peaks during preparation.** Sum the rendered samples at their scheduled offsets. Include every contiguous subset of overlapping passes because Cue and Stop omit passes outside the playing range. Retain the existing conservative guard for the legacy variable-phase route. Playback uses a fixed wet gain for each prepared mix.
 
 ## Risks / Trade-offs
 

@@ -248,7 +248,7 @@ void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& m
         {
             juce::Graphics::ScopedSaveState clip(g);
             g.reduceClipRegion(leadIn.getSmallestIntegerContainer());
-            drawWave(g,*data.loopLeadIn.peaks,wet,ui::aqua.withAlpha(.38f),waveGain,metrics,capture.manifest.loop->endSample);
+            drawWave(g,*data.loopLeadIn.peaks,wet,ui::aqua.withAlpha(.38f),waveGain * data.loopLeadIn.gain,metrics,capture.manifest.loop->endSample);
         }
         for(const auto& [id,wave]:data.wetSummaries)if(id!=data.session.primary && wave)
             drawWave(g,wave->peaks,wet,ui::otherWet.withAlpha(.22f),.45f/std::max(.000001f,wave->peak),metrics,find(data.session,id)?find(data.session,id)->placement:0);

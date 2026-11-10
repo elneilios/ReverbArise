@@ -195,6 +195,12 @@ The host must match the accepted Loop's sample rate for both Audition and
 Cue. Their disabled controls report the required rate in the existing
 Perform hover-help footer.
 
+Fixed-grid Perform protects the measured wet sum at the requested Live Wet
+level. The worker measures every phase of the prepared Loop and includes
+partial pass overlap at Cue and Stop. The guard stays fixed for that mix.
+Legacy phase correction retains the conservative bound. Dry + Wet still
+passes the live dry signal at unity.
+
 ## Capture end and disconnect
 
 FL Studio can declare a repeating range for Pattern playback. Learn treats

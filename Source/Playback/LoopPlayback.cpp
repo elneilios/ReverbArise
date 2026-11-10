@@ -46,8 +46,8 @@ bool LoopPlaybackPublication::prepareLeadInPeaks(const std::function<bool()>& ca
                 mix.right += render.samples[offset + 1];
             }
             auto& peak = (*peaks)[static_cast<size_t>((at - start) / stride)];
-            peak.minimum = std::min({peak.minimum,mix.left * gain,mix.right * gain});
-            peak.maximum = std::max({peak.maximum,mix.left * gain,mix.right * gain});
+            peak.minimum = std::min({peak.minimum,mix.left,mix.right});
+            peak.maximum = std::max({peak.maximum,mix.left,mix.right});
         }
     }
     leadInPeaks = std::move(peaks);
@@ -61,8 +61,9 @@ void LoopPlayback::collect()
         auto& slot = slots[index];
         // After retirement the callback can no longer publish this slot.
         // Its last displayed word may remain until the end of that block.
-        if (slot.state.load(std::memory_order_acquire) == retired
-            && (statusWord.load(std::memory_order_acquire) >> displaySlotShift) != index + 1)
+        if (slot.state.load(std::memory_order_acquire) != retired) continue;
+        const auto status = statusWord.load(std::memory_order_acquire);
+        if (!decodeLeadIn(status) || ((status >> displaySlotShift) & displaySlotMask) != index)
         {
             slot.data.reset();
             slot.state.store(free,std::memory_order_release);
@@ -154,10 +155,11 @@ std::optional<int64_t> LoopPlayback::decodeLeadIn(uint64_t word) noexcept
 LoopPlayback::LeadInDisplay LoopPlayback::leadInDisplay() const noexcept
 {
     const auto word = statusWord.load(std::memory_order_acquire);
-    const auto displaySlot = word >> displaySlotShift;
-    if (displaySlot == 0) return {};
-    const auto& publication = slots[displaySlot - 1].data;
-    return {decodeLeadIn(word),publication ? publication->leadInPeaks : nullptr};
+    const auto leadIn = decodeLeadIn(word);
+    if (!leadIn) return {};
+    const auto& publication = slots[(word >> displaySlotShift) & displaySlotMask].data;
+    if (!publication) return {};
+    return {leadIn,publication->leadInPeaks,(word & fixedGridDisplay) ? publication->fixedGridGain : publication->gain};
 }
 
 LoopPlayback::Status LoopPlayback::status() const noexcept
@@ -265,7 +267,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         statusWord.store(static_cast<unsigned>(scheduler.phase()) | (static_cast<unsigned>(scheduler.state()) << 3)
             | (static_cast<unsigned>(preparation) << 6) | (encoded << playheadShift)
             | (leadIn << leadInShift)
-            | ((leadIn ? static_cast<uint64_t>(held + 1) : 0) << displaySlotShift),std::memory_order_release);
+            | (leadIn ? (static_cast<uint64_t>(held) << displaySlotShift) : 0)
+            | (leadIn && scheduler.usesGrid() ? fixedGridDisplay : 0),std::memory_order_release);
     };
     if (!canPlay && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {
@@ -335,7 +338,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             const auto position = [&](int64_t index){ return scheduler.positionFor(index,sample); };
             const auto samplePlan = [&](const LoopPlaybackPublication& publication){
                 const auto mix = publication.plan.sample(cycle,scheduler.firstCycle(),scheduler.lastCycle(),position);
-                return LoopWetSample{mix.left * publication.gain,mix.right * publication.gain};
+                const auto gain = scheduler.usesGrid() ? publication.fixedGridGain : publication.gain;
+                return LoopWetSample{mix.left * gain,mix.right * gain};
             };
             wet = samplePlan(*plan);
             if (fadingFrom >= 0)

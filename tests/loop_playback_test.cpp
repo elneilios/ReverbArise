@@ -236,6 +236,50 @@ void compositorCases()
     REQUIRE(!plan.prepare(101,1024*1024,error) && error.contains("simultaneous"));
 }
 
+void fixedGridPeakCases()
+{
+    LoopWetPlan plan;
+    auto left = std::make_shared<WetRender>();
+    auto right = std::make_shared<WetRender>();
+    left->start = -12;
+    right->start = 8;
+    left->samples.resize(8);
+    right->samples.resize(8);
+    left->samples[0] = .7f;
+    right->samples[2] = -.7f;
+    left->peak = right->peak = .7f;
+    plan.audio.entries = {{0,0,-12,-8,.7f,left},{1,0,8,12,.7f,right}};
+    juce::String error;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.peakBound - 1.4f) < 1e-6f);
+    REQUIRE(std::abs(plan.fixedGridPeak - .7f) < 1e-6f);
+
+    // These two passes now hit the same phase. Opposite polarities cancel in
+    // the repeating mix, but a single pass at Cue or Stop still peaks at .7.
+    right->samples[2] = 0;
+    right->samples[0] = -.7f;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.fixedGridPeak - .7f) < 1e-6f);
+    right->samples[0] = .7f;
+    REQUIRE(plan.prepare(20,1024*1024,error));
+    REQUIRE(std::abs(plan.fixedGridPeak - 1.4f) < 1e-6f);
+
+    plan.audio.entries = {testEntry(0,-121,360,.01f),testEntry(1,-30,96,.02f),testEntry(2,62,213,.03f)};
+    constexpr int64_t period = 101, near = 5;
+    REQUIRE(plan.prepare(period,1024*1024,error));
+    float measured = 0;
+    for (int64_t phase = 0; phase < period; ++phase)
+    for (int64_t first = 0; first < 10; ++first)
+    for (auto last = first; last < 10; ++last)
+    {
+        const auto mix = plan.sample(near, first, last,
+            [&](int64_t cycle){ return std::optional{(near - cycle) * period + phase}; });
+        measured = std::max({measured, std::abs(mix.left), std::abs(mix.right)});
+    }
+    REQUIRE(measured <= plan.fixedGridPeak && plan.fixedGridPeak - measured < 1e-5f);
+    REQUIRE(!plan.prepare(period,1024*1024,error,[]{return true;}) && error.contains("superseded"));
+}
+
 void publicationCases()
 {
     using Prep = LoopPlaybackPublication::Preparation;
@@ -249,6 +293,7 @@ void publicationCases()
         next->timing = {300,4,4,4,123,6400};
         next->dependencies = playback.dependencies();
         next->preparation = silent ? Prep::noWet : Prep::ready;
+        next->fixedGridGain = .5f; // The variable-phase route uses the conservative gain instead.
         next->intentionallySilent = silent;
         if (!silent)
         {
@@ -353,8 +398,11 @@ void gridCueCases()
         publication->timing = {120,4,4,4,0,loopLength};
         publication->preparation = LoopPlaybackPublication::Preparation::ready;
         publication->plan.audio.entries = {testEntry(0,-16,80,.01f)};
+        publication->gain = .25f;
+        publication->fixedGridGain = .75f;
         juce::String error;
         REQUIRE(publication->plan.prepare(loopLength,1024*1024,error));
+        REQUIRE(publication->prepareLeadInPeaks([]{return false;}));
         REQUIRE(playback.publish(std::move(publication)));
 
         int64_t cursor = 0;
@@ -390,8 +438,10 @@ void gridCueCases()
         REQUIRE(playback.status().phase == LoopLiveReference::State::ready);
         playback.requestCue();
         REQUIRE(through(loopLength-17) == 0 && playback.status().playback == State::queued);
-        REQUIRE(through(loopLength-16) > 0 && playback.status().playhead == -16);
+        REQUIRE(std::abs(through(loopLength-16) - .0075f) < 1e-6f && playback.status().playhead == -16);
         REQUIRE(through(loopLength) > 0 && playback.status().playhead == 0);
+        const auto display = playback.leadInDisplay();
+        REQUIRE(display.start == loopLength - 16 && display.peaks && display.gain == .75f);
         REQUIRE(through(loopLength+1,finish) > 0 && playback.status().playback == State::finishing);
         REQUIRE(through(loopLength+2,finish) > 0 && playback.status().playback == State::finishing);
         REQUIRE(!playback.status().nextLeadInStart);
@@ -611,6 +661,6 @@ int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); publicationCases(); gridCueCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); rateChangeFadeCases();}
     });
 }

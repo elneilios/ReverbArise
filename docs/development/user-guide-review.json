@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed host-neutral Learn copy, the Rack and FL Studio setup recipes, and FL Studio Perform continuity across verified repeats. The guide covers direct Pattern Cue and a fresh Cue after a seek.",
+  "summary": "Reviewed the fixed-grid Loop Perform wet protection and documented how live dry audio and captured Audition context differ.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 46560,
-      "sha256": "9a3951fc7181994cc2f05288398f3ff3e128dfc66110616943b8e24e60a21b17"
+      "bytes": 46760,
+      "sha256": "c99f2a459c3867000dec4e59726c01c252421d8e55ada0d453da9fb987d6022c"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -525,8 +525,8 @@
     },
     {
       "path": "Source/Playback/LoopCueScheduler.h",
-      "bytes": 9813,
-      "sha256": "7226bb24ba6bc07b2e6eb4ad10df579bf84a384b3dfc2d404c8244bdd524e8ad"
+      "bytes": 9812,
+      "sha256": "5b52b01294f18e7ba28dcdc3ff58665995fce7ba14b8e74e503a1a22e85be0c1"
     },
     {
       "path": "Source/Playback/LoopLiveReference.h",
@@ -535,23 +535,23 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 17568,
-      "sha256": "2ed4f1dbf4521773590233dc5c5cb6e7a7f2bcd919d61a7c778a6ef65b350cf9"
+      "bytes": 17851,
+      "sha256": "c492153c8902ff4d77f04be7d8dbdf8d6f0b5bb418113cbdf3a1bdc0882d6725"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 4496,
-      "sha256": "c60baf4b784159f7dc31b1c532543f03846db2bd29012ad7546e469b35e3961a"
+      "bytes": 4701,
+      "sha256": "4a96761d319c738d656a563ee7c42f003f1a0c7bce0253bfbe41e4f1bda34573"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
-      "bytes": 3721,
-      "sha256": "a03727b8c079cef15d90b24814efe048756e1ac389dc6f675f5b8f46eef2eea6"
+      "bytes": 7991,
+      "sha256": "b38c58419c0774a2fc70d5edf8af36df60f77be4160baecb5704eafb827e8fb3"
     },
     {
       "path": "Source/Playback/LoopWetPlan.h",
-      "bytes": 1585,
-      "sha256": "cb43df5d932e25cfffc4ddca22a419284735aa255c1e95e0db506a8281592a60"
+      "bytes": 1663,
+      "sha256": "07e40823db05d7a26cfa8e556f1249d87dfa332ab64da2dc0adfc4805fbdda09"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -905,8 +905,8 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 52056,
-      "sha256": "d5740db39f033bfdc98cd9b3c0fa959d40d937d3bef4eb00a7a71bedcafefa6c"
+      "bytes": 52079,
+      "sha256": "ef2533b8afc1596c69a3885e2d0784e444785a58ec544d811ef9ac1c1fdaf49f"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
@@ -995,8 +995,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 51122,
-      "sha256": "e33fa63c25441289dc2e24f3cdf440dfeaa7f5798519ec8ffc443f2cacee487b"
+      "bytes": 51489,
+      "sha256": "e9a44e940078340aaadc75d5bd8b87508faa0b087de175aba443acd216c75fde"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

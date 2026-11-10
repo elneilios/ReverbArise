@@ -12,6 +12,7 @@ Issue #127 needs a reproducible way to capture a phrase and play its prepared we
 - Offer the same workflow and MIDI note numbers in Rack with a running Clock, using the first pulse as beat one. Let Stop finish the current pass and offer Stop Now for an immediate fade.
 - Offer an opt-in End on repeat capture method. Use the host-declared repeat range in FL Studio and Clock plus Phrase in Rack.
 - Keep a playing Loop running through compatible swell edits. Explain disabled Audition and Cue actions through the existing Perform hover help.
+- Protect fixed-grid Loop wet level using measured swell overlap, including the Cue and Stop boundaries.
 - Keep Song Mode behavior and the approved Learn and Perform design. Loop export remains in #128.
 
 ## Capabilities

@@ -83,6 +83,12 @@ MIDI Perform Stop SHALL cancel a queued launch or finish the current pass withou
 
 Loop wet SHALL use a complete prepared revision of the accepted source at the host sample rate. Queued launches SHALL require current render dependencies. An audible pass SHALL retain its last complete mix while a compatible edit prepares, then crossfade to the complete successor at the current Loop position without re-cueing. An intentionally silent mix SHALL allow a playing Loop to keep its position. Publication and retirement SHALL occur outside the callback. Resource admission SHALL account for pinned data and worst-case overlapping contributions within the shared preparation budget.
 
+#### Scenario: Fixed-grid Loop peak protection follows the rendered mix
+
+- **WHEN** the host or Rack Clock grid plays prepared Loop wet audio at a fixed sample period
+- **THEN** wet protection uses measured aggregate peaks, including the partial overlap at launch and finish, while preserving the requested balance below the ceiling
+- **AND** variable phase playback retains a conservative peak bound
+
 #### Scenario: Edits invalidate a queued or active revision
 
 - **WHEN** placement or render dependencies change while a Loop is queued or playing

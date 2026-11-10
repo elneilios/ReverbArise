@@ -283,3 +283,29 @@ See `out/build-logs/Release/20261110-165908-7565ef15/test.log` and
 The final full `scripts/build.ps1 -Configuration Release -Test` rerun passed
 all 102 tests, including both foreground-sensitive native checks and both
 Rack playback replays. See `out/build-logs/Release/20261110-171051-21b8e9f0/test.log`.
+
+### Loop Perform gain compared with Audition
+
+The owner reported weaker swells after Cue than in Dry + wet Audition.
+They reported matching live and Audition balance in Song Mode on the
+same pre-fix build.
+A read-only analysis of the saved FL Studio proof project applied the
+saved shaping, calibration and 2 ms wet edges to the rendered stereo
+assets. At 0 dB Live Wet with a −1 dBFS wet ceiling, the one-bar four-swell
+loop's original bound applied 16.64 dB of attenuation. Summing the samples
+at their actual fixed-grid offsets, including partial overlaps at Cue and
+Stop, required 4.99 dB. The two-bar fixture needed 2.81 dB instead of
+7.05 dB. These figures measure the wet branch and do not include dry audio.
+
+The full Windows MSVC Release suite passed all 102 tests
+(`out/build-logs/Release/20261110-205242-68e973d3/test.log`). The Loop
+playback test compares the prepared peak to a direct sample scan, checks
+peaks that coincide and peaks that cancel only during steady playback, and
+checks gain selection in the fixed-grid and legacy routes.
+
+The installed Release VST3
+(`21E8988363D8BEA6DE11522F659D6C0844676DE85B76FE3436E6E8E4DA55F1A6`)
+restored the Pattern 2 proof project, cued across the Pattern wrap, played
+through subsequent passes and returned to standby on transport stop.
+The host smoke check covered scheduling and restoration. The owner's
+listening comparison in their project is still pending.
