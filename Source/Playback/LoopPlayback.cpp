@@ -175,7 +175,8 @@ LoopPlayback::Status LoopPlayback::status() const noexcept
 
 void LoopPlayback::process(float* left, float* right, int frames, const loop_capture::MidiObservations& observations,
                            double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist) noexcept
+                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist,
+                           bool protectLiveOutput) noexcept
 {
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
@@ -366,7 +367,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         dry += std::clamp(dryTarget-dry,-dryStep,dryStep);
         if (dry != 1 || wet.left != 0) left[offset] = dry * left[offset] + wet.left;
         if (dry != 1 || wet.right != 0) right[offset] = dry * right[offset] + wet.right;
-        if (!lastWetOnly) outputGuard.protectMix(left[offset],right[offset],wet.left,wet.right,wet.present);
+        if (protectLiveOutput && !lastWetOnly) outputGuard.protectMix(left[offset],right[offset],wet.left,wet.right,wet.present);
         else outputGuard.reset();
     }
     retireLatestWithoutSource(revision);

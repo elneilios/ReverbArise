@@ -91,3 +91,38 @@ fixtures are retained for review.
 The ceiling applies to live sample peaks while wet is active. An inter-sample
 peak may be higher, and already-hot dry-only input passes through unchanged.
 Audition and host offline rendering have separate protection.
+
+## PR #146 review F1
+
+An offline callback can emit the existing Loop stop fade after disabling live
+playback. The processor now passes its realtime protection flag through
+`processLoopPlayback` to `LoopPlayback::process`. A realtime callback with
+disabled playback still protects that fade. An offline callback emits the
+established dry-plus-fading-wet samples.
+
+The added `offlineFadeCases` regression failed before the fix. After the fix,
+`preverb_loop_playback_test` passed all four combinations. Both stereo channels
+are compared against an independent 240-frame fade oracle with 0 or 17 fade
+frames already emitted. The checks include exact dry passthrough after the
+fade, return to Standby and zero callback allocations/deallocations.
+
+| Callback | Preceding fade frames | First left output |
+| --- | --- | --- |
+| Offline | 0 | 0.907469 |
+| Offline | 17 | 0.906937 |
+| Realtime | 0 | 0.891251 |
+| Realtime | 17 | 0.891251 |
+
+The first offline result matches the reviewer's base measurement. The realtime
+results retain the −1 dBFS guard. Focused before/after logs are retained as
+`out/issue-144/review-regression-before.log` and
+`out/issue-144/review-regression-after.log`.
+The earlier host approvals cover the realtime path, whose protection flag
+remains enabled. The offline boundary received automated sample comparisons.
+
+The review fix passed the complete Windows MSVC Release suite, 102/102 tests
+in 417.66 seconds, using `scripts/build.ps1 -Configuration Release -Test`.
+This was a warm rebuild. The two native foreground-sensitive fixtures received
+foreground focus during the run and passed without a rerun. Full logs are
+under `out/build-logs/Release/20261110-223646-48116ea9/`.
+Strict OpenSpec validation, guide currency and diff checks also passed.

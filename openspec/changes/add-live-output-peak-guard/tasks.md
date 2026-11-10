@@ -9,3 +9,7 @@
 
 - [x] 2.1 Compare Dry + wet Audition and live playback in FL Studio Song and Loop and VCV Rack Loop. Record peak and gain reduction for an ordinary passage and a coincident-transient stress case. Verify the full lead-in and dry attack by listening before accepting the default.
 - [x] 2.2 Run the full Windows Release suite and strict OpenSpec validation. Record host coverage and any measured audible or sample-peak limitations for review.
+
+## 3. Address PR review
+
+- [x] 3.1 Propagate realtime output protection explicitly through the Loop processor path. Verify that entering offline rendering preserves the existing wet stop fade, including a fade already in progress, while realtime fades retain linked peak protection. Record regression and Release results.

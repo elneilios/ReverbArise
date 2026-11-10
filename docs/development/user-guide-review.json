@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Issue #144 linked live output protection including Dry + Wet routing fades, the Live wet control, and separate Audition and export gain paths.",
+  "summary": "Reviewed PR #146 offline Loop stop-fade exclusion. The existing guide already states that host offline rendering retains its established protection; this fix restores that documented behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -540,13 +540,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 18226,
-      "sha256": "5698e28be5de9065ac0d0e912cc5b2126a0a1d4055c91206448004cf317a136a"
+      "bytes": 18298,
+      "sha256": "6d8f6eb1df4383b9e9da7128e9bd284e21f77103f64eeac22d849e30571dca0e"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 4768,
-      "sha256": "018aeab2df23eb4d595a88029dc7b06639ad9eb27a0baf55ac6487f669eb19ac"
+      "bytes": 4799,
+      "sha256": "36fe38d9e3015cbce32a664d36f82c478761ee213af994bec0c29cbeef2ad074"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -600,13 +600,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 79213,
-      "sha256": "665e235bc66a8236e3db8136d7cc7078ac6b3074039d63c4667694eb453e18ca"
+      "bytes": 79264,
+      "sha256": "6acd7cc4ff5a21947d4336069350c22fbfdf7d9202adf48ab7eb29ccd255479a"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 12718,
-      "sha256": "8b46853a33203cb7633b814c54fca39619a25f5b015c7cd4f32c9bc9d387b813"
+      "bytes": 12771,
+      "sha256": "d3b954b9afdb02ddc73fb9843a0f0d0fc06d2c423e1eeacad4a4425748742bfd"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",

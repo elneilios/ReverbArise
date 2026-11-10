@@ -29,6 +29,12 @@ Realtime Song and Loop Dry + Wet SHALL use one linked gain on the combined stere
 - **THEN** Dry + Wet passes the incoming dry unchanged and a subsequent live run starts at unity
 - **AND** Wet Only, Audition, Learn capture, host offline rendering and internal Export keep their existing protection and timing
 
+#### Scenario: Offline rendering begins during Loop playback
+
+- **WHEN** an offline callback disables Loop playback while wet audio is sounding or its stop fade is in progress
+- **THEN** the existing wet stop fade is emitted without realtime output peak protection
+- **AND** a realtime callback disabling the same playback retains linked output protection through the wet fade
+
 ## MODIFIED Requirements
 
 ### Requirement: Live routing is independent of manual monitoring

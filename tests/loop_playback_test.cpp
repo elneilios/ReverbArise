@@ -493,6 +493,68 @@ void gridCueCases()
     }
 }
 
+void offlineFadeCases()
+{
+    using State = LoopCueScheduler::State;
+    constexpr int64_t beatFrames = 24000, loopFrames = 4 * beatFrames;
+    constexpr float dryLeft = .9f, dryRight = -.45f, wetLevel = .0075f;
+    for (const bool realtime : {false,true})
+    for (const bool alreadyStopping : {false,true})
+    {
+        LoopPlayback playback;
+        auto publication = std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration = publication->sourceRevision = 1;
+        publication->rate = 48000;
+        publication->timing = {120,4,4,4,0,loopFrames};
+        publication->preparation = LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries = {testEntry(0,-16,80,.01f)};
+        publication->fixedGridGain = .75f;
+        juce::String error;
+        REQUIRE(publication->plan.prepare(loopFrames,1024*1024,error));
+        REQUIRE(playback.publish(std::move(publication)));
+        int64_t cursor = 0;
+        const auto process = [&](int frames, LoopPlayback::Access access, bool protectLiveOutput = true)
+        {
+            std::vector<float> left(frames,dryLeft),right(frames,dryRight);
+            const SongTime grid{true,cursor,static_cast<double>(cursor)/beatFrames,48000,120,4,4};
+            {
+                AudioAllocationGuard guard;
+                playback.process(left.data(),right.data(),frames,{},48000,1,1,access,false,{},grid,protectLiveOutput);
+            }
+            REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+            cursor += frames;
+            return std::pair{std::move(left),std::move(right)};
+        };
+        process(1,LoopPlayback::Access::perform);
+        REQUIRE(playback.status().phase == LoopLiveReference::State::ready);
+        playback.requestCue();
+        const auto lead = process(static_cast<int>(loopFrames-16),LoopPlayback::Access::perform);
+        REQUIRE(lead.first.back() == LiveOutputPeakGuard::ceiling);
+        REQUIRE(playback.status().playback == State::leadIn);
+        const auto precedingFade = alreadyStopping ? 17 : 0;
+        if (alreadyStopping)
+        {
+            playback.requestStop();
+            process(precedingFade,LoopPlayback::Access::perform);
+            REQUIRE(playback.status().playback == State::stopping);
+        }
+        const auto fade = process(256,LoopPlayback::Access::disabled,realtime);
+        std::cout << (realtime ? "Realtime" : "Offline") << " Loop fade, preceding samples "
+                  << precedingFade << ", first output " << fade.first.front() << '\n';
+        for (int n = 0; n < 256; ++n)
+        {
+            const auto weight = static_cast<float>(std::max(0,239-precedingFade-n))/240;
+            const auto wet = wetLevel * weight;
+            const auto rawLeft = dryLeft + wet,rawRight = dryRight - wet;
+            const auto gain = realtime && weight > 0 ? LiveOutputPeakGuard::ceiling / rawLeft : 1.0f;
+            REQUIRE(std::abs(fade.first[n]-rawLeft*gain) < 1e-7f);
+            REQUIRE(std::abs(fade.second[n]-rawRight*gain) < 1e-7f);
+        }
+        REQUIRE(fade.first.back() == dryLeft && fade.second.back() == dryRight);
+        REQUIRE(playback.status().playback == State::standby);
+    }
+}
+
 void rateChangeFadeCases()
 {
     using PlaybackState = LoopCueScheduler::State;
@@ -669,6 +731,6 @@ int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); offlineFadeCases(); rateChangeFadeCases();}
     });
 }
