@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Export workspace and engine readiness, Save chooser and overwrite handling, and Windows file drag. Updated the Export instructions for immediate ready-WAV drag, the WAV and stop cursors, and dotted border restoration.",
+  "summary": "Reviewed the synced Song Export spec against the delivered ready-WAV drag, target cursors, dotted border restoration and guarded Save flow. The offline guide already describes these behaviors and needed no prose changes.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1050,8 +1050,8 @@
     },
     {
       "path": "openspec/specs/song-export/spec.md",
-      "bytes": 19625,
-      "sha256": "2acc8e5fa551522cd2c8a3ca49acbb8917b53188e1894241037e54beac6b1ca8"
+      "bytes": 21554,
+      "sha256": "a46a0d5de402e0a2c9ebd3b028d86853aac9e16e91a8374daea2a5017f5f6672"
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
