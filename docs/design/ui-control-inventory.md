@@ -55,7 +55,7 @@ this audit adds no acceptance.
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | H1 `workflowHeader.settings` | C1 IconActionButton, command | I/H/P/F/D; merged #80 shares ActionButton surface with stable glyph ink; explicit keyboard focus and Return/Space | Retained approved revision 9; P1 regression reference, no duplicate migration |
-| H2 `workflowHeader.selector` and dynamically rebuilt `Segment` children | C7 SegmentedSelector, workflow navigation | I/H/P/F/D/S; arrows/Home/End inspect, Return/Space request; unavailable choice can be inspected; accepted selection separate from focus; shared edges painted by parent | P7, retain #35 policy; audit combined D/F states |
+| H2 `workflowHeader.selector` and dynamically rebuilt `Segment` children | C7 connected SegmentedSelector, workflow navigation | I/H/P/F/D/S; arrows/Home/End inspect, Return/Space request; unavailable choice can be inspected; accepted selection separate from focus; shared edges painted by parent | P7 tabs adopted; #35 guards retained and unavailable inspection covered in ControlLibrary and WorkflowHeader checks |
 
 ## Learn
 
@@ -68,7 +68,7 @@ shared controls #16/#37, responsive #58 and merged #80 shared IR field.
 | L2 `irEditor.fileButton` | C1 IconActionButton import command inside ConvolutionIrEditor | I/H/P/F/D/B; shared command surface/stable glyph ink; async chooser is binding-owned | Retained #80/revision 9; P1 reference, no duplicate migration |
 | L3 `irEditor.selector`, `irEditor`, `irBinding` | C2 IrSelector/ChoiceSelector and shared field/binding | Quiet independent hover/keyboard/selected states, outer aqua focus, small local feedback/red error border; no wheel reassignment; captured default catalogue/session/pass retained | Migrated in `unify-selector-states`; native family approved 2026-11-07; shared IR component/binding checks pass |
 | L4 `recapture`, `automatic`, `autoStop` | C6 Switch | I/H/P/F/D/S; trailing track, clickable label and keyboard/accessibility brackets | P6 adopted with Learn pass guards |
-| L5 `sections` and generated segments | C7 SegmentedSelector, Capture & Generate/Sound navigation | I/H/P/F/D/S; same accepted-selection mechanism as H2, different responsive text role | P7; reuse H2 policy, #58 scope |
+| L5 `sections` and generated segments | C7 connected SegmentedSelector, Capture & Generate/Sound navigation | I/H/P/F/D/S; same accepted-selection mechanism as H2, different responsive text role | P7 tabs adopted; Learn retains #58 section and responsive layout checks |
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ Approval: scoped #46/#49/#4/#68/#93/#58 evidence, not blanket legacy compliance.
 | P2 `snapButton`, `auditionWetOnly` | C1 LatchingActionButton, accepted effective latch | I/H/P/F/D/S; shared semantic painter for off/on; requested/effective Snap and audition session/pass remain distinct | P1 implemented; silent accepted-state refresh and existing bindings retained; family approved, native integration approved |
 | P3 `gridBox`, `irEditor.selector`, `irEditor`, `irBinding` | C2 ChoiceSelector and shared ConvolutionIrEditor/binding | Quiet inspection, explicit commit, no wheel; IR retains captured selected ID/input/epoch; grid retains rebase/cancel/pass guards | Migrated in `unify-selector-states`; native-approved family; component and actual-editor binding coverage |
 | P4 `enabledButton`, `soloButton`, `freezeButton` | C6 BooleanToggle checkbox | I/H/P/F/D/S; compact inline indicators and shared focus | P6 adopted with captured selected-swell scope |
-| P5 `inspectorSections` and generated segments | C7 SegmentedSelector, Timing/Envelope/Sound | I/H/P/F/D/S; shares navigation mechanism, composition owns section choice and visible content | P7; retain #58 navigation |
+| P5 `inspectorSections` and generated segments | C7 connected SegmentedSelector, Timing/Envelope/Sound | I/H/P/F/D/S; shares navigation mechanism, composition owns section choice and visible content | P7 tabs adopted; Perform retains #58 section and responsive layout checks |
 | P6 `performZoom.minus`, `.plus`, `.fit`, `.slider` | C1/C5 TimelineZoomControls, presentation intents | I/H/P/F/D. Shared track focus and wheel steps without a value box. Command buttons retain limit-specific states. | P1/P5 adopted. Keep #49 navigation and Fit behavior. |
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
@@ -133,7 +133,7 @@ as recorded in #58 evidence. Legacy other-page controls remain explicit debt.
 | S4 `liveButton` (Playback), `mappingButton` (Processing), `muteButton` (Swell), `isolateButton`, `isolateDryButton` (Audition), `toneButton` (Recovery) | C6 Switch | I/H/P/F/D/S; labeled track and thumb, retained unavailable on state | P6 adopted with existing playback, edit and tone rules |
 | S5 `automaticButton`, `autoButton` (Processing) | C6 Switch | I/H/P/F/D/S; labeled track and thumb with captured pass | P6 adopted with guarded activation and silent reconciliation |
 | S6 `presentationSizeBox`, `presentationScaleBox` (Appearance) | C2 ChoiceSelector | Independent H/P/F/S/D; no-wheel; explicit choice updates presentation profile, not project state; unavailable fit choices remain inspectable | Migrated in `unify-selector-states`; retain #58 composition/profile behavior |
-| S7 `settingsTabs`, generated tab buttons, `settingsPages[0..6]` | C7 JUCE TabbedComponent + screen setup | I/H/P/F/D/S for tabs; fixed native tab mechanism unlike segmented main navigation | P7 legacy ownership; pages themselves are layout-only |
+| S7 `settingsTabs`, generated tab buttons, existing pages and Storage viewport | C7 SettingsTabs and connected SegmentedSelector | I/H/P/F/D/S; stable page bindings, Appearance when available, About last | P7 tabs adopted; Storage, recovery, About and responsive tests cover page identity and geometry |
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
@@ -232,7 +232,8 @@ Keep the family open until every consumer has a recorded disposition.
 | P4 Numeric and text fields | L6, P7, E5, S8/S9, D5, N1 and N4 adopted or verified by `unify-numeric-text-fields`. D6 audited as retained hidden seams. | Shared text and numeric surfaces, wrapped feedback where it has a position, exact and explicit edit lifecycles, read-only copying and configured wheel steps. |
 | P5 Knobs and sliders | L6, P6/E4, P7, E5, S8 and N4 adopted by `unify-knob-slider-interactions`. D6 retained as hidden compatibility seams. | Shared dial/track feedback and Ctrl+wheel, Level home detent, preserved gesture guards, Reset, independent pair edits and display-only values. |
 | P6 Switches and toggles | L4, P4 and S4/S5 adopted by `unify-switch-toggle-states`. D3 retained hidden. | Shared toggle states. Labeled switches in Learn and Settings, inline checkboxes in the Swell Inspector, and preserved pass and binding authority. |
-| P7 Navigation, lists and scrolling | H2/L5/P5 segments, P9/P10, S7, D7 viewport, N5 scroll viewport; C7 SegmentedSelector/SwellList/FocusViewport/native tabs | Preserve accepted versus inspected option, row identity/scroll/multiselection and #93 contextual reveal. Review row keyboard/accessibility gaps and explicit focus-reveal use. Named native-tab difference allowed with evidence; no whole-workspace layout redesign. |
+| P7 Connected tabs | H2/L5/P5 and S7 adopted by `unify-connected-tabs`. | One connected strip and deliberate selection contract, with About last in Settings. |
+| P7 Lists and scrolling | P9/P10, D7 viewport and N5 scroll viewport remain a separate child under #107. | Preserve row identity, scroll, multiselection and #93 contextual reveal. Review row keyboard/accessibility gaps and explicit focus-reveal use. |
 | P8 Specialized interactions and auxiliary shells | L8 canvas, E2/E6 navigation/canvas, N3/N4/N5; C8 existing timeline/overview/navigation/file/window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and file drag/save guards, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
 
 Each remaining packet requires its own proposal/design/tasks and a

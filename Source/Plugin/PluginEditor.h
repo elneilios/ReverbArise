@@ -22,6 +22,7 @@
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
 #include <UI/PortableStoragePanel.h>
+#include <UI/SettingsTabs.h>
 #include <UI/Controls/FocusViewport.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
@@ -44,7 +45,7 @@ public:
     void stopAutomaticRefreshForReview() {stopTimer();}
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
-    juce::Component* settingsPanel() noexcept {return &settingsTabs;}
+    m3::ui::SettingsTabs* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
     // The host factory supplies user-local storage; fixtures inject isolated storage.
     void enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage>,std::optional<m3::ui::PresentationFitContext> display={});
@@ -209,7 +210,7 @@ private:
     std::unique_ptr<m3::ui::PortableStoragePanel> storageInventory;
     m3::ui::controls::FocusViewport storageViewport;
     juce::String storageIdentity;
-    juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
+    m3::ui::SettingsTabs settingsTabs;
     std::array<juce::Label,12> settingsLabels;
     std::array<juce::Label,6> settingsHelp;
     m3::ui::controls::EllipsisLabel regenerationFeedback;

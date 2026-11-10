@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Synced the approved P6 switch and checkbox contracts, including the reviewed pointer guard. The existing guide wording still matches Learn, Settings and the Swell Inspector.",
+  "summary": "Reviewed connected editor and Settings tabs, keyboard inspection and activation, and About last after Storage against the approved behavior and production bindings. Updated the offline guide instructions.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -510,8 +510,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15459,
-      "sha256": "733623cc2e8912410d99a56e5d7dfaae9cd52a96c7078daa9435a90e977ad059"
+      "bytes": 15458,
+      "sha256": "8a4bd791dc865b9e93b32d05825a4fd631c1d55e1b5729a35d6c29a9c0c68dd3"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -520,8 +520,8 @@
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
-      "bytes": 8807,
-      "sha256": "eb5ad3f320af14f4ca30fa4a09f6f9dfd53ae60218cdfe016bd0ff3a5977fec0"
+      "bytes": 8800,
+      "sha256": "ea6db6a163615765b5def1d3e6ef5cc3d9f49ca239d92428cda190ded1068976"
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
@@ -535,8 +535,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 26122,
-      "sha256": "6f870dcf2147d421833aa5f6e9a193fd24a0c778fc572165f7b627fbee298fab"
+      "bytes": 25892,
+      "sha256": "0fbf0ac72e7ba859f7c3f2570df2e1af6166f97dea8a5a24136be80ba1a84c99"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -710,8 +710,8 @@
     },
     {
       "path": "Source/UI/Controls/SegmentedSelector.h",
-      "bytes": 9288,
-      "sha256": "6099f5492d317dd114f9ad8c6bfce0de6a58d9b1bcd99d2c920bd89433eca1bc"
+      "bytes": 11826,
+      "sha256": "09042a8b19c1ebefbbd6fc5dbca6ba199407528e2ed7c3ea5c6985581d2de2df"
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
@@ -844,6 +844,11 @@
       "sha256": "e2aad169865004b146c310d63db640b3a280689c5a963b74759a7d3539757abe"
     },
     {
+      "path": "Source/UI/SettingsTabs.h",
+      "bytes": 2784,
+      "sha256": "c7d7293060a03c04562e1bcc94d5c721a00e78b59706724f07291b3d35480fb6"
+    },
+    {
       "path": "Source/UI/SongBarRuler.h",
       "bytes": 1908,
       "sha256": "2d6a7060929d1cb4cc18323778723b3eb5d534d9b3d139e64b8c264c6a1d0ab5"
@@ -945,8 +950,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 30419,
-      "sha256": "ccd7baab4634a4955a410d71c5dcaf5d44cd87f15ea4dd30311cc3d556ecf05e"
+      "bytes": 30693,
+      "sha256": "79267a0d46126d5905d55bee34e864e753d97948f893d58d5b37b70636bd7e54"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1145,8 +1150,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32784,
-      "sha256": "83153e866cb9d740d7ba6a4e3c0b1d3bc9892aba7c3a49299684d8e9f20f2205"
+      "bytes": 32532,
+      "sha256": "d6fc459dbf2151bf39b44ccdd2ff861f5a9f32eef9723f9895a65e1052a27f87"
     }
   ]
 }

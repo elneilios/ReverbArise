@@ -256,13 +256,17 @@ native JUCE preview on 10 November 2026.
 ## C7 — Navigation, lists, tabs and scroll containers
 
 Observed owners: [SegmentedSelector](../../Source/UI/Controls/SegmentedSelector.h),
+[SettingsTabs](../../Source/UI/SettingsTabs.h),
 [SwellList](../../Source/UI/Controls/SwellList.h), TimelineZoomControls,
-[FocusViewport](../../Source/UI/Controls/FocusViewport.h), plus Settings tabs.
-Segmented selection already distinguishes accepted selection from keyboard
-inspection: arrows/Home/End inspect; Return/Space requests; wheel does not choose.
-Unavailable choices expose reasons and are not committed. Keep joined-edge paint
-ordering and accessible selected state. Ordinary tab policy can remain distinct
-from segmented workflow navigation when named and reviewed.
+[FocusViewport](../../Source/UI/Controls/FocusViewport.h).
+
+The connected tab strip separates keyboard inspection from accepted selection.
+Arrows and Home/End inspect, Return/Space request activation, and wheel input
+passes through. Unavailable choices expose their reasons and reject activation.
+The selected fill, pointer hover and held feedback, and outer focus brackets
+are independent. Pointer clicks hide focus decoration while retaining focus.
+Settings routes programmatic selection by stable page identity and keeps About
+last, with Appearance before Storage when available.
 
 Contract: focus, inspected option, accepted selection, scroll and reveal
 are separate state. Refresh must preserve stable row identity/primary selection

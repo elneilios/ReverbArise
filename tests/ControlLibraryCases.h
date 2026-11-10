@@ -36,7 +36,7 @@ public:
         groups[0].onRequest=[this](int id){groups[0].display(choices(),id);feedback.setText("Accepted "+juce::String(m3::ui::modeLabel(static_cast<workflow::Mode>(id-1))),juce::dontSendNotification);};
         icons[0]->onClick=[this]{feedback.setText("Settings action received (fixture only)",juce::dontSendNotification);};
         feedback.setText("Try the first row. Tab: focus. Arrows: inspect.\nEnter/Space: activate an available choice.",juce::dontSendNotification);addAndMakeVisible(feedback);
-        help.setText("Unavailable reasons stay accessible. Wheel does not switch modes.\nAqua = accepted selection; the inset outline marks keyboard focus.\nOther rows show component states; their requests do not change the model.",juce::dontSendNotification);
+        help.setText("Unavailable reasons stay accessible. Wheel does not switch modes.\nAqua fill marks selection; outer brackets mark keyboard focus.\nOther rows show component states; their requests do not change the model.",juce::dontSendNotification);
         help.setJustificationType(juce::Justification::topLeft);addAndMakeVisible(help);
         setSize(720,540);
     }
@@ -66,6 +66,83 @@ inline void pointerClick(juce::Button& button)
     const auto point=button.getLocalBounds().getCentre().toFloat();const auto time=juce::Time::getCurrentTime();
     const auto event=[&](juce::ModifierKeys mods){return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,mods,0,0,0,0,0,&button,&button,time,point,time,1,false);};
     static_cast<juce::Component&>(button).mouseDown(event(juce::ModifierKeys::leftButtonModifier));static_cast<juce::Component&>(button).mouseUp(event({}));
+}
+inline void connectedTabCases()
+{
+    struct WheelHost : juce::Component
+    {
+        int scrolls=0;
+        void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&)override{++scrolls;}
+    } host;
+    SegmentedSelector tabs;
+    host.addAndMakeVisible(tabs);
+    host.setSize(340,50);
+    tabs.setBounds(0,0,330,36);
+    host.addToDesktop(juce::ComponentPeer::windowIsTemporary);
+    host.setVisible(true);
+    tabs.display(choices(),1);
+    int requests=0,last=0;
+    tabs.onRequest=[&](int id){++requests;last=id;};
+    auto& middle=*tabs.segment(2);
+    auto& button=static_cast<juce::Component&>(middle);
+    const auto centre=button.getLocalBounds().getCentre().toFloat();
+    const auto now=juce::Time::getCurrentTime();
+    const auto mouse=[&](juce::Point<float> point,juce::ModifierKeys mods)
+    {
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,mods,
+            0,0,0,0,0,&button,&button,now,centre,now,1,point!=centre);
+    };
+    button.mouseDown(mouse(centre,juce::ModifierKeys::leftButtonModifier));
+    REQUIRE(tabs.hasKeyboardFocus(false) && !tabs.isFocusVisible());
+    REQUIRE(middle.isDown() && requests==0);
+    button.mouseUp(mouse({-10,centre.y},{}));
+    REQUIRE(!middle.isDown() && requests==0 && tabs.selectedId()==1);
+    button.mouseDown(mouse(centre,juce::ModifierKeys::rightButtonModifier));
+    button.mouseDrag(mouse(centre,juce::ModifierKeys::rightButtonModifier));
+    button.mouseUp(mouse(centre,{}));
+    REQUIRE(!middle.isDown() && requests==0);
+    pointerClick(middle);
+    REQUIRE(requests==1 && last==2 && tabs.selectedId()==1 && !tabs.isFocusVisible());
+
+    const auto body=middle.getBounds();
+    const auto focusMargin=static_cast<int>(m3::ui::controlGeometry::focusOutset+m3::ui::controlGeometry::focusStroke);
+    for(int id:{1,2,3})REQUIRE(tabs.getLocalBounds().contains(tabs.segment(id)->getBounds().expanded(focusMargin)));
+    REQUIRE(tabs.segment(1)->getRight()==body.getX()+1 && body.getRight()==tabs.segment(3)->getX()+1);
+    const auto surface=[&](juce::Button::ButtonState state)
+    {
+        middle.setState(state);
+        return tabs.createComponentSnapshot(tabs.getLocalBounds());
+    };
+    const auto idle=surface(juce::Button::buttonNormal);
+    const auto over=surface(juce::Button::buttonOver);
+    const auto held=surface(juce::Button::buttonDown);
+    const auto sample=body.getTopLeft()+juce::Point<int>{3,3};
+    REQUIRE(idle.getPixelAt(sample.x,sample.y)!=over.getPixelAt(sample.x,sample.y));
+    REQUIRE(over.getPixelAt(sample.x,sample.y)!=held.getPixelAt(sample.x,sample.y));
+    REQUIRE(held.getPixelAt(body.getX(),body.getCentreY())==m3::ui::secondary);
+    REQUIRE(over.getPixelAt(body.getX(),body.getCentreY())==m3::ui::outline.interpolatedWith(m3::ui::text,.5f));
+    middle.setState(juce::Button::buttonNormal);
+
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::endKey));
+    REQUIRE(tabs.isFocusVisible() && tabs.focusedId()==3 && tabs.selectedId()==1);
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));
+    REQUIRE(requests==2 && last==3 && tabs.selectedId()==1);
+    auto* accessible=middle.getAccessibilityHandler();
+    REQUIRE(accessible && accessible->getActions().invoke(juce::AccessibilityActionType::focus));
+    REQUIRE(tabs.isFocusVisible() && tabs.focusedId()==2 && accessible->getCurrentState().isFocused());
+    REQUIRE(!accessible->getCurrentState().isSelected());
+    const auto focused=tabs.createComponentSnapshot(tabs.getLocalBounds());
+    REQUIRE(focused.getPixelAt(body.getX()-focusMargin,0)==m3::ui::aqua);
+    REQUIRE(accessible->getActions().invoke(juce::AccessibilityActionType::press));
+    REQUIRE(requests==3 && last==2 && tabs.selectedId()==1);
+    tabs.display(choices(false),1);
+    tabs.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+    REQUIRE(requests==3 && tabs.focusedId()==2 && tabs.getTooltip().contains("Learn useful"));
+    tabs.display(choices(),1);
+    juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;
+    button.mouseWheelMove(mouse(centre,{}),wheel);
+    REQUIRE(host.scrolls==1 && requests==3 && tabs.selectedId()==1);
+    host.removeFromDesktop();
 }
 inline void cases(bool withIcons=false)
 {
@@ -172,6 +249,7 @@ inline void cases(bool withIcons=false)
         REQUIRE(focused.getPixelAt(1,1)==m3::ui::aqua && disabled.getPixelAt(1,1).getAlpha()==0);
         REQUIRE(disabled.getPixelAt(50,17).getAlpha()<idle.getPixelAt(50,17).getAlpha());
     }
+    if(!withIcons)connectedTabCases();
     m3::ui::WorkspaceTheme theme;Panel panel;panel.setLookAndFeel(&theme);panel.addToDesktop(0);panel.setVisible(true);
     auto& selector=panel.groups[0];unsigned requests=0;int last=0;
     selector.grabKeyboardFocus();selector.moveKeyboardFocusToSibling(true);REQUIRE(panel.icons[0]->hasKeyboardFocus(true));
@@ -227,7 +305,7 @@ inline void cases(bool withIcons=false)
     }
     // Internal joins are square and contiguous; only the outer silhouette rounds.
     const auto middle=selector.segment(2);const auto middleImage=middle->createComponentSnapshot(middle->getLocalBounds());
-    REQUIRE(middleImage.getPixelAt(1,1)==m3::ui::background);
+    REQUIRE(middleImage.getPixelAt(1,1)==m3::ui::background.interpolatedWith(m3::ui::outline,.07f));
     const auto firstImage=selector.segment(1)->createComponentSnapshot(selector.segment(1)->getLocalBounds());
     REQUIRE(firstImage.getPixelAt(firstImage.getWidth()-2,1)==m3::ui::aqua);
     REQUIRE(selector.segment(1)->getRight()==selector.segment(2)->getX()+1 && selector.segment(2)->getRight()==selector.segment(3)->getX()+1);
@@ -240,8 +318,10 @@ inline void cases(bool withIcons=false)
         auto* hover=selector.segment(hovered);hover->setState(juce::Button::buttonOver);
         const auto frame=selector.createComponentSnapshot(selector.getLocalBounds());
         const auto shared=hovered<selected?hover->getRight()-1:hover->getX();
-        REQUIRE(frame.getPixelAt(shared,selector.getHeight()/2)==m3::ui::aqua);
-        REQUIRE(frame.getPixelAt(hover->getBounds().getCentreX(),0)==m3::ui::aqua && frame.getPixelAt(hover->getBounds().getCentreX(),selector.getHeight()-1)==m3::ui::aqua);
+        const auto edge=m3::ui::outline.interpolatedWith(m3::ui::text,.5f);
+        const auto body=hover->getBounds();
+        REQUIRE(frame.getPixelAt(shared,body.getCentreY())==edge);
+        REQUIRE(frame.getPixelAt(body.getCentreX(),body.getY())==edge && frame.getPixelAt(body.getCentreX(),body.getBottom()-1)==edge);
         REQUIRE(selector.selectedId()==selected && selector.focusedId()==selected);
         for(int id=1;id<=3;++id)REQUIRE(selector.getChildComponent(id-1)==selector.segment(id));
     }

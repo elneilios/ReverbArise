@@ -37,9 +37,9 @@ void Composition::verifyResponsiveScale()
     auto& reset=require<m3::ui::controls::ActionButton>(*panel,"resetWetShape");
     auto& footer=require<controls::TransportReadout>(*panel,"hostInfo");
     auto& cell=require<KnobValue>(*panel,"endOffsetCell");auto& field=cell.valueField();
-    auto& tabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
-    REQUIRE(tabs.getNumTabs()==8);
-    auto& appearance=*tabs.getTabContentComponent(6);
+    using Page=m3::ui::SettingsPage;auto& tabs=*panel->settingsPanel();
+    REQUIRE(tabs.selector().getNumChildComponents()==8);
+    auto& appearance=*tabs.page(Page::appearance);
     auto& scaleChoice=require<controls::DeliberateSelector>(appearance,"presentationScale");
     auto& sizeChoice=require<controls::DeliberateSelector>(appearance,"presentationSize");
     const auto saved=engine.savedSession();const auto capture=processor->getCaptureSnapshot().manifest.revision;
@@ -116,13 +116,23 @@ void Composition::verifyResponsiveScale()
     auto& header=require<WorkflowHeader>(*panel,"workflowHeader");header.onSettings();
     auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(panel->settingsPanel()->getTopLevelComponent());REQUIRE(settingsWindow);
     settingsWindow->setVisible(false);
-    auto& ownedTabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());ownedTabs.setCurrentTabIndex(5);
+    auto& ownedTabs=*panel->settingsPanel();
+    ownedTabs.selectPage(Page::about);
     auto& auxiliary=require<controls::PresentationSurface>(*settingsWindow,"presentationSurface");
     for(int scale:{100,125,100})
     {
         REQUIRE(panel->setPresentationScale(scale));
         REQUIRE(auxiliary.contentRoot().getWidth()==640 && auxiliary.contentRoot().getHeight()==570);
         REQUIRE(std::abs(auxiliary.contentRoot().getTransform().mat00-scale/100.f)<.001f);
+        REQUIRE(ownedTabs.selectedPage()==Page::about);
+        const auto& strip=ownedTabs.selector();
+        for(auto* child:strip.getChildren())
+        {
+            const auto& button=dynamic_cast<const juce::Button&>(*child);
+            const auto width=juce::GlyphArrangement::getStringWidth(interFont(bodySize,InterFace::semibold),button.getButtonText());
+            REQUIRE(width+10<=button.getWidth());
+            REQUIRE(strip.getLocalBounds().contains(button.getBounds().expanded(static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke))));
+        }
         auto& viewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
         auto& copy=require<juce::Component>(*panel->settingsPanel(),"copyBuildInformation");viewport.reveal(copy);
         REQUIRE(viewport.getViewArea().intersects(auxiliary.getLocalArea(&copy,copy.getLocalBounds())));
@@ -135,7 +145,7 @@ void Composition::verifyResponsiveScale()
     REQUIRE(copyAction.hasKeyboardFocus(true));
     REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
     settingsWindow->setVisible(false);
-    ownedTabs.setCurrentTabIndex(4);
+    ownedTabs.selectPage(Page::recovery);
     require<m3::ui::controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
     auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
     diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());

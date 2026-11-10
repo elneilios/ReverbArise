@@ -65,7 +65,7 @@ void Composition::verifyEditorBindings()
         REQUIRE(after->enabled==before.enabled && after->solo==before.solo && after->frozen==before.frozen);
     }
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
-    auto* processing=dynamic_cast<juce::TabbedComponent*>(panel->settingsPanel())->getTabContentComponent(1);
+    auto* processing=panel->settingsPanel()->page(m3::ui::SettingsPage::processing);
     auto& automatic=require<controls::Switch>(*processing,"automaticProcessing");
     auto& autoRefresh=require<controls::Switch>(*processing,"autoRefreshAfterRecapture");
     for(auto* setting:{&automatic,&autoRefresh})setting->beforeInvocation();

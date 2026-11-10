@@ -105,14 +105,13 @@ void PreverbAudioProcessorEditor::showRegenerationResult(const m3::RegenerationR
 void PreverbAudioProcessorEditor::initialiseSettings()
 {
     settingsTabs.getProperties().set("contextHelp","Choose a settings tab. These settings apply to this plugin instance.");
-    settingsTabs.setName("settingsTabs");settingsTabs.setTabBarDepth(36);
-    settingsTabs.setColour(juce::TabbedComponent::backgroundColourId,m3::ui::background);
-    settingsTabs.setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack);
+    using Page=m3::ui::SettingsPage;
     const juce::StringArray titles{"Playback","Processing","Swell","Audition","Recovery","About"};
+    constexpr std::array ids{Page::playback,Page::processing,Page::swell,Page::audition,Page::recovery,Page::about};
     for(int i=0;i<6;++i)
     {
         settingsPages[i].setName("settings"+titles[i]);
-        settingsTabs.addTab(titles[i],m3::ui::background,&settingsPages[i],false);
+        settingsTabs.addPage(ids[i],settingsPages[i]);
         settingsPages[i].addAndMakeVisible(settingsHelp[i]);
         settingsHelp[i].setColour(juce::Label::textColourId,m3::ui::secondary);settingsHelp[i].setFont(juce::FontOptions(m3::ui::bodySize));
         settingsHelp[i].setJustificationType(juce::Justification::topLeft);
@@ -124,7 +123,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     storageInventory->onRestored=[this](const auto& input,auto& error){return processor.reloadRecoveredAssets(input,error);};
     storageViewport.setName("storageViewport");storageViewport.setFocusRevealEnabled(true);
     storageViewport.setViewedComponent(storageInventory.get(),false);
-    settingsTabs.addTab("Storage",m3::ui::background,&storageViewport,false);
+    settingsTabs.addPage(Page::storage,storageViewport);
     const auto move=[&](int page,std::initializer_list<juce::Component*> controls)
     {for(auto* c:controls)settingsPages[page].addAndMakeVisible(c);};
     move(0,{&gainPolicyLabel,&gainPolicyBox,&liveButton,&liveRoutingBox,&liveLevel,&liveLevelLabel});
@@ -344,7 +343,8 @@ void PreverbAudioProcessorEditor::showAssetRecoveryWarning(const m3::storage::po
         if(!safe || safe->destroying || action==0)return;
         m3::storage::portable::Input current;juce::String error;
         if(!safe->processor.pinPortableAssets(current,error,true) || current.instanceRoot!=expected.instanceRoot || current.controlEpoch!=expected.controlEpoch)return;
-        safe->setSettingsOpen(true);for(int i=0;i<safe->settingsTabs.getNumTabs();++i)if(safe->settingsTabs.getTabNames()[i]=="Storage")safe->settingsTabs.setCurrentTabIndex(i);
+        safe->setSettingsOpen(true);
+        safe->settingsTabs.selectPage(m3::ui::SettingsPage::storage);
         if(action==1)safe->storageInventory->locateOriginalAssets();else if(action==2)safe->storageInventory->restoreBackup();
     }),false);
 }

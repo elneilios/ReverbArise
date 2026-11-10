@@ -1,11 +1,25 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.20 · **Production standards revision:** 20 · **Purpose:** Production UI authority and design reference. Revision 20 adopts shared switch and checkbox interaction. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
+**Version:** 1.21 · **Production standards revision:** 21 · **Purpose:** Production UI authority and design reference. Revision 21 adopts connected tabs across the editor and Settings. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
 [approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
 Legacy debt remains explicit; family migrations retain scoped native approval.
+
+## Connected tabs — issue #107
+
+The workflow header, Learn sections, Swell Inspector sections and Settings use
+the same connected strip. The accepted tab has an aqua fill. Quiet hover and
+stronger held feedback change the tab's border and background. Adjacent tabs
+share one edge, with rounded ends at the outside of the strip. Keyboard and
+accessibility focus show aqua corner brackets with a gap outside the tab body.
+Clicking keeps actual focus and hides the brackets.
+
+Settings keeps About last, immediately after Storage. The existing Appearance
+page remains available before Storage in the responsive layout. See the
+[C7 contract](../development/ui-control-contracts.md#c7--navigation-lists-tabs-and-scroll-containers)
+for selection and focus behavior.
 
 
 ## Selector family — issue #107 (native approved)

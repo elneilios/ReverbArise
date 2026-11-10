@@ -471,21 +471,31 @@ smoke rather than repeating passing automated edge cases.
 The first families live under `Source/UI/Controls/`; they were approved in a
 native review fixture and are composed into the shared production WorkflowHeader:
 
-- `SegmentedSelector::display(choices, acceptedId)` silently supplies labels,
+- Production standards revision 21 uses `SegmentedSelector` for the workflow
+  header, Learn, the Swell Inspector and Settings. The control's
+  `display(choices, acceptedId)` silently supplies labels,
   help, availability and unavailable reasons. `onRequest(id)` emits an intent;
   the binding must revalidate it against the model and call `display` with the
   accepted state. Pointer/Enter/Space activation never toggles optimistically.
   Arrow/Home/End keys inspect choices without selecting them; Tab enters/leaves
   the group. The group exposes all reasons through accessibility descriptions,
-  including disabled choices. Wheel and repeated active selection are no-ops.
+  including unavailable choices. Wheel forwards to surrounding scrolling and
+  repeated active selection does not invoke the binding.
   Segments share square internal joins with one border; only the group's outer
-  left/right ends are rounded, following owner checkpoint-A feedback.
+  left/right ends are rounded. The body shows separate hover and held feedback.
+  The shared provenance policy shows outer brackets for keyboard and explicit
+  accessibility focus. A pointer click hides the brackets and retains focus.
   Navigation text uses the shared 18-pixel Semibold role. Issue #35 adds an optional
   semantic `ModeIcon` to each choice, defaulting to no icon. Canonical 16-pixel SVG
   icons precede labels by 8 pixels; the combined group stays centred inside the
-  existing segment geometry. `ModeIconCache` prepares immutable source and separate
+  existing segment geometry. Settings uses the comfortable body text role.
+  `ModeIconCache` prepares immutable source and separate
   foreground variants before paint. Borders still paint above all child fills,
   preserving the Issue #11 shared-edge and focus regressions.
+- `SettingsTabs` composes the shared strip with existing page components.
+  Register and select pages by `SettingsPage` identity. About is the terminal
+  entry, and Appearance is available before Storage when responsive presentation
+  is enabled. Only the active page participates in the window's focus traversal.
 - `HeaderInformation` owns the regular 14-pixel Inter mode description in
   `#C7CDD4`, centred in the 32-pixel information row. Its 2×16-pixel aqua accent
   has an 8-pixel gap to text and an 8-pixel trailing inset. The screen supplies
