@@ -114,3 +114,14 @@ responsive editor, responsive scale and Storage Settings. The focused log is
 `out/build-logs/p3-text-review-tests.log`. UI standards, guide currency, strict
 OpenSpec validation and diff checks also passed. The earlier full-suite and
 host/DPI coverage distinctions above still apply.
+
+## Owner-approved closeout
+
+The owner approved PR #148 and authorized sync, archive and merge. All nine
+tracked tasks are complete. The three P3 requirements were synchronized into
+`openspec/specs/ui-design-system/spec.md`, retaining the existing specification
+and Purpose. The completed change is archived at
+`openspec/changes/archive/2026-11-10-unify-text-help-and-notices/`.
+Canonical spec validation passed all 20 capabilities with existing long-text
+warnings; no production code changed during closeout. The earlier native
+results and explicit host/DPI limits remain the verification evidence.

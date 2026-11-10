@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed PR #148 F1 Settings scroll-position preservation during content reflow and resizing; existing scrolling guidance remains accurate, so no prose change is needed.",
+  "summary": "Reviewed P3 canonical spec synchronization and completed-change archive; wrapped text, aqua footer help, persistent errors and scrolling match the implemented guide. No guide prose changes required for closeout.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1100,8 +1100,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 49713,
-      "sha256": "10681b7f4839398e639e7107d26a415ca887e791249398c2c4fef28fd25861b8"
+      "bytes": 53276,
+      "sha256": "d16e21f70c2957cff6b41909d3a1b077a5abb584f04afcf92681a0eaa9fdf51d"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
