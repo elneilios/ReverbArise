@@ -1,7 +1,7 @@
 #pragma once
 #include <Storage/AssetInventory.h>
 #include <UI/Controls/ActionButton.h>
-#include <UI/Controls/EllipsisLabel.h>
+#include <UI/Controls/WrappedLabel.h>
 #include <UI/UiGeometry.h>
 
 namespace m3::ui
@@ -59,8 +59,8 @@ public:
     bool scanning()const{return service.busy();}
     void refresh(){begin();}
 private:
-    static int textHeight(const juce::Label& label,int width)
-    {juce::AttributedString text(label.getText().trimEnd());text.setFont(label.getFont());juce::TextLayout layout;layout.createLayout(text,static_cast<float>(std::max(1,width-label.getBorderSize().getLeftAndRight())));return static_cast<int>(std::ceil(layout.getHeight()))+label.getBorderSize().getTopAndBottom();}
+    static int textHeight(const controls::WrappedLabel& label,int width)
+    {return label.preferredHeight(width);}
     void clearResults(){shown.reset();details.setText({},juce::dontSendNotification);for(size_t i=0;i<values.size();++i)setValue(i,{});cancelButton.setVisible(false);}
     void updateVisibility()
     {
@@ -76,7 +76,7 @@ private:
     void setValue(size_t index,const juce::String& content){values[index].setText(content,juce::dontSendNotification);values[index].setDescription(content);values[index].setTooltip(content);}
     Provider provider;storage::InventoryService service;std::shared_ptr<const storage::Report> shown;
     bool pageOpen=false;
-    juce::Label heading,details,help;std::array<juce::Label,6> labels;std::array<controls::EllipsisLabel,6> values;
+    controls::EllipsisLabel heading;controls::WrappedLabel details,help;std::array<controls::EllipsisLabel,6> labels;std::array<controls::EllipsisLabel,6> values;
     controls::ActionButton cancelButton{"Stop scan"};
 };
 }

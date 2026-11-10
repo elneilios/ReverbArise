@@ -7,6 +7,7 @@
 #include "ConvolutionIrBinding.h"
 #include "Controls/ActionButton.h"
 #include "Controls/SegmentedSelector.h"
+#include "Controls/WrappedLabel.h"
 #include "Controls/WaveformGestures.h"
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
@@ -28,11 +29,11 @@ public:
         automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
         sensitivityLabel.setText("Event sensitivity",juce::dontSendNotification);
         applyTextRole(sensitivityLabel,TextRole::controlLabel);
-        for(auto* label:{&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
-        for(auto* label:{&captureTitle,&automaticLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
+        for(auto* label:std::initializer_list<juce::Label*>{&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+        for(auto* label:std::initializer_list<juce::Label*>{&captureTitle,&automaticLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
         automaticHelp.setText({},juce::dontSendNotification);
         autoStopHelp.setText({},juce::dontSendNotification);
-        manualHelp.setText(wrappedHelper("Want to place swells yourself? Add manual swells in Perform."),juce::dontSendNotification);
+        manualHelp.setText("Want to place swells yourself? Add manual swells in Perform.",juce::dontSendNotification);
         manualHelp.setTooltip(manualHelp.getText().replace("\n"," "));
         captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");
         irEditor.setName("learnIrEditor");irEditor.label.setName("learnIRLabel");irEditor.selector.setName("learnDefaultIR");irEditor.fileButton.setName("learnImportIR");irEditor.status.setName("learnIRStatus");
@@ -70,7 +71,7 @@ public:
         autoStop.setToggleState(editor.session.autoGenerateOnStop,juce::dontSendNotification);
         autoStop.setEnabled(!flow.locked() || editor.session.autoGenerateOnStop);
         generate.setEnabled(generationView.canGenerate);
-        generateReason.setText(wrappedHelper(generationView.canGenerate?"Ready to generate":generationView.reason),juce::dontSendNotification);
+        generateReason.setText(generationView.canGenerate?"Ready to generate":generationView.reason,juce::dontSendNotification);
         generate.setDescription(generationView.reason);generate.setHelpText(generationView.reason);
         generate.setTooltip("Create or replace automatically detected swells using the markers shown. Manual and frozen swells are preserved.\n"+generationView.reason);
         generateReason.setTooltip(generationView.reason);
@@ -209,12 +210,12 @@ public:
         if(responsive){layoutResponsive();return;}
         auto a=getLocalBounds();left=a.removeFromLeft(workspaceGeometry::learnSettingsWidth);a.removeFromLeft(workspaceGeometry::columnGap);right=a;
         auto controls=left.withTrimmedTop(spacing::related);
-        const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& description)
+        const auto toggleGroup=[&](controls::Switch& toggle,controls::WrappedLabel& description)
         {
             toggle.setBounds(controls.removeFromTop(controlGeometry::switchHeight));
-            const auto lines=description.getText().isEmpty()?0:description.getText().containsChar('\n')?2:1;
-            if(lines>0)controls.removeFromTop(spacing::labelHelp);
-            description.setBounds(controls.removeFromTop(lines*learnTypography::secondaryLineHeight));
+            const auto height=description.preferredHeight(controls.getWidth());
+            if(height>0)controls.removeFromTop(spacing::labelHelp);
+            description.setBounds(controls.removeFromTop(height));
         };
         captureTitle.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
         toggleGroup(recapture,recaptureHelp);
@@ -225,9 +226,9 @@ public:
             irEditor.setBounds(controls.removeFromTop(irEditor.preferredHeight(controls.getWidth())));controls.removeFromTop(spacing::group);
             sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::related);generate.setBounds(controls.removeFromTop(controlGeometry::height));
-            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
+            controls.removeFromTop(spacing::labelHelp);generateReason.setBounds(controls.removeFromTop(generateReason.preferredHeight(controls.getWidth())));}
         controls.removeFromTop(automaticOn?spacing::labelHelp:spacing::group);
-        manualHelp.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));
+        manualHelp.setBounds(controls.removeFromTop(manualHelp.preferredHeight(controls.getWidth())));
         auto canvas=right.reduced(0,spacing::related);timelineHeading=canvas.removeFromTop(controlGeometry::headingHeight);canvas.removeFromTop(spacing::tight);
         timelineCaption=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::metadataGap);
         timelineRuler=canvas.removeFromTop(learnTypography::secondaryLineHeight);canvas.removeFromTop(learnGeometry::rulerViewportGap);
@@ -324,7 +325,7 @@ public:
 private:
     bool responsive=false;int selectedSection=1;
     controls::SegmentedSelector sections;
-    juce::Label captureGroup,soundScope;
+    controls::EllipsisLabel captureGroup;controls::WrappedLabel soundScope;
     void updateSections()
     {sections.display({{1,"Capture & Generate","Capture and generation policies"},{2,"Sound","Default sound for new swells"}},selectedSection);}
     void layoutResponsive()
@@ -333,9 +334,11 @@ private:
         auto area=getLocalBounds();left=area.removeFromLeft(284);area.removeFromLeft(16);right=area;
         auto column=left.withTrimmedRight(groupGap);captureTitle.setBounds(column.removeFromTop(headingHeight));column.removeFromTop(spacing::tight);
         sections.setBounds(column.removeFromTop(tabsHeight));column.removeFromTop(contentPadding);
-        auto actions=column.removeFromBottom(132);actions.removeFromTop(contentPadding);
+        const auto helpHeight=generateReason.preferredHeight(column.getWidth());
+        const auto manualHeight=manualHelp.preferredHeight(column.getWidth());
+        auto actions=column.removeFromBottom(std::max(132,controlHeight+helpHeight+manualHeight+3*contentPadding+spacing::tight));actions.removeFromTop(contentPadding);
         generate.setBounds(actions.removeFromTop(controlHeight));actions.removeFromTop(spacing::tight);
-        generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
+        generateReason.setBounds(actions.removeFromTop(helpHeight));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(manualHeight));
         const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
         captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
         const auto toggleRow=[&](controls::Switch& value)
@@ -346,7 +349,7 @@ private:
         for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureHelp,&automaticLabel,&automatic})c->setVisible(captureVisible);
         for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
         auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
-        soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
+        soundScope.setBounds(sound.removeFromTop(soundScope.preferredHeight(sound.getWidth())));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
         irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
         automaticHelp.setVisible(false);autoStopHelp.setVisible(false);generate.setVisible(automaticOn);generateReason.setVisible(automaticOn);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
@@ -362,19 +365,6 @@ private:
         else if(it!=events.begin() && std::abs(static_cast<long double>((it-1)->sample)-sample)<std::abs(static_cast<long double>(it->sample)-sample))--it;
         const auto pixels=std::abs((static_cast<long double>(it->sample)-sample)*chart.getWidth()/viewport.span());
         return pixels<=spacing::tight*2?std::optional<int64_t>{it->sample}:std::nullopt;
-    }
-    static juce::String wrappedHelper(const juce::String& text)
-    {
-        const auto words=juce::StringArray::fromTokens(text,false);juce::String result,line;
-        const auto font=textFont(TextRole::helper);
-        for(const auto& word:words)
-        {
-            const auto next=line.isEmpty()?word:line+" "+word;
-            if(line.isNotEmpty() && juce::GlyphArrangement::getStringWidth(font,next)>workspaceGeometry::learnSettingsWidth)
-            {result+=line+"\n";line=word;}
-            else line=next;
-        }
-        return result+line;
     }
     static int64_t sampleBound(double value)noexcept
     {return static_cast<int64_t>(std::clamp(static_cast<long double>(value),static_cast<long double>(INT64_MIN),static_cast<long double>(INT64_MAX)));}
@@ -410,8 +400,9 @@ private:
     controls::Switch autoStop{"Generate on Stop",controls::ToggleLabelSide::beforeIndicator};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
     controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;
     controls::SliderControl sensitivity{{"Event sensitivity (%)", "Adjust how many events are detected in captured audio."}};
-    juce::Label captureTitle,recaptureHelp,automaticLabel,automaticHelp,sensitivityLabel;
-    juce::Label autoStopHelp,manualHelp,generateReason;
+    controls::EllipsisLabel captureTitle,automaticLabel,sensitivityLabel;
+    controls::WrappedLabel recaptureHelp,automaticHelp;
+    controls::WrappedLabel autoStopHelp,manualHelp,generateReason;
     LearnGenerationView generationView;uint64_t displaySession=0,displayPass=0;
     std::optional<GenerationIntent> autoStopIntent,generateIntent;
     std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;

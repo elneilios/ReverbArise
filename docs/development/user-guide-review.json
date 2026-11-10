@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical P8 waveform spec sync against the delivered Learn, Export and Perform gestures and approved guide. Existing guide instructions already cover pointer wheel zoom, middle-drag pan, local positioning and the Perform Overview exception.",
+  "summary": "Reviewed P3 text wrapping, aqua footer help and scroll access. The Settings text viewport preserves direct Tab navigation into the selected page. Existing guide instructions remain accurate after that focus correction.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 102241,
-      "sha256": "61c8c299a94d2811d316998dd539d764ffa2df04357f84d6e0328629466da0b1"
+      "bytes": 102338,
+      "sha256": "3dd708b3fae5106e17fb9f74a157009425cefd8f8ba3246e107cbb52f1b04186"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15752,
-      "sha256": "4949fbc3d95c3a91c0d9e70fc2f537f7b209ab9eb145fb832d6c9c7ace359056"
+      "bytes": 16096,
+      "sha256": "461c364a4b0651a3b9d61c243ec0db7d9f524f5245e7fd09252518f5d2d4b1ce"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -535,8 +535,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 25892,
-      "sha256": "0fbf0ac72e7ba859f7c3f2570df2e1af6166f97dea8a5a24136be80ba1a84c99"
+      "bytes": 26353,
+      "sha256": "ca6837a0b5eaf5434fea11efd8349690d8db529073a439d989ef051f796b9652"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -610,8 +610,8 @@
     },
     {
       "path": "Source/UI/Controls/EllipsisLabel.h",
-      "bytes": 503,
-      "sha256": "63aacc09b13b36a836d16a8368d301f489b72e72ecd2e74a51398cadca352bec"
+      "bytes": 832,
+      "sha256": "19c8c979d1edf4575e573938280879aa9949541788be69cb0a11c63a2e938b6e"
     },
     {
       "path": "Source/UI/Controls/ExportLevelsControl.h",
@@ -779,6 +779,11 @@
       "sha256": "05ffd6a7484bae4ac1621237867a5956fc5229c98861247ee10b8ba22c2d0125"
     },
     {
+      "path": "Source/UI/Controls/WrappedLabel.h",
+      "bytes": 1283,
+      "sha256": "47f7d0f66362f83d29a481a32a3f76abb3601e047cd2fd59fb4cd0ad4b7dcc4b"
+    },
+    {
       "path": "Source/UI/ConvolutionIrBinding.h",
       "bytes": 7390,
       "sha256": "e07d3fed78cacac7950031887d3218cca5d0eb2da6bf771e98e7394d7d8707b5"
@@ -800,8 +805,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 22988,
-      "sha256": "dcc36f6450724630915711589d7ced421c19a0b0133f2fbe6a786b6828242f20"
+      "bytes": 24052,
+      "sha256": "18c896492e1385ba2e384bbd82d8d54a97e650f800d769009b346c72858723c5"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -820,8 +825,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 37554,
-      "sha256": "60c6bcceca5241a1d7b4e52b5141f565b92e25e18b30417d6db731a1f873e735"
+      "bytes": 37420,
+      "sha256": "d2e33f913f8e07cfe74f8d0b6efa842aec199da11f895a1866d87161351fa14c"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -850,8 +855,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 22043,
-      "sha256": "6b4fcea596912f5c8a437b204ac0fa54861cef6624a450f2e0816acf65b72bdb"
+      "bytes": 21868,
+      "sha256": "bb2748b5b987e3c9ea128f3c408d2de9519e433af4c507275365a1eb1d0ac8de"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -870,8 +875,8 @@
     },
     {
       "path": "Source/UI/SettingsTabs.h",
-      "bytes": 2784,
-      "sha256": "c7d7293060a03c04562e1bcc94d5c721a00e78b59706724f07291b3d35480fb6"
+      "bytes": 3484,
+      "sha256": "2f4862ea09cf6b690d58528e8fca1ef9605255cf4a8ca57f1bfbe639e03d461a"
     },
     {
       "path": "Source/UI/SongBarRuler.h",
@@ -880,8 +885,8 @@
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",
-      "bytes": 7654,
-      "sha256": "7ff9609be454ba7263f2940d84db4c868540a2983ee34e41cdbbf42fbdbda465"
+      "bytes": 7439,
+      "sha256": "1ccac6ad046e0701e78a610991ba271c497a7d9c2f900f74ec51ea140b2132ae"
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
@@ -930,8 +935,8 @@
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
-      "bytes": 15900,
-      "sha256": "e17c9f2f66cc9c1f1e3d88465321bcdd06d51b662c9a7d9a3341725d7415602b"
+      "bytes": 15775,
+      "sha256": "f776d83c6a5fe1e9ae3aab424efe581ecc195446531606dd89fa299af70eed97"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",
@@ -945,8 +950,8 @@
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 17110,
-      "sha256": "15949f03dfd2725a193f823aa011ca0093ffeb3ebe4b7ab29b367c6f748af9a5"
+      "bytes": 17158,
+      "sha256": "f81bc6343fe55ec0d1b813f737e40299ec28ccdcbe56a8a92f60b1c888e02be7"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -975,8 +980,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 31815,
-      "sha256": "151d41d0d5e95f73b0d07d2373b3225aee6024f3688f5f3c70fa1660f1b2f403"
+      "bytes": 32253,
+      "sha256": "746e8ab342a8ea3fe1898e2e2e6a013be1f7742b9bc2ae6b02c2ea4b33302fe9"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1175,8 +1180,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32532,
-      "sha256": "d6fc459dbf2151bf39b44ccdd2ff861f5a9f32eef9723f9895a65e1052a27f87"
+      "bytes": 32610,
+      "sha256": "5c5f938d0318b4ecd1a2b399d2445835fc290ca74308d0d748ba9ab60faaa76c"
     }
   ]
 }

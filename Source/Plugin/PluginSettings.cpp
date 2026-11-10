@@ -113,8 +113,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
         settingsPages[i].setName("settings"+titles[i]);
         settingsTabs.addPage(ids[i],settingsPages[i]);
         settingsPages[i].addAndMakeVisible(settingsHelp[i]);
-        settingsHelp[i].setColour(juce::Label::textColourId,m3::ui::secondary);settingsHelp[i].setFont(juce::FontOptions(m3::ui::bodySize));
-        settingsHelp[i].setJustificationType(juce::Justification::topLeft);
+        m3::ui::applyTextRole(settingsHelp[i],m3::ui::TextRole::helper,juce::Justification::topLeft);
     }
     const auto recoveryRoot=processor.swellEngine().assetDirectory().getParentDirectory().getParentDirectory();
     storageInventory=std::make_unique<m3::ui::PortableStoragePanel>([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);},recoveryRoot);
@@ -145,7 +144,7 @@ void PreverbAudioProcessorEditor::initialiseSettings()
     settingsPages[4].addAndMakeVisible(regenerationFeedback);
     const juce::StringArray captions{"Routing","Default IR","Fade-in curve","Fade-out curve","Source range (bars)","Audition scope","Manual preparation","Onset suggestions","Fresh capture","Test tone range","Details",""};
     const int labelPages[]{0,1,2,2,2,3,4,4,4,4,4,4};
-    for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);settingsLabels[i].setFont(juce::FontOptions(m3::ui::bodySize));settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
+    for(int i=0;i<12;++i){settingsLabels[i].setText(captions[i],juce::dontSendNotification);m3::ui::applyTextRole(settingsLabels[i],m3::ui::TextRole::controlLabel);settingsPages[labelPages[i]].addAndMakeVisible(settingsLabels[i]);}
     settingsHelp[0].setText("Musical gain matches source intensity, then adds the approved +6 dB target.\nLevel 0 dB is that starting balance. Legacy preserves older projects.\nLive Wet also sets new audition wet gain; legacy blend/trim stay separate.",juce::dontSendNotification);
     settingsHelp[1].setText("Both sensitivities stay in the main workspace.\nThe default IR applies to future swells; existing swells keep their own IR.",juce::dontSendNotification);
     settingsHelp[2].setText("Applies to the selected swell. Rename from its three-dot list menu.\nSource, envelope, Enabled, Solo and Freeze stay in the inspector.",juce::dontSendNotification);
@@ -209,7 +208,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     toneStartLabel.setBounds(left,300+feedbackBand,90,30);toneStartSlider.setBounds(left+95,300+feedbackBand,190,30);toneEndLabel.setBounds(left+300,300+feedbackBand,100,30);toneEndSlider.setBounds(left+405,300+feedbackBand,185,30);
     openDiagnosticsButton.setBounds(left,346+feedbackBand,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
-    for(int i:{0,1,3,4})settingsHelp[i].setBounds(left,i==4?394+feedbackBand:310,width,70);
+    for(int i:{0,1,3,4})settingsHelp[i].setBounds(left,i==4?394+feedbackBand:310,width,std::max(70,settingsHelp[i].preferredHeight(width)));
     using namespace m3::ui;
     aboutHeading.setBounds(left,spacing::section,width,controlGeometry::headingHeight);
     auto aboutY=aboutHeading.getBottom()+spacing::section;
@@ -220,7 +219,11 @@ void PreverbAudioProcessorEditor::layoutSettings()
         aboutY+=controlGeometry::labelHeight+spacing::related;
     }
     copyBuildInformation.setBounds(left,aboutY+spacing::related,width,controlGeometry::height);
-    settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,2*learnTypography::secondaryLineHeight);
+    settingsHelp[5].setBounds(left,copyBuildInformation.getBottom()+spacing::section,width,std::max(2*learnTypography::secondaryLineHeight,settingsHelp[5].preferredHeight(width)));
+    using Page=m3::ui::SettingsPage;
+    constexpr std::array pages{Page::playback,Page::processing,Page::swell,Page::audition,Page::recovery,Page::about};
+    for(size_t i=0;i<pages.size();++i)
+        settingsTabs.setPageContentHeight(pages[i],settingsHelp[i].getBottom()+spacing::section);
 }
 
 void PreverbAudioProcessorEditor::refreshSourceRangeFeedback(const m3::Swell* swell)
@@ -287,7 +290,9 @@ void PreverbAudioProcessorEditor::layoutSourceRange()
     const auto actionY=setBarsButton.getBottom()+spacing::related;
     fullButton.setBounds(heading.getX(),actionY,220,32);
     removeButton.setBounds(heading.getX()+240,actionY,160,32);
-    settingsHelp[2].setBounds(heading.getX(),fullButton.getBottom()+spacing::section,heading.getWidth(),70);
+    settingsHelp[2].setBounds(heading.getX(),fullButton.getBottom()+spacing::section,heading.getWidth(),
+        std::max(70,settingsHelp[2].preferredHeight(heading.getWidth())));
+    settingsTabs.setPageContentHeight(SettingsPage::swell,settingsHelp[2].getBottom()+spacing::section);
 }
 
 void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapshot& capture,uint64_t epoch)

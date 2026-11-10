@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, updated 10 November 2026, production standards revision 24.**
+**Owner-approved contracts, updated 10 November 2026, production standards revision 25.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -300,6 +300,18 @@ Reuse ControlLibrary/SwellListBinding/PerformNavigationState/ResponsiveEditor/
 ResponsiveScale cases and their existing native preview paths.
 
 ## C3 — Labels, context help, notices and field feedback
+
+`WrappedLabel` extends the shared single-line label family with one measured
+layout for wrapping and painting. Allocate `preferredHeight(width)` and reflow
+following content inside its existing scroll container. It handles unbroken
+paths without reducing the font. Shared labels synchronize their ordinary full
+descriptions and contextual text on content changes while retaining a binding's
+explicit custom explanation.
+
+The hover-help footer uses `contextHelpInk`, the approved #00C2CC softer aqua.
+Its helper role and nearest-control routing are shared with owned Settings and
+Diagnostics windows. Persistent local errors and notice severity keep their
+existing roles independently of the footer.
 
 Observed owners: semantic TextRole policies, plain labels,
 [EllipsisLabel](../../Source/UI/Controls/EllipsisLabel.h), HeaderInformation,
