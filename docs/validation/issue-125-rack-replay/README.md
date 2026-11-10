@@ -16,3 +16,5 @@ Both Release replays passed with unchanged dry contribution, complete lead-in, s
 ## Windows Release validation
 
 On 9 November 2026, `scripts/build.ps1 -Configuration Release -Test` configured and built the implementation in `43fbf75` with the existing MSVC build tree. CTest passed 100 of 101 cases in 360.89 seconds. The remaining test, `preverb_perform_readability_test`, timed out at the Windows foreground-focus check previously recorded in the [#123 baseline](../2026-11-09-issue-123-rack-timing.md#native-song-regression). `ctest -C Release --rerun-failed --output-on-failure` passed that test on the same build in 20.73 seconds. The logs are in `out/build-logs/Release/20261109-234450-f664210b/`.
+
+On 10 November 2026, the same Release wrapper passed all 101 CTest cases in one run on `a479ca8`, including Perform readability. The new regression cases verify retirement of old Loop PCM after the final callback, the earliest viable Cue after a late fractional marker, and the 5 ms fade limit when switching from 96 to 48 kHz before or during Stop. Both Rack replays reproduced the results above. Logs are in `out/build-logs/Release/20261110-000428-f5af6de2/`.

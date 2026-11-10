@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the headless Loop scheduler against the offline guide. Existing Learn controls and capture instructions still apply. The scheduler is exposed to the processor and tests, with Perform UI bindings and host routing covered by later issues, so the musician-facing guide text remains accurate.",
+  "summary": "Reviewed the synced Loop playback and Song timing requirements and the three scheduler review fixes. The Loop scheduler remains headless. Existing Loop Learn and Song Perform instructions apply, so the offline guide text is unchanged.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -470,8 +470,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 45768,
-      "sha256": "830ffd4697575333cd0896fbbd056813331aa6b66e55e7b6498da899fc2c6fb8"
+      "bytes": 45945,
+      "sha256": "02cf3e98be8ddef9310b32e8752654e614953f8fb84cf09927c50a9668c345c1"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -515,23 +515,23 @@
     },
     {
       "path": "Source/Playback/LoopCueScheduler.h",
-      "bytes": 4544,
-      "sha256": "b19bbadb5a7602a4f5566dd6ca72600ca4dd79c767d1479ff1dfeb0991f44991"
+      "bytes": 5429,
+      "sha256": "01d03642744ead2d937cf4cf226ddb8e16b705cbf3ebdbc3c87c4b37aa2c57d0"
     },
     {
       "path": "Source/Playback/LoopLiveReference.h",
-      "bytes": 5038,
-      "sha256": "9f13d5280315e599b00a2649cf2b00fae93bbfb1e9418e9df4fe9d2ca4753862"
+      "bytes": 5802,
+      "sha256": "1b1223335577521f6b8c64a4f4daf3dbf0bc7a438c13ca498bfebdd3e807d356"
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 7818,
-      "sha256": "34ee0ecfa3dac35e9d750572826d55fdeab3ff6555ade9c8dc5076220b02dcdc"
+      "bytes": 8296,
+      "sha256": "1d2bf82cda9f9cf5100a24ede338916cfa2742decd652253be5c9669a90dfdd6"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 2543,
-      "sha256": "5194e677ea85bc1d4f3ec10f6751581567eb58b9c749bd28e1bc6666bfb5e7f7"
+      "bytes": 2634,
+      "sha256": "a088859241df30a925ea5b5b4d129571573185d309b777920377a28f7c85059f"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -1110,8 +1110,8 @@
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 42398,
-      "sha256": "e13a99da384a0c5dd5a3576247cb34a2382a974ee9cd0b3c60e0c736ccf2f521"
+      "bytes": 47352,
+      "sha256": "50691496ff4269a9d94d665650787803489c40160cca6540a730350db9bad190"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",

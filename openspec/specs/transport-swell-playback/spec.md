@@ -99,7 +99,7 @@ Playback SHALL follow the saved gain policy. Legacy sessions SHALL retain their 
 - **AND** neither host block partitions, page boundaries nor a changed IR recording level introduces repeated normalization during playback
 
 ### Requirement: Transport discontinuities do not replay old positions
-Seeking and looping SHALL abandon the old wet position and join prepared audio at the new absolute offset. Stopping, disabling or losing valid timing SHALL stop wet with a bounded click-prevention transition. Old-position audio SHALL not continue beyond that transition. Host transport SHALL never be changed by plugin playback controls.
+Song seeking and looping SHALL abandon the old wet position and join prepared audio at the new absolute offset. Stopping, disabling or losing valid timing SHALL stop wet with a bounded click-prevention transition. Old-position audio SHALL not continue beyond that transition. Host transport SHALL never be changed by plugin playback controls.
 
 #### Scenario: Loop through a swell
 - **WHEN** a warm loop wraps into the middle of a swell
@@ -110,7 +110,7 @@ Seeking and looping SHALL abandon the old wet position and join prepared audio a
 - **THEN** wet reaches zero through a disclosed ramp no longer than 5 ms and does not restart until a subsequent valid Play
 
 ### Requirement: Timing incompatibility is explicit
-Live wet SHALL require valid absolute host samples and fixed rate/tempo/meter compatible with accepted assets. A fresh valid playing run SHALL establish an ephemeral sample-to-PPQ mapping independent of parked/source origin. Each run SHALL retain its mapping within the existing one-sample origin tolerance; unsupported changes SHALL suppress wet with a reason. Fresh validation SHALL precede resumption. Stored sample positions, edits and assets SHALL remain unchanged.
+Song live wet SHALL require valid absolute host samples and fixed rate/tempo/meter compatible with accepted assets. A fresh valid playing run SHALL establish an ephemeral sample-to-PPQ mapping independent of parked/source origin. Each run SHALL retain its mapping within the existing one-sample origin tolerance; unsupported changes SHALL suppress wet with a reason. Fresh validation SHALL precede resumption. Stored sample positions, edits and assets SHALL remain unchanged.
 
 #### Scenario: Change tempo or sample rate
 - **WHEN** the host mapping becomes incompatible with prepared assets
@@ -481,3 +481,64 @@ After host processing resumes during running transport, eligible prepared wet SH
 - **WHEN** processing resumes with unavailable timing, incompatible rate/tempo/meter, invalid assets, disabled saved Live output or a workflow outside Live
 - **THEN** existing exclusion and diagnostic rules remain effective and no stale wet is admitted
 - **AND** an ordinary seek, loop, missing callback interval or internal Live toggle alone does not authorize replacement of an established incompatible run mapping
+
+### Requirement: Loop Cue requires independent live phase
+Loop live playback SHALL require a verified recurring reference with shared phrase origin and matching accepted rate, tempo, meter and beat length. Capture timing SHALL supply only the source grid and exact recorded extent. Standby SHALL keep checking the reference, pass dry and report the unmet prerequisite for Cue.
+
+#### Scenario: Accepted capture lacks matching recurrence
+- **WHEN** a Clock-only take has a verified local grid and the live phrase reference is absent or repeats every four bars for a three-bar take
+- **THEN** the accepted loop and its grid remain valid and Cue stays unavailable with the corresponding reason
+- **AND** an aligned matching reference can admit Cue after two complete matching intervals and coherent prepared wet
+
+#### Scenario: Valid fractional reference
+- **WHEN** aligned marker intervals alternate within the verified adjacent integer lengths
+- **THEN** live phase stays verified within the epoch drift bound and each observed marker fixes its actual downbeat
+- **AND** the accepted audio extent and render sample rate are preserved
+
+### Requirement: Loop Cue schedules a complete future entry
+An eligible Cue SHALL target the earliest future matching boundary with sufficient time for the full negative lead-in. Once queued, it SHALL start the lead-in in time for the earliest allowed arrival and place the wet downbeat at the observed boundary. Playback SHALL repeat until stopped or invalidated.
+
+#### Scenario: Cue arrives too late for the next lead-in
+- **WHEN** the next possible boundary leaves insufficient time for the complete lead-in
+- **THEN** Cue targets the earliest later boundary that fits it and plays no partial launch at the missed boundary
+
+#### Scenario: Marker and Cue share an offset
+- **WHEN** a verified marker and Cue arrive at the same sample
+- **THEN** the marker is evaluated before Cue and the launch targets a future boundary
+
+### Requirement: Perform Stop and live sync loss end Loop wet
+Perform Stop SHALL cancel queued playback or begin an immediate click-prevention transition of at most 5 ms. It SHALL take precedence over coincident Cue. Loss of live phase or playback authority SHALL cancel queued launches, fade active wet and require fresh authority and Cue as applicable.
+
+#### Scenario: Capture commands and boundaries are independent
+- **WHEN** Capture Start/Arm, Capture Stop or an ordinary phrase marker arrives during live Loop playback
+- **THEN** the capture roles and marker do not request Perform Stop or Cue and a valid scheduled repeat continues
+
+#### Scenario: Lost reference, seek or reset
+- **WHEN** a required marker is late or invalid, a seek or reset occurs, or the live rate, tempo or session becomes incompatible
+- **THEN** any queued launch is cancelled and active wet fades without altering dry in Dry + Wet
+- **AND** re-lock alone leaves the scheduler in Standby until a fresh Cue
+
+### Requirement: Loop wet composition counts each cycle contribution once
+Loop playback SHALL mix every eligible prepared swell with source-relative placement and exclusive end bounds. All scheduled negative leads and tails that overlap another cycle SHALL be included exactly once. Phase correction SHALL be bounded and keep the prepared content at its native rate.
+
+#### Scenario: Lead and tail span multiple cycles
+- **WHEN** an eligible swell has a lead or tail longer than one phrase and overlaps other swells or repeats
+- **THEN** the wet sum equals the sample-level sum of the intersecting scheduled contributions
+- **AND** the first entry contains only contributions from the first scheduled cycle and later cycles
+
+#### Scenario: A downbeat differs from the earliest prediction
+- **WHEN** a valid marker arrives inside its rounding window
+- **THEN** bounded correction aligns the wet downbeat to the observed sample and retains the complete lead and tail content
+
+### Requirement: Loop playback pins coherent prepared revisions
+Loop wet SHALL use a complete prepared revision associated with the accepted source and current render dependencies. Publication and retirement SHALL occur outside the callback. Resource admission SHALL account for the pinned data and worst-case overlapping contributions within the shared preparation budget.
+
+#### Scenario: Edits invalidate a queued or active revision
+- **WHEN** a source, placement or render dependency of the pinned revision is revoked
+- **THEN** the obsolete queued launch is cancelled or the obsolete wet fades safely
+- **AND** a fresh Cue can use the complete successor once it is ready
+
+#### Scenario: Prepared workload exceeds the supported bound
+- **WHEN** the pinned memory or worst-case scheduled overlap exceeds the admission budget
+- **THEN** Cue reports the limiting resource and dry continues without partial or truncated wet
+- **AND** the callback performs no allocation, deallocation, disk I/O, convolution, blocking or locking
