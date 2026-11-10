@@ -168,7 +168,9 @@ Swells menu opens via right-click or the row's three-dot icon. The list owns
 the popup across row recycling. The menu captures the invoked row, selection,
 session and Perform pass. Delete from a selected row with multiple swells
 selected requires confirmation for the captured group. An unselected row is
-a single deletion target. The engine accepts or rejects a group atomically. Per-knob Reset uses the same neutral presentation at
+a single deletion target. The engine accepts or rejects a group atomically.
+Settings Delete captures the selected IDs, session and Perform pass at
+invocation, before any queued command runs. Per-knob Reset uses the same neutral presentation at
 the right-click anchor. It displays the provider's label and eligibility,
 and invokes the captured `ResetAction`. Pointer return to the dial keeps
 keyboard access with its focus decoration suppressed. Keyboard or accessibility
@@ -281,6 +283,8 @@ Fit, as approved for #93. The primary row adds a square Enabled checkbox and
 More actions as Tab stops on the way to the inspector. Both controls expose
 named accessible actions for their row. Focus and action binding follow the
 stable ID across recycled rows while ListBox owns selection.
+After a menu closes, restore focus to its action only if the viewport contains
+the action. A clipped row returns focus to the list without scrolling.
 
 Focused controls must be reachable inside scroll content and full focus strokes
 contained. FocusViewport reveal is an explicit usage policy; the type alone does

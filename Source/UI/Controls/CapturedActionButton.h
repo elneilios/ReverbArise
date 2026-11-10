@@ -5,57 +5,57 @@
 
 namespace m3::ui::controls
 {
-// A file action captures a continuation for each input before it can be queued.
-class FileSaveAction : public ActionButton
+// Capture a command continuation at input time, before dispatch can be queued.
+class CapturedActionButton : public ActionButton
 {
 public:
-    using Save = std::function<void()>;
-    using CaptureSave = std::function<Save()>;
+    using Invocation = std::function<void()>;
+    using Capture = std::function<Invocation()>;
     using PressId = uint64_t;
     using ActionButton::ActionButton;
 
-    void bindSave(CaptureSave capture)
+    void bindInvocation(Capture capture)
     {
-        captureSave = std::move(capture);
+        captureInvocation = std::move(capture);
         onClick = [this]
         {
-            auto save = std::exchange(pointerSave, {});
-            if (save) save();
+            auto invoke = std::exchange(pointerInvocation, {});
+            if (invoke) invoke();
         };
     }
 
     void invokeCommand() override
     {
-        if (!captureSave) { ActionButton::invokeCommand(); return; }
+        if (!captureInvocation) { ActionButton::invokeCommand(); return; }
         if (!isEnabled()) return;
-        auto save = captureSave();
-        if (!save) return;
-        juce::MessageManager::callAsync([safe = juce::Component::SafePointer<FileSaveAction>(this), save = std::move(save)]
+        auto invoke = captureInvocation();
+        if (!invoke) return;
+        juce::MessageManager::callAsync([safe = juce::Component::SafePointer<CapturedActionButton>(this), invoke = std::move(invoke)]
         {
-            if (safe != nullptr && safe->isEnabled()) save();
+            if (safe != nullptr && safe->isEnabled()) invoke();
         });
     }
 
     void mouseDown(const juce::MouseEvent& event) override
     {
-        if (captureSave)
+        if (captureInvocation)
         {
             if (!isEnabled() || !event.mods.isLeftButtonDown()) return;
             if (press && (press->source != event.source || press->down == event.mouseDownTime)) return;
             press = Press{event.source, event.mouseDownTime, ++serial};
-            pointerSave = captureSave();
+            pointerInvocation = captureInvocation();
         }
         ActionButton::mouseDown(event);
     }
 
     void mouseDrag(const juce::MouseEvent& event) override
     {
-        if (!captureSave || ownsPress(event)) juce::Button::mouseDrag(event);
+        if (!captureInvocation || ownsPress(event)) juce::Button::mouseDrag(event);
     }
 
     void mouseUp(const juce::MouseEvent& event) override
     {
-        if (!captureSave) { juce::Button::mouseUp(event); return; }
+        if (!captureInvocation) { juce::Button::mouseUp(event); return; }
         if (!ownsPress(event)) return;
         press.reset();
         if (event.source.getCurrentModifiers().isAnyMouseButtonDown()
@@ -63,11 +63,11 @@ public:
             juce::Button::mouseExit(event);
         else
         {
-            const juce::Component::SafePointer<FileSaveAction> safe(this);
+            const juce::Component::SafePointer<CapturedActionButton> safe(this);
             juce::Button::mouseUp(event);
             if (safe == nullptr) return;
         }
-        pointerSave = {};
+        pointerInvocation = {};
     }
 
     bool hasPress(PressId id) const noexcept { return press && press->id == id; }
@@ -75,7 +75,7 @@ public:
     {
         if (!hasPress(id)) return;
         press.reset();
-        pointerSave = {};
+        pointerInvocation = {};
         setState(juce::Button::buttonNormal);
     }
     bool isPressActive(PressId id) const noexcept
@@ -86,18 +86,18 @@ public:
     }
 
 protected:
-    bool usesBoundSave() const noexcept { return static_cast<bool>(captureSave); }
+    bool hasCapturedInvocation() const noexcept { return static_cast<bool>(captureInvocation); }
     bool ownsPress(const juce::MouseEvent& event) const noexcept
     {
         return press && press->source == event.source && press->down == event.mouseDownTime;
     }
     PressId pointerPress() const noexcept { return press ? press->id : 0; }
-    void suppressPointerSave() { pointerSave = {}; }
+    void suppressPointerInvocation() { pointerInvocation = {}; }
 
 private:
     struct Press { juce::MouseInputSource source; juce::Time down; PressId id; };
-    CaptureSave captureSave;
-    Save pointerSave;
+    Capture captureInvocation;
+    Invocation pointerInvocation;
     std::optional<Press> press;
     PressId serial = 0;
 };

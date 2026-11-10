@@ -22,15 +22,15 @@ public:
     using ReadyFile = std::function<juce::File(const Scope&)>;
     using DragGuard = std::function<bool()>;
     using StartExternalDrag = std::function<controls::WavDragResult(const juce::File&, const DragGuard&, const DragGuard&)>;
-    using PressId = controls::FileSaveAction::PressId;
+    using PressId = controls::CapturedActionButton::PressId;
 
-    ExportFileInvocations(controls::FileSaveAction& save, controls::FileDragTile& dragTile,
+    ExportFileInvocations(controls::CapturedActionButton& save, controls::FileDragTile& dragTile,
                           SaveFile saveFile, ReadyFile resolve, StartExternalDrag externalDrag, ChooseSave choose = {})
         : tile(dragTile), saveWav(std::move(saveFile)), readyFile(std::move(resolve)),
           startExternalDrag(std::move(externalDrag)), chooseSave(std::move(choose))
     {
         const auto weak = juce::WeakReference<ExportFileInvocations>(this);
-        const auto capture = [weak]() -> controls::FileSaveAction::Save
+        const auto capture = [weak]() -> controls::CapturedActionButton::Invocation
         {
             if (weak == nullptr || !weak->current) return {};
             return [weak, intent = weak->captureIntent()]
@@ -38,8 +38,8 @@ public:
                 if (weak != nullptr) weak->openSave(intent);
             };
         };
-        save.bindSave(capture);
-        tile.bindSave(capture);
+        save.bindInvocation(capture);
+        tile.bindInvocation(capture);
         tile.beforeInvocation = [weak]
         {
             if (weak != nullptr)

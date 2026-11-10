@@ -344,8 +344,13 @@ private:
     {
         if(auto* surface=surfaceFor(rowFor(id)))
         {
-            focusVisibility->keyboardInput();
             auto& action=more?static_cast<juce::Button&>(surface->more):surface->enabled;
+            const auto* viewport=getViewport();
+            const auto* content=viewport->getViewedComponent();
+            if(!content || !viewport->getViewArea().contains(content->getLocalArea(&action,action.getLocalBounds())))
+                return false;
+
+            focusVisibility->keyboardInput();
             action.grabKeyboardFocus();
             return action.hasKeyboardFocus(false);
         }

@@ -233,7 +233,7 @@ private:
     SwellEngine& engine;ExportSnapshot state;std::shared_ptr<const PreparedExport> displayed;juce::String identity,rangeIdentity,localMessage;
     double pendingSince=0;bool refreshing=false;uint64_t lastDelivery=0;std::optional<uint64_t> mixSession,mixPass;
     controls::ActionButton play{"",controls::CommandIcon::play,true},stop{"",controls::CommandIcon::stop},back{"Return to Perform",controls::CommandIcon::returnBack};
-    controls::FileSaveAction save{"Save WAV...",controls::CommandIcon::save};
+    controls::CapturedActionButton save{"Save WAV...",controls::CommandIcon::save};
     controls::TimelineZoomControls zoom;controls::TimelineNavigation navigation;std::optional<ZoomScope> zoomInvocation;
     controls::ExportLevelsControl mix;controls::FileDragTile tile;
     juce::Rectangle<int> left,right,heading,caption,mixHeading,ruler,chart,legend,timeArea,statusArea;

@@ -52,3 +52,19 @@ UI standards, strict OpenSpec validation, the user-guide currency check
 and Git whitespace checks passed. Native component tests exercised JUCE
 accessibility handlers. A live Windows screen reader, FL Studio hosting
 and physical high-DPI displays remain unverified.
+
+## PR #142 review follow-up
+
+Settings Delete now captures the selected IDs, session and Perform pass
+before keyboard or accessibility dispatch. The native editor test changes
+selection before delivery, then verifies the original group still requires
+confirmation and Escape leaves all swells intact. The list test verifies
+that an action in a fully clipped but recycled row falls back to list focus
+without scrolling, while a visible action still receives restored focus.
+
+The Release build passed. CTest passed 96 of 99 cases on its initial run.
+The editor test passed after its Settings fixture restored the previous page
+and the test ran in isolation. The Export invocation test and both Perform
+foreground-focus checks also passed on isolated reruns. Logs are in
+`out/build-logs/Release/20261110-210414-caa09f90` and the
+`out/build-logs/p7-list-review-*.log` files.

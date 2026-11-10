@@ -160,6 +160,21 @@ static void rowFocusCases()
     auto* otherAction=other->getChildComponent(0);
     REQUIRE(otherAction->getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::focus));
     REQUIRE(otherAction->hasKeyboardFocus(false) && list.getNumSelectedRows()==2 && reveals==0);
+
+    list.restoreMenuFocus("id-0002",true);
+    REQUIRE(more->hasKeyboardFocus(false));
+    auto* viewport=list.getViewport();
+    viewport->setViewPosition(0,3*list.getRowHeight());
+    const auto view=viewport->getViewPosition();
+    auto* buffered=list.getComponentForRowNumber(2);
+    REQUIRE(buffered); // JUCE retains the row just above the viewport.
+    auto* clipped=buffered->getChildComponent(1);
+    const auto clippedBounds=viewport->getViewedComponent()->getLocalArea(clipped,clipped->getLocalBounds());
+    REQUIRE(!viewport->getViewArea().intersects(clippedBounds));
+    inspector.grabKeyboardFocus();
+    list.restoreMenuFocus("id-0002",true);
+    REQUIRE(list.hasKeyboardFocus(false) && viewport->getViewPosition()==view);
+    REQUIRE(list.getNumSelectedRows()==2 && reveals==0);
     host.removeFromDesktop();
 }
 

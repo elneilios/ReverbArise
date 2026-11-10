@@ -180,7 +180,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     spanLabel.setText("Bars",juce::dontSendNotification);
     barStartLabel.setText("Bar start",juce::dontSendNotification);barEndLabel.setText("End excl.",juce::dontSendNotification);
     toneStartLabel.setText("Tone start bar",juce::dontSendNotification);toneEndLabel.setText("End exclusive",juce::dontSendNotification);
-    for(auto* button:{&addButton,&removeButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
+    addAndMakeVisible(removeButton);
+    for(auto* button:{&addButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
     addAndMakeVisible(assetInfoButton);assetInfoButton.setTooltip("Copy the selected swell's managed asset paths for backup or validation.");
     assetInfoButton.onClick=[this]
     {
@@ -242,11 +243,18 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     snapButton.setToggleState(true,juce::dontSendNotification);
     addButton.onClick=[this]{processor.swellEngine().addTarget(processor.getSongTime().sample);refresh();};
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
-    removeButton.onClick=[this]
+    removeButton.setName("settingsDeleteSwells");
+    removeButton.bindInvocation([this]() -> m3::ui::controls::CapturedActionButton::Invocation
     {
-        const auto current=processor.swellEngine().snapshot();
-        requestDeleteSwells(current.session.selected,current.sessionEpoch,processor.getWorkflowSnapshot().pass);
-    };
+        if(updating || destroying)return {};
+        auto current=processor.swellEngine().snapshot();
+        const auto flow=processor.getWorkflowSnapshot();
+        if(current.session.selected.empty() || flow.mode!=workflow::Mode::live)return {};
+        return [this,ids=std::move(current.session.selected),epoch=current.sessionEpoch,pass=flow.pass]() mutable
+        {
+            requestDeleteSwells(std::move(ids),epoch,pass);
+        };
+    });
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
     auditionButton.onClick=[this]{processor.swellEngine().audition();};stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};

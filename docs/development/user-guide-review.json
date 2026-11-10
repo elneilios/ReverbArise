@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Swells keyboard traversal and context actions, disabled Rename and confirmed group deletion, and updated the Perform guide. Checked popup pointer eligibility and focus return against the approved preview.",
+  "summary": "Reviewed the PR #142 fixes for Settings Delete invocation capture and visible-only list focus restoration. The documented Delete and keyboard flows still apply. Export Save retains its existing guarded command behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 101836,
-      "sha256": "013b99d3b54270a7fbdca8b6492df5bc9cd76b0c3ea354bb919f281cac42fa57"
+      "bytes": 102241,
+      "sha256": "61c8c299a94d2811d316998dd539d764ffa2df04357f84d6e0328629466da0b1"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 15662,
-      "sha256": "67dbf7565227cf323c6cc3b86a10e7173120b237b81f428733ed0dad85d069ee"
+      "bytes": 15752,
+      "sha256": "4949fbc3d95c3a91c0d9e70fc2f537f7b209ab9eb145fb832d6c9c7ace359056"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -579,6 +579,11 @@
       "sha256": "c858103174a485e245fdaddbe2f3f7429b567e15158c7e867942a9e7d84e7c20"
     },
     {
+      "path": "Source/UI/Controls/CapturedActionButton.h",
+      "bytes": 3517,
+      "sha256": "2d67096247b259f5a34da61cfb0e61ab98f2f1f133879ab0e5f5f50a7bc21adb"
+    },
+    {
       "path": "Source/UI/Controls/ChoicePopup.h",
       "bytes": 14382,
       "sha256": "4779cc50b8fefcbae755d69274da16b35c9a024c39c9f7a6968ddc94d7715513"
@@ -635,13 +640,8 @@
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
-      "bytes": 4412,
-      "sha256": "6f9341b6e067304bee9246a8ddcca9cd87627387d89f21a2ac68013c5b087f12"
-    },
-    {
-      "path": "Source/UI/Controls/FileSaveAction.h",
-      "bytes": 3368,
-      "sha256": "b6a85ab075a3d0285b1fc55a2e480e47f053affd49c23198992ba0ed080a690a"
+      "bytes": 4486,
+      "sha256": "25074247a307d916c4e1474b74f30725d42af96d9688177c7723805cd3b97cd6"
     },
     {
       "path": "Source/UI/Controls/FocusViewport.h",
@@ -740,8 +740,8 @@
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
-      "bytes": 19501,
-      "sha256": "ec3ed3374259baadafe96a532fd28ced103f21b246e14fbce9f402691b5c1ce2"
+      "bytes": 19762,
+      "sha256": "a3e1a2b5ad39734910d181043c98e7ab0b1a6dd291af958b9bf5e59a6626f159"
     },
     {
       "path": "Source/UI/Controls/SwellListOrder.h",
@@ -790,13 +790,13 @@
     },
     {
       "path": "Source/UI/ExportFileInvocations.h",
-      "bytes": 6790,
-      "sha256": "7624dabca536eaa4fbef143e94af4a58e7b126f48306ee8318a1a90fec53afd6"
+      "bytes": 6826,
+      "sha256": "9cbc3d1db6aa9926428837b8ff2c52477ed7d7e6e8304c8e8e10381985a4f8d3"
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 23199,
-      "sha256": "47eea14b9828dd5f1f24c774ce221cc30f9aa7740b42deec974f202c3127d426"
+      "bytes": 23205,
+      "sha256": "9a5e1e2e5bbdcdc6d20de3c8823bffddf0ccec12b17bd768230f539dee38f66d"
     },
     {
       "path": "Source/UI/InitialPerformView.h",

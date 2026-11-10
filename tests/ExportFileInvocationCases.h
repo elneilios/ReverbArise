@@ -6,12 +6,12 @@ namespace exportFileInvocationReview
 {
 using m3::ui::ExportFileInvocations;
 using m3::ui::controls::FileDragTile;
-using m3::ui::controls::FileSaveAction;
+using m3::ui::controls::CapturedActionButton;
 using m3::ui::controls::WavDragResult;
 
 inline void cases()
 {
-    FileSaveAction save("Save WAV");
+    CapturedActionButton save("Save WAV");
     FileDragTile tile;
     juce::Component host;
     host.setSize(390, 300);

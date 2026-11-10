@@ -193,6 +193,48 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
     const std::vector<juce::String> group{first,second};
     REQUIRE(engine.selectTargets(group,first));
     editor.refresh();
+
+    // The Settings command queues keyboard and accessibility activation.
+    // Change selection before dispatch so a late lookup would delete the
+    // unrelated singleton without confirmation.
+    auto* settingsButton=dynamic_cast<juce::Button*>(named(editor,"diagnostics"));
+    REQUIRE(settingsButton);
+    settingsButton->onClick();
+    auto* settingsTabs=editor.settingsPanel();
+    const auto previousSettingsPage=settingsTabs->selectedPage();
+    settingsTabs->selectPage(m3::ui::SettingsPage::swell);
+    auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(settingsTabs->getTopLevelComponent());
+    auto* settingsDelete=dynamic_cast<CommandButton*>(named(*settingsTabs,"settingsDeleteSwells"));
+    REQUIRE(settingsWindow && settingsDelete && settingsDelete->isShowing());
+    for(const auto accessibility : {false,true})
+    {
+        REQUIRE(engine.selectTargets(group,first));
+        editor.refresh();
+        REQUIRE(settingsDelete->isEnabled());
+        if(accessibility)
+        {
+            auto* handler=settingsDelete->getAccessibilityHandler();
+            REQUIRE(handler && handler->getActions().invoke(juce::AccessibilityActionType::press));
+        }
+        else REQUIRE(settingsDelete->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+
+        REQUIRE(juce::Component::getCurrentlyModalComponent()==nullptr);
+        REQUIRE(engine.selectTargets({unaffected},unaffected));
+        editor.refresh();
+        pump();
+
+        auto* settingsConfirm=juce::Component::getCurrentlyModalComponent();
+        REQUIRE(settingsConfirm && settingsConfirm->getName()=="deleteSwellConfirmation");
+        REQUIRE(settingsConfirm->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));
+        pump();
+        const auto current=engine.savedSession();
+        REQUIRE(current.swells.size()==3 && current.primary==unaffected && m3::find(current,unaffected));
+    }
+    settingsTabs->selectPage(previousSettingsPage);
+    settingsWindow->closeButtonPressed();
+    editor.toFront(true);
+    REQUIRE(engine.selectTargets(group,first));
+    editor.refresh();
     auto* single=openMenu(*list,unaffected,true);
     REQUIRE(!single->state().items()[0].eligible && single->state().items()[1].label=="Delete");
     single->dismiss();
