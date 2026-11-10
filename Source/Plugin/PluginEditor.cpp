@@ -203,8 +203,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
     separationSlider.beforeInvocation=[this]{separationPass=processor.getWorkflowSnapshot().pass;};
     separationSlider.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,separationSlider.getValue()/1000,s.autoRegenerate,separationPass.value_or(processor.getWorkflowSnapshot().pass));}};
+    autoButton.setName("autoRefreshAfterRecapture");
     autoButton.beforeInvocation=[this]{refreshPass=processor.getWorkflowSnapshot().pass;};
-    autoButton.onClick=[this]{const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,s.separationSeconds,autoButton.getToggleState(),refreshPass.value_or(processor.getWorkflowSnapshot().pass));};
+    autoButton.onClick=[this]{const auto s=processor.swellEngine().savedSession();const auto pass=std::exchange(refreshPass,{}).value_or(processor.getWorkflowSnapshot().pass);
+        processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,s.separationSeconds,autoButton.getToggleState(),pass);refresh();};
     analyzeButton.onClick=[this]
     {
         const auto capture=processor.getCaptureSnapshot();
@@ -251,9 +253,32 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     liveRoutingBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(liveRoutingBox,false);};
     gainPolicyBox.beforeInvocation=[this,captureSelectorContext]{captureSelectorContext(gainPolicyBox,false);};
     inCurveBox.onChange=[this]{curveChanged(true);};outCurveBox.onChange=[this]{curveChanged(false);};
-    const auto activity=[this]
-    {if(updating)return;processor.swellEngine().edit(state.session.primary,[&](auto& w,auto&){w.enabled=enabledButton.getToggleState();w.muted=muteButton.getToggleState();w.solo=soloButton.getToggleState();return true;});};
-    enabledButton.onClick=activity;muteButton.onClick=activity;soloButton.onClick=activity;
+    const auto flagScope=[this]{return FlagScope{state.sessionEpoch,processor.getWorkflowSnapshot().pass,state.session.primary};};
+    const auto bindFlag=[this,flagScope](m3::ui::controls::BooleanToggle& control,std::optional<FlagScope>& pending,auto apply)
+    {
+        control.beforeInvocation=[&pending,flagScope]{pending=flagScope();};
+        control.onClick=[this,&control,&pending,flagScope,apply]
+        {
+            const auto target=std::exchange(pending,{}).value_or(flagScope());
+            if(updating)return;
+            const auto current=processor.swellEngine().snapshot();
+            if(control.isEnabled() && target.primary.isNotEmpty() && current.sessionEpoch==target.epoch
+                && current.session.primary==target.primary && processor.getWorkflowSnapshot().pass==target.pass)
+                apply(target,control.getToggleState());
+            refresh();
+        };
+    };
+    const auto activity=[this](bool m3::Swell::*flag)
+    {
+        return [this,flag](const FlagScope& target,bool value)
+        {processor.swellEngine().edit(target.primary,[flag,value](auto& w,auto&){w.*flag=value;return true;},target.epoch);};
+    };
+    enabledButton.setName("swellEnabled");soloButton.setName("swellSolo");muteButton.setName("swellMute");
+    bindFlag(enabledButton,enabledScope,activity(&m3::Swell::enabled));
+    bindFlag(muteButton,muteScope,activity(&m3::Swell::muted));
+    bindFlag(soloButton,soloScope,activity(&m3::Swell::solo));
+    bindFlag(freezeButton,freezeScope,[this](const FlagScope& target,bool value)
+    {processor.swellEngine().setFrozen(target.primary,value,target.epoch);});
     mappingButton.onClick=[this]{processor.setMappingEnabled(mappingButton.getToggleState());};clearButton.onClick=[this]{processor.requestClearCapture();refresh();};
     toneButton.onClick=[this]{processor.setTestToneEnabled(toneButton.getToggleState());};
     toneStartSlider.onValueChange=[this]{if(!updating)processor.setToneStartBar(static_cast<int>(toneStartSlider.getValue()));};
@@ -285,7 +310,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");
     workflowHeader.onSettings=[this]{if(!destroying)setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
     automaticButton.beforeInvocation=[this]{automaticPass=processor.getWorkflowSnapshot().pass;};
-    automaticButton.onClick=[this]{processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),automaticPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
+    automaticButton.onClick=[this]{const auto pass=std::exchange(automaticPass,{}).value_or(processor.getWorkflowSnapshot().pass);
+        processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),pass);refresh();};
     sampleUnitsButton.onClick=[this]{refresh();};
     suppressionButton.onClick=[this]{processor.swellEngine().resetSuppression();refresh();};
     defaultIRButton.onClick=[this]{learnWorkspace.openDefaultIrFile();};
@@ -316,7 +342,6 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     regenerationKnob.onValueChange=[this]{if(!updating)processor.swellEngine().setRegenerationSensitivity(static_cast<float>(regenerationKnob.getValue()/100));};
     inspectorContent.addAndMakeVisible(freezeButton);freezeButton.setName("freezeRender");
     freezeButton.setTooltip("Keep this rendered wet audio fixed against source changes. Unfreeze to change source/IR or extend render support. Envelope, gain and placement remain editable.");
-    freezeButton.onClick=[this]{processor.swellEngine().setFrozen(state.session.primary,freezeButton.getToggleState());refresh();};
     markerButton.beforeInvocation=[this]{markingPass=processor.getWorkflowSnapshot().pass;};
     markerButton.onClick=[this]{processor.swellEngine().setAutoMarkers(markerButton.getToggleState(),markingPass.value_or(processor.getWorkflowSnapshot().pass));refresh();};
     addAndMakeVisible(isolateDryButton);isolateDryButton.setName("isolateDry");
@@ -408,7 +433,6 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     inspectorContent.addAndMakeVisible(resetMenu);resetMenu.setName("resetSwellMenu");resetMenu.setButtonText("Reset All");
     resetMenu.setTooltip("Reset this whole swell back to creation defaults: wet shape plus dry source points, IR, enabled/solo/freeze and activity.");
     resetMenu.onClick=[this]{const auto id=state.session.primary;processor.swellEngine().resetSwell(id,true);refresh();};
-    freezeButton.setButtonText("Freeze");
     for(auto* label:{&captureDiagnostic,&playbackDiagnostic,&policyDiagnostic}){diagnosticsContent.addAndMakeVisible(label);label->setFont(juce::FontOptions(m3::ui::controlSize));label->setJustificationType(juce::Justification::topLeft);}
     diagnosticsContent.addAndMakeVisible(liveDiagnostic);liveDiagnostic.setName("diagnosticLiveAdmission");
     m3::ui::applyTextRole(liveDiagnostic,m3::ui::TextRole::helper,juce::Justification::topLeft);
@@ -837,6 +861,7 @@ void PreverbAudioProcessorEditor::refresh()
     markerButton.setToggleState(state.session.autoMarkersEnabled,juce::dontSendNotification);
     markerState.setText(!state.session.autoMarkersEnabled?"Off":!state.session.automaticProcessing?"Master paused":state.analyzing?"Analysing":"On",juce::dontSendNotification);
     isolateDryButton.setToggleState(state.session.isolateDry,juce::dontSendNotification);isolateDryButton.setEnabled(state.session.auditionMode==m3::AuditionMode::dryWet);
+    isolateDryButton.setUnavailableReason("Available during dry + wet audition. The dry isolation setting is retained.");
     isolateButton.setToggleState(state.session.isolateSelected,juce::dontSendNotification);
     if(!tailSlider.isMouseButtonDown() && !tailSlider.hasKeyboardFocus(true))tailSlider.setValue(state.session.postRollSeconds,juce::dontSendNotification);
     if(!auditionSlider.isMouseButtonDown() && !auditionSlider.hasKeyboardFocus(true))auditionSlider.setValue(state.session.auditionDb,juce::dontSendNotification);
@@ -906,6 +931,9 @@ void PreverbAudioProcessorEditor::refresh()
     removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
     auditionButton.setEnabled(state.auditionReady && !(state.session.liveEnabled && diagnostics.isPlaying));stopButton.setEnabled(state.playing || state.auditionReady);fullButton.setEnabled(w && state.raw);
     freezeButton.setEnabled(w && (w->frozen || w->phase==m3::Phase::ready));
+    freezeButton.setUnavailableReason(w?"Wait for a ready render before freezing.":"Select a swell to freeze its render.");
+    for(auto* control:std::initializer_list<m3::ui::controls::BooleanToggle*>{&enabledButton,&soloButton,&muteButton})
+        control->setUnavailableReason("Select a swell to change this setting.");
     for(auto* control:std::array<juce::Component*,6>{&enabledButton,&muteButton,&soloButton,&inCurveBox,&outCurveBox,&setBarsButton})control->setEnabled(w!=nullptr);
     if(w && w->frozen){for(int field:{arrival,sourceA,sourceB})fields[field].setEnabled(false);setBarsButton.setEnabled(false);}
     refreshSourceRangeFeedback(w);
@@ -997,6 +1025,7 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
     recaptureStatus.setText(flow.recapture?"Recapture armed for encountered positions; commit on DAW Stop":"Recapture off; mapped source protected",juce::dontSendNotification);
     mappingButton.setEnabled(!flow.locked());mappingButton.setTooltip("Legacy control requests Learn or Perform; workflow guards always apply.");
+    mappingButton.setUnavailableReason("Wait for the current capture pass to finish.");
     clearButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     regenerationKnob.setEnabled(false);regenerationKnob.setTooltip("Saved for compatibility. Source replacement requires Learn with explicit Recapture.");
     const bool edit=caps.edit;timeline.setEditingEnabled(edit);
@@ -1026,8 +1055,10 @@ void PreverbAudioProcessorEditor::refresh()
     if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
     if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
+    automaticButton.setUnavailableReason(flow.locked()?"Wait for the current capture pass to finish.":"Available in Learn or Perform.");
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
     toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
+    toneButton.setUnavailableReason("The test tone is available in Perform.");
     if(learningLayout)learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);

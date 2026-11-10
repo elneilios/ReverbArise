@@ -173,7 +173,7 @@ public:
     bool setGainPolicy(GainPolicy);
     void setRegenerationSensitivity(float);
     float changeTolerance() const noexcept {return (1-regeneration.load())*.3f;}
-    bool setFrozen(const juce::String&,bool);
+    bool setFrozen(const juce::String&,bool,uint64_t expectedSession=0);
     void loadDefaultIR(const juce::File&);
     bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);

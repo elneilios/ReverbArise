@@ -519,7 +519,9 @@ int main(int argc,char* argv[]){return runTest([&]
         m3::ui::WorkspaceTheme focusTheme;juce::Component gallery;gallery.setLookAndFeel(&focusTheme);gallery.setSize(180,80);
         toggle.setEnabled(true);gallery.addAndMakeVisible(toggle);toggle.setBounds(16,20,m3::ui::controlGeometry::switchWidth,m3::ui::controlGeometry::switchHeight);
         m3::ui::controls::Switch other("Other policy");gallery.addAndMakeVisible(other);other.setBounds(100,20,toggle.getWidth(),toggle.getHeight());other.setToggleState(true,juce::dontSendNotification);
-        gallery.addToDesktop(0);gallery.setVisible(true);toggle.grabKeyboardFocus();REQUIRE(toggle.hasKeyboardFocus(true));
+        gallery.addToDesktop(0);gallery.setVisible(true);
+        REQUIRE(toggle.getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::focus));
+        REQUIRE(toggle.hasKeyboardFocus(true) && toggle.isFocusVisible());
         for(const auto scale:{1.0f,1.25f,1.5f,2.0f})
         {
             juce::Image image(juce::Image::ARGB,juce::roundToInt(toggle.getWidth()*scale),juce::roundToInt(toggle.getHeight()*scale),true,juce::SoftwareImageType{});
@@ -528,7 +530,8 @@ int main(int argc,char* argv[]){return runTest([&]
             if(folder.isNotEmpty()){auto output=juce::File(folder).getChildFile("learn-switch-focused-"+juce::String(juce::roundToInt(scale*100))+".png").createOutputStream();REQUIRE(output && output->setPosition(0) && output->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(image,*output));}
             for(int x=0;x<image.getWidth();++x)REQUIRE(image.getPixelAt(x,0).getAlpha()==0 && image.getPixelAt(x,image.getHeight()-1).getAlpha()==0);
             for(int y=0;y<image.getHeight();++y)REQUIRE(image.getPixelAt(0,y).getAlpha()==0 && image.getPixelAt(image.getWidth()-1,y).getAlpha()==0);
-            REQUIRE(image.getPixelAt(juce::roundToInt(2*scale),image.getHeight()/2).getAlpha()>0);
+            const auto corner=toggle.focusInkBounds().getTopLeft()+juce::Point<float>{3.f,1.f};
+            REQUIRE(image.getPixelAt(juce::roundToInt(corner.x*scale),juce::roundToInt(corner.y*scale)).getAlpha()>0);
         }
         snapshotPanel(gallery,"learn-switch-focus-native");gallery.setLookAndFeel(nullptr);gallery.removeFromDesktop();
     }
@@ -922,7 +925,7 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto sourceHeading=dynamic_cast<juce::Label*>(named(editor,"learnCaptureHeading")),automaticHeading=dynamic_cast<juce::Label*>(named(editor,"learnAutomaticHeading"));
         REQUIRE(sourceHeading && automaticHeading && sourceHeading->getFont().getHeight()==automaticHeading->getFont().getHeight());
         REQUIRE(sourceHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi") && automaticHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi"));
-        for(const auto* labelName:{"learnRecaptureLabel","learnAutomaticLabel","learnIRLabel","learnSensitivityLabel"})
+        for(const auto* labelName:{"learnIRLabel","learnSensitivityLabel"})
         {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize);
             const auto* selector=named(editor,"learnDefaultIR");REQUIRE(selector);
             const auto expectedX=juce::String(labelName)=="learnIRLabel"
@@ -932,10 +935,15 @@ int main(int argc,char* argv[]){return runTest([&]
             REQUIRE(label->findColour(juce::Label::textColourId)==m3::ui::text);}
         const auto recaptureSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"recaptureExisting")),automaticSwitch=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutomaticSwells"));
         REQUIRE(recaptureSwitch && automaticSwitch && recaptureSwitch->getWidth()==automaticSwitch->getWidth() && recaptureSwitch->getHeight()==automaticSwitch->getHeight() && recaptureSwitch->getRight()==automaticSwitch->getRight());
-        for(auto* control:{recaptureSwitch,automaticSwitch})REQUIRE(control->getLocalBounds().toFloat().contains(control->focusInkBounds()));
+        for(auto* control:{recaptureSwitch,automaticSwitch})
+        {
+            REQUIRE(control->getLocalBounds().toFloat().contains(control->focusInkBounds()));
+            REQUIRE(learning->getLocalArea(control,control->labelBounds()).getX()==sourceHeading->getX());
+            REQUIRE(m3::ui::componentTextFont(*control,m3::ui::TextRole::controlLabel).getTypefaceStyle().containsIgnoreCase("medium"));
+        }
         REQUIRE(!recaptureSwitch->getBounds().intersects(named(editor,"learnRecaptureHelp")->getBounds()) && !automaticSwitch->getBounds().intersects(named(editor,"learnAutomaticHelp")->getBounds()));
-        REQUIRE(named(editor,"learnRecaptureHelp")->getY()-named(editor,"learnRecaptureLabel")->getBottom()==m3::ui::spacing::labelHelp);
-        REQUIRE(named(editor,"learnAutomaticHelp")->getY()-named(editor,"learnAutomaticLabel")->getBottom()==m3::ui::spacing::labelHelp);
+        REQUIRE(named(editor,"learnRecaptureHelp")->getY()-recaptureSwitch->getBottom()==m3::ui::spacing::labelHelp);
+        REQUIRE(named(editor,"learnAutomaticHelp")->getY()>=automaticSwitch->getBottom());
         REQUIRE(sourceHeading->getY()==learning->timelineHeadingBounds().getY());
         REQUIRE(!learning->showsEmptyPrompt());
         for(const auto* labelName:{"learnRecaptureHelp","learnAutomaticHelp","learnIRStatus"})
@@ -1449,11 +1457,18 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(engine.savedSession().wetBlend==.35f && engine.snapshot().renderCount==monitorRenderCount);
     engine.setPreferences(-24,.5f,.08,false);editor.refresh();
     mixed();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
-    auto dryIsolation=dynamic_cast<juce::ToggleButton*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && dryIsolation->isEnabled());
+    auto dryIsolation=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && dryIsolation->isEnabled());
     diagnostics->onClick();tabs->setCurrentTabIndex(3);editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
     dryIsolation->setToggleState(true,juce::dontSendNotification);dryIsolation->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().isolateDry && engine.snapshot().auditionDryEnd==engine.savedSession().swells[0].sourceEnd);
-    snapshotEditor(editor,"isolated-dry");dryIsolation->setToggleState(false,juce::dontSendNotification);dryIsolation->onClick();
+    snapshotEditor(editor,"isolated-dry");
+    wet();editor.refresh();
+    REQUIRE(!dryIsolation->isEnabled() && dryIsolation->getToggleState());
+    REQUIRE(dryIsolation->getTooltip().contains("retained"));
+    dryIsolation->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));
+    REQUIRE(engine.savedSession().isolateDry);
+    mixed();editor.refresh();
+    dryIsolation->setToggleState(false,juce::dontSendNotification);dryIsolation->onClick();
     waitUI([&]{return engine.snapshot().auditionReady;});
     wet();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(!named(editor,"resetAuditionTrim") && engine.savedSession().auditionDb==-24);

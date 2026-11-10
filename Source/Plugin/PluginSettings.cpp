@@ -188,14 +188,15 @@ void PreverbAudioProcessorEditor::layoutSettings()
     const auto row=[&](juce::Component& label,juce::Component& value,int y)
     {label.setBounds(left,y,labelWidth,32);const juce::Rectangle<int> body{left+labelWidth,y,width-labelWidth,32};
         if(auto* selector=dynamic_cast<m3::ui::controls::ChoiceSelector*>(&value))selector->setRowBounds(body);else value.setBounds(body);};
-    row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,30);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
-    mappingButton.setBounds(left,24,width,30);automaticButton.setBounds(left,64,width,30);autoButton.setBounds(left,104,width,30);
+    const auto switchHeight=m3::ui::controlGeometry::switchHeight;
+    row(gainPolicyLabel,gainPolicyBox,24);liveButton.setBounds(left,68,width,switchHeight);row(settingsLabels[0],liveRoutingBox,108);row(liveLevelLabel,liveLevel,150);
+    mappingButton.setBounds(left,24,width,switchHeight);automaticButton.setBounds(left,64,width,switchHeight);autoButton.setBounds(left,104,width,switchHeight);
     row(separationLabel,separationSlider,150);row(settingsLabels[1],defaultIRButton,196);
-    muteButton.setBounds(left,20,150,30);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
+    muteButton.setBounds(left,20,150,switchHeight);sampleUnitsButton.setBounds({});sampleUnitsButton.setVisible(false); // Retained internal exact-coordinate diagnostic seam.
     row(settingsLabels[2],inCurveBox,60);row(settingsLabels[3],outCurveBox,100);
     settingsLabels[4].setBounds(left,146,width,24);
     layoutSourceRange();
-    settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,30);isolateDryButton.setBounds(left+265,56,300,30);
+    settingsLabels[5].setBounds(left,20,width,24);isolateButton.setBounds(left,56,250,switchHeight);isolateDryButton.setBounds(left+265,56,300,switchHeight);
     row(tailLabel,tailSlider,106);row(auditionLabel,auditionSlider,152);
     settingsLabels[6].setBounds(left,12,160,26);generateButton.setBounds(left+175,12,200,30);allButton.setBounds(left+390,12,200,30);
     const auto feedbackBand=m3::ui::controlGeometry::feedbackHeight+m3::ui::spacing::related;
@@ -205,7 +206,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     settingsLabels[8].setBounds(left,132+feedbackBand,160,26);recaptureButton.setBounds(left+175,132+feedbackBand,200,30);cancelButton.setBounds(left+390,132+feedbackBand,200,30);
     recaptureStatus.setBounds(left,170+feedbackBand,width,38);
     clearButton.setBounds(left,214+feedbackBand,220,30);suppressionButton.setBounds(left+240,214+feedbackBand,350,30);
-    toneButton.setBounds(left,258+feedbackBand,width,30);
+    toneButton.setBounds(left,258+feedbackBand,width,switchHeight);
     toneStartLabel.setBounds(left,300+feedbackBand,90,30);toneStartSlider.setBounds(left+95,300+feedbackBand,190,30);toneEndLabel.setBounds(left+300,300+feedbackBand,100,30);toneEndSlider.setBounds(left+405,300+feedbackBand,185,30);
     openDiagnosticsButton.setBounds(left,346+feedbackBand,220,32);
     settingsLabels[9].setBounds({});settingsLabels[10].setBounds({});settingsLabels[11].setBounds({});
