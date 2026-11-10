@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the P6 switches in Learn and Settings and the inline inspector flags. Existing guide labels, actions and behavior still apply.",
+  "summary": "Reviewed the P6 pointer gesture guard. Ordinary clicks, keyboard activation and the guide instructions remain current.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -575,8 +575,8 @@
     },
     {
       "path": "Source/UI/Controls/BooleanToggle.h",
-      "bytes": 9171,
-      "sha256": "e11d025ec68a7819691502b28eddd561d4206e72e14899b2064f00651bda1844"
+      "bytes": 10185,
+      "sha256": "c858103174a485e245fdaddbe2f3f7429b567e15158c7e867942a9e7d84e7c20"
     },
     {
       "path": "Source/UI/Controls/ChoicePopup.h",

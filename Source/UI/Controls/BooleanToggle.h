@@ -3,6 +3,7 @@
 #include <UI/WorkspaceTheme.h>
 #include "FocusVisibility.h"
 #include "InvocationToggle.h"
+#include <optional>
 
 namespace m3::ui::controls
 {
@@ -117,8 +118,39 @@ public:
     void mouseDown(const juce::MouseEvent& event) override
     {
         visibility->pointerInput();
-        if (event.mods.isLeftButtonDown() && prepareInvocation())
+        if (!pressedSource && event.mods.isLeftButtonDown() && prepareInvocation())
+        {
+            pressedSource = event.source;
             juce::ToggleButton::mouseDown(event);
+        }
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+        if (pressedSource == event.source && event.mods.isLeftButtonDown())
+            juce::ToggleButton::mouseDrag(event);
+    }
+
+    void mouseUp(const juce::MouseEvent& event) override
+    {
+        if (pressedSource != event.source) return;
+        pressedSource.reset();
+        if (event.mods.isAnyMouseButtonDown() && !event.mods.isLeftButtonDown())
+            juce::ToggleButton::mouseExit(event);
+        else
+            juce::ToggleButton::mouseUp(event);
+    }
+
+    void enablementChanged() override
+    {
+        if (!isEnabled()) pressedSource.reset();
+        juce::ToggleButton::enablementChanged();
+    }
+
+    void visibilityChanged() override
+    {
+        if (!isVisible()) pressedSource.reset();
+        juce::ToggleButton::visibilityChanged();
     }
 
     bool keyPressed(const juce::KeyPress& key) override
@@ -203,7 +235,7 @@ private:
 
     bool activate()
     {
-        if (!prepareInvocation()) return false;
+        if (pressedSource || !prepareInvocation()) return false;
         // Match pointer release on the message thread. A later input cannot
         // replace the binding context of a queued keyboard or accessibility edit.
         setToggleState(!getToggleState(), juce::sendNotificationSync);
@@ -213,5 +245,6 @@ private:
     const ToggleForm form;
     const ToggleLabelSide labelSide;
     juce::SharedResourcePointer<FocusVisibility> visibility;
+    std::optional<juce::MouseInputSource> pressedSource;
 };
 }

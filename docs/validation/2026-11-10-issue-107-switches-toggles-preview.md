@@ -34,3 +34,11 @@ during wet-only audition. The responsive and scale checks passed, including
 the compact inspector row and fixed Reset. UI standards, guide currency and
 strict OpenSpec change validation passed. Physical DPI and FL Studio were
 outside this run.
+
+PR #138 review follow-up gated drag and release on an accepted primary press
+from the same pointer. The right-button regression reproduced the unguarded
+release before the fix. The focused Windows Release component test passed
+afterward for both the switch and checkbox, including normal click, pointer
+cancellation, keyboard and accessibility paths. Logs are under
+`out/build-logs/Release/p6-pointer-review`. The full suite was run on the
+original PR revision.

@@ -57,6 +57,20 @@ static void inputCases(ToggleForm form)
         return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), point, modifiers,
                                 0, 0, 0, 0, 0, &control, &control, time, point, time, 1, false);
     };
+    const auto indicator = control.indicatorBounds().getCentre();
+    const auto rightPress = event(indicator, juce::ModifierKeys::rightButtonModifier);
+    const auto rightDrag = event(indicator.translated(2, 0), juce::ModifierKeys::rightButtonModifier);
+    mouseTarget.mouseEnter(rightPress);
+    control.mouseDown(rightPress);
+    mouseTarget.mouseDrag(rightDrag);
+    REQUIRE(!control.isDown());
+    // Reproduce the held state JUCE's drag handler can set when a real
+    // desktop pointer is over the control. Release still needs a valid press.
+    control.setState(juce::Button::buttonDown);
+    mouseTarget.mouseUp(rightDrag);
+    REQUIRE(preparations == 0 && commits == 0 && !control.getToggleState());
+    control.setState(juce::Button::buttonNormal);
+
     for (const auto point : {control.indicatorBounds().getCentre(), control.labelBounds().getCentre()})
     {
         control.mouseDown(event(point, juce::ModifierKeys::leftButtonModifier));

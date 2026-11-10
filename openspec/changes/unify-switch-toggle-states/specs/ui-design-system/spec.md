@@ -18,6 +18,7 @@ Both forms SHALL distinguish quiet hover and held feedback on the indicator surf
 - **WHEN** the user hovers, holds or releases the pointer on a switch or checkbox
 - **THEN** the indicator's border and background show distinct hover and held states without obscuring its accepted value
 - **AND** the label and indicator activate the same control, and cancelling the press before activation leaves the value unchanged
+- **AND** a pointer release can activate the control only after an eligible primary press from the same pointer
 
 #### Scenario: Change focus input method
 - **WHEN** the user tabs to a control or explicitly focuses it through accessibility
