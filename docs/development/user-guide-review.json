@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Loop host admission, Perform workspace, and transport specifications against the existing guide. The guide already covers Pattern and Playlist repeats, independent capture and live timing, and fixed-grid wet protection.",
+  "summary": "Reviewed Issue #144 linked live output protection including Dry + Wet routing fades, the Live wet control, and separate Audition and export gain paths.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -445,8 +445,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 87746,
-      "sha256": "de1b71dac03544c76f1874801440d85c116500e2d8b09c4325a865ce01bdc659"
+      "bytes": 87751,
+      "sha256": "a854091a99099df3c975fd4ffe04a017f618fd7becbb4f6c9b98e2638ebd3f78"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -514,6 +514,11 @@
       "sha256": "ac53cd49a78f0690b0485383781c0d59cb606d375fa5a03b3709271bb9c6f708"
     },
     {
+      "path": "Source/Playback/LiveOutputPeakGuard.h",
+      "bytes": 1243,
+      "sha256": "10290a253fef928ac6240fb45e171d7ccf751a839c8a2858d0043c235dc8dfdd"
+    },
+    {
       "path": "Source/Playback/LiveTransportClock.h",
       "bytes": 2764,
       "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
@@ -535,13 +540,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 17851,
-      "sha256": "c492153c8902ff4d77f04be7d8dbdf8d6f0b5bb418113cbdf3a1bdc0882d6725"
+      "bytes": 18226,
+      "sha256": "5698e28be5de9065ac0d0e912cc5b2126a0a1d4055c91206448004cf317a136a"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 4701,
-      "sha256": "4a96761d319c738d656a563ee7c42f003f1a0c7bce0253bfbe41e4f1bda34573"
+      "bytes": 4768,
+      "sha256": "018aeab2df23eb4d595a88029dc7b06639ad9eb27a0baf55ac6487f669eb19ac"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -550,8 +555,8 @@
     },
     {
       "path": "Source/Playback/LoopWetPlan.h",
-      "bytes": 1663,
-      "sha256": "07e40823db05d7a26cfa8e556f1249d87dfa332ab64da2dc0adfc4805fbdda09"
+      "bytes": 1732,
+      "sha256": "22609e1a811efb0597331c4ccfcb8b5c572daf4d314060753e69cee39260e31e"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -565,13 +570,13 @@
     },
     {
       "path": "Source/Playback/TransportPlayback.cpp",
-      "bytes": 12013,
-      "sha256": "cfb65fac7bd19bf7bd5d19e8db0bfdff0b49ba2fc87855a42a65c3a6e028eb27"
+      "bytes": 12796,
+      "sha256": "fcdd0866e73124c83cf8696f6bc0919fc77dafbe1499218dcb21004e0bb540cf"
     },
     {
       "path": "Source/Playback/TransportPlayback.h",
-      "bytes": 3914,
-      "sha256": "aefb397399872dee192b70c3b248a0ea131e5ae3f39da1fd74f7d187a59ebb49"
+      "bytes": 4031,
+      "sha256": "2cd2de20a85b029d02dd90b05eecfa206512d356b2f1de19eb27b2681165ad59"
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
@@ -995,8 +1000,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 51489,
-      "sha256": "e9a44e940078340aaadc75d5bd8b87508faa0b087de175aba443acd216c75fde"
+      "bytes": 52052,
+      "sha256": "5625f8ca7287d2261ab9284eeca6a69367d5f79c7ca042622852006b529fcd2b"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

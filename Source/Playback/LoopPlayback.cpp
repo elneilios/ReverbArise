@@ -242,7 +242,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     wasObserving = canObserve;
     if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
     if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
-    if (!validFrames) { cursor = 0; return; }
+    if (!validFrames) { cursor = 0; outputGuard.reset(); return; }
     const auto observePlaylistPhrase = [&](uint16_t roles, int offset)
     {
         if ((roles & phrase) && playlist && playlist->valid && scheduler.state() == LoopCueScheduler::State::standby)
@@ -272,6 +272,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     };
     if (!canPlay && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {
+        outputGuard.reset();
         // In Learn, verify the bounded event batch without processing dry samples.
         if (canObserve)
         {
@@ -296,6 +297,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         return;
     }
     using State = LoopCueScheduler::State;
+    outputGuard.prepare(rate);
     const auto fadeSamples = std::isfinite(rate) ? std::clamp(rate * .005,1.0,960.0) : 1.0;
     const auto dryStep = static_cast<float>(1.0 / fadeSamples);
     if (canPlay && !interrupted && scheduler.state() == State::repeating && held >= 0
@@ -339,22 +341,24 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             const auto samplePlan = [&](const LoopPlaybackPublication& publication){
                 const auto mix = publication.plan.sample(cycle,scheduler.firstCycle(),scheduler.lastCycle(),position);
                 const auto gain = scheduler.usesGrid() ? publication.fixedGridGain : publication.gain;
-                return LoopWetSample{mix.left * gain,mix.right * gain};
+                return LoopWetSample{mix.left * gain,mix.right * gain,mix.present};
             };
             wet = samplePlan(*plan);
             if (fadingFrom >= 0)
             {
                 const auto old = samplePlan(*slots[fadingFrom].data);
                 const auto weight = 1.0f - static_cast<float>(--editFadeRemaining) / static_cast<float>(editFadeLength);
-                wet = {std::lerp(old.left,wet.left,weight),std::lerp(old.right,wet.right,weight)};
+                wet = {std::lerp(old.left,wet.left,weight),std::lerp(old.right,wet.right,weight),
+                    wet.present || (old.present && weight < 1.0f)};
                 if (editFadeRemaining == 0) releaseEditFade();
             }
             lastWet = wet;
+            lastWetOnly = plan->wetOnly;
         }
         else if (state == LoopCueScheduler::State::stopping)
         {
             const auto fade = scheduler.fadeWeight();
-            wet = {lastWet.left * fade,lastWet.right * fade};
+            wet = {lastWet.left * fade,lastWet.right * fade,lastWet.present && fade > 0.0f};
         }
         else lastWet = {};
         if (!scheduler.active()) releaseHeld();
@@ -362,6 +366,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         dry += std::clamp(dryTarget-dry,-dryStep,dryStep);
         if (dry != 1 || wet.left != 0) left[offset] = dry * left[offset] + wet.left;
         if (dry != 1 || wet.right != 0) right[offset] = dry * right[offset] + wet.right;
+        if (!lastWetOnly) outputGuard.protectMix(left[offset],right[offset],wet.left,wet.right,wet.present);
+        else outputGuard.reset();
     }
     retireLatestWithoutSource(revision);
     cursor += frames;

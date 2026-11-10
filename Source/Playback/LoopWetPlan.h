@@ -5,7 +5,7 @@
 
 namespace m3
 {
-struct LoopWetSample { float left = 0, right = 0; };
+struct LoopWetSample { float left = 0, right = 0; bool present = false; };
 
 struct LoopWetPlan
 {
@@ -31,6 +31,7 @@ struct LoopWetPlan
             if (it == audio.segments.begin()) continue;
             const auto& segment = *std::prev(it);
             if (*local >= segment.end) continue;
+            wet.present |= segment.count != 0;
             for (size_t index = 0; index < segment.count; ++index)
             {
                 const auto& render = *audio.entries[segment.members[index]].audio;

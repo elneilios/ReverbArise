@@ -103,6 +103,8 @@ private:
     std::optional<double> playlistPhrasePpq;
     int64_t cursor = 0;
     LoopWetSample lastWet;
+    LiveOutputPeakGuard outputGuard;
+    bool lastWetOnly = false;
     float dry = 1;
     bool wasObserving = false;
 };

@@ -39,13 +39,14 @@ The actual positioned wet sum receives one fixed attenuation only when its
 sample peak would exceed **-1 dBFS**. Level changes below this ceiling produce
 the requested amplitude ratio. Once protection acts, further gain can be
 ceiling-constrained; status/Diagnostics separates Level, calibration and
-protection. This protects wet samples, not the final live dry-plus-wet sum or
-true peaks. IR and raw convolution files are never rewritten by gain staging.
+protection. This stage protects wet sample peaks. The realtime output stage
+below protects the live dry-plus-wet sum separately. IR and raw convolution
+files are never rewritten by gain staging.
 
 ## Existing projects and rollback
 
-Versions 1-7 retain **Legacy** with saved edits, -6 dBFS guard and original
-output. Select **Settings > Playback > Gain staging > Musical (source energy
+Versions 1-7 retain **Legacy** with saved edits, -6 dBFS wet guard and
+calibration. Select **Settings > Playback > Gain staging > Musical (source energy
 +6 dB)** to adopt explicitly. Numerical edits and assets are preserved; saved
 Level becomes an adjustment around the new calibration. Adoption stops audition
 and prepares eligible swells without reconvolution. Frozen swells lacking a
@@ -73,10 +74,20 @@ wet contribution alone with Wet only On. Wet and combined-sum safety guards can
 reduce level; audition boundary ramps and finite-window membership differ from
 host playback. Legacy sessions retain linear blend and saved -60 to 0 dB trim
 until an explicit Wet only toggle adopts live-level monitoring. Stored legacy
-trim is then inactive, not erased. Live Dry + Wet adds wet at saved Live Wet gain
-to unchanged incoming dry. Audition leaves live settings alone. Export snapshots
-accepted audio, policy and gain per instance; pending
-replacement work cannot change that bounce's snapshot.
+trim is then inactive, not erased. Audition leaves live settings alone. Export
+snapshots accepted audio, policy and gain per instance; pending replacement
+work cannot change that bounce's snapshot.
+
+Realtime Song and Loop Dry + Wet sum unity dry with the wet contribution at
+its prepared Live Wet gain. A separate linked stereo guard limits the live mix
+to **-1 dBFS sample peak** while wet contributes or the guard is recovering
+within a wet interval. The guard acts on the current sample and recovers
+linearly to unity within 50 ms after the last limiting peak. It adds no latency.
+Both channels and both contributions receive the same gain. When the mix
+returns to dry only, the incoming dry passes through unchanged. The ceiling
+does not guarantee inter-sample peaks or cap an already hot dry-only input.
+Wet Only, Audition, Learn capture, host offline rendering and WAV Export retain
+their existing gain paths.
 
 ## FL Studio acceptance
 

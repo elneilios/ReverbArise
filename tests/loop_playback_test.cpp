@@ -406,6 +406,7 @@ void gridCueCases()
         REQUIRE(playback.publish(std::move(publication)));
 
         int64_t cursor = 0;
+        float dryLevel = 0, lastRight = 0;
         const auto through = [&](int64_t until, uint16_t midi = 0, bool clockRunning = true,
                                  LoopPlayback::Access access = LoopPlayback::Access::perform, bool seek = false)
         {
@@ -413,6 +414,8 @@ void gridCueCases()
             while (cursor <= until)
             {
                 std::array<float,128> left{},right{};
+                left.fill(dryLevel);
+                right.fill(-dryLevel * 0.5f);
                 const auto frames = static_cast<int>(std::min<int64_t>(left.size(),until-cursor+1));
                 MidiObservations events;
                 for (int offset = 0; offset < frames; ++offset)
@@ -429,6 +432,7 @@ void gridCueCases()
                 seek = false;
                 REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
                 sample = left[frames-1];
+                lastRight = right[frames-1];
                 cursor += frames;
             }
             return sample;
@@ -450,12 +454,16 @@ void gridCueCases()
 
         REQUIRE(through(3*loopLength-10,cue) == 0); // Too late for the next downbeat.
         REQUIRE(through(3*loopLength) == 0 && playback.status().playback == State::queued);
-        REQUIRE(through(4*loopLength-16) > 0 && playback.status().playhead == -16);
+        dryLevel = .9f;
+        REQUIRE(through(4*loopLength-17) == dryLevel);
+        REQUIRE(through(4*loopLength-16) == LiveOutputPeakGuard::ceiling && playback.status().playhead == -16);
+        REQUIRE(std::abs(lastRight - (-.45f - .0075f) * LiveOutputPeakGuard::ceiling / (.9f + .0075f)) < 1e-6f);
         playback.requestFinish();
         REQUIRE(through(4*loopLength-15) > 0 && playback.status().playback == State::finishing);
         playback.requestFinish();
-        REQUIRE(through(4*loopLength-14) > 0 && playback.status().playback == State::stopping);
-        REQUIRE(through(4*loopLength+240) == 0 && playback.status().playback == State::standby);
+        REQUIRE(through(4*loopLength-14) == LiveOutputPeakGuard::ceiling && playback.status().playback == State::stopping);
+        REQUIRE(through(4*loopLength+240) == dryLevel && playback.status().playback == State::standby);
+        dryLevel = 0;
         REQUIRE(through(4*loopLength+241,cue | finish) == 0 && playback.status().playback == State::standby);
         REQUIRE(through(4*loopLength+242,cue) == 0 && playback.status().playback == State::queued);
         REQUIRE(through(4*loopLength+243,finish) == 0 && playback.status().playback == State::standby);

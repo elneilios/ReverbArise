@@ -1,9 +1,60 @@
 #include "TestSupport.h"
 #include "AllocationGuard.h"
+#include <Playback/LiveOutputPeakGuard.h>
 #include <Playback/TransportPlayback.h>
 #include <thread>
 #include <string_view>
 using namespace m3;
+static void verifyLiveOutputGuard()
+{
+    for (const double rate : {44100.0, 48000.0, 96000.0})
+    {
+        using Frame = std::array<float, 2>;
+        const auto recoveryFrames = static_cast<size_t>(rate * 0.050);
+        const auto repeatedPeak = recoveryFrames / 4;
+        const auto render = [&](size_t blockSize)
+        {
+            LiveOutputPeakGuard guard;
+            std::vector<Frame> output(recoveryFrames + repeatedPeak + 3, {0.4f, -0.2f});
+            output[1] = {2.0f, -1.0f};
+            output[repeatedPeak] = {0.75f, -1.5f};
+            {
+                AudioAllocationGuard allocations;
+                for (size_t start = 0; start < output.size(); start += blockSize)
+                {
+                    guard.prepare(rate);
+                    for (size_t n = start; n < std::min(start + blockSize, output.size()); ++n)
+                        guard.apply(output[n][0], output[n][1]);
+                }
+            }
+            REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+            REQUIRE(!guard.recovering());
+            return output;
+        };
+        const auto whole = render(recoveryFrames + repeatedPeak + 3);
+        REQUIRE(whole == render(1) && whole == render(127));
+        REQUIRE((whole.front() == Frame{0.4f, -0.2f}));
+        REQUIRE((whole.back() == Frame{0.4f, -0.2f}));
+        const auto ceiling = LiveOutputPeakGuard::ceiling;
+        REQUIRE((whole[1] == Frame{ceiling, -ceiling * 0.5f}));
+        REQUIRE((whole[repeatedPeak] == Frame{ceiling * 0.5f, -ceiling}));
+        for (const auto& frame : whole)
+            REQUIRE(std::max(std::abs(frame[0]), std::abs(frame[1])) <= ceiling);
+        REQUIRE(whole[2][0] < whole[repeatedPeak - 1][0]);
+        REQUIRE(whole[repeatedPeak + 1][0] < whole[repeatedPeak + 2][0]);
+        LiveOutputPeakGuard guard;
+        guard.prepare(rate);
+        float left = 2.0f, right = -1.0f;
+        guard.apply(left, right);
+        REQUIRE(guard.recovering());
+        guard.reset();
+        left = 0.4f;
+        right = -0.2f;
+        guard.apply(left, right);
+        REQUIRE(left == 0.4f && right == -0.2f && !guard.recovering());
+    }
+}
+
 static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=180)
 {
     auto p=std::make_unique<LivePublication>();p->mapping={true,0,0,1000,120,4,4};p->start=first;p->end=last;
@@ -12,7 +63,72 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
         p->entries.push_back({n,1,a->start,a->start+120,.08f,a});}
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
+
+static void verifySongOutputGuard()
+{
+    TransportPlayback live, offline;
+    for (auto* player : {&live, &offline})
+    {
+        player->invalidate(0, 1);
+        player->invalidate(1, 1);
+        REQUIRE(player->publish(fixture()));
+    }
+    offline.primeForOffline();
+    using Frame = std::array<float, 2>;
+    const auto render = [&](int64_t position, Frame input, bool playing = true)
+    {
+        TransportTime time{{true,position,position / 500.0,1000,120,4,4},playing};
+        auto guarded = input, unguarded = input;
+        {
+            AudioAllocationGuard allocations;
+            live.process(&guarded[0], &guarded[1], 1, time, true, nullptr, true);
+            offline.process(&unguarded[0], &unguarded[1], 1, time);
+        }
+        REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+        return std::pair{guarded, unguarded};
+    };
+    const auto ceiling = LiveOutputPeakGuard::ceiling;
+    const auto checkLimited = [&](const auto& guarded, const auto& unguarded)
+    {
+        REQUIRE(unguarded[0] > ceiling && guarded[0] == ceiling);
+        REQUIRE(std::abs(guarded[1] - unguarded[1] * ceiling / unguarded[0]) < 1e-7f);
+    };
+    for (int position = 0; position < 6; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, {0.4f, -0.2f});
+        REQUIRE(liveFrame == offlineFrame && liveFrame[0] > 0.4f);
+    }
+    const Frame hotDry{0.9f, -0.45f};
+    const auto [peak, offlinePeak] = render(6, hotDry);
+    checkLimited(peak, offlinePeak);
+    const auto [afterSeek, offlineAfterSeek] = render(50, {0.4f, -0.2f});
+    REQUIRE(afterSeek == offlineAfterSeek);
+    const auto [fading, offlineFade] = render(51, hotDry, false);
+    checkLimited(fading, offlineFade);
+    for (int position = 52; position <= 56; ++position)
+        render(position, hotDry, false);
+    REQUIRE(render(57, hotDry, false).first == hotDry);
+    live.configure(true, LiveRouting::wetOnly, 0);
+    offline.configure(true, LiveRouting::wetOnly, 0);
+    for (int position = 58; position < 69; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, hotDry);
+        REQUIRE(liveFrame == offlineFrame);
+    }
+    live.configure(true, LiveRouting::dryWet, 0);
+    offline.configure(true, LiveRouting::dryWet, 0);
+    for (int position = 69; position < 75; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, {1.2f, -0.6f});
+        REQUIRE(std::abs(liveFrame[0]) <= ceiling && std::abs(liveFrame[1]) <= ceiling);
+        if (offlineFrame[0] > ceiling)
+            checkLimited(liveFrame, offlineFrame);
+    }
+}
+
 int main(int argc,char* argv[]){return runTest([&]{
+    verifyLiveOutputGuard();
+    verifySongOutputGuard();
     {LiveTransportClock first,second;TransportTime at{{true,16,0,48000,122,4,4},true};
         REQUIRE(!first.snapshot(3));REQUIRE(!gridClockContext(first.snapshot(3),true).available);
         first.observe(at,73,3);const auto original=gridClockContext(first.snapshot(3),true);
