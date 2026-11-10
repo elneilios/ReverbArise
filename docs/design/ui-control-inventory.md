@@ -74,7 +74,7 @@ shared controls #16/#37, responsive #58 and merged #80 shared IR field.
 | --- | --- | --- | --- |
 | L6 `sensitivity`, embedded FieldNumericInput and steppers | C5/C4 SliderControl + InvocationSlider | I/H/P/F/D/E. Shared percent entry and track. Plain/Ctrl+wheel moves 1/0.1 percentage points on the track. Learn pass remains pinned. | P4 field and P5 track adopted. |
 | L7 `captureTitle`, `captureGroup`, `recaptureLabel`, `recaptureHelp`, `automaticLabel`, `automaticToggleLabel`, `automaticHelp`, `sensitivityLabel`, `autoStopLabel`, `autoStopHelp`, `manualHelp`, `generateReason`, `soundScope`; nested `irEditor.label`, `irEditor.status` | C3 screen labels/roles plus shared IR EllipsisLabel/FieldMessage | I/D/B/overflow; IR feedback uses normal helper font, red actionable failure, readable disabled-input feedback and collapsed empty space; scope remains screen-owned | Retain #80 revisions 8/10; P3 reference for other fields |
-| L8 painted `timelineHeading`, `timelineCaption`, `timelineRuler`, `timelineStatus`, empty prompt and interactive `chart` | C3/C8 LearnWorkspace specialized canvas | I/H/F/S/B; pin/inspect guides, Home/End/arrows/Escape; recorded/silence/gap/unavailable distinct; no generic input field | P8 retained #11/#58, review specialized accessibility rather than replacing canvas |
+| L8 painted `timelineHeading`, `timelineCaption`, `timelineRuler`, `timelineStatus`, empty prompt and interactive `chart` | C3/C8 LearnWorkspace specialized canvas | I/H/F/S/B; left-drag pin, wheel zoom, middle-drag pan, Home/End/arrows/Escape; recorded/silence/gap/unavailable distinct; no generic input field | P8 waveform gestures and shared focus adopted, retaining #11/#58 inspection |
 
 ## Perform
 
@@ -115,7 +115,7 @@ Sources: [ExportWorkspace](../../Source/UI/ExportWorkspace.h),
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | E5 `mix.dry`, `mix.wet`, embedded FieldNumericInput and steppers | C5/C4/C3 ExportLevelsControl | I/H/P/F/D/E. Shared tracks use 1/0.1 percentage-point wheel steps. The untouched level and accepted Character are preserved. | P4 fields and P5 tracks adopted. |
-| E6 `navigation`; painted heading/caption/mixHeading/ruler/chart/legend/timeArea/statusArea | C8 TimelineNavigation and ExportWorkspace paint | I/H/F/D/B; left positions preview, right drag pans, wheel zoom/Shift-wheel pan, Home Fit; previous waveform/status distinct from accepted output | P8 retain #6/#51; no export asset or cache changes |
+| E6 `navigation`; painted heading/caption/mixHeading/ruler/chart/legend/timeArea/statusArea | C8 TimelineNavigation and ExportWorkspace paint | I/H/F/D/B; left positions ready preview, middle-drag pans, wheel zooms, Home fits; previous waveform/status distinct from accepted output | P8 waveform gestures and shared focus adopted, retaining #6/#51 preview and file ownership |
 
 ## Settings
 
@@ -172,7 +172,7 @@ treated as production primary controls.
 
 | ID / actual consumers | Owner / semantics | States / differences | Disposition |
 | --- | --- | --- | --- |
-| N4 `timeline`, source/wet handles, ruler, overview, scrollbar, `waveZoom` and its caption | C8 SwellTimeline/SwellOverview, C5/C4 display-only Height | I/H/F/S/D/drag/overflow. Height uses the compact field and shared 3/1 dB wheel track with a 0 dB reset. | P4/P5 Height adopted. P8 owns specialized timeline interactions. |
+| N4 `timeline`, source/wet handles, ruler, overview, scrollbar, `waveZoom` and its caption | C8 SwellTimeline/SwellOverview, C5/C4 display-only Height | I/H/F/S/D/drag/overflow. Height uses the compact field and shared 3/1 dB wheel track with a 0 dB reset. | P4/P5 Height and P8 waveform gestures adopted. Detail left places the local playhead or edits a handle. Compact Overview left-drag pans. |
 | N5 `settingsWindow`, `diagnosticsWindow` WorkspaceWindow; nested `surface`, `viewport`, `comfortableTheme`; editor `presentationSurface` and host resize affordance | C8/C7 PresentationSurface, FocusViewport, native DocumentWindow chrome | logical size versus single magnification transform; comfortable auxiliary typography; bounded work-area scroll and focus reveal; native close behavior | P8 retain #58, actual host/DPI coverage separate |
 | H3 `workflowHeader.wordmark`, `.tagline`, `.role`; editor `hoverHelp`, `noticeBar`, `hostInfo` | C3 Wordmark/Label/HeaderInformation/EllipsisLabel/NoticeBar/TransportReadout | I/B/overflow; wordmark SVG; compact hides tagline, role wraps; bottom hoverHelp full description, notice severity/precedence, transport fixed slots and unavailable text | P3 retained #35/#46/#68/#58 and no-forced-speech notice policy |
 
@@ -235,7 +235,8 @@ Keep the family open until every consumer has a recorded disposition.
 | P7 Connected tabs | H2/L5/P5 and S7 adopted by `unify-connected-tabs`. | One connected strip and deliberate selection contract, with About last in Settings. |
 | P7 Lists and scrolling | P9/P10, D7 viewport and N5 scroll viewport covered by `unify-swells-list-and-scrolling`. | Row actions, confirmed group Delete, disabled popup feedback and existing focus reveal. See the [validation record](../validation/2026-11-10-issue-107-swells-list-and-scrolling.md). |
 | P8 Export file gestures | E2 and Export N3 Save WAV, tile Save fallback and ready-file drag | Adopted at revision 22. See the [Export validation record](../validation/2026-11-10-issue-107-export-file-invocations.md). |
-| P8 Remaining specialized interactions and auxiliary shells | L8 and E6 navigation/canvas, non-Export N3, N4 and N5; C8 timeline, overview, native file and window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and captured ownership, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
+| P8 Waveform gestures | L8, E6 and N4. Shared main-canvas gestures and focus with a left-drag-only Perform Overview. | See [waveform gesture evidence](../validation/2026-11-10-issue-107-waveform-gestures.md). |
+| P8 Remaining specialized interactions and auxiliary shells | Non-Export N3 and N5 native file and window mechanisms | No generic replacement of domain geometry or asset lifecycle. Preserve timing/Snap/frozen/selection and source/render/session identities, native chooser cancellation and captured ownership, single transform and comfortable auxiliary type. C1/C5 nested controls remain owned there. A source audit gap alone does not authorize DSP or persistence changes. |
 
 Each remaining packet requires its own proposal/design/tasks and a
 consumer-specific diff, tests, review evidence and documentation update.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Swells workspace and shared UI specs against the delivered row actions, confirmed deletion, disabled popup hover and focus scrolling. The Perform guide already describes the delivered interaction.",
+  "summary": "Updated the Learn, Export and Perform waveform gestures, including the Perform Overview exception. Reviewed the ready Export preview and retained WAV delivery, and the distinction between the local Perform playhead, DAW transport and audition.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -755,8 +755,8 @@
     },
     {
       "path": "Source/UI/Controls/TimelineNavigation.h",
-      "bytes": 5441,
-      "sha256": "96b21ff931e021b3211674877a6969ab7c6de34eb85502e9e5c3da7062406b75"
+      "bytes": 4980,
+      "sha256": "b6db978c1ae0732a14cda719c2e27f84b5d73e131cf8297b00a65aac531c347c"
     },
     {
       "path": "Source/UI/Controls/TimelineZoomControls.h",
@@ -772,6 +772,11 @@
       "path": "Source/UI/Controls/TransportReadout.h",
       "bytes": 4197,
       "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
+    },
+    {
+      "path": "Source/UI/Controls/WaveformGestures.h",
+      "bytes": 1365,
+      "sha256": "05ffd6a7484bae4ac1621237867a5956fc5229c98861247ee10b8ba22c2d0125"
     },
     {
       "path": "Source/UI/ConvolutionIrBinding.h",
@@ -795,8 +800,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 23205,
-      "sha256": "9a5e1e2e5bbdcdc6d20de3c8823bffddf0ccec12b17bd768230f539dee38f66d"
+      "bytes": 22988,
+      "sha256": "dcc36f6450724630915711589d7ced421c19a0b0133f2fbe6a786b6828242f20"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -815,8 +820,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 34807,
-      "sha256": "c62ea861c136cc6ecdd1e420cd30878d40488e7bf68bad181d77628e43a31b63"
+      "bytes": 37554,
+      "sha256": "60c6bcceca5241a1d7b4e52b5141f565b92e25e18b30417d6db731a1f873e735"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -880,13 +885,13 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 49551,
-      "sha256": "632b95ceb11c448c9eb2046a4a726459b0e2824546fa78e7a7b16370f18e2cb8"
+      "bytes": 52998,
+      "sha256": "23e7d9e978ca2d62bf879718c1d62ec60536b4049a74333f5e8b74d2708d9ea9"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 8324,
-      "sha256": "e6a44b19ddd65ce047b2b2645a7e71d76ad9027bb7c84e14cbbd1ad2eb252b93"
+      "bytes": 9505,
+      "sha256": "27f5125314fc3c73e6d20c287828e624f5ca58b8f9b2a7acc5aaa869c1c4a5a4"
     },
     {
       "path": "Source/UI/SwellViewport.h",
@@ -970,8 +975,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 31188,
-      "sha256": "0ef2df41014747b65524eb8b6d1584aee56156bd0b464dfcf189bf5f599b58ba"
+      "bytes": 31815,
+      "sha256": "151d41d0d5e95f73b0d07d2373b3225aee6024f3688f5f3c70fa1660f1b2f403"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

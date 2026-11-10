@@ -64,16 +64,19 @@ clamped endpoint. Its fixed-work adjacent-index search accounts for the final
 integer-sample rounding, including sub-sample grid spacing. This domain foundation
 is tested independently and through actual handle/translation gestures.
 
-Perform timeline navigation now uses opt-in `constrain` / `zoomBounded` methods;
-Export's unbounded viewport arithmetic and its adapter-owned limits remain
-unchanged. Limits cover known capture, selected/source definitions, real render
+Perform and Export reuse bounded viewport math with their own accepted limits.
+Perform limits cover known capture, selected/source definitions, real render
 frames and requested shape extents plus existing 4% Fit margins. Minimum span is
 one sample per logical source-lane pixel (or the complete context when shorter),
 with an additional double-precision floor at extreme absolute coordinates.
 The horizontal fraction is logarithmic from complete context (0) to closest (1).
 Toolbar zoom anchors a visible selected target, then a visible host playhead,
-then center; Ctrl-wheel anchors at the pointer. Overview/pan stay inside the same
-limits without seeking the host. Navigation never edits source/model coordinates.
+then centre. Wheel zoom anchors at the pointer and middle-drag pans the detail
+waveform. Left-drag on the Overview moves the detail range with the pointer at
+the current zoom. A plain click, wheel and the other buttons are idle there.
+The detail playhead follows a left-click or drag on open waveform and stays at
+its absolute sample through navigation. It is independent of host and audition
+playback. Handle and wet-body edits retain priority on their hit areas.
 
 `UI/Controls/LatchingActionButton.h` extends the accepted ActionButton family
 without modifying it. The shared control owns accepted pressed-state presentation,
@@ -84,7 +87,7 @@ Off remains Off after Ctrl release. Ctrl bypasses horizontal Snap; Shift scales
 pointer deltas by 0.1; Ctrl+Shift combines both. Modifier transitions rebase from
 the last accepted position and pointer without publishing an edit. Focus loss
 cancels gestures and clears transient keys; active-editor refresh reconciles the
-actual modifiers. Ctrl-wheel still zooms horizontally at the pointer. Exact
+actual modifiers. Wheel zoom needs no modifier. Exact
 inspector entries remain unsnapped; left/right handle nudges use the adjacent grid
 point, or one sample with Ctrl. Vertical tension remains continuous.
 

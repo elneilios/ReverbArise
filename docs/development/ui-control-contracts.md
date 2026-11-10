@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, updated 7 November 2026; production standards revision 14.**
+**Owner-approved contracts, updated 10 November 2026, production standards revision 24.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -464,10 +464,14 @@ envelope math, timing guards or viewport selection policy in a presentation slic
 Document unsupported keyboard/accessibility actions as gaps for scoped child work,
 not as behavior proven by a painted highlight.
 
-Keep Learn inspection pin and transient hover distinct; Escape clears only in its
-existing focus context. Keep Perform drag anchor/frozen/session policy and display
-height separate from gain. Export navigation remains left-position/right-pan,
-wheel zoom/Shift-wheel pan and Home Fit. FileDragTile's dotted idle border, solid pointer drag and separate keyboard focus
+Keep Learn inspection pin and transient hover distinct. Escape clears only with
+waveform focus. On the Learn, Export and Perform main waveforms, left-click or
+drag positions the local marker or edits a Perform handle, wheel zooms at the
+pointer, middle-drag pans, and right input is idle. Perform's compact Overview
+pans only on left-drag. Main waveform focus uses shared aqua brackets for
+keyboard/accessibility focus. Preserve Perform drag anchor/frozen/session policy,
+display height independent of gain, and Export ready positioning and Home Fit.
+FileDragTile's dotted idle border, solid pointer drag and separate keyboard focus
 are the approved Export variant. The primary press crosses the threshold once
 and suppresses its own click-to-save. The binding pins the current session, pass
 and WAV, and Windows sets the WAV or stop cursor using target feedback. The tile

@@ -6,6 +6,7 @@
 #include "EnvelopeHandles.h"
 #include "WaveformDisplay.h"
 #include "Controls/SliderControl.h"
+#include "Controls/WaveformGestures.h"
 
 namespace m3
 {
@@ -22,7 +23,7 @@ public:
     const ui::WaveformPaintMetrics& wetPaintMetrics()const noexcept{return wetWaveformLayer.metrics();}
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
-    void mouseUp(const juce::MouseEvent&) override {drag=Drag::none;repaint();}
+    void mouseUp(const juce::MouseEvent&) override {endPointerGesture();}
     void mouseMove(const juce::MouseEvent&) override;
     bool keyPressed(const juce::KeyPress&) override;
     std::vector<EnvelopeGrab> grabPoints() const;
@@ -43,7 +44,10 @@ public:
     void setSnapBypassed(bool bypassed){setGestureModifiers(fineDrag,bypassed);}
     void setGestureModifiers(bool fine,bool bypassed);
     void modifierKeysChanged(const juce::ModifierKeys& mods)override{setGestureModifiers(mods.isShiftDown(),mods.isCtrlDown());}
-    void focusLost(FocusChangeType)override{drag=Drag::none;fineDrag=false;snapBypassed=false;}
+    void focusGained(FocusChangeType cause)override{if(cause==focusChangedByTabKey)focus->keyboardInput();repaint();}
+    void focusLost(FocusChangeType)override{endPointerGesture();fineDrag=false;snapBypassed=false;}
+    void visibilityChanged()override{if(!isVisible()){localPlayhead.reset();endPointerGesture();}}
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler()override{return ui::controls::waveformAccessibility(*this,*focus);}
     void setGridDivision(GridDivision division);
     GridDivision selectedGrid()const noexcept{return gridDivision;}
     std::optional<HostGrid> makeGrid(GridEvidence* evidence=nullptr)const{return HostGrid::make(gridTiming(),time,capture.manifest.sampleRate,gridDivision,evidence,playheadAvailable,&clockContext);}
@@ -54,6 +58,7 @@ public:
     void setEditingEnabled(bool enabled){if(!enabled){drag=Drag::none;hover.reset();}editingEnabled=enabled;}
     bool beginDrag(juce::Point<float>);void dragTo(juce::Point<float>);
     const SwellViewport& viewport() const noexcept {return view;}
+    std::optional<int64_t> localPlayheadSample()const noexcept{return localPlayhead;}
     void setViewport(SwellViewport v) {if(!std::isfinite(v.first) || !std::isfinite(v.last) || !std::isfinite(v.span()) || v.span()<=0)return;if(v.first!=view.first || v.last!=view.last)drag=Drag::none;view=v;updateScroll();repaint();}
     void setInlineOverview(bool enabled){inlineOverview=enabled;resized();repaint();}
     void setResponsivePresentation(bool enabled){if(responsivePresentation!=enabled){responsivePresentation=enabled;resized();repaint();}}
@@ -69,10 +74,16 @@ private:
     // A dry-only session pins its fixed mapping when the first target is
     // accepted. Bootstrap that insertion only; retain established-map guards.
     const SongTime& gridTiming()const{return !data.session.timing.valid && data.session.swells.empty()?time:data.session.timing;}
-    enum class Drag {none,overview,arrival,sourceStart,sourceEnd,audibleStart,audibleEnd,fadeIn,fadeOut,inTension,outTension,move};
+    enum class Drag {none,arrival,sourceStart,sourceEnd,audibleStart,audibleEnd,fadeIn,fadeOut,inTension,outTension,move};
+    enum class Press {open,handled,blocked};
+    enum class PointerGesture {none,position,detailPan,overviewPan};
     void scrollBarMoved(juce::ScrollBar*,double) override;
     void updateScroll();
-    void navigationChanged(){if(drag!=Drag::overview)drag=Drag::none;updateScroll();repaint();if(onViewportChanged)onViewportChanged();}
+    void navigationChanged(){drag=Drag::none;updateScroll();repaint();if(onViewportChanged)onViewportChanged();}
+    Press beginEdit(juce::Point<float>);
+    void endPointerGesture(){pointerGesture=PointerGesture::none;drag=Drag::none;repaint();}
+    void positionPlayhead(float x);
+    void panFrom(SwellViewport initial,double fraction);
     bool prepareDrag(juce::Point<float>);
     void rebaseDrag();
     void gestureMessage(const juce::String& text){if(gestureStatus!=text){gestureStatus=text;setDescription(text);repaint();}}
@@ -85,6 +96,10 @@ private:
     float x(int64_t sample) const {return static_cast<float>(view.pixel(static_cast<double>(sample),source.getX(),source.getWidth()));}
     SwellEngine& engine;CaptureSessionSnapshot capture;EditorSnapshot data;SongTime time;
     SwellViewport view;juce::ScrollBar scrollbar{false};juce::Rectangle<int> ruler;
+    juce::SharedResourcePointer<ui::controls::FocusVisibility> focus;
+    std::optional<int64_t> localPlayhead;
+    PointerGesture pointerGesture=PointerGesture::none;
+    SwellViewport panStart;
     ui::controls::SliderControl waveZoom{{"Height (dB)", "Display zoom for source and wet waveforms. Audio gain stays the same.", false}};
     juce::Label waveZoomLabel;
     juce::Rectangle<float> overview,source,wet;
@@ -123,11 +138,18 @@ public:
     {return timeline.responsivePresentation?getLocalBounds().toFloat().withTrimmedLeft(ui::responsiveGeometry::overviewHeadingWidth+ui::responsiveGeometry::contentPadding).reduced(1):getLocalBounds().toFloat().reduced(12,1).withTrimmedTop(50);}
     juce::Rectangle<float> detailBounds()const;
     void paint(juce::Graphics&) override;
-    void mouseDown(const juce::MouseEvent& e)override{mouseDrag(e);}
-    void mouseDrag(const juce::MouseEvent& e)override{const auto lane=waveformBounds();timeline.navigateOverview((e.position.x-lane.getX())/std::max(1.0f,lane.getWidth()));repaint();}
+    void mouseDown(const juce::MouseEvent&)override;
+    void mouseDrag(const juce::MouseEvent&)override;
+    void mouseUp(const juce::MouseEvent&)override;
+    void mouseMove(const juce::MouseEvent&)override;
+    void mouseWheelMove(const juce::MouseEvent&,const juce::MouseWheelDetails&)override{}
+    void visibilityChanged()override{if(!isVisible())panning=false;}
 private:
     void paintWaveforms(juce::Graphics&,ui::WaveformPaintMetrics&);
     SwellTimeline& timeline;juce::Label heading;
+    SwellViewport panStart;
+    uint64_t panEpoch=0;
+    bool panning=false;
     ui::WaveformLayer waveformLayer;
     uint64_t waveformRevision=UINT64_MAX;
 };

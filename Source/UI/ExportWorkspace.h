@@ -41,8 +41,6 @@ public:
         navigation.onChange=[this]{requestDetail();updateZoom();repaint();};
         navigation.onPosition=[this](int64_t sample){if(state.prepared && engine.seekExport(sample,state.session,state.pass,state.prepared->plan->identity)){
             state.previewPosition=std::clamp(sample,*state.prepared->metrics.audibleStart,*state.prepared->metrics.audibleEnd-1);state.cursor.reset();repaint();}};
-        navigation.setPanGesture(controls::TimelineNavigation::PanGesture::rightDrag);
-        navigation.setTooltip("Left-click or drag: position preview. Right-drag: pan. Wheel: zoom. Shift-wheel: pan. Home: Fit.");
         play.setName("exportPlay");stop.setName("exportStop");mix.setName("exportLevels");tile.setName("exportDrag");save.setName("exportSave");back.setName("exportReturn");
         setTitle("Song-aligned export preview");mix.setTitle("Export mix");play.setTitle("Play export preview");stop.setTitle("Stop export preview");
         play.setTooltip("Preview from the positioned playhead, or the first audible sample by default");stop.setTooltip("Stop internal preview; DAW transport is unchanged");
@@ -142,7 +140,7 @@ public:
         applyTextRole(g,*this,TextRole::helper);
         const auto captionText=state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
             :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
-            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Right-drag: pan. Wheel: zoom.");
+            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Middle-drag: pan. Wheel: zoom.");
         g.drawFittedText(captionText,caption,juce::Justification::topLeft,2);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         if(!displayed){if(state.phase!=ExportPhase::error && juce::Time::getMillisecondCounterHiRes()-pendingSince<600)return;applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Export unavailable. See the message above.":"Preparing your song-aligned mix",chart.reduced(spacing::section),juce::Justification::centred,2);return;}
