@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Retained the approved waveform gesture instructions and restored the wet-lane raw-reference and shared display-scale explanation in context help. No guide prose change was needed for the restored explanation.",
+  "summary": "Reviewed canonical P8 waveform spec sync against the delivered Learn, Export and Perform gestures and approved guide. Existing guide instructions already cover pointer wheel zoom, middle-drag pan, local positioning and the Perform Overview exception.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 113675,
-      "sha256": "70398185bc4bd33af66bacf9a05e30064abdcfed154b4bf7fac7c1c11cc5908b"
+      "bytes": 117138,
+      "sha256": "43cd21afb25d0e85e7b8c46ccab5b11bffd56162a6cc6cbd9e021be9c3ba925d"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
