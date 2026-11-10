@@ -57,12 +57,45 @@ Playback SHALL include all current, enabled, unmuted swells intersecting the blo
 - **WHEN** a swell is disabled or muted, or excluded by an active eligible solo
 - **THEN** its wet contribution is excluded using a short transition without moving any source event
 
+### Requirement: Realtime Dry + Wet output has linked peak protection
+
+Realtime Song and Loop Dry + Wet SHALL use one linked gain on the combined stereo output, with a −1 dBFS sample-peak ceiling when a wet contribution is mixed. The guard SHALL add no latency and return to exactly unity after recovery. Existing wet calibration, including the approved +6 dB target, and existing wet overlap protection SHALL remain independent.
+
+#### Scenario: Dry and wet peaks coincide
+
+- **WHEN** prepared wet and incoming dry sum above the ceiling in active live Dry + Wet
+- **THEN** both channels receive the same gain and the emitted sample peaks stay within the ceiling
+- **AND** the gain reduction keeps the dry-to-wet ratio at that sample and does not move the swell
+
+#### Scenario: The live sum has headroom
+
+- **WHEN** the summed peak remains below the ceiling and the guard is idle
+- **THEN** incoming dry is at unity and prepared wet follows the saved gain and protection plan
+
+#### Scenario: Protection recovers
+
+- **WHEN** a peak subsides during active live playback
+- **THEN** guard gain returns to unity without exceeding the ceiling on later peaks
+- **AND** the result is independent of audio callback block boundaries
+
+#### Scenario: Dry-only passthrough and other output paths
+
+- **WHEN** there is no active live wet contribution or its stop transition has finished
+- **THEN** Dry + Wet passes the incoming dry unchanged and a subsequent live run starts at unity
+- **AND** Wet Only, Audition, Learn capture, host offline rendering and internal Export keep their existing protection and timing
+
+#### Scenario: Offline rendering begins during Loop playback
+
+- **WHEN** an offline callback disables Loop playback while wet audio is sounding or its stop fade is in progress
+- **THEN** the existing wet stop fade is emitted without realtime output peak protection
+- **AND** a realtime callback disabling the same playback retains linked output protection through the wet fade
+
 ### Requirement: Live routing is independent of manual monitoring
-Within Live, saved enable, Dry + Wet/Wet Only routing and wet level SHALL remain independent of audition, defaulting to enabled Dry + Wet at 0 dB. Dry + Wet SHALL add only prepared wet to unchanged input. Wet Only SHALL suppress dry only during enabled valid Live playback. Capture/Finalise SHALL preserve dry passthrough without modifying saved Live preferences.
+Within Live, saved enable, Dry + Wet/Wet Only routing and wet level SHALL remain independent of audition, defaulting to enabled Dry + Wet at 0 dB. Dry + Wet SHALL add prepared wet to incoming dry at unity before applying live output peak protection. Wet Only SHALL suppress dry only during enabled valid Live playback. Capture/Finalise SHALL preserve dry passthrough without modifying saved Live preferences.
 
 #### Scenario: Play in context
 - **WHEN** a prepared project plays in Live default Dry + Wet
-- **THEN** output is input plus protected positioned wet, without captured-dry replay or audition blend/trim
+- **THEN** output is the live input plus protected positioned wet, with the linked live output guard acting only when needed and with no captured-dry replay or audition blend/trim
 
 #### Scenario: Route wet only and disable
 - **WHEN** Wet Only is selected during Live playback and live playback is subsequently disabled
@@ -507,7 +540,7 @@ Loop live playback SHALL use the running FL Studio host grid, the verified Rack 
 #### Scenario: Dry audio is deliberately out of phase
 
 - **WHEN** prepared wet is cued using valid live timing with dry audio offset from the target downbeat
-- **THEN** wet follows the live timing without manual confirmation, and Dry + Wet preserves the dry input
+- **THEN** wet follows the live timing without manual confirmation, and Dry + Wet keeps the live dry at unity when the output guard is idle
 
 #### Scenario: Cue with a running grid
 
@@ -540,7 +573,7 @@ MIDI Perform Stop SHALL cancel a queued launch or finish the current pass withou
 #### Scenario: Lost reference, seek or reset
 
 - **WHEN** a required clock or marker is late or invalid, a seek or reset occurs, or the live timing or session becomes incompatible
-- **THEN** any queued launch is cancelled and active wet fades without altering dry in Dry + Wet
+- **THEN** any queued launch is cancelled and active wet fades. Dry + Wet keeps dry at unity after the wet fade ends
 - **AND** restored timing leaves the scheduler in Standby until a fresh Cue
 
 #### Scenario: Stop Loop is clicked during playback

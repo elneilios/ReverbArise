@@ -126,3 +126,15 @@ This was a warm rebuild. The two native foreground-sensitive fixtures received
 foreground focus during the run and passed without a rerun. Full logs are
 under `out/build-logs/Release/20261110-223646-48116ea9/`.
 Strict OpenSpec validation, guide currency and diff checks also passed.
+
+## Spec sync and archive
+
+The owner approved PR #146 and authorized sync, archive and integration merge.
+The four delta requirements were verified in the canonical
+`transport-swell-playback` spec, with its existing purpose and all unrelated
+requirement blocks preserved. All five tasks and all planning artifacts were
+complete. The change is archived at
+`openspec/changes/archive/2026-11-10-add-live-output-peak-guard/`.
+Canonical spec validation passed 22/22 with existing long-text warnings.
+Guide currency and diff checks passed. This closeout changes documentation
+only, so the passing 102-test Release result above remains applicable.

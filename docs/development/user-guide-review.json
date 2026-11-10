@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed PR #146 offline Loop stop-fade exclusion. The existing guide already states that host offline rendering retains its established protection; this fix restores that documented behavior.",
+  "summary": "Reviewed the synced live output peak guard and offline Loop fade contract against the implemented guide. Existing prose covers the implemented realtime ceiling, Live wet level control and separate offline protection.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1125,8 +1125,8 @@
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 50219,
-      "sha256": "830dde3e9a96fa1a5f50db0059deca789d0196802d929bfaa2221c56d5827c79"
+      "bytes": 52368,
+      "sha256": "e39a0ff22774b81d2e9a558bba2c02427c99f32909f9134fdf75a9cf6fed613a"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
