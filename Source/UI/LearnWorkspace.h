@@ -21,26 +21,27 @@ public:
     {
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
         setTooltip(inspectionHelp);setName("learnWorkspace");setTitle("Learn: source capture and generation preferences");
-        for(auto* c:std::array<juce::Component*,17>{&captureTitle,&recaptureLabel,&recaptureHelp,&recapture,&automaticLabel,&automaticToggleLabel,&automaticHelp,&automatic,
-            &autoStopLabel,&autoStopHelp,&autoStop,&irEditor,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
+        for(auto* c:std::array<juce::Component*,14>{&captureTitle,&recaptureHelp,&recapture,&automaticLabel,&automaticHelp,&automatic,
+            &autoStopHelp,&autoStop,&irEditor,&sensitivityLabel,&sensitivity,&generate,&generateReason,&manualHelp})addAndMakeVisible(c);
         captureTitle.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureTitle,TextRole::sectionHeading);
-        recaptureLabel.setText("Recapture audio",juce::dontSendNotification);
         automaticLabel.setText("Automatic Swells",juce::dontSendNotification);applyTextRole(automaticLabel,TextRole::sectionHeading);
-        automaticToggleLabel.setText("Detect events",juce::dontSendNotification);
         sensitivityLabel.setText("Event sensitivity",juce::dontSendNotification);
-        autoStopLabel.setText("Generate on Stop",juce::dontSendNotification);
-        for(auto* label:{&recaptureLabel,&automaticToggleLabel,&sensitivityLabel,&autoStopLabel})applyTextRole(*label,TextRole::controlLabel);
+        applyTextRole(sensitivityLabel,TextRole::controlLabel);
         for(auto* label:{&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
-        for(auto* label:{&captureTitle,&recaptureLabel,&automaticLabel,&automaticToggleLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&autoStopLabel,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
+        for(auto* label:{&captureTitle,&automaticLabel,&sensitivityLabel,&recaptureHelp,&automaticHelp,&autoStopHelp,&manualHelp,&generateReason})label->setBorderSize({});
         automaticHelp.setText({},juce::dontSendNotification);
         autoStopHelp.setText({},juce::dontSendNotification);
         manualHelp.setText(wrappedHelper("Want to place swells yourself? Add manual swells in Perform."),juce::dontSendNotification);
         manualHelp.setTooltip(manualHelp.getText().replace("\n"," "));
-        captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");recaptureLabel.setName("learnRecaptureLabel");automaticToggleLabel.setName("learnAutomaticLabel");
+        captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");
         irEditor.setName("learnIrEditor");irEditor.label.setName("learnIRLabel");irEditor.selector.setName("learnDefaultIR");irEditor.fileButton.setName("learnImportIR");irEditor.status.setName("learnIRStatus");
         sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
         recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");sensitivity.setName("learnMarkerSensitivity");
-        autoStop.setName("learnAutoGenerateOnStop");autoStopLabel.setName("learnAutoGenerateLabel");autoStopHelp.setName("learnAutoGenerateHelp");
+        autoStop.setName("learnAutoGenerateOnStop");autoStopHelp.setName("learnAutoGenerateHelp");
+        recapture.setTooltip("Replace captured audio encountered during the next Learn pass.");
+        automatic.setTooltip("Detect events in captured audio for automatic swells.");
+        autoStop.setTooltip("Generate swells when the eligible Learn pass stops.");
+        for(auto* toggle:{&recapture,&automatic,&autoStop})toggle->setUnavailableReason("Wait for the current capture pass to finish.");
         generate.setName("learnGenerateSwells");manualHelp.setName("learnManualSwellsHelp");generateReason.setName("learnGenerateReason");
         autoStop.beforeInvocation=[this]{autoStopIntent=GenerationIntent{displaySession,displayPass,0};};
         autoStop.onClick=[this]{const auto intent=autoStopIntent.value_or(GenerationIntent{displaySession,displayPass,0});autoStopIntent.reset();
@@ -79,7 +80,7 @@ public:
         recaptureHelp.setText(flow.recapture?"Replace audio next pass.":"Keep captured audio.",juce::dontSendNotification);
         irBinding.displayDefault(editor);
         if(!responsive)irEditor.setVisible(automaticOn);
-        for(auto* c:std::array<juce::Component*,7>{&sensitivityLabel,&sensitivity,&autoStop,&autoStopLabel,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
+        for(auto* c:std::array<juce::Component*,6>{&sensitivityLabel,&sensitivity,&autoStop,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
         const auto scope=juce::String(source.manifest.projectId)+"/"+source.manifest.instanceId;
         const auto session=engine.assignmentEpoch();
         // A mode roundtrip/reset may complete between paints. A recording pass
@@ -173,20 +174,19 @@ public:
         if(responsive){layoutResponsive();return;}
         auto a=getLocalBounds();left=a.removeFromLeft(workspaceGeometry::learnSettingsWidth);a.removeFromLeft(workspaceGeometry::columnGap);right=a;
         auto controls=left.withTrimmedTop(spacing::related);
-        const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& label,juce::Label& description)
+        const auto toggleGroup=[&](controls::Switch& toggle,juce::Label& description)
         {
-            auto row=controls.removeFromTop(controlGeometry::switchHeight);toggle.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(spacing::related);
-            label.setBounds(row.withSizeKeepingCentre(row.getWidth(),juce::roundToInt(bodySize)));
+            toggle.setBounds(controls.removeFromTop(controlGeometry::switchHeight));
             const auto lines=description.getText().isEmpty()?0:description.getText().containsChar('\n')?2:1;
-            description.setBounds(row.getX(),label.getBottom()+spacing::labelHelp,row.getWidth(),lines*learnTypography::secondaryLineHeight);
-            controls.removeFromTop(std::max(0,description.getBottom()-controls.getY()));
+            if(lines>0)controls.removeFromTop(spacing::labelHelp);
+            description.setBounds(controls.removeFromTop(lines*learnTypography::secondaryLineHeight));
         };
         captureTitle.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
-        toggleGroup(recapture,recaptureLabel,recaptureHelp);
+        toggleGroup(recapture,recaptureHelp);
         controls.removeFromTop(spacing::related);divider=controls.getY();controls.removeFromTop(spacing::related);
         automaticLabel.setBounds(controls.removeFromTop(controlGeometry::headingHeight));controls.removeFromTop(spacing::related);
-        toggleGroup(automatic,automaticToggleLabel,automaticHelp);
-        if(automaticOn){controls.removeFromTop(spacing::related);toggleGroup(autoStop,autoStopLabel,autoStopHelp);controls.removeFromTop(spacing::group);
+        toggleGroup(automatic,automaticHelp);
+        if(automaticOn){controls.removeFromTop(spacing::related);toggleGroup(autoStop,autoStopHelp);controls.removeFromTop(spacing::group);
             irEditor.setBounds(controls.removeFromTop(irEditor.preferredHeight(controls.getWidth())));controls.removeFromTop(spacing::group);
             sensitivityLabel.setBounds(controls.removeFromTop(controlGeometry::labelHeight));controls.removeFromTop(spacing::tight);sensitivity.setBounds(controls.removeFromTop(controlGeometry::height));
             controls.removeFromTop(spacing::related);generate.setBounds(controls.removeFromTop(controlGeometry::height));
@@ -302,13 +302,13 @@ private:
         generateReason.setBounds(actions.removeFromTop(40));actions.removeFromTop(contentPadding);manualHelp.setBounds(actions.removeFromTop(40));
         const auto captureVisible=selectedSection==1,soundVisible=selectedSection==2;
         captureGroup.setVisible(captureVisible);captureGroup.setBounds(column.removeFromTop(headingHeight));
-        const auto toggleRow=[&](controls::Switch& value,juce::Label& label)
-        {auto row=column.removeFromTop(36);value.setBounds(row.removeFromRight(controlGeometry::switchWidth));row.removeFromRight(contentPadding);label.setBounds(row);};
-        toggleRow(recapture,recaptureLabel);recaptureHelp.setBounds(column.removeFromTop(20));column.removeFromTop(contentPadding);divider=column.getY();column.removeFromTop(contentPadding);
-        automaticLabel.setBounds(column.removeFromTop(headingHeight));toggleRow(automatic,automaticToggleLabel);toggleRow(autoStop,autoStopLabel);
+        const auto toggleRow=[&](controls::Switch& value)
+        {value.setBounds(column.removeFromTop(controlGeometry::switchHeight));};
+        toggleRow(recapture);recaptureHelp.setBounds(column.removeFromTop(20));column.removeFromTop(contentPadding);divider=column.getY();column.removeFromTop(contentPadding);
+        automaticLabel.setBounds(column.removeFromTop(headingHeight));toggleRow(automatic);toggleRow(autoStop);
         column.removeFromTop(contentPadding);sensitivityLabel.setBounds(column.removeFromTop(24));sensitivity.setBounds(column.removeFromTop(controlHeight));
-        for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,&automaticToggleLabel})c->setVisible(captureVisible);
-        for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&autoStopLabel,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
+        for(auto* c:std::initializer_list<juce::Component*>{&recapture,&recaptureHelp,&automaticLabel,&automatic})c->setVisible(captureVisible);
+        for(auto* c:std::initializer_list<juce::Component*>{&autoStop,&sensitivity,&sensitivityLabel})c->setVisible(captureVisible && automaticOn);
         auto sound=left.withTrimmedRight(groupGap).withTrimmedTop(sections.getBottom()+contentPadding);
         soundScope.setBounds(sound.removeFromTop(40));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
         irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
@@ -353,12 +353,13 @@ private:
     LearnDryView view;uint64_t inspectionSession=0,inspectionWorkflow=0;bool inspectionPinned=false;std::optional<int64_t> inspection,hoverEvent;juce::String totalsText,viewScope;
     struct GenerationIntent{uint64_t session,pass,serial;};
     SwellEngine& engine;std::function<workflow::Snapshot()> flowNow;
-    controls::Switch recapture{"Recapture existing audio"},automatic{"Enable automatic swells"};
-    controls::Switch autoStop{"Auto-generate on Stop"};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
+    controls::Switch recapture{"Recapture audio",controls::ToggleLabelSide::beforeIndicator};
+    controls::Switch automatic{"Detect events",controls::ToggleLabelSide::beforeIndicator};
+    controls::Switch autoStop{"Generate on Stop",controls::ToggleLabelSide::beforeIndicator};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
     controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;
     controls::SliderControl sensitivity{{"Event sensitivity (%)", "Adjust how many events are detected in captured audio."}};
-    juce::Label captureTitle,recaptureLabel,recaptureHelp,automaticLabel,automaticToggleLabel,automaticHelp,sensitivityLabel;
-    juce::Label autoStopLabel,autoStopHelp,manualHelp,generateReason;
+    juce::Label captureTitle,recaptureHelp,automaticLabel,automaticHelp,sensitivityLabel;
+    juce::Label autoStopHelp,manualHelp,generateReason;
     LearnGenerationView generationView;uint64_t displaySession=0,displayPass=0;
     std::optional<GenerationIntent> autoStopIntent,generateIntent;
     std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;

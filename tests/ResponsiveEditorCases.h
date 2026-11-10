@@ -17,6 +17,23 @@ void Composition::verifyResponsive(const juce::File& output)
             if(button->getButtonText()=="Mute" || button->getButtonText()=="Full response")
             {REQUIRE(button->isVisible());++actions;}
         REQUIRE(actions==2);
+        const std::array<int,5> expectedSwitches{1,3,1,2,1};
+        for (int page=0;page<static_cast<int>(expectedSwitches.size());++page)
+        {
+            const auto* content=settings.getTabContentComponent(page);
+            int switches=0;
+            for(auto* child:content->getChildren())
+                if(auto* toggle=dynamic_cast<controls::Switch*>(child))
+                {
+                    ++switches;
+                    REQUIRE(toggle->getHeight()==controlGeometry::switchHeight);
+                    REQUIRE(toggle->indicatorBounds().getWidth()==controlGeometry::switchTrackWidth);
+                    REQUIRE(toggle->getLocalBounds().toFloat().contains(toggle->focusInkBounds()));
+                    REQUIRE(juce::GlyphArrangement::getStringWidth(textFont(TextRole::controlLabel),toggle->getButtonText())
+                            <= toggle->labelBounds().getWidth());
+                }
+            REQUIRE(switches==expectedSwitches[static_cast<size_t>(page)]);
+        }
     };
     const auto original=engine.savedSession();const auto sourceRevision=processor->getCaptureSnapshot().manifest.revision;
     panel->setSize(900,600);panel->refresh();
@@ -66,6 +83,17 @@ void Composition::verifyResponsive(const juce::File& output)
         checkSettingsRoutes();
         const ResponsiveWorkspaceLayout layout(panel->getLocalBounds());
         checkVisible("resetWetShape");checkVisible("resetSwellMenu");
+        auto& enabled=require<controls::BooleanToggle>(*panel,"swellEnabled");
+        auto& solo=require<controls::BooleanToggle>(*panel,"swellSolo");
+        auto& freeze=require<controls::BooleanToggle>(*panel,"freezeRender");
+        for(auto* flag:{&enabled,&solo,&freeze})
+        {
+            REQUIRE(flag->getY()==enabled.getY() && flag->indicatorBounds().getWidth()==18);
+            REQUIRE(flag->getLocalBounds().toFloat().contains(flag->focusInkBounds()));
+            REQUIRE(juce::GlyphArrangement::getStringWidth(componentTextFont(*flag,TextRole::controlLabel),flag->getButtonText())
+                    <= flag->labelBounds().getWidth());
+        }
+        REQUIRE(enabled.getRight()<=solo.getX() && solo.getRight()<=freeze.getX());
         auto& notice=require<controls::NoticeBar>(*panel,"workspaceNotice");
         REQUIRE(notice.currentMessage() && notice.completeMessageFits());
         REQUIRE(notice.displayedTextHeight()>=responsiveGeometry::noticeMinimum);
@@ -126,7 +154,8 @@ void Composition::verifyResponsive(const juce::File& output)
             auto& learn=require<LearnWorkspace>(*panel,"learnWorkspace");
             auto& sourceHeading=require<juce::Label>(learn,"learnSourceCaptureHeading");
             REQUIRE(sourceHeading.getBorderSize().getLeft()==0);
-            REQUIRE(sourceHeading.getX()==require<juce::Label>(learn,"learnRecaptureLabel").getX());
+            const auto& recapture=require<controls::Switch>(learn,"recaptureExisting");
+            REQUIRE(sourceHeading.getX()==learn.getLocalArea(&recapture,recapture.labelBounds()).getX());
             auto& scope=require<juce::Label>(learn,"learnSoundScope");
             auto& ir=require<controls::ConvolutionIrEditor>(learn,"learnIrEditor");
             REQUIRE(scope.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);

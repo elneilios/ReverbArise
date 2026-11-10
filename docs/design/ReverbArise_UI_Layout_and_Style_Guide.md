@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.19 · **Production standards revision:** 19 · **Purpose:** Production UI authority and design reference. Revision 19 adopts shared knob and slider-track interaction. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
+**Version:** 1.20 · **Production standards revision:** 20 · **Purpose:** Production UI authority and design reference. Revision 20 adopts shared switch and checkbox interaction. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -170,6 +170,7 @@ a general accent variant. Copy, severity and real coverage supplement colour.
 | Control / label / heading heights | 34 / 24 / 30 | `controlGeometry` |
 | Numeric value / step strip | 74 x 28 / 18 wide | `controlGeometry` |
 | Switch track / component | 44 x 24 / 56 x 36 | `Switch` and control geometry |
+| Inline checkbox indicator | 18 x 18 | `BooleanToggle` and the existing focus clearance |
 | Focus | 2 stroke, 3 outset, 6 padding | Control geometry; contain the full stroke |
 | Rule / ordinary radius | 1 / 4 | Theme; switches and joined segments retain their own geometry |
 | Learn settings / column gap | 304 / 28 | `workspaceGeometry` |
@@ -236,6 +237,7 @@ production standards revision; this revision does not change plugin/state versio
 | 17 | #107 native field feedback approved 2026-11-07 | Settings Swell puts captions above the source-range inputs and wraps one local help or validation message below them. The existing field metrics, error ink and focus geometry apply. |
 | 18 | #107 native numeric and text fields approved 2026-11-09 | Shared editable, embedded and read-only field surfaces. Existing field metrics apply to wrapped inspector and Rename feedback. Compact embedded entries keep context help and configured stepper behavior. |
 | 19 | #107 native knobs and sliders review | Aqua value arc or track, off-white position marker, and shared outer focus brackets. Quiet pointer feedback follows the dial arc or the slider track body. Ctrl+wheel uses the control's fine step. Level has a drag-only 0 dB detent with a ±0.3 dB band and a quiet tick at 12 o'clock. |
+| 20 | #107 native switches and checkboxes approved 2026-11-10 | Labeled switches in Learn and Settings. Enabled, Solo and Freeze use inline checkboxes. Both forms share quiet hover, held feedback, readable disabled state and outer aqua keyboard/accessibility brackets. |
 
 ### Stable Perform transport information
 

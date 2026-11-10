@@ -19,6 +19,12 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 20 uses labeled switches in Learn and Settings
+and inline checkboxes for Enabled, Solo and Freeze. Use `Switch` and the
+checkbox form of `BooleanToggle` for their shared pointer, focus and activation
+policy. Give the indicator and label one clickable area and preserve the
+binding's accepted value and eligibility.
+
 Production standards revision 19 adopts the approved P5 dial and track states.
 Use the shared dial or track surface and the same corner-bracket geometry as
 command controls. Configure wheel steps in the control's own units. Ctrl+wheel

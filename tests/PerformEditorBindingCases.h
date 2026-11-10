@@ -41,9 +41,45 @@ void Composition::verifyEditorBindings()
     REQUIRE(std::abs(zoomTrack.getValue()-beforeWheel-.055)<.001);
     const auto userView=panel->timelineComponent().viewport();
     REQUIRE(engine.savedSession().performUi.hasView);
+    auto& enabled=require<controls::BooleanToggle>(*panel,"swellEnabled");
+    auto& solo=require<controls::BooleanToggle>(*panel,"swellSolo");
+    auto& freeze=require<controls::BooleanToggle>(*panel,"freezeRender");
+    const auto beforeFlags=engine.savedSession();
+    const auto beforeEnabled=enabled.getToggleState();
+    REQUIRE(enabled.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    REQUIRE(m3::find(engine.savedSession(),beforeFlags.primary)->enabled!=beforeEnabled);
+    REQUIRE(enabled.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    for(auto* flag:{&enabled,&solo,&freeze})flag->beforeInvocation();
     REQUIRE(engine.selectTargets({secondId},secondId));panel->refresh();
+    for(auto* flag:{&enabled,&solo,&freeze})
+    {
+        const auto accepted=flag->getToggleState();
+        flag->setToggleState(!accepted,juce::dontSendNotification);
+        flag->onClick();
+        REQUIRE(flag->getToggleState()==accepted);
+    }
+    const auto afterFlags=engine.savedSession();
+    for(const auto& before:beforeFlags.swells)
+    {
+        const auto* after=m3::find(afterFlags,before.id);REQUIRE(after);
+        REQUIRE(after->enabled==before.enabled && after->solo==before.solo && after->frozen==before.frozen);
+    }
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
+    auto* processing=dynamic_cast<juce::TabbedComponent*>(panel->settingsPanel())->getTabContentComponent(1);
+    auto& automatic=require<controls::Switch>(*processing,"automaticProcessing");
+    auto& autoRefresh=require<controls::Switch>(*processing,"autoRefreshAfterRecapture");
+    for(auto* setting:{&automatic,&autoRefresh})setting->beforeInvocation();
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();
+    const auto beforeProcessing=engine.savedSession();
+    for(auto* setting:{&automatic,&autoRefresh})
+    {
+        const auto accepted=setting->getToggleState();
+        setting->setToggleState(!accepted,juce::dontSendNotification);
+        setting->onClick();
+        REQUIRE(setting->getToggleState()==accepted);
+    }
+    REQUIRE(engine.savedSession().automaticProcessing==beforeProcessing.automaticProcessing);
+    REQUIRE(engine.savedSession().autoRegenerate==beforeProcessing.autoRegenerate);
     REQUIRE(require<LearnWorkspace>(*panel,"learnWorkspace").isVisible() && !zoom.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);

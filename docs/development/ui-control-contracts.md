@@ -225,9 +225,10 @@ storage/working-folder controls, C1 buttons and action-menu adoption are separat
 
 ## C6 — Switches and toggles
 
-Observed owners: [Switch](../../Source/UI/Controls/Switch.h), InvocationToggle,
-and legacy ToggleButton theme checkboxes. Track/thumb Learn switches and labeled
-checkboxes are distinct existing presentations; C1 action latches are separate.
+Owners include [BooleanToggle](../../Source/UI/Controls/BooleanToggle.h) and
+[Switch](../../Source/UI/Controls/Switch.h). Learn and Settings use labeled
+tracks, while Enabled, Solo and Freeze use inline checkboxes. C1 owns action
+latches. Hidden compatibility controls retain their existing owners.
 
 Contract: define explicit boolean-setting versus accepted-effective-latch
 semantics. Boolean controls expose accessible name/state, pointer/Space activation
@@ -243,6 +244,14 @@ to the shared composition. Capture existing pass/session hooks and retain silent
 programmatic refresh. Evidence: pointer/key/accessibility toggling, D+F/S cases,
 stale pass rejection, no extra display callbacks, hit/focus bounds and caption fit.
 Reuse ControlLibrary/UiStandards and Learn pass policy plus actual editor bindings.
+
+P6 uses two labeled forms of the same boolean control.
+The track and checkbox share quiet hover, held feedback and independent outer
+aqua brackets. Pointer clicks hide the brackets and keep actual focus. The
+label and indicator share a single Tab stop and guarded activation. Space,
+existing Return behavior and accessibility use the same invocation path.
+The disabled form keeps the accepted state readable. The owner approved the
+native JUCE preview on 10 November 2026.
 
 ## C7 — Navigation, lists, tabs and scroll containers
 
