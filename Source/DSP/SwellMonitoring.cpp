@@ -65,6 +65,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     if(!checkedAdd(anchor->start,static_cast<int64_t>(anchor->frames()),wetEnd))return;
     windowEnd=wetEnd;
     const auto validContext=auditionContextEnd(requested,anchor->rate,saved.postRollSeconds,contextEnd);
+    if (context.capture.manifest.loop) contextEnd=std::min(contextEnd,context.capture.manifest.loop->endSample);
     if(!saved.isolateDry)dryEnd=contextEnd;
     const auto needed=validContext?"Dry source not captured for this span; need samples ["+juce::String(requested.sourceStart)+", "+juce::String(dryEnd)+")":juce::String("Audition context overflow: reduce endpoint or listening tail");
     if(mode==AuditionMode::dryWet){windowStart=std::min(windowStart,requested.sourceStart);windowEnd=std::max(windowEnd,contextEnd);if(!validContext)error=needed;}
@@ -120,6 +121,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
         available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false,saved.gainPolicy,saved.auditionFollowsLive?std::optional<float>{saved.liveWetDb}:std::nullopt)){}
     const auto latest=contextProvider();const juce::ScopedLock guard(lock);if(cancel())return;
     bool changed=context.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(context.time,latest.time);
+    if(context.capture.manifest.loop)changed=changed || latest.capture.reference!=context.capture.reference;
     if(mode==AuditionMode::dryWet)changed=changed || sourceDependency(context.capture.manifest,requested.sourceStart,dryEnd)!=sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd);
     for(const auto& member:members)if(!member.frozen)changed=changed || sourceDependency(context.capture.manifest,member.sourceStart,renderInputEnd(member))!=sourceDependency(latest.capture.manifest,member.sourceStart,renderInputEnd(member));
     if(changed){stopLocked();return;}

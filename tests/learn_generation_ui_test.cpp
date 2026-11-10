@@ -141,6 +141,51 @@ static void captureImage(juce::Component& editor,const juce::String& tag,float s
     REQUIRE(juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,scale),*output));
 }
 
+static void songHostTimingFeedback(bool review=false)
+{
+    LoopCaptureFixture fixture;
+    auto& processor=*fixture.processor;
+    auto preference=processor.getLoopCapturePreference();
+    preference.enabled=false;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    await([&]{return processor.swellEngine().savedSession().defaultIR.present();});
+    auto preview=std::make_unique<PreverbAudioProcessorEditor>(processor);
+    auto& editor=*preview;
+    editor.setVisible(true);
+    auto* learn=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
+    auto* notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));
+    REQUIRE(learn && notice);
+    processor.setPlayHead(&fixture.host);
+    fixture.host.position.setTimeInSamples(128);
+    fixture.host.position.setBpm(120);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(processor.getHostPositionDiagnostics().samplePositionAvailable && !learn->songPlayhead());
+    REQUIRE(!learn->timelineStatusText().contains("Ready"));
+    REQUIRE(notice->currentMessage() && notice->currentMessage()->text.contains("Song Mode")
+            && notice->currentMessage()->detail.contains("Loop Mode"));
+    captureImage(editor,"song-host-timing-unavailable");
+    if(review)
+    {
+        controlReview::run(std::move(preview));
+        return;
+    }
+
+    preference.enabled=true;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    editor.refresh();
+    REQUIRE(!notice->currentMessage());
+    preference.enabled=false;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    fixture.host.position.setTimeInSamples(256);
+    fixture.host.position.setPpqPosition(256./24000);
+    fixture.host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(learn->songPlayhead()==256 && !notice->currentMessage());
+    processor.setPlayHead(nullptr);
+}
+
 static void loopUiCases(bool review)
 {
     LoopCaptureFixture fixture;
@@ -203,6 +248,7 @@ static void loopUiCases(bool review)
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && toggle->getToggleState());
     REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
+    REQUIRE(!visible(status));
     REQUIRE(buttonFill(*arm)==m3::ui::background && buttonFill(*toggle)==m3::ui::aqua);
     REQUIRE(visible(automatic) && automatic->isEnabled());
     automatic->setToggleState(true,juce::dontSendNotification);
@@ -211,6 +257,16 @@ static void loopUiCases(bool review)
     REQUIRE(visible(sensitivity) && visible(generate) && visible(onStop) && !onStop->isEnabled());
     method->setSelectedId(2,juce::sendNotificationSync);
     REQUIRE(arm->isEnabled() && !visible(count));
+    REQUIRE(!visible(status) && arm->getTooltip().containsIgnoreCase("leave Arm off"));
+    REQUIRE(method->getTooltip().contains("end of the bar"));
+    REQUIRE(controlBounds("learnRecaptureLabel").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
+    captureImage(editor,"issue126-learn-end-signal");
+    activate(*arm);
+    REQUIRE(arm->getToggleState() && processor.getWorkflowSnapshot().phase==workflow::Phase::armed);
+    REQUIRE(visible(status) && controlBounds("learnRecaptureLabel").getY()>controlBounds("learnLoopStatus").getBottom());
+    activate(*arm); // The preview has no audio callbacks between these clicks.
+    REQUIRE(!arm->getToggleState() && toggle->isEnabled());
+    REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
     method->setSelectedId(1,juce::sendNotificationSync);
     unit->setSelectedId(2,juce::sendNotificationSync);
     count->onStep(1);
@@ -225,6 +281,7 @@ static void loopUiCases(bool review)
     REQUIRE(status->getText().contains("Waiting") && !toggle->isEnabled());
     REQUIRE(workspace->coverageTotalsText()=="No accepted source");
     activate(*arm);
+    REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState() && toggle->isEnabled());
     fixture.tick();
     editor.refresh();
     REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState() && toggle->isEnabled());
@@ -255,15 +312,15 @@ static void loopUiCases(bool review)
         return view.displayed && view.displayed->identity.loop==accepted.manifest.loop && !view.updating;
     });
     const auto view=markers();
-    REQUIRE(!view.canGenerate && !view.displayed->positions.empty() && !view.displayed->identity.provisional);
+    REQUIRE(!view.displayed->positions.empty() && !view.displayed->identity.provisional);
     REQUIRE(view.displayed->identity.sourceReference==accepted.reference);
     for(const auto& marker:view.displayed->positions)
         REQUIRE(marker.sample>=0 && marker.sample<accepted.manifest.loop->endSample);
     editor.refresh();
     REQUIRE(workspace->coverageTotalsText().startsWith("Accepted Loop"));
     REQUIRE(!arm->getToggleState() && !arm->isEnabled() && toggle->getToggleState());
-    REQUIRE(status->getText().contains("Recapture Audio"));
-    REQUIRE(!generate->isEnabled());
+    REQUIRE(status->getText().contains("Recapture audio"));
+    REQUIRE(!onStop->isEnabled());
     REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(accepted.manifest.loop->endSample)));
     for (const auto scale : {100,125})
     {
@@ -287,7 +344,7 @@ static void loopUiCases(bool review)
     recapture->onClick();
     REQUIRE(processor.loopRecaptureEnabled() && arm->isEnabled());
     activate(*arm);
-    REQUIRE(arm->getToggleState() && markers().displayed->serial==view.displayed->serial);
+    REQUIRE(arm->getToggleState() && !generate->isEnabled() && markers().displayed->serial==view.displayed->serial);
     for(const auto scale : {100,125})
     {
         REQUIRE(editor.setPresentationScale(scale));
@@ -299,8 +356,19 @@ static void loopUiCases(bool review)
     REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState());
     if (!review)
     {
-        REQUIRE(!processor.swellEngine().generateLearn(
-            processor.swellEngine().assignmentEpoch(),processor.getWorkflowSnapshot().pass,view.displayed->serial));
+        auto& engine=processor.swellEngine();
+        const auto ir=fixture.root.file.getChildFile("Loop generation impulse.wav");
+        writeTestWav(ir,1,48000,{.4f,0,.2f,0,.1f});
+        REQUIRE(engine.assignDefaultIR(ir,engine.assignmentEpoch(),processor.getWorkflowSnapshot().pass));
+        await([&]{return markers().canGenerate;});
+        const auto ready=markers();
+        REQUIRE(!engine.generateLearn(engine.assignmentEpoch(),processor.getWorkflowSnapshot().pass,ready.displayed->serial+1));
+        editor.refresh();REQUIRE(generate->isEnabled());
+        activate(*generate);
+        await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+        const auto swells=engine.savedSession().swells;
+        REQUIRE(!swells.empty() && processor.getCaptureSnapshot().reference==accepted.reference);
+        for(const auto& swell:swells) REQUIRE(swell.sourceStart>=0 && swell.sourceEnd<=accepted.manifest.loop->endSample);
         return;
     }
 
@@ -462,13 +530,21 @@ static void alphaGuide()
 }
 int main(int argc,char** argv){return runTest([&]
 {
-    if (argc==2 && juce::String(argv[1])=="--review-empty-loop")
+    const auto option=argc==2 ? juce::String(argv[1]) : juce::String{};
+    if(option=="--review-song-timing")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        songHostTimingFeedback(true);
+        return;
+    }
+    if (option=="--review-empty-loop" || option=="--review-end-signal")
     {
         juce::ScopedJuceInitialiser_GUI gui;
         LoopCaptureFixture fixture;
         auto& processor=*fixture.processor;
         auto preference=processor.getLoopCapturePreference();
-        preference.enabled=false;
+        preference.enabled=option=="--review-end-signal";
+        if (preference.enabled) preference.method=LoopCapturePreference::Method::endSignal;
         REQUIRE(processor.setLoopCapturePreference(preference));
         auto editor=std::make_unique<PreverbAudioProcessorEditor>(processor);
         editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
@@ -491,7 +567,7 @@ int main(int argc,char** argv){return runTest([&]
     if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();aboutBindings();return;}
     if(argc>1 && juce::String(argv[1])=="--review-about"){aboutBindings(true);return;}
     const bool review=argc>1 && juce::String(argv[1])=="--review";
-    if(!review)loopUiCases(false);
+    if(!review){songHostTimingFeedback();loopUiCases(false);}
     if(!review)aboutBindings();
     if(!review)controlBindings();
     if(!review)sharedSoundBindings();

@@ -21,6 +21,10 @@ exclusive capture end. Rounded pulse distances must admit a common period
 with strictly less than one sample of rounding error per distance. Clock loss,
 reset, or conflicting markers before the required boundary invalidate the
 attempt. A local capture grid grants no recurring phase authority for Perform.
+The Perform Phrase pulse on note 12 may remain connected alongside the
+simplified Clock, including on the same sample. Learn treats it as phase
+information for Perform. A mix of simplified Clock and legacy Beat or Bar
+remains conflicting capture timing.
 
 See the [manual and sequenced Rack fixtures](../validation/issue-133-rack-fixture/README.md)
 for measured control delivery and sample alignment. Existing marker-based
@@ -60,7 +64,7 @@ evidence from its current reference epoch.
 | Capability | Required evidence | Example unavailable explanation |
 | --- | --- | --- |
 | Song timeline | Existing Song admission for absolute host timing | Host did not supply a valid Song timeline. |
-| Loop phrase phase | Shared origin and a recurring reference matching the accepted phrase | Connect a reference that repeats at the captured length. |
+| Loop phrase phase | Observed wet origin and a recurring reference matching the accepted phrase | Connect a reference that repeats at the captured length. |
 | Duration capture | Verified start, beat timing, meter and the requested span's musical boundary | Declare the meter to use Bars and Beats. |
 | End signal capture | Verified fresh start, attributable end request and a verified bar reference for quantised completion | Use Duration or a verified capture end input. |
 | Musical grid | Verified beat timing and explicit meter | Provide beat timing to enable the grid. |
@@ -77,14 +81,16 @@ belongs to [#127](https://github.com/elneilios/ReverbArise/issues/127).
 
 ## Stable fractional periods and recovery
 
-Live Loop readiness uses an independently configured phrase length and shared
-origin. A capture grid can be ready while live phase is unconfigured, waiting,
+Live Loop readiness uses an independently declared phrase length and the
+observed marker as the wet origin. A capture grid can be ready while live phase is unconfigured, waiting,
 mismatched or lost. The accepted sample extent provides a rounding check for
 matching a measured capture tempo to the live reference. Live marker cadence
 uses the independently verified reference tempo throughout its epoch.
 
-The reference policy uses two complete matching intervals to acquire
-phase. For a verified fixed configuration, use its fractional period and
+The automatic Rack route supports one, two and four bars. Use the accepted
+length as the expected recurrence and verify it against the actual Phrase
+pulses. A wrong cadence blocks Cue. The reference policy uses two complete
+matching intervals to acquire phase. For a verified fixed configuration, use its fractional period and
 accept the two adjacent integer interval lengths. On the measured 48 kHz
 lanes the four-bar periods are exactly `46,080,000 / 137` and
 `46,080,000 / 280` samples. Bound cumulative error to one sample from
@@ -99,8 +105,9 @@ reference. Derive the nominal period as
 `sampleRate × 60 × beats × 4 / (tempoBpm × meterDenominator)`.
 Accept a recorded frame count equal to the floor or ceiling of that
 period. A four-bar take at 137 BPM and 48 kHz can therefore contain
-336,350 or 336,351 frames. Keep the recorded extent and verify the shared
-phrase origin independently.
+336,350 or 336,351 frames. Keep the recorded extent and use the live marker
+for the wet downbeat. The musician may place that marker independently of
+incoming dry audio.
 
 Declare sync lost when a required marker is absent after the previous
 marker plus the upper integer interval, arrives out of cadence, or the

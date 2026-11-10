@@ -1,0 +1,239 @@
+#pragma once
+
+namespace preview46
+{
+static void writeLoopPreview(const juce::File& png,const juce::Image& image)
+{
+    if(png.existsAsFile())REQUIRE(png.deleteFile());
+    auto stream=png.createOutputStream();
+    REQUIRE(stream && juce::PNGImageFormat().writeImageToStream(image,*stream));
+}
+
+static void loopPerformReview(bool review,const juce::File& output)
+{
+    using Phase=m3::LoopLiveReference::State;
+    using Prep=m3::LoopPlaybackPublication::Preparation;
+    using Playing=m3::LoopCueScheduler::State;
+    LoopCaptureFixture fixture;
+    fixture.percussive=true;
+    fixture.simpleClock=true;
+    fixture.simplePhrase=true;
+    auto& processor=*fixture.processor;
+    auto& engine=processor.swellEngine();
+    engine.setAutomaticProcessing(false);
+    auto preference=processor.getLoopCapturePreference();
+    preference.count=4;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    REQUIRE(processor.armLoopCapture());
+    fixture.through(fixture.marker(16),true);
+    const auto capture=processor.getCaptureSnapshot();
+    if(!capture.manifest.loop || capture.manifest.loop->beats!=16)
+        throw std::runtime_error(processor.loopCaptureStatus().toStdString());
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(!processor.requestWorkflowMode(workflow::Mode::finalise));
+    REQUIRE(engine.addTarget(0));
+    const auto first=engine.savedSession().primary;
+    REQUIRE(engine.addTarget(84088));
+    const auto second=engine.savedSession().primary;
+    REQUIRE(first!=second && engine.selectTargets({first,second},first));
+    const auto ir=fixture.root.file.getChildFile("Loop Perform preview impulse.wav");
+    std::vector<float> impulse(14400);
+    for(size_t i=0;i<impulse.size();++i)
+        impulse[i]=static_cast<float>(.12*std::exp(-static_cast<double>(i)/3200)*std::cos(i*.034));
+    writeTestWav(ir,1,48000,impulse);
+    engine.loadIR(ir);
+    const auto until=[&](const auto& predicate)
+    {
+        const auto deadline=juce::Time::getMillisecondCounter()+12000;
+        while(!predicate() && juce::Time::getMillisecondCounter()<deadline)
+        {fixture.tick();juce::Thread::sleep(2);}
+        if(!predicate())throw std::runtime_error(engine.snapshot().message.toStdString());
+    };
+    until([&]{const auto session=engine.savedSession();return session.swells.size()==2
+        && session.swells[0].irName==ir.getFileName() && session.swells[1].irName==ir.getFileName();});
+    REQUIRE(engine.selectTargets({first},first));
+    engine.generate(true);
+    until([&]{return engine.snapshot().auditionReady && processor.loopPlaybackStatus().preparation==Prep::ready;});
+    REQUIRE(engine.snapshot().sourceDetail && engine.snapshot().raw && engine.snapshot().raw->start<0);
+    REQUIRE(!engine.edit(first,[](auto& swell,auto&){swell.enabled=false;return true;},engine.assignmentEpoch(),nullptr,capture.manifest.revision+1));
+
+    PreverbAudioProcessorEditor editor(processor);
+    editor.enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
+    REQUIRE(editor.setPresentationSize(900,600));
+    editor.setVisible(true);
+    editor.refresh();
+    auto& cue=require<controls::ActionButton>(editor,"loopCue");
+    auto& status=require<juce::Label>(editor,"loopPlaybackStatus");
+    REQUIRE(cue.isVisible() && status.isVisible() && find(editor,"loopStop")==nullptr);
+    REQUIRE(!cue.isEnabled() && cue.getButtonText()=="Cue Loop" && status.getText().isNotEmpty());
+    REQUIRE(editor.timelineComponent().gridAvailable());
+    auto& placement=require<KnobValue>(editor,"wetPlacementCell");
+    placement.valueField().setText("-25",false);placement.valueField().onReturnKey();
+    const auto edited=engine.savedSession();
+    REQUIRE(m3::find(edited,first)->placement==-1200 && m3::find(edited,second)->placement==0);
+    auto& reset=require<controls::ActionButton>(editor,"resetWetShape");
+    reset.invokeCommand();juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    REQUIRE(m3::find(engine.savedSession(),first)->placement==0);
+    placement.valueField().setText("-25",false);placement.valueField().onReturnKey();
+    REQUIRE(m3::find(engine.savedSession(),first)->placement==-1200);
+    REQUIRE(engine.selectTargets({second},second));editor.refresh();
+    REQUIRE(engine.savedSession().primary==second && editor.timelineComponent().gridAvailable());
+    auto& freeze=require<juce::ToggleButton>(editor,"freezeRender");
+    freeze.setToggleState(true,juce::dontSendNotification);freeze.onClick();
+    REQUIRE(m3::find(engine.savedSession(),second)->frozen);
+    freeze.setToggleState(false,juce::dontSendNotification);freeze.onClick();
+    REQUIRE(!m3::find(engine.savedSession(),second)->frozen);
+    auto& timeline=editor.timelineComponent();
+    timeline.fitSelection();timeline.setSnap(false);
+    const auto lane=timeline.sourceLane();
+    const auto oldEnd=m3::find(edited,second)->sourceEnd;
+    const auto endX=static_cast<float>(timeline.viewport().pixel(oldEnd,lane.getX(),lane.getWidth()));
+    const juce::Point<float> handle{endX,lane.getY()+lane.getHeight()*.75f};
+    REQUIRE(timeline.beginDrag(handle));
+    timeline.dragTo(handle.translated(-8,0));
+    REQUIRE(m3::find(engine.savedSession(),second)->sourceEnd<oldEnd);
+    timeline.focusLost(juce::Component::focusChangedDirectly);
+    timeline.setSnap(true);
+    REQUIRE(engine.selectTargets({first},first));editor.refresh();
+    until([&]{return engine.snapshot().auditionReady && processor.loopPlaybackStatus().preparation==Prep::ready;});
+    editor.refresh();timeline.fitSelection();
+    REQUIRE(engine.audition());
+    fixture.tick(true);
+    REQUIRE(engine.snapshot().playing);
+    engine.stop();
+    for(int block=0;block<3;++block)fixture.tick();
+    if(output!=juce::File{})
+    {
+        REQUIRE(output.createDirectory().wasOk());
+        for(const auto scale:{100,125})
+        {
+            REQUIRE(editor.setPresentationScale(scale));editor.refresh();
+            writeLoopPreview(output.getChildFile("loop-blocked-"+juce::String(scale)+".png"),
+                editor.createComponentSnapshot(editor.getLocalBounds(),true));
+        }
+        REQUIRE(editor.setPresentationScale(100));
+    }
+    fixture.dryOffset=2171;
+    fixture.through(fixture.marker(80));
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().phase==Phase::ready && cue.isEnabled());
+    REQUIRE(cue.getButtonText()=="Cue Loop" && status.getText()=="Ready");
+    const auto readyBounds=cue.getBounds();
+    REQUIRE(cue.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::queued && cue.isEnabled() && cue.getButtonText()=="Cancel Loop");
+    REQUIRE(status.getText()=="Waiting for phrase");
+    REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("Cancel"));
+    if(output!=juce::File{})
+        writeLoopPreview(output.getChildFile("loop-queued.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
+    cue.invokeCommand();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    fixture.tick();editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::standby && cue.getButtonText()=="Cue Loop" && status.getText()=="Ready");
+    cue.invokeCommand();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    fixture.through(fixture.marker(96)-4096);
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::leadIn && cue.getButtonText()=="Stop Loop" && cue.isEnabled());
+    REQUIRE(status.getText()=="Playing lead-in");
+    REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
+    fixture.through(fixture.marker(96));
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::repeating && cue.getButtonText()=="Stop Loop" && cue.isEnabled());
+    REQUIRE(status.getText()=="Playing loop");
+    REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("fade"));
+    if(output!=juce::File{})
+        writeLoopPreview(output.getChildFile("loop-stop-active.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
+    const auto previousView=timeline.viewport();
+    const auto phraseEnd=capture.manifest.loop->endSample;
+    const m3::SwellViewport finalBar{phraseEnd * .75,static_cast<double>(phraseEnd)};
+    timeline.setViewport(finalBar);
+    fixture.through(fixture.marker(112)-4096);
+    editor.refresh();
+    const auto playing=processor.loopPlaybackStatus();
+    REQUIRE(playing.playhead && playing.nextLeadInStart && *playing.playhead > *playing.nextLeadInStart);
+    const auto leadIn=engine.snapshot().loopLeadIn;
+    REQUIRE(leadIn.peaks && std::any_of(leadIn.peaks->begin(),leadIn.peaks->end(),
+        [](const auto& peak){return peak.maximum > peak.minimum;}));
+    timeline.createComponentSnapshot(timeline.getLocalBounds(),true);
+    const auto paintedColumns=timeline.wetPaintMetrics().columnsPainted;
+    REQUIRE(paintedColumns > 0);
+    REQUIRE(engine.selectTargets({second},second));
+    editor.refresh();
+    timeline.setViewport(finalBar);
+    REQUIRE(engine.snapshot().loopLeadIn == leadIn);
+    const auto otherSelection=editor.createComponentSnapshot(editor.getLocalBounds(),true);
+    REQUIRE(timeline.wetPaintMetrics().columnsPainted == paintedColumns);
+    if(output!=juce::File{})
+        writeLoopPreview(output.getChildFile("loop-next-lead-in.png"),otherSelection);
+    REQUIRE(engine.selectTargets({first},first));
+    editor.refresh();
+    timeline.setViewport(previousView);
+    cue.invokeCommand();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    for(int block=0;block<3;++block)fixture.tick();
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().playback==Playing::standby && cue.isEnabled());
+
+    if(output!=juce::File{})
+    {
+        REQUIRE(output.createDirectory().wasOk());
+        Composition song;
+        auto songEditor=song.createComparisonEditor();
+        songEditor->enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
+        REQUIRE(songEditor->setPresentationSize(900,600));
+        songEditor->setVisible(true);
+        for(const auto scale:{100,125})
+        {
+            REQUIRE(songEditor->setPresentationScale(scale) && editor.setPresentationScale(scale));
+            songEditor->refresh();editor.refresh();
+            REQUIRE(!require<controls::ActionButton>(*songEditor,"loopCue").isVisible());
+            const auto songImage=songEditor->createComponentSnapshot(songEditor->getLocalBounds(),true);
+            const auto loopImage=editor.createComponentSnapshot(editor.getLocalBounds(),true);
+            juce::Image comparison(juce::Image::RGB,songImage.getWidth()+loopImage.getWidth(),loopImage.getHeight(),true);
+            {juce::Graphics g(comparison);g.drawImageAt(songImage,0,0);g.drawImageAt(loopImage,songImage.getWidth(),0);}
+            writeLoopPreview(output.getChildFile("song-loop-"+juce::String(scale)+".png"),comparison);
+        }
+        REQUIRE(editor.setPresentationScale(100));
+    }
+
+    fixture.simplePhrase=false;
+    fixture.through(fixture.marker(112)+128);
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().phase==Phase::lost && !cue.isEnabled());
+    fixture.simplePhrase=true;
+    fixture.through(fixture.marker(160));
+    editor.refresh();
+    REQUIRE(processor.loopPlaybackStatus().phase==Phase::ready && cue.isEnabled());
+    std::cout<<"Loop Perform native layout, real source and wet, Cue, Stop, loss and re-lock passed.\n";
+    if(!review)return;
+
+    // Open on repeating wet so the active command is visible immediately.
+    REQUIRE(processor.requestLoopCue());
+    REQUIRE(engine.selectTargets({second},second));
+    fixture.through(fixture.marker(192)-6000);
+    editor.refresh();
+    timeline.setViewport(finalBar);
+    REQUIRE(cue.isEnabled() && cue.getButtonText()=="Stop Loop" && status.getText()=="Playing loop");
+
+    class Window final:public juce::DocumentWindow,private juce::Timer
+    {
+    public:
+        Window(PreverbAudioProcessorEditor& editor,LoopCaptureFixture& source)
+            :DocumentWindow("ReverbArise #126 - Loop Perform preview",background,closeButton),fixture(source)
+        {
+            setUsingNativeTitleBar(true);setContentNonOwned(&editor,true);
+            centreWithSize(editor.getWidth(),editor.getHeight());setVisible(true);toFront(true);
+            startTimer(40);
+        }
+        void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
+    private:
+        void timerCallback()override{for(int block=0;block<15;++block)fixture.tick();}
+        LoopCaptureFixture& fixture;
+    };
+    Window window(editor,fixture);
+    juce::MessageManager::getInstance()->runDispatchLoop();
+}
+}

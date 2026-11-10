@@ -1,4 +1,4 @@
-"""Build local manual, sequenced and trace patches without bundling Rack licenses."""
+"""Build local capture, Perform and trace patches without bundling Rack licenses."""
 
 import argparse
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-def create_patch(bundle, output, variant, audio_device=None):
+def create_patch(bundle, output, variant, audio_device=None, steps=16):
     modules = []
     cables = []
     position = 0
@@ -25,10 +25,15 @@ def create_patch(bundle, output, variant, audio_device=None):
                            inputModuleId=target, inputId=inlet,
                            color="#ffb437" if timing else "#1ebc8b"))
 
-    manual = variant == "manual"
+    perform_sequence = variant == "perform-sequenced"
+    perform = variant == "perform" or perform_sequence
+    manual = variant == "manual" or perform
     probe = variant == "probe"
-    clock = module("ImpromptuModular", "Clocked-Clkd", "2.5.0", 10, [(3, 137)],
-                   running=manual or probe, trigOuts=[False] * 4, resetClockOutputsHigh=False)
+    clock_params = [(1, -17), (2, -5), (3, 137)] if variant == "perform" else [(3, 137)]
+    clock = module("ImpromptuModular", "Clocked-Clkd", "2.5.0", 10, clock_params,
+                   running=variant in ("manual", "perform", "probe"),
+                   trigOuts=[False, False, True, False] if variant == "perform" else [False] * 4,
+                   resetClockOutputsHigh=False)
     source, beat = clock, 0
     if not manual:
         sequencer = module("Fundamental", "SEQ3", "2.6.4", 22, [(3, 4)], running=True,
@@ -36,13 +41,35 @@ def create_patch(bundle, output, variant, audio_device=None):
         connect(clock, 0, sequencer, 1)
         source, beat = sequencer, 13
 
-    if not probe:
-        oscillator = module("Fundamental", "VCO", "2.6.4", 9, [(2, -12)])
-    level = module("Fundamental", "VCA", "2.6.4", 5, [(0, 0.24), (1, 1)])
-    connect(source, beat, level, 5)
-    if not probe:
-        connect(oscillator, 0, level, 2, False)
-        connect(source, beat, level, 1)
+    if perform_sequence:
+        # GateSeq64 in 4x16 mode. At one pulse per step, enabled gates
+        # follow the input clock, so all four Host-FX inputs align.
+        default_gate, enabled_gate = 50, 50 | 0x200
+        attributes = [default_gate] * 64
+        for track, active_steps in enumerate(([0], [steps - 1], range(steps), range(0, steps, 4))):
+            for step in active_steps:
+                attributes[track * 16 + step] = enabled_gate
+        sequencer = module("ImpromptuModular", "Gate-Seq-64", "2.5.0", 24,
+                           [(66, 0), (71, 1)], running=True, pulsesPerStep=1,
+                           sequences=[steps], attributes2=attributes)
+        connect(clock, 0, sequencer, 0)
+    if perform:
+        noise = module("Fundamental", "Noise", "2.6.4", 5)
+        envelope = module("Fundamental", "ADSR", "2.6.4", 12,
+                          [(0, 0.0), (1, 0.42), (2, 0.0), (3, 0.2)])
+        level = module("Fundamental", "VCA", "2.6.4", 5, [(0, 0.42)])
+        # A bar gate gives the snare envelope time to decay.
+        connect(sequencer if perform_sequence else clock, 3, envelope, 4)
+        connect(envelope, 0, level, 1)
+        connect(noise, 0, level, 2, False)
+    else:
+        if not probe:
+            oscillator = module("Fundamental", "VCO", "2.6.4", 9, [(2, -12)])
+        level = module("Fundamental", "VCA", "2.6.4", 5, [(0, 0.24), (1, 1)])
+        connect(source, beat, level, 5)
+        if not probe:
+            connect(oscillator, 0, level, 2, False)
+            connect(source, beat, level, 1)
     if not manual:
         gates = module("Fundamental", "VCA", "2.6.4", 5)
         # Step gates must coincide with clock high, including at patch load.
@@ -50,7 +77,12 @@ def create_patch(bundle, output, variant, audio_device=None):
             connect(sequencer, step, gates, signal)
             connect(source, beat, gates, cv)
 
-    notes = [23] if manual else [23, 24, 25]
+    if perform_sequence:
+        notes = [23, 24, 25, 12]
+    elif perform:
+        notes = [23, 12]
+    else:
+        notes = [23] if manual else [23, 24, 25]
     if probe:
         notes += [21, 17]
     host = module("VCV-Host", "Host-FX", "2.1.0", 10,
@@ -58,7 +90,14 @@ def create_patch(bundle, output, variant, audio_device=None):
                   subPluginId=0, blockSize=256, bypass=False, worker=True,
                   pluginPath=bundle.as_posix(), pluginName=bundle.stem,
                   busChannelMappings=[[[0, 1]], [[0, 1]]])
-    connect(level, 1, host, 0)
+    if perform_sequence:
+        for inlet, track in enumerate((2, 0, 1, 0)):
+            connect(sequencer, track, host, inlet)
+    elif perform:
+        connect(clock, 0, host, 0)  # Clock sets the Learn capture grid.
+        connect(clock, 2, host, 1)  # Phrase /16 sets live wet phase.
+    else:
+        connect(level, 1, host, 0)
     if not manual:
         connect(gates, 0, host, 1)
         connect(gates, 1, host, 2)
@@ -84,7 +123,7 @@ def create_patch(bundle, output, variant, audio_device=None):
             "In Learn, turn on Loop Mode and select End Signal, then press Run on Clkd. SEQ3 Step 1 arms the take. "
             "Step 4 requests finish. The next Step 1 closes the bar."
         )
-        module("Core", "Notes", "2.6.6", 16, text=(
+        instructions = (
             f"REVERBARISE LOOP / {variant.upper()}\n\n"
             "Select your speakers in Audio 2 if needed. Click the Host-FX eye to open Learn.\n\n"
             "Host-FX Note Gate (MIDI channel 1)\n"
@@ -92,7 +131,33 @@ def create_patch(bundle, output, variant, audio_device=None):
             f"{workflow}\n\n"
             "Recapture Audio off protects an accepted Loop. Switch it on to replace the Loop. "
             "If the clock stops before the closing beat, the incomplete take is discarded."
-        ))
+        )
+        if perform_sequence:
+            instructions = (
+                f"REVERBARISE / {steps}-STEP END SIGNAL\n\n"
+                "Select 48 kHz audio. Open the Host-FX eye. In Learn, turn on Loop Mode "
+                "and choose End Signal if needed.\n\n"
+                "Press RUN on Clkd and wait for Step 1. The sequencer does the arming. "
+                "The Arm button in Learn starts a manual take on the next beat.\n\n"
+                f"Step 1 arms and sets Phrase. Step {steps} requests Stop. "
+                f"The next Step 1 closes the {steps // 4}-bar take. "
+                "Recapture Audio off keeps the accepted take on later cycles.\n\n"
+                "Keep Clkd running while you generate swells in Learn so Phrase can verify. "
+                "Go to Perform and click Cue Loop when Ready."
+            )
+        elif perform:
+            instructions = (
+                "REVERBARISE / LOOP PERFORM\n\n"
+                "Use 48 kHz and leave Clkd at 137 BPM. Select your output device in Audio 2. "
+                "You should hear a short snare-like hit once per bar. Open ReverbArise with the Host-FX eye.\n\n"
+                "Learn: turn on Loop Mode, set Duration to 4 Bars and click Arm. "
+                "After Loop accepted, review the detected markers and click Generate Swells.\n\n"
+                "Perform: wait for Ready, then click Cue Loop. While waiting you can click Cancel Loop. "
+                "Once it plays, Stop Loop fades the swells and the dry hits keep going.\n\n"
+                "Leave both Host-FX timing cables connected. Input 1: Clock (B0). "
+                "Input 2: Phrase (C0). Green cables carry audio."
+            )
+        module("Core", "Notes", "2.6.6", 16, text=instructions)
     patch = dict(version="2.6.6", path="", zoom=0.85, gridOffset=[0, 0], modules=modules, cables=cables)
     output.parent.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=output.parent) as temp:
@@ -102,9 +167,10 @@ def create_patch(bundle, output, variant, audio_device=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("variant", choices=["manual", "sequenced", "probe"])
+    parser.add_argument("variant", choices=["manual", "sequenced", "probe", "perform", "perform-sequenced"])
     parser.add_argument("--bundle", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--asio-device")
+    parser.add_argument("--steps", type=int, choices=[4, 8, 16], default=16)
     args = parser.parse_args()
-    create_patch(args.bundle.resolve(strict=True), args.output.resolve(), args.variant, args.asio_device)
+    create_patch(args.bundle.resolve(strict=True), args.output.resolve(), args.variant, args.asio_device, args.steps)

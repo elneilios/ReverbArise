@@ -86,19 +86,32 @@ public:
             control->setEnabled(!busy);
         loopArm.display(armed && !finishing);
         loopArm.setEnabled(!finishing && (armed || canArm));
-        const auto stopHelp=preference.method==LoopCapturePreference::Method::endSignal
-            ? "Arm off finishes at the end of the bar." : "Arm off cancels the take.";
-        loopSetup.setText(juce::String("4/4. One clock pulse per beat.\n")+stopHelp,juce::dontSendNotification);
-        loopArm.setHelpText(status);
-        loopArm.setTooltip(status);
+        const bool endSignal=preference.method==LoopCapturePreference::Method::endSignal;
+        loopMethod.setTooltip(endSignal
+            ? "Turn Arm off or send Stop while recording to finish at the end of the bar."
+            : "Record for the number of bars or beats you choose.");
+        auto armHelp=status;
+        if (loopArm.isEnabled())
+        {
+            if (!armed)
+                armHelp="Start a manual recording. Leave Arm off if your sequencer starts the recording.";
+            else if (flowNow().phase!=workflow::Phase::recording)
+                armHelp="Cancel before recording starts.";
+            else
+                armHelp=endSignal ? "Finish recording at the end of this bar." : "Cancel this recording.";
+        }
+        loopArm.setHelpText(armHelp);
+        loopArm.setTooltip(armHelp);
         loopStatus.setText(status,juce::dontSendNotification);
         loopStatus.setTooltip(status);
     }
-    void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,workflow::Snapshot flow,bool position,const CaptureProgress& pending={})
+    void display(const CaptureSessionSnapshot& source,const EditorSnapshot& editor,const SongTime& time,
+                 workflow::Snapshot flow,bool position,const CaptureProgress& pending={},bool songTimingBlocked=false)
     {
         const bool loopSource=source.sourceKind()==CaptureSourceKind::loop;
         const bool coordinateChange=source.sourceKind()!=capture.sourceKind() || (loopSource && source.reference!=capture.reference);
         refreshing=true;capture=source;clock=time;playhead=position && source.sourceKind()==CaptureSourceKind::song;
+        hostSongTimingBlocked=songTimingBlocked;
         if (loopSource) clock.valid=false;
         automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
         generationView=editor.learnGeneration;displaySession=editor.sessionEpoch;displayPass=flow.pass;
@@ -110,12 +123,10 @@ public:
                 || (!loopSource && identity.loop))
                 generationView.displayed.reset();
         }
-        if(loopSource)
+        if(loopSource && !generationView.displayed && generationView.canGenerate)
         {
             generationView.canGenerate=false;
-            generationView.reason=generationView.displayed && !generationView.updating
-                ? juce::String(static_cast<int>(generationView.displayed->positions.size()))+" markers. Generate Swells requires Song audio."
-                : "Generate Swells requires Song audio.";
+            generationView.reason="Wait for markers from the accepted Loop.";
         }
         autoStop.setToggleState(editor.session.autoGenerateOnStop,juce::dontSendNotification);
         autoStop.setEnabled(!usesLoopPolicies() && (!flow.locked() || editor.session.autoGenerateOnStop));
@@ -156,7 +167,7 @@ public:
             else if (source.manifest.loop) totalsText+=" | "+duration(source.manifest.loop->endSample);
             else if (accepted) totalsText+=" | "+duration(learnMappedFrames(source.manifest));
         }
-        statusText=phase==workflow::Phase::recording?"Recording":phase==workflow::Phase::draining || phase==workflow::Phase::validating?"Finishing capture":phase==workflow::Phase::failed?"Capture failed; previous audio kept":flow.result==workflow::Result::cancelled?"Capture cancelled":source.unavailable?"Some audio unavailable":hasSource()?"Captured":"Ready to capture";
+        statusText=phase==workflow::Phase::recording?"Recording":phase==workflow::Phase::draining || phase==workflow::Phase::validating?"Finishing capture":phase==workflow::Phase::failed?"Capture failed; previous audio kept":flow.result==workflow::Result::cancelled?"Capture cancelled":source.unavailable?"Some audio unavailable":hasSource()?"Captured":hostSongTimingBlocked?"":"Ready to capture";
         if(hasSource() && rate>0)statusText+=" | "+duration(flow.locked()?learnProvisionalFrames(progress):learnMappedFrames(capture.manifest));
         if(automaticOn && generationView.displayed)statusText+=" | "+juce::String(static_cast<int>(generationView.displayed->positions.size()))+" events"
             +(generationView.updating?" (updating)":generationView.displayed->identity.provisional?" (preview)":"");
@@ -208,6 +219,8 @@ public:
     juce::Rectangle<int> timelineRulerBounds()const noexcept{return timelineRuler;}
     juce::Rectangle<int> timelineStatusBounds()const noexcept{return timelineStatus;}
     bool showsEmptyPrompt()const noexcept{return !hasSource() && phase!=workflow::Phase::recording && phase!=workflow::Phase::draining && phase!=workflow::Phase::validating;}
+    std::optional<int64_t> songPlayhead()const noexcept
+    {return playhead && clock.valid ? std::optional{clock.sample} : std::nullopt;}
     const juce::String& timelineStatusText()const noexcept{return statusText;}
     std::array<juce::Rectangle<int>,3> emptyStateRegions()const noexcept
     {
@@ -298,7 +311,7 @@ public:
         {const auto width=std::min(static_cast<float>(controlGeometry::rulerLabelWidth),static_cast<float>(chart.getWidth())),at=std::clamp(x(tick.samplePosition)-width*.5f,static_cast<float>(chart.getX()),static_cast<float>(chart.getRight())-width);
             g.drawText(juce::String(tick.bar)+".1",juce::Rectangle<float>(at,static_cast<float>(timelineRuler.getY()),width,static_cast<float>(timelineRuler.getHeight())),juce::Justification::centred);}
         else if(loopSource)g.drawText("Phrase-local audio",timelineRuler,juce::Justification::left);
-        else if(!loopSettings.enabled || hasSource())g.drawText("Time unavailable",timelineRuler,juce::Justification::left);
+        else if(!hostSongTimingBlocked && (!loopSettings.enabled || hasSource()))g.drawText("Time unavailable",timelineRuler,juce::Justification::left);
         const auto mid=static_cast<float>(chart.getCentreY()),height=chart.getHeight()*.4f;
         const auto drawSource=[&](const auto& regions,bool provisional)
         {
@@ -352,12 +365,15 @@ public:
             constexpr std::array<float,9> bars{8,17,29,13,38,22,32,16,7};
             for(size_t i=0;i<bars.size();++i){const auto h=bars[i];g.fillRoundedRectangle(static_cast<float>(iconCentre.x)-35+static_cast<float>(i)*8,static_cast<float>(iconCentre.y)-h*.5f,3,h,1.5f);}
             applyTextRole(g,*this,TextRole::emptyHeading);
+            const bool canStart=loopArm.isEnabled() && !loopArm.getToggleState();
             g.drawFittedText(loopSettings.enabled
-                ? (phase==workflow::Phase::armed?"Waiting for capture timing":"Arm to capture a loop")
-                : "Play audio in your DAW",regions[1],juce::Justification::centred,1);
+                ? (canStart?"Capture a loop":"No loop recorded yet")
+                : (hostSongTimingBlocked?"No song audio yet":"Play audio in your DAW"),regions[1],juce::Justification::centred,1);
             applyTextRole(g,*this,TextRole::emptyBody);
-            g.drawFittedText(loopSettings.enabled?"Use the same clock for the audio and capture."
-                : automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform.",
+            g.drawFittedText(loopSettings.enabled
+                ? (canStart?"Click Arm to record manually. With a clock input, recording starts on the next beat.\n"
+                            "If your sequencer starts the recording, leave Arm off.":"")
+                : (hostSongTimingBlocked?"":automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform."),
                 regions[2],juce::Justification::centredTop,2);
         }
         if(hasKeyboardFocus(false)){
@@ -369,7 +385,8 @@ public:
             g.setColour(text);const float dash[]{3,3};g.drawDashedLine({at,static_cast<float>(chart.getY()+5),at,static_cast<float>(chart.getBottom()-5)},dash,2,1);
             g.fillEllipse(at-3,static_cast<float>(chart.getY()+5),6,6);
         }
-        if(playhead && clock.sample>=first && clock.sample<=last){g.setColour(timing);g.drawVerticalLine(static_cast<int>(x(static_cast<double>(clock.sample))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));}
+        if(const auto sample=songPlayhead();sample && *sample>=first && *sample<=last)
+        {g.setColour(timing);g.drawVerticalLine(static_cast<int>(x(static_cast<double>(*sample))),static_cast<float>(chart.getY()),static_cast<float>(chart.getBottom()));}
         applyTextRole(g,*this,TextRole::helper);g.drawText(visibleInspectionText(),timelineStatus,juce::Justification::left);
     }
 private:
@@ -383,18 +400,16 @@ private:
     }
     void setupLoopControls()
     {
-        for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount,&loopArm,&loopSetup,&loopStatus})
+        for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount,&loopArm,&loopStatus})
             addChildComponent(control);
         loopMode.setName("learnLoopMode");
-        loopMode.setTooltip("Select Loop for the next capture.");
+        loopMode.setTooltip("Record a loop using 4/4 timing. Send one clock pulse per beat from the same clock as your audio.");
         loopMethod.setName("learnLoopMethod");loopMethod.setTitle("Capture method");
         loopUnit.setName("learnLoopUnit");loopUnit.setTitle("Duration unit");
         loopCount.setName("learnLoopCount");loopCount.setTitle("Duration count");
         loopArm.setName("learnLoopArm");loopStatus.setName("learnLoopStatus");
-        for (auto* label : {&loopSetup,&loopStatus})
-            applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
-        for (auto* label : {&loopSetup,&loopStatus}) label->setBorderSize({});
-        loopSetup.setTooltip("Route stereo audio and one Clock pulse per beat. Arm confirms the audio and clock are aligned. Start/Arm and Stop triggers are optional.");
+        applyTextRole(loopStatus,TextRole::helper,juce::Justification::topLeft);
+        loopStatus.setBorderSize({});
         loopMethod.addItem("Duration",1);loopMethod.addItem("End signal",2);
         loopUnit.addItem("Bars",1);loopUnit.addItem("Beats",2);
         loopCount.setEditable(true,true,false);
@@ -443,9 +458,12 @@ private:
         const bool show=visible && static_cast<bool>(onLoopPreference);
         const bool loop=show && loopSettings.enabled;
         const bool duration=loop && loopSettings.method==LoopCapturePreference::Method::duration;
+        const auto loopMessage=loopStatus.getText();
+        const bool showStatus=loop && loopMessage.isNotEmpty();
         loopMode.setVisible(show);
-        for (auto* control : std::initializer_list<juce::Component*>{&loopMethod,&loopArm,&loopSetup,&loopStatus})
+        for (auto* control : std::initializer_list<juce::Component*>{&loopMethod,&loopArm})
             control->setVisible(loop);
+        loopStatus.setVisible(showStatus);
         loopUnit.setVisible(duration);loopCount.setVisible(duration);
         if (!show) return;
         auto row=column.removeFromTop(controlGeometry::height);
@@ -463,11 +481,16 @@ private:
             loopUnit.setRowBounds(values.expanded(policyFocusMargin,0));
         }
         column.removeFromTop(spacing::related);
-        loopSetup.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
-        column.removeFromTop(spacing::labelHelp);
         loopArm.setBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
-        column.removeFromTop(spacing::labelHelp);
-        loopStatus.setBounds(column.removeFromTop(2*learnTypography::secondaryLineHeight));
+        if (showStatus)
+        {
+            column.removeFromTop(spacing::labelHelp);
+            const auto font=loopStatus.getLookAndFeel().getLabelFont(loopStatus);
+            const bool wraps=loopMessage.containsChar('\n')
+                || juce::GlyphArrangement::getStringWidth(font,loopMessage)>column.getWidth();
+            loopStatus.setBounds(column.removeFromTop((wraps?2:1)*learnTypography::secondaryLineHeight));
+        }
+        column.removeFromTop(spacing::tight);
     }
     LoopCapturePreference loopSettings;
     bool loopRecaptureOn=false;
@@ -475,7 +498,7 @@ private:
     controls::LatchingActionButton loopArm{"Arm",controls::CommandVariant::destructive};
     controls::ChoiceSelector loopMethod,loopUnit;
     controls::NumericInputControl loopCount;
-    juce::Label loopSetup,loopStatus;
+    juce::Label loopStatus;
     std::optional<uint64_t> loopArmPass;
     static constexpr int policyFocusMargin=controls::SelectorPresentation::focusMargin;
     juce::Component loopPolicies;
@@ -488,7 +511,7 @@ private:
     {
         auto* parent=inViewport?&loopPolicies:static_cast<juce::Component*>(this);
         for (auto* control : std::initializer_list<juce::Component*>{&captureGroup,&loopMode,&loopMethod,&loopUnit,&loopCount,
-             &loopArm,&loopSetup,&loopStatus,&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,
+             &loopArm,&loopStatus,&recapture,&recaptureLabel,&recaptureHelp,&automaticLabel,&automatic,
              &automaticToggleLabel,&autoStop,&autoStopLabel,&sensitivityLabel,&sensitivity,&generate,&generateReason})
             if (control->getParentComponent()!=parent) parent->addChildComponent(control);
         loopPoliciesViewport.setVisible(inViewport && (!responsive || selectedSection==1));
@@ -622,5 +645,6 @@ private:
     bool hasSource()const noexcept{return !capture.manifest.ranges.empty() || !capture.overview.empty() || !progress.ranges.empty();}
     juce::String statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
     juce::Rectangle<int> left,right,chart,timelineHeading,timelineCaption,timelineRuler,timelineStatus;int divider=0;double first=0,last=1;bool automaticOn=true,refreshing=false,playhead=false;
+    bool hostSongTimingBlocked=false;
 };
 }

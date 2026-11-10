@@ -34,6 +34,12 @@ struct HostPositionDiagnostics
     int64_t loopStart=0,loopEnd=0;
     int blockSize = 0;
     double sampleRate = 0.0;
+
+    SongTime songTime() const noexcept
+    {
+        return {positionAvailable && samplePositionAvailable && ppqPositionAvailable && tempoAvailable && meterAvailable,
+                samplePosition, ppqPosition, sampleRate, bpm, numerator, denominator};
+    }
 };
 
 class PreverbAudioProcessor final : public juce::AudioProcessor, private juce::AsyncUpdater
@@ -91,6 +97,7 @@ public:
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
     SongTime getSongTime() const noexcept;
+    SongTime getSourceEditTime(const CaptureSessionSnapshot&) const noexcept;
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}
     workflow::Readiness getWorkflowReadiness() const;
     bool requestWorkflowMode(workflow::Mode);
@@ -168,13 +175,15 @@ private:
     std::chrono::steady_clock::time_point previousLoopCallback;
     std::chrono::steady_clock::time_point previousLoopPlaybackCallback;
     std::optional<int64_t> loopPlaybackHostEnd;
+    m3::LoopReferenceSetup observedLoopReference;
     bool previousLoopSource = false;
     void invalidateLoopClock() noexcept;
     bool loopArmAllowed(workflow::Snapshot, bool external) const noexcept;
     uint64_t reserveLoopArm(bool external) noexcept;
     bool loopDurationFits(LoopCapturePreference) const noexcept;
     void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
-    void processLoopPlayback(juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
+    void processLoopPlayback(juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&,
+                             m3::LoopPlayback::Access, uint64_t) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;

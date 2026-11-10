@@ -30,7 +30,8 @@ bool sameCaptureDisplay(const CaptureSessionSnapshot& a,const CaptureSessionSnap
 bool sameWetDisplay(const EditorSnapshot& a,const EditorSnapshot& b)
 {
     if(a.sessionEpoch!=b.sessionEpoch || a.session.primary!=b.session.primary || a.raw!=b.raw || a.shaped!=b.shaped
-        || a.sourceDetail!=b.sourceDetail || a.wetSummaries!=b.wetSummaries || a.session.swells.size()!=b.session.swells.size())return false;
+        || a.sourceDetail!=b.sourceDetail || a.wetSummaries!=b.wetSummaries || a.loopLeadIn!=b.loopLeadIn
+        || a.session.swells.size()!=b.session.swells.size())return false;
     for(size_t i=0;i<a.session.swells.size();++i)
     {
         const auto& x=a.session.swells[i];const auto& y=b.session.swells[i];
@@ -62,7 +63,8 @@ void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t
         const auto owner=find(s.session,dragId);
         const bool timingChanged=!dragClock.sameAuthority(nextClock) || t.valid!=dragTime.valid || (t.valid && !transportMappingMatches(dragTime,t))
             || s.session.timing.valid!=dragAcceptedTime.valid || (s.session.timing.valid && !transportMappingMatches(dragAcceptedTime,s.session.timing));
-        if(s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
+        const bool loopChanged=(capture.manifest.loop || c.manifest.loop) && capture.reference!=c.reference;
+        if(loopChanged || s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
             || available!=dragSampleAvailable || (wetDrag && (owner->inputGeneration!=dragInput || owner->render.content!=dragRender
                 || !s.raw || !dragRaw || s.raw->start!=dragRaw->start || s.raw->end!=dragRaw->end)))
         {drag=Drag::none;gestureMessage("Gesture cancelled: selection, source, mode or fixed timing changed");}
@@ -227,14 +229,29 @@ void SwellTimeline::drawWave(juce::Graphics& g,const std::vector<CapturePeak>& p
         g.drawVerticalLine(static_cast<int>(lane.getX())+static_cast<int>(i),top,std::max(top+1.0f,bottom));++metrics.columnsPainted;
     }
 }
+juce::Rectangle<float> SwellTimeline::loopLeadInBounds() const noexcept
+{
+    if (!data.loopLeadIn.start || !capture.manifest.loop) return {};
+    const auto left = std::clamp(x(*data.loopLeadIn.start),wet.getX(),wet.getRight());
+    const auto right = std::clamp(x(capture.manifest.loop->endSample),wet.getX(),wet.getRight());
+    return {left,wet.getY(),std::max(0.0f,right - left),wet.getHeight()};
+}
+
 void SwellTimeline::paintWaveforms(juce::Graphics& g,ui::WaveformPaintMetrics& metrics,bool wetOnly)
 {
     const auto waveGain=juce::Decibels::decibelsToGain(static_cast<float>(waveZoom.getValue()));
     if(wetOnly)
     {
+        const auto primary=find(data.session,data.session.primary);
+        const auto leadIn = loopLeadInBounds();
+        if (!leadIn.isEmpty() && data.loopLeadIn.peaks)
+        {
+            juce::Graphics::ScopedSaveState clip(g);
+            g.reduceClipRegion(leadIn.getSmallestIntegerContainer());
+            drawWave(g,*data.loopLeadIn.peaks,wet,ui::aqua.withAlpha(.38f),waveGain,metrics,capture.manifest.loop->endSample);
+        }
         for(const auto& [id,wave]:data.wetSummaries)if(id!=data.session.primary && wave)
             drawWave(g,wave->peaks,wet,ui::otherWet.withAlpha(.22f),.45f/std::max(.000001f,wave->peak),metrics,find(data.session,id)?find(data.session,id)->placement:0);
-        const auto primary=find(data.session,data.session.primary);
         if(data.raw)
         {
             drawWave(g,data.raw->peaks,wet,ui::rawWet.withAlpha(.3f),.55f/std::max(.000001f,data.raw->peak),metrics,primary?primary->placement:0);
@@ -336,7 +353,21 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.drawDashedLine({at,source.getY(),at,wet.getBottom()},dashes,2,1);
         juce::Path marker;marker.addTriangle(at-5,source.getY()+5,at+5,source.getY()+5,at,source.getY()+14);g.fillPath(marker);
         g.drawText("Target",juce::Rectangle<float>(at+7,source.getY()+3,140,18),juce::Justification::left);}
+    const auto leadIn = loopLeadInBounds();
+    if (!leadIn.isEmpty())
+    {
+        g.setColour(ui::aqua.withAlpha(.12f));
+        g.fillRect(leadIn);
+    }
     wetWaveformLayer.paint(g,getWidth(),getHeight(),view.first,view.last,[this](auto& drawing,float,auto& metrics){paintWaveforms(drawing,metrics,true);});
+    if (!leadIn.isEmpty())
+    {
+        ui::applyTextRole(g,*this,ui::TextRole::helper);
+        const juce::String label = "Lead-In";
+        const auto labelArea = leadIn.reduced(ui::spacing::tight,0).withHeight(ui::responsiveGeometry::laneCaptionHeight);
+        if (labelArea.getWidth() >= juce::GlyphArrangement::getStringWidth(g.getCurrentFont(),label))
+            g.drawText(label,labelArea,juce::Justification::centredRight);
+    }
     if(data.raw)
     {
         const auto current=primary && primary->phase==Phase::ready;
@@ -409,13 +440,24 @@ void SwellTimeline::paint(juce::Graphics& g)
     }
     if(primary && x(primary->arrival)>=source.getX() && x(primary->arrival)<=source.getRight())
     {g.setColour(ui::timing);const float dashes[]{4,4};g.drawDashedLine({x(primary->arrival),source.getY()+24,x(primary->arrival),wet.getBottom()},dashes,2,1);}
-    if(playheadAvailable && x(time.sample)>=source.getX() && x(time.sample)<=source.getRight())
-    {g.setColour(ui::timing);g.drawVerticalLine(static_cast<int>(x(time.sample)),source.getY(),wet.getBottom());}
+    if(const auto position=transportPlayhead())
+    {
+        const auto play=x(*position);
+        if(play>=source.getX() && play<=source.getRight())
+        {g.setColour(ui::timing);g.drawVerticalLine(static_cast<int>(play),source.getY(),wet.getBottom());}
+    }
     if(data.auditionSample){const auto play=x(*data.auditionSample);if(play>=source.getX() && play<=source.getRight()){
         g.setColour(ui::previewCursor);g.drawVerticalLine(static_cast<int>(play),source.getY(),wet.getBottom());
         g.drawText("Audition",juce::Rectangle<float>(play+4,source.getY()+3,65,16),juce::Justification::left);}}
 
 }
+std::optional<int64_t> SwellTimeline::transportPlayhead() const noexcept
+{
+    if(capture.sourceKind()==CaptureSourceKind::loop) return loopPlayhead;
+    if(songPlayheadAvailable && playheadAvailable && time.valid && capture.sourceKind()==CaptureSourceKind::song) return time.sample;
+    return {};
+}
+
 bool SwellTimeline::beginDrag(juce::Point<float> point)
 {
     if(!editingEnabled)return false;
@@ -491,7 +533,7 @@ void SwellTimeline::dragTo(juce::Point<float> point)
         if(kind==Drag::inTension)shape.inTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         if(kind==Drag::outTension)shape.outTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         return setShape(w,shape,raw->start,raw->end,error);
-    },dragEpoch);
+    },dragEpoch,nullptr,capture.manifest.loop?capture.manifest.revision:0);
     if(!changed){if(!invoked || stale || engine.assignmentEpoch()!=dragEpoch)drag=Drag::none;gestureMessage(failure.isNotEmpty()?failure:"Edit rejected by current source/session/mode guard");return;}
     gestureMessage({});
     // Canonical metadata only: no waveform preparation or FFT on the message thread.
@@ -546,8 +588,8 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
             if(!clockContext.sameAuthority(gridClockContext(latest,true)) || !latest
                 || !HostGrid::make(gridTiming(),latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,playheadAvailable,&clockContext))grid.reset();}
         const auto at=grid?grid->snap(candidate):std::optional<int64_t>{};
-        if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at);}
-    else engine.addTarget(candidate);
+        if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at,nullptr,capture.manifest.loop?capture.manifest.revision:0);}
+    else engine.addTarget(candidate,nullptr,capture.manifest.loop?capture.manifest.revision:0);
 }
 void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
 {if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}navigationChanged();}
@@ -640,7 +682,7 @@ void SwellOverview::paint(juce::Graphics& g)
     waveformLayer.paint(g,getWidth(),getHeight(),a,b,[this](auto& drawing,float,auto& metrics){paintWaveforms(drawing,metrics);});
     const auto viewport=detailBounds();
     g.setColour(ui::aqua.withAlpha(.12f));g.fillRoundedRectangle(viewport,5);g.setColour(ui::aqua);g.drawRoundedRectangle(viewport,5,2);
-    if(timeline.playheadAvailable){const auto play=x(static_cast<double>(timeline.time.sample));if(play>=lane.getX() && play<=lane.getRight()){
+    if(const auto position=timeline.transportPlayhead()){const auto play=x(static_cast<double>(*position));if(play>=lane.getX() && play<=lane.getRight()){
         g.setColour(ui::timing);g.drawVerticalLine(static_cast<int>(play),lane.getY(),lane.getBottom());}}
     if(timeline.data.auditionSample){const auto play=x(static_cast<double>(*timeline.data.auditionSample));if(play>=lane.getX() && play<=lane.getRight()){
         g.setColour(ui::previewCursor);g.drawVerticalLine(static_cast<int>(play),lane.getY(),lane.getBottom());}}

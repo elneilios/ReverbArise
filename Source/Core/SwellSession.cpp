@@ -63,6 +63,8 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     if (s.swells.size() >= maximumSwells) { error = "Session capacity: 4096 swells"; return false; }
     if (! time.valid || ! std::isfinite(time.rate) || ! std::isfinite(time.bpm) || time.rate <= 0 || time.bpm <= 0)
     { error = "Valid fixed host timing is required"; return false; }
+    if (map.loop && (arrival<0 || arrival>=map.loop->endSample))
+    { error = "Target must stay within the captured Loop"; return false; }
     std::optional<int64_t> coveredEnd;
     for (const auto& range : map.ranges)
     {
@@ -84,6 +86,11 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     if (end <= arrival) { error = "Source interval is empty"; return false; }
     Swell w; w.name = defaultSwellName(arrival,time,&s);
     w.arrival = w.sourceStart = arrival; w.sourceEnd = end; w.shape=initialShape(time.rate);
+    if (map.loop)
+    {
+        w.shape.endOffset=std::min(w.shape.endOffset,map.loop->endSample-arrival);
+        w.shape.fadeOut=std::min(w.shape.fadeOut,w.shape.endOffset);
+    }
     const auto id = w.id; s.swells.push_back(std::move(w)); s.timing = time;
     select(s, {id}, id); error.clear(); return true;
 }

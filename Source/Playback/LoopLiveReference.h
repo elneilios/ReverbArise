@@ -14,7 +14,8 @@ struct LoopReferenceSetup
     int beats = 0;
     int numerator = 0;
     int denominator = 0;
-    bool sharedOrigin = false;
+    bool phraseInput = false;
+    bool observeCadence = false;
 
     bool operator==(const LoopReferenceSetup&) const = default;
 };
@@ -22,7 +23,7 @@ struct LoopReferenceSetup
 class LoopLiveReference
 {
 public:
-    enum class State { unconfigured, mismatch, waiting, ready, lost };
+    enum class State { unconfigured, mismatch, waiting, ready, lost, unsupported };
     struct Window { int64_t earliest, latest; };
     struct Observation { bool boundary = false, lost = false; };
 
@@ -33,10 +34,13 @@ public:
         setup = next;
         accepted = source;
         acceptedRate = sourceRate;
-        origin = last = -1;
+        origin = last = lastPhrase = -1;
         cycles = 0;
-        if (!source || !next.sharedOrigin || !next.clock.valid() || next.beats <= 0)
+        cadenceMismatch = false;
+        if (!source || !next.phraseInput || next.beats <= 0)
             unavailable = State::unconfigured;
+        else if (!next.clock.valid())
+            unavailable = State::unsupported;
         else if (next.clock.rate != sourceRate || next.beats != source->beats
                  || next.numerator != source->meterNumerator || next.denominator != source->meterDenominator
                  || next.numerator != 4 || next.denominator != 4
@@ -51,17 +55,25 @@ public:
 
     State state() const noexcept
     {
-        return cycles >= 2 ? State::ready : unavailable;
+        if (cycles >= 2) return State::ready;
+        return cadenceMismatch ? State::mismatch : unavailable;
     }
 
     Observation observe(int64_t sample, uint16_t roles) noexcept
     {
-        if (unavailable == State::unconfigured || unavailable == State::mismatch) return {};
-        if ((roles & loop_capture::reset) || sample < 0 || advance(sample))
+        if (unavailable == State::unconfigured || unavailable == State::mismatch || unavailable == State::unsupported) return {};
+        if ((roles & loop_capture::reset) || sample < 0)
         {
             revoke();
             return {false, true};
         }
+        if (setup.observeCadence && (roles & loop_capture::phrase))
+        {
+            if (lastPhrase >= 0)
+                cadenceMismatch = !roundedLength(sample - lastPhrase,period());
+            lastPhrase = sample;
+        }
+        if (advance(sample)) return {false,true};
         if (!(roles & loop_capture::phrase)) return {};
         if (origin < 0) { origin = last = sample; updateDeadline(); return {}; }
         const auto next = cycles + 1;
@@ -69,7 +81,7 @@ public:
         if (!boundary || sample < boundary->earliest || sample > boundary->latest
             || !roundedLength(sample - last, period()))
         {
-            revoke();
+            revokeEpoch();
             return {false,true};
         }
         last = sample;
@@ -82,15 +94,15 @@ public:
     {
         if (origin < 0) return false;
         if (sample >= last && sample <= deadline) return false;
-        revoke();
+        revokeEpoch();
         return true;
     }
 
     void revoke() noexcept
     {
-        if (state() == State::ready) unavailable = State::lost;
-        origin = last = -1;
-        cycles = 0;
+        revokeEpoch();
+        lastPhrase = -1;
+        cadenceMismatch = false;
     }
     int64_t ordinal() const noexcept { return cycles; }
     long double period() const noexcept { return phrasePeriod(setup.clock.rate, setup.clock.tempo, setup.beats); }
@@ -118,6 +130,13 @@ public:
     }
 
 private:
+    void revokeEpoch() noexcept
+    {
+        if (cycles >= 2) unavailable = State::lost;
+        origin = last = -1;
+        cycles = 0;
+    }
+
     void updateDeadline() noexcept
     {
         const auto boundary = epochWindow(cycles + 1);
@@ -148,6 +167,8 @@ private:
     std::optional<LoopPhraseTiming> accepted;
     double acceptedRate = 0;
     int64_t origin = -1, last = -1, cycles = 0, deadline = 0;
+    int64_t lastPhrase = -1;
+    bool cadenceMismatch = false;
     State unavailable = State::unconfigured;
 };
 }

@@ -62,17 +62,8 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot)
     swells = std::make_unique<m3::SwellEngine>(std::move(projectsRoot), [this]
     {
         auto capture=captureWorker.snapshot();if(captureWorker.isLoading())capture.status="Loading capture state";
-        auto songTime=getSongTime();
-        if (capture.sourceKind()==CaptureSourceKind::loop)
-        {
-            // Shared render preparation can use a phrase-local grid. The
-            // callback's live phase must still come from the reference route.
-            const auto& timing = capture.manifest.loop;
-            songTime = timing && !capture.unavailable && workflowState.snapshot().mode == workflow::Mode::live
-                ? SongTime{true,0,0,capture.manifest.sampleRate,timing->tempoBpm,timing->meterNumerator,timing->meterDenominator}
-                : SongTime{};
-        }
-        return PreviewContext{std::move(capture), songTime, captureWorker.captureGeneration()};
+        const auto editTime=getSourceEditTime(capture);
+        return PreviewContext{std::move(capture), editTime, captureWorker.captureGeneration()};
     },[this]{persistentStateChanged();});
     swells->setGainPolicy(m3::GainPolicy::musical);
     swells->setAuditionWetOnly(false,swells->assignmentEpoch());
@@ -134,6 +125,7 @@ bool PreverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
 void PreverbAudioProcessor::processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     invalidateLoopClock();
+    swells->loopTransport().invalidateReference();
     AudioProcessor::processBlockBypassed(buffer,midiMessages);
 }
 
@@ -203,6 +195,17 @@ bool PreverbAudioProcessor::setLoopRecapture(bool enabled)
 bool PreverbAudioProcessor::requestLoopStop(uint64_t pass) noexcept
 {
     if (pass == 0 || loopArm.load(std::memory_order_acquire) != pass || loopFinishing()) return false;
+    const auto duration=getLoopCapturePreference().method==LoopCapturePreference::Method::duration;
+    // Cancellation must work when the host is not issuing audio callbacks.
+    // If the first beat wins the race for End Signal, fall through to Stop.
+    const auto cancelled=duration?workflowState.cancelUnsettledCapture(pass):workflowState.cancelReservedCapture(pass);
+    if (cancelled)
+    {
+        loopArm.compare_exchange_strong(pass,0,std::memory_order_acq_rel);
+        return true;
+    }
+    const auto flow=workflowState.snapshot();
+    if (duration || flow.pass!=pass || flow.phase!=workflow::Phase::recording) return false;
     loopStop.store(pass, std::memory_order_release);
     return true;
 }
@@ -223,24 +226,24 @@ juce::String PreverbAudioProcessor::loopCaptureStatus() const
     if (flow.phase == workflow::Phase::recording && loopCaptureArmed()) return "Recording Loop";
     if (flow.phase == workflow::Phase::draining || flow.phase == workflow::Phase::validating) return "Checking captured audio";
     const auto route = loopRouteHint.load(std::memory_order_acquire);
-    if (loopCaptureArmed()) return route == LoopRoute::marker ? "Armed. Waiting for the next phrase."
-                                                            : "Armed. Waiting for the next beat.";
+    if (loopCaptureArmed()) return route == LoopRoute::marker ? "Waiting for the next phrase"
+                                                            : "Waiting for the next clock pulse";
     if (flow.result == workflow::Result::failed) return captureWorker.snapshot().status;
-    if (loopInterrupted.load(std::memory_order_relaxed)) return "Capture cancelled. Clock or timing was interrupted.";
+    if (loopInterrupted.load(std::memory_order_relaxed)) return "Recording cancelled. Check the clock and try again.";
     if (flow.result == workflow::Result::cancelled) return "Capture cancelled";
     if (captureWorker.acceptedLoop() && !loopRecaptureEnabled())
-        return "Loop protected. Turn on Recapture Audio to replace it.";
+        return "Turn on Recapture audio to record again.";
     if (flow.result == workflow::Result::accepted && captureWorker.acceptedLoop()) return "Loop accepted";
     if (route != LoopRoute::marker)
-        return captureWorker.canCaptureLoop() ? "Ready to arm" : "Capture storage is unavailable";
+        return captureWorker.canCaptureLoop() ? juce::String{} : "Can't save recordings. Check Settings > Storage.";
     if (getLoopCapturePreference().method == LoopCapturePreference::Method::endSignal)
-        return "End Signal needs a Clock input and a deliberate Stop.";
+        return "End signal needs a Clock input.";
     if (loopClockState.load(std::memory_order_acquire) == State::ready)
-        return !loopDurationFits(getLoopCapturePreference()) ? "Duration exceeds the capture limit. Choose a shorter take."
-            : canArmLoopCapture() ? "Clock ready" : "Capture storage or Learn is unavailable";
-    if (loopClockState.load(std::memory_order_relaxed) == State::syncLost) return "Clock sync lost. Check the timing markers.";
-    if (loopClockState.load(std::memory_order_relaxed) == State::notConfigured) return "Waiting for supported 4/4 timing.";
-    return "Waiting for aligned beat, bar and phrase markers";
+        return !loopDurationFits(getLoopCapturePreference()) ? "This loop exceeds the capture limit. Choose a shorter duration."
+            : canArmLoopCapture() ? juce::String{} : "Recording is unavailable right now.";
+    if (loopClockState.load(std::memory_order_relaxed) == State::syncLost) return "Lost the clock. Check your timing inputs.";
+    if (loopClockState.load(std::memory_order_relaxed) == State::notConfigured) return "Set your clock to 4/4.";
+    return "Waiting for beat, bar and phrase signals";
 }
 
 void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi,
@@ -394,13 +397,15 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
         const auto at = loopRunSample + offset;
         const auto boundary = loopClock.observe(at,roles);
         const bool simpleBeat = (roles & captureClock) != 0;
-        const bool marker = (roles & (beat | bar | phrase)) != 0;
+        // A standalone phrase pulse belongs to Perform. Only the legacy
+        // beat/bar inputs compete with Clock for capture timing.
+        const bool legacyMarker = (roles & (beat | bar)) != 0;
         if (simpleBeat)
             loopRouteHint.store(LoopRoute::clock, std::memory_order_release);
-        else if (marker && loopRouteHint.load(std::memory_order_relaxed) == LoopRoute::waiting)
+        else if (legacyMarker && loopRouteHint.load(std::memory_order_relaxed) == LoopRoute::waiting)
             loopRouteHint.store(LoopRoute::marker, std::memory_order_release);
-        if ((roles & loop_capture::reset) || (simpleBeat && marker)
-            || (loopTakeRoute == LoopRoute::clock && marker)
+        if ((roles & loop_capture::reset) || (simpleBeat && legacyMarker)
+            || (loopTakeRoute == LoopRoute::clock && legacyMarker)
             || (loopTakeRoute == LoopRoute::marker && (simpleBeat || boundary.revoked)))
         {
             cancel(true);
@@ -561,8 +566,13 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         if (loopSource || previousLoopSource)
         {
             if (!offline) swells->endOffline();
-            processLoopPlayback(buffer,midi,diagnostics,loopSource && !offline && workflow.mode==workflow::Mode::live
-                && !captureWorker.isLoading() && swells->livePlaybackEnabled(),captureGeneration);
+            using Access=m3::LoopPlayback::Access;
+            auto access=Access::disabled;
+            if (loopSource && !offline && !captureWorker.isLoading() && workflow.mode!=workflow::Mode::finalise)
+                access=workflow.mode==workflow::Mode::live && swells->livePlaybackEnabled()?Access::perform:Access::observe;
+            processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration);
+            if(loopSource && !offline)swells->processLoopAudition(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),
+                diagnostics.sampleRate,captureGeneration,captureWorker.acceptedLoopRevision(),workflow.mode==workflow::Mode::live && !captureWorker.isLoading());
         }
         if (!loopSource)
         {
@@ -578,21 +588,33 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 }
 
 void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi,
-    const HostPositionDiagnostics& timing, bool allowed, uint64_t generation) noexcept
+    const HostPositionDiagnostics& timing, m3::LoopPlayback::Access access, uint64_t generation) noexcept
 {
     loop_capture::MidiObservations observations;
     const auto frames = buffer.getNumSamples();
-    if (allowed) loop_capture::readLoopObservations(midi,frames,observations,false);
+    const bool observe=access!=m3::LoopPlayback::Access::disabled;
+    if (observe) loop_capture::readLoopObservations(midi,frames,observations,false);
+    if (!observe) observedLoopReference={};
+    else if (observations.error==loop_capture::MidiObservations::Error::none)
+    {
+        const auto clock=loop_capture::measuredProfile(timing.sampleRate,frames);
+        const auto observed=observedLoopReference.phraseInput || std::any_of(observations.samples.begin(),observations.samples.begin()+observations.size,
+            [](const auto& edge){return (edge.roles & loop_capture::phrase) != 0;});
+        if (observed)
+            observedLoopReference={clock.valid()?clock:loop_capture::ClockProfile{timing.sampleRate,0},
+                loop_capture::PhraseClock::beatsPerPhrase,loop_capture::PhraseClock::beatsPerBar,4,true};
+    }
     const auto now = std::chrono::steady_clock::now();
     const auto gap = previousLoopPlaybackCallback.time_since_epoch().count() != 0 && timing.sampleRate > 0
         && now - previousLoopPlaybackCallback > std::chrono::duration<double>(std::max(.5,3 * frames / timing.sampleRate));
     previousLoopPlaybackCallback = now;
-    const auto hasPosition = allowed && timing.isPlaying && timing.samplePositionAvailable;
+    const auto hasPosition = observe && timing.isPlaying && timing.samplePositionAvailable;
     const auto seek = hasPosition && loopPlaybackHostEnd && *loopPlaybackHostEnd != timing.samplePosition;
+    const auto stopped = observe && loopPlaybackHostEnd && timing.positionAvailable && !timing.isPlaying;
     loopPlaybackHostEnd.reset();
     if (hasPosition && timing.samplePosition <= INT64_MAX - frames) loopPlaybackHostEnd = timing.samplePosition + frames;
     swells->loopTransport().process(buffer.getWritePointer(0),buffer.getWritePointer(1),frames,observations,
-        timing.sampleRate,generation,captureWorker.acceptedLoopRevision(),allowed,gap || seek);
+        timing.sampleRate,generation,captureWorker.acceptedLoopRevision(),access,gap || seek || stopped,observedLoopReference);
 }
 
 HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() const noexcept
@@ -629,10 +651,16 @@ HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() cons
 
 SongTime PreverbAudioProcessor::getSongTime() const noexcept
 {
-    const auto d = getHostPositionDiagnostics();
-    return {d.positionAvailable && d.samplePositionAvailable && d.ppqPositionAvailable
-                && d.tempoAvailable && d.meterAvailable,
-            d.samplePosition, d.ppqPosition, d.sampleRate, d.bpm, d.numerator, d.denominator};
+    return getHostPositionDiagnostics().songTime();
+}
+
+SongTime PreverbAudioProcessor::getSourceEditTime(const CaptureSessionSnapshot& capture) const noexcept
+{
+    if (capture.sourceKind()!=CaptureSourceKind::loop) return getSongTime();
+    const auto& timing=capture.manifest.loop;
+    if (capture.unavailable || !timing || captureWorker.isLoading() || capture.reference.isEmpty()
+        || capture.manifest.revision != captureWorker.acceptedLoopRevision()) return {};
+    return {true,0,0,capture.manifest.sampleRate,timing->tempoBpm,timing->meterNumerator,timing->meterDenominator};
 }
 
 void PreverbAudioProcessor::setMappingEnabled(bool enabled)
@@ -685,12 +713,14 @@ bool PreverbAudioProcessor::armRecapture(int64_t start,int64_t end)
 
 workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
 {
-    const auto capture=captureWorker.snapshot();const auto time=getSongTime();
+    const auto capture=captureWorker.snapshot();
+    if (capture.sourceKind()==CaptureSourceKind::loop)
+        return {captureWorker.hasUsefulSource(),getSourceEditTime(capture).valid,false,false};
+    const auto time=getSongTime();
     const auto session=swells->savedSession();
     const auto solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     const auto ready=[&](const auto& w){return w.enabled && !w.muted && (!solo || w.solo) && m3::hasCompatibleReadyRender(w,time);};
     const auto frozen=std::any_of(session.swells.begin(),session.swells.end(),[&](const auto& w){return w.frozen && ready(w);});
-    if (capture.sourceKind()==CaptureSourceKind::loop) return {captureWorker.hasUsefulSource(),false,false,false};
     return {captureWorker.hasUsefulSource(),frozen || (!capture.unavailable && time.valid && (capture.manifest.ranges.empty() || capture.manifest.sampleRate==time.rate)
         && (!session.timing.valid || sameMusicalMapping(session.timing,time))),
         swells->hasExportableWet(time),frozen};
@@ -703,19 +733,19 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
     if(const auto block=workflow::entryBlock(workflowState.snapshot(),mode,readiness);block!=workflow::EntryBlock::none)
     {swells->diagnostic(m3::ui::entryExplanation(block));return false;}
     if(!workflowState.requestMode(mode,readiness))return false;
-    swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();if(previous!=mode)persistentStateChanged();return true;
+    swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();
+    if(previous!=mode)
+    {
+        if(previous==workflow::Mode::live && captureWorker.acceptedLoop())swells->loopTransport().requestStop();
+        persistentStateChanged();
+    }
+    return true;
 }
 
 bool PreverbAudioProcessor::enterLoopStandby()
 {
     const juce::ScopedLock guard(storageStateLock);
-    if (!captureWorker.acceptedLoop() || !captureWorker.hasUsefulSource() || captureWorker.isLoading()
-        || loopCaptureArmed()) return false;
-    if (workflowState.snapshot().mode == workflow::Mode::live) return true;
-    if (!workflowState.requestMode(workflow::Mode::live,{true,true,false,false})) return false;
-    swells->stop();
-    swells->loopTransport().invalidateReference();
-    return true;
+    return captureWorker.acceptedLoop() && requestWorkflowMode(workflow::Mode::live);
 }
 
 void PreverbAudioProcessor::setLoopPlaybackReference(const m3::LoopReferenceSetup& setup, bool externalCommands)
@@ -732,7 +762,8 @@ m3::LoopPlayback::Status PreverbAudioProcessor::loopPlaybackStatus() const noexc
 bool PreverbAudioProcessor::requestLoopCue() noexcept
 {
     const auto current = loopPlaybackStatus();
-    if (workflowState.snapshot().mode != workflow::Mode::live || !captureWorker.acceptedLoop()
+    if (workflowState.snapshot().mode != workflow::Mode::live || !captureWorker.acceptedLoop() || captureWorker.isLoading()
+        || !swells->livePlaybackEnabled() || current.playback!=m3::LoopCueScheduler::State::standby
         || current.phase != m3::LoopLiveReference::State::ready
         || current.preparation != m3::LoopPlaybackPublication::Preparation::ready) return false;
     swells->loopTransport().requestCue();

@@ -63,6 +63,64 @@ void liveReferenceCases()
     REQUIRE(reference.state() == State::lost);
 }
 
+LiveEntry testEntry(size_t slot, int64_t start, int64_t frames, float scale, double rate);
+
+void automaticShortPhraseCases()
+{
+    using Phase = LoopLiveReference::State;
+    using Playing = LoopCueScheduler::State;
+    for (const int beats : {4,8})
+    {
+        LoopPlayback playback;
+        const auto marker = [](int beatIndex){return 37 + std::llround(48000.L * 60 * beatIndex / 137);};
+        const auto frames = marker(beats) - marker(0);
+        auto publication = std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration = publication->sourceRevision = 1;
+        publication->rate = 48000;
+        publication->timing = {137,4,4,beats,0,frames};
+        publication->preparation = LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries = {testEntry(0,0,128,.01f,48000)};
+        juce::String error;
+        REQUIRE(publication->plan.prepare(frames,1024*1024,error));
+        REQUIRE(playback.publish(std::move(publication)));
+        const LoopReferenceSetup rack{{48000,137},16,4,4,true};
+        int64_t cursor = 0;
+        const auto through = [&](int beatIndex, bool sendPhrase, LoopPlayback::Access access=LoopPlayback::Access::perform){
+            const auto boundary = marker(beatIndex);
+            bool heardWet = false;
+            while (cursor <= boundary)
+            {
+                std::array<float,128> left{},right{};
+                MidiObservations events;
+                if (sendPhrase && boundary < cursor + static_cast<int64_t>(left.size()))
+                    events.samples[events.size++] = {static_cast<int>(boundary-cursor),phrase};
+                { AudioAllocationGuard guard;
+                    playback.process(left.data(),right.data(),static_cast<int>(left.size()),events,48000,1,1,access,false,rack); }
+                REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+                heardWet |= std::any_of(left.begin(),left.end(),[](float sample){return sample != 0;});
+                cursor += left.size();
+            }
+            return heardWet;
+        };
+        const auto learn=LoopPlayback::Access::observe;
+        REQUIRE(!through(0,true,learn));
+        REQUIRE(!through(16,true,learn));
+        REQUIRE(playback.status().phase == Phase::mismatch);
+        REQUIRE(!through(16 + beats,true,learn));
+        REQUIRE(playback.status().phase != Phase::ready);
+        playback.requestCue();
+        REQUIRE(!through(16 + 2 * beats,true,learn));
+        REQUIRE(playback.status().phase == Phase::ready);
+        REQUIRE(!through(16 + 2 * beats + 1,false));
+        REQUIRE(playback.status().playback == Playing::standby);
+        playback.requestCue();
+        REQUIRE(through(16 + 3 * beats,true));
+        REQUIRE(playback.status().playback == Playing::repeating);
+        through(16 + 4 * beats + 1,false);
+        REQUIRE(playback.status().phase == Phase::lost && playback.status().playback == Playing::standby);
+    }
+}
+
 void schedulerCases()
 {
     using State = LoopCueScheduler::State;
@@ -214,7 +272,8 @@ void publicationCases()
                 if (at == commandSample) bits |= roles;
                 if (bits) events.samples[events.size++] = {offset,bits};
             }
-            { AudioAllocationGuard guard; playback.process(left.data(),right.data(),count,events,8000,1,source,source!=0,false); }
+            { AudioAllocationGuard guard; playback.process(left.data(),right.data(),count,events,8000,1,source,
+                source!=0?LoopPlayback::Access::perform:LoopPlayback::Access::disabled,false); }
             REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
             for (int n = 0; n < count; ++n) REQUIRE(std::abs(left[n]+right[n]-.3f)<1e-6f);
             sample = left[count-1];
@@ -224,27 +283,40 @@ void publicationCases()
     };
     REQUIRE(advance(12801,12801,cue)==.1f); // External commands are disabled.
     REQUIRE(playback.status().phase == LoopLiveReference::State::ready);
+    REQUIRE(!playback.status().playhead);
     playback.requestCue();
+    REQUIRE(advance(12802)==.1f && !playback.status().playhead);
     REQUIRE(std::abs(advance(19184)-.11f)<1e-6f);
+    REQUIRE(playback.status().playhead == -16);
+    REQUIRE(!playback.status().nextLeadInStart);
     publish(.05f); // A compatible successor waits while the old revision is pinned.
     REQUIRE(std::abs(advance(19200)-.13f)<1e-6f);
     REQUIRE(playback.status().playback == PlaybackState::repeating);
+    REQUIRE(playback.status().playhead == 0);
+    REQUIRE(playback.status().nextLeadInStart == 6384);
+    advance(25599);
+    REQUIRE(playback.status().playhead == 6399);
+    REQUIRE(advance(25600)>.1f && playback.status().playhead == 0);
     const auto both = playback.pinnedBytes();
     playback.invalidatePrepared();
-    REQUIRE(advance(19250)==.1f && playback.status().playback == PlaybackState::standby);
+    REQUIRE(advance(25650)==.1f && playback.status().playback == PlaybackState::standby);
+    REQUIRE(!playback.status().playhead);
+    REQUIRE(!playback.status().nextLeadInStart);
     playback.collect();
     REQUIRE(playback.pinnedBytes() < both && playback.status().preparation == Prep::waiting);
     publish(.05f,2);
-    REQUIRE(advance(25600,-1,0,2)==.1f);
+    REQUIRE(advance(25651,-1,0,2)==.1f);
+    REQUIRE(playback.status().phase != LoopLiveReference::State::ready); // Same length, different accepted source.
+    REQUIRE(advance(44800,-1,0,2)==.1f);
     REQUIRE(playback.status().playback == PlaybackState::standby);
     playback.requestCue();
-    REQUIRE(advance(32000,-1,0,2)>.1f);
+    REQUIRE(advance(51200,-1,0,2)>.1f);
     playback.collect();
     const auto acceptedBytes = playback.pinnedBytes();
     REQUIRE(acceptedBytes > 0);
     publish(.02f,2);
     REQUIRE(playback.pinnedBytes() == 2 * acceptedBytes);
-    REQUIRE(advance(32064,-1,0,0)==.1f && playback.status().playback == PlaybackState::standby);
+    REQUIRE(advance(51264,-1,0,0)==.1f && playback.status().playback == PlaybackState::standby);
     playback.collect();
     REQUIRE(playback.pinnedBytes() == acceptedBytes); // The final Loop callback released the adopted plan.
     playback.discardPending();
@@ -274,7 +346,7 @@ void rateChangeFadeCases()
         events.samples[events.size++] = {period,phrase};
         events.samples[events.size++] = {2 * period,phrase | cue};
         events.samples[events.size++] = {3 * period,phrase};
-        { AudioAllocationGuard guard; playback.process(left.data(),right.data(),static_cast<int>(left.size()),events,96000,1,1,true,false); }
+        { AudioAllocationGuard guard; playback.process(left.data(),right.data(),static_cast<int>(left.size()),events,96000,1,1,LoopPlayback::Access::perform,false); }
         REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
         REQUIRE(playback.status().playback == PlaybackState::repeating && left.back() > 0);
         auto last = left.back();
@@ -282,14 +354,14 @@ void rateChangeFadeCases()
         if (alreadyStopping)
         {
             playback.requestStop();
-            { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),64,{},96000,1,1,true,false); }
+            { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),64,{},96000,1,1,LoopPlayback::Access::perform,false); }
             REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
             REQUIRE(playback.status().playback == PlaybackState::stopping && fadeLeft[63] > 0);
             last = fadeLeft[63];
             fadeLeft.fill(0);
             fadeRight.fill(0);
         }
-        { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),241,{},48000,1,1,true,false); }
+        { AudioAllocationGuard guard; playback.process(fadeLeft.data(),fadeRight.data(),241,{},48000,1,1,LoopPlayback::Access::perform,false); }
         REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
         const auto end = alreadyStopping ? 208 : 240;
         REQUIRE(fadeLeft.front() <= last && fadeLeft[end-2] > 0 && fadeLeft[end-1] == 0 && fadeLeft.back() == 0);
@@ -408,7 +480,7 @@ void measuredReplay(const char* path, double bpm)
             if (flags&dryBit) dry[offset]=left[offset]=.375f;
             if (roles) blockEvents.samples[blockEvents.size++]={offset,roles};
         }
-        {AudioAllocationGuard guard; playback.process(left.data(),right.data(),frames,blockEvents,48000,1,1,true,false);}
+        {AudioAllocationGuard guard; playback.process(left.data(),right.data(),frames,blockEvents,48000,1,1,LoopPlayback::Access::perform,false);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
         for (int n=0;n<frames;++n)
         {
@@ -427,6 +499,6 @@ int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); schedulerCases(); earliestCueCase(); compositorCases(); publicationCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); publicationCases(); rateChangeFadeCases();}
     });
 }

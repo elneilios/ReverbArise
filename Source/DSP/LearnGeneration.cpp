@@ -30,15 +30,13 @@ LearnGenerationView SwellEngine::learnViewLocked()const
     view.generating=learnGenerating || learnRequest.has_value();view.notice=learnNotice;view.failed=learnFailed;
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!workflowState || flow.mode!=workflow::Mode::capture)view.reason="Generate Swells is available in Learn.";
-    else if(flow.locked() || transportActive.load())view.reason="Finish recording before generating swells.";
+    else if(flow.locked() || (transportActive.load() && (!learnCandidates || !learnCandidates->identity.loop)))view.reason="Finish recording before generating swells.";
     else if(view.generating)view.reason="Generating swells...";
     else if(!model.automaticProcessing || !model.autoMarkersEnabled)view.reason="Enable Automatic Swells to generate.";
     else if(!learnUsable)view.reason=learnReason.isNotEmpty()?learnReason:"Capture usable audio before generating swells.";
     else if(view.updating || !learnCandidates || learnCandidates->identity.provisional
         || learnCandidates->identity.session!=sessionGeneration.load() || learnCandidates->identity.settings!=markerGeneration.load())
         view.reason=learnReason.isNotEmpty()?learnReason:"Analysing captured audio... markers updating.";
-    else if(learnCandidates->identity.loop)
-        view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers in the Loop.";
     else if(defaultPending)view.reason="Finish preparing the Default IR before generating swells.";
     else if(!model.defaultIR.present())view.reason="Choose a valid Default IR before generating swells.";
     else {view.canGenerate=true;view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers found. Generate Swells to apply.";}
@@ -57,12 +55,10 @@ bool SwellEngine::requestLearnLocked(const PreviewContext& context,uint64_t sess
 {
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     const auto view=learnViewLocked();
-    if(context.capture.sourceKind()==CaptureSourceKind::loop
-        || session!=sessionGeneration.load() || flow.pass!=pass || !view.canGenerate || !learnCandidates
+    if(session!=sessionGeneration.load() || flow.pass!=pass || !view.canGenerate || !learnCandidates
         || learnCandidates->serial!=serial || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {
-        learnNotice=context.capture.sourceKind()==CaptureSourceKind::loop?"Generate Swells is unavailable for Loop audio."
-            :view.canGenerate?"Automatic markers changed. Wait for current analysis and try again.":view.reason;
+        learnNotice=view.canGenerate?"Automatic markers changed. Wait for current analysis and try again.":view.reason;
         learnFailed=false;return false;
     }
     actionError.clear();LearnRequest request;request.candidates=learnCandidates;request.expected=model;request.source=context.capture.manifest;
@@ -80,7 +76,7 @@ void SwellEngine::captureSettled(uint64_t pass,uint64_t capture,bool useful)
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!learnCandidates || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {learnUpdating=true;learnAttempt.reset();}
-    if(!useful || !workflowState || flow.pass!=pass || flow.phase!=workflow::Phase::validating
+    if(context.capture.manifest.loop || !useful || !workflowState || flow.pass!=pass || flow.phase!=workflow::Phase::validating
         || context.captureGeneration!=capture || !model.autoGenerateOnStop || !model.automaticProcessing || !model.autoMarkersEnabled)return;
     StopIntent intent;intent.source=learnIdentity(context);intent.pass=pass;intent.configuration=configurationRevision;
     intent.revision=learnGenerationCancellation.load();intent.ir=model.defaultIR;stopIntent=std::move(intent);notify();
@@ -199,7 +195,7 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
     {
         const auto flow=workflowState->snapshot();
         return threadShouldExit() || request.candidates->identity.session!=sessionGeneration.load()
-            || request.cancellation!=learnGenerationCancellation.load() || transportActive.load()
+            || request.cancellation!=learnGenerationCancellation.load() || (!request.candidates->identity.loop && transportActive.load())
             || flow.mode!=workflow::Mode::capture || flow.locked() || flow.pass!=request.flow.pass
             || flow.configurationSlot!=request.flow.configurationSlot
             || (captureEpochProvider && captureEpochProvider()!=request.candidates->identity.captureGeneration);

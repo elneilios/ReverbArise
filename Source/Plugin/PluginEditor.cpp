@@ -101,7 +101,12 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     gridBox.setSelectedId(3,juce::dontSendNotification);gridBox.setTitle("Snap grid division");
     for(auto* box:{&inCurveBox,&outCurveBox}){box->addItem("Linear",1);box->addItem("Smooth",2);box->addItem("Exponential",3);}
     snapButton.setToggleState(true,juce::dontSendNotification);
-    addButton.onClick=[this]{processor.swellEngine().addTarget(processor.getSongTime().sample);refresh();};
+    addButton.onClick=[this]{
+        const auto capture=processor.getCaptureSnapshot();
+        const auto sample=capture.manifest.loop ? static_cast<int64_t>(std::clamp(timeline.viewport().first,0.0,
+            static_cast<double>(capture.manifest.loop->endSample-1))) : processor.getSongTime().sample;
+        processor.swellEngine().addTarget(sample,nullptr,capture.manifest.loop?capture.manifest.revision:0);refresh();
+    };
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
     removeButton.onClick=[this]{processor.swellEngine().removeSelected();refresh();};
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
@@ -186,6 +191,18 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     helper.setFont(juce::FontOptions(m3::ui::smallSize));
     for(auto* button:{&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
     addAndMakeVisible(auditionWetOnly);auditionWetOnly.setName("auditionWetOnly");monitorStatus.setName("auditionStatus");
+    addChildComponent(loopCue);addChildComponent(loopPlaybackStatus);
+    loopCue.setName("loopCue");loopPlaybackStatus.setName("loopPlaybackStatus");
+    m3::ui::applyTextRole(loopPlaybackStatus,m3::ui::TextRole::helper);
+    loopCue.beforeInvocation=[this]{loopButtonInvocation=std::pair{processor.getWorkflowSnapshot().pass,loopButtonStops};};
+    loopCue.onClick=[this]{
+        const auto invocation=std::exchange(loopButtonInvocation,std::nullopt);
+        const auto flow=processor.getWorkflowSnapshot();
+        if(!invocation || updating || destroying || !loopPerformLayout || flow.mode!=workflow::Mode::live || flow.pass!=invocation->first)return;
+        if(invocation->second)processor.requestLoopPlaybackStop();
+        else processor.requestLoopCue();
+        refresh();
+    };
     for(auto* button:std::array<juce::Button*,2>{&automaticButton,&sampleUnitsButton})addAndMakeVisible(button);
     sampleUnitsButton.setName("sampleUnits");automaticButton.setName("automaticProcessing");
     workflowHeader.onSettings=[this]{if(!destroying)setSettingsOpen(!settingsWindow || !settingsWindow->isVisible());};
@@ -341,6 +358,7 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
             g.drawHorizontalLine(y,float(layout.header.getX()),float(layout.header.getRight()));
         for(const auto line:{layout.listDivider(),layout.inspectorDivider()})
             g.drawVerticalLine(juce::roundToInt(line.getStartX()),line.getStartY(),line.getEndY());
+        if(loopPerformLayout)g.drawVerticalLine(monitorStatus.getRight(),static_cast<float>(loopCue.getY()),static_cast<float>(loopCue.getBottom()));
         return;
     }
     g.fillAll(m3::ui::background);const m3::ui::WorkspaceLayout layout(getLocalBounds());g.setColour(m3::ui::separator);
@@ -350,6 +368,7 @@ void PreverbAudioProcessorEditor::paintWorkspace(juce::Graphics& g)
         g.drawHorizontalLine(y,static_cast<float>(perform.header.getX()),static_cast<float>(perform.header.getRight()));
     for(const auto x:{perform.list.getRight()+m3::ui::performGeometry::columnGap/2,perform.inspector.getX()-m3::ui::performGeometry::columnGap/2})
         g.drawVerticalLine(x,static_cast<float>(perform.work.getY()+m3::ui::performGeometry::columnInset),static_cast<float>(perform.work.getBottom()-m3::ui::performGeometry::columnInset));
+    if(loopPerformLayout)g.drawVerticalLine(monitorStatus.getRight(),static_cast<float>(loopCue.getY()),static_cast<float>(loopCue.getBottom()));
 }
 void PreverbAudioProcessorEditor::showSwellMenu(const m3::ui::controls::SwellListRow& w,const juce::MouseEvent& event)
 {
@@ -476,7 +495,7 @@ void PreverbAudioProcessorEditor::resized()
     auto audition=perform.audition.reduced(0,performGeometry::bandInset);auto auditionRow=audition.removeFromTop(36);
     auditionHeading.setBounds(auditionRow.removeFromLeft(112));auditionButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(8);stopButton.setBounds(auditionRow.removeFromLeft(50));auditionRow.removeFromLeft(performGeometry::toolbarGap);
     auditionWetOnly.setBounds(auditionRow.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
-    auditionRow.removeFromLeft(spacing::related);monitorStatus.setBounds(auditionRow);
+    auditionRow.removeFromLeft(spacing::related);layoutLoopPlayback(auditionRow);
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info.withBottom(std::min(perform.info.getBottom(),hoverHelp.getY())));
     const auto width=inspectorWidth-16;inspectorContent.setSize(width,650+3*controlGeometry::labelHeight+3*spacing::group+2*64);
     auto inspector=inspectorContent.getLocalBounds().reduced(2,4);
@@ -598,7 +617,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setRowBounds(layout.grid.reduced(0,3));
     auto audition=layout.audition.reduced(0,contentPadding);auditionHeading.setBounds(audition.removeFromLeft(88));
     auditionButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);stopButton.setBounds(audition.removeFromLeft(40));audition.removeFromLeft(contentPadding);
-    auditionWetOnly.setBounds(audition.removeFromLeft(96));audition.removeFromLeft(contentPadding);monitorStatus.setBounds(audition);
+    auditionWetOnly.setBounds(audition.removeFromLeft(96));audition.removeFromLeft(contentPadding);layoutLoopPlayback(audition);
     songOverview.setBounds(layout.overview.reduced(0,contentPadding));hostInfo.setBounds(layout.position);
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     layoutSettings();layoutPresentationSettings();layoutLiveDiagnostics();refreshResponsiveSections();
@@ -626,9 +645,62 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
     liveDiagnostic.setBounds(status.getX(),placementEditor.getBottom()+inset,status.getWidth(),height);
     diagnosticsContent.setSize(panelBounds.getWidth(),liveDiagnostic.getBottom()+inset);
 }
+void PreverbAudioProcessorEditor::layoutLoopPlayback(juce::Rectangle<int> row)
+{
+    using namespace m3::ui;
+    if(!loopPerformLayout){monitorStatus.setBounds(row);return;}
+    const auto buttonWidth=2*controlGeometry::valueWidth;
+    auto playback=row.removeFromRight(std::min(row.getWidth(),buttonWidth+2*spacing::related+3*controlGeometry::valueWidth));
+    monitorStatus.setBounds(row);
+    playback.removeFromLeft(spacing::related);loopCue.setBounds(playback.removeFromLeft(buttonWidth));
+    playback.removeFromLeft(spacing::related);loopPlaybackStatus.setBounds(playback);
+}
+
+void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnabled)
+{
+    using Phase=m3::LoopLiveReference::State;
+    using Prep=m3::LoopPlaybackPublication::Preparation;
+    using Playing=m3::LoopCueScheduler::State;
+    loopCue.setVisible(visible);loopPlaybackStatus.setVisible(visible);
+    if(!visible){timeline.setLoopPlayhead({});loopButtonInvocation.reset();return;}
+    const auto playback=processor.loopPlaybackStatus();
+    timeline.setLoopPlayhead(playback.playhead);
+    const auto active=playback.playback!=Playing::standby && playback.playback!=Playing::stopping;
+    const auto ready=liveEnabled && playback.phase==Phase::ready && playback.preparation==Prep::ready;
+    juce::String label="Cue Loop",text,help;
+    if(playback.playback==Playing::queued){label="Cancel Loop";text="Waiting for phrase";help="Cancel the queued Loop before it starts.";}
+    else if(playback.playback==Playing::leadIn || playback.playback==Playing::repeating)
+    {
+        label="Stop Loop";
+        text=playback.playback==Playing::leadIn?"Playing lead-in":"Playing loop";
+        help="Stop the Loop with a short fade. Dry audio continues.";
+    }
+    else if(playback.playback==Playing::stopping){label="Stop Loop";text="Fading out";help="Loop playback is fading out. Dry audio continues.";}
+    else if(!liveEnabled){text="Live output off";help="Enable Live playback in Settings.";}
+    else if(playback.phase==Phase::unconfigured){text="Connect phrase reference";help="Send a supported recurring phrase marker to enable Loop Cue.";}
+    else if(playback.phase==Phase::unsupported){text="Unsupported phrase input";help="Use a verified phrase input configuration for this sample rate and callback size.";}
+    else if(playback.phase==Phase::mismatch){text="Reference differs from Loop";help="Match the accepted Loop length, tempo, meter and sample rate.";}
+    else if(playback.phase==Phase::lost){text="Sync lost";help="Restore the recurring phrase markers, then Cue again.";}
+    else if(playback.phase==Phase::waiting){text="Verifying phrase sync";help="Keep the phrase reference running through two matching intervals.";}
+    else if(playback.preparation==Prep::noWet){text="No prepared wet";help="Prepare at least one enabled, audible swell.";}
+    else if(playback.preparation==Prep::budget){text="Wet exceeds limit";help="Reduce wet overlap or the amount of prepared audio.";}
+    else if(playback.preparation==Prep::waiting){text="Preparing wet";help="Wait for the current swell renders.";}
+    else {text="Ready";help="Cue at the first phrase with room for the full wet lead-in.";}
+    loopButtonStops=active;
+    loopCue.setButtonText(label);
+    loopCue.setVariant(playback.playback==Playing::standby?m3::ui::controls::CommandVariant::neutral:m3::ui::controls::CommandVariant::destructive);
+    loopCue.setEnabled(active || (ready && playback.playback==Playing::standby));
+    loopCue.setTooltip(help);loopCue.setHelpText(help);
+    loopPlaybackStatus.setText(text,juce::dontSendNotification);loopPlaybackStatus.setTooltip(help);loopPlaybackStatus.setDescription(text.isEmpty()?help:text+". "+help);
+}
+
 void PreverbAudioProcessorEditor::refresh()
 {
-    if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSongTime();const auto diagnostics=processor.getHostPositionDiagnostics();
+    if(destroying)return;updating=true;state=processor.swellEngine().snapshot();const auto capture=processor.getCaptureSnapshot();
+    const bool loopSource=capture.sourceKind()==CaptureSourceKind::loop;
+    const auto diagnostics=processor.getHostPositionDiagnostics();
+    const auto hostTime=diagnostics.songTime();
+    const auto time=loopSource?processor.getSourceEditTime(capture):hostTime;
     refreshStorageScope(capture,state.sessionEpoch);
     serviceAssetRecovery();
     if(regenerationFeedbackSession!=state.sessionEpoch)
@@ -647,6 +719,39 @@ void PreverbAudioProcessorEditor::refresh()
         processor.swellEngine().establishPerformPosition(state.sessionEpoch);
     }
     const auto nextLearning=mode==workflow::Mode::capture,nextExport=mode==workflow::Mode::finalise;
+    const auto loopSettings=processor.getLoopCapturePreference();
+    const bool songView=!loopSource && !nextExport && (!nextLearning || !loopSettings.enabled);
+    std::optional<m3::ui::controls::NoticeMessage> songTimingIssue;
+    bool songPlayheadAvailable=false;
+    if(songView)
+    {
+        using m3::ui::controls::NoticeMessage;
+        using m3::ui::controls::NoticeTone;
+        long double origin;
+        if(!songOrigin(hostTime,origin))
+        {
+            if(diagnostics.blockSize>0)
+                songTimingIssue=NoticeMessage{"Song Mode needs bar and beat position, tempo and time signature from the host.",
+                    "For a clock-based setup, use Loop Mode in Learn.",NoticeTone::warning};
+        }
+        else
+        {
+            const auto clock=m3::gridClockContext(state.gridClock,!nextLearning && diagnostics.isPlaying);
+            const auto& accepted=state.session.timing.valid?state.session.timing:hostTime;
+            const auto rate=capture.manifest.ranges.empty()?hostTime.rate:capture.manifest.sampleRate;
+            m3::GridEvidence evidence;
+            songPlayheadAvailable=m3::HostGrid::make(accepted,hostTime,rate,m3::GridDivision::beat,&evidence,
+                diagnostics.samplePositionAvailable,&clock).has_value();
+            if(evidence.gate==m3::GridGate::clockRejected || evidence.gate==m3::GridGate::runOrigin)
+                songTimingIssue=NoticeMessage{"Song timing changed during playback.",
+                    "Stop playback, then restart from a position with a steady tempo and time signature.",NoticeTone::warning};
+            else if(!songPlayheadAvailable && evidence.gate!=m3::GridGate::clockUnavailable)
+                songTimingIssue=NoticeMessage{"Host timing differs from the captured song.",
+                    "Check the host’s song position, tempo, time signature and sample rate against the original capture.",NoticeTone::warning};
+        }
+    }
+    const auto loopLayoutChanged=loopPerformLayout!=(!nextLearning && !nextExport && loopSource);
+    loopPerformLayout=!nextLearning && !nextExport && loopSource;
     if(exportLayout && !nextExport)exportWorkspace.resetView();
     const auto wasSpecial=learningLayout || exportLayout,nextSpecial=nextLearning || nextExport;
     const auto leavingLearn=wasSpecial && !nextSpecial;
@@ -658,8 +763,12 @@ void PreverbAudioProcessorEditor::refresh()
         else if(!nextSpecial){for(const auto& [c,visible]:performVisibility)if(c->getParentComponent()==&workspaceRoot())c->setVisible(visible);performVisibility.clear();}
         learningLayout=nextLearning;exportLayout=nextExport;resized();
     }
-    if(!nextSpecial){timeline.setData(capture,state,time,diagnostics.samplePositionAvailable,diagnostics.isPlaying);if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
-    hostInfo.display(m3::ui::transportPresentation(time,diagnostics.samplePositionAvailable,
+    else if(loopLayoutChanged)resized();
+    refreshLoopPlayback(loopPerformLayout,state.session.liveEnabled);
+    if(!nextSpecial){timeline.setData(capture,state,time,loopSource?time.valid:diagnostics.samplePositionAvailable,!loopSource && diagnostics.isPlaying);
+        timeline.setSongPlayheadAvailable(songPlayheadAvailable);
+        if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    hostInfo.display(m3::ui::transportPresentation(hostTime,diagnostics.samplePositionAvailable,
         diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);
     liveRoutingBox.setSelectedId(state.session.liveRouting==m3::LiveRouting::wetOnly?2:1,juce::dontSendNotification);
@@ -842,11 +951,21 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureStatus.setText(recapture,juce::dontSendNotification);recaptureStatus.setTooltip(recapture);
     const auto flow=processor.getWorkflowSnapshot();const auto workflowReady=processor.getWorkflowReadiness();
     const auto caps=workflow::capabilities(flow,workflowReady);
-    const auto loopSettings=processor.getLoopCapturePreference();
     const auto loopStatus=loopSettings.enabled?processor.loopCaptureStatus():juce::String{};
     workflowHeader.display(m3::ui::presentWorkflow(flow,workflowReady),loopSettings.enabled?loopStatus:capture.status);
+    if(loopPerformLayout)
+    {
+        juce::String accepted="Accepted Loop";
+        if(const auto& phrase=capture.manifest.loop; phrase && phrase->meterNumerator>0)
+        {
+            const auto wholeBars=phrase->beats%phrase->meterNumerator==0;
+            const auto count=wholeBars?phrase->beats/phrase->meterNumerator:phrase->beats;
+            accepted<<" | "<<count<<(wholeBars?(count==1?" bar":" bars"):(count==1?" beat":" beats"));
+        }
+        workflowHeader.modeInformation().display(accepted);
+    }
     noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
-        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes()),loopStatus));
+        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes()),loopStatus,songTimingIssue));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
@@ -858,7 +977,9 @@ void PreverbAudioProcessorEditor::refresh()
     if(!edit)for(auto& control:valueControls)if(control.editing())control.cancel();
     inspectorContent.setEnabled(edit);addButton.setEnabled(edit);removeButton.setEnabled(edit && hasSelection);
     for(auto* button:{&generateButton,&allButton,&analyzeButton,&confirmButton,&timingButton})button->setEnabled(edit && button->isEnabled());
-    auditionButton.setEnabled(caps.preview && state.auditionReady && !(flow.mode==workflow::Mode::live && state.session.liveEnabled && diagnostics.isPlaying));
+    const auto livePriority=state.session.liveEnabled && (loopSource
+        ? processor.loopPlaybackStatus().playback!=m3::LoopCueScheduler::State::standby : diagnostics.isPlaying);
+    auditionButton.setEnabled(caps.preview && state.auditionReady && !(flow.mode==workflow::Mode::live && livePriority));
     stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
     auditionWetOnly.setEnabled(flow.mode==workflow::Mode::live && !flow.locked());
     juce::String monitoring;
@@ -869,7 +990,7 @@ void PreverbAudioProcessorEditor::refresh()
         "Unavailable: capture the dry listening window in Learn":"Unavailable: "+state.dryStatus;
     else if(w->phase==m3::Phase::empty || w->phase==m3::Phase::error || w->phase==m3::Phase::stale)monitoring="Unavailable: "+w->status;
     else monitoring="Preparing audition";
-    if(w && state.auditionReady && !state.playing && state.session.liveEnabled && diagnostics.isPlaying)monitoring="DAW playback active - stop transport to audition";
+    if(w && state.auditionReady && !state.playing && livePriority)monitoring=loopSource?"Stop Loop to audition":"DAW playback active - stop transport to audition";
     if(w){
         if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
         if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
@@ -888,7 +1009,7 @@ void PreverbAudioProcessorEditor::refresh()
         learnWorkspace.displayLoop(loopSettings,processor.canArmLoopCapture(),
             processor.loopCaptureArmed(),flow.locked(),processor.loopFinishing(),
             processor.loopRecaptureEnabled(),loopStatus);
-        learnWorkspace.display(capture,state,time,flow,diagnostics.samplePositionAvailable,processor.getCaptureProgress());
+        learnWorkspace.display(capture,state,time,flow,songPlayheadAvailable,processor.getCaptureProgress(),songTimingIssue.has_value());
     }
     if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
