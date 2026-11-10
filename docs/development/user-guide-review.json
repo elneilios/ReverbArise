@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the P6 pointer gesture guard. Ordinary clicks, keyboard activation and the guide instructions remain current.",
+  "summary": "Synced the approved P6 switch and checkbox contracts, including the reviewed pointer guard. The existing guide wording still matches Learn, Settings and the Swell Inspector.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1065,8 +1065,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 40180,
-      "sha256": "a6d53427d7973b03c5e70f375702521958da5a3c19b8e653eba16991bba45b55"
+      "bytes": 43925,
+      "sha256": "5755b9cfbb42a7d8fdb0f9f0959ff4e6b8a2a06bb25aac60b4756984cf8fca19"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

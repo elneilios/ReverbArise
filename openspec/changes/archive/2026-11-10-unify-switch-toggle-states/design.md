@@ -2,7 +2,7 @@
 
 ## Context
 
-The [C6 contract](../../../docs/development/ui-control-contracts.md#c6--switches-and-toggles) and [P6 inventory](../../../docs/design/ui-control-inventory.md#delivery-packets) define the family. Learn already uses a track and thumb. Perform and Settings still use theme-drawn checkboxes, with some bindings using an invocation hook to capture a workflow pass. On 9 November 2026 the owner approved the standalone Windows comparison and chose switches where there is space, with inline checkboxes for the three Swell Inspector flags.
+The [C6 contract](../../../../docs/development/ui-control-contracts.md#c6--switches-and-toggles) and [P6 inventory](../../../../docs/design/ui-control-inventory.md#delivery-packets) define the family. Learn already uses a track and thumb. Perform and Settings still use theme-drawn checkboxes, with some bindings using an invocation hook to capture a workflow pass. On 9 November 2026 the owner approved the standalone Windows comparison and chose switches where there is space, with inline checkboxes for the three Swell Inspector flags.
 
 ## Goals / Non-Goals
 
