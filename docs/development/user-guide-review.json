@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the fixed-grid Loop Perform wet protection and documented how live dry audio and captured Audition context differ.",
+  "summary": "Reviewed the synced Loop host admission, Perform workspace, and transport specifications against the existing guide. The guide already covers Pattern and Playlist repeats, independent capture and live timing, and fixed-grid wet protection.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1060,8 +1060,8 @@
     },
     {
       "path": "openspec/specs/loop-host-admission/spec.md",
-      "bytes": 10313,
-      "sha256": "822fff42bc3247abda90723866fb21281ca51ed3d9e70f10224fd6135472d8f0"
+      "bytes": 16535,
+      "sha256": "4221d6d18bc46ca6a0ed27f1bab728d9a0ea53fda5f5d769043c732f0b1fb3c6"
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
@@ -1115,13 +1115,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 114077,
-      "sha256": "4b293459723e8defd02f16b91dfe6464e8daedbc8eb0b7024e6dd2a02bcf1725"
+      "bytes": 115018,
+      "sha256": "ec6706a027807607b269d64c25485299396a074b9974332dd809caacb6c9f82b"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 48187,
-      "sha256": "43adbfc02b0b8b6ab0c8558ebd7d7d1138c98c0e380aba57f6f2731463954887"
+      "bytes": 50219,
+      "sha256": "830dde3e9a96fa1a5f50db0059deca789d0196802d929bfaa2221c56d5827c79"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",

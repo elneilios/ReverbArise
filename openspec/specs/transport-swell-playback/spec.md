@@ -483,51 +483,83 @@ After host processing resumes during running transport, eligible prepared wet SH
 - **AND** an ordinary seek, loop, missing callback interval or internal Live toggle alone does not authorize replacement of an established incompatible run mapping
 
 ### Requirement: Loop Cue requires independent live phase
-Loop live playback SHALL require a verified recurring reference with an observed phrase origin and matching accepted rate, tempo, meter and beat length. Capture timing SHALL supply only the source grid and exact recorded extent. Standby SHALL keep checking the reference, pass dry and report the unmet prerequisite for Cue.
+
+Loop live playback SHALL use the running FL Studio host grid, the verified Rack Clock grid, or a verified legacy Phrase reference. Capture timing SHALL supply only the source grid and exact recorded extent. Standby SHALL check the active live route, pass dry and explain an unmet Cue prerequisite. Clock and FL Studio host playback SHALL repeat at the accepted sample length.
 
 #### Scenario: Accepted capture lacks matching recurrence
-- **WHEN** a Clock-only take has a verified local grid and the live phrase reference is absent or repeats every four bars for a three-bar take
-- **THEN** the accepted loop and its grid remain valid and Cue stays unavailable with the corresponding reason
-- **AND** a matching reference can admit Cue automatically after two complete matching intervals and coherent prepared wet
+
+- **WHEN** a legacy Phrase-only patch lacks recurrence matching the accepted take
+- **THEN** the take remains valid and the legacy route cannot enable Cue
 
 #### Scenario: Verify Phrase while still in Learn
-- **WHEN** an accepted Loop receives valid live Phrase pulses in Learn
-- **THEN** those observations SHALL count toward verification for the same Loop in Perform, with no wet playback or Cue in Learn
-- **AND** reset, timing interruption, incompatible cadence, or a replacement source SHALL require fresh observations
-- **AND** entering Perform SHALL still require a fresh Cue before wet playback
+
+- **WHEN** Rack receives valid Clock pulses in Learn
+- **THEN** the current clock run can establish the grid used in Perform
+- **AND** a legacy Phrase-only route may still verify recurrence for the accepted take in Learn
+- **AND** Learn plays no Loop wet and entering Perform requires a fresh Cue
 
 #### Scenario: Valid fractional reference
-- **WHEN** marker intervals alternate within the verified adjacent integer lengths
-- **THEN** live phase stays verified within the epoch drift bound and each observed marker fixes its actual downbeat
+
+- **WHEN** required legacy marker intervals alternate within the verified adjacent integer lengths
+- **THEN** phase stays verified within the epoch drift bound and each observed marker fixes its actual downbeat
 - **AND** the accepted audio extent and render sample rate are preserved
 
 #### Scenario: Dry audio is deliberately out of phase
-- **WHEN** prepared wet is cued against a verified compatible live phrase reference with dry audio offset from that reference
-- **THEN** wet is scheduled against the observed phrase markers without a manual phase confirmation
-- **AND** Dry + Wet preserves the incoming dry samples and does not inspect their content to admit phase
+
+- **WHEN** prepared wet is cued using valid live timing with dry audio offset from the target downbeat
+- **THEN** wet follows the live timing without manual confirmation, and Dry + Wet preserves the dry input
+
+#### Scenario: Cue with a running grid
+
+- **WHEN** a coherent prepared Loop is in Perform and FL Studio Pattern or Playlist playback or Rack Clock supplies valid bar timing
+- **THEN** UI and supported MIDI Cue are eligible without a recurring Phrase input
 
 ### Requirement: Loop Cue schedules a complete future entry
-An eligible Cue SHALL target the earliest future matching boundary with sufficient time for the full negative lead-in. Once queued, it SHALL start the lead-in in time for the earliest allowed arrival and place the wet downbeat at the observed boundary. Playback SHALL repeat until stopped or invalidated.
+
+An eligible Cue SHALL target the earliest future downbeat with room for the full negative lead-in. Playlist and Rack Clock routes SHALL schedule that downbeat from their respective bar grids. A legacy Phrase-only route SHALL use the observed phrase boundary. Playback SHALL repeat until stopped or invalidated.
 
 #### Scenario: Cue arrives too late for the next lead-in
+
 - **WHEN** the next possible boundary leaves insufficient time for the complete lead-in
 - **THEN** Cue targets the earliest later boundary that fits it and plays no partial launch at the missed boundary
 
 #### Scenario: Marker and Cue share an offset
-- **WHEN** a verified marker and Cue arrive at the same sample
+
+- **WHEN** a timing marker and Cue arrive at the same sample
 - **THEN** the marker is evaluated before Cue and the launch targets a future boundary
 
 ### Requirement: Perform Stop and live sync loss end Loop wet
-Perform Stop SHALL cancel queued playback or begin an immediate click-prevention transition of at most 5 ms. It SHALL take precedence over coincident Cue. Loss of live phase or playback authority SHALL cancel queued launches, fade active wet and require fresh authority and Cue as applicable.
+
+MIDI Perform Stop SHALL cancel a queued launch or finish the current pass without mixing the next lead-in. Repeated Stop notes SHALL leave an existing finish request in place. The Stop Loop button SHALL finish the current pass and then offer Stop Now. MIDI and UI Stop Now SHALL cancel a queued launch or start the short wet fade immediately. Live timing loss or playback authority loss SHALL cancel queued launches and fade active wet. When MIDI commands coincide, Stop Now SHALL take precedence over Stop, and either stop SHALL take precedence over Cue.
 
 #### Scenario: Capture commands and boundaries are independent
+
 - **WHEN** Capture Start/Arm, Capture Stop or an ordinary phrase marker arrives during live Loop playback
 - **THEN** the capture roles and marker do not request Perform Stop or Cue and a valid scheduled repeat continues
 
 #### Scenario: Lost reference, seek or reset
-- **WHEN** a required marker is late or invalid, a seek or reset occurs, or the live rate, tempo or session becomes incompatible
+
+- **WHEN** a required clock or marker is late or invalid, a seek or reset occurs, or the live timing or session becomes incompatible
 - **THEN** any queued launch is cancelled and active wet fades without altering dry in Dry + Wet
-- **AND** re-lock alone leaves the scheduler in Standby until a fresh Cue
+- **AND** restored timing leaves the scheduler in Standby until a fresh Cue
+
+#### Scenario: Stop Loop is clicked during playback
+
+- **WHEN** the musician clicks Stop Loop during the lead-in or current pass
+- **THEN** the current pass continues to its end and the next lead-in is suppressed
+- **AND** clicking Stop Now before completion starts the short fade immediately
+
+#### Scenario: MIDI Stop and Stop Now are distinct
+
+- **WHEN** a Stop note arrives while the Loop is playing
+- **THEN** it finishes the current pass and suppresses the next lead-in even if another Stop note arrives
+- **AND** a Stop Now note arriving before completion starts the short fade immediately
+
+#### Scenario: FL Studio reaches a declared repeat boundary
+
+- **WHEN** consecutive playing callbacks retain their musical mapping and repeat range and meet its exact end and start samples
+- **THEN** a queued Cue and an active Loop retain their scheduled phase across the wrap
+- **AND** an early jump to the same start sample is handled as a seek
 
 ### Requirement: Loop wet composition counts each cycle contribution once
 Loop playback SHALL mix every eligible prepared swell with source-relative placement and exclusive end bounds. All scheduled negative leads and tails that overlap another cycle SHALL be included exactly once. Phase correction SHALL be bounded and keep the prepared content at its native rate.
@@ -542,14 +574,25 @@ Loop playback SHALL mix every eligible prepared swell with source-relative place
 - **THEN** bounded correction aligns the wet downbeat to the observed sample and retains the complete lead and tail content
 
 ### Requirement: Loop playback pins coherent prepared revisions
-Loop wet SHALL use a complete prepared revision associated with the accepted source and current render dependencies. Publication and retirement SHALL occur outside the callback. Resource admission SHALL account for the pinned data and worst-case overlapping contributions within the shared preparation budget.
+
+Loop wet SHALL use a complete prepared revision of the accepted source at the host sample rate. Queued launches SHALL require current render dependencies. An audible pass SHALL retain its last complete mix while a compatible edit prepares, then crossfade to the complete successor at the current Loop position without re-cueing. An intentionally silent mix SHALL allow a playing Loop to keep its position. Publication and retirement SHALL occur outside the callback. Resource admission SHALL account for pinned data and worst-case overlapping contributions within the shared preparation budget.
 
 #### Scenario: Edits invalidate a queued or active revision
-- **WHEN** a source, placement or render dependency of the pinned revision is revoked
-- **THEN** the obsolete queued launch is cancelled or the obsolete wet fades safely
-- **AND** a fresh Cue can use the complete successor once it is ready
+
+- **WHEN** placement or render dependencies change while a Loop is queued or playing
+- **THEN** a queued launch with obsolete dependencies is cancelled
+- **AND** an audible Loop keeps its phase and uses the last complete mix until a compatible successor crossfades in during repeating playback
+- **AND** a change to the accepted source identity or sample-rate compatibility cancels or fades the old playback
 
 #### Scenario: Prepared workload exceeds the supported bound
+
 - **WHEN** the pinned memory or worst-case scheduled overlap exceeds the admission budget
 - **THEN** Cue reports the limiting resource and dry continues without partial or truncated wet
+- **AND** an existing compatible pass retains its last complete mix
 - **AND** the callback performs no allocation, deallocation, disk I/O, convolution, blocking or locking
+
+#### Scenario: Fixed-grid Loop peak protection follows the rendered mix
+
+- **WHEN** the host or Rack Clock grid plays prepared Loop wet audio at a fixed sample period
+- **THEN** wet protection uses measured aggregate peaks, including the partial overlap at launch and finish, while preserving the requested balance below the ceiling
+- **AND** variable phase playback retains a conservative peak bound

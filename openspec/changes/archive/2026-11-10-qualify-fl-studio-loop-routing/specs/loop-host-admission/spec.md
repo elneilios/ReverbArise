@@ -4,7 +4,7 @@
 
 ### Requirement: Musical admission requires explicit meter and origin
 
-Bars, beats and musical grids SHALL require verified beat timing and explicit meter. Capture SHALL establish an origin shared by the audio and clock. FL Studio Cue SHALL use the Playlist grid by default. The supported Rack Clock route SHALL use 4/4 and count the first pulse of the current clock run as beat one. A Phrase note MAY set a different playback downbeat while in standby; Rack requires it to be aligned with a Clock beat and also accepts an aligned Bar pulse. Legacy Phrase-only routes SHALL still require a compatible recurring marker.
+Bars, beats and musical grids SHALL require verified beat timing and explicit meter. Capture SHALL establish an origin shared by the audio and clock. FL Studio Cue SHALL use the running host bar grid by default. The supported Rack Clock route SHALL use 4/4 and count the first pulse of the current clock run as beat one. A Phrase note MAY set a different playback downbeat while in standby; Rack requires it to be aligned with a Clock beat and also accepts an aligned Bar pulse. Legacy Phrase-only routes SHALL still require a compatible recurring marker.
 
 #### Scenario: Beat and bar observations without a declared meter
 
@@ -71,7 +71,7 @@ Learn SHALL offer an opt-in End on repeat method. FL Studio SHALL use the verifi
 
 ### Requirement: FL Studio capture timing and live playback are independent
 
-The system SHALL use a verified capture grid for FL Studio Learn. In Perform, an accepted Loop with prepared swells SHALL be cueable while the host transport runs with valid Playlist timing and live output enabled. The first eligible downbeat on the default or Phrase-aligned playback grid with room for the full wet lead-in SHALL establish the origin for repeats at the accepted Loop length. The FL Studio Cue route SHALL require no Phrase notes.
+The system SHALL use a verified capture grid for FL Studio Learn. In Perform, an accepted Loop with prepared swells SHALL be cueable while Pattern or Playlist playback supplies valid bar timing and live output is enabled. The first eligible downbeat on the default or Phrase-aligned playback grid with room for the full wet lead-in SHALL establish the origin for repeats at the accepted Loop length. The FL Studio Cue route SHALL require no Phrase notes.
 
 #### Scenario: Cue during running transport
 
@@ -84,7 +84,8 @@ The system SHALL use a verified capture grid for FL Studio Learn. In Perform, an
 - **WHEN** a Phrase note arrives while the Playlist runs and Loop playback is in standby
 - **THEN** future cues count playback bars from the note's sample using the verified Playlist tempo
 - **AND** the Learn grid, queued launches, and active repeats are unchanged
-- **AND** stopping, seeking, wrapping, or losing valid timing restores the default Playlist origin until a fresh Phrase note arrives
+- **AND** stopping, seeking, resetting, or losing valid timing restores the default host origin until a fresh Phrase note arrives
+- **AND** a verified repeat preserves the current origin
 
 #### Scenario: A deliberate End Signal reaches a verified downbeat
 
@@ -131,9 +132,14 @@ The system SHALL admit external commands only for a measured FL Studio configura
 
 #### Scenario: Transport interrupts a live take
 
-- **WHEN** transport stops, seeks, wraps, or resets
+- **WHEN** transport stops, seeks, or resets
 - **THEN** wet playback stops and requires a fresh Cue while transport is running
 - **AND** missed note-on events are not reconstructed from Playlist position
+
+#### Scenario: Transport crosses a verified repeat
+
+- **WHEN** consecutive playing callbacks keep the declared repeat range and musical mapping and meet its exact end and start samples
+- **THEN** queued and active Loop playback keep their scheduled phase
 
 #### Scenario: External delivery is unavailable
 
