@@ -458,6 +458,14 @@ std::optional<int64_t> SwellTimeline::transportPlayhead() const noexcept
     return {};
 }
 
+std::optional<int64_t> SwellTimeline::loopInsertionSample() const noexcept
+{
+    if(!capture.manifest.loop || capture.manifest.loop->endSample<=0)return {};
+    const auto last=capture.manifest.loop->endSample-1;
+    if(loopPlayhead && *loopPlayhead>=0 && *loopPlayhead<=last)return loopPlayhead;
+    return static_cast<int64_t>(std::clamp(view.first,0.0,static_cast<double>(last)));
+}
+
 bool SwellTimeline::beginDrag(juce::Point<float> point)
 {
     if(!editingEnabled)return false;
@@ -579,7 +587,8 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
     if(!editingEnabled || data.sessionEpoch!=engine.assignmentEpoch())return;
     setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(!source.contains(e.position))return;
-    for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample);return;}
+    const auto identity=targetIdentity();
+    for(const auto& c:data.candidates)if(std::abs(e.position.x-x(c.sample))<7){engine.confirmCandidateAt(c.sample,identity);return;}
     for(const auto& w:data.session.swells)if(std::abs(e.position.x-x(w.arrival))<7){engine.selectTargets({w.id},w.id);return;}
     const auto candidate=view.sample(e.position.x,source.getX(),source.getWidth());
     if(effectiveSnap())
@@ -588,8 +597,8 @@ void SwellTimeline::mouseDoubleClick(const juce::MouseEvent& e)
             if(!clockContext.sameAuthority(gridClockContext(latest,true)) || !latest
                 || !HostGrid::make(gridTiming(),latest->observed,capture.manifest.sampleRate,gridDivision,nullptr,playheadAvailable,&clockContext))grid.reset();}
         const auto at=grid?grid->snap(candidate):std::optional<int64_t>{};
-        if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at,nullptr,capture.manifest.loop?capture.manifest.revision:0);}
-    else engine.addTarget(candidate,nullptr,capture.manifest.loop?capture.manifest.revision:0);
+        if(!at){gestureMessage("Snap unavailable: compatible fixed host timing required. Hold Ctrl or turn Snap off.");return;}engine.addTarget(*at,nullptr,identity);}
+    else engine.addTarget(candidate,nullptr,identity);
 }
 void SwellTimeline::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel)
 {if(e.mods.isCtrlDown() && source.getWidth()>0)view.zoomBounded(wheel.deltaY>0?0.8:1.25,(e.position.x-source.getX())/source.getWidth(),navigationBounds(),minimumViewSpan());else if(std::isfinite(wheel.deltaY)){view.shift(-wheel.deltaY*0.5);constrainNavigation();}navigationChanged();}

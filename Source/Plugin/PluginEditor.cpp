@@ -101,11 +101,18 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     gridBox.setSelectedId(3,juce::dontSendNotification);gridBox.setTitle("Snap grid division");
     for(auto* box:{&inCurveBox,&outCurveBox}){box->addItem("Linear",1);box->addItem("Smooth",2);box->addItem("Exponential",3);}
     snapButton.setToggleState(true,juce::dontSendNotification);
+    addButton.beforeInvocation=[this]{
+        addTargetInvocation.reset();
+        const auto identity=timeline.targetIdentity();
+        const auto sample=identity.sourceKind==CaptureSourceKind::loop
+            ? timeline.loopInsertionSample() : std::optional{processor.getSongTime().sample};
+        if(sample)addTargetInvocation=std::pair{*sample,identity};
+    };
     addButton.onClick=[this]{
-        const auto capture=processor.getCaptureSnapshot();
-        const auto sample=capture.manifest.loop ? static_cast<int64_t>(std::clamp(timeline.viewport().first,0.0,
-            static_cast<double>(capture.manifest.loop->endSample-1))) : processor.getSongTime().sample;
-        processor.swellEngine().addTarget(sample,nullptr,capture.manifest.loop?capture.manifest.revision:0);refresh();
+        const auto invocation=std::exchange(addTargetInvocation,std::nullopt);
+        if(!invocation || updating || destroying)return;
+        processor.swellEngine().addTarget(invocation->first,nullptr,invocation->second);
+        refresh();
     };
     addButton.setTooltip("Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
     removeButton.onClick=[this]{processor.swellEngine().removeSelected();refresh();};
@@ -768,6 +775,13 @@ void PreverbAudioProcessorEditor::refresh()
     if(!nextSpecial){timeline.setData(capture,state,time,loopSource?time.valid:diagnostics.samplePositionAvailable,!loopSource && diagnostics.isPlaying);
         timeline.setSongPlayheadAvailable(songPlayheadAvailable);
         if(leavingLearn && performViewport)timeline.setViewport(*performViewport);hasPerformWorkspace=true;}
+    const auto addPlayhead=timeline.transportPlayhead();
+    const bool addAtViewStart=loopPerformLayout && (!addPlayhead || *addPlayhead<0);
+    addButton.setTitle(addAtViewStart?"Add at view start":"Add at playhead");
+    addButton.setTooltip(loopPerformLayout
+        ? (addAtViewStart?"Add a swell at the start of the visible loop. Double-click the waveform to choose a different point."
+                         :"Add a swell at the loop playhead. Double-click the waveform to choose a different point.")
+        : "Move FL Studio's playhead to captured audio, or double-click the source waveform to add a target.");
     hostInfo.display(m3::ui::transportPresentation(hostTime,diagnostics.samplePositionAvailable,
         diagnostics.tempoAvailable,diagnostics.bpm,diagnostics.meterAvailable,diagnostics.numerator,diagnostics.denominator));
     liveButton.setToggleState(state.session.liveEnabled,juce::dontSendNotification);

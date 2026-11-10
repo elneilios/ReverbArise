@@ -95,7 +95,13 @@ static void loopPerformReview(bool review,const juce::File& output)
     timeline.focusLost(juce::Component::focusChangedDirectly);
     timeline.setSnap(true);
     REQUIRE(engine.selectTargets({first},first));editor.refresh();
-    until([&]{return engine.snapshot().auditionReady && processor.loopPlaybackStatus().preparation==Prep::ready;});
+    REQUIRE(engine.generate(true).accepted);
+    until([&]{
+        const auto state=engine.snapshot();
+        const auto* other=m3::find(state.session,second);
+        return other && other->phase==m3::Phase::ready && state.auditionReady
+            && processor.loopPlaybackStatus().preparation==Prep::ready;
+    });
     editor.refresh();timeline.fitSelection();
     REQUIRE(engine.audition());
     fixture.tick(true);
@@ -174,6 +180,8 @@ static void loopPerformReview(bool review,const juce::File& output)
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     for(int block=0;block<3;++block)fixture.tick();
+    until([&]{const auto state=processor.loopPlaybackStatus();
+        return state.playback==Playing::standby && state.preparation==Prep::ready && state.phase==Phase::ready;});
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::standby && cue.isEnabled());
 
@@ -199,21 +207,56 @@ static void loopPerformReview(bool review,const juce::File& output)
         REQUIRE(editor.setPresentationScale(100));
     }
 
+    const int missedPhraseBeat=((fixture.nextBeat+15)/16)*16;
     fixture.simplePhrase=false;
-    fixture.through(fixture.marker(112)+128);
+    fixture.through(fixture.marker(missedPhraseBeat)+128);
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().phase==Phase::lost && !cue.isEnabled());
     fixture.simplePhrase=true;
-    fixture.through(fixture.marker(160));
+    fixture.through(fixture.marker(missedPhraseBeat+48));
     editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().phase==Phase::ready && cue.isEnabled());
     std::cout<<"Loop Perform native layout, real source and wet, Cue, Stop, loss and re-lock passed.\n";
-    if(!review)return;
+    if(!review)
+    {
+        auto& add=require<controls::ActionButton>(editor,"Add at playhead");
+        REQUIRE(add.getTitle()=="Add at view start");
+        REQUIRE(processor.requestLoopCue());
+        fixture.through(fixture.marker(missedPhraseBeat+68)+1024);
+        editor.refresh();
+        const auto playhead=timeline.transportPlayhead();
+        REQUIRE(playhead && *playhead>84088 && add.getTitle()=="Add at playhead");
+        add.invokeCommand();
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+        const auto playingSession=engine.savedSession();
+        const auto* inserted=m3::find(playingSession,playingSession.primary);
+        REQUIRE(playingSession.swells.size()==3 && inserted && inserted->arrival==*playhead);
+
+        processor.requestLoopPlaybackStop();
+        for(int block=0;block<3;++block)fixture.tick();
+        editor.refresh();
+        timeline.setViewport({42000,126000});
+        REQUIRE(add.getTitle()=="Add at view start");
+        add.invokeCommand();
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+        const auto saved=engine.savedSession();
+        inserted=m3::find(saved,saved.primary);
+        REQUIRE(saved.swells.size()==4 && inserted && inserted->arrival==42000);
+
+        auto wrongSource=timeline.targetIdentity();
+        wrongSource.reference+=".other";
+        REQUIRE(!engine.addTarget(50000,nullptr,wrongSource));
+        const auto stale=timeline.targetIdentity();
+        engine.restore(saved);
+        REQUIRE(!engine.addTarget(50000,nullptr,stale));
+        REQUIRE(engine.savedSession().swells.size()==saved.swells.size());
+        return;
+    }
 
     // Open on repeating wet so the active command is visible immediately.
     REQUIRE(processor.requestLoopCue());
     REQUIRE(engine.selectTargets({second},second));
-    fixture.through(fixture.marker(192)-6000);
+    fixture.through(fixture.marker(missedPhraseBeat+80)-6000);
     editor.refresh();
     timeline.setViewport(finalBar);
     REQUIRE(cue.isEnabled() && cue.getButtonText()=="Stop Loop" && status.getText()=="Playing loop");

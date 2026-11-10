@@ -129,9 +129,15 @@ public:
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
-    bool addTarget(int64_t arrival,juce::String* rejection=nullptr,uint64_t expectedLoop=0);
+    struct TargetIdentity
+    {
+        uint64_t session, revision;
+        juce::String reference;
+        CaptureSourceKind sourceKind;
+    };
+    bool addTarget(int64_t arrival,juce::String* rejection=nullptr,std::optional<TargetIdentity> expected={});
     bool confirmCandidate(size_t index);
-    bool confirmCandidateAt(int64_t sample);
+    bool confirmCandidateAt(int64_t sample,std::optional<TargetIdentity> expected={});
     void removeSelected();
     bool removeTarget(const juce::String&,uint64_t expectedSession);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);

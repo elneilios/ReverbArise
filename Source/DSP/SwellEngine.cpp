@@ -183,12 +183,27 @@ void SwellEngine::clear()
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=false;
 }
-bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection,uint64_t expectedLoop)
+bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection,std::optional<TargetIdentity> expected)
 {
+    const auto expectedSession=expected?expected->session:sessionGeneration.load();
+    // The capture snapshot takes the worker's command lock. Keep it outside
+    // the engine lock and recheck its atomic generation before editing.
+    const auto context=contextProvider();
+    const juce::ScopedLock guard(lock);
     if(!permitCreative(rejection))return false;
-    const auto context=contextProvider(); const juce::ScopedLock guard(lock);
-    if(expectedLoop && (!context.capture.manifest.loop || !context.time.valid || context.capture.manifest.revision!=expectedLoop))
-    {if(rejection)*rejection="Accepted Loop changed";return false;}
+    const bool loopSource=context.capture.sourceKind()==CaptureSourceKind::loop;
+    if(expectedSession!=sessionGeneration.load() || (loopSource && captureEpochProvider && captureEpochProvider()!=context.captureGeneration)
+        || (expected && (expected->revision!=context.capture.manifest.revision || expected->reference!=context.capture.reference
+                         || expected->sourceKind!=context.capture.sourceKind())))
+    {
+        if(rejection)*rejection="The session or captured source changed";
+        return false;
+    }
+    if(loopSource && (!context.capture.manifest.loop || !context.time.valid))
+    {
+        if(rejection)*rejection="The accepted Loop is unavailable";
+        return false;
+    }
     std::vector<int64_t> arrivals; for(const auto& c:candidates) arrivals.push_back(c.sample);
     const auto& targetTime=sameMusicalMapping(model.timing,context.time)?model.timing:context.time;
     if(!add(model,arrival,context.capture.manifest,targetTime,arrivals,message))
@@ -210,11 +225,14 @@ bool SwellEngine::confirmCandidate(size_t index)
     { const juce::ScopedLock guard(lock); if(index>=candidates.size()) return false; arrival=candidates[index].sample; }
     return confirmCandidateAt(arrival);
 }
-bool SwellEngine::confirmCandidateAt(int64_t arrival)
+bool SwellEngine::confirmCandidateAt(int64_t arrival,std::optional<TargetIdentity> expected)
 {
     {const juce::ScopedLock guard(lock);if(std::none_of(candidates.begin(),candidates.end(),[&](const auto& c){return c.sample==arrival;})){message="Suggestion changed; choose a current candidate";return false;}}
-    if(!addTarget(arrival)) return false;
-    const juce::ScopedLock guard(lock); std::erase_if(candidates,[&](const auto& c){return c.sample==arrival;}); return true;
+    if(!addTarget(arrival,nullptr,expected)) return false;
+    const juce::ScopedLock guard(lock);
+    if(!expected || expected->session==sessionGeneration.load())
+        std::erase_if(candidates,[&](const auto& c){return c.sample==arrival;});
+    return true;
 }
 void SwellEngine::removeSelected()
 {

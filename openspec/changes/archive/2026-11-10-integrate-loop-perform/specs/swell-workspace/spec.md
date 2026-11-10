@@ -75,6 +75,12 @@ Perform SHALL offer the shared multi-swell editing and Audition tools for an acc
 - **THEN** existing Perform edits stay bound to the current accepted identity until a useful replacement settles
 - **AND** stale gestures and worker results cannot modify or publish against the replacement
 
+#### Scenario: Add a target in Loop Perform
+- **WHEN** the musician invokes Add while the Loop playhead is within the captured phrase
+- **THEN** the target is added at the displayed phrase position
+- **AND** when no in-phrase playhead is available, the action says it adds at the start of the visible loop
+- **AND** a source or session change before insertion cancels the action
+
 ### Requirement: Loop playback controls report actual readiness
 An accepted Loop SHALL show one playback command and separate status beside Audition in Perform. Cue Loop SHALL require verified phase and coherent prepared wet. Cancel Loop SHALL cancel a queued start. Stop Loop SHALL fade sounding Loop wet while dry continues. These commands SHALL act independently of Audition. Song SHALL retain its existing composition.
 

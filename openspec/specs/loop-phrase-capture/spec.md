@@ -22,7 +22,12 @@ Learn Source Capture SHALL expose a Loop Mode toggle for the next capture. The a
 - **WHEN** Detect events is enabled and Learn has an accepted Loop
 - **THEN** Learn shows the automatic marker controls and detects markers in the accepted phrase at the selected sensitivity
 - **AND** a pending replacement keeps the accepted phrase's markers visible
-- **AND** Song generation actions remain visible with their availability explained
+- **AND** Generate Swells can use the accepted Loop's current eligible markers when generation prerequisites hold, while Generate on Stop retains its Song behavior
+
+#### Scenario: Generate while a Loop clock continues
+- **WHEN** Learn is idle with an accepted Loop, matching marker analysis and valid generation settings
+- **THEN** explicit Generate Swells may publish definitions tied to that source revision while the clock continues
+- **AND** a capture restart, source replacement, changed marker inputs or incompatible workflow transition rejects stale work and preserves unrelated manual and frozen definitions
 
 ### Requirement: Each arm owns one verified capture
 Learn Arm and a verified external Start/Arm SHALL request the same one-take operation and pin its settings. The recorder SHALL accept original stereo input from the verified start sample inclusive through the verified end sample exclusive. Timing and role admission SHALL follow the Loop host admission contract.

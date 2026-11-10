@@ -51,6 +51,12 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 - **WHEN** a verified wet render permits Finalise entry and the user selects 0% Wet or a new mix is still preparing
 - **THEN** Finalise remains selected, its current Save/Drag/preview actions reflect actual mixdown readiness and dry-only source alone still cannot unlock initial entry
 
+#### Scenario: An accepted Loop is ready to edit without live sync
+- **WHEN** a useful verified Loop is accepted and capture is idle
+- **THEN** Perform is available using that phrase's local coordinates even when Song transport, Loop phase or prepared wet is unavailable
+- **AND** entering Perform starts in dry Standby without moving host transport
+- **AND** Loop export availability follows its separately delivered prerequisites
+
 ### Requirement: Capture activity locks manual mode switching
 Manual mode switching SHALL be disabled during active DAW Capture and while its Stop-triggered drain, commit or validation is settling. Rejection SHALL identify the reason, apply to every command path, and leave current mode/source unchanged. A stopped idle Capture SHALL permit transitions whose prerequisites hold.
 

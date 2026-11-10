@@ -16,3 +16,9 @@ Windows x64 MSVC Release build passed. The first full run had one environment fa
 The audible desktop handoff used VCV Rack Free 2.6.6 on Windows with Host-FX 2.1.0. The owner exercised Loop Perform and confirmed the replacement patches worked. The [Rack fixture instructions](../issue-133-rack-fixture/README.md) document the patch generator, routing, timing traces, and accepted audio for the 4-, 8- and 16-step captures. Headless Rack measurements used Fundamental 2.6.4 and Impromptu Modular 2.5.0, at 48 kHz with 128-frame callbacks. The fresh patches contain no saved plug-in state.
 
 The desktop handoff copies and their VST3 bundle are together under `out/issue-126/arm-cancel-fix/`. The tracked generator also builds the examples against the current local Release bundle. End-to-end timing assertions, including early Phrase verification and fresh Cue after phase loss, are from native processor/UI tests and recorded Rack timing replay. The final Release build was not re-run through the entire audible desktop sequence. Physical DPI and FL Studio Loop routing remain outside this validation.
+
+## PR #140 review verification
+
+The Add command uses the displayed Loop playhead while it is inside the phrase, and the visible view start at other times. Add commands and waveform insertions carry the displayed session and captured-source identity into the engine. The native regression covers both placements and rejects stale session and wrong-source identities.
+
+The Windows MSVC Release build passed. Six focused regressions passed in `out/build-logs/Release/20261110-075317-4da858a5/review-regressions.log`. The Loop Perform run in that batch crashed inside the AMD graphics driver. A direct rerun also exposed a fixture race around an edited swell. The fixture now waits for the edited render before playback and passes in `out/build-logs/Release/20261110-080035-102d5701/loop-perform-review.log`. The full 102-test pass above covers the pre-review revision.

@@ -16,6 +16,9 @@ public:
     void setLoopPlayhead(std::optional<int64_t> sample) noexcept { loopPlayhead = sample; }
     void setSongPlayheadAvailable(bool available) noexcept { songPlayheadAvailable = available; }
     std::optional<int64_t> transportPlayhead() const noexcept;
+    SwellEngine::TargetIdentity targetIdentity() const
+    {return {data.sessionEpoch,capture.manifest.revision,capture.reference,capture.sourceKind()};}
+    std::optional<int64_t> loopInsertionSample() const noexcept;
     void paint(juce::Graphics&) override;
     void resized() override;
     void lookAndFeelChanged()override{invalidateWaveforms();}

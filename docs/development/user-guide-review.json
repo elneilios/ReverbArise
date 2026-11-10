@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the compact spacing below Loop Arm. Learn reserves space only for visible status text. The existing capture and Phrase instructions still apply.",
+  "summary": "Reviewed Loop Perform target insertion, stale-source protection and the synced Loop workspace specs. Updated the offline guide with the live playhead and visible-start behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -440,13 +440,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 86715,
-      "sha256": "57cca3530b724594e70644deac8aed6ee99dd875f6c5716993509efad34cd614"
+      "bytes": 87626,
+      "sha256": "dea68821acab264d03ea4ba96ede5f6d7fb0e7103a0e3fd3a47946650be68709"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25111,
-      "sha256": "fd07bbf5574f1f472625345ecb9c9a8381221d89a8c157af81e0095d5ae8fa08"
+      "bytes": 25316,
+      "sha256": "ff30fe9acebf4544cabfb372534396b0198c21213c464b3f67b4de2401758a0d"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -565,13 +565,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 100204,
-      "sha256": "8cc45ee5bded9da7d58113ae756e97f3331e7f9543f0e59c89b397dafc0addfd"
+      "bytes": 101045,
+      "sha256": "b99473ed474d4e176df7d3ad233a2284fdd2ac3ae4a1a3bb4372735b6924fd1c"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 14512,
-      "sha256": "e8dc3f3653a605d64668e988ae8e44272e054d320668fb0d9844564ad3ba64aa"
+      "bytes": 14603,
+      "sha256": "2d2ef5053bcc8e1853627f84d16cd88c6a2c7a3850298bafb51accb9ad3411d6"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -895,13 +895,13 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 51606,
-      "sha256": "fb274f66773b6d86c2cc20fe62aafe262c53fbb967434265762189d536c33c46"
+      "bytes": 51962,
+      "sha256": "70bc761ac81004fd1c57d09dfd3847b276795490694ab5b869fd0d8a9b555bf4"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 8569,
-      "sha256": "d29fa95be2fd8846c2119ad9cc508cdbe6044d4aa2578a98d5e51bbc5673bd2b"
+      "bytes": 8788,
+      "sha256": "5bee88ddc6a92d9522a167f9a74dc6eb89acea86243afdb7067e4b00621be622"
     },
     {
       "path": "Source/UI/SwellViewport.h",
@@ -985,8 +985,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 34102,
-      "sha256": "25598065c6f88587c2eb908424d9da9ce85b928a35bef84ca5e2ead3829312b4"
+      "bytes": 34345,
+      "sha256": "5fce57eba377b10554bf6d2ae7d727586b234c677c73e74cecc2fddf1c1e679d"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1050,13 +1050,13 @@
     },
     {
       "path": "openspec/specs/loop-host-admission/spec.md",
-      "bytes": 9094,
-      "sha256": "5831468dfdae7b4e52649e5b13755de16e53364b9d4afbe83a4daac2d376b5a7"
+      "bytes": 10313,
+      "sha256": "822fff42bc3247abda90723866fb21281ca51ed3d9e70f10224fd6135472d8f0"
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 10763,
-      "sha256": "7ef5f67203b73c24747ed7f36e1a5c26e6f3aa1ba4d546d6ad7b8cd3c40618bb"
+      "bytes": 11296,
+      "sha256": "a6d3910a5706964af5073d963b387527c5dad7b3dbda079e367e54b9d65ba2a8"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
@@ -1105,13 +1105,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 110749,
-      "sha256": "af6f5e2ef2915cd59fb24c938a5a955f76ff58d05b3e103c7d39233593455756"
+      "bytes": 114077,
+      "sha256": "4b293459723e8defd02f16b91dfe6464e8daedbc8eb0b7024e6dd2a02bcf1725"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 47352,
-      "sha256": "50691496ff4269a9d94d665650787803489c40160cca6540a730350db9bad190"
+      "bytes": 48187,
+      "sha256": "43adbfc02b0b8b6ab0c8558ebd7d7d1138c98c0e380aba57f6f2731463954887"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
@@ -1120,8 +1120,8 @@
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
-      "bytes": 14179,
-      "sha256": "f779d63c0eb5108a97e50ceb5c62e4f6c5d86a4e1688452c65fc651f69f1b662"
+      "bytes": 14612,
+      "sha256": "146492acade0df6e6b1b771c183b8a36f6fc479caedb88a14875e3251acd69cd"
     },
     {
       "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",

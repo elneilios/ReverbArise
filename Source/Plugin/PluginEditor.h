@@ -223,6 +223,7 @@ private:
     bool loopPerformLayout=false;
     bool loopButtonStops=false;
     std::optional<std::pair<uint64_t,bool>> loopButtonInvocation;
+    std::optional<std::pair<int64_t,m3::SwellEngine::TargetIdentity>> addTargetInvocation;
     m3::ui::controls::EllipsisLabel selectedStatus,performSoundScope;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};
