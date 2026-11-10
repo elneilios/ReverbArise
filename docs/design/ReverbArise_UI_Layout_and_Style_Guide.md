@@ -1,6 +1,6 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.21 · **Production standards revision:** 21 · **Purpose:** Production UI authority and design reference. Revision 21 adopts connected tabs across the editor and Settings. Keyboard and accessibility focus use aqua outer brackets, with decoration suppressed after pointer input.
+**Version:** 1.22 · **Production standards revision:** 22 · **Purpose:** Production UI authority and design reference. Revision 22 adopts the approved Export WAV drag feedback. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
@@ -252,6 +252,8 @@ production standards revision; this revision does not change plugin/state versio
 | 18 | #107 native numeric and text fields approved 2026-11-09 | Shared editable, embedded and read-only field surfaces. Existing field metrics apply to wrapped inspector and Rename feedback. Compact embedded entries keep context help and configured stepper behavior. |
 | 19 | #107 native knobs and sliders review | Aqua value arc or track, off-white position marker, and shared outer focus brackets. Quiet pointer feedback follows the dial arc or the slider track body. Ctrl+wheel uses the control's fine step. Level has a drag-only 0 dB detent with a ±0.3 dB band and a quiet tick at 12 o'clock. |
 | 20 | #107 native switches and checkboxes approved 2026-11-10 | Labeled switches in Learn and Settings. Enabled, Solo and Freeze use inline checkboxes. Both forms share quiet hover, held feedback, readable disabled state and outer aqua keyboard/accessibility brackets. |
+| 21 | #107 native connected tabs approved 2026-11-10 | Editor and Settings use connected tabs with quiet pointer states, independent keyboard/accessibility focus and About last in Settings. |
+| 22 | #107 native Export file interaction approved 2026-11-10 | The ready WAV tile starts a native copy gesture. Windows shows the approved WAV badge over accepting targets and the stop cursor over rejecting targets. The pointer drag uses a solid outline and restores the dotted affordance at the end. The cursor badge's 8.5 logical-unit label belongs to this artwork. |
 
 ### Stable Perform transport information
 

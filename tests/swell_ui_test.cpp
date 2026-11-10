@@ -136,6 +136,7 @@ static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::Strin
 #include "WorkspaceNoticeCases.h"
 #include "UiStandardsCases.h"
 #include "ExportControlCases.h"
+#include "ExportFileInvocationCases.h"
 #include "SwellListBindingCases.h"
 #include "SwellListCaptureCases.h"
 #include "RegenerationCases.h"
@@ -320,6 +321,7 @@ static void sourceRangeFeedbackCases()
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-source-range-feedback"){sourceRangeFeedbackCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
@@ -492,6 +494,7 @@ int main(int argc,char* argv[]){return runTest([&]
     if(argc>1 && juce::String(argv[1])=="--review-export-controls"){exportControlReview::cases();controlReview::run(std::make_unique<exportControlReview::Panel>());return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-controls"){exportControlReview::cases();return;}
     exportControlReview::cases();
+    exportFileInvocationReview::cases();
     if(argc>1 && juce::String(argv[1])=="--review-controls"){controlReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-messages"){noticeReview::run();return;}
     modeIconCases();
@@ -849,6 +852,68 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(!visibleOffscreen(named(editor,"swellTimeline")) && visibleOffscreen(named(editor,"exportWorkspace")));
         waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
         auto exportView=dynamic_cast<m3::ui::ExportWorkspace*>(named(editor,"exportWorkspace"));REQUIRE(exportView);
+        {
+            using m3::ui::ExportFileInvocations;
+            using m3::ui::controls::FileDragTile;
+            using m3::ui::controls::FileSaveAction;
+            const auto ready = engine.snapshot();
+            const auto& state = ready.songExport;
+            const auto expected = engine.assetDirectory().getChildFile(state.prepared->file.path);
+            ExportFileInvocations::SaveResult completeSave;
+            int handoffs = 0;
+            m3::ui::ExportWorkspace workspace(engine,
+                [&](const auto& scope, auto complete)
+                {
+                    REQUIRE(scope.session == state.session && scope.pass == state.pass && scope.file == state.prepared->file);
+                    completeSave = std::move(complete);
+                },
+                [&](const auto& path, const auto& canStart, const auto& canContinue)
+                {
+                    REQUIRE(path == expected && canStart() && canContinue());
+                    ++handoffs;
+                    return m3::ui::controls::WavDragResult::cancelled;
+                });
+            workspace.setSize(900, 510);
+            workspace.addToDesktop(juce::ComponentPeer::windowIsTemporary);
+            workspace.setVisible(true);
+            workspace.setAlwaysOnTop(true);
+            workspace.display(ready);
+            auto* tile = dynamic_cast<FileDragTile*>(named(workspace, "exportDrag"));
+            auto* save = dynamic_cast<FileSaveAction*>(named(workspace, "exportSave"));
+            auto* peer = workspace.getPeer();
+            REQUIRE(tile && save && peer && expected.existsAsFile());
+            auto stamp = juce::Time::currentTimeMillis();
+            const auto send = [&](juce::Point<int> point, juce::ModifierKeys mods)
+            {
+                peer->handleMouseEvent(juce::MouseInputSource::InputSourceType::mouse, point.toFloat(),
+                    mods, 0.0f, 0.0f, ++stamp);
+            };
+            const auto primary = juce::ModifierKeys::leftButtonModifier;
+            const auto tilePoint = tile->getBounds().getCentre();
+            const auto dragPoint = tilePoint.translated(12, 0);
+            send(tilePoint, {});
+            REQUIRE(juce::Desktop::getInstance().getMainMouseSource().getComponentUnderMouse() == tile);
+            send(tilePoint, primary);
+            send(dragPoint, primary);
+            juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+            send(dragPoint, {});
+            REQUIRE(handoffs == 1 && !tile->hasSolidBorder() && !completeSave
+                && engine.snapshot().songExport.delivery == state.delivery);
+
+            juce::TemporaryFile saved(".wav");
+            invokeCommand(*save);
+            REQUIRE(completeSave);
+            completeSave({});
+            REQUIRE(!saved.getFile().exists() && engine.snapshot().songExport.delivery == state.delivery);
+            completeSave = {};
+            invokeCommand(*save);
+            REQUIRE(completeSave);
+            completeSave(saved.getFile());
+            waitUI([&]{return !engine.snapshot().songExport.delivering && saved.getFile().existsAsFile();});
+            REQUIRE(saved.getFile().hasIdenticalContentTo(expected));
+            workspace.removeFromDesktop();
+            editor.refresh();
+        }
         for(float wet:{0.f,.5f,1.f}){REQUIRE(engine.setExportMix(wet,engine.assignmentEpoch()));
             waitUI([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
             REQUIRE(named(editor,"exportSave")->isEnabled() && named(editor,"exportDrag")->isEnabled());

@@ -552,10 +552,13 @@ are follow-up consumers, not a precedent for new controls.
 invocation hooks, semantic play/stop/save/return glyphs and in-bounds focus ink.
 `Controls/FileDragTile.h` owns a once-per-pointer-gesture external-file intent
 and click/Enter/Space Save fallback, with no path storage or filesystem I/O.
-Bindings own current-file verification and session/revision authority. The tile
-never claims the host accepted a drop. Disabled actions do not invoke bindings;
-keyboard activation remains usable after dragging. Native cases exercise these
-contracts before wider rollout. Existing Settings/Diagnostics and Perform text
+Revision 22 uses `ExportFileInvocations` to pin the session, pass and prepared
+WAV at input. The engine validates that identity and resolves the ready path.
+`NativeWavDrag` offers that path to Windows as a copy and uses the negotiated drop
+effect for WAV or stop feedback. The background worker has already checked the
+file. Save keeps the native chooser, overwrite confirmation and guarded worker.
+The tile clears its solid pointer border after drop, cancellation or failure.
+Keyboard and accessibility activation remain available after dragging. Existing Settings/Diagnostics and Perform text
 buttons are untouched consumers, not claimed migrated. The owner approved these families in native component checkpoint A on
 2026-11-04; the existing numeric stepper approval is preserved. Integrated
 Export workspace acceptance remains a separate checkpoint.

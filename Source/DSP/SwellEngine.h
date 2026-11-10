@@ -200,6 +200,7 @@ public:
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
     uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
+    juce::File readyExportFile(uint64_t expectedSession,uint64_t expectedPass,const ExportFile&) const;
     void holdExportForTesting(bool hold) noexcept {exportHold.store(hold);notify();}
     bool exportWaitingForTesting()const noexcept{return exportWaiting.load();}
     bool audition();

@@ -456,9 +456,12 @@ not as behavior proven by a painted highlight.
 Keep Learn inspection pin and transient hover distinct; Escape clears only in its
 existing focus context. Keep Perform drag anchor/frozen/session policy and display
 height separate from gain. Export navigation remains left-position/right-pan,
-wheel zoom/Shift-wheel pan and Home Fit. FileDragTile's dashed/solid focus border,
-drag threshold and suppression of click after drag are an explicit #6 variant.
-Its binding retains file/revision/session eligibility; the control owns no path.
+wheel zoom/Shift-wheel pan and Home Fit. FileDragTile's dotted idle border, solid pointer drag and separate keyboard focus
+are the approved Export variant. The primary press crosses the threshold once
+and suppresses its own click-to-save. The binding pins the current session, pass
+and WAV, and Windows sets the WAV or stop cursor using target feedback. The tile
+restores its pointer-idle border when the native drag returns. The engine owns
+ready-file eligibility and the background integrity check.
 
 Native file choosers and window chrome remain native. Application launch and
 completion must retain lifetime, target, cancellation and session/pass checks.
@@ -484,7 +487,7 @@ native review must use the actual prepared fixture and retain one review window.
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
 | Stable fixed transport typography and bounded notice wrapping | Production guide revisions 6/7 and no-forced-speech spec; not generic text shrink permission |
-| File-drag tile dashed affordance | Existing #6 Export family; retain separate native-file semantics |
+| File-drag tile dotted affordance and WAV cursor | #6 Export family, updated at revision 22 under #107; Windows target feedback and guarded Save fallback |
 | Grouped local actionable error/collapsed empty IR feedback | #109 scoped field approval; merged and present here; C3/C4 extension candidates need their own family checkpoint |
 | Comfortable auxiliary typography, main responsive roles, single transform | Production guide revision 7; physical DPI/host coverage remains separately recorded |
 
