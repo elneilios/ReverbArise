@@ -359,6 +359,8 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(ui::aqua.withAlpha(.12f));
         g.fillRect(leadIn);
     }
+    // The cached waveforms already carry their individual opacities.
+    g.setOpacity(1.0f);
     wetWaveformLayer.paint(g,getWidth(),getHeight(),view.first,view.last,[this](auto& drawing,float,auto& metrics){paintWaveforms(drawing,metrics,true);});
     if (!leadIn.isEmpty())
     {

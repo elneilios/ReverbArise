@@ -31,6 +31,34 @@ int main(){return runTest([]
         juce::Graphics g(image);g.addTransform(juce::AffineTransform::scale(scale));component.paintEntireComponent(g,true);return image;
     };
     const auto present=[&]{timeline.setData(capture,state,time);paint(timeline);paint(overview);};
+    {
+        auto loopCapture=capture;
+        loopCapture.manifest.loop=LoopPhraseTiming{120,4,4,4,0,1000};
+        auto loopState=state;
+        auto selectedWave=std::make_shared<Waveform>(*wave);
+        selectedWave->peaks={{300,1,-.25f,.5f}};
+        loopState.raw=loopState.shaped=selectedWave;
+        loopState.wetSummaries.clear();
+        timeline.setData(loopCapture,loopState,time);
+        timeline.setViewport({0,1000});
+        const auto wetLane=timeline.wetLane();
+        const auto wetPixel=[&](const juce::Image& image,int64_t sample){
+            const auto x=timeline.viewport().pixel(sample,wetLane.getX(),wetLane.getWidth());
+            return image.getPixelAt(static_cast<int>(x),static_cast<int>(wetLane.getCentreY())+6);
+        };
+        const auto selectedBefore=wetPixel(paint(timeline),300);
+        REQUIRE(selectedBefore.getGreen()>ui::background.getGreen());
+        loopState.loopLeadIn.start=700;
+        timeline.setData(loopCapture,loopState,time);
+        const auto tintOnly=wetPixel(paint(timeline),850);
+        loopState.loopLeadIn.peaks=std::make_shared<const std::vector<CapturePeak>>(
+            std::vector<CapturePeak>{{-150,1,-.25f,.5f}});
+        timeline.setData(loopCapture,loopState,time);
+        const auto playing=paint(timeline);
+        REQUIRE(wetPixel(playing,300)==selectedBefore);
+        const auto leadIn=wetPixel(playing,850);
+        REQUIRE(leadIn.getGreen()>tintOnly.getGreen() && leadIn.getGreen()<selectedBefore.getGreen());
+    }
     timeline.setViewport({0,1000});present();
     REQUIRE(timeline.waveformPaintMetrics().peaksVisited==100); // No hidden inline or distant-range work.
     REQUIRE(timeline.waveformPaintMetrics().columnsPainted==100); // Coarse buckets remain narrow at deep zoom.

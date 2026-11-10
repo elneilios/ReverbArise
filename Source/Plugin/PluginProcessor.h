@@ -11,10 +11,15 @@
 #include <Capture/LoopCapturePreference.h>
 #include <Capture/LoopTake.h>
 #include <Capture/LoopBeatClock.h>
+#include <Capture/LoopHostGrid.h>
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
 #include <Storage/WorkingFolder.h>
+
+#if PREVERB_FL_STUDIO_TRACE
+class FlStudioHostTrace;
+#endif
 
 struct HostPositionDiagnostics
 {
@@ -45,7 +50,8 @@ struct HostPositionDiagnostics
 class PreverbAudioProcessor final : public juce::AudioProcessor, private juce::AsyncUpdater
 {
 public:
-    explicit PreverbAudioProcessor(juce::File projectsRoot = defaultProjectsRoot());
+    explicit PreverbAudioProcessor(juce::File projectsRoot = defaultProjectsRoot(),
+                                   bool flStudioLoopHost = juce::PluginHostType().isFruityLoops());
     ~PreverbAudioProcessor() override;
 
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
@@ -93,6 +99,7 @@ public:
     bool cancelLoopCapture(uint64_t pass);
     bool loopCaptureArmed() const noexcept { return loopArm.load(std::memory_order_acquire) != 0; }
     bool canArmLoopCapture() const;
+    bool usesFlStudioLoopTiming() const noexcept { return flStudioLoopHost; }
     juce::String loopCaptureStatus() const;
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
@@ -105,7 +112,7 @@ public:
     void setLoopPlaybackReference(const m3::LoopReferenceSetup&, bool externalCommands);
     m3::LoopPlayback::Status loopPlaybackStatus() const noexcept;
     bool requestLoopCue() noexcept;
-    void requestLoopPlaybackStop() noexcept { swells->loopTransport().requestStop(); }
+    void requestLoopPlaybackStop() noexcept { swells->loopTransport().requestFinish(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
     void holdCaptureValidationForTesting(bool hold) noexcept {captureWorker.holdValidationForTesting(hold);}
@@ -120,7 +127,7 @@ public:
     };
     SourceBarSubmission setSourceBars(int64_t start, int64_t end);
     void generatePreview() { swells->generate(); }
-    bool auditionPreview() { return swells->audition(); }
+    bool auditionPreview() { return swells->audition(sampleRate.load(std::memory_order_relaxed)); }
     void setAuditionLevelDb(float db);
     void stopPreview() { swells->stop(); }
     m3::SwellEngine& swellEngine() noexcept { return *swells; }
@@ -147,6 +154,9 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+#if PREVERB_FL_STUDIO_TRACE
+    std::unique_ptr<FlStudioHostTrace> flStudioHostTrace;
+#endif
     void handleAsyncUpdate() override {updateHostDisplay(ChangeDetails{}.withNonParameterStateChanged(true));}
     void persistentStateChanged() {if(hostNotificationsEnabled.load() && juce::MessageManager::getInstanceWithoutCreating()!=nullptr)triggerAsyncUpdate();}
     struct RecoveryIntent{m3::storage::portable::Input original;std::vector<std::pair<int64_t,int64_t>> required;};
@@ -158,7 +168,15 @@ private:
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     std::atomic<uint32_t> loopPreference{LoopCapturePreference{}.packed()};
-    enum class LoopRoute { waiting, marker, clock };
+    enum class LoopRoute { waiting, marker, clock, host };
+    const bool flStudioLoopHost;
+    loop_capture::HostGrid loopHostGrid;
+    loop_capture::HostGrid::Block loopHostBlock;
+    m3::LoopClockGrid rackClockGrid;
+    uint64_t rackClockResetEpoch = 0;
+    int64_t rackClockSample = 0;
+    double rackClockRate = 0;
+    std::chrono::steady_clock::time_point previousRackClockCallback;
     std::atomic<uint64_t> loopArm{0}, loopStop{0}, loopReset{0}, loopArmResetEpoch{0};
     std::atomic<bool> loopRecapture{false}, loopFinishPending{false};
     std::atomic<LoopRoute> loopRouteHint{LoopRoute::waiting};
@@ -175,15 +193,19 @@ private:
     std::chrono::steady_clock::time_point previousLoopCallback;
     std::chrono::steady_clock::time_point previousLoopPlaybackCallback;
     std::optional<int64_t> loopPlaybackHostEnd;
+    TransportTime loopPlaybackHostTime;
     m3::LoopReferenceSetup observedLoopReference;
     bool previousLoopSource = false;
     void invalidateLoopClock() noexcept;
     bool loopArmAllowed(workflow::Snapshot, bool external) const noexcept;
+    bool flStudioLoopTimingUnsupported() const noexcept;
     uint64_t reserveLoopArm(bool external) noexcept;
     bool loopDurationFits(LoopCapturePreference) const noexcept;
-    void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&, bool, uint64_t) noexcept;
+    void observeRackClock(const juce::MidiBuffer&, int frames, double rate, loop_capture::MidiObservations&) noexcept;
+    void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&,
+                            bool, uint64_t, const loop_capture::MidiObservations& rackEvents) noexcept;
     void processLoopPlayback(juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&,
-                             m3::LoopPlayback::Access, uint64_t) noexcept;
+                             m3::LoopPlayback::Access, uint64_t, loop_capture::MidiObservations&) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;

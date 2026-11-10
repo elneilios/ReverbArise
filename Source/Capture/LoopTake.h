@@ -53,16 +53,24 @@ public:
     unsigned beatCount() const noexcept { return beats; }
     bool stopPending() const noexcept { return stopSample >= 0; }
     bool duration() const noexcept { return preference.method == LoopCapturePreference::Method::duration; }
+    bool endOnRepeat() const noexcept { return preference.method == LoopCapturePreference::Method::endOnRepeat; }
     void requestStop(int64_t sample) noexcept
     {
         if (!stopPending())
             stopSample = sample;
     }
-    Edge observeClock(int64_t sample) noexcept
+    Edge observeClock(int64_t sample, bool repeatStart = false) noexcept
     {
         if (!armed) return Edge::none;
-        if (origin < 0) { origin = sample; return Edge::start; }
+        if (origin < 0)
+        {
+            if (endOnRepeat() && !repeatStart) return Edge::none;
+            origin = sample;
+            return Edge::start;
+        }
         ++beats;
+        if (endOnRepeat())
+            return repeatStart ? finish(beats % PhraseClock::beatsPerBar == 0 ? Edge::end : Edge::invalid) : Edge::none;
         const auto target = preference.count
             * (preference.unit == LoopCapturePreference::Unit::bars ? PhraseClock::beatsPerBar : 1);
         const auto complete = duration() ? beats == target

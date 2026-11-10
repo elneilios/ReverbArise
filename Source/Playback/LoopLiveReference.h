@@ -23,7 +23,7 @@ struct LoopReferenceSetup
 class LoopLiveReference
 {
 public:
-    enum class State { unconfigured, mismatch, waiting, ready, lost, unsupported };
+    enum class State { unconfigured, mismatch, waiting, ready, lost, unsupported, waitingForClock };
     struct Window { int64_t earliest, latest; };
     struct Observation { bool boundary = false, lost = false; };
 

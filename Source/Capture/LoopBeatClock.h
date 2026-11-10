@@ -43,6 +43,7 @@ public:
     }
 
     bool verified() const noexcept { return intervals >= 2 && earliest <= latest; }
+    double estimatedPeriod() const noexcept { return verified() ? (earliest + latest) * .5 : 0; }
 
     double tempo(int64_t extent, unsigned beats) const noexcept
     {

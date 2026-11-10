@@ -210,7 +210,7 @@ public:
     uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
     void holdExportForTesting(bool hold) noexcept {exportHold.store(hold);notify();}
     bool exportWaitingForTesting()const noexcept{return exportWaiting.load();}
-    bool audition();
+    bool audition(double deviceRate = 0);
     void stop();
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
     void processAudio(float*,float*,int,const SongTime&) noexcept;

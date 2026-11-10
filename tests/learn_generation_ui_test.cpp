@@ -256,9 +256,10 @@ static void loopUiCases(bool review)
     REQUIRE(processor.swellEngine().savedSession().autoMarkersEnabled);
     REQUIRE(visible(sensitivity) && visible(generate) && visible(onStop) && !onStop->isEnabled());
     method->setSelectedId(2,juce::sendNotificationSync);
+    REQUIRE(method->getText()=="End on Signal");
     REQUIRE(arm->isEnabled() && !visible(count));
-    REQUIRE(!visible(status) && arm->getTooltip().containsIgnoreCase("leave Arm off"));
-    REQUIRE(method->getTooltip().contains("end of the bar"));
+    REQUIRE(!visible(status) && arm->getTooltip()=="Arm the next recording.");
+    REQUIRE(method->getTooltip().contains("Stop MIDI note") && method->getTooltip().contains("next bar line"));
     REQUIRE(controlBounds("learnRecaptureLabel").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
     captureImage(editor,"issue126-learn-end-signal");
     activate(*arm);
@@ -267,7 +268,11 @@ static void loopUiCases(bool review)
     activate(*arm); // The preview has no audio callbacks between these clicks.
     REQUIRE(!arm->getToggleState() && toggle->isEnabled());
     REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
+    method->setSelectedId(3,juce::sendNotificationSync);
+    REQUIRE(processor.getLoopCapturePreference().method==LoopCapturePreference::Method::endOnRepeat);
+    REQUIRE(!visible(count) && arm->getTooltip().contains("one pass"));
     method->setSelectedId(1,juce::sendNotificationSync);
+    REQUIRE(visible(count) && arm->getTooltip().contains("bar line"));
     unit->setSelectedId(2,juce::sendNotificationSync);
     count->onStep(1);
     REQUIRE(processor.getLoopCapturePreference().count==2);
@@ -537,14 +542,15 @@ int main(int argc,char** argv){return runTest([&]
         songHostTimingFeedback(true);
         return;
     }
-    if (option=="--review-empty-loop" || option=="--review-end-signal")
+    if (option=="--review-empty-loop" || option=="--review-end-signal" || option=="--review-end-on-repeat")
     {
         juce::ScopedJuceInitialiser_GUI gui;
         LoopCaptureFixture fixture;
         auto& processor=*fixture.processor;
         auto preference=processor.getLoopCapturePreference();
-        preference.enabled=option=="--review-end-signal";
-        if (preference.enabled) preference.method=LoopCapturePreference::Method::endSignal;
+        preference.enabled=option!="--review-empty-loop";
+        if (preference.enabled) preference.method=option=="--review-end-on-repeat"
+            ? LoopCapturePreference::Method::endOnRepeat : LoopCapturePreference::Method::endSignal;
         REQUIRE(processor.setLoopCapturePreference(preference));
         auto editor=std::make_unique<PreverbAudioProcessorEditor>(processor);
         editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});

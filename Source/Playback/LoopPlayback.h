@@ -2,6 +2,7 @@
 
 #include "LoopWetPlan.h"
 #include <Capture/CaptureSession.h>
+#include <Core/TransportTime.h>
 
 namespace m3
 {
@@ -13,7 +14,7 @@ struct LoopPlaybackPublication
     LoopPhraseTiming timing;
     Preparation preparation = Preparation::waiting;
     float gain = 1;
-    bool wetOnly = false;
+    bool wetOnly = false, intentionallySilent = false;
     LoopWetPlan plan;
     std::shared_ptr<const std::vector<CapturePeak>> leadInPeaks;
     bool prepareLeadInPeaks(const std::function<bool()>& cancelled);
@@ -54,12 +55,14 @@ public:
     void invalidateReference() noexcept { resetEpoch.fetch_add(1,std::memory_order_release); }
     void requestCue() noexcept { commands.fetch_or(loop_capture::cue,std::memory_order_release); }
     void requestStop() noexcept { commands.fetch_or(loop_capture::stop,std::memory_order_release); }
+    void requestFinish() noexcept { commands.fetch_or(LoopCueScheduler::finishCommand,std::memory_order_release); }
     Status status() const noexcept;
     // Call under the same control lock as publish and collect.
     LeadInDisplay leadInDisplay() const noexcept;
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
                  double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                 const LoopReferenceSetup& observedReference = {}) noexcept;
+                 const LoopReferenceSetup& observedReference = {},
+                 std::optional<SongTime> playlist = {}) noexcept;
 
 private:
     enum SlotState { free, published, retained, retired };
@@ -70,8 +73,10 @@ private:
     };
     std::array<Slot,4> slots;
     std::atomic<int> pending{-1};
-    int latest = -1, held = -1;
+    int latest = -1, held = -1, fadingFrom = -1;
+    int editFadeRemaining = 0, editFadeLength = 0;
     void takePublication() noexcept;
+    void releaseEditFade() noexcept;
     void releaseHeld() noexcept;
     void retireLatestWithoutSource(uint64_t revision) noexcept;
 
@@ -91,6 +96,7 @@ private:
     std::atomic<uint64_t> statusWord{0};
 
     LoopCueScheduler scheduler;
+    std::optional<double> playlistPhrasePpq;
     int64_t cursor = 0;
     LoopWetSample lastWet;
     float dry = 1;

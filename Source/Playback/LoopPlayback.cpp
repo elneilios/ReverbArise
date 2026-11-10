@@ -2,6 +2,24 @@
 
 namespace m3
 {
+namespace
+{
+std::optional<int64_t> playlistDownbeat(const SongTime& time, int64_t blockStart,
+                                       int offset, int64_t lead, double originPpq) noexcept
+{
+    const auto delay = offset + std::max(int64_t{1},lead);
+    if (delay > INT64_MAX - time.sample) return {};
+    const auto earliest = time.sample + delay;
+    const auto ppq = time.ppq + (static_cast<double>(delay) - .5) * time.bpm / (time.rate * 60);
+    const auto bar = originPpq + std::ceil((ppq - originPpq) / 4) * 4;
+    int64_t boundary = 0;
+    if (!resolvePpqSample(time,bar,boundary)) return {};
+    if (boundary < earliest && !resolvePpqSample(time,bar + 4,boundary)) return {};
+    if (boundary < earliest || boundary - time.sample > INT64_MAX - blockStart) return {};
+    return blockStart + (boundary - time.sample);
+}
+}
+
 bool LoopPlaybackPublication::prepareLeadInPeaks(const std::function<bool()>& cancelled)
 {
     const auto start = std::max(plan.audio.start,-timing.endSample);
@@ -86,13 +104,23 @@ void LoopPlayback::takePublication() noexcept
 {
     const auto next = pending.exchange(-1,std::memory_order_acq_rel);
     if (next < 0) return;
-    if (latest >= 0 && latest != held) slots[latest].state.store(retired,std::memory_order_release);
+    if (latest >= 0 && latest != held && latest != fadingFrom)
+        slots[latest].state.store(retired,std::memory_order_release);
     latest = next;
     slots[latest].state.store(retained,std::memory_order_release);
 }
 
+void LoopPlayback::releaseEditFade() noexcept
+{
+    if (fadingFrom >= 0 && fadingFrom != latest)
+        slots[fadingFrom].state.store(retired,std::memory_order_release);
+    fadingFrom = -1;
+    editFadeRemaining = 0;
+}
+
 void LoopPlayback::releaseHeld() noexcept
 {
+    releaseEditFade();
     if (held >= 0 && held != latest) slots[held].state.store(retired,std::memory_order_release);
     held = -1;
 }
@@ -145,7 +173,7 @@ LoopPlayback::Status LoopPlayback::status() const noexcept
 
 void LoopPlayback::process(float* left, float* right, int frames, const loop_capture::MidiObservations& observations,
                            double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                           const LoopReferenceSetup& observedReference) noexcept
+                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist) noexcept
 {
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
@@ -158,8 +186,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     };
     const auto currentMatches = sameSource(current);
     const auto epoch = dependencyEpoch.load(std::memory_order_acquire);
-    const auto prepared = [&](const LoopPlaybackPublication* p){
-        return sameSource(p) && p->rate == rate && p->dependencies == epoch && p->preparation == Preparation::ready;
+    const auto compatible = [&](const LoopPlaybackPublication* p){
+        return sameSource(p) && p->rate == rate;
     };
 
     const auto before = configSequence.load(std::memory_order_acquire);
@@ -185,20 +213,39 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         }
     }
     if (currentMatches && current->rate != rate) setup.clock.rate = rate;
+    if (playlist)
+    {
+        setup = {};
+        externalAllowed = playlist->valid;
+    }
+    const bool autoClock = before == 0 && !playlist;
+    if (autoClock && scheduler.usesClock())
+    {
+        setup = {};
+        externalAllowed = true;
+    }
     scheduler.setProcessingRate(rate);
-    scheduler.configure(setup,currentMatches ? current->rate : 0,currentMatches ? std::optional{current->timing} : std::nullopt);
+    scheduler.configure(setup,currentMatches ? current->rate : 0,currentMatches ? std::optional{current->timing} : std::nullopt,
+                        playlist && playlist->valid,autoClock);
     const auto reset = resetEpoch.load(std::memory_order_acquire);
     const bool validFrames = frames > 0 && cursor <= INT64_MAX - frames;
     const bool canObserve = access != Access::disabled && validFrames && observations.error == MidiObservations::Error::none;
     const bool canPlay = canObserve && access == Access::perform;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
-    const bool interrupted = discontinuity || sourceChanged || (wasObserving && !canObserve) || reset != seenReset;
+    const bool timingInterrupted = discontinuity || (wasObserving && !canObserve) || reset != seenReset;
+    const bool interrupted = timingInterrupted || sourceChanged;
     seenReset = reset;
     seenGeneration = generation;
     seenRevision = revision;
     wasObserving = canObserve;
-    if (interrupted || !validFrames) scheduler.invalidateReference();
+    if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
+    if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
     if (!validFrames) { cursor = 0; return; }
+    const auto observePlaylistPhrase = [&](uint16_t roles, int offset)
+    {
+        if ((roles & phrase) && playlist && playlist->valid && scheduler.state() == LoopCueScheduler::State::standby)
+            playlistPhrasePpq = std::fmod(playlist->ppq + offset * (playlist->bpm / (playlist->rate * 60)),4.0);
+    };
     const auto local = commands.exchange(0,std::memory_order_acq_rel);
     const auto preparation = currentMatches && current->dependencies == epoch ? current->preparation : Preparation::waiting;
     const auto publishStatus = [&]{
@@ -228,8 +275,10 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             for (unsigned event = 0; event < observations.size; ++event)
             {
                 const auto& edge = observations.samples[event];
-                const auto roles = edge.roles & (phrase | reset);
-                if (!roles || (interrupted && edge.sampleOffset == 0)) continue;
+                const auto roles = edge.roles & (captureClock | rackBeatMask | bar | phrase | reset);
+                const bool newClock = autoClock && (roles & captureClock);
+                if (!roles || (timingInterrupted && edge.sampleOffset == 0 && !newClock)) continue;
+                observePlaylistPhrase(roles,edge.sampleOffset);
                 const auto sample = cursor + edge.sampleOffset;
                 if (edge.sampleOffset != 0)
                     scheduler.processSample(sample - 1,0,false,0);
@@ -243,7 +292,17 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         publishStatus();
         return;
     }
-    const auto dryStep = static_cast<float>(1.0 / (std::isfinite(rate) ? std::clamp(rate * .005,1.0,960.0) : 1.0));
+    using State = LoopCueScheduler::State;
+    const auto fadeSamples = std::isfinite(rate) ? std::clamp(rate * .005,1.0,960.0) : 1.0;
+    const auto dryStep = static_cast<float>(1.0 / fadeSamples);
+    if (canPlay && !interrupted && scheduler.state() == State::repeating && held >= 0
+        && fadingFrom < 0 && latest != held && compatible(current) && current->dependencies == epoch
+        && (current->preparation == Preparation::ready || current->intentionallySilent))
+    {
+        fadingFrom = held;
+        held = latest;
+        editFadeRemaining = editFadeLength = static_cast<int>(fadeSamples);
+    }
     unsigned event = 0;
     for (int offset = 0; offset < frames; ++offset)
     {
@@ -251,22 +310,41 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         uint16_t roles = 0;
         if (canObserve && event < observations.size && observations.samples[event].sampleOffset == offset)
             roles = observations.samples[event++].roles;
-        if (!canPlay || !externalAllowed) roles &= ~(cue | stop);
+        if (!canPlay || !externalAllowed) roles &= ~(cue | finish | stop);
         if (offset == 0 && !interrupted && canPlay) roles |= local;
-        if (offset == 0 && interrupted) roles = 0;
+        if (offset == 0 && interrupted && (!playlist || discontinuity))
+            roles = autoClock && (roles & captureClock) ? roles & (captureClock | rackBeatMask | bar | phrase) : 0;
+        if (roles & phrase) observePlaylistPhrase(roles,offset);
         const auto plan = held >= 0 ? slots[held].data.get() : current;
-        const auto ready = canPlay && prepared(plan);
-        scheduler.processSample(sample,roles,ready,ready ? -plan->plan.audio.start : 0);
+        const auto playingBefore = scheduler.active() && scheduler.state() != State::queued;
+        const auto ready = canPlay && compatible(plan) && (held >= 0 && playingBefore
+            ? plan->preparation == Preparation::ready || plan->intentionallySilent
+            : plan->dependencies == epoch && plan->preparation == Preparation::ready);
+        const auto lead = ready ? -plan->plan.audio.start : 0;
+        const auto downbeat = ready && playlist && playlist->valid && (roles & cue)
+            ? playlistDownbeat(*playlist,cursor,offset,lead,playlistPhrasePpq.value_or(0)) : std::nullopt;
+        scheduler.processSample(sample,roles,ready,lead,downbeat);
         if (scheduler.active() && held < 0) held = latest;
         const auto state = scheduler.state();
-        const auto playing = state == LoopCueScheduler::State::leadIn || state == LoopCueScheduler::State::repeating;
+        const auto playing = state == LoopCueScheduler::State::leadIn || state == LoopCueScheduler::State::repeating
+            || state == LoopCueScheduler::State::finishing;
         LoopWetSample wet;
         if (playing && ready)
         {
-            wet = plan->plan.sample(scheduler.nearCycle(sample),scheduler.firstCycle(),INT64_MAX,
-                [&](int64_t cycle){ return scheduler.positionFor(cycle,sample); });
-            wet.left *= plan->gain;
-            wet.right *= plan->gain;
+            const auto cycle = scheduler.nearCycle(sample);
+            const auto position = [&](int64_t index){ return scheduler.positionFor(index,sample); };
+            const auto samplePlan = [&](const LoopPlaybackPublication& publication){
+                const auto mix = publication.plan.sample(cycle,scheduler.firstCycle(),scheduler.lastCycle(),position);
+                return LoopWetSample{mix.left * publication.gain,mix.right * publication.gain};
+            };
+            wet = samplePlan(*plan);
+            if (fadingFrom >= 0)
+            {
+                const auto old = samplePlan(*slots[fadingFrom].data);
+                const auto weight = 1.0f - static_cast<float>(--editFadeRemaining) / static_cast<float>(editFadeLength);
+                wet = {std::lerp(old.left,wet.left,weight),std::lerp(old.right,wet.right,weight)};
+                if (editFadeRemaining == 0) releaseEditFade();
+            }
             lastWet = wet;
         }
         else if (state == LoopCueScheduler::State::stopping)

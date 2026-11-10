@@ -18,6 +18,12 @@ what Song Mode needs. Perform also checks the current playback clock against
 the captured mapping. The footer continues to report individual host fields
 as observed.
 
+In Loop Mode, the Perform footer uses the accepted Loop's tempo and meter.
+Bar and Beat follow the same sample position as the yellow playback playhead
+and start again at Bar 1, Beat 1 each pass. They are unavailable before the
+first downbeat and after playback ends. Rack does not need to report a host
+song position for these values.
+
 The component retains the existing footer's 15-logical-pixel embedded Inter
 Regular and primary text ink. It introduces no background/highlight decoration.
 Bar and Beat captions, the BPM unit and three separators have independent boxes;

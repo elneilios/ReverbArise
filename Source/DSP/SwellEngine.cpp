@@ -533,7 +533,7 @@ bool SwellEngine::setExportLevels(float dry,float wet,uint64_t expectedSession,u
     if(!m3::setExportLevels(model,dry,wet,message))return false;
     if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();if((dry==0 && wet==0) || (wet>0 && !exportPreviewWetAvailable))exportVoice->stop();else if(exportVoice->requested(exportVoice->request()) && exportPreviewPin && exportPreviewSession==sessionGeneration.load() && exportPreviewPass==workflowState->snapshot().pass && exportPreviewRevision==liveRevision)exportVoice->setLevels(exportVoice->request(),dry,wet,exportPreviewPin->plan->end);else exportVoice->stop();exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
 }
-bool SwellEngine::audition()
+bool SwellEngine::audition(double deviceRate)
 {
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise)return playExport(sessionGeneration.load());
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return false;
@@ -544,7 +544,9 @@ bool SwellEngine::audition()
     if(playable.phase!=Phase::ready || (model.auditionMode==AuditionMode::dryWet && !at->second.dryAvailable))return false;
     const auto context=contextProvider();
     const bool loop=context.capture.sourceKind()==CaptureSourceKind::loop;
-    if(liveEnabled.load() && (loop ? loopPlayback.status().playback!=LoopCueScheduler::State::standby : transportActive.load()))return false;
+    if(loop && deviceRate>0 && deviceRate!=context.capture.manifest.sampleRate)return false;
+    if(loop ? loopPlayback.status().playback!=LoopCueScheduler::State::standby
+            : liveEnabled.load() && transportActive.load())return false;
     if(!sameMusicalMapping(model.timing,context.time) || context.capture.manifest.sampleRate!=context.time.rate) return false;
     auditionLoopGeneration.store(context.captureGeneration,std::memory_order_relaxed);
     auditionLoopRevision.store(loop?context.capture.manifest.revision:0,std::memory_order_relaxed);

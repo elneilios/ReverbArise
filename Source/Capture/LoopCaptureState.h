@@ -37,10 +37,12 @@ inline bool readLoopState(const juce::XmlElement& state, CaptureSourceKind& kind
     const auto enabled = next->getStringAttribute("enabled"), method = next->getStringAttribute("method"),
         unit = next->getStringAttribute("unit"), count = next->getStringAttribute("count");
     if (next->getStringAttribute("version") != "1" || next->getNumAttributes() != 5 || next->getNumChildElements() != 0
-        || (enabled != "0" && enabled != "1") || (method != "duration" && method != "endSignal")
+        || (enabled != "0" && enabled != "1") || (method != "duration" && method != "endSignal" && method != "endOnRepeat")
         || (unit != "bars" && unit != "beats") || count != juce::String(count.getIntValue()))
         return false;
-    preference = { enabled == "1", method == "duration" ? LoopCapturePreference::Method::duration : LoopCapturePreference::Method::endSignal,
+    using Method = LoopCapturePreference::Method;
+    preference = { enabled == "1", method == "duration" ? Method::duration
+                         : method == "endOnRepeat" ? Method::endOnRepeat : Method::endSignal,
                    unit == "bars" ? LoopCapturePreference::Unit::bars : LoopCapturePreference::Unit::beats,
                    static_cast<unsigned>(count.getIntValue()) };
     return preference.valid();

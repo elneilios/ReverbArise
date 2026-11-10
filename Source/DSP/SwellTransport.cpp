@@ -494,6 +494,10 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
         snapshot = model;
         for (auto& w : snapshot.swells)
         {
+            // During the edit debounce the replacement is pending even though
+            // reconciliation has not moved it from Stale to Checking yet.
+            if (w.phase == Phase::stale && w.ir.present() && forceRefresh.contains(w.id))
+                w.phase = Phase::checking;
             const auto kept = retainedIR.find(w.id);
             if (kept == retainedIR.end()) continue;
             if (!retainedCompatible(kept->second,w,context))
@@ -523,11 +527,13 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
     SwellAssetStore store(instanceRoot(manifest));
     juce::String error;
     auto result = Preparation::noWet;
+    bool hasAudibleMember = false;
     uint64_t reserved = 8ULL * 1024 * 1024;
     for (auto& w : snapshot.swells)
     {
         if (cancel()) return;
         if (!w.enabled || w.muted || (anySolo && !w.solo)) continue;
+        hasAudibleMember = true;
         if (w.phase != Phase::ready || !w.render.present())
         {
             if (w.phase == Phase::queued || w.phase == Phase::restoring || w.phase == Phase::checking || w.phase == Phase::rendering)
@@ -579,12 +585,13 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
             if (publication->plan.peakBound > 0)
                 publication->gain = std::min(publication->gain,
                     juce::Decibels::decibelsToGain(gainCeilingDb(snapshot)) / publication->plan.peakBound);
-            publication->wetOnly = snapshot.liveRouting == LiveRouting::wetOnly;
             if (!publication->prepareLeadInPeaks(cancel)) return;
             if (publication->bytes() > available()) result = Preparation::budget;
         }
     }
     publication->preparation = result;
+    publication->intentionallySilent = !hasAudibleMember;
+    publication->wetOnly = snapshot.liveRouting == LiveRouting::wetOnly;
     if (result != Preparation::ready)
     {
         publication->plan = {};

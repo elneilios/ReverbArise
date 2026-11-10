@@ -78,7 +78,8 @@ public:
         loopSettings=preference;
         loopRecaptureOn=recaptureEnabled;
         loopMode.display(preference.enabled);
-        loopMethod.setSelectedId(preference.method==LoopCapturePreference::Method::duration?1:2,juce::dontSendNotification);
+        loopMode.setTooltip("Record a loop using 4/4 timing. See the user guide for host setup.");
+        loopMethod.setSelectedId(static_cast<int>(preference.method)+1,juce::dontSendNotification);
         loopUnit.setSelectedId(preference.unit==LoopCapturePreference::Unit::bars?1:2,juce::dontSendNotification);
         if (!loopCount.isBeingEdited())
             loopCount.setText(juce::String(static_cast<int>(preference.count)),juce::dontSendNotification);
@@ -87,18 +88,23 @@ public:
         loopArm.display(armed && !finishing);
         loopArm.setEnabled(!finishing && (armed || canArm));
         const bool endSignal=preference.method==LoopCapturePreference::Method::endSignal;
-        loopMethod.setTooltip(endSignal
-            ? "Turn Arm off or send Stop while recording to finish at the end of the bar."
+        const bool endOnRepeat=preference.method==LoopCapturePreference::Method::endOnRepeat;
+        loopMethod.setTooltip(endOnRepeat
+            ? "Record one whole pass of a repeat."
+            : endSignal
+            ? "Click Arm again or send a Stop MIDI note to finish at the next bar line."
             : "Record for the number of bars or beats you choose.");
         auto armHelp=status;
         if (loopArm.isEnabled())
         {
-            if (!armed)
-                armHelp="Start a manual recording. Leave Arm off if your sequencer starts the recording.";
+            if (!armed && endOnRepeat)
+                armHelp="Wait for the next repeat to start, then record one pass.";
+            else if (!armed)
+                armHelp=endSignal ? "Arm the next recording." : "Record the chosen length starting on a bar line.";
             else if (flowNow().phase!=workflow::Phase::recording)
                 armHelp="Cancel before recording starts.";
             else
-                armHelp=endSignal ? "Finish recording at the end of this bar." : "Cancel this recording.";
+                armHelp=endSignal ? "Finish recording at the next bar line." : "Cancel this recording.";
         }
         loopArm.setHelpText(armHelp);
         loopArm.setTooltip(armHelp);
@@ -370,9 +376,13 @@ public:
                 ? (canStart?"Capture a loop":"No loop recorded yet")
                 : (hostSongTimingBlocked?"No song audio yet":"Play audio in your DAW"),regions[1],juce::Justification::centred,1);
             applyTextRole(g,*this,TextRole::emptyBody);
+            const auto* armHelp = loopSettings.method == LoopCapturePreference::Method::endOnRepeat
+                ? "Click Arm to record one full repeat.\nRecording starts at the beginning of the next pass."
+                : loopSettings.method == LoopCapturePreference::Method::endSignal
+                ? "Click Arm to start recording in sync.\nClick Arm again or send a Stop MIDI note to finish at the next bar line."
+                : "Choose a length and click Arm.\nRecording starts on a bar line and stops after the chosen length.";
             g.drawFittedText(loopSettings.enabled
-                ? (canStart?"Click Arm to record manually. With a clock input, recording starts on the next beat.\n"
-                            "If your sequencer starts the recording, leave Arm off.":"")
+                ? (canStart ? armHelp : "")
                 : (hostSongTimingBlocked?"":automaticOn?"Review events before generating swells.":"Learn audio, then shape it in Perform."),
                 regions[2],juce::Justification::centredTop,2);
         }
@@ -403,14 +413,13 @@ private:
         for (auto* control : std::initializer_list<juce::Component*>{&loopMode,&loopMethod,&loopUnit,&loopCount,&loopArm,&loopStatus})
             addChildComponent(control);
         loopMode.setName("learnLoopMode");
-        loopMode.setTooltip("Record a loop using 4/4 timing. Send one clock pulse per beat from the same clock as your audio.");
         loopMethod.setName("learnLoopMethod");loopMethod.setTitle("Capture method");
         loopUnit.setName("learnLoopUnit");loopUnit.setTitle("Duration unit");
         loopCount.setName("learnLoopCount");loopCount.setTitle("Duration count");
         loopArm.setName("learnLoopArm");loopStatus.setName("learnLoopStatus");
         applyTextRole(loopStatus,TextRole::helper,juce::Justification::topLeft);
         loopStatus.setBorderSize({});
-        loopMethod.addItem("Duration",1);loopMethod.addItem("End signal",2);
+        loopMethod.addItem("Duration",1);loopMethod.addItem("End on Signal",2);loopMethod.addItem("End on repeat",3);
         loopUnit.addItem("Bars",1);loopUnit.addItem("Beats",2);
         loopCount.setEditable(true,true,false);
         loopCount.setKeyboardType(juce::TextInputTarget::numericKeyboard);
@@ -424,7 +433,9 @@ private:
         loopMode.onClick=[this,submit]{auto next=loopSettings;next.enabled=loopMode.getToggleState();submit(next);};
         loopMethod.onChange=[this,submit]{
             auto next=loopSettings;
-            next.method=loopMethod.getSelectedId()==1?LoopCapturePreference::Method::duration:LoopCapturePreference::Method::endSignal;
+            const auto selected=loopMethod.getSelectedId();
+            if (selected<1 || selected>3) return;
+            next.method=static_cast<LoopCapturePreference::Method>(selected-1);
             submit(next);
         };
         loopUnit.onChange=[this,submit]{

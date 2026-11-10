@@ -134,6 +134,16 @@ target_sources(preverb_plugin PRIVATE
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
 
+if("$ENV{PREVERB_FL_STUDIO_TRACE}" STREQUAL "1")
+    if(PREVERB_RELEASE_TAG OR PREVERB_RELEASE_CANDIDATE)
+        message(FATAL_ERROR "Disable PREVERB_FL_STUDIO_TRACE before tagged/candidate builds")
+    endif()
+    target_sources(preverb_plugin PRIVATE tests/diagnostics/FlStudioHostTrace.cpp)
+    target_compile_definitions(preverb_plugin PUBLIC PREVERB_FL_STUDIO_TRACE=1)
+    target_compile_definitions(preverb_plugin PRIVATE
+        PREVERB_FL_STUDIO_TRACE_DIR="${CMAKE_CURRENT_BINARY_DIR}/fl-studio-trace")
+endif()
+
 target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)
 target_link_libraries(preverb_plugin PRIVATE
     preverb_playback
