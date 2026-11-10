@@ -152,7 +152,7 @@ inline void cases()
     unsigned destroyedClicks=0;
     {auto button=std::make_unique<ActionButton>("Queued");button->onClick=[&]{++destroyedClicks;};button->invokeCommand();button.reset();}pump();REQUIRE(destroyedClicks==0);
     {auto button=std::make_unique<ActionButton>("Destroy during capture");button->beforeInvocation=[&]{button.reset();};button->invokeCommand();REQUIRE(!button);}pump();
-    {auto button=std::make_unique<ActionButton>("Destroy on click");button->onClick=[&]{button.reset();++destroyedClicks;};button->invokeCommand();pump();REQUIRE(!button && destroyedClicks==1);}
+    {auto button=std::make_unique<ActionButton>("Destroy on click");button->onClick=[&]{++destroyedClicks;button.reset();};button->invokeCommand();pump();REQUIRE(!button && destroyedClicks==1);}
 
     FileDragTile tile;unsigned saves=0;tile.onSave=[&]{++saves;};tile.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();REQUIRE(saves==1);
     tile.setSize(280,230);REQUIRE(render(tile).isValid());

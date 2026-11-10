@@ -18,11 +18,11 @@ void Composition::verifySelectors()
     REQUIRE(panel->timelineComponent().selectedGrid()==m3::gridChoices[static_cast<size_t>(grid.getSelectedId()-1)].division);
     // Present the actual Settings pages on a peer; their production callbacks
     // and editor lifetime stay intact, without opening a second review window.
-    juce::Component settingsHost;auto& tabs=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
+    juce::Component settingsHost;using Page=m3::ui::SettingsPage;auto& tabs=*panel->settingsPanel();
     settingsHost.addAndMakeVisible(tabs);settingsHost.setBounds(120,120,760,600);tabs.setBounds(settingsHost.getLocalBounds());
-    settingsHost.addToDesktop(0);settingsHost.setVisible(true);settingsHost.toFront(true);tabs.setCurrentTabIndex(2);pump();
-    auto& in=require<ChoiceSelector>(*tabs.getTabContentComponent(2),"fadeInCurve");
-    auto& out=require<ChoiceSelector>(*tabs.getTabContentComponent(2),"fadeOutCurve");
+    settingsHost.addToDesktop(0);settingsHost.setVisible(true);settingsHost.toFront(true);tabs.selectPage(Page::swell);pump();
+    auto& in=require<ChoiceSelector>(*tabs.page(Page::swell),"fadeInCurve");
+    auto& out=require<ChoiceSelector>(*tabs.page(Page::swell),"fadeOutCurve");
     const auto current=[&](const juce::String& id){return *m3::find(engine.savedSession(),id);};
     const auto before=current(firstId).shape;
     popup=inspect(in,2);REQUIRE(current(firstId).shape==before);
@@ -36,9 +36,9 @@ void Composition::verifySelectors()
     popup=inspect(in,0);REQUIRE(engine.selectTargets({secondId},secondId));
     popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();panel->refresh();
     REQUIRE(current(secondId).shape==secondBefore && current(firstId).shape.inCurve==m3::Curve::exponential);
-    tabs.setCurrentTabIndex(0);pump();
-    auto& routing=require<ChoiceSelector>(*tabs.getTabContentComponent(0),"liveRouting");
-    auto& policy=require<ChoiceSelector>(*tabs.getTabContentComponent(0),"gainPolicy");
+    tabs.selectPage(Page::playback);pump();
+    auto& routing=require<ChoiceSelector>(*tabs.page(Page::playback),"liveRouting");
+    auto& policy=require<ChoiceSelector>(*tabs.page(Page::playback),"gainPolicy");
     const auto routingBefore=engine.savedSession().liveRouting;
     popup=inspect(routing,routingBefore==m3::LiveRouting::dryWet?1:0);
     popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();panel->refresh();

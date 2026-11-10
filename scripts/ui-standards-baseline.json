@@ -23,16 +23,6 @@
       "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
     },
     {
-      "id": "ui37-003",
-      "path": "Source/Plugin/PluginSettings.cpp",
-      "rule": "literal-style",
-      "occurrence": "setColour(juce::TabbedComponent::outlineColourId,juce::Colours::transparentBlack",
-      "count": 1,
-      "scope": "retained legacy consumer",
-      "reason": "Bounded existing styling debt; migrate only with the affected workspace/policy, without restyling in #37.",
-      "review": "https://github.com/elneilios/ReverbArise/issues/37; baseline 2848fcd; scoped Apply request"
-    },
-    {
       "id": "ui37-004",
       "path": "Source/UI/Controls/DeliberateSelector.h",
       "rule": "interaction-default",

@@ -1,0 +1,61 @@
+# Issue #107 P7 connected tabs
+
+## Native preview approval
+
+The owner approved the native JUCE connected tabs preview for rollout on
+10 November 2026. It used the shared `SegmentedSelector` for the workflow
+header, Learn sections, Swell Inspector and sample Settings pages. The
+preview included unavailable workflow choices, keyboard inspection and
+activation, distinct hover and held feedback, and About last after Storage.
+Its focused component and seven-tab layout checks passed at 100% and 125%
+preview scale.
+
+## Production coverage
+
+The three existing editor strips and Settings now use the same control.
+Settings selects by page identity. Responsive Settings also exposes the
+existing Appearance page before Storage, so both seven- and eight-tab
+layouts finish with Storage and About. The Recovery warning continues to
+open Storage.
+
+A focused Windows MSVC Release fixture passed the final tab component
+checks and measured all eight labels at the 640-unit production Settings
+width. It covered release outside, right-click cancellation, selected and
+hovered seams, keyboard and accessibility inspection, accepted selection
+and wheel forwarding. The component fixture linked against cached JUCE
+build output.
+
+## Integrated Windows verification
+
+- The Debug wrapper built the VST3 and ran all 99 CTest entries. The first
+  run passed 95, including the responsive editor and scale checks. The knob
+  reset and exact-value readability tests passed on isolated Debug retries
+  after Windows foreground focus was available. The Storage test passed in
+  isolation and intermittently timed out in Debug during the background
+  inventory refresh after a working-folder change.
+- The broad Swell UI test initially crashed in an existing command-button
+  fixture that read a capture after destroying its own callback. The test
+  now increments its counter before destruction. The repaired Debug test
+  reached the dense list scenario, where the Storage timer kept serializing
+  the 500-swell fixture while the JUCE message queue drained. That retry was
+  stopped. The rebuilt Release Swell UI and Storage tests both passed.
+- UI standards, user-guide currency, strict OpenSpec validation and diff
+  whitespace checks passed. Physical Windows DPI and FL Studio were outside
+  these runs.
+
+The full Debug log is `out/build-logs/Debug/20261110-014400-45ce20fc/test.log`.
+The focused results are in `out/build-logs/p7-connected-tabs-ctest-retry.log`
+and `out/build-logs/p7-connected-tabs-release-focused-test.log`.
+
+## PR #139 accessibility follow-up
+
+The shared strip keeps one keyboard tab stop and gives the inspected tab's
+handler native accessibility focus. Windows UI Automation can query that tab
+through the same `getChildFocus()` path used by the provider. The regression
+checks entry, Left and Right, Home and End, explicit accessibility focus,
+unavailable inspection and focus leaving the strip. It checks the native
+handler separately from the accepted page and the painted brackets.
+
+The focused Windows MSVC Release rebuild passed both CTest entries
+(`preverb_swell_ui_test` and `preverb_storage_settings_test`). Results are in
+`out/build-logs/p7-uia-release-test.log`.

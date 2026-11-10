@@ -6,8 +6,8 @@ void Composition::verifyResponsive(const juce::File& output)
 {
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
     auto panel=productionEditor();panel->stopAutomaticRefreshForReview();panel->enableResponsiveReview({},PresentationFitContext{{4000,3000},{0,0}});
-    auto& settings=dynamic_cast<juce::TabbedComponent&>(*panel->settingsPanel());
-    auto& swellSettings=*settings.getTabContentComponent(2);
+    using Page=m3::ui::SettingsPage;auto& settings=*panel->settingsPanel();
+    auto& swellSettings=*settings.page(Page::swell);
     const auto checkSettingsRoutes=[&]
     {
         REQUIRE(require<juce::ComboBox>(swellSettings,"fadeInCurve").isVisible());
@@ -20,7 +20,7 @@ void Composition::verifyResponsive(const juce::File& output)
         const std::array<int,5> expectedSwitches{1,3,1,2,1};
         for (int page=0;page<static_cast<int>(expectedSwitches.size());++page)
         {
-            const auto* content=settings.getTabContentComponent(page);
+            const auto* content=settings.page(static_cast<Page>(page));
             int switches=0;
             for(auto* child:content->getChildren())
                 if(auto* toggle=dynamic_cast<controls::Switch*>(child))
@@ -77,6 +77,18 @@ void Composition::verifyResponsive(const juce::File& output)
         {REQUIRE(output.createDirectory().wasOk());auto stream=output.getChildFile(name+".png").createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(image,*stream));}
         return image;
     };
+    const auto checkTabFit=[](const controls::SegmentedSelector& strip,float textHeight,bool withIcons=false)
+    {
+        const auto font=interFont(textHeight,InterFace::semibold);
+        const auto focusMargin=static_cast<int>(controlGeometry::focusOutset+controlGeometry::focusStroke);
+        for(auto* child:strip.getChildren())
+        {
+            const auto& button=dynamic_cast<const juce::Button&>(*child);
+            const auto labelWidth=juce::GlyphArrangement::getStringWidth(font,button.getButtonText());
+            REQUIRE(labelWidth+10+(withIcons?24:0)<=button.getWidth());
+            REQUIRE(strip.getLocalBounds().contains(button.getBounds().expanded(focusMargin)));
+        }
+    };
     for(auto size:{juce::Point<int>{900,600},{955,700},{956,700},{957,700},{1000,700},{1099,849},{1100,850},{1101,851},{1199,850},{1200,850},{1201,850},{1400,900},{1399,999},{1400,1000},{1401,1001},{1600,1000}})
     {
         panel->setSize(size.x,size.y);panel->refresh();
@@ -103,6 +115,9 @@ void Composition::verifyResponsive(const juce::File& output)
         REQUIRE(panel->timelineComponent().sourceLane().getHeight()>=70);REQUIRE(panel->timelineComponent().wetLane().getHeight()>=70);
         auto& overview=require<m3::SwellOverview>(*panel,"songOverview");REQUIRE(overview.waveformBounds().getHeight()>=28);
         auto& tabs=require<controls::SegmentedSelector>(*panel,"inspectorSections");
+        const auto type=ResponsiveTypography::at(size.x,size.y);
+        checkTabFit(require<WorkflowHeader>(*panel,"workflowHeader").modeSelector(),type.navigation,true);
+        checkTabFit(tabs,type.body);
         for(int section=1;section<=3;++section)
         {
             tabs.onRequest(section);panel->refresh();
@@ -144,6 +159,7 @@ void Composition::verifyResponsive(const juce::File& output)
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();
         checkSettingsRoutes();
         auto& learnTabs=require<controls::SegmentedSelector>(*panel,"learnSections");
+        checkTabFit(learnTabs,type.body);
         for(int section=1;section<=2;++section)
         {
             learnTabs.onRequest(section);panel->refresh();checkVisible("learnSections");

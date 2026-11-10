@@ -48,7 +48,7 @@ static juce::Component* named(juce::Component& root,const juce::String& name)
     if(auto result=findNamed(root,name))return result;
     if(auto editor=dynamic_cast<PreverbAudioProcessorEditor*>(&root))
     {if(auto result=findNamed(*editor->settingsPanel(),name))return result;
-        if(auto tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel()))for(int i=0;i<tabs->getNumTabs();++i)if(auto result=findNamed(*tabs->getTabContentComponent(i),name))return result;
+        for(auto* page:editor->settingsPanel()->pageComponents())if(page)if(auto result=findNamed(*page,name))return result;
         return findNamed(*editor->diagnosticsPanel(),name);}
     return nullptr;
 }
@@ -66,7 +66,7 @@ static juce::Button* button(juce::Component& root,const juce::String& text)
     if(auto b=findButton(root,text))return b;
     if(auto editor=dynamic_cast<PreverbAudioProcessorEditor*>(&root))
     {if(auto b=findButton(*editor->settingsPanel(),text))return b;
-        if(auto tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel()))for(int i=0;i<tabs->getNumTabs();++i)if(auto b=findButton(*tabs->getTabContentComponent(i),text))return b;
+        for(auto* page:editor->settingsPanel()->pageComponents())if(page)if(auto b=findButton(*page,text))return b;
         return findButton(*editor->diagnosticsPanel(),text);}
     return nullptr;
 }
@@ -179,16 +179,16 @@ static void sourceRangeFeedbackCases()
     auto* settings=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));
     REQUIRE(settings);
     settings->onClick();
-    auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());
+    auto* tabs=editor->settingsPanel();
     REQUIRE(tabs);
-    tabs->setCurrentTabIndex(2);
+    tabs->selectPage(m3::ui::SettingsPage::swell);
     auto* start=dynamic_cast<FieldTextEditor*>(named(*editor,"sourceStart"));
     auto* end=dynamic_cast<FieldTextEditor*>(named(*editor,"sourceEnd"));
     auto* feedback=named(*editor,"sourceRangeFeedback");
     auto* apply=button(*editor,"Set source from bars");
     auto* full=button(*editor,"Full response");
     REQUIRE(start && end && feedback && apply && full && apply->isEnabled());
-    auto* page=tabs->getTabContentComponent(2);
+    auto* page=tabs->page(m3::ui::SettingsPage::swell);
     const auto captionFor=[page](const FieldTextEditor& input)
     {
         for(auto* child:page->getChildren())
@@ -587,7 +587,7 @@ int main(int argc,char* argv[]){return runTest([&]
         {
             auto activeOwner=std::make_unique<PreverbAudioProcessorEditor>(liveProcessor);auto& active=*activeOwner;active.setVisible(true);
             auto gear=dynamic_cast<juce::Button*>(named(active,"diagnostics"));REQUIRE(gear);gear->onClick();
-            auto tabs=dynamic_cast<juce::TabbedComponent*>(active.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
+            active.settingsPanel()->selectPage(m3::ui::SettingsPage::recovery);
             auto open=dynamic_cast<m3::ui::controls::ActionButton*>(named(active,"openDiagnostics"));REQUIRE(open);open->onClick();
             playhead.position.setTimeInSamples(512);playhead.position.setPpqPosition(512./24000);silence.clear();liveProcessor.processBlock(silence,events);
             REQUIRE(liveProcessor.flushCaptureForTesting());active.refresh();
@@ -1271,14 +1271,14 @@ int main(int argc,char* argv[]){return runTest([&]
     const auto beforeSettings=engine.savedSession();const auto beforeSettingsRenders=engine.snapshot().renderCount;
     const auto beforeSettingsCapture=processor->getCaptureSnapshot().manifest.revision;
     diagnostics->onClick();editor.refresh();
-    auto tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs && tabs->getNumTabs()==7 && tabs->getCurrentTabIndex()==0);
+    using Page=m3::ui::SettingsPage;auto* tabs=editor.settingsPanel();REQUIRE(tabs->selector().getNumChildComponents()==7 && tabs->selectedPage()==Page::playback);
     REQUIRE(editor.settingsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.settingsPanel()));
     std::map<juce::String,int> settingsValueFields;
     const std::map<juce::String,std::pair<double,double>> settingsSteps{
         {"Live level (dB)",{1,.1}},{"Separation (ms)",{10,1}},{"Audition tail (s)",{.1,.01}},
         {"Audition trim (dB)",{1,.1}},{"Test tone start bar",{1,1}},{"Test tone end bar (exclusive)",{1,1}}};
-    for(int page:{0,1,3,4})
-        for(auto* child:tabs->getTabContentComponent(page)->getChildren())
+    for(auto page:{Page::playback,Page::processing,Page::audition,Page::recovery})
+        for(auto* child:tabs->page(page)->getChildren())
             if(auto* slider=dynamic_cast<m3::ui::controls::SliderControl*>(child))
             {
                 auto* value=dynamic_cast<m3::ui::controls::FieldNumericInput*>(slider->getChildComponent(0));
@@ -1308,8 +1308,8 @@ int main(int argc,char* argv[]){return runTest([&]
     for(const auto* title:{"Live level (dB)","Separation (ms)","Audition tail (s)","Audition trim (dB)",
                            "Test tone start bar","Test tone end bar (exclusive)"})
         REQUIRE(settingsValueFields[title]==1);
-    for(int page=0;page<6;++page){tabs->setCurrentTabIndex(page);snapshotPanel(*tabs,"settings-"+tabs->getTabNames()[page].toLowerCase());}
-    tabs->setCurrentTabIndex(4); // Continue the existing Recovery action checks after visiting About.
+    for(auto page:{Page::playback,Page::processing,Page::swell,Page::audition,Page::recovery,Page::about})
+    tabs->selectPage(Page::recovery); // Continue the existing Recovery action checks after visiting About.
     REQUIRE(visibleOffscreen(named(editor,"generate")));snapshotEditor(editor,"settings-open");
     auto openDetails=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openDetails);invokeCommand(*openDetails);editor.refresh();
     REQUIRE(editor.diagnosticsPanel()->findParentComponentOfClass<juce::DocumentWindow>() && !editor.isParentOf(editor.diagnosticsPanel()));
@@ -1425,7 +1425,7 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(std::abs(engine.savedSession().sensitivity-.12f)<1e-5 && !engine.savedSession().autoMarkersEnabled);
     auto liveToggle=dynamic_cast<juce::ToggleButton*>(named(editor,"livePlayback"));auto liveMode=dynamic_cast<juce::ComboBox*>(named(editor,"liveRouting"));auto liveLevel=dynamic_cast<juce::Slider*>(named(editor,"liveWetLevel"));
     REQUIRE(liveToggle && liveMode && liveLevel);
-    REQUIRE(!visibleOffscreen(liveLevel));diagnostics->onClick();tabs->setCurrentTabIndex(0);editor.refresh();REQUIRE(visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();
+    REQUIRE(!visibleOffscreen(liveLevel));diagnostics->onClick();tabs->selectPage(Page::playback);editor.refresh();REQUIRE(visibleOffscreen(liveLevel));diagnostics->onClick();editor.refresh();
     liveToggle->setToggleState(false,juce::dontSendNotification);liveToggle->onClick();liveMode->setSelectedId(2,juce::sendNotificationSync);liveLevel->setValue(-7.5,juce::sendNotificationSync);
     REQUIRE(!engine.savedSession().liveEnabled && engine.savedSession().liveRouting==m3::LiveRouting::wetOnly && engine.savedSession().liveWetDb==-7.5f);
     REQUIRE(engine.savedSession().auditionDb==0);engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);editor.refresh();
@@ -1458,7 +1458,7 @@ int main(int argc,char* argv[]){return runTest([&]
     engine.setPreferences(-24,.5f,.08,false);editor.refresh();
     mixed();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     auto dryIsolation=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"isolateDry"));REQUIRE(dryIsolation && dryIsolation->isEnabled());
-    diagnostics->onClick();tabs->setCurrentTabIndex(3);editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
+    diagnostics->onClick();tabs->selectPage(Page::audition);editor.refresh();REQUIRE(visibleOffscreen(dryIsolation));diagnostics->onClick();editor.refresh();
     dryIsolation->setToggleState(true,juce::dontSendNotification);dryIsolation->onClick();waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     REQUIRE(engine.savedSession().isolateDry && engine.snapshot().auditionDryEnd==engine.savedSession().swells[0].sourceEnd);
     snapshotEditor(editor,"isolated-dry");

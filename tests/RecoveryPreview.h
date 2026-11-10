@@ -16,8 +16,8 @@ static void recoveryPreview(bool review,bool responsive=true)
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*processor);if(responsive)editor->enableResponsiveReview();
     struct Window:juce::DocumentWindow{Window():DocumentWindow("Missing assets - normal Learn recovery preview",m3::ui::background,closeButton){}void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}} window;
     window.setUsingNativeTitleBar(true);window.setContentNonOwned(editor.get(),false);window.centreWithSize(1100,850);window.setVisible(true);
-    auto& tabs=dynamic_cast<juce::TabbedComponent&>(*editor->settingsPanel());
-    auto* viewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.getTabContentComponent(tabs.getNumTabs()-1));REQUIRE(viewport);
+    auto& tabs=*editor->settingsPanel();
+    auto* viewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.page(m3::ui::SettingsPage::storage));REQUIRE(viewport);
     auto* storage=dynamic_cast<m3::ui::PortableStoragePanel*>(viewport->getViewedComponent());REQUIRE(storage);
     juce::String stage="opening warning";
     const auto pump=[&](auto predicate){const auto end=juce::Time::getMillisecondCounterHiRes()+20000;while(!predicate()){if(juce::Time::getMillisecondCounterHiRes()>=end)throw std::runtime_error((stage+" | "+processor->getCaptureSnapshot().status+" | "+processor->getCaptureSnapshot().failure.detail+" | "+processor->swellEngine().snapshot().learnGeneration.reason+" | "+processor->swellEngine().savedSession().swells[0].status).toStdString());juce::MessageManager::getInstance()->runDispatchLoopUntil(10);editor->refresh();}};
@@ -33,6 +33,7 @@ static void recoveryPreview(bool review,bool responsive=true)
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(fixture.root);};
     warning->exitModalState(1);warning->setVisible(false);
     stage="popup Locate";pump([&]{return storage->statusText().contains("source reloaded") && !processor->getCaptureSnapshot().unavailable && !storage->reloadPending();});REQUIRE(!processor->getCaptureSnapshot().unavailable);
+    REQUIRE(tabs.selectedPage()==m3::ui::SettingsPage::storage && viewport->isShowing());
     auto restoredRoot=processor->swellEngine().assetDirectory();auto sourceFile=restoredRoot.getChildFile(fixture.observed.reference);
     waitFor([&]{return sourceFile.moveFileTo(sourceFile.getSiblingFile("source-offline-one.json"));});load(*processor,fixture.xml);processor->processBlock(audio,midi);editor->refresh();
     pump([&]{return editor->assetRecoveryWarningVisible();});warning=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());REQUIRE(warning);
