@@ -20,15 +20,19 @@
 
 The Rack sequenced fixture routes Host-FX Note Gates on MIDI channel 1: Clock B0 (23), Start/Arm C1 (24), and Stop C#1 (25). The Clock plus Phrase fixture routes the master clock to B0 (23) and the divide-by-eight output to Phrase C0 (12). These mappings were verified against the patch configuration and successful host captures. A fresh MIDI event trace was not taken on this build. Both setups use one Clock pulse per beat, 4/4, and a dry source aligned to the clock.
 
-The saved Rack manifests showed 84,088 frames for both Clock-only Duration and sequenced End on Signal, and 168,176 frames for Clock plus Phrase End on Repeat. FL Studio's saved Playlist and Pattern manifests showed 192,000 frames for their two-bar takes. All measured takes used 48 kHz. Captured source WAVs matched the SHA-256 checksums in the manifests. Screenshots, disposable projects and measured WAVs are under `out/issue-130`. Physical listening remains pending.
+The saved Rack manifests showed 84,088 frames for both Clock-only Duration and sequenced End on Signal, and 168,176 frames for Clock plus Phrase End on Repeat. FL Studio's saved Playlist and Pattern manifests showed 192,000 frames for their two-bar takes. All measured takes used 48 kHz. Captured source WAVs matched the SHA-256 checksums in the manifests. Screenshots, disposable projects and measured WAVs are under `out/issue-130`.
 
 ## Physical display scaling
 
 Windows Display Settings confirmed 100% and 125%. ReverbArise UI scale stayed at 100% with the editor preference set to 900 × 600. Both hosts showed Loop Learn and Loop Perform at both physical settings and responded to pointer navigation. A saved Song fixture with 24 swells opened in FL Studio. Song Learn and Perform fit and responded to pointer navigation and Right/Enter workflow navigation at both scales. The Rack Learn view was also checked with Loop Mode off. Rack reopened the editor at both scales. Tab made the keyboard focus visible and Right moved waveform inspection to the loop boundary at both scales. The full Rack editor captures showed the layout fit. Song Perform remains unverified in Rack, where the fixture lacks an absolute host timeline. At 125% the desktop automation reports scaled screenshot coordinates, so its returned pixel bounds are not a physical-pixel measurement. Windows scaling and the original ReverbArise editor preference were restored.
 
+## Workstation listening
+
+The owner reported that the listening checks sounded good and identified no issues. The requested workstation session covered Dry + Wet Audition versus Cue Loop in Rack and FL Studio and playback of the 24-swell FL Studio Song fixture. This records subjective listening on the qualification build. Peak, fade, standby and overload measurements are tracked separately.
+
 ## Readiness
 
-Integrated acceptance is in progress. Strict OpenSpec validation, UI standards and offline guide currency passed. Native Release regression checks and consolidated owner listening acceptance remain pending. Host UI observations and WAV measurements are recorded separately from listening.
+Integrated acceptance is in progress. Strict OpenSpec validation, UI standards and offline guide currency passed. Native Release regression checks and the remaining technical host cases are still open. Host UI observations and WAV measurements are recorded separately from listening.
 
 ## Same-build MIDI, transport and asset recovery follow-up
 
