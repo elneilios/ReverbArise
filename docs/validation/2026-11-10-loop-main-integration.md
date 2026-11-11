@@ -9,7 +9,7 @@
 - Final main checkpoint: `88bd5d0` (PR #148, revision-25 text/help/notices), synchronized in merge `d9c17b4`. The Loop target remained `c2a9758`.
 - Integration began on 10 November; follow-up validation continued on 11 November.
 - Initial resolved merge: `942bca3523e280635245a1bed7a94361e26eb7c8`; a real two-parent merge retains synchronization ancestry.
-- This integrates existing approved contracts. No new OpenSpec change, feature scope, control family, visual variant, state schema or host identifier is introduced.
+- This integrates existing approved contracts. The integration adds no OpenSpec change, feature scope, control family, visual variant, state schema or host identifier beyond the approved branch work.
 
 ## Resolution decisions
 
@@ -38,7 +38,10 @@ compilation passed in `out/build-logs/Debug/20261111-002842-80c9835e/`.
 These are full-run plus focused native results, not a claim that a second full
 Debug run was executed on the final checkpoint.
 
-Release validation is the next gate and will be recorded in the completion update.
+Release used `scripts/build.ps1 -Configuration Release -Test` at `5b425ea`.
+Configure, the VST3 and test build, and all 103 CTest cases passed (345.95 s
+of test time). The full-run log is
+`out/build-logs/Release/20261111-003130-7b559c1b/test.log`.
 
 - `scripts/check-ui-standards.ps1`: pass, 85 files / 48 bounded definition/debt occurrences after merging main revision 25. No debt inventory regeneration.
 - `scripts/check-user-guide.ps1`: pass after explicit semantic review.
@@ -82,8 +85,11 @@ Real disposable-fixture captures, 900×600 composition with 100%/125% user scale
 - [Song/Loop Perform, 100%](2026-11-10-loop-main-integration/song-loop-perform-100.png)
 - [Song/Loop Perform, 125%](2026-11-10-loop-main-integration/song-loop-perform-125.png)
 
-The completion update will replace the initial captures with the final Release
-checkpoint images and record the retained owner-preview output.
+The four captures are from the validated Release checkpoint, generated with
+`--test-loop` and `--test-loop-perform` and inspected at both user scales.
+Native capture output and logs are retained under
+`out/integration-review/final/`. The task build tree is retained for the
+native Learn review; no build output was removed.
 
 ## Environment and limitations
 
