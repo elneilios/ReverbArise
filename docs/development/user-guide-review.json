@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed verified frozen-wet recovery, integer grid boundary placement and deferred preview dry reads after the shared dialog integration.",
+  "summary": "Reviewed canonical Loop Export and workflow-mode sync against the implemented workflow. The guide already covers capture-local export readiness, Perform wet level, dry mix, repeat composition and WAV placement.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1144,6 +1144,11 @@
       "sha256": "69d1af646d8568ec3c322c67df058115994dc89208407a4038d666bae2fa4c27"
     },
     {
+      "path": "openspec/specs/loop-export/spec.md",
+      "bytes": 10181,
+      "sha256": "4a29458131d463ede517c88bbca47471e9509d2ed65f3fe786e2db210e534ff4"
+    },
+    {
       "path": "openspec/specs/loop-host-admission/spec.md",
       "bytes": 16535,
       "sha256": "4221d6d18bc46ca6a0ed27f1bab728d9a0ea53fda5f5d769043c732f0b1fb3c6"
@@ -1215,8 +1220,8 @@
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
-      "bytes": 14612,
-      "sha256": "146492acade0df6e6b1b771c183b8a36f6fc479caedb88a14875e3251acd69cd"
+      "bytes": 15347,
+      "sha256": "801379e5984ecfdaac490f0ad030f8fca21a0b5660adc5e657c417f789261f76"
     },
     {
       "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",

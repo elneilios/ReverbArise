@@ -18,7 +18,7 @@ Each instance SHALL have exactly one Capture, Live or Finalise mode. Fresh insta
 - **THEN** their mode, capture-pass ownership and output remain independent
 
 ### Requirement: Mode entry prerequisites reflect verified material
-Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Finalise entry SHALL require an enabled, unmuted, solo-eligible verified exportable wet render compatible with current rate, tempo and meter, independently of dry availability or mixdown readiness. Mapped silence alone SHALL NOT satisfy usefulness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit replacement.
+Live entry SHALL require useful verified compatible source or an eligible verified frozen wet render at compatible timing. Song Finalise entry SHALL require an enabled, unmuted, solo-eligible verified exportable wet render compatible with current rate, tempo and meter, independently of dry availability or mixdown readiness. Loop Finalise entry SHALL use verified accepted capture-local timing and eligible wet independently of current host timing or live synchronization; its file readiness SHALL follow the Loop export contract. Mapped silence alone SHALL NOT satisfy usefulness. Pending wet renders SHALL NOT prevent source-ready Live entry. Frozen recovery SHALL NOT fabricate dry or permit replacement.
 
 #### Scenario: Manual workflow after dry capture
 - **WHEN** useful source has committed with Automatic Swells off and no prepared swell
@@ -34,7 +34,7 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 - **THEN** Finalise can be selected without requiring an immediate export
 
 #### Scenario: Ready render has incompatible timing
-- **WHEN** useful source matches the host but a ready render has a different sample rate, tempo or meter
+- **WHEN** useful source matches the host but a ready render has a different sample rate, tempo or meter in Song mode, or a Loop render is incompatible with its accepted capture-local timing
 - **THEN** that render cannot qualify for Finalise or frozen-wet recovery; eligibility does not substitute for the later export workspace's full asset/output preparation
 
 #### Scenario: Frozen wet recovery without source
@@ -56,6 +56,11 @@ Live entry SHALL require useful verified compatible source or an eligible verifi
 - **THEN** Perform is available using that phrase's local coordinates even when Song transport, Loop phase or prepared wet is unavailable
 - **AND** entering Perform starts in dry Standby without moving host transport
 - **AND** Loop export availability follows its separately delivered prerequisites
+
+#### Scenario: Loop Export is independent of Cue readiness
+- **WHEN** capture is idle and an accepted Loop has useful verified capture-local material and eligible wet, but the live clock or Phrase reference is unavailable
+- **THEN** Export entry remains available under the Loop export prerequisites
+- **AND** Save, Drag and preview readiness reflect the current finite composition without enabling Cue or inventing live synchronization
 
 ### Requirement: Capture activity locks manual mode switching
 Manual mode switching SHALL be disabled during active DAW Capture and while its Stop-triggered drain, commit or validation is settling. Rejection SHALL identify the reason, apply to every command path, and leave current mode/source unchanged. A stopped idle Capture SHALL permit transitions whose prerequisites hold.
