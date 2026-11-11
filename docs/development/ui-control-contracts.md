@@ -1,6 +1,6 @@
 # Shared UI control contracts — issue #107
 
-**Owner-approved contracts, updated 10 November 2026, production standards revision 25.**
+**Owner-approved contracts, updated 11 November 2026, production standards revision 26.**
 Reconciled with merged #80 at `717c890` (revisions 8–10). This document records
 existing mechanisms and accepted contracts for separate family changes; it does
 not certify legacy consumers or approve unreviewed production appearance, input
@@ -466,6 +466,16 @@ PerformNavigationState and ResponsiveEditor/Scale tests. Model/audio invariance
 checks remain binding-specific whenever a child touches those paths.
 
 ## C8 — Specialized canvases, native surfaces and auxiliary shells
+
+P8 surface lifecycle reuse: `SurfaceInvocation` owns only one pending UI
+invocation and weak completion lifetime; its ticket adds no domain permission.
+`SurfaceFocusReturn` defers return to a live, showing, eligible opener/fallback
+and preserves input provenance. Restoration is suppressed outside foreground
+ownership and while another modal surface owns input. `SurfaceEscape` runs the
+focused field's existing Escape cancellation before closing an auxiliary shell.
+`OwnedAlertWindow` retains measured alert/custom content with shared native
+close chrome. Keep native picker modes/filters and all binding guards; hiding
+Storage still follows its existing safe cancellation/handoff rules.
 
 Observed owners: SwellTimeline/SwellOverview and waveform handles, LearnWorkspace
 inspection canvas, Export TimelineNavigation, FileDragTile/ExternalFileDrag,

@@ -1,11 +1,26 @@
 # ReverbArise — UI Layout & Visual Style Guide
 
-**Version:** 1.25 · **Production standards revision:** 25 · **Purpose:** Production UI authority and design reference. Revision 25 adopts shared measured text wrapping and softer aqua context help across the plugin. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
+**Version:** 1.26 · **Production standards revision:** 26 · **Purpose:** Production UI authority and design reference. Revision 26 adopts the approved dialog, native-picker and auxiliary-window lifecycle, retaining revision 25 text and aqua-help policies. Keyboard and accessibility focus use aqua outer brackets on shared controls, with decoration suppressed after pointer input.
 
 See the [control inventory and family roadmap](ui-control-inventory.md),
 [shared contracts](../development/ui-control-contracts.md) and
 [approval/evidence](../validation/2026-11-06-issue-107-control-audit.md).
 Legacy debt remains explicit; family migrations retain scoped native approval.
+
+## Dialogs, native pickers and auxiliary windows — issue #107
+
+Reuse `OwnedAlertWindow` for measured alert/custom content and native close
+chrome, `WorkspaceWindow` for Settings/Diagnostics, and shared controls within
+them. Rename starts in Name, group Delete on Cancel and recovery on Continue.
+Escape/title-bar close dismiss without a primary action. Field cancellation,
+accepted settings and guarded Storage cancellation/handoff remain authoritative.
+
+`SurfaceInvocation` owns pending UI lifetime and one-shot completion.
+`SurfaceFocusReturn` defers return to an eligible visible opener/fallback with
+input-appropriate decoration. Native Windows pickers retain modes, filters and
+overwrite behavior. Auxiliary content keeps one scale transform, comfortable
+text and focus-aware scrolling. Do not reopen a hidden owner. See
+[P8 evidence](../validation/2026-11-11-issue-107-dialogs-windows.md).
 
 ## Text and contextual help — issue #107
 
@@ -272,6 +287,7 @@ production standards revision; this revision does not change plugin/state versio
 | 23 | #107 native Swells list and scrolling approved 2026-11-10 | The virtualized list uses square Enabled checkboxes and keyboard-accessible row actions. Group Delete requires confirmation with Cancel focused. Rename is dimmed during multiselect. Unavailable popup rows stay quiet under the pointer and short popup highlights reach the inner edge. |
 | 24 | #107 P8 native waveform gestures approved 2026-11-10 | Main waveforms share pointer-anchored wheel zoom, middle-drag pan and aqua keyboard/accessibility brackets. Left positions the local marker or edits a Perform handle. The compact Perform Overview uses left-drag alone to pan the detail range. |
 | 25 | #107 P3 native text and aqua footer approved 2026-11-10 | Shared measured wrapping and complete label descriptions across the plugin. Context help uses the existing softer aqua #00C2CC. Existing local errors, notice severity and transport geometry retain their established roles. |
+| 26 | #107 P8 native dialogs, choosers and auxiliary windows approved by the owner; adoption 2026-11-11 | Shared dismissal and input-appropriate focus return, native dialog close chrome, retained Windows pickers and operation guards, existing single-transform scaling and scroll access. |
 
 Loop Arm retains the owner-approved #133 destructive latch appearance (2026-11-09): red text and outline when off, red fill with dark text when armed, and independent aqua keyboard focus. This reuses the existing command variant.
 

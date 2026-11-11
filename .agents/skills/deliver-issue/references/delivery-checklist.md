@@ -14,7 +14,7 @@ Follow `CONTRIBUTING.md`, existing review conventions and all applicable upstrea
 
 - [ ] Each completed task was implemented and checked against its acceptance criteria.
 - [ ] Vanilla Apply task-line validation and post-checkbox progress confirmation were honoured.
-- [ ] Relevant focused and integration tests passed; mandatory final gates completed.
+- [ ] Focused and affected integration checks passed. When `CONTRIBUTING.md` requires full suites, passing results cover the PR revision's tested inputs.
 - [ ] Native MSVC/CTest results, fixtures and host/FL Studio checks are clearly distinguished.
 - [ ] Data safety, compatibility, threading and plugin-state risks were reviewed where applicable.
 - [ ] Living docs reflect implemented changes; dated evidence preserved; no unrelated generated output.

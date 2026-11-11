@@ -6,6 +6,7 @@
 #include <UI/CaptureFailureText.h>
 #include <DSP/DefaultImpulse.h>
 #include <UI/InitialPerformView.h>
+#include <UI/Controls/OwnedAlertWindow.h>
 
 namespace
 {
@@ -24,17 +25,16 @@ juce::String sampleRateText(double rate)
     return juce::String(rate/1000,3).trimCharactersAtEnd("0").trimCharactersAtEnd(".")+" kHz";
 }
 
-class DeleteSwellsDialog final : public juce::AlertWindow
+class DeleteSwellsDialog final : public m3::ui::controls::OwnedAlertWindow
 {
 public:
     DeleteSwellsDialog(juce::Component& owner,int count)
-        : AlertWindow("Delete "+juce::String(count)+" selected swells?",
+        : OwnedAlertWindow("Delete "+juce::String(count)+" selected swells?",
                       "This removes all "+juce::String(count)+" selected swells from the list.",
                       juce::MessageBoxIconType::NoIcon,&owner)
     {
         using namespace m3::ui;
         setName("deleteSwellConfirmation");
-        setLookAndFeel(&theme);
         setEscapeKeyCancels(true);
         cancel.setName("cancelSwellDeletion");
         remove.setName("confirmSwellDeletion");
@@ -45,42 +45,40 @@ public:
         actions.setSize(2*buttonWidth+spacing::related,juce::roundToInt(height));
         cancel.setBounds(actions.getLocalBounds().removeFromLeft(buttonWidth));
         remove.setBounds(actions.getLocalBounds().removeFromRight(buttonWidth));
-        cancel.onClick=[this]{exitModalState(0);};
-        remove.onClick=[this]{exitModalState(1);};
+        cancel.onClick=[this]{finish(0);};
+        remove.onClick=[this]{finish(1);};
         addCustomComponent(&actions);
     }
 
     ~DeleteSwellsDialog() override
     {
         removeCustomComponent(0);
-        setLookAndFeel(nullptr);
     }
 
     void show(std::function<void(int)> complete)
     {
+        showNative();
         enterModalState(true,juce::ModalCallbackFunction::create(std::move(complete)),false);
         cancel.grabKeyboardFocus();
     }
 
 private:
-    m3::ui::WorkspaceTheme theme;
     juce::Component actions;
     m3::ui::controls::ActionButton cancel{"Cancel"};
     m3::ui::controls::ActionButton remove{"Delete swells",m3::ui::controls::CommandIcon::none,m3::ui::controls::CommandVariant::destructive};
 };
 
-class RenameSwellDialog final : public juce::AlertWindow
+class RenameSwellDialog final : public m3::ui::controls::OwnedAlertWindow
 {
 public:
     using Submit = std::function<bool(const juce::String&)>;
 
     RenameSwellDialog(juce::Component& owner,const juce::String& currentName,Submit submitName)
-        : juce::AlertWindow("Rename swell",{},juce::MessageBoxIconType::NoIcon,&owner),
+        : OwnedAlertWindow("Rename swell",{},juce::MessageBoxIconType::NoIcon,&owner),
           submit(std::move(submitName))
     {
         using namespace m3::ui;
         using namespace controls;
-        setLookAndFeel(&theme);
         setEscapeKeyCancels(true);
         caption.setText("Name",juce::dontSendNotification);
         applyTextRole(caption,TextRole::controlLabel);
@@ -90,10 +88,10 @@ public:
         field.setText(currentName,false);
         field.setSelectAllWhenFocused(true);
         field.onReturnKey=[this]{accept();};
-        field.onEscapeKey=[this]{exitModalState(0);};
+        field.onEscapeKey=[this]{finish(0);};
         field.onFocusLost=[this]{if(isCurrentlyModal())validate();};
         ok.onClick=[this]{accept();};
-        cancel.onClick=[this]{exitModalState(0);};
+        cancel.onClick=[this]{finish(0);};
         for(auto* child:std::initializer_list<juce::Component*>{&caption,&field,&feedback,&ok,&cancel})
             form.addAndMakeVisible(child);
 
@@ -115,12 +113,12 @@ public:
     {
         field.onFocusLost={};
         removeCustomComponent(0);
-        setLookAndFeel(nullptr);
     }
 
-    void show()
+    void show(std::function<void(int)> complete)
     {
-        enterModalState(true,nullptr,true);
+        showNative();
+        enterModalState(true,juce::ModalCallbackFunction::create(std::move(complete)),true);
         field.grabKeyboardFocus();
         field.selectAll();
     }
@@ -148,11 +146,10 @@ private:
             field.grabKeyboardFocus();
             return;
         }
-        if(submit(field.getText()))exitModalState(1);
+        if(submit(field.getText()))finish(1);
         else describe("This swell is no longer available. Close the dialog and try again.",true);
     }
 
-    m3::ui::WorkspaceTheme theme;
     juce::Component form;
     juce::Label caption;
     m3::ui::controls::FieldTextEditor field{"Name"};
@@ -409,7 +406,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         processor.swellEngine().setAutomaticProcessing(automaticButton.getToggleState(),pass);refresh();};
     sampleUnitsButton.onClick=[this]{refresh();};
     suppressionButton.onClick=[this]{processor.swellEngine().resetSuppression();refresh();};
-    defaultIRButton.onClick=[this]{learnWorkspace.openDefaultIrFile();};
+    defaultIRButton.onClick=[this]{learnWorkspace.openDefaultIrFile(&defaultIRButton);};
     auditionWetOnly.beforeInvocation=[this]{auditionInvocation=std::pair{state.sessionEpoch,processor.getWorkflowSnapshot().pass};};
     auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
     auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop; safety protection remains active.");
@@ -592,7 +589,10 @@ void PreverbAudioProcessorEditor::requestDeleteSwells(std::vector<juce::String> 
             safe->refresh();
         }
         if(safe && focusRow.isNotEmpty() && safe->list.isShowing())
-            safe->list.restoreMenuFocus(focusRow,keyboard);
+        {
+            auto focus=m3::ui::controls::SurfaceFocusReturn::capture(safe->list,safe.getComponent());focus.keyboard=keyboard;
+            focus.post({},[safe,focusRow](bool keys){if(safe)safe->list.restoreMenuFocus(focusRow,keys);});
+        }
     };
     if(count==1){complete(1);return;}
 
@@ -659,7 +659,8 @@ void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::Men
                 return accepted;
             });
             safe->renameDialog=dialog;
-            dialog->show();
+            auto focus=m3::ui::controls::SurfaceFocusReturn::capture(safe->list,safe.getComponent());focus.keyboard=keyboard;
+            dialog->show([safe,focus,id=request.id](int){focus.post({},[safe,id](bool keyboard){if(safe)safe->list.restoreMenuFocus(id,keyboard);});});
         });
     swellMenu->setName("swellActionMenu");
     swellMenu->setTitle("Actions for "+swell->name);
