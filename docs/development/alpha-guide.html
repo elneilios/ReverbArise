@@ -753,7 +753,7 @@ Save the DAW project and its external audio separately, and back up every plugin
 </ol>
 <h5>Loop Mode with End on Signal</h5>
 <p>For a manual take, use the same Clock cable, select <strong>End on Signal</strong>, and click <strong>Arm</strong>. Recording starts on the next beat. Click <strong>Arm</strong> again during the last bar you want to record. Keep the clock running through the next bar line.</p>
-<p>For a sequenced two-bar take, keep Clock connected. Send Start/Arm <strong>C1 (24)</strong> on step 1 and Stop <strong>C&#9839;1 (25)</strong> on the final step, with one step per beat. Leave the Arm button off so the sequence starts the take. The next bar line closes the capture.</p>
+<p>For a sequenced one-bar take, keep Clock connected and run a four-step sequence at one step per beat. Send Start/Arm <strong>C1 (24)</strong> on step 1 and Stop <strong>C&#9839;1 (25)</strong> on step 4. Leave the Arm button off so the sequence starts the take. The next step 1 closes the capture. For a two-bar take, use eight steps and move Stop to step 8.</p>
 <p>With Impromptu Clocked, patch Master to Clock, <strong>CLK 1</strong> divided by 8 with zero delay to Start/Arm, and <strong>CLK 2</strong> divided by 8 with a three-quarter-cycle delay to Stop. Start arrives on beat 1, Stop on beat 7 and the take closes on beat 9. Set stopped outputs to low and reset Clocked before pressing <strong>Run</strong>.</p>
 <h5>Loop Mode with End on repeat</h5>
 <ol>
@@ -799,7 +799,7 @@ Save the DAW project and its external audio separately, and back up every plugin
 </ol>
 <h5>Loop Mode with Duration</h5>
 <ol>
-<li>Select <strong>Song</strong> for the Playlist or <strong>Pattern</strong> for the selected pattern. In Learn, enable <strong>Loop Mode</strong>, select <strong>Duration</strong> and choose the length.</li>
+<li>Select <strong>Song</strong> for the Playlist or <strong>Pattern</strong> for the selected pattern. In Learn, enable <strong>Loop Mode</strong>, select <strong>Duration</strong> and choose the length. For example, choose two bars and let a one-bar Pattern play twice to capture both passes.</li>
 <li>Click <strong>Arm</strong> and play. From a bar line, recording can start immediately. If playback starts or you arm mid-bar, capture waits for the next bar line. Let playback continue through the end of the take.</li>
 </ol>
 <p>Set <strong>2 Bars</strong> to capture two passes of a repeating one-bar pattern. FL Studio must report the repeat boundaries and keep playback continuous at each wrap.</p>

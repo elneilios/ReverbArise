@@ -11,7 +11,18 @@ inline void liveResourceCases()
     REQUIRE(engine.addTarget(12000));std::vector<float> ir(96000,.00001f);const auto file=root.file.getChildFile("long-ir.wav");writeTestWav(file,1,48000,ir);engine.loadIR(file);
     waitM3([&]{return engine.savedSession().swells[0].irName=="long-ir.wav";});engine.generate();waitM3([&]{return engine.snapshot().auditionReady;});
     auto state=engine.savedSession();const auto original=state.swells[0];state.swells.clear();
-    for(int i=0;i<128;++i){auto w=original;w.id=juce::Uuid().toDashedString();w.name="Resource "+juce::String(i);w.placement=i<64?0:960000;state.swells.push_back(w);}
+    REQUIRE(original.generatedGain.has_value());
+    constexpr int overlap=64;
+    for(int i=0;i<2*overlap;++i)
+    {
+        auto swell=original;
+        swell.id=juce::Uuid().toDashedString();
+        swell.name="Resource "+juce::String(i);
+        swell.placement=i<overlap?0:960000;
+        // Model the starting gain of a batch generated with this overlap.
+        swell.generatedGain=*original.generatedGain/overlap;
+        state.swells.push_back(swell);
+    }
     state.primary=state.swells[0].id;state.selected={state.primary};engine.restore(state);
     head.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{80,81});head.position.setIsLooping(true);position(-48000,false);buffer.clear();p->processBlock(buffer,midi);
     const auto deadline=juce::Time::getMillisecondCounter()+60000;
@@ -23,7 +34,9 @@ inline void liveResourceCases()
     REQUIRE(buffer.getMagnitude(0,4096)>0 && engine.residentBytes()<=previewMemoryBudget);
     const auto denseBytes=engine.residentBytes();
     engine.generate(); // A render competes with pinned playback pages and retiring audition.
-    position(-43904,true);buffer.clear();p->processBlock(buffer,midi);waitM3([&]{return engine.snapshot().liveReady && engine.savedSession().swells[0].phase==m3::Phase::ready;});
+    position(-43904,true);buffer.clear();p->processBlock(buffer,midi);
+    try{waitM3([&]{const auto s=engine.snapshot();return s.liveReady && s.session.swells[0].phase==m3::Phase::ready;});}
+    catch(...){const auto s=engine.snapshot();std::cerr<<"After live regeneration: "<<s.liveStatus<<" | "<<s.session.swells[0].status<<" | "<<s.message<<"\n";throw;}
     REQUIRE(engine.residentBytes()<=previewMemoryBudget);
     // A 65th simultaneous contribution is explicitly refused, not silently lost.
     auto excess=engine.savedSession();auto extra=excess.swells[0];extra.id=juce::Uuid().toDashedString();excess.swells.push_back(extra);engine.restore(excess);buffer.clear();p->processBlock(buffer,midi);

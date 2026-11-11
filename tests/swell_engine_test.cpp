@@ -104,7 +104,10 @@ int main() { return runTest([]
     REQUIRE(engine.audition()); float left[64]{},right[64]{};
     {AudioAllocationGuard guard;engine.processAudio(left,right,64,context.time);}
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
-    REQUIRE(left[0]==0 && left[2]==0 && std::abs(left[1]-.5f)<1e-5);
+    const auto startingGain=initial.session.swells.front().generatedGain;
+    REQUIRE(startingGain && *startingGain>0 && *startingGain<1);
+    REQUIRE(engine.savedSession().swells.front().generatedGain==startingGain);
+    REQUIRE(left[0]==0 && left[2]==0 && std::abs(left[1]-.5f*(*startingGain))<1e-5);
     REQUIRE(engine.edit(first,[](auto& w,auto&){w.shape.gainDb=6;return true;}));
     waitFor([&]{return engine.snapshot().auditionReady;});
     REQUIRE(engine.snapshot().renderCount==2 && engine.snapshot().raw->peak==initial.raw->peak);

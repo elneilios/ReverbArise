@@ -17,7 +17,12 @@ static void renderCompletionDuringAdmission()
     if(processor.getWorkflowSnapshot().mode!=workflow::Mode::live)std::cerr<<"Render/admission outcome: "<<result.learnGeneration.notice<<'\n';
     REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
     const auto* kept=find(result.session,manual);
-    REQUIRE(kept && kept->provenance==Provenance::manualCreated && kept->render.present() && kept->phase==Phase::ready);
+    REQUIRE(kept && kept->provenance==Provenance::manualCreated && kept->render.present());
+    // The generated batch must finish rendering before shared headroom is calculated.
+    engine.holdLearnRendersForTesting(false);
+    await([&]{const auto s=engine.savedSession();const auto* swell=find(s,manual);return swell && swell->phase==Phase::ready;});
+    const auto completed=engine.savedSession();
+    REQUIRE(find(completed,manual)->render==kept->render && find(completed,manual)->generatedGain.has_value());
 }
 static void interruptedRenderRecoversAfterFailure()
 {

@@ -31,9 +31,9 @@ static void workingFolderLoopCases()
     waitFor([&]{return processor.pinPortableAssets(input,error);});
     std::shared_ptr<WorkingFolder> folder;
     if(!prepareWorkingFolder(input,destination.file,processor.assetRegistryRoot(),folder,error))
-        throw std::runtime_error(error.toStdString());
+        throw std::runtime_error("Prepare initial Loop working folder: "+error.toStdString());
     if(!processor.useWorkingFolder(folder,input,error))
-        throw std::runtime_error(error.toStdString());
+        throw std::runtime_error("Adopt initial Loop working folder: "+error.toStdString());
     const auto roundTrip=[&](CaptureSourceKind kind)
     {
         const auto accepted=processor.getCaptureSnapshot();
@@ -93,7 +93,11 @@ static void workingFolderLoopCases()
         return true;
     }));
     engine.generate(true);
-    waitFor([&]{return engine.savedSession().swells.front().render.present();});
+    waitFor([&]{
+        const auto session = engine.savedSession();
+        const auto& swell = session.swells.front();
+        return swell.phase == Phase::ready && swell.render.present() && swell.generatedGain.has_value();
+    });
     auto nextCapture = preference;
     nextCapture.enabled = false;
     nextCapture.unit = LoopCapturePreference::Unit::beats;
@@ -174,7 +178,7 @@ static void workingFolderLoopCases()
         const auto swell = owner.swellEngine().savedSession().swells.front();
         const auto& savedSwell = original.observed.session.swells.front();
         REQUIRE(swell.id == savedSwell.id && swell.name == savedSwell.name && swell.shape.gainDb == savedSwell.shape.gainDb
-            && swell.ir == savedSwell.ir && swell.render == savedSwell.render);
+            && swell.ir == savedSwell.ir && swell.render == savedSwell.render && swell.generatedGain == savedSwell.generatedGain);
         for (const auto& dependency : original.files)
         {
             const auto file = recovered.instanceRoot.getChildFile(dependency.path);
@@ -272,6 +276,12 @@ static void workingFolderProcessorCases()
     ProfileHost host;host.position.setTimeInSamples(0);host.position.setPpqPosition(0.0);host.position.setBpm(120);
     host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});host.position.setIsPlaying(false);
     processor->setPlayHead(&host);processor->prepareToPlay(48000,6);juce::AudioBuffer<float> audio(2,6);audio.clear();juce::MidiBuffer midi;processor->processBlock(audio,midi);
+    // Start folder preparation from an accepted render, including its persisted headroom.
+    waitFor([&]{
+        const auto session = processor->swellEngine().savedSession();
+        const auto& swell = session.swells.front();
+        return swell.phase == Phase::ready && swell.generatedGain.has_value();
+    });
     Input input;waitFor([&]{return processor->pinPortableAssets(input,error);});const auto before=processor->getCaptureSnapshot();const auto flow=processor->getWorkflowSnapshot();
     std::shared_ptr<WorkingFolder> folder;REQUIRE(prepareWorkingFolder(input,destination.file,processor->assetRegistryRoot(),folder,error));
     const auto newRoot=workingFolderInfo(*folder).projectsRoot.getChildFile(fixture.observed.project).getChildFile(fixture.observed.instance);
@@ -281,7 +291,7 @@ static void workingFolderProcessorCases()
     const auto apply=[&](auto& owner,const auto& prepared,const auto& expected){
         auto task=std::async(std::launch::async,[&]{return owner.useWorkingFolder(prepared,expected,error);});
         REQUIRE(task.wait_for(std::chrono::seconds(15))==std::future_status::ready);
-        if(!task.get())throw std::runtime_error(error.toStdString());
+        if(!task.get())throw std::runtime_error("Adopt Song working folder: "+error.toStdString());
     };
     Hooks cancel;cancel.cancelled=[]{return true;};REQUIRE(!processor->useWorkingFolder(folder,input,error,cancel));
     REQUIRE(processor->swellEngine().assetDirectory()==input.instanceRoot && processor->getCaptureSnapshot().reference==before.reference);
