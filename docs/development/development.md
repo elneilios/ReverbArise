@@ -75,6 +75,23 @@ cases labelled `pr-regression` under the same build-tree lock.
 Record the tested revision, configuration, selected cases and outcomes in the
 PR. Keep manual FL Studio acceptance separate in the record.
 
+### Comparing parallel CTest runs
+
+With current Release binaries and an idle build tree, use the same headless
+cases for both measurements. Start with two jobs and compare total CTest time
+and any failures.
+
+```powershell
+ctest --preset windows-msvc-release --no-tests=error -L '^parallel-safe$' --parallel 1
+ctest --preset windows-msvc-release --no-tests=error -L '^parallel-safe$' --parallel 2
+```
+
+The `parallel-safe` label is limited to cases that have no native windows or
+shared writable fixtures. CTest runs the other cases alone within the same
+invocation, including when a caller explicitly requests parallel jobs. For
+measurements involving native windows, run one desktop test session at a time
+across worktrees.
+
 ### Build tools and troubleshooting
 
 The wrapper prefers a compatible CMake on PATH with adjacent CTest and otherwise
