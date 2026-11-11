@@ -269,11 +269,27 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         if(capture.manifest.ranges.empty()){processor.swellEngine().diagnostic("Capture source before suggesting onsets");return;}
         const auto& last=capture.manifest.ranges.back();processor.swellEngine().analyze(capture.manifest.ranges.front().startSample,last.startSample+static_cast<int64_t>(last.frameCount));
     };
-    candidateBox.onChange=[this]{if(updating)return;const auto index=candidateBox.getSelectedId()-1;if(index>=0 && index<static_cast<int>(state.candidates.size()))chosenCandidate=state.candidates[static_cast<size_t>(index)].sample;};
-    confirmButton.onClick=[this]{if(chosenCandidate)processor.swellEngine().confirmCandidateAt(*chosenCandidate);refresh();};
+    candidateBox.beforeInvocation=[this]
+    {
+        const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+        candidateBox.canCommit=[safe,source=onsetSource,epoch=state.sessionEpoch,pass=state.workflowState.pass]
+        {
+            if(!safe || safe->destroying || safe->updating)return false;
+            const auto current=safe->processor.swellEngine().snapshot();
+            if(current.sessionEpoch!=epoch || current.workflowState.pass!=pass)return false;
+            const auto capture=safe->processor.getCaptureSnapshot();
+            if(source!=std::pair{capture.reference,capture.manifest.revision})return false;
+            const auto viewport=safe->timeline.viewport();
+            return safe->candidateBox.matches(current.candidates,viewport.first,viewport.last);
+        };
+    };
+    confirmButton.onClick=[this]{if(const auto sample=candidateBox.selectedSample())processor.swellEngine().confirmCandidateAt(*sample);refresh();};
     timeline.onCandidateSelected=[this](int index)
-    {if(index<0 || index>=static_cast<int>(state.candidates.size()))return;chosenCandidate=state.candidates[static_cast<size_t>(index)].sample;
-        if(candidateBox.indexOfItemId(index+1)<0)candidateBox.addItem("Sample "+juce::String(*chosenCandidate),index+1);candidateBox.setSelectedId(index+1,juce::dontSendNotification);};
+    {
+        if(index<0 || index>=static_cast<int>(state.candidates.size()))return;
+        const auto viewport=timeline.viewport();
+        candidateBox.display(state.candidates,viewport.first,viewport.last,state.candidates[static_cast<size_t>(index)].sample);
+    };
     const auto beginNavigation=[this]{navigationInvocation.reset();const auto flow=processor.getWorkflowSnapshot();
         if(!updating && flow.mode==workflow::Mode::live)navigationInvocation=NavigationScope{processor.swellEngine().assignmentEpoch(),flow.pass,state.session.primary};};
     performZoom.beforeInvocation=snapButton.beforeInvocation=gridBox.beforeInvocation=beginNavigation;
@@ -1009,17 +1025,11 @@ void PreverbAudioProcessorEditor::refresh()
     if(musical && state.liveReady && state.liveAttenuationDb<-.01f)aggregate<<" | Wet protection "<<juce::String(state.liveAttenuationDb,1)<<" dB";
     if(state.actionError.isNotEmpty() && !state.liveStatus.startsWith("Export"))aggregate=state.actionError;
     headerStatus.setText(aggregate,juce::dontSendNotification);headerStatus.setTooltip(aggregate+"\n"+((state.liveStatus.startsWith("Export incomplete") || state.liveStatus.startsWith("Export warning"))?state.liveStatus:state.message));
-    candidateBox.clear(juce::dontSendNotification);int selectedCandidate=0;const auto viewport=timeline.viewport();
-    for(size_t i=0;i<state.candidates.size();++i)
-    {
-        const auto sample=state.candidates[i].sample;const auto chosen=chosenCandidate && sample==*chosenCandidate;
-        if(chosen || (candidateBox.getNumItems()<128 && sample>=viewport.first && sample<=viewport.last))
-        {candidateBox.addItem("Sample "+juce::String(sample),static_cast<int>(i+1));if(chosen)selectedCandidate=static_cast<int>(i+1);}
-    }
-    if(!selectedCandidate && candidateBox.getNumItems()){selectedCandidate=candidateBox.getItemId(0);chosenCandidate=state.candidates[static_cast<size_t>(selectedCandidate-1)].sample;}
-    if(selectedCandidate)candidateBox.setSelectedId(selectedCandidate,juce::dontSendNotification);else chosenCandidate.reset();
-    candidateBox.setTextWhenNothingSelected("Click a suggestion in the source lane");
-    confirmButton.setEnabled(chosenCandidate.has_value());analyzeButton.setEnabled(!capture.manifest.ranges.empty() && !state.analyzing);
+    const auto source=std::pair{capture.reference,capture.manifest.revision};
+    if(onsetSource!=source){candidateBox.hidePopup();onsetSource=source;}
+    const auto viewport=timeline.viewport();
+    candidateBox.display(state.candidates,viewport.first,viewport.last,candidateBox.selectedSample());
+    confirmButton.setEnabled(candidateBox.selectedSample().has_value());analyzeButton.setEnabled(!capture.manifest.ranges.empty() && !state.analyzing);
     const auto hasSelection=!state.session.selected.empty();bool selectedIR=false,selectedImport=false;
     for(const auto& swell:state.session.swells)
     {

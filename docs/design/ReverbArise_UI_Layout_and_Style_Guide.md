@@ -58,7 +58,8 @@ The owner approved the quiet dropdown/menu design on 7 November 2026, including
 transient pointer hover, persistent keyboard inspection and an independent
 selected checkmark. The owner approved the revised native family on 7 November,
 including small local help/red error feedback. `unify-selector-states` adopts
-only its listed consumers; remaining families and #8 controls remain explicit debt.
+its listed consumers. The later Recovery follow-up adopts the same dropdown for
+Onset suggestions using that approval.
 
 The owner also approved smaller help immediately beneath the input and **red
 validation text plus a red body border**, with aqua focus brackets independent,

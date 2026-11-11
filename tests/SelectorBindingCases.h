@@ -54,4 +54,49 @@ void Composition::verifySelectors()
     popup=inspect(routing,acceptedRouting==m3::LiveRouting::dryWet?1:0);
     engine.restore(engine.savedSession());popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();panel->refresh();
     REQUIRE(engine.savedSession().liveRouting==acceptedRouting);
+
+    tabs.selectPage(Page::recovery);pump();
+    auto& integrated=require<RecoveryOnsetSelector>(*tabs.page(Page::recovery),"onsetSuggestions");
+    REQUIRE(integrated.getAccessibilityHandler()->getTitle()=="Onset suggestions");
+    REQUIRE(integrated.getTextWhenNothingSelected()=="Click a suggestion in the source lane");
+    REQUIRE(controls::commandBodyBounds(integrated.getBounds()).getHeight()==30);
+
+    // Exercise the same control with deterministic sample data and a native peer.
+    RecoveryOnsetSelector suggestions;
+    settingsHost.addAndMakeVisible(suggestions);
+    suggestions.setRowBounds({200,140,415,30});
+    REQUIRE(!suggestions.isEnabled() && !suggestions.selectedSample());
+    REQUIRE(suggestions.getAccessibilityHandler()->getDescription().contains("source lane"));
+    const int64_t wideSample=int64_t{1}<<40;
+    std::vector<m3::Candidate> candidates{{10,1.f},{20,1.f},{wideSample,1.f}};
+    auto currentCandidates=candidates;
+    suggestions.canCommit=[&]{return suggestions.matches(currentCandidates,0,30);};
+    int changes=0;
+    suggestions.onChange=[&]{++changes;};
+    suggestions.display(candidates,0,30,std::nullopt);
+    REQUIRE(suggestions.getNumItems()==2 && suggestions.selectedSample()==10 && changes==0);
+    popup=inspect(suggestions,1);
+    suggestions.display(candidates,0,30,suggestions.selectedSample());
+    REQUIRE(suggestions.activePopup()==popup && suggestions.selectedSample()==10);
+    popup->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));pump();
+    REQUIRE(!suggestions.isPopupActive() && suggestions.selectedSample()==10 && changes==0);
+    popup=inspect(suggestions,1);
+    popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();
+    REQUIRE(suggestions.selectedSample()==20 && changes==1);
+
+    std::reverse(candidates.begin(),candidates.end());
+    suggestions.display(candidates,0,30,suggestions.selectedSample());
+    REQUIRE(suggestions.selectedSample()==20 && changes==1);
+    suggestions.display(candidates,0,30,wideSample);
+    REQUIRE(suggestions.selectedSample()==wideSample && suggestions.getNumItems()==3 && changes==1);
+    currentCandidates=candidates;
+    popup=inspect(suggestions,1);
+    currentCandidates[1].sample=25;
+    popup->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));pump();
+    REQUIRE(suggestions.selectedSample()==wideSample && changes==1);
+    candidates.erase(candidates.begin());
+    suggestions.display(candidates,0,30,suggestions.selectedSample());
+    REQUIRE(suggestions.selectedSample()==20 && changes==1);
+    suggestions.display({},0,30,suggestions.selectedSample());
+    REQUIRE(!suggestions.isEnabled() && !suggestions.selectedSample() && changes==1);
 }
