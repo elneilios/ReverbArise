@@ -90,5 +90,29 @@ Release build from `4844c92` on 11 November 2026.
 
 The Debug build and standalone tab check passed. The full Debug run failed at
 the Swells multi-delete assertion in `SwellListBindingCases.h:277` and was
-stopped during the later composition fixture. The full Debug gate remains open.
+stopped during the later composition fixture.
 See `out/build-logs/Debug/20261111-085722-42028b05/`.
+
+### PR #157 fixture follow-up
+
+The multi-delete test now waits for the confirmation dialog's asynchronous
+completion before asserting that only the captured swells were removed. The
+500-row fixture uses explicit editor refresh and isolates the Storage and
+Working Folder providers until the test restores its original session. Native
+stack samples showed the Working Folder timer serializing the synthetic session
+while JUCE dispatched messages. The dense list and popup assertions remain in
+the suite. This follow-up changes tests only.
+
+Both Windows MSVC builds and all 100 CTest entries per configuration were
+verified against the test inputs committed as `a489683`. The full Debug sweep
+passed 98/100, including Swell UI in 203.74 seconds. Perform readability and
+knob Reset passed on targeted retries after Windows foreground-focus failures.
+The full Release sweep passed 99/100. Swell UI passed on retry after a native
+peer-focus failure. Retries used the same binaries. The owner-confirmed FL
+Studio build remains `4844c92`.
+
+Full sweep logs are in `out/build-logs/Debug/20261111-102942-2f3ba473/` and
+`out/build-logs/Release/20261111-105024-13447673/`. Retry logs are
+`out/build-logs/tab-fix-debug-focus-retry.log`,
+`out/build-logs/tab-fix-debug-knob-reset-native.log`, and
+`out/build-logs/tab-fix-release-focus-retry.log`.
