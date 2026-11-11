@@ -1,4 +1,5 @@
 #pragma once
+#include "Controls/SurfaceLifecycle.h"
 #include <Storage/PortableAssets.h>
 #include <UI/WorkingFolderPanel.h>
 #include <UI/StorageInventoryPanel.h>
@@ -44,7 +45,7 @@ public:
         backupButton.onClick=[this]{choose(Action::backup);};restoreButton.onClick=[this]{restoreBackup();};locateButton.onClick=[this]{if(onRestored)locateOriginalAssets();else choose(Action::locate);};cancelButton.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. Originals and previous backups remain intact.");};
         setStatus("Save the DAW project and external audio separately.");refreshButtons();startTimerHz(10);
     }
-    ~PortableStoragePanel()override{destroying=true;stopTimer();worker.cancel=true;}
+    ~PortableStoragePanel()override{destroying=true;stopTimer();worker.cancel=true;pickerInvocation.invalidate();chooser.reset();}
     static juce::String recoveryGuidance(){return "Some saved audio assets are unavailable. Your swell markers and edits are preserved.\n\nLocate their original folder or restore a backup. If that is not possible:\n\nIn Learn, turn Detect events off and Recapture audio on. Play the entire song, then stop. After complete audio and required IRs are verified, existing unfrozen swells rebuild automatically using their saved parameters.\n\nMissing custom IRs need restoring or replacing. Frozen audio stays protected; unfreeze missing frozen results to rebuild them. Re-learning may sound different and cannot recreate exported or Playlist files.";}
     void enableWorkingFolder(juce::File registry,WorkingFolderPanel::WorkerCommit publish){
         workingFolder=std::make_unique<WorkingFolderPanel>(provider,std::move(registry),WorkingFolderPanel::Commit{});
@@ -54,17 +55,18 @@ public:
     std::function<bool(const Input&,juce::String&)> onRestored;
     void showRecoveryStatus(const juce::String& message){setStatus(message);resized();}
     void locateOriginalAssets(){Input input;juce::String error;
-        if(workingFolder && provider(input,error))if(const auto state=juce::XmlDocument::parse(input.processorXml);state && state->getIntAttribute("stateVersion")==9){workingFolder->locateExisting();return;}
+        if(workingFolder && provider(input,error))if(const auto state=juce::XmlDocument::parse(input.processorXml);state && state->getIntAttribute("stateVersion")==9){workingFolder->locateExisting(&locateButton);return;}
         choose(Action::legacy);
     }
     void restoreBackup(){Input input;juce::String error;
         if(!workingFolder || !provider(input,error) || !input.folderUnavailable){choose(Action::restore);return;}
         if(busy() || choosing || waitingReload || workingFolder->occupied())return;
+        const auto ticket=pickerInvocation.begin(restoreButton,this);if(!ticket)return;
         choosing=true;refreshButtons();
-        auto complete=[safe=juce::Component::SafePointer<PortableStoragePanel>(this),input](juce::File receipt){
-            if(!safe)return;safe->choosing=false;safe->refreshButtons();if(receipt==juce::File{} || !safe->isShowing())return;
+        auto complete=[safe=juce::Component::SafePointer<PortableStoragePanel>(this),input,ticket=*ticket](juce::File receipt){
+            if(!safe || safe->destroying || !ticket.complete([safe]{return safe && (!safe->workingFolder || !safe->workingFolder->occupied());}))return;safe->choosing=false;safe->refreshButtons();if(receipt==juce::File{} || !safe->isShowing())return;
             Input current;juce::String error;if(!safe->provider(current,error) || current.processorXml!=input.processorXml || current.controlEpoch!=input.controlEpoch || current.instanceRoot!=input.instanceRoot){safe->setStatus("Session changed; choose the backup again");return;}
-            safe->workingFolder->setAvailable(true);safe->workingFolder->restoreFromBackup(receipt);
+            safe->workingFolder->setAvailable(true);safe->workingFolder->restoreFromBackup(receipt,&safe->restoreButton);
         };
         const juce::String title="Choose the exact completed backup receipt inside receipts";
         if(receiptPicker)receiptPicker(title,{},std::move(complete));else{
@@ -161,8 +163,10 @@ private:
         if(destroying || busy() || choosing || waitingReload || (workingFolder && workingFolder->occupied()))return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
         if(knownRoot!=input.instanceRoot || knownEpoch!=input.controlEpoch)known={};
         const bool receiptSelection=(action==Action::restore || action==Action::locate) && known.snapshot.isEmpty();
+        auto& opener=action==Action::backup?backupButton:action==Action::restore?restoreButton:locateButton;
+        const auto ticket=pickerInvocation.begin(opener,this);if(!ticket)return;
         choosing=true;refreshButtons();const auto title=action==Action::legacy?"Choose the original project instance asset folder":action==Action::backup?"Choose an empty folder or an existing asset backup":receiptSelection?"Choose the exact completed backup receipt inside receipts":"Choose the folder containing this saved backup";
-        auto complete=[safe=juce::Component::SafePointer<PortableStoragePanel>(this),action,input,receiptSelection](juce::File folder){if(!safe || safe->destroying)return;safe->choosing=false;
+        auto complete=[safe=juce::Component::SafePointer<PortableStoragePanel>(this),action,input,receiptSelection,ticket=*ticket](juce::File folder){if(!safe || safe->destroying || !ticket.complete())return;safe->choosing=false;
             if(!safe->isShowing()){safe->refreshButtons();return;}
             if(folder==juce::File{}){safe->refreshButtons();return;}Input current;juce::String error;
             if(!safe->provider(current,error) || current.instanceRoot!=input.instanceRoot || current.controlEpoch!=input.controlEpoch){safe->setStatus("The active session changed while the folder picker was open. Reopen Backup and try again.");safe->refreshButtons();return;}
@@ -189,6 +193,7 @@ private:
     void timerCallback()override{poll();}
     uint64_t guidanceEpoch=UINT64_MAX,adoptedReloadEpoch=UINT64_MAX;
     Provider provider;juce::File restoreRoot,selected,operationRoot,knownRoot;Locator known;uint64_t operationEpoch=0,knownEpoch=0;bool choosing=false,destroying=false,waitingReload=false;Input operationInput;
+    controls::SurfaceInvocation pickerInvocation;
     Worker worker;std::shared_ptr<const Result> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport contentViewport;
     std::unique_ptr<WorkingFolderPanel> workingFolder;

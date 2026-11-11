@@ -1,4 +1,5 @@
 #pragma once
+#include <UI/Controls/OwnedAlertWindow.h>
 #include <Plugin/PluginEditor.h>
 static juce::Component* recoveryFind(juce::Component& root,const juce::String& name)
 {if(root.getName()==name)return &root;for(auto* child:root.getChildren())if(auto* found=recoveryFind(*child,name))return found;return nullptr;}
@@ -27,7 +28,21 @@ static void recoveryPreview(bool review,bool responsive=true)
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_RECOVERY_PREVIEW_OUTPUT",{});
     if(output.isNotEmpty()){auto stream=juce::File(output).createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(warning->createComponentSnapshot(warning->getLocalBounds()),*stream));}
     if(review){juce::MessageManager::getInstance()->runDispatchLoop();window.setContentNonOwned(nullptr,false);editor.reset();processor->setPlayHead(nullptr);return;}
-    REQUIRE(warning->isCurrentlyModal() && warning->getParentComponent()==editor.get() && editor->isCurrentlyBlockedByAnotherModalComponent());
+    REQUIRE(warning->isCurrentlyModal() && warning->isOnDesktop() && warning->isUsingNativeTitleBar() && editor->isCurrentlyBlockedByAnotherModalComponent());
+    auto* initial=dynamic_cast<m3::ui::controls::ActionButton*>(juce::Component::getCurrentlyFocusedComponent());
+    REQUIRE(initial && initial->getButtonText()=="Continue");
+    const auto unavailableReference=processor->getCaptureSnapshot().reference;
+    int cancelledPicks=0;
+    storage->folderPicker=[&](const auto&,const auto&,auto complete){++cancelledPicks;complete({});};
+    auto* locate=dynamic_cast<m3::ui::controls::ActionButton*>(warning->getCustomComponent(0)->getChildComponent(0));
+    REQUIRE(locate && locate->getButtonText()=="Locate assets...");
+    locate->grabKeyboardFocus();REQUIRE(locate->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    stage="cancelled popup Locate";pump([&]{return cancelledPicks==1;});
+    REQUIRE(!storage->busy() && !storage->reloadPending() && !editor->assetRecoveryWarningVisible());
+    REQUIRE(processor->getCaptureSnapshot().unavailable && processor->getCaptureSnapshot().reference==unavailableReference);
+    load(*processor,fixture.xml);processor->processBlock(audio,midi);editor->refresh();
+    stage="reopen warning after cancelled picker";pump([&]{return editor->assetRecoveryWarningVisible();});
+    warning=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());REQUIRE(warning);
     // The popup routes to the actual original-folder picker and transactional
     // reload, then a later missing-source session can select an exact receipt.
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(fixture.root);};
@@ -44,7 +59,7 @@ static void recoveryPreview(bool review,bool responsive=true)
     waitFor([&]{return sourceFile.moveFileTo(sourceFile.getSiblingFile("source-offline-two.json"));});load(*processor,fixture.xml);processor->processBlock(audio,midi);editor->refresh();
     pump([&]{return editor->assetRecoveryWarningVisible();});warning=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());REQUIRE(warning);
     // Continue leaves the arrangement unchanged and does not repeat the warning.
-    warning->exitModalState(0);warning->setVisible(false);juce::MessageManager::getInstance()->runDispatchLoopUntil(10);editor->refresh();REQUIRE(!editor->assetRecoveryWarningVisible());
+    static_cast<m3::ui::controls::OwnedAlertWindow*>(warning)->userTriedToCloseWindow();juce::MessageManager::getInstance()->runDispatchLoopUntil(10);editor->refresh();REQUIRE(!editor->assetRecoveryWarningVisible());
     const auto old=processor->getCaptureSnapshot();const auto before=processor->swellEngine().savedSession();
     // Use the normal Learn Recapture control; partial source cannot publish.
     if(!processor->setRecaptureExisting(true))throw std::runtime_error(processor->swellEngine().snapshot().message.toStdString());juce::AudioBuffer<float> partial(2,1);partial.clear();partial.setSample(0,0,.5f);
@@ -69,6 +84,8 @@ static void recoveryPreview(bool review,bool responsive=true)
     // the stricter metadata-decode failure warning.
     editor->refresh();
     pump([&]{return editor->assetRecoveryWarningVisible();});warning=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());REQUIRE(warning && warning->getDescription().contains("cannot be confirmed intact"));
+    REQUIRE(warning->getNumCustomComponents()==1 && warning->getCustomComponent(0)->getNumChildComponents()==1);
+    REQUIRE(static_cast<m3::ui::controls::OwnedAlertWindow*>(warning)->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));
     warning->exitModalState(0);warning->setVisible(false);window.setContentNonOwned(nullptr,false);editor.reset();processor->setPlayHead(nullptr);
     std::cout<<"Recovery UI: one editor-open warning, preserved metadata, normal Recapture without Generate, fixed/responsive modality and stale callback fences, complete-only recovery and decode-failure distinction passed.\n";
 }

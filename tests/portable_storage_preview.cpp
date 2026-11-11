@@ -21,6 +21,14 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && 
     for(const auto& name:juce::StringArray{"backupAssets","restoreAssets","locateAssets"})REQUIRE(panel.getLocalBounds().contains(button(panel,name).getBounds()));
     // Cancelling a picker performs no operation and a changed session is rejected.
     const auto previous=panel.lastResult();panel.folderPicker=[](const auto&,const auto&,auto complete){complete({});};button(panel,"backupAssets").onClick();REQUIRE(!panel.busy() && panel.lastResult()==previous);
+    int pendingPicks=0;std::function<void(juce::File)> cancelledPicker;
+    panel.folderPicker=[&](const auto&,const auto&,auto complete){++pendingPicks;cancelledPicker=std::move(complete);};
+    button(panel,"backupAssets").onClick();button(panel,"backupAssets").onClick();REQUIRE(pendingPicks==1);
+    cancelledPicker({});cancelledPicker(backup.file);REQUIRE(!panel.busy() && panel.lastResult()==previous);
+    std::function<void(juce::File)> orphanedPicker;
+    {auto orphan=std::make_unique<m3::ui::PortableStoragePanel>([&](auto& value,auto&){value=input;return true;},restore.file);
+        orphan->folderPicker=[&](const auto&,const auto&,auto complete){orphanedPicker=std::move(complete);};button(*orphan,"backupAssets").onClick();}
+    REQUIRE(orphanedPicker);orphanedPicker(backup.file);REQUIRE(!panel.busy() && panel.lastResult()==previous);
     const auto original=input.instanceRoot;panel.folderPicker=[&](const auto&,const auto&,auto complete){input.instanceRoot=fixture.directory.file;complete(backup.file);};button(panel,"backupAssets").onClick();REQUIRE(!panel.busy() && panel.statusText().contains("session changed"));input.instanceRoot=original;
     std::function<void(juce::File)> finishPicker;panel.folderPicker=[&](const auto&,const auto&,auto complete){finishPicker=std::move(complete);};button(panel,"backupAssets").onClick();window.setVisible(false);finishPicker(backup.file);REQUIRE(!panel.busy());window.setVisible(true);
     button(panel,"backupAssets").onClick();++input.controlEpoch;finishPicker(backup.file);REQUIRE(!panel.busy() && panel.statusText().contains("session changed"));--input.controlEpoch;

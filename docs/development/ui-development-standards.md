@@ -19,6 +19,12 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 26 uses `SurfaceInvocation`, `SurfaceFocusReturn`,
+`SurfaceEscape`, `OwnedAlertWindow` and `WorkspaceWindow` for P8 surface lifecycle.
+Keep native pickers and guarded binding continuations; surface closing adds no
+permission to accept an edit or obsolete selection. Preserve safe Storage hide,
+cancel and handoff behavior. See [P8 evidence](../validation/2026-11-11-issue-107-dialogs-windows.md).
+
 Production standards revision 25 adds measured `WrappedLabel` prose and shared
 full descriptions to `EllipsisLabel`. Use the wrapped label's preferred height
 when laying out following content, with existing focus-aware scrolling for long
