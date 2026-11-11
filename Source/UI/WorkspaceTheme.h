@@ -10,6 +10,7 @@ namespace m3::ui
 inline const juce::Colour background{0xff0f1418}, aqua{0xff00efff}, hover{0xff00c2cc},
     timing{0xffffc700}, text{0xfff8fafc}, secondary{0xffedf1f5}, separator{0xff4a5058}, outline{0xff6b737c},
     danger{0xffff6b5e};
+inline const juce::Colour contextHelpInk=hover;
 inline constexpr float rule=1, radius=4, headingSize=21, bodySize=14, controlSize=13, smallSize=12, captionSize=11, emptyHeadingSize=24;
 inline constexpr float navigationSize=18, modeDescriptionSize=16;
 inline const juce::Colour capturedSilence{0xff242a30}, unavailableSource{0xffa54444}, unavailableOverview{0xff773d3d},

@@ -327,6 +327,16 @@ static void loopUiCases(bool review)
     REQUIRE(status->getText().contains("Recapture audio"));
     REQUIRE(!onStop->isEnabled());
     REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(accepted.manifest.loop->endSample)));
+    // Shared P3 wrapping must allocate the full Loop status and move following
+    // controls inside the existing scroll region, including long explanations.
+    const auto longStatus=juce::String::repeatedString("Wait for the accepted Loop and its timing reference before recording again. ",12);
+    workspace->displayLoop(processor.getLoopCapturePreference(),false,false,false,false,false,longStatus);
+    workspace->resized();
+    const auto* wrappedStatus=dynamic_cast<m3::ui::controls::WrappedLabel*>(status);REQUIRE(wrappedStatus);
+    REQUIRE(status->getHeight()==wrappedStatus->preferredHeight(status->getWidth()));
+    REQUIRE(recapture->getY()>=status->getBottom() && policies->getViewedComponent()->getHeight()>=generate->getBottom());
+    REQUIRE(status->getTooltip()==longStatus);
+    editor.refresh();
     // Main's waveform navigation must use the accepted phrase, even when the
     // host has no Song position. Refresh retains inspection; a new source resets it.
     const auto fullLoopView=workspace->dryViewport();
@@ -631,14 +641,14 @@ int main(int argc,char** argv){return runTest([&]
         {
             candidateOverlay(*editor,fixture);
             auto* button=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"learnGenerateSwells"));REQUIRE(button && button->isEnabled());
-            auto* helper=dynamic_cast<juce::Label*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
+            auto* helper=dynamic_cast<m3::ui::controls::WrappedLabel*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
             REQUIRE(helper->getText().replace("\n"," ")=="Want to place swells yourself? Add manual swells in Perform.");
-            REQUIRE(helper->getText().containsChar('\n') && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
+            REQUIRE(helper->textLayout(helper->getWidth()).getNumLines()>1 && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
             REQUIRE(!helper->getText().contains("?\n") && helper->getText().contains("? Add"));
             for(auto size:{juce::Point{1100,850},juce::Point{1400,1000},juce::Point{1600,1100}})
             {
                 editor->setSize(size.x,size.y);editor->refresh();
-                REQUIRE(helper->getWidth()>0 && helper->getHeight()>=40);
+                REQUIRE(helper->getWidth()>0 && helper->getHeight()>=helper->preferredHeight(helper->getWidth()));
                 const auto* reason=named(*editor,"learnGenerateReason");REQUIRE(reason);
                 REQUIRE(reason->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
                 REQUIRE(helper->getY()-reason->getBottom()==m3::ui::spacing::labelHelp);

@@ -1,5 +1,6 @@
 #pragma once
 #include "Controls/SegmentedSelector.h"
+#include "Controls/FocusViewport.h"
 
 namespace m3::ui
 {
@@ -16,6 +17,9 @@ public:
         strip.setTextHeight(bodySize);
         strip.onRequest = [this](int id) { selectPage(static_cast<SettingsPage>(id)); };
         addAndMakeVisible(strip);
+        addAndMakeVisible(viewport);
+        viewport.setFocusRevealEnabled(true);
+        viewport.setWantsKeyboardFocus(false);
     }
 
     void addPage(SettingsPage id, juce::Component& content)
@@ -40,16 +44,28 @@ public:
     SettingsPage selectedPage() const noexcept { return selected; }
     const auto& pageComponents() const noexcept { return pages; }
     controls::SegmentedSelector& selector() noexcept { return strip; }
+    void setPageContentHeight(SettingsPage id,int height)
+    {
+        heights[static_cast<size_t>(id)]=std::max(0,height);
+        resized();
+    }
 
     void paint(juce::Graphics& g) override { g.fillAll(background); }
     void resized() override
     {
+        const auto viewPosition = viewport.getViewPosition();
         auto area = getLocalBounds();
         strip.setBounds(area.removeFromTop(tabDepth));
+        viewport.setBounds(area);
         // Inactive pages stay detached. Showing Storage still starts its scan.
-        for (auto* content : pages)
-            if (content != nullptr)
-                content->setBounds(area);
+        for (size_t i=0;i<pages.size();++i)
+            if (auto* content=pages[i])
+            {
+                const auto height=std::max(area.getHeight(),heights[i]);
+                const auto width=area.getWidth()-(height>area.getHeight()?viewport.getScrollBarThickness():0);
+                content->setBounds(0,0,width,height);
+            }
+        viewport.setViewPosition(viewPosition);
     }
 
 private:
@@ -67,10 +83,10 @@ private:
         if (active != nullptr)
         {
             active->setVisible(false);
-            removeChildComponent(active);
+            viewport.setViewedComponent(nullptr,false);
         }
         active = &content;
-        addChildComponent(content);
+        viewport.setViewedComponent(&content,false);
         resized();
         content.setVisible(true);
     }
@@ -79,6 +95,8 @@ private:
     static constexpr std::array titles{"Playback", "Processing", "Swell", "Audition", "Recovery",
         "Appearance", "Storage", "About"};
     std::array<juce::Component*, titles.size()> pages{};
+    std::array<int,titles.size()> heights{};
+    controls::FocusViewport viewport;
     controls::SegmentedSelector strip;
     SettingsPage selected = SettingsPage::playback;
     juce::Component* active = nullptr;

@@ -19,6 +19,12 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 25 adds measured `WrappedLabel` prose and shared
+full descriptions to `EllipsisLabel`. Use the wrapped label's preferred height
+when laying out following content, with existing focus-aware scrolling for long
+pages. Context help uses the semantic `contextHelpInk` role, reusing #00C2CC.
+See the [P3 consumer and validation record](../validation/2026-11-10-issue-107-text-help.md).
+
 Production standards revision 24 adopts the approved P8 waveform gestures.
 Reuse `WaveformGestures` for input classification, pointer-wheel zoom and
 focus rendering. Each main canvas keeps its own bounds and model binding.

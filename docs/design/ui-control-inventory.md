@@ -73,7 +73,7 @@ shared controls #16/#37, responsive #58 and merged #80 shared IR field.
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | L6 `sensitivity`, embedded FieldNumericInput and steppers | C5/C4 SliderControl + InvocationSlider | I/H/P/F/D/E. Shared percent entry and track. Plain/Ctrl+wheel moves 1/0.1 percentage points on the track. Learn pass remains pinned. | P4 field and P5 track adopted. |
-| L7 `captureTitle`, `captureGroup`, `recaptureLabel`, `recaptureHelp`, `automaticLabel`, `automaticToggleLabel`, `automaticHelp`, `sensitivityLabel`, `autoStopLabel`, `autoStopHelp`, `manualHelp`, `generateReason`, `soundScope`; nested `irEditor.label`, `irEditor.status` | C3 screen labels/roles plus shared IR EllipsisLabel/FieldMessage | I/D/B/overflow; IR feedback uses normal helper font, red actionable failure, readable disabled-input feedback and collapsed empty space; scope remains screen-owned | Retain #80 revisions 8/10; P3 reference for other fields |
+| L7 `captureTitle`, `captureGroup`, `recaptureLabel`, `recaptureHelp`, `automaticLabel`, `automaticToggleLabel`, `automaticHelp`, `sensitivityLabel`, `autoStopLabel`, `autoStopHelp`, `manualHelp`, `generateReason`, `soundScope`; nested `irEditor.label`, `irEditor.status` | C3 screen labels/roles plus shared IR EllipsisLabel/FieldMessage | I/D/B/overflow; IR feedback uses normal helper font, red actionable failure, readable disabled-input feedback and collapsed empty space; scope remains screen-owned | Retain #80 revisions 8/10; P3 measured wrapping adopted for screen prose; existing IR feedback retained |
 | L8 painted `timelineHeading`, `timelineCaption`, `timelineRuler`, `timelineStatus`, empty prompt and interactive `chart` | C3/C8 LearnWorkspace specialized canvas | I/H/F/S/B; left-drag pin, wheel zoom, middle-drag pan, Home/End/arrows/Escape; recorded/silence/gap/unavailable distinct; no generic input field | P8 waveform gestures and shared focus adopted, retaining #11/#58 inspection |
 
 ## Perform
@@ -95,7 +95,7 @@ Approval: scoped #46/#49/#4/#68/#93/#58 evidence, not blanket legacy compliance.
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
 | P7 `valueControls[0..10]`: Target, Source Start, Source End, Pre-roll, End Offset, Fade In, Fade Out, Level, Curve In, Curve Out, Move Wet | C5/C4 KnobValue, nested Dial/Caption/FieldTextEditor | I/H/F/D/E/V. Shared dial state, domain wheel steps, optional 0 dB Level detent, guarded Reset and exact entry. | P4 entries and P5 dials adopted. |
-| P8 `inspectorHeading`, `listEmpty`, `inspectorEmpty`, `auditionHeading`, `editorReadout`, `listCount`, `listLabel`, `inspectorGroups[0..2]`; `selectedStatus`, `monitorStatus`, `performSoundScope`; nested `irEditor.label`, `irEditor.status` | C3 roles/plain Labels, EllipsisLabel and IR FieldMessage | I/D/B/overflow; screen scope outside shared IR field; feedback collapse reflows Level while Reset stays fixed; remaining statuses ellipsize | P3 retain #80 revisions 8/10; do not duplicate field feedback |
+| P8 `inspectorHeading`, `listEmpty`, `inspectorEmpty`, `auditionHeading`, `editorReadout`, `listCount`, `listLabel`, `inspectorGroups[0..2]`; `selectedStatus`, `monitorStatus`, `performSoundScope`; nested `irEditor.label`, `irEditor.status` | C3 roles/plain Labels, EllipsisLabel and IR FieldMessage | I/D/B/overflow; screen scope outside shared IR field; feedback collapse reflows Level while Reset stays fixed; remaining statuses ellipsize | P3 shared roles and explicit single-line/wrapped labels adopted; existing field feedback retained |
 | P9 `list`, generated `RowSurface`, inherited ListBox viewport/scrollbars | C7 SwellList specialized identity list | I/H/P/F/S/D/B; real Enabled and More controls expose row actions, with Tab traversal for the primary row; ListBox owns selection and refresh preserves identity and scroll | P7 adopted at revision 23, with #4 and #93 behavior retained |
 | P10 `inspectorViewport`, `inspectorContent` | C7 FocusViewport + screen layout | scroll/focus/overflow; reveal policy explicit, not implied by viewport type | P7 verified with existing focus reveal and pinned Reset |
 
@@ -139,9 +139,9 @@ as recorded in #58 evidence. Legacy other-page controls remain explicit debt.
 | --- | --- | --- | --- |
 | S8 `liveLevel` (Playback), `separationSlider` (Processing), `tailSlider` and `auditionSlider` (Audition), `toneStartSlider` and `toneEndSlider` (Recovery) | C5/C4 SliderControl with compact FieldNumericInput | I/H/P/F/D/E. Shared tracks use domain wheel steps. Compact boxes keep their suffix, range and reset rules, and Separation keeps its captured pass. | P4 fields and P5 tracks adopted. |
 | S9 `barStartEditor`, `barEndEditor` and their captions | C4 FieldTextEditor and C3 FieldFeedbackLabel | I/F/D/E/V. Digits only, shared wrapping feedback. Focus loss checks the draft. Return and Set source from bars submit to the bound swell and session. Context changes clear the pair. | P3 presentation retained and verified in P4. |
-| S10 `settingsLabels[0..11]`, `settingsHelp[0..5]`, `gainPolicyLabel`, `liveLevelLabel`, `separationLabel`, `tailLabel`, `auditionLabel`, `toneStartLabel`, `toneEndLabel`, `recaptureStatus`; `regenerationFeedback` | C3 legacy label/help layout; feedback EllipsisLabel | I/D/B/overflow; most help built with raw body/secondary setup, About helper uses semantic role; regeneration feedback retains session; no universal association | P3 preserve copy and accepted feedback; link exact groups |
-| S11 `aboutHeading`, `buildInformationLabels[0..2]`, `buildInformationValues[0..2]` | C3 roles + EllipsisLabel | I/overflow; full build value in description/tooltip; copy feedback uses standard accessible event | P3 retain #59 unchanged |
-| S12 `presentationSizeLabel`, `presentationScaleLabel`, `presentationHelp` | C3 Appearance composition | I/B/overflow; fit recovery help distinct from requested profile and effective size | P3 retain #58 profile behavior |
+| S10 `settingsLabels[0..11]`, `settingsHelp[0..5]`, `gainPolicyLabel`, `liveLevelLabel`, `separationLabel`, `tailLabel`, `auditionLabel`, `toneStartLabel`, `toneEndLabel`, `recaptureStatus`; `regenerationFeedback` | C3 shared captions, WrappedLabel help and EllipsisLabel feedback | I/D/B/overflow; shared semantic roles and measured prose; regeneration feedback retains session | P3 adopted with measured Settings help and scrollable page content |
+| S11 `aboutHeading`, `buildInformationLabels[0..2]`, `buildInformationValues[0..2]` | C3 roles + EllipsisLabel | I/overflow; full build value in description/tooltip; copy feedback uses standard accessible event | P3 verified existing About roles, full build values and copy authority |
+| S12 `presentationSizeLabel`, `presentationScaleLabel`, `presentationHelp` | C3 Appearance composition | I/B/overflow; fit recovery help distinct from requested profile and effective size | P3 shared labels with existing #58 profile behavior |
 
 ## Diagnostics
 
@@ -157,7 +157,7 @@ treated as production primary controls.
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
-| D4 `status`, `detail`, `captureDiagnostic`, `playbackDiagnostic`, `policyDiagnostic`, `liveDiagnostic` | C3 diagnostic text/labels | I/B/overflow; long technical content and throttled refresh; copyDiagnostics exposes full text | P3 retain diagnostic precision; not new product status controls |
+| D4 `status`, `detail`, `captureDiagnostic`, `playbackDiagnostic`, `policyDiagnostic`, `liveDiagnostic` | C3 diagnostic text/labels | I/B/overflow; long technical content and throttled refresh; copyDiagnostics exposes full text | P3 measured multiline labels adopted, retaining diagnostic precision and full copy |
 | D5 `fields[name..fadeOut]` and `placementEditor`, with their captions | C4 shared read-only FieldTextEditor | I/F/D/overflow. Accessible precision and copying, existing timing visibility, and hidden Name. | P4 read-only adoption. |
 | D6 `markerKnob`, `regenerationKnob`, `markerLabel`, `markerState`, `regenerationLabel`, `headerStatus`, `spanLabel`, `helper` | C5/C3 retained legacy controls and labels | Hidden or zero-size sensitivity boxes and their saved compatibility values remain in place. | P4 and P5 audited and retained as compatibility seams. |
 | D7 `diagnosticsViewport`, `diagnosticsContent` | C7 FocusViewport/FlatSurface | scroll/focus/overflow; diagnostic panel inside separately bounded auxiliary window | P7/P8; no independent duplicate model |
@@ -203,6 +203,11 @@ even when they have no persistent Button/Label member of their own.
 
 ## Family roadmap and delivery packets
 
+The P3 rollout accounts for every visible text group, including the closed #8
+Storage/Recovery surfaces. Its [consumer dispositions and evidence](../validation/2026-11-10-issue-107-text-help.md)
+identify the planned shared implementation, verified existing policy or retained
+native presentation for each group.
+
 ### Merged-main addendum
 
 Main `f98157e` subsequently delivered the independently owned #8 recovery/storage
@@ -228,7 +233,7 @@ Keep the family open until every consumer has a recorded disposition.
 | --- | --- | --- |
 | P1 Commands, glyph actions and latches | H1, L1/L2, P1/P2/P6 command children, E1/E4 command children, S2/S3, D1/D2; C1 shared command family | Delivered in PR #114. Native family revision 4 and the IR alignment correction were approved. Explicit roles replace all 20 persistent legacy TextButtons. Callbacks, captured ownership and effective latch state are preserved. |
 | P2 Selectors and menus | L3, P3, E3, four S1 selectors and S6 adopted by `unify-selector-states`. N1 and N2 use the shared action presenter | Selectors preserve catalogue/ID/epoch/input/pass and deliberate no-wheel policy. Swells and Reset retain captured actions and pointer anchoring. Recovery candidateBox stays with #8. Rename dialog input stays P4. |
-| P3 Text, context help and feedback | S9 established the shared caption/help/validation composition. Apply local field feedback within each owning field family where it has a position for help or validation. This packet retains shared text, context help, notices and readouts across H3, L7/L8, P8, E5/E6, S10/S11/S12, D4/D5/D6 and N4. | Preserve notice precedence, transport geometry and full diagnostic copy. Each family verifies its field feedback alongside its own layout and accessibility checks. |
+| P3 Text, context help and feedback | Shared measured wrapping and full-description labels across H3, L7/L8, P8, E5/E6, S10/S11/S12, D4/D5/D6 and N4, including Storage/Recovery from closed #8. | Revision 25 adoption. Existing field feedback, notice precedence, transport geometry and full diagnostic copying retain their approved specialized policies. See the P3 consumer evidence. |
 | P4 Numeric and text fields | L6, P7, E5, S8/S9, D5, N1 and N4 adopted or verified by `unify-numeric-text-fields`. D6 audited as retained hidden seams. | Shared text and numeric surfaces, wrapped feedback where it has a position, exact and explicit edit lifecycles, read-only copying and configured wheel steps. |
 | P5 Knobs and sliders | L6, P6/E4, P7, E5, S8 and N4 adopted by `unify-knob-slider-interactions`. D6 retained as hidden compatibility seams. | Shared dial/track feedback and Ctrl+wheel, Level home detent, preserved gesture guards, Reset, independent pair edits and display-only values. |
 | P6 Switches and toggles | L4, P4 and S4/S5 adopted by `unify-switch-toggle-states`. D3 retained hidden. | Shared toggle states. Labeled switches in Learn and Settings, inline checkboxes in the Swell Inspector, and preserved pass and binding authority. |

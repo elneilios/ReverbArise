@@ -6,6 +6,7 @@
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
 #include <UI/Controls/EllipsisLabel.h>
+#include <UI/Controls/WrappedLabel.h>
 #include <UI/Controls/TransportReadout.h>
 #include <UI/ConvolutionIrBinding.h>
 #include <UI/WorkflowHeader.h>
@@ -67,7 +68,8 @@ private:
     std::optional<m3::ui::PresentationFitContext> appliedPresentationDisplay;
     juce::Point<int> appliedPresentationSize;
     m3::ui::controls::ChoiceSelector presentationSizeBox,presentationScaleBox;
-    juce::Label presentationSizeLabel,presentationScaleLabel,presentationHelp;
+    m3::ui::controls::EllipsisLabel presentationSizeLabel,presentationScaleLabel;
+    m3::ui::controls::WrappedLabel presentationHelp;
     void initialisePresentation();
     void applyPresentation();
     void resizePresentation();
@@ -94,8 +96,9 @@ private:
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;
     m3::ui::controls::TransportReadout hostInfo;
-    juce::Label inspectorHeading,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
-    std::array<juce::Label,3> inspectorGroups;
+    m3::ui::controls::EllipsisLabel inspectorHeading,auditionHeading,editorReadout,listCount;
+    m3::ui::controls::WrappedLabel listEmpty,inspectorEmpty;
+    std::array<m3::ui::controls::EllipsisLabel,3> inspectorGroups;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {servicePresentation();modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
     void setDiagnosticsOpen(bool);
@@ -168,7 +171,8 @@ private:
     std::unique_ptr<m3::ui::controls::ChoicePopup> swellMenu;
     juce::Component::SafePointer<juce::AlertWindow> renameDialog;
     std::unique_ptr<juce::AlertWindow> deleteSwellConfirmation;
-    juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
+    m3::ui::controls::WrappedLabel status,detail,recaptureStatus;
+    m3::ui::controls::EllipsisLabel listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,toneStartLabel,toneEndLabel;
     m3::ui::controls::CapturedActionButton removeButton{"Delete"};
     m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
@@ -197,7 +201,7 @@ private:
     std::optional<FlagScope> enabledScope,soloScope,freezeScope,muteScope;
     juce::ComboBox candidateBox;
     m3::ui::controls::ChoiceSelector inCurveBox,outCurveBox;
-    std::array<juce::Label,fieldCount> fieldLabels;
+    std::array<m3::ui::controls::EllipsisLabel,fieldCount> fieldLabels;
     std::array<m3::ui::controls::FieldTextEditor,fieldCount> fields;
     m3::ui::controls::FieldTextEditor barStartEditor{"Bar start"},barEndEditor{"End excl."};
     m3::ui::controls::FieldFeedbackLabel sourceRangeFeedback;
@@ -212,18 +216,18 @@ private:
     juce::Component inspectorContent;
     m3::ui::FlatSurface diagnosticsContent;
     void layoutLiveDiagnostics();
-    juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
+    m3::ui::controls::WrappedLabel captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
     std::array<juce::Component,7> settingsPages;
     std::unique_ptr<m3::ui::PortableStoragePanel> storageInventory;
     m3::ui::controls::FocusViewport storageViewport;
     juce::String storageIdentity;
     m3::ui::SettingsTabs settingsTabs;
-    std::array<juce::Label,12> settingsLabels;
-    std::array<juce::Label,6> settingsHelp;
+    std::array<m3::ui::controls::EllipsisLabel,12> settingsLabels;
+    std::array<m3::ui::controls::WrappedLabel,6> settingsHelp;
     m3::ui::controls::EllipsisLabel regenerationFeedback;
     uint64_t regenerationFeedbackSession=0;
-    juce::Label aboutHeading;
-    std::array<juce::Label,3> buildInformationLabels;
+    m3::ui::controls::EllipsisLabel aboutHeading;
+    std::array<m3::ui::controls::EllipsisLabel,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
     m3::ui::controls::ActionButton copyBuildInformation{"Copy build information",m3::ui::controls::CommandIcon::none,true};
     std::function<void(const juce::String&)> buildInformationWriter;

@@ -141,8 +141,7 @@ public:
         const auto contentWidth=std::max(1,contentViewport.getWidth()-contentViewport.getScrollBarThickness());
         const auto folderHeight=workingFolder?workingFolder->preferredHeight(contentWidth):0;
         const auto inventoryHeight=inventory.preferredHeight(contentWidth);
-        juce::AttributedString statusText(status.getText());statusText.setFont(status.getFont());juce::TextLayout layout;layout.createLayout(statusText,static_cast<float>(std::max(1,contentWidth-2*spacing::section)));
-        const auto statusHeight=std::max(learnTypography::secondaryLineHeight,static_cast<int>(std::ceil(layout.getHeight())))+spacing::tight;
+        const auto statusHeight=std::max(learnTypography::secondaryLineHeight,status.preferredHeight(contentWidth-2*spacing::section))+spacing::tight;
         const auto destinationHeight=selected==juce::File{}?0:controlGeometry::labelHeight+spacing::tight;destination.setVisible(destinationHeight!=0);
         const auto contentHeight=folderHeight+inventoryHeight+spacing::related+controlGeometry::headingHeight+spacing::related
             +destinationHeight+controlGeometry::labelHeight+spacing::tight+statusHeight+spacing::related;
@@ -205,7 +204,7 @@ private:
     Worker worker;std::shared_ptr<const Result> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport contentViewport;
     std::unique_ptr<WorkingFolderPanel> workingFolder;
-    StorageInventoryPanel inventory;juce::Label heading,status;controls::EllipsisLabel destination,recoveryDestination;
+    StorageInventoryPanel inventory;controls::EllipsisLabel heading;controls::WrappedLabel status;controls::EllipsisLabel destination,recoveryDestination;
     controls::ActionButton backupButton{"Back up assets..."},restoreButton{"Restore backup..."},locateButton{"Locate assets..."},cancelButton{"Stop operation"};
 };
 }
