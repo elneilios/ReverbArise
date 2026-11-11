@@ -1,4 +1,5 @@
 #pragma once
+#include "Controls/SurfaceLifecycle.h"
 #include <Storage/WorkingFolder.h>
 #include <UI/Controls/ActionButton.h>
 #include <UI/Controls/WrappedLabel.h>
@@ -48,7 +49,7 @@ public:
         choose.onClick=[this]{select();};use.onClick=[this]{activate();};stop.onClick=[this]{worker.cancel=true;setStatus("Stopping safely. The current working folder is retained.");};
         refreshLocation();refresh();startTimerHz(10);
     }
-    ~WorkingFolderPanel()override{stopTimer();worker.cancel=true;}
+    ~WorkingFolderPanel()override{stopTimer();worker.cancel=true;pickerInvocation.invalidate();chooser.reset();}
     // Production publication runs on this panel's worker and completes before
     // success feedback. The processor outlives the joined panel worker.
     using WorkerCommit=std::function<bool(const std::shared_ptr<Folder>&,const Input&,juce::String&,const storage::portable::Hooks&)>;
@@ -66,8 +67,8 @@ public:
                 if(const auto* association=xml->getChildByName("WorkingFolder");association && association->getStringAttribute("writer")==storage::portable::workingFolderInfo(*reply->folder).association.writer)return;
         }
         candidate.reset();setStatus({});refreshLocation();refresh();}
-    void locateExisting(){select(true);}
-    void restoreFromBackup(const juce::File& receipt){select(false,receipt);}
+    void locateExisting(juce::Component* opener=nullptr){select(true,{},opener);}
+    void restoreFromBackup(const juce::File& receipt,juce::Component* opener=nullptr){select(false,receipt,opener);}
     Picker picker;
     bool busy()const{return worker.active.load();}
     bool occupied()const{return busy() || choosing;}
@@ -119,11 +120,12 @@ private:
         current.setText(text,juce::dontSendNotification);current.setTooltip(text);current.setDescription(text);
     }}
     void refresh(){const bool idle=available && !busy() && !choosing;choose.setVisible(!busy());use.setVisible(!busy());choose.setEnabled(idle);use.setEnabled(idle && candidate!=nullptr);stop.setVisible(busy());resized();}
-    void select(bool locate=false,juce::File receipt={})
+    void select(bool locate=false,juce::File receipt={},juce::Component* opener=nullptr)
     {
         if(!available || busy() || choosing)return;Input input;juce::String error;if(!provider(input,error)){setStatus(error);return;}
-        choosing=true;refresh();auto complete=[safe=juce::Component::SafePointer<WorkingFolderPanel>(this),input,locate,receipt](juce::File folder){
-            if(!safe)return;safe->choosing=false;if(folder==juce::File{} || !safe->isShowing()){safe->refresh();return;}
+        const auto ticket=pickerInvocation.begin(opener?*opener:choose,this);if(!ticket)return;
+        choosing=true;refresh();auto complete=[safe=juce::Component::SafePointer<WorkingFolderPanel>(this),input,locate,receipt,ticket=*ticket](juce::File folder){
+            if(!safe || !ticket.complete())return;safe->choosing=false;if(folder==juce::File{} || !safe->isShowing()){safe->refresh();return;}
             Input current;juce::String error;if(!safe->provider(current,error) || !same(current,input)){safe->candidate.reset();safe->setStatus("The session changed while choosing. Prepare the folder again.");safe->refresh();return;}
             safe->operation=input;safe->candidate.reset();const auto registry=safe->registryRoot;const bool recovery=safe->recoveryNeeded;const auto commit=safe->publishOnWorker;
             const bool started=safe->worker.begin([input,folder,registry,recovery,locate,commit,receipt](const auto& hooks){Reply reply;reply.success=receipt!=juce::File{}?storage::portable::prepareRestoredWorkingFolder(input,receipt,folder,registry,reply.folder,reply.error,hooks):locate?storage::portable::prepareAssociatedLocation(input,folder,registry,reply.folder,reply.error,hooks):recovery?storage::portable::prepareRecoveryWorkspace(input,folder,registry,reply.folder,reply.error,hooks):storage::portable::prepareWorkingFolder(input,folder,registry,reply.folder,reply.error,hooks);
@@ -144,6 +146,7 @@ private:
     }
     void timerCallback()override{poll();}
     Provider provider;juce::File registryRoot;Commit publish;Input operation;bool choosing=false,externalFooter=false,available=true,recoveryNeeded=false;
+    controls::SurfaceInvocation pickerInvocation;
     Worker worker;std::shared_ptr<Folder> candidate;std::shared_ptr<const Reply> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport viewport;controls::EllipsisLabel heading;controls::WrappedLabel help,status;controls::EllipsisLabel current,selected;
     controls::ActionButton choose{"Choose folder..."},use{"Use This Folder"},stop{"Stop operation"};

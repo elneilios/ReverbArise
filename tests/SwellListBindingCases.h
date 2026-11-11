@@ -107,6 +107,9 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
         pump();
         auto* dialog=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
         REQUIRE(dialog && dynamic_cast<FieldTextEditor*>(named(*dialog,"name")));
+        REQUIRE(dialog->isOnDesktop() && dialog->isUsingNativeTitleBar());
+        auto* field=dynamic_cast<FieldTextEditor*>(named(*dialog,"name"));
+        REQUIRE(field->getHighlightedRegion().getLength()==field->getText().length());
         return dialog;
     };
     const auto originalName = m3::find(engine.savedSession(), first)->name;

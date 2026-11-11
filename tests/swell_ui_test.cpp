@@ -12,6 +12,7 @@
 #include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
 #include "TextPresentationCases.h"
+#include "SurfaceLifecycleCases.h"
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -329,6 +330,8 @@ static void sourceRangeFeedbackCases()
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && juce::String(argv[1])=="--test-surface-lifecycle")
+    {surfaceLifecycleCases([]{juce::MessageManager::getInstance()->runDispatchLoopUntil(30);});return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-source-range-feedback"){sourceRangeFeedbackCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
