@@ -80,6 +80,8 @@ This directory covers product identity, the existing implementation, development
 
 - [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.
 
+- [First main → Loop integration](validation/2026-11-10-loop-main-integration.md) — merge decisions, combined native verification and explicit host/DPI limits.
+
 - [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
 
 - [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — delivered source/thread audit and original measurements; waveform optimisation subsequently shipped in #67 / PR #69. Host/resource follow-up remains tracked by #25.

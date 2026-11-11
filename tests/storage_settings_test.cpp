@@ -105,16 +105,33 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     contentViewport->setViewPosition(0,10000);
     REQUIRE(action("chooseWorkingFolder").getBounds()==chooseBounds && chooseBounds.getY()>=contentViewport->getBottom()
         && chooseBounds.getBottom()<=action("backupAssets").getY());
-    REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});
+    REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy() && working->ready();});
     if(!working->ready())throw std::runtime_error("Working-folder preparation: "+working->statusText().toStdString());
     REQUIRE(processor.swellEngine().assetDirectory()==firstRoot && action("useWorkingFolder").isEnabled());
-    action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});storage->poll();
     const auto associatedRoot=associated.file.getChildFile("working").getChildFile(beforeCapture.manifest.projectId).getChildFile(beforeCapture.manifest.instanceId);
+    action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy()
+        && processor.swellEngine().assetDirectory()==associatedRoot && working->statusText().contains("Save your DAW project");});
     REQUIRE(processor.swellEngine().assetDirectory()==associatedRoot && working->statusText().contains("Save your DAW project"));
     REQUIRE(processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
     processor.getStateInformation(after);auto associatedState=juce::AudioProcessor::getXmlFromBinary(after.getData(),static_cast<int>(after.getSize()));
     REQUIRE(associatedState && associatedState->getStringAttribute("stateVersion")=="9");
-    editor.refresh();wait([&]{editor.refresh();const auto* current=storage->displayedReport();return current && !current->files.empty() && current->files.front().root==associatedRoot.getFullPathName();});
+    try
+    {
+        editor.refresh();wait([&]{editor.refresh();const auto* current=storage->displayedReport();return current && !current->files.empty() && current->files.front().root==associatedRoot.getFullPathName();});
+    }
+    catch(...)
+    {
+        m3::storage::portable::Input pinned;juce::String pinError;
+        const auto pinnedOk=processor.pinPortableAssets(pinned,pinError,true);
+        const auto* current=storage->displayedReport();
+        std::cerr<<"Storage report after association: showing="<<storage->isShowing()<<" scanning="<<storage->scanning()
+            <<" report="<<(current!=nullptr)<<" files="<<(current?current->files.size():0)
+            <<" expected="<<associatedRoot.getFullPathName()<<" pinned="<<pinnedOk<<" root="<<pinned.instanceRoot.getFullPathName()
+            <<" error="<<pinError<<"\n";
+        if(current){for(const auto& issue:current->issues)std::cerr<<"Inventory issue: "<<issue<<"\n";
+            if(!current->files.empty())std::cerr<<"Inventory root: "<<current->files.front().root<<"\n";}
+        throw;
+    }
     for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
     storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);contentViewport->setViewPosition(0,0);
     REQUIRE(working->statusText().contains("Save your DAW project"));

@@ -76,6 +76,8 @@ public:
     void visibilityChanged()override{if(!isShowing()){worker.cancel=true;candidate.reset();refresh();}}
     void poll()
     {
+        const auto pending=worker.answer.load();
+        if(!isShowing() && !occupied() && (!pending || pending==shown))return;
         refreshLocation();
         if(busy())return;const auto reply=worker.answer.load();if(!reply || reply==shown)return;shown=reply;
         if(reply->committed){candidate.reset();refreshLocation();setStatus(reply->folder && storage::portable::workingFolderInfo(*reply->folder).incompleteRecovery

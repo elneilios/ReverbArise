@@ -43,6 +43,15 @@ variant or Storage Learn/Generate control is introduced. Scan retention remains
 unchanged when returning to the same page; a changed session/root gets its own
 inventory scope.
 
+Hidden idle Storage and working-folder panels skip repeated session pinning and
+serialization. Active jobs and unconsumed results still receive service; opening
+the page refreshes its current scope. Native fixtures wait for the prepared
+candidate or published association status, since a stopped worker alone does
+not establish that the UI has consumed its result.
+A consumed reload marker identifies both the control epoch and instance root;
+it cannot suppress a scan after a same-epoch folder association. The marker is
+one-shot, including when a different scope supersedes it.
+
 ## Ownership and publication
 
 `Storage/WorkingFolder.h` owns worker-only exact-byte preparation, verification,

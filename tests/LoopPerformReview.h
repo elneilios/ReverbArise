@@ -1,4 +1,6 @@
 #pragma once
+#include <chrono>
+#include <thread>
 
 namespace preview46
 {
@@ -21,6 +23,22 @@ static void loopPerformReview(bool review,const juce::File& output)
     auto& processor=*fixture.processor;
     processor.setLoopPlaybackReference({{48000,137},16,4,4,true},true);
     auto& engine=processor.swellEngine();
+    // The native fixture normally advances audio synchronously. Painting/PNG
+    // output can exceed the production callback-gap guard in Debug. Feed the
+    // actual processor on an independent callback thread while capturing UI,
+    // just as a host continues audio while its message thread paints.
+    const auto withAudioCallbacks=[&](auto&& capture)
+    {
+        std::jthread callbacks([&](std::stop_token stop)
+        {
+            while(!stop.stop_requested())
+            {
+                fixture.tick();
+                std::this_thread::sleep_for(std::chrono::duration<double>(fixture.frames/fixture.rate));
+            }
+        });
+        return capture(); // jthread stops and joins before the next fixture edit.
+    };
     engine.setAutomaticProcessing(false);
     auto preference=processor.getLoopCapturePreference();
     preference.count=4;
@@ -119,14 +137,17 @@ static void loopPerformReview(bool review,const juce::File& output)
     for(int block=0;block<3;++block)fixture.tick();
     if(output!=juce::File{})
     {
-        REQUIRE(output.createDirectory().wasOk());
-        for(const auto scale:{100,125})
+        withAudioCallbacks([&]
         {
-            REQUIRE(editor.setPresentationScale(scale));editor.refresh();
-            writeLoopPreview(output.getChildFile("loop-blocked-"+juce::String(scale)+".png"),
-                editor.createComponentSnapshot(editor.getLocalBounds(),true));
-        }
-        REQUIRE(editor.setPresentationScale(100));
+            REQUIRE(output.createDirectory().wasOk());
+            for(const auto scale:{100,125})
+            {
+                REQUIRE(editor.setPresentationScale(scale));editor.refresh();
+                writeLoopPreview(output.getChildFile("loop-blocked-"+juce::String(scale)+".png"),
+                    editor.createComponentSnapshot(editor.getLocalBounds(),true));
+            }
+            REQUIRE(editor.setPresentationScale(100));
+        });
     }
     fixture.dryOffset=2171;
     fixture.through(fixture.marker(80));
@@ -143,10 +164,12 @@ static void loopPerformReview(bool review,const juce::File& output)
     REQUIRE(status.getText()=="Waiting for bar");
     REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("Cancel"));
     if(output!=juce::File{})
-        writeLoopPreview(output.getChildFile("loop-queued.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
+        withAudioCallbacks([&]{writeLoopPreview(output.getChildFile("loop-queued.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));});
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     fixture.tick();editor.refresh();
+    if(!(processor.loopPlaybackStatus().playback==Playing::standby && cue.getButtonText()=="Cue Loop" && status.getText()=="Ready"))
+        std::cerr<<"Loop cancel state="<<static_cast<int>(processor.loopPlaybackStatus().playback)<<" phase="<<static_cast<int>(processor.loopPlaybackStatus().phase)<<" status="<<status.getText()<<" button="<<cue.getButtonText()<<"\n";
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::standby && cue.getButtonText()=="Cue Loop" && status.getText()=="Ready");
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
@@ -164,7 +187,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     REQUIRE(values[0]=="1" && values[1].getDoubleValue()>=1 && values[1].getDoubleValue()<2);
     REQUIRE(cue.getBounds()==readyBounds && cue.getTooltip().contains("next lead-in"));
     if(output!=juce::File{})
-        writeLoopPreview(output.getChildFile("loop-stop-active.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));
+        withAudioCallbacks([&]{writeLoopPreview(output.getChildFile("loop-stop-active.png"),editor.createComponentSnapshot(editor.getLocalBounds(),true));});
     const auto previousView=timeline.viewport();
     const auto phraseEnd=capture.manifest.loop->endSample;
     const m3::SwellViewport finalBar{phraseEnd * .75,static_cast<double>(phraseEnd)};
@@ -177,23 +200,25 @@ static void loopPerformReview(bool review,const juce::File& output)
     const auto leadIn=engine.snapshot().loopLeadIn;
     REQUIRE(leadIn.peaks && std::any_of(leadIn.peaks->begin(),leadIn.peaks->end(),
         [](const auto& peak){return peak.maximum > peak.minimum;}));
-    timeline.createComponentSnapshot(timeline.getLocalBounds(),true);
+    withAudioCallbacks([&]{timeline.createComponentSnapshot(timeline.getLocalBounds(),true);});
     const auto paintedColumns=timeline.wetPaintMetrics().columnsPainted;
     REQUIRE(paintedColumns > 0);
     REQUIRE(engine.selectTargets({second},second));
     editor.refresh();
     timeline.setViewport(finalBar);
     REQUIRE(engine.snapshot().loopLeadIn == leadIn);
-    const auto otherSelection=editor.createComponentSnapshot(editor.getLocalBounds(),true);
+    const auto otherSelection=withAudioCallbacks([&]{return editor.createComponentSnapshot(editor.getLocalBounds(),true);});
     REQUIRE(timeline.wetPaintMetrics().columnsPainted == paintedColumns);
     if(output!=juce::File{})
-        writeLoopPreview(output.getChildFile("loop-next-lead-in.png"),otherSelection);
+        withAudioCallbacks([&]{writeLoopPreview(output.getChildFile("loop-next-lead-in.png"),otherSelection);});
     REQUIRE(engine.selectTargets({first},first));
     editor.refresh();
     timeline.setViewport(previousView);
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     fixture.tick();editor.refresh();
+    if(!(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now"))
+        std::cerr<<"Loop finish state="<<static_cast<int>(processor.loopPlaybackStatus().playback)<<" phase="<<static_cast<int>(processor.loopPlaybackStatus().phase)<<" status="<<status.getText()<<" button="<<cue.getButtonText()<<"\n";
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now");
     REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
     fixture.through(fixture.marker(112)+512);
@@ -205,24 +230,27 @@ static void loopPerformReview(bool review,const juce::File& output)
 
     if(output!=juce::File{})
     {
-        REQUIRE(output.createDirectory().wasOk());
-        Composition song;
-        auto songEditor=song.createComparisonEditor();
-        songEditor->enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
-        REQUIRE(songEditor->setPresentationSize(900,600));
-        songEditor->setVisible(true);
-        for(const auto scale:{100,125})
+        withAudioCallbacks([&]
         {
-            REQUIRE(songEditor->setPresentationScale(scale) && editor.setPresentationScale(scale));
-            songEditor->refresh();editor.refresh();
-            REQUIRE(!require<controls::ActionButton>(*songEditor,"loopCue").isVisible());
-            const auto songImage=songEditor->createComponentSnapshot(songEditor->getLocalBounds(),true);
-            const auto loopImage=editor.createComponentSnapshot(editor.getLocalBounds(),true);
-            juce::Image comparison(juce::Image::RGB,songImage.getWidth()+loopImage.getWidth(),loopImage.getHeight(),true);
-            {juce::Graphics g(comparison);g.drawImageAt(songImage,0,0);g.drawImageAt(loopImage,songImage.getWidth(),0);}
-            writeLoopPreview(output.getChildFile("song-loop-"+juce::String(scale)+".png"),comparison);
-        }
-        REQUIRE(editor.setPresentationScale(100));
+            REQUIRE(output.createDirectory().wasOk());
+            Composition song;
+            auto songEditor=song.createComparisonEditor();
+            songEditor->enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
+            REQUIRE(songEditor->setPresentationSize(900,600));
+            songEditor->setVisible(true);
+            for(const auto scale:{100,125})
+            {
+                REQUIRE(songEditor->setPresentationScale(scale) && editor.setPresentationScale(scale));
+                songEditor->refresh();editor.refresh();
+                REQUIRE(!require<controls::ActionButton>(*songEditor,"loopCue").isVisible());
+                const auto songImage=songEditor->createComponentSnapshot(songEditor->getLocalBounds(),true);
+                const auto loopImage=editor.createComponentSnapshot(editor.getLocalBounds(),true);
+                juce::Image comparison(juce::Image::RGB,songImage.getWidth()+loopImage.getWidth(),loopImage.getHeight(),true);
+                {juce::Graphics g(comparison);g.drawImageAt(songImage,0,0);g.drawImageAt(loopImage,songImage.getWidth(),0);}
+                writeLoopPreview(output.getChildFile("song-loop-"+juce::String(scale)+".png"),comparison);
+            }
+            REQUIRE(editor.setPresentationScale(100));
+        });
     }
 
     const int missedPhraseBeat=((fixture.nextBeat+15)/16)*16;

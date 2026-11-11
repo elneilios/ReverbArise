@@ -1184,10 +1184,9 @@ void PreverbAudioProcessorEditor::refresh()
     const auto now=juce::Time::getMillisecondCounterHiRes();
     if(diagnosticsOpen && (diagnosticsRefreshedAt<0 || now-diagnosticsRefreshedAt>=200))
     {
-    diagnosticsRefreshedAt=now;
     const auto timingEvidence=(mode==workflow::Mode::live?m3::ui::gridDiagnosticsText(timeline.gridEvidence())
         :juce::String("Fixed grid: not evaluated outside Perform\n"))+"\n"+m3::ui::liveDiagnosticsText(state);
-    liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);layoutLiveDiagnostics();
+    liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);
     juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(diagnostics.samplePosition):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(diagnostics.ppqPosition,3):"unavailable")
         <<" | "<<(diagnostics.tempoAvailable?juce::String(diagnostics.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(diagnostics.numerator)+"/"+juce::String(diagnostics.denominator):"meter unavailable")<<" | "<<juce::String(diagnostics.sampleRate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
@@ -1245,6 +1244,10 @@ void PreverbAudioProcessorEditor::refresh()
     for(size_t i=0;i<fields.size();++i)
         if(fields[i].getText()!=exactValues[i])fields[i].setText(exactValues[i],false);
     if(placementEditor.getText()!=placement)placementEditor.setText(placement,false);
+    // Measure the refresh interval from completion. Slow native text layout
+    // must leave a quiet interval for input instead of making the timer due
+    // again before its previous callback has returned.
+    diagnosticsRefreshedAt=juce::Time::getMillisecondCounterHiRes();
 
     }
     const auto arm=processor.getRecaptureSnapshot();cancelButton.setEnabled(arm.active);recaptureButton.setEnabled(hasSelection && !arm.active);
