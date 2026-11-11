@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed completed P8 dialog/native-picker/auxiliary flows, safe initial actions, Escape/native close, nested/delegated focus return, chooser teardown and unchanged Storage guards. Updated musician-facing keyboard/closing guidance; approved typography and existing capture, Perform and Export instructions remain accurate.",
+  "summary": "Reviewed PR #149 F1. Escape now records keyboard input before closing Settings or Diagnostics, so returned focus uses the documented aqua keyboard brackets. The existing guide remains accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -745,8 +745,8 @@
     },
     {
       "path": "Source/UI/Controls/SurfaceLifecycle.h",
-      "bytes": 4795,
-      "sha256": "c9558cf0a82da35b620b914eb8900cfbdc2cdde4772afe7a4ada35e657a8bd46"
+      "bytes": 4973,
+      "sha256": "bda48a19cd5f2a7e5be81d55f8cfb025869d880866316ae25b818a726fb47832"
     },
     {
       "path": "Source/UI/Controls/SwellList.h",

@@ -117,3 +117,17 @@ normal approval/sync/archive. Task-owned Release objects were cleaned after
 validation and delivery; the approved specimen, review executables, dependency
 caches and all logs/evidence were retained. See the local cleanup record at
 `out/build-logs/p8-lifecycle-cleanup.json`.
+
+## Review correction F1
+
+After pointer focus in a field, Escape could close the auxiliary window before
+the shared observer recorded keyboard input. `SurfaceEscape` now records it
+before cancelling the draft or dismissing the window. The regression reproduced
+the missing keyboard provenance before the fix and checks the returned focus
+brackets when the native peer owns foreground focus.
+
+The initial focused run also exposed a Storage fixture race between polling
+and observing worker completion. The fixture now polls once more after the
+worker finishes, before asserting that the prepared folder is ready. The
+Release build and all three focused CTest cases passed on the final run.
+Logs are retained in `out/build-logs/p8-escape-review-retest.log`.

@@ -87,6 +87,9 @@ public:
     bool keyPressed(const juce::KeyPress& key,juce::Component* target)override
     {
         if(!key.isKeyCode(juce::KeyPress::escapeKey) || !root.isShowing() || root.isCurrentlyBlockedByAnotherModalComponent())return false;
+        // This listener can consume Escape before the shared input observer sees it.
+        juce::SharedResourcePointer<FocusVisibility> input;
+        input->keyboardInput();
         const juce::Component::SafePointer<juce::Component> safe(&root);
         const auto close=dismiss;
         if(target && (&root==target || root.isParentOf(target)))

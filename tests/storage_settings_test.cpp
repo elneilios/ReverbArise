@@ -106,6 +106,7 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     REQUIRE(action("chooseWorkingFolder").getBounds()==chooseBounds && chooseBounds.getY()>=contentViewport->getBottom()
         && chooseBounds.getBottom()<=action("backupAssets").getY());
     REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});
+    storage->poll();
     if(!working->ready())throw std::runtime_error("Working-folder preparation: "+working->statusText().toStdString());
     REQUIRE(processor.swellEngine().assetDirectory()==firstRoot && action("useWorkingFolder").isEnabled());
     action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});storage->poll();

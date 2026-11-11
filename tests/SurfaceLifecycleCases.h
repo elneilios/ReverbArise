@@ -45,10 +45,21 @@ inline void surfaceLifecycleCases(const std::function<void()>& pump,bool require
     REQUIRE(fallback.hasKeyboardFocus(false));REQUIRE(replacement->complete());pump();
     fallback.grabKeyboardFocus();SurfaceFocusReturn::capture(opener,&fallback).post([]{return false;});pump();REQUIRE(fallback.hasKeyboardFocus(false));
     int closes=0,cancels=0;
-    SurfaceEscape escape(content,[&]{++closes;});field.onEscapeKey=[&]{++cancels;};field.grabKeyboardFocus();pump();
+    auto returnFocus=SurfaceFocusReturn::capture(opener,&fallback);
+    SurfaceEscape escape(content,[&]{
+        ++closes;
+        returnFocus.useCurrentInput();
+        returnFocus.post();
+    });
+    field.onEscapeKey=[&]{++cancels;};field.grabKeyboardFocus();pump();
+    input->pointerInput();
+    REQUIRE(!field.isFocusVisible());
     REQUIRE(!escape.keyPressed(juce::KeyPress(juce::KeyPress::returnKey),&field));
     REQUIRE(escape.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey),&field));
-    REQUIRE(cancels==1 && closes==1);
+    REQUIRE(cancels==1 && closes==1 && returnFocus.keyboard);
+    pump();
+    if(requireNativeFocus || juce::Process::isForegroundProcess())
+        REQUIRE(opener.hasKeyboardFocus(false) && opener.isFocusVisible());
     OwnedAlertWindow alert("Sample dialog","No operation is performed.",juce::MessageBoxIconType::NoIcon,&content);
     REQUIRE(alert.findColour(juce::AlertWindow::backgroundColourId)==background);
     REQUIRE(alert.findColour(juce::AlertWindow::textColourId)==text);
