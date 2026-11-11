@@ -8,7 +8,7 @@
 
 - [x] 2.1 In Rack Free 2.6.6 / Host-FX 2.1.0 / CLKD 2.5.0 at 48 kHz, revalidate Clock-only UI Arm and Duration, Step 1 Start/Arm with Step 4 Stop in End on Signal, and Clock plus aligned Phrase in End on repeat. Verify the observed MIDI 23/24/25 routes and exclusive take lengths. Include stopped-to-running and already-running clock starts.
 - [x] 2.2 Verify End on Signal closes at the next downbeat, Duration Stop cancels, and clock loss before completion preserves the prior take. Run repeated sequencer cycles with Recapture Audio off, then enable it and prove a successful new take replaces the previous one.
-- [ ] 2.3 In Perform, test Clock-only UI Cue and optional aligned Phrase and MIDI Cue/Stop/Stop Now. Check lead-in, repeats, Stop finish, immediate fade, reset, sync loss and fresh Cue. Demonstrate dry Standby without valid timing and with a mismatched legacy Phrase-only route. Verify Song reports the missing absolute timeline on this Rack setup.
+- [x] 2.3 In Perform, test Clock-only UI Cue and optional aligned Phrase and MIDI Cue/Stop/Stop Now. Check lead-in, repeats, Stop finish, immediate fade, reset, sync loss and fresh Cue. Demonstrate dry Standby without valid timing and with a mismatched legacy Phrase-only route. Verify Song reports the missing absolute timeline on this Rack setup.
 
 ## 3. FL Studio
 
@@ -18,7 +18,7 @@
 ## 4. Audio, delivery and recovery
 
 - [ ] 4.1 Physically monitor both hosts with known transients and a long multi-swell session. Compare Audition and live balance, dry transients and lead-ins. Verify generated wet headroom at -1 dBFS, unchanged dry level when summing, and measured overload feedback after a deliberate gain increase. Record timing, peaks, resource use and any dropout or unsupported configuration, including rate changes and host suspension.
-- [ ] 4.2 Verify finite Loop WAV Preview, Save and Drag placement, repeat spacing, initial lead-in and final tail, including Rack capture with no live timing and FL Studio import. Compare Wet Layer and Dry + Wet with their prepared mix. Measure FL Studio bounce separately and document when WAV is the dependable choice.
+- [x] 4.2 Verify finite Loop WAV Preview, Save and Drag placement, repeat spacing, initial lead-in and final tail, including Rack capture with no live timing and FL Studio import. Compare Wet Layer and Dry + Wet with their prepared mix. Measure FL Studio bounce separately and document when WAV is the dependable choice.
 - [ ] 4.3 In both hosts, save and reopen a current-build edited Loop, then exercise Locate and verified Restore on disposable copies. Compare accepted identity, frozen edit and dependency checksums, save and reopen again, and verify disarmed Learn, dry Standby and fresh timing and Cue.
 
 ## 5. Physical DPI transferred from #126
