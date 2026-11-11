@@ -23,7 +23,7 @@ inline Capabilities capabilities(const Snapshot& s,Readiness r) noexcept
     const bool valid=(r.usefulSource || r.frozenWet) && r.compatible;
     return {s.mode==Mode::capture && !s.locked() && r.compatible,
         s.mode==Mode::live && valid,s.mode==Mode::live && valid,
-        (s.mode==Mode::finalise?r.readySwell && r.compatible:s.mode==Mode::live && valid),!s.locked()};
+        (s.mode==Mode::finalise?r.readySwell && (r.compatible || r.exportCompatible):s.mode==Mode::live && valid),!s.locked()};
 }
 inline const char* modeName(Mode mode) noexcept
 {switch(mode){case Mode::capture:return "Capture";case Mode::live:return "Live";case Mode::finalise:return "Finalise";}return "Unknown";}

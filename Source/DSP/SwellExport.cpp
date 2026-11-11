@@ -232,17 +232,16 @@ void SwellEngine::serviceExportPreview()
     }
     if(supplied || exportPreviewNext==end)exportVoice->arm(ticket);
 }
-void SwellEngine::prepareExport(const PreviewContext& sourceContext)
+void SwellEngine::prepareExport(const PreviewContext& context)
 {
-    auto context=sourceContext;
-    context.time=context.exportTime();
     if(!workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise){
         const juce::ScopedLock guard(lock);exportAttempt.clear();exportRetryFile.reset();exportState={};detailWork.reset();detailSerial.fetch_add(1);return;
     }
     // A coherent host-time read can temporarily be unavailable during callback
     // publication. Wait as inspect/prepareTransport do; do not turn that miss
     // into a new dependency key which cancels a verified current preview.
-    if(!context.time.valid)return;
+    const auto time=context.exportTime();
+    if(!time.valid)return;
     std::shared_ptr<const PreparedExport> previous;std::shared_ptr<const SongMixDetail> previousDetail;
     Session accepted;ExportFile retryFile;ExportRequest owner;uint64_t pass=0,revision=0,failedDelivery=0;juce::String notice,key,error,deliveryFailure;
     const auto directory=instanceRoot(context.capture.manifest);
@@ -251,10 +250,10 @@ void SwellEngine::prepareExport(const PreviewContext& sourceContext)
         const auto flow=workflowState->snapshot();if(flow.mode!=workflow::Mode::finalise || flow.locked())return;
         owner={sessionGeneration.load(),exportRequest.load(),context.capture.manifest.projectId,context.capture.manifest.instanceId};
         pass=flow.pass;revision=liveRevision;
-        int64_t origin=0;const auto mapped=resolvePpqSample(context.time,0,origin);
+        int64_t origin=0;const auto mapped=resolvePpqSample(time,0,origin);
         key=juce::String(owner.session)+":"+juce::String(owner.generation)+":"+juce::String(pass)+":"+juce::String(revision)
             +":"+context.capture.reference+":"+juce::String(context.captureGeneration)+":"+juce::String(static_cast<int>(mapped))+":"+juce::String(origin)
-            +":"+juce::String(context.time.rate,12)+":"+juce::String(context.time.bpm,12)+":"+juce::String(context.time.numerator)+":"+juce::String(context.time.denominator);
+            +":"+juce::String(time.rate,12)+":"+juce::String(time.bpm,12)+":"+juce::String(time.numerator)+":"+juce::String(time.denominator);
         if(key==exportAttempt)return;
         const auto levels=model.exportState.levels(context.capture.sourceKind()==CaptureSourceKind::loop);
         if(levels.dry==0 && levels.wet==0){
@@ -299,7 +298,7 @@ void SwellEngine::prepareExport(const PreviewContext& sourceContext)
     const auto levels=accepted.exportState.levels(context.capture.sourceKind()==CaptureSourceKind::loop);
     const auto planned=context.capture.sourceKind()==CaptureSourceKind::loop
         ?prepareLoopExportPlan(accepted,context.capture.manifest,context.capture.reference,accepted.exportState.loop.options,levels.dry,levels.wet,plan,error)
-        :prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,levels.dry,levels.wet,plan,error);
+        :prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,time,levels.dry,levels.wet,plan,error);
     if(!planned){
         fail(error);return;
     }
@@ -350,7 +349,7 @@ void SwellEngine::prepareExport(const PreviewContext& sourceContext)
     }
     const auto latest=contextProvider();
     if(latest.capture.reference!=context.capture.reference || latest.capture.manifest.projectId!=owner.project.toStdString()
-        || latest.capture.manifest.instanceId!=owner.instance.toStdString() || !transportMappingMatches(context.time,latest.exportTime())){
+        || latest.capture.manifest.instanceId!=owner.instance.toStdString() || !transportMappingMatches(time,latest.exportTime())){
         const juce::ScopedLock guard(lock);
         // Retry a missed publication check without accepting stale timing or
         // writing another immutable WAV for this exact request. Keep it private

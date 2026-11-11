@@ -464,11 +464,14 @@ static void loopExportBindingCases()
     REQUIRE(engine.setFrozen(id,true));
     juce::MemoryBlock saved;
     processor.getStateInformation(saved);
+    const auto captured=processor.getCaptureSnapshot();
+    REQUIRE(saved.getSize()>0 && !captured.manifest.ranges.empty());
     const auto dry=engine.assetDirectory().getChildFile(
-        juce::String(processor.getCaptureSnapshot().manifest.ranges.front().assetPath));
+        juce::String(captured.manifest.ranges.front().assetPath));
     REQUIRE(dry.deleteFile());
 
-    PreverbAudioProcessor restored(fixture.root.file);
+    auto reopened=std::make_unique<PreverbAudioProcessor>(fixture.root.file);
+    auto& restored=*reopened;
     restored.prepareToPlay(48000,fixture.frames);
     restored.setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
     const auto waitFor=[&](const auto& condition){

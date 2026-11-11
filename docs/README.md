@@ -12,6 +12,8 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Dialogs, choosers and auxiliary windows — issue #107](validation/2026-11-11-issue-107-dialogs-windows.md) — approved P8 native chrome, keyboard dismissal, guarded picker completion and focus return.
+
 - [Shared text, help and notices — issue #107](validation/2026-11-10-issue-107-text-help.md) — approved aqua footer, measured text wrapping and complete consumer dispositions across modes, Settings, Diagnostics and Storage/Recovery.
 
 - [Connected tabs — issue #107](validation/2026-11-10-issue-107-connected-tabs.md) — native preview approval, editor and Settings adoption, and About last.

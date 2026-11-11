@@ -211,3 +211,21 @@ foreground focus and passed on its isolated rerun in 11.17 seconds. This
 covers all 105 tests across the two runs. Logs:
 `out/build-logs/Release/20261111-014616-8b696c9e/test.log` and
 `out/issue-128/integration-focus-rerun.log`.
+
+## PR #153 review follow-up
+
+- F1. Export reads timing from the known accepted Loop manifest when dry
+  assets are unavailable. A restored processor with a verified frozen swell
+  can export Wet Layer, and including Dry reports unavailable coverage.
+  The same fixture confirms Perform still requires its normal source.
+- F2. At 48 kHz and 137 BPM, the lead-in boundary at −84,088 samples stays
+  in place. The regression also checks the samples immediately before and
+  after that boundary.
+- F3. Wet Layer preview leaves the dry reader disabled. Raising Dry prepares
+  it and resumes from the current position. The worker test checks that dry
+  is audible after the edit and preview advances.
+
+Focused Release tests for workflow, export composition and worker, Loop
+Export UI and bindings, and the shared surface lifecycle passed across the
+focused run and corrected recovery fixture rerun. The fixture uses a heap
+allocation for the second processor to avoid overflowing the test stack.

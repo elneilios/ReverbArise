@@ -102,6 +102,7 @@ inline void cases()
     pump();
     REQUIRE(choosers == 1 && binding->isChoosing());
     completeSave({});
+    completeSave(destination); // A repeated native completion cannot revive cancellation.
     REQUIRE(!binding->isChoosing() && deliveries.isEmpty());
     save.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
     pump();

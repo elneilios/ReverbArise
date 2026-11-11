@@ -1,53 +1,9 @@
 #include "PluginEditor.h"
 #include <Core/BuildInformation.h>
 
-namespace
-{
-class WorkspaceWindow final:public juce::DocumentWindow
-{
-public:
-    WorkspaceWindow(const juce::String& title,juce::Component& content,int width,int height,std::function<void()> closed,int scale=0)
-        :DocumentWindow(title,m3::ui::background,DocumentWindow::closeButton),onClose(std::move(closed)),logicalWidth(width),logicalHeight(height),scalable(scale!=0)
-    {
-        setUsingNativeTitleBar(true);setResizable(false,false);
-        if(scalable)
-        {
-            setLookAndFeel(&comfortableTheme);
-            surface.contentRoot().addAndMakeVisible(content);content.setBounds(0,0,width,height);
-            viewport.setName("auxiliaryPresentationViewport");viewport.setFocusRevealEnabled(true);viewport.setViewedComponent(&surface,false);
-            setContentNonOwned(&viewport,false);setPresentationScale(scale);
-        }
-        else{setContentNonOwned(&content,false);setSize(width,height);}
-    }
-    ~WorkspaceWindow()override{setLookAndFeel(nullptr);}
-    void closeButtonPressed()override{setVisible(false);if(onClose)onClose();}
-    void setPresentationScale(int scale)
-    {
-        if(!scalable)return;
-        const auto* display=juce::Desktop::getInstance().getDisplays().getDisplayForRect(getScreenBounds());
-        if(!display)return;
-        const auto work=display->userBounds.toNearestInt();juce::BorderSize<int> frame;
-        if(const auto* peer=getPeer())if(const auto measured=peer->getFrameSizeIfPresent())frame=*measured;
-        if(scale==lastScale && work==lastWork && frame==lastFrame)return;
-        lastScale=scale;lastWork=work;lastFrame=frame;
-        const auto width=(logicalWidth*scale+99)/100,height=(logicalHeight*scale+99)/100;
-        surface.present(logicalWidth,logicalHeight,scale);surface.setSize(width,height);
-        const auto border=getContentComponentBorder();
-        const juce::Rectangle<int> available{0,0,std::max(1,work.getWidth()-frame.getLeftAndRight()-border.getLeftAndRight()),std::max(1,work.getHeight()-frame.getTopAndBottom()-border.getTopAndBottom())};
-        const auto scroll=viewport.getScrollBarThickness();
-        setSize(std::min(width+(height>available.getHeight()?scroll:0),available.getWidth())+border.getLeftAndRight(),std::min(height+(width>available.getWidth()?scroll:0),available.getHeight())+border.getTopAndBottom());
-        if(isVisible())setTopLeftPosition(juce::jlimit(work.getX()+frame.getLeft(),std::max(work.getX()+frame.getLeft(),work.getRight()-getWidth()-frame.getRight()),getX()),
-            juce::jlimit(work.getY()+frame.getTop(),std::max(work.getY()+frame.getTop(),work.getBottom()-getHeight()-frame.getBottom()),getY()));
-    }
-private:
-    std::function<void()> onClose;
-    int logicalWidth,logicalHeight,lastScale=0;bool scalable;
-    juce::Rectangle<int> lastWork;juce::BorderSize<int> lastFrame;
-    m3::ui::controls::PresentationSurface surface;
-    m3::ui::controls::FocusViewport viewport;
-    m3::ui::WorkspaceTheme comfortableTheme;
-};
-}
+#include <UI/Controls/WorkspaceWindow.h>
+#include <UI/Controls/OwnedAlertWindow.h>
+using m3::ui::controls::WorkspaceWindow;
 
 juce::Rectangle<int> PreverbAudioProcessorEditor::swellMenuAnchor(const juce::MouseEvent& event)const
 {
@@ -65,6 +21,7 @@ void PreverbAudioProcessorEditor::setSettingsOpen(bool open)
         settingsWindow->addMouseListener(this,true);
         settingsWindow->centreAroundComponent(this,settingsWindow->getWidth(),settingsWindow->getHeight());
     }
+    if(open && settingsWindow)static_cast<WorkspaceWindow*>(settingsWindow.get())->setReturnFocus(m3::ui::controls::SurfaceFocusReturn::capture(workflowHeader.settingsAction(),this));
     if(settingsWindow){settingsWindow->setVisible(open);if(open){refresh();updateAuxiliaryPresentation();settingsWindow->toFront(true);}}
 }
 void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
@@ -80,6 +37,7 @@ void PreverbAudioProcessorEditor::setDiagnosticsOpen(bool open)
         diagnosticsWindow->addMouseListener(this,true);
         diagnosticsWindow->centreAroundComponent(this,diagnosticsWindow->getWidth(),diagnosticsWindow->getHeight());
     }
+    if(open && diagnosticsWindow)static_cast<WorkspaceWindow*>(diagnosticsWindow.get())->setReturnFocus(m3::ui::controls::SurfaceFocusReturn::capture(openDiagnosticsButton,&workflowHeader.settingsAction()));
     if(diagnosticsWindow){diagnosticsWindow->setVisible(open);if(open){refresh();updateAuxiliaryPresentation();diagnosticsWindow->toFront(true);}}
 }
 void PreverbAudioProcessorEditor::updateAuxiliaryPresentation()
@@ -344,14 +302,17 @@ void PreverbAudioProcessorEditor::serviceAssetRecovery()
 void PreverbAudioProcessorEditor::showAssetRecoveryWarning(const m3::storage::portable::Input& expected,bool metadataFailure)
 {
     if(recoveryWarning && recoveryWarning->isCurrentlyModal())return;
-    recoveryWarning=std::make_unique<juce::AlertWindow>(metadataFailure?"Project metadata unavailable":"Project assets unavailable",
+    recoveryWarning=std::make_unique<m3::ui::controls::OwnedAlertWindow>(metadataFailure?"Project metadata unavailable":"Project assets unavailable",
         metadataFailure?"Saved plugin metadata could not be decoded. The arrangement cannot be confirmed intact. Keep the project and original assets; restore an earlier DAW project copy if available.":m3::ui::PortableStoragePanel::recoveryGuidance(),juce::MessageBoxIconType::NoIcon,this);
     recoveryWarning->setDescription(metadataFailure?"Saved plugin metadata could not be decoded; the arrangement cannot be confirmed intact.":m3::ui::PortableStoragePanel::recoveryGuidance());
-    recoveryWarning->setComponentID("missingAssetRecoveryDialog");recoveryWarning->setLookAndFeel(&workspaceTheme);
-    if(!metadataFailure){recoveryWarning->addButton("Locate assets...",1);recoveryWarning->addButton("Restore backup...",2);}
-    recoveryWarning->addButton("Continue",0,juce::KeyPress(juce::KeyPress::escapeKey));
-    recoveryWarning->setAlwaysOnTop(false);addAndMakeVisible(*recoveryWarning);recoveryWarning->setCentrePosition(getLocalBounds().getCentre());recoveryWarning->toFront(true);
-    recoveryWarning->enterModalState(true,juce::ModalCallbackFunction::create([safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),expected](int action){
+    recoveryWarning->setComponentID("missingAssetRecoveryDialog");
+    auto& warning=static_cast<m3::ui::controls::OwnedAlertWindow&>(*recoveryWarning);
+    if(!metadataFailure){warning.addAction("Locate assets...",1);warning.addAction("Restore backup...",2);}
+    warning.addAction("Continue",0,true);
+    recoveryWarning->setAlwaysOnTop(false);warning.showActions(*this);
+    const auto returnFocus=m3::ui::controls::SurfaceFocusReturn::capture(workflowHeader.settingsAction(),this);
+    recoveryWarning->enterModalState(true,juce::ModalCallbackFunction::create([safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(this),expected,returnFocus](int action){
+        if(action==0)returnFocus.post();
         if(!safe || safe->destroying || action==0)return;
         m3::storage::portable::Input current;juce::String error;
         if(!safe->processor.pinPortableAssets(current,error,true) || current.instanceRoot!=expected.instanceRoot || current.controlEpoch!=expected.controlEpoch)return;
@@ -359,4 +320,5 @@ void PreverbAudioProcessorEditor::showAssetRecoveryWarning(const m3::storage::po
         safe->settingsTabs.selectPage(m3::ui::SettingsPage::storage);
         if(action==1)safe->storageInventory->locateOriginalAssets();else if(action==2)safe->storageInventory->restoreBackup();
     }),false);
+    warning.focusInitialAction();
 }

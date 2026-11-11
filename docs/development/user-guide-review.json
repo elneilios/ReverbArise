@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reconciled the integrated shared Export file and waveform gestures with the Loop export guide and in-tile placement.",
+  "summary": "Reviewed verified frozen-wet recovery, integer grid boundary placement and deferred preview dry reads after the shared dialog integration.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 34697,
-      "sha256": "eb594772f89a9193698c67ea899f1f212d310984259d80c51636150a07590486"
+      "bytes": 34802,
+      "sha256": "81966bff2765755b14e2a505f7fe54ff4e211a17699f64f5251dd0d4508220e1"
     },
     {
       "path": "CMakePresets.json",
@@ -310,8 +310,8 @@
     },
     {
       "path": "Source/Core/WorkflowState.h",
-      "bytes": 10023,
-      "sha256": "6acaef3da1e536aaeb05d408e38bc2c197ad3bc494461e462ced307967548cbb"
+      "bytes": 10121,
+      "sha256": "2d1ffa48240ee834bf21a407bd477f3e09912d2fa81cd55e5f8fe3aabfa85b65"
     },
     {
       "path": "Source/DSP/AuditionMix.cpp",
@@ -390,8 +390,8 @@
     },
     {
       "path": "Source/DSP/PreviewEngine.h",
-      "bytes": 2745,
-      "sha256": "6353ba5fc6e98b53335461ebd3a18a31ad8b99c85677fe3a777d0524bf9e3b62"
+      "bytes": 3309,
+      "sha256": "b42b9f51837305fd042dd4c9364fd86d56078ce46a3aa4be3223267b07e4b9a8"
     },
     {
       "path": "Source/DSP/ReverseConvolution.cpp",
@@ -405,8 +405,8 @@
     },
     {
       "path": "Source/DSP/SongExport.cpp",
-      "bytes": 8723,
-      "sha256": "75a7e1a1c602e9c36316606de6269691f0ecd57ea7b82e1e5f808df3d57d1fc1"
+      "bytes": 8841,
+      "sha256": "aed2dd2e56138976415e72687a11648bb30b3847d3543fc799f9b5e7274296b7"
     },
     {
       "path": "Source/DSP/SongExport.h",
@@ -445,18 +445,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 91447,
-      "sha256": "4b0960c52f7c79c52a28733f9e3ad2592df2d14a25c5238afddee495b800f436"
+      "bytes": 91923,
+      "sha256": "380fb25204b3b5311b895e484def50a9666d69b7ad922a30c5f808f4a12bc2da"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25998,
-      "sha256": "35f66f2ed5dd846cd1fc046dd75dba7ab47c47a126d7f3675bd06c511ec51762"
+      "bytes": 26088,
+      "sha256": "c9c8187a59ad396617ed85d9e3fa2f373ff0c657466b94b8e547efbad7837a40"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 28175,
-      "sha256": "3757d6e36c6464863ee203d41c34b3e4b9bf6d1c91e7e1293623afe81a15d6cc"
+      "bytes": 29219,
+      "sha256": "9945def52d5bf4f2dbef672cfd4e4f2bd58ae6240b136e6f892dbe8642581eba"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 116087,
-      "sha256": "2045f5fe64ed973e253055e5b8583aa6802fbe5bb1ab24103e22acc378f33158"
+      "bytes": 116515,
+      "sha256": "23691115dc39f145c94c75bc8a9cbffe5cebabeb4870228dbddd3534ddbff0f2"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -605,8 +605,8 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 81117,
-      "sha256": "c5b07b42a2c87cd589caeeb77154166a3e40bb567d81c973bfa1b8e9a17a4f5d"
+      "bytes": 81184,
+      "sha256": "11b839837ab76f3adbccce198cc92727cf43c1b2042414e8cfae27417ce22f33"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
@@ -615,8 +615,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 26676,
-      "sha256": "be0eeef05b7cb889f7e744c9d4e5e891be9f81bee8f6b7439df11bb26710b556"
+      "bytes": 24301,
+      "sha256": "27649d7e72ee031aaba860bd7fce5bb1c89ecd5de4cb76328f8441738ea72b92"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -794,6 +794,11 @@
       "sha256": "08d873d6290d3de579ffeccd164c20a860af127820bc361d3d9d762b125b6ff0"
     },
     {
+      "path": "Source/UI/Controls/OwnedAlertWindow.h",
+      "bytes": 3144,
+      "sha256": "a564d7ed0a4a0687cd092d1f03ab98be553f71c36461aa951861dec698181451"
+    },
+    {
       "path": "Source/UI/Controls/PopupInteraction.h",
       "bytes": 2304,
       "sha256": "fa51963c52188bf07f43f9ac2a7116a61248e4c5bd81ee4030053a724ec95d05"
@@ -817,6 +822,11 @@
       "path": "Source/UI/Controls/SliderControl.h",
       "bytes": 2521,
       "sha256": "e39f8e3f9635e195835dffe52a420d683f88985e3dde29f24a5a8f0395d76e81"
+    },
+    {
+      "path": "Source/UI/Controls/SurfaceLifecycle.h",
+      "bytes": 4973,
+      "sha256": "bda48a19cd5f2a7e5be81d55f8cfb025869d880866316ae25b818a726fb47832"
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
@@ -859,14 +869,19 @@
       "sha256": "05ffd6a7484bae4ac1621237867a5956fc5229c98861247ee10b8ba22c2d0125"
     },
     {
+      "path": "Source/UI/Controls/WorkspaceWindow.h",
+      "bytes": 3607,
+      "sha256": "883b2d05fe3a66ad2da9fa48bac55232550ad8788dc949302a42f3a022de7f8e"
+    },
+    {
       "path": "Source/UI/Controls/WrappedLabel.h",
       "bytes": 1283,
       "sha256": "47f7d0f66362f83d29a481a32a3f76abb3601e047cd2fd59fb4cd0ad4b7dcc4b"
     },
     {
       "path": "Source/UI/ConvolutionIrBinding.h",
-      "bytes": 7390,
-      "sha256": "e07d3fed78cacac7950031887d3218cca5d0eb2da6bf771e98e7394d7d8707b5"
+      "bytes": 7938,
+      "sha256": "9c37d8923e14449286b03f1374b2d47aa71d97d3c9b4a047b46cc5f2f308715b"
     },
     {
       "path": "Source/UI/EditorPresentationState.h",
@@ -880,8 +895,8 @@
     },
     {
       "path": "Source/UI/ExportFileInvocations.h",
-      "bytes": 7048,
-      "sha256": "8d3e2eb8a7a09ba58534d856dd9e86f66ae991b2f3e97a389acdf7a6c35c1ad4"
+      "bytes": 7484,
+      "sha256": "0293a726a4516ae61a686a731e5e3accfb16b78f74dadba13897474d2d467712"
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
@@ -905,8 +920,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 54100,
-      "sha256": "295e6c3206e239ae26a1a8f04438254abec1a1c50d036e95d47a2342f2ca3062"
+      "bytes": 54137,
+      "sha256": "23049f2fe1549eb0cc4994920916b1d3817a3e7bdc4b12216d1fff075a77b607"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -940,8 +955,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 22506,
-      "sha256": "ad7b629044c7723cc3a2c071ebbc822fb1461595ccf38cb3f0f159ce484159a2"
+      "bytes": 23129,
+      "sha256": "29c248c6caccb707ad8f4af0a7a2df8b6311e5aaf137d912cee3c9ead7e9d9db"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -1020,8 +1035,8 @@
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
-      "bytes": 15903,
-      "sha256": "0a26b4ff788a57de0b9fb02d3d3b85cc44fd06edbca923ec27ea27fb7de97e84"
+      "bytes": 16283,
+      "sha256": "c559bf9586bb9aa48d4c10a135095aea7a932fb53dab4fef385016a87447abaa"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",
@@ -1065,8 +1080,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 124473,
-      "sha256": "5483df1d63770dc14dd76ed16d1b2db186f1142e373b2ce3cc902ac69fa7e181"
+      "bytes": 124921,
+      "sha256": "b9d35fe3742fc69d43a5bf0b605ae266344c3acfa5e53bbd678126ed8c428520"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1195,8 +1210,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 53276,
-      "sha256": "d16e21f70c2957cff6b41909d3a1b077a5abb584f04afcf92681a0eaa9fdf51d"
+      "bytes": 64308,
+      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

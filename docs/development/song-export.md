@@ -17,7 +17,9 @@ Repeats do not repeatedly add a rounded beat duration or reinterpret the take
 from a later host tempo. Fractional musical beat periods can yield a floor or
 ceil accepted sample extent; that exact captured extent repeats intact, including
 non-whole-bar takes. Musical lead-in alignment uses the accepted tempo and meter,
-rounding the initial included wet start backward to the chosen grid.
+rounding the initial included wet start backward to the chosen grid. Compare
+grid points as rounded sample positions so a swell already on a grid point
+keeps that boundary.
 
 The shared bounded cycle visitor covers only scheduled passes. Initial wet
 lead-in is retained once, internal negative wet and tails overlap once per pass,
@@ -47,6 +49,10 @@ capture-schema migration is introduced by these additive fields.
 
 Export entry uses accepted capture-local timing and an eligible verified wet
 render. The current Cue clock/Phrase state is not an entry or file dependency.
+When dry assets are missing, a known accepted Loop manifest can supply timing
+for independently verified frozen wet. Dry-inclusive export reports unavailable
+dry ranges and fills them with silence. Perform and capture keep their separate
+source requirements.
 `processLoopExport` consumes prepared pages with a device-rate gate independently
 of Song timing admission; the UI disables Preview with an explanation when the
 device rate differs while leaving valid file delivery available. Song's callback
@@ -317,6 +323,8 @@ and last-good display remain intact. No waiting loop blocks the worker.
 Play pins the session, Export pass, captured-source reference, timing and render
 revision independently of the requested WAV generation. The worker prepares the
 existing SongMix reader at unit dry/wet levels and reads two stereo branches.
+Loop Wet Layer starts without opening dry chunks. The first edit that raises
+Dry prepares that layer and resumes from the current preview position.
 Wet samples retain accepted calibration, envelopes and true-boundary conditioning.
 A dry-only pin can omit unavailable wet dependencies; requesting that missing
 branch stops preview until a valid composition is ready. Dependency changes,

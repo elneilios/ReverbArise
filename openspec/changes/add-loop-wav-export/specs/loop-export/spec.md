@@ -31,6 +31,10 @@ Loop Export SHALL preserve all included initial negative wet audio and round WAV
 - **WHEN** all included initial contributions begin at or after Loop Bar 1, including a dry-only mix with Wet at zero
 - **THEN** WAV origin is Loop Bar 1 with no extra grid block of silence
 
+#### Scenario: Wet starts on a rounded grid boundary
+- **WHEN** the first wet sample equals the grid boundary converted to an integer sample
+- **THEN** WAV start remains on that boundary
+
 #### Scenario: Incomplete musical metadata
 - **WHEN** a take lacks verified meter needed for a bar grid
 - **THEN** the bar-grid option is unavailable with its reason and no live transport value silently reinterprets the capture
@@ -76,6 +80,11 @@ A nonzero Dry level SHALL include accepted capture-local dry audio exactly once 
 - **WHEN** nonzero Dry references missing captured coverage
 - **THEN** affected coverage becomes explicitly warned silence while verified contributions stay aligned
 - **AND** setting Dry to zero removes the dry dependency and its substitution warning for the current composition
+
+#### Scenario: Raise Dry during a Wet Layer preview
+- **WHEN** a preview starts at Dry zero
+- **THEN** it starts without reading dry chunks
+- **AND** the first edit above Dry zero prepares that layer and resumes preview from its current position
 
 ### Requirement: Loop mix controls reuse the shared Export pair
 Loop Export SHALL reuse Mix Character and independent Dry/Wet faders, defaulting a fresh Loop mix to Wet Layer (Dry 0%, Wet 100%). Presets SHALL change only the level pair atomically; direct edits SHALL retain the other level and display Custom for unmatched pairs. The pair SHALL govern both Preview and WAV. Dry-inclusive guidance SHALL warn against doubling the original dry. At 0/0, current preview, Save and Drag SHALL be disabled without deleting earlier files.

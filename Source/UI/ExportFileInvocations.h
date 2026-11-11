@@ -2,6 +2,7 @@
 #include <Core/ExportState.h>
 #include "Controls/FileDragTile.h"
 #include "Controls/NativeWavDrag.h"
+#include "Controls/SurfaceLifecycle.h"
 
 namespace m3::ui
 {
@@ -30,16 +31,16 @@ public:
           startExternalDrag(std::move(externalDrag)), chooseSave(std::move(choose))
     {
         const auto weak = juce::WeakReference<ExportFileInvocations>(this);
-        const auto capture = [weak]() -> controls::CapturedActionButton::Invocation
+        const auto capture = [weak](juce::Component& opening) -> controls::CapturedActionButton::Invocation
         {
             if (weak == nullptr || !weak->current) return {};
-            return [weak, intent = weak->captureIntent()]
+            return [weak, intent = weak->captureIntent(),opener=juce::Component::SafePointer<juce::Component>(&opening)]
             {
-                if (weak != nullptr) weak->openSave(intent);
+                if (weak != nullptr && opener) weak->openSave(intent,*opener);
             };
         };
-        save.bindInvocation(capture);
-        tile.bindInvocation(capture);
+        save.bindInvocation([capture,&save]{return capture(save);});
+        tile.bindInvocation([capture,this]{return capture(tile);});
         tile.beforeInvocation = [weak]
         {
             if (weak != nullptr)
@@ -77,14 +78,16 @@ private:
     { return tile.hasPress(press) && (pointerStillDown ? pointerStillDown(press) : tile.isPressActive(press)); }
     void report(const juce::String& message) { if (onStatus) onStatus(message); }
 
-    void openSave(const Intent& intent)
+    void openSave(const Intent& intent,juce::Component& opener)
     {
         if (choosing || dragging || !isCurrent(intent) || readyFile(intent.scope) == juce::File{}) return;
+        const auto ticket=saveInvocation.begin(opener,opener.getParentComponent());if(!ticket)return;
         choosing = true;
         const auto serial = ++saveSerial;
-        auto complete = [weak = juce::WeakReference<ExportFileInvocations>(this), intent, serial](const juce::File& destination)
+        auto complete = [weak = juce::WeakReference<ExportFileInvocations>(this), intent, serial,ticket=*ticket](const juce::File& destination)
         {
             if (weak == nullptr || !weak->choosing || weak->saveSerial != serial) return;
+            if(!ticket.complete())return;
             weak->choosing = false;
             if (destination != juce::File{} && weak->isCurrent(intent))
                 weak->saveWav(intent.scope, destination);
@@ -153,6 +156,7 @@ private:
     StartExternalDrag startExternalDrag;
     ChooseSave chooseSave;
     std::unique_ptr<juce::FileChooser> chooser;
+    controls::SurfaceInvocation saveInvocation;
     std::optional<Scope> current;
     std::optional<Intent> dragIntent;
     uint64_t scopeVersion = 0, saveSerial = 0;
