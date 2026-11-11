@@ -13,16 +13,18 @@ ReverbArise is a personal project. Contributions, including Codex-generated chan
 
 - Keep changes within the issue's approved scope and preserve compatibility and real-time audio safety.
 - Commit cohesive increments with clear messages. Avoid unrelated cleanup, broad refactoring or generated build outputs.
-- Run focused tests and checks for affected behaviour. Document what was and was not tested, including any FL Studio manual validation still required.
+- Inspect affected paths and prepare targeted tests for the review gate. Build the binaries needed for owner previews and DAW checks.
 - Keep living technical docs current when implementation changes; don't rewrite archived historical records.
 - UI contributions must follow the [UI development standards](docs/development/ui-development-standards.md), including shared control ownership, incremental migration and visual/interaction acceptance.
 - Prefer concise plans and summaries, targeted file reads and limited test logs to minimise agent token cost.
 
 ## Open a pull request
 
-Run the full Debug and Release CTest suites on the final revision before opening a PR that can affect plugin behaviour, build outputs or test execution. Use `./scripts/build.ps1 -Configuration Debug -Test` and `./scripts/build.ps1 -Configuration Release -Test`. During implementation, use focused checks for affected behaviour and integration paths. Apply an earlier full-suite gate only when explicitly required for the task or a separate release or host-test workflow.
-
-For guidance-only changes, use relevant document checks. When updating an open PR, rerun the full suites before pushing changes that could invalidate the prior results. Reuse passing results after edits that leave the tested inputs intact, such as prose-only updates. Record the tested revision, results and any outstanding checks in the PR.
+1. During implementation, get the owner's decisions and acceptance using inspection, previews and DAW checks as applicable. Defer automated tests.
+2. Once implementation is finished and the owner has approved the work, open a **draft PR** for owner or rubber-duck review. Address review findings while it is in draft. Automated tests are pending at this stage.
+3. After review findings are addressed and the owner approves marking the PR ready, run the tests targeted to the final diff and the [standard PR regression set](docs/development/development.md#standard-pr-regression-set). Record the tested revision, commands, configurations and results. Keep the PR in draft while any required check is failing or pending. Mark it ready after the checks pass.
+4. Leave merge to the owner. If tested inputs change after the gate, refresh affected targeted results and rerun the regression set before merge. Reuse results for edits that leave tested inputs intact.
+5. When the owner requests a release package, run the full Release build and registered CTest suite on the exact candidate before creating the ZIP. Report packaging validation failures and record follow-up work items that return to step 1.
 
 Open **one PR per coherent change**, targeting `main`. Include:
 

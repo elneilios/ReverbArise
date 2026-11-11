@@ -209,6 +209,7 @@ private:
     m3::LoopReferenceSetup observedLoopReference;
     bool previousLoopSource = false;
     void invalidateLoopClock() noexcept;
+    bool storagePlaybackActive() const noexcept;
     bool loopArmAllowed(workflow::Snapshot, bool external) const noexcept;
     bool flStudioLoopTimingUnsupported() const noexcept;
     uint64_t reserveLoopArm(bool external) noexcept;

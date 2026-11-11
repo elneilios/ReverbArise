@@ -18,20 +18,17 @@ sandbox escalation when required. Windows ACL elevation may also be required.
 Never report a sandbox copy as a host installation.
 
 ```powershell
-./scripts/install-test-vst3.ps1 -Test      # Full Release CTest before installation
 ./scripts/install-test-vst3.ps1 -WhatIf    # Show target; no build or install
 ./scripts/install-test-vst3.ps1 -Destination 'C:\Program Files\VST3'
 ./scripts/install-test-vst3.ps1 -ReleaseTag v0.1.0 -Candidate alpha.rehearsal.4
 ```
 
-`-Destination` names the containing VST3 folder, not the bundle itself. Without
-`-Test`, CTest is not run. `-Test` opts into the full solution build and Release
-CTest; a fresh worktree may take substantially longer because its test executables
-also compile JUCE. Use the default for ordinary host-test delivery and request
-`-Test` when full automated validation is needed. A build/test failure stops before installation; there is
-no skip-build option that could silently deliver stale output. Dirty worktrees are
-allowed for local testing. This is independent of tagged release packaging and
-does not publish or redistribute anything.
+`-Destination` names the containing VST3 folder. Use the default plugin-only
+build for work-in-progress DAW checks, including builds from a dirty worktree.
+A build failure stops before installation. The
+[contribution workflow](../../CONTRIBUTING.md#open-a-pull-request) sets the
+timing for automated tests, and [release packaging](releases.md) runs the full
+Release suite.
 
 The installer takes the existing build-directory lock while reading the output,
 checks the required resources, x64 binary and version, then stages a full copy and

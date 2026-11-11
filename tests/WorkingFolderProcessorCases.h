@@ -54,7 +54,7 @@ static void workingFolderLoopCases()
         REQUIRE(restored.location->association.store==association.store && !restored.unavailable);
         REQUIRE(restored.sourceKind()==kind && restored.reference==accepted.reference);
         REQUIRE(restored.manifest.loop==accepted.manifest.loop && restored.manifest.revision==accepted.manifest.revision);
-        REQUIRE(reopened->getLoopCapturePreference()==preference && !reopened->loopCaptureArmed());
+        REQUIRE(reopened->getLoopCapturePreference()==processor.getLoopCapturePreference() && !reopened->loopCaptureArmed());
 
         // Recompute the envelope digest to check shape rejection independently
         // of the integrity check.
@@ -83,7 +83,185 @@ static void workingFolderLoopCases()
     fixture.through(fixture.marker(2));
     REQUIRE(processor.armLoopCapture());
     fixture.through(fixture.marker(20),true);
+    REQUIRE(processor.enterLoopStandby());
+    auto& engine = processor.swellEngine();
+    REQUIRE(engine.addTarget(512));
+    const auto swellId = engine.savedSession().primary;
+    REQUIRE(engine.edit(swellId, [](auto& swell, auto&){
+        swell.name = "Loop recovery edit";
+        swell.shape.gainDb = -3;
+        return true;
+    }));
+    engine.generate(true);
+    waitFor([&]{return engine.savedSession().swells.front().render.present();});
+    auto nextCapture = preference;
+    nextCapture.enabled = false;
+    nextCapture.unit = LoopCapturePreference::Unit::beats;
+    nextCapture.count = 3;
+    REQUIRE(processor.setLoopCapturePreference(nextCapture));
     roundTrip(CaptureSourceKind::loop);
+
+    waitFor([&]{return processor.pinPortableAssets(input,error);});
+    std::shared_ptr<Prepared> prepared;
+    REQUIRE(prepare(input, prepared, error));
+    const auto original = snapshot(*prepared);
+    TestDirectory backupRoot, moved, restoreRoot;
+    for (const auto& path : {backupRoot.file, restoreRoot.file})
+        REQUIRE(path.createDirectory().wasOk());
+    const auto packed = backup(prepared, backupRoot.file);
+    REQUIRE(packed.success);
+    prepared.reset();
+    const auto receipt = backupRoot.file.getChildFile("receipts/" + packed.receipt.locator.snapshot + ".json");
+    {
+        TestDirectory defaultCache, conflictingCopy, conflictingBackup;
+        for (const auto& path : {defaultCache.file, conflictingCopy.file, conflictingBackup.file})
+            REQUIRE(path.createDirectory().wasOk());
+        std::shared_ptr<Verified> correct;
+        REQUIRE(locateReceipt(receipt, correct, error));
+        REQUIRE(restoreCopy(correct, conflictingCopy.file).success);
+        const auto instanceFolder = [&](const juce::File& root){
+            return root.getChildFile(original.observed.project).getChildFile(original.observed.instance);
+        };
+        auto target = input;
+        m3::storage::Association association;
+        REQUIRE(m3::storage::decodeAssociatedState(input.processorXml, association, target.processorXml, target.manifestJson, error));
+        target.instanceRoot = instanceFolder(defaultCache.file);
+        target.sourceUnavailable = true;
+        auto conflict = original.observed.capture;
+        ++conflict.loop->originSample;
+        auto candidate = target;
+        candidate.instanceRoot = instanceFolder(conflictingCopy.file);
+        candidate.sourceUnavailable = false;
+        REQUIRE(serializeCaptureManifest(conflict, candidate.manifestJson, error));
+        REQUIRE(candidate.instanceRoot.getChildFile(original.observed.reference).replaceWithText(candidate.manifestJson));
+        std::shared_ptr<Prepared> conflictSnapshot;
+        REQUIRE(prepare(candidate, conflictSnapshot, error));
+        const auto conflictPack = backup(conflictSnapshot, conflictingBackup.file);
+        REQUIRE(conflictPack.success);
+        std::shared_ptr<Verified> wrong;
+        REQUIRE(locateReceipt(conflictingBackup.file.getChildFile("receipts/" + conflictPack.receipt.locator.snapshot + ".json"), wrong, error));
+        std::shared_ptr<Prepared> located;
+        REQUIRE(!prepareLegacyRecovery(candidate.instanceRoot, target, located, error));
+        REQUIRE(error.contains("differs from the accepted Loop"));
+        REQUIRE(!matchesRecoveryTarget(*wrong, target, error));
+        REQUIRE(error.contains("differs from the accepted Loop"));
+        REQUIRE(!target.instanceRoot.getChildFile(original.observed.reference).exists());
+        REQUIRE(matchesRecoveryTarget(*correct, target, error));
+        REQUIRE(restoreCopy(correct, defaultCache.file).success);
+        REQUIRE(target.instanceRoot.getChildFile(original.observed.reference).existsAsFile());
+    }
+    juce::MemoryBlock saved;
+    processor.getStateInformation(saved);
+    fixture.processor.reset();
+    folder.reset();
+    const auto moveDeadline = juce::Time::getMillisecondCounterHiRes() + 5000;
+    while (!destination.file.moveFileTo(moved.file) && juce::Time::getMillisecondCounterHiRes() < moveDeadline)
+        juce::Thread::sleep(10);
+    REQUIRE(moved.file.isDirectory() && !destination.file.exists());
+
+    const auto checkRecovered = [&](PreverbAudioProcessor& owner){
+        Input recovered;
+        waitFor([&]{return owner.pinPortableAssets(recovered,error);});
+        const auto capture = owner.getCaptureSnapshot();
+        REQUIRE(!capture.unavailable && capture.sourceKind() == CaptureSourceKind::loop);
+        REQUIRE(capture.reference == original.observed.reference && capture.manifest.revision == original.observed.capture.revision
+            && capture.manifest.projectId == original.observed.capture.projectId
+            && capture.manifest.instanceId == original.observed.capture.instanceId
+            && capture.manifest.sampleRate == original.observed.capture.sampleRate
+            && capture.manifest.loop == original.observed.capture.loop);
+        REQUIRE(owner.getSourceEditTime(capture).valid && owner.getLoopCapturePreference() == nextCapture);
+        REQUIRE(!owner.loopRecaptureEnabled() && !owner.loopCaptureArmed() && !owner.requestLoopCue());
+        const auto swell = owner.swellEngine().savedSession().swells.front();
+        const auto& savedSwell = original.observed.session.swells.front();
+        REQUIRE(swell.id == savedSwell.id && swell.name == savedSwell.name && swell.shape.gainDb == savedSwell.shape.gainDb
+            && swell.ir == savedSwell.ir && swell.render == savedSwell.render);
+        for (const auto& dependency : original.files)
+        {
+            const auto file = recovered.instanceRoot.getChildFile(dependency.path);
+            if (!file.existsAsFile()) throw std::runtime_error("Missing recovered asset: " + file.getFullPathName().toStdString());
+            REQUIRE(fileHash(file) == dependency.sha256);
+        }
+    };
+    for (const bool useBackup : {false, true})
+    {
+        TestDirectory missingRegistry;
+        REQUIRE(missingRegistry.file.createDirectory().wasOk());
+        auto owner = std::make_unique<PreverbAudioProcessor>(missingRegistry.file);
+        owner->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+        REQUIRE(owner->flushCaptureForTesting());
+        LoopCaptureFixture::TimingHost rackHost;
+        rackHost.position.setIsPlaying(true);
+        rackHost.position.setTimeInSamples(0);
+        rackHost.position.setPpqPosition(0.0);
+        rackHost.position.setBpm(137);
+        owner->setPlayHead(&rackHost);
+        owner->prepareToPlay(48000, 128);
+        juce::AudioBuffer<float> audio(2, 128);
+        audio.clear();
+        juce::MidiBuffer timing;
+        owner->processBlock(audio, timing);
+        REQUIRE(owner->getHostPositionDiagnostics().isPlaying && !owner->getSongTime().valid);
+        Input missing;
+        waitFor([&]{return owner->pinPortableAssets(missing,error,true);});
+        REQUIRE(missing.folderUnavailable && owner->getCaptureSnapshot().sourceKind() == CaptureSourceKind::loop);
+        std::shared_ptr<WorkingFolder> recovery;
+        if (useBackup)
+            REQUIRE(prepareRestoredWorkingFolder(missing, receipt, restoreRoot.file, owner->assetRegistryRoot(), recovery, error));
+        else
+        {
+            std::shared_ptr<WorkingFolder> rejected;
+            Hooks cancelled;
+            cancelled.cancelled = []{return true;};
+            REQUIRE(!prepareAssociatedLocation(missing, moved.file, owner->assetRegistryRoot(), rejected, error, cancelled));
+            REQUIRE(!prepareAssociatedLocation(missing, restoreRoot.file, owner->assetRegistryRoot(), rejected, error));
+            const auto& captured = original.observed.capture.ranges.front();
+            const auto& wet = original.observed.session.swells.front().render;
+            for (const auto& path : {juce::String(captured.assetPath), wet.path})
+            {
+                TestDirectory damaged;
+                REQUIRE(moved.file.copyDirectoryTo(damaged.file));
+                const auto asset = damaged.file.getChildFile("working").getChildFile(original.observed.project)
+                    .getChildFile(original.observed.instance).getChildFile(path);
+                REQUIRE(asset.existsAsFile() && asset.replaceWithText("corrupt"));
+                REQUIRE(!prepareAssociatedLocation(missing, damaged.file, owner->assetRegistryRoot(), rejected, error));
+                REQUIRE(owner->getCaptureSnapshot().unavailable && !owner->requestLoopCue());
+                REQUIRE(owner->swellEngine().savedSession().swells.front().id == swellId);
+            }
+            REQUIRE(prepareAssociatedLocation(missing, moved.file, owner->assetRegistryRoot(), recovery, error));
+        }
+        auto stale = missing;
+        ++stale.controlEpoch;
+        REQUIRE(!owner->useWorkingFolder(recovery, stale, error));
+        REQUIRE(owner->getCaptureSnapshot().unavailable);
+        REQUIRE(owner->useWorkingFolder(recovery, missing, error));
+        checkRecovered(*owner);
+        juce::MemoryBlock recoveredState;
+        owner->getStateInformation(recoveredState);
+        owner->setPlayHead(nullptr);
+        owner.reset();
+        recovery.reset();
+        auto reopened = std::make_unique<PreverbAudioProcessor>(missingRegistry.file);
+        reopened->setStateInformation(recoveredState.getData(), static_cast<int>(recoveredState.getSize()));
+        REQUIRE(reopened->flushCaptureForTesting());
+        checkRecovered(*reopened);
+    }
+
+    TestDirectory incompleteRegistry, incompleteRoot;
+    REQUIRE(incompleteRegistry.file.createDirectory().wasOk() && incompleteRoot.file.createDirectory().wasOk());
+    auto incomplete = std::make_unique<PreverbAudioProcessor>(incompleteRegistry.file);
+    incomplete->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+    REQUIRE(incomplete->flushCaptureForTesting());
+    Input unavailable;
+    waitFor([&]{return incomplete->pinPortableAssets(unavailable,error,true);});
+    std::shared_ptr<WorkingFolder> workspace;
+    REQUIRE(prepareRecoveryWorkspace(unavailable, incompleteRoot.file, incomplete->assetRegistryRoot(), workspace, error));
+    REQUIRE(incomplete->useWorkingFolder(workspace, unavailable, error));
+    const auto unresolved = incomplete->getCaptureSnapshot();
+    REQUIRE(unresolved.unavailable && unresolved.sourceKind() == CaptureSourceKind::loop
+        && unresolved.reference == original.observed.reference && unresolved.manifest.loop == original.observed.capture.loop);
+    REQUIRE(incomplete->swellEngine().savedSession().swells.front().id == swellId && !incomplete->requestLoopCue());
+    REQUIRE(incomplete->pinPortableAssets(unavailable,error,true));
+    REQUIRE(!prepare(unavailable, prepared, error) && !incompleteRoot.file.getChildFile("receipts").exists());
 }
 
 static void workingFolderProcessorCases()
