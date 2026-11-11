@@ -30,6 +30,12 @@ configuration; zero discovered tests is an error. Build-only success says testin
 was not requested. You can invoke the script by absolute path from any directory,
 including a checkout path containing spaces; the caller's location is restored.
 
+During implementation, use focused checks. With current test binaries in an idle
+build tree, run the relevant CTest cases using the matching preset with `-R`
+and `--no-tests=error`. Reserve the wrapper's full `-Test` runs for the
+[pre-PR gate](../../CONTRIBUTING.md#open-a-pull-request) and separately required
+release, host-test or acceptance gates.
+
 `-PluginOnly` builds `preverb_plugin_VST3` and its dependencies instead of the full
 solution. It cannot be combined with `-Test`, since tests need their executables
 built. The test installer uses plugin-only by default; its `-Test` option retains

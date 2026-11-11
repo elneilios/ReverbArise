@@ -11,12 +11,13 @@ ReverbArise is a Windows VST3 reverse-reverb effect built with C++20 and JUCE. E
 ## Issue delivery orchestration
 - For requests to deliver, implement, or continue a GitHub issue, use the repository skill [`deliver-issue`](.agents/skills/deliver-issue/SKILL.md). It resolves issue context, reuses existing OpenSpec changes and applies risk-aware verification.
 - The skill orchestrates **vanilla** OpenSpec explore/propose/apply; it does not replace their generated instructions, approval gates or task tracking. Explicit requests for individual OpenSpec operations may use those workflows directly.
-- Follow the specialist [Apply policy](.agents/skills/deliver-issue/references/apply-policy.md) for risk-based verification and task completion. Efficiency advice never waives mandatory OpenSpec instruction refreshes, owner approvals, required tests or final validation gates.
+- Follow the specialist [Apply policy](.agents/skills/deliver-issue/references/apply-policy.md) for focused verification and task completion. Preserve mandatory OpenSpec instruction refreshes, owner approvals and applicable acceptance checks.
 - Do not change generated OpenSpec skills or `openspec/config.yaml` to customise this delivery workflow.
 - **Completed-work cleanup:** Automatically remove regenerable build output owned by the completed task once validation and delivery are finished, following the [cleanup procedure](.agents/skills/deliver-issue/references/completed-work-cleanup.md). Preserve active builds and reviews, local changes, releases, rollback bundles, durable assets and validation evidence. Do not delete a checkout or clean other chats' worktrees as routine task cleanup; report anything retained and why.
 
 ## Contribution workflow
 - Follow [CONTRIBUTING.md](CONTRIBUTING.md): work on an issue-specific branch, open a PR for owner review, and do not push directly to `main` or self-merge.
+- **Test cadence:** Run focused checks during implementation and at integration checkpoints. Reserve full project suites for the [pre-PR gate](CONTRIBUTING.md#open-a-pull-request). Apply separately required release, host-test and owner-approved acceptance gates at their specified stages.
 
 ## Implementation safeguards
 - **Release packaging:** Use the [build-release skill](.agents/skills/build-release/SKILL.md) when preparing a release/alpha ZIP. Author release-specific notes against the previous shared build before running the existing packager; preserve its validation and immutable-output gates.

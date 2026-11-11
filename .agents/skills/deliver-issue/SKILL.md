@@ -38,7 +38,7 @@ A `plan-only` invocation stops after the permitted planning operation, never imp
 
 When OpenSpec Apply is authorised and ready, read `references/apply-policy.md`. Classify *each task* by work type, technical risk and dependency, not by the issue's overall label. Group related investigation, source edits and test setup when sensible, but maintain individual task completion, verification and mandatory OpenSpec status checks.
 
-Preserve real-time safety, transaction atomicity, durable assets, concurrency semantics and session identity. Avoid redundant reads/log dumps, repeated unchanged full suites and unnecessary administrative scripts. Never skip tests needed to establish an acceptance criterion.
+Preserve real-time safety, transaction atomicity, durable assets, concurrency semantics and session identity. Use focused checks during Apply and follow the pre-PR full-suite gate in `CONTRIBUTING.md`. Preserve explicitly required acceptance checks.
 
 After delivered user-facing code/spec or release-input changes, use [maintain-user-guide](../maintain-user-guide/SKILL.md) to review the implementation against the offline guide and record currency. Run the read-only `scripts/check-user-guide.ps1` before release packaging, even when no prose change was needed. Packaging must fail stale review; it must not invoke a skill or rewrite the guide.
 

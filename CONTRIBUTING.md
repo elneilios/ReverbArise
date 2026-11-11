@@ -20,6 +20,10 @@ ReverbArise is a personal project. Contributions, including Codex-generated chan
 
 ## Open a pull request
 
+Run the full Debug and Release CTest suites on the final revision before opening a PR that can affect plugin behaviour, build outputs or test execution. Use `./scripts/build.ps1 -Configuration Debug -Test` and `./scripts/build.ps1 -Configuration Release -Test`. During implementation, use focused checks for affected behaviour and integration paths. Apply an earlier full-suite gate only when explicitly required for the task or a separate release or host-test workflow.
+
+For guidance-only changes, use relevant document checks. When updating an open PR, rerun the full suites before pushing changes that could invalidate the prior results. Reuse passing results after edits that leave the tested inputs intact, such as prose-only updates. Record the tested revision, results and any outstanding checks in the PR.
+
 Open **one PR per coherent change**, targeting `main`. Include:
 
 - Linked GitHub issue and OpenSpec change (when applicable).
