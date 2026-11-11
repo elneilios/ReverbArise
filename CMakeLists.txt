@@ -489,3 +489,26 @@ endif()
 if(BUILD_TESTING)
     add_test(NAME preverb_shared_swell_engine_test COMMAND preverb_workflow_processor_test --shared-engine)
 endif()
+
+if(BUILD_TESTING)
+    set(preverb_pr_regression_executables
+        preverb_build_smoke
+        preverb_product_version_test
+        preverb_workflow_processor_test
+        preverb_workflow_state_test
+        preverb_capture_test
+        preverb_capture_transaction_test
+        preverb_persistent_capture_test
+        preverb_source_range_test
+        preverb_scheduled_tone_test
+        preverb_transport_playback_test
+        preverb_reverse_convolution_test
+        preverb_swell_session_test
+        preverb_waveform_display_test
+    )
+    set_property(TEST ${preverb_pr_regression_executables}
+        preverb_built_version_test preverb_ui_standards_check
+        APPEND PROPERTY LABELS pr-regression)
+    add_custom_target(preverb_pr_regression)
+    add_dependencies(preverb_pr_regression preverb_plugin_VST3 ${preverb_pr_regression_executables})
+endif()
