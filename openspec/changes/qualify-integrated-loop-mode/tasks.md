@@ -7,7 +7,7 @@
 ## 2. VCV Rack
 
 - [x] 2.1 In Rack Free 2.6.6 / Host-FX 2.1.0 / CLKD 2.5.0 at 48 kHz, revalidate Clock-only UI Arm and Duration, Step 1 Start/Arm with Step 4 Stop in End on Signal, and Clock plus aligned Phrase in End on repeat. Verify the observed MIDI 23/24/25 routes and exclusive take lengths. Include stopped-to-running and already-running clock starts.
-- [ ] 2.2 Verify End on Signal closes at the next downbeat, Duration Stop cancels, and clock loss before completion preserves the prior take. Run repeated sequencer cycles with Recapture Audio off, then enable it and prove a successful new take replaces the previous one.
+- [x] 2.2 Verify End on Signal closes at the next downbeat, Duration Stop cancels, and clock loss before completion preserves the prior take. Run repeated sequencer cycles with Recapture Audio off, then enable it and prove a successful new take replaces the previous one.
 - [ ] 2.3 In Perform, test Clock-only UI Cue and optional aligned Phrase and MIDI Cue/Stop/Stop Now. Check lead-in, repeats, Stop finish, immediate fade, reset, sync loss and fresh Cue. Demonstrate dry Standby without valid timing and with a mismatched legacy Phrase-only route. Verify Song reports the missing absolute timeline on this Rack setup.
 
 ## 3. FL Studio
