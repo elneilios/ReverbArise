@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Loop capture, Rack Note Gate routing, FL Studio Pattern repeats and stopped-clock WAV guidance against the integrated Release. Added the observed four-step Rack and two-pass Pattern examples.",
+  "summary": "Reviewed the integrated Loop guide examples for a four-step Rack take and two FL Studio Pattern passes alongside the waveform paint closeout. The current Perform navigation and waveform inspection guidance covers the canonical display behavior. No additional guide prose was required.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1210,8 +1210,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 121397,
-      "sha256": "a2f2cc16a743f25a7cfcd37b6e79e6110cefda6a6855182761ae5b33ccfb6eb1"
+      "bytes": 124476,
+      "sha256": "e46996a7eea31cc5af3013a0373737d575f02f4b4269fff8de266629ea522417"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
