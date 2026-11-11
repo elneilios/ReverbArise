@@ -203,3 +203,11 @@ placement instruction and uses that instruction after a successful Loop
 drop. The post-merge focused Release run passed all six Loop playback,
 Perform, Export UI/binding, composition and worker tests
 (`out/issue-128/integration-test.log`).
+
+The integrated revision `8b7d419` built successfully with
+`scripts/build.ps1 -Configuration Release -Test`. CTest passed 104 of 105 in
+356.48 seconds. The Perform knob reset fixture timed out acquiring Windows
+foreground focus and passed on its isolated rerun in 11.17 seconds. This
+covers all 105 tests across the two runs. Logs:
+`out/build-logs/Release/20261111-014616-8b696c9e/test.log` and
+`out/issue-128/integration-focus-rerun.log`.
