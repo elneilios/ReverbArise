@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Recovery Onset suggestions selection, keyboard dismissal and Confirm against the merged editor bindings. Retained the new Recovery guidance and the Loop capture, timing diagrams and WAV Export instructions from the Loop baseline.",
+  "summary": "Reviewed the connected tab pointer release fix against the existing tab navigation guidance. The fix restores ordinary mouse activation, so the existing instructions remain accurate. Retained the combined Recovery, Loop capture, timing and WAV Export guidance.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -815,8 +815,8 @@
     },
     {
       "path": "Source/UI/Controls/SegmentedSelector.h",
-      "bytes": 12523,
-      "sha256": "d42e46e7a8d9ba24530ea2218789a7f6a8b61b9a0c6e6ef01938ff6c15c93b99"
+      "bytes": 12623,
+      "sha256": "6709ba6ef575755435f61b8ecdd75dfc9a1770a2764620f800206d79e2456ba8"
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
