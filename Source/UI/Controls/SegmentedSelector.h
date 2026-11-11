@@ -41,7 +41,8 @@ class SegmentedSelector final:public juce::Component,public juce::SettableToolti
         {
             if(pressedSource!=e.source)return;
             pressedSource.reset();
-            if(e.mods.isAnyMouseButtonDown() || !getLocalBounds().toFloat().contains(e.position))
+            // JUCE sends the modifiers from before the release in mouseUp.
+            if(e.source.getCurrentModifiers().isAnyMouseButtonDown() || !getLocalBounds().toFloat().contains(e.position))
                 juce::Button::mouseExit(e);
             else
                 juce::Button::mouseUp(e);
