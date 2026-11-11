@@ -160,6 +160,8 @@ static void workingFolderLoopCases()
     REQUIRE(moved.file.isDirectory() && !destination.file.exists());
 
     const auto checkRecovered = [&](PreverbAudioProcessor& owner){
+        Input recovered;
+        waitFor([&]{return owner.pinPortableAssets(recovered,error);});
         const auto capture = owner.getCaptureSnapshot();
         REQUIRE(!capture.unavailable && capture.sourceKind() == CaptureSourceKind::loop);
         REQUIRE(capture.reference == original.observed.reference && capture.manifest.revision == original.observed.capture.revision
@@ -174,7 +176,11 @@ static void workingFolderLoopCases()
         REQUIRE(swell.id == savedSwell.id && swell.name == savedSwell.name && swell.shape.gainDb == savedSwell.shape.gainDb
             && swell.ir == savedSwell.ir && swell.render == savedSwell.render);
         for (const auto& dependency : original.files)
-            REQUIRE(fileHash(owner.swellEngine().assetDirectory().getChildFile(dependency.path)) == dependency.sha256);
+        {
+            const auto file = recovered.instanceRoot.getChildFile(dependency.path);
+            if (!file.existsAsFile()) throw std::runtime_error("Missing recovered asset: " + file.getFullPathName().toStdString());
+            REQUIRE(fileHash(file) == dependency.sha256);
+        }
     };
     for (const bool useBackup : {false, true})
     {

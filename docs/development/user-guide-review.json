@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Loop recovery preflight and the shared Cue and Storage handoff fence. The existing guide already covers stopped playback, verified recovery through Settings Storage and fresh Cue, so no prose changes were needed.",
+  "summary": "Reviewed the synced Loop persistence and asset portability requirements against the existing save, Locate, Restore and fresh Cue instructions. Both native Release gates passed. The existing guide text covers the delivered workflow.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1160,8 +1160,8 @@
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 11296,
-      "sha256": "a6d3910a5706964af5073d963b387527c5dad7b3dbda079e367e54b9d65ba2a8"
+      "bytes": 12075,
+      "sha256": "6d5d83b20cc0d63b6d73b2c4e0bacb6b753f947e22f3a8b4aa6d75503085877b"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
@@ -1170,8 +1170,8 @@
     },
     {
       "path": "openspec/specs/project-asset-portability/spec.md",
-      "bytes": 15503,
-      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
+      "bytes": 17138,
+      "sha256": "bc8daae250091400691d1e2a1f8954f9a3134531649e365b9401e128d4ff35c8"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",

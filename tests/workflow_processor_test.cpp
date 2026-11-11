@@ -1151,9 +1151,14 @@ static void loopPlaybackProcessorCases()
     REQUIRE(restoredQueue->getWorkflowSnapshot().mode == workflow::Mode::live);
     REQUIRE(restoredQueue->loopPlaybackStatus().playback == Playing::standby && !restoredQueue->requestLoopCue());
     REQUIRE(p.loopPlaybackStatus().playback == Playing::queued);
+    const auto closeEditor = [&p](juce::AudioProcessorEditor* editor){
+        p.editorBeingDeleted(editor);
+        delete editor;
+    };
     for (int open = 0; open < 2; ++open)
     {
-        const auto editor = std::unique_ptr<juce::AudioProcessorEditor>(p.createEditorAndMakeActive());
+        const std::unique_ptr<juce::AudioProcessorEditor, decltype(closeEditor)> editor(
+            p.createEditorAndMakeActive(), closeEditor);
         REQUIRE(editor && p.getCaptureSnapshot().reference == accepted.reference);
         REQUIRE(p.loopPlaybackStatus().playback == Playing::queued);
     }
