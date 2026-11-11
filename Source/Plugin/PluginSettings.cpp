@@ -158,7 +158,7 @@ void PreverbAudioProcessorEditor::layoutSettings()
     const auto feedbackBand=m3::ui::controlGeometry::feedbackHeight+m3::ui::spacing::related;
     regenerationFeedback.setBounds(left,allButton.getBottom()+m3::ui::spacing::tight,width,m3::ui::controlGeometry::feedbackHeight);
     settingsLabels[7].setBounds(left,52+feedbackBand,160,26);analyzeButton.setBounds(left+175,52+feedbackBand,200,30);confirmButton.setBounds(left+390,52+feedbackBand,200,30);
-    candidateBox.setBounds(left+175,90+feedbackBand,415,30);
+    candidateBox.setRowBounds({left+labelWidth,90+feedbackBand,width-labelWidth,30});
     settingsLabels[8].setBounds(left,132+feedbackBand,160,26);recaptureButton.setBounds(left+175,132+feedbackBand,200,30);cancelButton.setBounds(left+390,132+feedbackBand,200,30);
     recaptureStatus.setBounds(left,170+feedbackBand,width,38);
     clearButton.setBounds(left,214+feedbackBand,220,30);suppressionButton.setBounds(left+240,214+feedbackBand,350,30);

@@ -6,16 +6,16 @@ production standards revision 11 after #80's revisions 8â€“10. This documen
 source inspection. The separate command-button child now records native family
 revision-4 approval and production adoption at standards revision 12; its
 [evidence](../validation/2026-11-06-issue-107-buttons.md) separates integrated
-acceptance and automated results. Other production migrations remain
-separate child changes; #107 remains open. Independent #108 Level and #8 recovery/engine
-work are outside this delivery and the remaining-button proposal.
+acceptance and automated results. The family rollout shipped in the child changes
+listed below. Independent #108 Level and #8 recovery/engine work retains its own
+delivery and evidence.
 
 The selector child `unify-selector-states` adds the native-approved C2 family and
 named consumer adoption at standards revision 14 (7 November 2026). Its
 [evidence](../validation/2026-11-07-issue-107-selectors.md) records local field
 feedback approval, binding checks and remaining host/DPI coverage. Action menus
-remain the separate `unify-action-menu-states` child; Recovery candidateBox stays
-with #8.
+shipped in `unify-action-menu-states`. The Recovery selector deferred during #8
+adopts C2 in `unify-recovery-onset-selector`.
 
 ## How to read this inventory
 
@@ -123,11 +123,11 @@ Source: [PluginSettings](../../Source/Plugin/PluginSettings.cpp) moves existing
 editor members into pages; these are not duplicate controls in Diagnostics.
 Playback, Processing, Swell, Audition, Recovery, About plus conditional Appearance
 are covered. About has #59 acceptance; Appearance/auxiliary limitations remain
-as recorded in #58 evidence. Legacy other-page controls remain explicit debt.
+as recorded in #58 evidence.
 
 | ID / actual members | Owner / semantics | States and concrete differences | Disposition |
 | --- | --- | --- | --- |
-| S1 `gainPolicyBox`, `liveRoutingBox` (Playback); `inCurveBox`, `outCurveBox` (Swell); `candidateBox` (Recovery) | C2 ChoiceSelector for four Playback/Swell choices; Recovery retains plain ComboBox/theme | Four migrated selectors use deliberate no-wheel inspection/commit and captured session/pass/selected-swell guards; gain prototype remains inspectable/unavailable | `unify-selector-states` adopts only the four named choices; Recovery candidateBox remains #8/P2 debt |
+| S1 `gainPolicyBox`, `liveRoutingBox` (Playback); `inCurveBox`, `outCurveBox` (Swell); `candidateBox` (Recovery) | C2 ChoiceSelector | Deliberate no-wheel inspection/commit with captured binding context; gain prototype remains inspectable/unavailable. Recovery refreshes by sample identity and keeps Confirm separate. | `unify-selector-states` covers Playback/Swell. `unify-recovery-onset-selector` covers Recovery. |
 | S2 `defaultIRButton` (Processing); `fullButton`, `setBarsButton`, `removeButton` (Swell); `generateButton`, `allButton`, `analyzeButton`, `confirmButton`, `recaptureButton`, `cancelButton`, `clearButton`, `suppressionButton`, `openDiagnosticsButton` (Recovery) | C1 neutral ActionButton | I/H/P/F/D/B; shared mouse/focus states and eligible keyboard/accessibility path; Delete/Clear retain neutral classification | P1 implemented; callbacks and guards retained; default import retains shared binding; native integration approved |
 | S3 `copyBuildInformation` (About) | C1 primary ActionButton | I/H/P/F/D; intentionally primary copy action already explicit, success feedback accessible event | P1 retain #59 scope |
 | S4 `liveButton` (Playback), `mappingButton` (Processing), `muteButton` (Swell), `isolateButton`, `isolateDryButton` (Audition), `toneButton` (Recovery) | C6 Switch | I/H/P/F/D/S; labeled track and thumb, retained unavailable on state | P6 adopted with existing playback, edit and tone rules |
@@ -233,7 +233,7 @@ Keep the family open until every consumer has a recorded disposition.
 | Packet / proposed order | Exact scope and reusable ownership | Dependencies, guards and disposition |
 | --- | --- | --- |
 | P1 Commands, glyph actions and latches | H1, L1/L2, P1/P2/P6 command children, E1/E4 command children, S2/S3, D1/D2; C1 shared command family | Delivered in PR #114. Native family revision 4 and the IR alignment correction were approved. Explicit roles replace all 20 persistent legacy TextButtons. Callbacks, captured ownership and effective latch state are preserved. |
-| P2 Selectors and menus | L3, P3, E3, four S1 selectors and S6 adopted by `unify-selector-states`. N1 and N2 use the shared action presenter | Selectors preserve catalogue/ID/epoch/input/pass and deliberate no-wheel policy. Swells and Reset retain captured actions and pointer anchoring. Settings → Recovery still uses a plain JUCE ComboBox for Onset suggestions (`candidateBox`) after #8 closed. It remains a #107 coverage item. Rename dialog input is covered by P4. |
+| P2 Selectors and menus | L3, P3, E3, S1 and S6 use the shared selector. N1 and N2 use the shared action presenter. | Selectors preserve catalogue/ID/epoch/input/pass and deliberate no-wheel policy. Swells and Reset retain captured actions and pointer anchoring. The Recovery follow-up uses the approved C2 presentation and preserves the existing sample and Confirm behavior. Rename dialog input is covered by P4. |
 | P3 Text, context help and feedback | Shared measured wrapping and full-description labels across H3, L7/L8, P8, E5/E6, S10/S11/S12, D4/D5/D6 and N4, including Storage/Recovery from closed #8. S9 source-range feedback shipped separately in #122. | Revision 25 adoption. Existing field feedback, notice precedence, transport geometry and full diagnostic copying retain their approved specialized policies. See the P3 consumer evidence and [S9 validation](../validation/2026-11-07-issue-107-field-feedback.md). |
 | P4 Numeric and text fields | L6, P7, E5, S8/S9, D5, N1 and N4 adopted or verified by `unify-numeric-text-fields`. D6 audited as retained hidden seams. | Shared text and numeric surfaces, wrapped feedback where it has a position, exact and explicit edit lifecycles, read-only copying and configured wheel steps. |
 | P5 Knobs and sliders | L6, P6/E4, P7, E5, S8 and N4 adopted by `unify-knob-slider-interactions`. D6 retained as hidden compatibility seams. | Shared dial/track feedback and Ctrl+wheel, Level home detent, preserved gesture guards, Reset, independent pair edits and display-only values. |
@@ -244,10 +244,13 @@ Keep the family open until every consumer has a recorded disposition.
 | P8 Waveform gestures | L8, E6 and N4. Shared main-canvas gestures and focus with a left-drag-only Perform Overview. | See [waveform gesture evidence](../validation/2026-11-10-issue-107-waveform-gestures.md). |
 | P8 Dialogs, choosers and auxiliary shells | N1 dialogs, N3 native pickers, N5 Settings/Diagnostics and Storage/working-folder picker routes | Revision 26 adoption; [full consumer evidence](../validation/2026-11-11-issue-107-dialogs-windows.md). Shared dismissal/focus lifetime, retained native modes/filters and operation guards, single transform and comfortable typography. Host chrome, waveform and drag interactions retain their owners. |
 
-Each remaining packet requires its own proposal/design/tasks and a
-consumer-specific diff, tests, review evidence and documentation update.
-Every row has a packet or explicit retained-native disposition. For controls
-retained as shared references, record equivalence evidence in the child change.
+The final coverage review reconciles these rows against the delivered P1–P8
+children and the Recovery selector follow-up. Visible consumers are accounted
+for by the shared families or their documented specialized owners. In
+particular, native pickers and host chrome retain platform ownership, while
+waveform, file drag and virtualized list interactions retain their specialized
+policies. The hidden diagnostic compatibility controls in D3 and D6 retain
+their existing bindings and stay outside the visible control surface.
 
 ### Common native and compatibility gate for every packet
 
@@ -316,8 +319,9 @@ upstream results, not tests performed by this documentation audit.
 P1 reuses the delivered shared surface; P3/P4 reuse the approved IR feedback
 composition. Rows H1/L2/L3/L7/P1/P3/P8/N3 reflect merged ownership. The legacy
 `loadIR` theme painter is orphaned; the actual IR file action is already shared.
-Remaining name-based theme consumers and other legacy families stay explicit debt.
-No production code is changed by this audit.
+The initial audit identified remaining name-based theme consumers. P1 replaced
+those command consumers with typed roles, and the current fallback painter
+uses button state independently of names and labels.
 
 The first child is proposed as
 [`unify-command-button-states`](../../openspec/changes/archive/2026-11-06-unify-command-button-states/proposal.md).
