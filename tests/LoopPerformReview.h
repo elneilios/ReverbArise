@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <source_location>
 #include <thread>
 
 namespace preview46
@@ -61,12 +62,20 @@ static void loopPerformReview(bool review,const juce::File& output)
         impulse[i]=static_cast<float>(.12*std::exp(-static_cast<double>(i)/3200)*std::cos(i*.034));
     writeTestWav(ir,1,48000,impulse);
     engine.loadIR(ir);
-    const auto until=[&](const auto& predicate)
+    const auto until=[&](const auto& predicate,const std::source_location where=std::source_location::current())
     {
         const auto deadline=juce::Time::getMillisecondCounter()+12000;
         while(!predicate() && juce::Time::getMillisecondCounter()<deadline)
         {fixture.tick();juce::Thread::sleep(2);}
-        if(!predicate())throw std::runtime_error(engine.snapshot().message.toStdString());
+        if(!predicate())
+        {
+            const auto state=engine.snapshot();const auto playback=processor.loopPlaybackStatus();
+            std::cerr<<"Loop readiness timeout at "<<where.line()<<" audition="<<state.auditionReady
+                <<" phase="<<static_cast<int>(playback.phase)<<" playback="<<static_cast<int>(playback.playback)
+                <<" preparation="<<static_cast<int>(playback.preparation)<<" message="<<state.message<<"\n";
+            for(const auto& swell:state.session.swells)std::cerr<<"Swell "<<swell.name<<" phase="<<static_cast<int>(swell.phase)<<" "<<swell.status<<"\n";
+            throw std::runtime_error("Loop readiness did not settle");
+        }
     };
     until([&]{const auto session=engine.savedSession();return session.swells.size()==2
         && session.swells[0].irName==ir.getFileName() && session.swells[1].irName==ir.getFileName();});
@@ -221,7 +230,10 @@ static void loopPerformReview(bool review,const juce::File& output)
         std::cerr<<"Loop finish state="<<static_cast<int>(processor.loopPlaybackStatus().playback)<<" phase="<<static_cast<int>(processor.loopPlaybackStatus().phase)<<" status="<<status.getText()<<" button="<<cue.getButtonText()<<"\n";
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now");
     REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
-    fixture.through(fixture.marker(112)+512);
+    // Audio continued during the screenshots, so Stop may now belong to the
+    // following pass. Drive through that pass's actual observed boundary.
+    const auto stopBoundaryBeat=((fixture.nextBeat+fixture.phraseBeats-1)/fixture.phraseBeats)*fixture.phraseBeats;
+    fixture.through(fixture.marker(stopBoundaryBeat)+512);
     until([&]{const auto state=processor.loopPlaybackStatus();
         return state.playback==Playing::standby && state.preparation==Prep::ready && state.phase==Phase::ready;});
     editor.refresh();

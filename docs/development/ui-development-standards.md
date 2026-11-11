@@ -187,7 +187,8 @@ lists the integration baseline, component ownership and remaining legacy consume
   ownership and safe completion paths must still be shared and tested.
 
 The Loop Learn policy viewport reuses the labeled `Switch` family and
-`FieldNumericInput` for duration count. Its Arm command retains the approved
+`FieldNumericInput` for duration count. Loop status and helper prose allocate
+`WrappedLabel` preferred heights within that viewport. Its Arm command retains the approved
 destructive latch. Shared waveform navigation stays bounded to the accepted
 phrase, and a replacement source clears its inspection/navigation context.
 See the [first main/Loop integration evidence](../validation/2026-11-10-loop-main-integration.md)
