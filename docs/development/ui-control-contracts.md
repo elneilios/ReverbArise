@@ -280,6 +280,9 @@ Arrows and Home/End inspect, Return/Space request activation, and wheel input
 passes through. Unavailable choices expose their reasons and reject activation.
 The selected fill, pointer hover and held feedback, and outer focus brackets
 are independent. Pointer clicks hide focus decoration while retaining focus.
+Tab pointer regression checks reproduce JUCE's release event, which carries the
+pre-release modifiers in `mouseUp` while the input source reports the current
+button state.
 Settings routes programmatic selection by stable page identity and keeps About
 last, with Appearance before Storage when available.
 

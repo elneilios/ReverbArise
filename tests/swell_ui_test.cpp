@@ -334,6 +334,7 @@ int main(int argc,char* argv[]){return runTest([&]
     {surfaceLifecycleCases([]{juce::MessageManager::getInstance()->runDispatchLoopUntil(30);});return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-source-range-feedback"){sourceRangeFeedbackCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-connected-tabs"){controlReview::connectedTabCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
     {
@@ -1859,6 +1860,13 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(engine.edit(first,[&](auto& w,auto&){w.shape=shapeBefore;return true;}));waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
     for(int n=0;n<500;++n){auto w=saved.swells[0];w.id=juce::Uuid().toDashedString();w.name="Target "+juce::String(n+1);many.swells.push_back(w);}
     many.primary=many.swells[0].id;many.selected={many.primary};engine.restore(many);editor.refresh();
+    // Keep the 500-row fixture focused on list virtualization and menu input.
+    // The working-folder panel has its own copy of the provider and its own timer.
+    editor.stopAutomaticRefreshForReview();
+    auto* denseFixtureStorage=dynamic_cast<m3::ui::PortableStoragePanel*>(named(editor,"portableStorage"));
+    REQUIRE(denseFixtureStorage);
+    denseFixtureStorage->bind([](auto&,auto&){return false;});
+    denseFixtureStorage->enableWorkingFolder(processor->assetRegistryRoot(),{});
     const auto list=dynamic_cast<juce::ListBox*>(named(editor,"swellList"));REQUIRE(list && list->getModel()->getNumRows()==500 && list->getNumChildComponents()<30);snapshotEditor(editor,"many");
     {const auto old=editor.getBounds();for(const auto size:{juce::Point<int>{1100,850},juce::Point<int>{1400,900},juce::Point<int>{1400,1000},juce::Point<int>{1600,1000}})
         {editor.setSize(size.x,size.y);editor.refresh();snapshotEditor(editor,"many-"+juce::String(size.x)+"x"+juce::String(size.y));}
@@ -1881,6 +1889,9 @@ int main(int argc,char* argv[]){return runTest([&]
     }
 
     engine.restore(saved);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();
+    denseFixtureStorage->enableWorkingFolder(processor->assetRegistryRoot(),
+        [owner=processor.get()](const auto& folder,const auto& input,auto& error,const auto& hooks)
+        {return owner->useWorkingFolder(folder,input,error,hooks);});
     auto advanced=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
     REQUIRE(visibleOffscreen(named(editor,"sourceSampleStart")));snapshotEditor(editor,"precise-timing");
     const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});editor.refresh();snapshotEditor(editor,"error");

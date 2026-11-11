@@ -59,3 +59,60 @@ handler separately from the accepted page and the painted brackets.
 The focused Windows MSVC Release rebuild passed both CTest entries
 (`preverb_swell_ui_test` and `preverb_storage_settings_test`). Results are in
 `out/build-logs/p7-uia-release-test.log`.
+
+## 11 November 2026 pointer regression from FL Studio smoke testing
+
+The installed `5fc1240` build cancelled normal tab clicks. JUCE dispatches
+`mouseUp` with the modifiers from before release, so the tab interpreted a
+normal left release as a button still being held. The old tests called
+`mouseUp` directly with empty modifiers. Settings integration tests selected
+pages programmatically or with keys and did not cover the missing pointer path.
+
+The failure was reproduced by sending a click through a JUCE component peer.
+Against `5fc1240`, hit-testing and press succeeded but release emitted no
+selection request. The same peer check passed with the fix in the Release
+suite. The permanent test reproduces the native event/source modifier mismatch
+without relying on desktop hit-testing through potentially overlapping windows.
+The fix retains same-source, in-bounds and availability checks. The focused
+test is available via `preverb_swell_ui_test --test-connected-tabs`.
+
+Windows MSVC Release built successfully. The full sweep passed 98/100 tests,
+including the native-peer tab check. The reset and readability fixtures stopped
+while waiting for native focus. After replacing the peer fixture with the
+deterministic release-event regression, the focused tab check and all four
+targeted CTest entries passed, including both focus retries and the Swell UI and
+Storage Settings tests. Logs are under
+`out/build-logs/Release/20261111-084404-6c0be8fc/` and
+`out/build-logs/tab-pointer-release-focus-retry.log`.
+
+The owner confirmed that clicking tabs worked in FL Studio on the installed
+Release build from `4844c92` on 11 November 2026.
+
+The Debug build and standalone tab check passed. The full Debug run failed at
+the Swells multi-delete assertion in `SwellListBindingCases.h:277` and was
+stopped during the later composition fixture.
+See `out/build-logs/Debug/20261111-085722-42028b05/`.
+
+### PR #157 fixture follow-up
+
+The multi-delete test now waits for the confirmation dialog's asynchronous
+completion before asserting that only the captured swells were removed. The
+500-row fixture uses explicit editor refresh and isolates the Storage and
+Working Folder providers until the test restores its original session. Native
+stack samples showed the Working Folder timer serializing the synthetic session
+while JUCE dispatched messages. The dense list and popup assertions remain in
+the suite. This follow-up changes tests only.
+
+Both Windows MSVC builds and all 100 CTest entries per configuration were
+verified against the test inputs committed as `a489683`. The full Debug sweep
+passed 98/100, including Swell UI in 203.74 seconds. Perform readability and
+knob Reset passed on targeted retries after Windows foreground-focus failures.
+The full Release sweep passed 99/100. Swell UI passed on retry after a native
+peer-focus failure. Retries used the same binaries. The owner-confirmed FL
+Studio build remains `4844c92`.
+
+Full sweep logs are in `out/build-logs/Debug/20261111-102942-2f3ba473/` and
+`out/build-logs/Release/20261111-105024-13447673/`. Retry logs are
+`out/build-logs/tab-fix-debug-focus-retry.log`,
+`out/build-logs/tab-fix-debug-knob-reset-native.log`, and
+`out/build-logs/tab-fix-release-focus-retry.log`.

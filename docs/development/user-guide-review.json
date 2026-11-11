@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Recovery onset selector and synchronized specification. The guide explains choosing a sample, keyboard inspection and dismissal, retention during refresh, and the separate Confirm action.",
+  "summary": "Reviewed the connected-tab pointer release fix against the current guide. Mouse activation now follows the documented tab behavior, with the same keyboard, accessibility and selection rules. No guide text changed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -735,8 +735,8 @@
     },
     {
       "path": "Source/UI/Controls/SegmentedSelector.h",
-      "bytes": 12523,
-      "sha256": "d42e46e7a8d9ba24530ea2218789a7f6a8b61b9a0c6e6ef01938ff6c15c93b99"
+      "bytes": 12623,
+      "sha256": "6709ba6ef575755435f61b8ecdd75dfc9a1770a2764620f800206d79e2456ba8"
     },
     {
       "path": "Source/UI/Controls/SelectorPresentation.h",
