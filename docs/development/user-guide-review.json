@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the merged P8 dialog, Windows picker, Settings and Diagnostics keyboard and focus behavior against production bindings. Retained the P8 instructions and the Loop timing diagrams, accepted-source guidance and Song-only WAV export instructions. No new host acceptance claimed.",
+  "summary": "Reviewed P8 keyboard dismissal and focus return, and the archived C3 Settings source-range help and validation contract, against the existing guide and production bindings. The merged guide retains Loop diagrams, capture and timing guidance, and Song-only WAV export. The C3 closeout documents existing behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1200,8 +1200,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 61332,
-      "sha256": "bcd0dce0b199c3a1d8ddfc8c11fbd280ae025807628577b609da4b912ffa1ca6"
+      "bytes": 64308,
+      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
