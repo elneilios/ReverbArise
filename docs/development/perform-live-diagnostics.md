@@ -6,6 +6,9 @@ managed assets. Do not Clear, Recapture, reset renders, delete swells or toggle
 settings to repair silence before collecting evidence; use a separate FLP copy
 when changing the plugin build.
 
+Each periodic refresh updates the Diagnostics readouts before measuring their
+wrapped heights and laying out the window. Layout uses the text from that refresh.
+
 ## Reading observations
 
 The fixed-grid section is a **UI snapshot**, separate from callback/worker
