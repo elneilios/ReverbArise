@@ -36,6 +36,14 @@ class Double {
     }
     string stage = tool == "ctest" ? "Test" : all.Contains("--build") ? "Build" : "Configure";
     File.AppendAllText(Environment.GetEnvironmentVariable("FIXTURE_TRACE"), stage + "|" + all + "|" + Environment.CurrentDirectory + "\n");
+    if (tool == "ctest" && all.Contains("--show-only=json-v1")) {
+      string configuration = all.Contains("windows-msvc-release") ? "Release" : "Debug";
+      string name = all.Contains("wrong_target") ? "preverb_other_test" : "preverb_focused_test";
+      string executable = Environment.CurrentDirectory.Replace('\\', '/') + "/out/build/windows-msvc/" + configuration + "/" + name + ".exe";
+      Console.WriteLine(all.Contains("no_match") ? "{\"tests\":[]}" :
+        "{\"tests\":[{\"name\":\"preverb_focused_case\",\"command\":[\"" + executable + "\"]}]}");
+      return 0;
+    }
     Console.WriteLine("fixture stdout " + stage);
     Console.Error.WriteLine("fixture stderr " + stage);
     if (Environment.GetEnvironmentVariable("FIXTURE_FAIL") == stage) return 23;
@@ -104,6 +112,21 @@ try {
     }
     $null = Run-Case @('-Configuration', 'Other') 1
     Assert ((Get-Item -LiteralPath $trace).Length -eq 0) 'Invalid input launched a native stage.'
+    $null = Run-Case @('-Configuration','Release','-TestTarget','preverb_focused_test','-TestFilter','^preverb_focused_case$')
+    $focusedCalls = @(Get-Content -LiteralPath $trace)
+    Assert ($focusedCalls.Count -eq 4 -and $focusedCalls[1].Contains('--target preverb_focused_test')) 'Focused run did not build the selected target.'
+    Assert ($focusedCalls[2].Contains('--show-only=json-v1') -and $focusedCalls[3].Contains('windows-msvc-release --no-tests=error -R ^preverb_focused_case$')) 'Focused run did not inspect and execute the selected cases.'
+    $null = Run-Case @('-TestTarget','preverb_focused_test')
+    Assert ((Get-Content -LiteralPath $trace -Raw).Contains('-R ^preverb_focused_test$')) 'Default filter did not select the test named after the target.'
+    foreach ($filter in 'wrong_target','no_match') {
+        $output = Run-Case @('-TestTarget','preverb_focused_test','-TestFilter',$filter) 1
+        Assert ($output -match 'does not run the freshly built target|matched no tests') 'Invalid CTest selection was not diagnosed.'
+        Assert (@(Get-Content -LiteralPath $trace).Count -eq 3) 'Invalid selection launched tests.'
+    }
+    $null = Run-Case @('-TestFilter','preverb_focused_test') 1
+    Assert ((Get-Item -LiteralPath $trace).Length -eq 0) 'A filter alone launched native work.'
+    $null = Run-Case @('-TestTarget','preverb_focused_test','-PrRegression') 1
+    Assert ((Get-Item -LiteralPath $trace).Length -eq 0) 'Conflicting test modes launched native work.'
     foreach ($failure in @('Configure', 'Build', 'Test')) {
         $env:FIXTURE_FAIL = $failure
         $output = Run-Case @('-Test') 23

@@ -6,9 +6,11 @@ param(
     [switch] $PluginOnly,
     [string] $ReleaseTag = '',
     [string] $Candidate = '',
-    [switch] $PrRegression
+    [switch] $PrRegression,
+    [string] $TestTarget = '',
+    [string] $TestFilter = ''
 )
 
 . (Join-Path $PSScriptRoot 'build-support.ps1')
-$result = Invoke-ReverbBuild -Root (Split-Path $PSScriptRoot -Parent) -Configuration $Configuration -Test:$Test -PluginOnly:$PluginOnly -ReleaseTag $ReleaseTag -Candidate $Candidate -PrRegression:$PrRegression
+$result = Invoke-ReverbBuild -Root (Split-Path $PSScriptRoot -Parent) -Configuration $Configuration -Test:$Test -PluginOnly:$PluginOnly -ReleaseTag $ReleaseTag -Candidate $Candidate -PrRegression:$PrRegression -TestTarget $TestTarget -TestFilter $TestFilter
 exit $result

@@ -34,7 +34,19 @@ including a checkout path containing spaces; the caller's location is restored.
 During implementation and draft review, build the binaries needed for owner
 previews and DAW checks. Start automated testing after the owner approves
 marking the draft ready. For targeted checks, run the relevant CTest cases
-against current binaries in an idle build tree using the matching preset with
+through the wrapper by naming the test executable target. By default it runs
+the CTest case with the same name. Supply `-TestFilter` for cases registered
+under other names. The wrapper builds the target, checks that every matching
+case uses that executable in the selected configuration, and runs the cases
+under the same build-tree lock.
+
+```powershell
+./scripts/build.ps1 -Configuration Debug -TestTarget preverb_reverse_convolution_test
+./scripts/build.ps1 -Configuration Release -TestTarget preverb_swell_ui_test -TestFilter '^(preverb_swell_ui_test|preverb_surface_lifecycle_test)$'
+```
+
+For script-based checks or tests that need multiple targets, build their
+prerequisites and run CTest in an idle tree using the matching preset with
 `-R` and `--no-tests=error`. Choose Debug, Release or both based on which
 configuration exercises the affected behaviour. For guidance-only diffs, use
 relevant document checks as the targeted checks. The full Release suite runs
