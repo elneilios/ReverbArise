@@ -103,18 +103,34 @@ function Get-BuildRevision([string] $Git, [string] $Root) {
 
 function Invoke-ReverbBuild {
     [CmdletBinding()]
-    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '', [switch] $PrRegression)
+    param(
+        [string] $Root,
+        [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug',
+        [switch] $Test,
+        [switch] $PluginOnly,
+        [string] $ReleaseTag = '',
+        [string] $Candidate = '',
+        [switch] $PrRegression,
+        [string] $TestTarget = '',
+        [string] $TestFilter = ''
+    )
     $ErrorActionPreference = 'Stop'
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
     $preset = 'windows-msvc-' + $Configuration.ToLowerInvariant()
     $stages = [ordered]@{ Preflight = 'not run'; Configure = 'not run'; Build = 'not run'; Test = 'not requested' }
-    $runTests = $Test -or $PrRegression
+    $runTests = $Test -or $PrRegression -or $TestTarget
     if ($runTests) { $stages.Test = 'not run' }
     $revision = 'unavailable'; $logDirectory = 'unavailable'; $lock = $null; $code = 1; $stage = 'Preflight'
     Push-Location -LiteralPath $Root
     try {
         if ($PluginOnly -and $Test) { throw '-PluginOnly cannot be combined with -Test; tests require the full build.' }
         if ($PrRegression -and ($PluginOnly -or $Test)) { throw '-PrRegression cannot be combined with -PluginOnly or -Test.' }
+        if ($TestFilter -and -not $TestTarget) { throw '-TestFilter requires -TestTarget.' }
+        if ($TestTarget) {
+            if ($Test -or $PluginOnly -or $PrRegression) { throw '-TestTarget selects its own build and test mode.' }
+            if ($TestTarget -cnotmatch '^preverb_[A-Za-z0-9_]+$') { throw '-TestTarget requires a preverb test executable target name.' }
+            if (-not $TestFilter) { $TestFilter = "^$TestTarget$" }
+        }
         $tools = Resolve-BuildTools
         $revision = Get-BuildRevision $tools.Git $Root
         # Resolve binaryDir from the unchanged configure preset rather than using a global lock.
@@ -130,6 +146,7 @@ function Invoke-ReverbBuild {
         Write-Host "Tools: $($tools.CMake); $($tools.CTest)"
         if ($PluginOnly) { Write-Host 'Build target: preverb_plugin_VST3 (plugin only; CTest not requested)' }
         if ($PrRegression) { Write-Host 'Build target: preverb_pr_regression (CTest label: pr-regression)' }
+        if ($TestTarget) { Write-Host "Build target: $TestTarget (CTest filter: $TestFilter)" }
         foreach ($stage in @('Configure', 'Build', 'Test')) {
             if ($stage -eq 'Test' -and -not $runTests) { continue }
             $executable = $tools.CMake
@@ -140,9 +157,24 @@ function Invoke-ReverbBuild {
             }
             if ($stage -eq 'Build' -and $PluginOnly) { $arguments += @('--target', 'preverb_plugin_VST3') }
             if ($stage -eq 'Build' -and $PrRegression) { $arguments += @('--target', 'preverb_pr_regression') }
+            if ($stage -eq 'Build' -and $TestTarget) { $arguments += @('--target', $TestTarget) }
             if ($stage -eq 'Test') {
                 $executable = $tools.CTest
                 if ($PrRegression) { $arguments += @('-L', '^pr-regression$') }
+                if ($TestTarget) {
+                    $arguments += @('-R', $TestFilter)
+                    $inventoryLog = Join-Path $logDirectory 'test-inventory.json'
+                    $code = Invoke-BuildNative $executable ($arguments + '--show-only=json-v1') $inventoryLog
+                    if ($code -ne 0) { throw "CTest discovery failed. Full output: $inventoryLog" }
+                    $inventory = Get-Content -LiteralPath $inventoryLog -Raw | ConvertFrom-Json
+                    if (-not $inventory.tests) { throw "CTest filter matched no tests: $TestFilter" }
+                    $expectedExecutable = Join-Path $binaryDirectory "$Configuration/$TestTarget.exe"
+                    foreach ($case in $inventory.tests) {
+                        if (-not $case.command -or [IO.Path]::GetFullPath($case.command[0]) -ine $expectedExecutable) {
+                            throw "CTest case '$($case.name)' does not run the freshly built target '$TestTarget'. Full output: $inventoryLog"
+                        }
+                    }
+                }
             }
             $log = Join-Path $logDirectory ($stage.ToLowerInvariant() + '.log')
             Write-Host "$stage $Configuration... ($log)"
