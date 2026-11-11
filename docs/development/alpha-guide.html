@@ -591,9 +591,9 @@
 <tr><th scope="row">Perform Stop</th><td>17</td><td class="note-name">F0</td><td class="note-name">F1</td><td>Finishes the current pass without the next lead-in, or cancels a queued start.</td></tr>
 <tr><th scope="row">Perform Stop Now</th><td>18</td><td class="note-name">F&#9839;0</td><td class="note-name">F&#9839;1</td><td>Fades the wet signal immediately, or cancels a queued start.</td></tr>
 <tr><th scope="row">Reset</th><td>22</td><td class="note-name">A&#9839;0</td><td>&mdash;</td><td>Clears Rack timing and cancels an in-progress take or Loop playback. Cue again once timing returns.</td></tr>
-<tr><th scope="row">Bar</th><td>19</td><td class="note-name">G0</td><td>&mdash;</td><td>Marks bar boundaries for older marker-based patches. In Perform, it can also align an idle Loop if it arrives with Clock.</td></tr>
-<tr><th scope="row">Beat</th><td>21</td><td class="note-name">A0</td><td>&mdash;</td><td>Marks beats in the older marker-based route.</td></tr>
-<tr><th scope="row">Capture Gate</th><td>14</td><td class="note-name">D0</td><td>&mdash;</td><td>Recognized for older marker-based patches. For sequenced capture, use Learn Start/Arm and Learn Stop. Releasing Capture Gate does not finish an End on Signal take.</td></tr>
+<tr><th scope="row">Bar</th><td>19</td><td class="note-name">G0</td><td>&mdash;</td><td>Legacy Rack timing input. Marks downbeats for marker-based Duration capture. In Perform, send Bar and Clock (23) on the same sample while the Loop is idle to set beat one for future Cues.</td></tr>
+<tr><th scope="row">Beat</th><td>21</td><td class="note-name">A0</td><td>&mdash;</td><td>Legacy Rack timing input. Marks each beat for marker-based Duration capture, alongside Bar and Phrase (12). In Learn, use this marker setup on its own. Mixing Bar or Beat with Clock (23) can cancel the take.</td></tr>
+<tr><th scope="row">Capture Gate</th><td>14</td><td class="note-name">D0</td><td>&mdash;</td><td>Legacy Rack input. Pressing or releasing Capture Gate does not start or stop a take. For sequenced capture, use <strong>Learn Start/Arm (24)</strong> and <strong>Learn Stop (25)</strong>.</td></tr>
 </tbody>
 </table>
 </div>

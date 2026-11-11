@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the integrated Loop guide examples for a four-step Rack take and two FL Studio Pattern passes alongside the waveform paint closeout. The current Perform navigation and waveform inspection guidance covers the canonical display behavior. No additional guide prose was required.",
+  "summary": "Verified Rack Bar and Beat against the production marker-based Duration route and Perform downbeat alignment. Clarified the legacy Rack inputs, the capture conflict with Clock, and that Capture Gate cannot start or stop a take. Pointed sequenced capture to Learn Start/Arm and Learn Stop.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126095,
-      "sha256": "3e9fc4e9d577fca270f70f5e2758f99a02777af6e1ac876857ecd8a47afae527"
+      "bytes": 126348,
+      "sha256": "4cb2153b561c97a6e4b44d7eaf541f343124130b99824cb16db5092d9cb95e9b"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
