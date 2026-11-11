@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the merged Loop recovery and swell gain documentation. The guide covers project recovery, generation headroom, per-swell Level and overload reporting.",
+  "summary": "Reviewed the merged Diagnostics refresh against the existing Diagnostics guidance. Layout runs once after the readouts update, with Loop timing and gain observations preserved. The focused build runner and test changes do not change musician instructions.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 35665,
-      "sha256": "0600fdd93998f4e27682aacbca18e66269e940601c1a2ae9fb9324d308157f7a"
+      "bytes": 36542,
+      "sha256": "db5856f5807ad6c834caaabded96b8d3b8a10f24791a2f41777a98122702383c"
     },
     {
       "path": "CMakePresets.json",
@@ -586,7 +586,7 @@
     {
       "path": "Source/Plugin/PluginEditor.cpp",
       "bytes": 115739,
-      "sha256": "ac7a4f82d873eef23e1fe897d001969475d51e7965ec71e3e975b9274958283d"
+      "sha256": "0d72d0a232830212eef0931143eb4a1db521a30f910de10a9f7c68bdfeb3ec35"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -1235,13 +1235,13 @@
     },
     {
       "path": "scripts/build-support.ps1",
-      "bytes": 10228,
-      "sha256": "6d6f4a0758401ae23afaca05eed524b60c3a8a971b37aba5906aa5f8a127f3c3"
+      "bytes": 12093,
+      "sha256": "4eb8a41d03f1fd90a491d07f8697457049903a297a9c1ec69fdfc163d511432c"
     },
     {
       "path": "scripts/build.ps1",
-      "bytes": 510,
-      "sha256": "8b187bab354dbdf44c84b2b0f2130c6ce77352e0a75ab909dd976026d0904d04"
+      "bytes": 620,
+      "sha256": "c14e8f7f99a66a90df70c0ef0fc1bac04a4db4de6b0c5ed8e5010a0d36fd8f71"
     },
     {
       "path": "scripts/check-user-guide.ps1",

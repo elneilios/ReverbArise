@@ -3,6 +3,7 @@
 #include <Plugin/PluginEditor.h>
 #include <DSP/DefaultImpulse.h>
 #include <UI/LiveDiagnosticsText.h>
+#include <chrono>
 #include <source_location>
 #include <map>
 #include "ControlLibraryCases.h"
@@ -16,6 +17,21 @@
 
 struct UIPlayHead final:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
+
+static bool profileSwellUI()
+{
+    static const bool enabled=juce::SystemStats::getEnvironmentVariable("PREVERB_SWELL_UI_PROFILE",{})=="1";
+    return enabled;
+}
+
+static void profileCheckpoint(const juce::String& label)
+{
+    if(!profileSwellUI())return;
+    using Clock=std::chrono::steady_clock;
+    static const auto start=Clock::now();
+    const auto elapsed=std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now()-start);
+    std::cerr<<"Swell UI +"<<elapsed.count()<<" ms: "<<label<<'\n';
+}
 static juce::MouseEvent waveformPointer(juce::Component& target,juce::Point<float> point,
                                        juce::ModifierKeys mods={},std::optional<juce::Point<float>> start={})
 {
@@ -49,7 +65,18 @@ static void pointerTo(juce::Component& root,juce::Point<float> point,juce::Modif
     if(click){target->mouseDown(event(mods));target->mouseUp(event({}));}else target->mouseMove(event({}));
 }
 template<class F>static void waitUI(F f,const std::source_location loc=std::source_location::current())
-{const auto end=juce::Time::getMillisecondCounter()+15000;while(!f()){if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("UI timeout "+std::to_string(loc.line()));juce::Thread::sleep(2);}}
+{
+    const auto start=juce::Time::getMillisecondCounter();
+    const auto end=start+15000;
+    while(!f())
+    {
+        if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("UI timeout "+std::to_string(loc.line()));
+        juce::Thread::sleep(2);
+    }
+    const auto elapsed=juce::Time::getMillisecondCounter()-start;
+    if(profileSwellUI() && elapsed>=100)
+        profileCheckpoint("Wait at line "+juce::String(static_cast<int>(loc.line()))+" took "+juce::String(elapsed)+" ms");
+}
 static juce::Component* findNamed(juce::Component& root,const juce::String& name)
 {if(root.getName()==name)return &root;for(auto child:root.getChildren())if(auto result=findNamed(*child,name))return result;return nullptr;}
 static juce::Component* named(juce::Component& root,const juce::String& name)
@@ -65,10 +92,12 @@ static juce::Button* findButton(juce::Component& root,const juce::String& text)
 {for(auto child:root.getChildren()){if(auto b=dynamic_cast<juce::Button*>(child);b && b->getButtonText()==text)return b;if(auto b=findButton(*child,text))return b;}return nullptr;}
 static void invokeCommand(juce::Button& button)
 {
+    if(profileSwellUI())profileCheckpoint("Dispatch "+button.getButtonText());
     auto* command=dynamic_cast<m3::ui::controls::ActionButton*>(&button);REQUIRE(command);
     REQUIRE(button.isEnabled());
     REQUIRE(command->keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
     juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
+    if(profileSwellUI())profileCheckpoint("Dispatched "+button.getButtonText());
 }
 static juce::Button* button(juce::Component& root,const juce::String& text)
 {
@@ -81,6 +110,7 @@ static juce::Button* button(juce::Component& root,const juce::String& text)
 }
 static void snapshotPanel(juce::Component& panel,const juce::String& tag)
 {
+    if(profileSwellUI())profileCheckpoint(tag);
     std::cerr<<"Native panel: "<<tag<<'\n';
     auto folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_M3_OUTPUT",{});
     if(folder.isEmpty() && tag=="live-admission-evidence")folder=juce::SystemStats::getEnvironmentVariable("PREVERB_UI_LIVE_OUTPUT",{});
@@ -94,6 +124,7 @@ static bool visibleOffscreen(juce::Component* control)
 {if(!control)return false;for(;control;control=control->getParentComponent())if(!control->isVisible())return false;return true;}
 static void snapshotEditor(PreverbAudioProcessorEditor& editor,const juce::String& tag)
 {
+    if(profileSwellUI())profileCheckpoint(tag);
     std::cerr<<"Native editor: "<<tag<<'\n';
     const auto header=named(editor,"workflowHeader");REQUIRE(header);
     const auto children=header->getChildren();
@@ -331,6 +362,7 @@ static void sourceRangeFeedbackCases()
 
 int main(int argc,char* argv[]){return runTest([&]
 {
+    profileCheckpoint("Start");
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && (juce::String(argv[1])=="--test-loop-export" || juce::String(argv[1])=="--review-loop-export")){
         loopExportReview::cases();if(juce::String(argv[1])=="--review-loop-export")loopExportReview::review();return;}
@@ -346,6 +378,7 @@ int main(int argc,char* argv[]){return runTest([&]
         if(juce::String(argv[1])=="--review-command-buttons")commandButtonCases::run();
         return;
     }
+    profileCheckpoint("Command buttons");
     commandButtonCases::cases();
     if(argc>1 && (juce::String(argv[1])=="--test-ir-editor" || juce::String(argv[1])=="--review-ir-editor" || juce::String(argv[1])=="--review-ir-editor-failed"))
     {
@@ -353,11 +386,14 @@ int main(int argc,char* argv[]){return runTest([&]
         if(juce::String(argv[1])!="--test-ir-editor")controlReview::run(std::make_unique<convolutionIrCases::Panel>(juce::String(argv[1])=="--review-ir-editor-failed"?5:1));
         return;
     }
+    profileCheckpoint("Convolution IR");
     convolutionIrCases::cases();
     if(argc>1 && (juce::String(argv[1])=="--test-regeneration" || juce::String(argv[1])=="--review-regeneration"))
     {regenerationCases(juce::String(argv[1])=="--review-regeneration");return;}
+    profileCheckpoint("Regeneration");
     regenerationCases();
     if(argc>1 && juce::String(argv[1])=="--review-perform-warning"){noticeReview::run();return;}
+    profileCheckpoint("Source range feedback");
     if(argc==1)sourceRangeFeedbackCases();
     {m3::EditorSnapshot diagnosticState;
         REQUIRE(m3::ui::liveDiagnosticsText(diagnosticState).contains("Current callback: unavailable"));
@@ -592,6 +628,7 @@ int main(int argc,char* argv[]){return runTest([&]
         input.selectAll();REQUIRE(input.keyPressed(juce::KeyPress('6',{},'6')));
         live.display("level","3",.5,true);REQUIRE(input.getText()=="6");input.onReturnKey();REQUIRE(committed=="6");
     }
+    profileCheckpoint("Window lifecycle");
     // Window lifecycle while the real callback and capture worker keep running.
     {
         TestDirectory liveRoot;auto owner=std::make_unique<PreverbAudioProcessor>(liveRoot.file);auto& liveProcessor=*owner;
@@ -621,6 +658,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(liveProcessor.flushCaptureForTesting());REQUIRE(liveProcessor.getDroppedCaptureBlockCount()==0 && !liveProcessor.isTestToneEnabled());
         liveProcessor.setPlayHead(nullptr);
     }
+    profileCheckpoint("Pending capture input");
     // Real pending input must be visible before five-second storage batching,
     // while all authoritative source readers still see the empty commit.
     {
@@ -664,6 +702,7 @@ int main(int argc,char* argv[]){return runTest([&]
         capturing.removeFromDesktop();
         captureProcessor.setPlayHead(nullptr);
     }
+    profileCheckpoint("Fresh instance");
     // A fresh instance must not inherit capture or status from the long-lived
     // editing fixture below. Keep matched baseline states independently useful.
     {
@@ -1595,6 +1634,11 @@ int main(int argc,char* argv[]){return runTest([&]
     REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::musical && engine.savedSession().liveWetDb==4);
     liveLevel->setValue(0,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::legacy);editor.refresh();
     REQUIRE(liveLevel->getMaximum()==0);
+    // Diagnostics has its own coverage above. Close the window before the
+    // audition and editing cases so their message pumps don't service it.
+    detailsWindow->closeButtonPressed();
+    REQUIRE(!visibleOffscreen(editor.diagnosticsPanel()));
+    profileCheckpoint("Gain diagnostics closed");
     const auto monitorRenderCount=engine.snapshot().renderCount;
     auto toggle=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"auditionWetOnly"));REQUIRE(toggle);
     const auto mixed=[&]{toggle->beforeInvocation();toggle->setToggleState(false,juce::dontSendNotification);toggle->onClick();};
@@ -1971,4 +2015,5 @@ int main(int argc,char* argv[]){return runTest([&]
         field->setText("9223372036854775808",false);field->onReturnKey();REQUIRE(engine.savedSession().swells[0].arrival==9007199254740995LL);
     }
     engine.restore({});editor.refresh();snapshotEditor(editor,"empty");
+    profileCheckpoint("Finished scenarios");
 });}

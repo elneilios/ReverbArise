@@ -532,3 +532,26 @@ if(BUILD_TESTING)
     add_custom_target(preverb_pr_regression)
     add_dependencies(preverb_pr_regression preverb_plugin_VST3 ${preverb_pr_regression_executables})
 endif()
+
+if(BUILD_TESTING)
+    # These cases have no native windows or shared writable fixtures.
+    set(preverb_parallel_tests
+        preverb_automatic_generation_test
+        preverb_capture_failure_test
+        preverb_capture_transaction_test
+        preverb_persistent_capture_test
+        preverb_reverse_convolution_test
+        preverb_song_export_engine_test
+        preverb_song_export_test
+        preverb_source_edges_test
+        preverb_source_range_test
+        preverb_swell_engine_test
+        preverb_swell_session_test
+        preverb_transport_playback_test
+    )
+    set_property(TEST ${preverb_parallel_tests} APPEND PROPERTY LABELS parallel-safe)
+
+    get_property(preverb_serial_tests DIRECTORY PROPERTY TESTS)
+    list(REMOVE_ITEM preverb_serial_tests ${preverb_parallel_tests})
+    set_property(TEST ${preverb_serial_tests} PROPERTY RUN_SERIAL TRUE)
+endif()
