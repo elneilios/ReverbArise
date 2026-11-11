@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Recovery onset selector and its existing confirmation command. The guide now explains choosing a sample, keyboard inspection and dismissal, retention during refresh, and the separate Confirm action.",
+  "summary": "Reviewed the Recovery onset selector and synchronized specification. The guide explains choosing a sample, keyboard inspection and dismissal, retention during refresh, and the separate Confirm action.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1120,8 +1120,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 64308,
-      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
+      "bytes": 65810,
+      "sha256": "35ac44f005580e44b80937db02b5771b9ce2679729cf903c224e9e744eef4820"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
