@@ -107,3 +107,13 @@ focused checks supplement the original full run; they are not a repeated
 objects. UI standards (88 files, 48 existing bounded occurrences), strict
 OpenSpec, guide currency and diff checks passed. Actual FL Studio hosting,
 physical Windows DPI changes and a live screen reader were not retested.
+
+## Review delivery
+
+[PR #149](https://github.com/elneilios/ReverbArise/pull/149) is open for owner
+review. The final diff is limited to the approved P8 UI lifecycle, tests,
+standards, user guide and change artifacts. The canonical specs remain pending
+normal approval/sync/archive. Task-owned Release objects were cleaned after
+validation and delivery; the approved specimen, review executables, dependency
+caches and all logs/evidence were retained. See the local cleanup record at
+`out/build-logs/p8-lifecycle-cleanup.json`.

@@ -24,7 +24,7 @@
 ## 5. Final change-wide verification and delivery
 
 - [x] 5.1 Run the supported Windows Release build/test wrapper, focused native lifecycle/guard integration cases, UI standards check, strict OpenSpec validation and user-guide currency check. Reconcile every consumer in the design with the delivered evidence; record commands, revision, failures/retries, warm or rebuilt outputs and explicit FL Studio/physical-DPI/live-reader limits. Reuse the approved native design and passing cases; request extra owner checks only for material changes or concrete unresolved host behavior.
-- [ ] 5.2 Review the final diff against all six requirements and the complete consumer roster, confirming no changed command, recovery, asset, persistence, DSP or Export-drag authority. Prepare one owner-review PR with Refs #107 and linked results; keep unrelated family debt and completed-change housekeeping outside this delivery. Verify Git status and follow the task-owned generated-output cleanup procedure while retaining review binaries, assets and validation evidence.
+- [x] 5.2 Review the final diff against all six requirements and the complete consumer roster, confirming no changed command, recovery, asset, persistence, DSP or Export-drag authority. Prepare one owner-review PR with Refs #107 and linked results; keep unrelated family debt and completed-change housekeeping outside this delivery. Verify Git status and follow the task-owned generated-output cleanup procedure while retaining review binaries, assets and validation evidence.
 
 ## Workflow follow-up
 
