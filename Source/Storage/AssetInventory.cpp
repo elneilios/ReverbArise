@@ -1,4 +1,5 @@
 #include "AssetInventory.h"
+#include <Capture/LoopCaptureState.h>
 #include <Core/AssetAssociation.h>
 #include <Core/ContentHash.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -118,6 +119,10 @@ bool readLegacySnapshot(const juce::String& xml,const juce::String& manifestJson
             if(next.capture.projectId!=next.project.toStdString() || next.capture.instanceId!=next.instance.toStdString() || next.capture.revision!=static_cast<uint64_t>(n))return fail(error,"Observed source identity/revision mismatch");
         }else if(n!=0)return fail(error,"Missing accepted manifest reference");
     }else{next.capture.projectId=juce::Uuid().toDashedString().toStdString();next.capture.instanceId=juce::Uuid().toDashedString().toStdString();}
+    auto kind = CaptureSourceKind::song;
+    LoopCapturePreference preference;
+    if (!readLoopState(*envelope, kind, preference) || kind != next.capture.kind())
+        return fail(error, "Saved source kind or next-capture preference does not match the capture metadata");
     if(version>=3){const auto* session=envelope->getChildByName("SwellSession");if(!session || !decode(session->getAllSubText(),next.session,error))return fail(error,"Invalid or unsupported creative state: "+error);}
     else next.session.autoGenerateOnStop=true;
     if(version==3){next.session.mappingEnabled=false;next.session.automaticProcessing=false;for(auto& swell:next.session.swells)swell.provenance=Provenance::manualEdited;}

@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the connected tab pointer release fix against the existing tab navigation guidance. The fix restores ordinary mouse activation, so the existing instructions remain accurate. Retained the combined Recovery, Loop capture, timing and WAV Export guidance.",
+  "summary": "Reviewed current-build Loop persistence and the Rack storage handoff fix against both host recovery runs. Added the Settings Storage recovery route, stop-playback guidance and the reminder to save the recovered project.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
-      "bytes": 2403,
-      "sha256": "57a82fb7f4fca729f559671e2f85f8cb2ad6c0add327259e6f8521152a8383a8"
+      "bytes": 2415,
+      "sha256": "a7b034cdbacbb7ad8fa816a2ccfd23d173ea5dbc97972cb899fd852e740b54ab"
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 34802,
-      "sha256": "81966bff2765755b14e2a505f7fe54ff4e211a17699f64f5251dd0d4508220e1"
+      "bytes": 35665,
+      "sha256": "0600fdd93998f4e27682aacbca18e66269e940601c1a2ae9fb9324d308157f7a"
     },
     {
       "path": "CMakePresets.json",
@@ -125,8 +125,8 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 22793,
-      "sha256": "01cbe099ba2d86973718b7679c30816f06bd02df70c398e495d9e63195cb1fa0"
+      "bytes": 23280,
+      "sha256": "0219eb2c7cebd2d3801d7ab8e8dd6566f8666519a51f56db6167f120dab992db"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
@@ -545,13 +545,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 18601,
-      "sha256": "8c2b951b160cfdc2d7d2ea8577aba2c9c9f6e89ae120c1f8064a76a05598d035"
+      "bytes": 18915,
+      "sha256": "bd46d4af663312028aa3332e460e7669297c694fce22891a735b03767c47ef55"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 4948,
-      "sha256": "9ededfe15f3c3ab9c887e7a512def918c3f2737311f55257c5c2bcee75ef4a16"
+      "bytes": 5044,
+      "sha256": "7c0aefa74d576b3f29fe353e3889e51e4634745b8af1c3952d7b9f6e19719312"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -605,13 +605,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 81184,
-      "sha256": "11b839837ab76f3adbccce198cc92727cf43c1b2042414e8cfae27417ce22f33"
+      "bytes": 82633,
+      "sha256": "e041c6e9d9e33d7f26a6e970e8bb93c1d94c37799f988f698477ddc683d8a093"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 13486,
-      "sha256": "a4d2fbccbfe672e3f624b3a8e58e9012a11ef1ba276bcb5f83a1fe81b4534140"
+      "bytes": 13535,
+      "sha256": "865b7c65bfdb0e1b8e7fea4f159f44dfbf0efc089f911719fcefbef77296da10"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -625,8 +625,8 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 26698,
-      "sha256": "c80b19479f1d42f1a8182112668f06b8b3883bef66211c912e4d87bec61eddce"
+      "bytes": 27011,
+      "sha256": "39bb3f7f658a162012191194931a834af3cb6a638d69701a49b316672749daef"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
@@ -635,8 +635,8 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 103061,
-      "sha256": "da448e8ce03d3772147029eb5abb310b682aca85d7ff72690939498fbc0fd1c4"
+      "bytes": 103182,
+      "sha256": "9abc730c7696afa11c7b43315238664befcdba2ead2f8a2986a8b59fca4a675c"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
@@ -1085,13 +1085,13 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 125307,
-      "sha256": "2aa58759488b2bfdc23bfafacde983e8f2c8fb7bc4f71471bfadade291a57b53"
+      "bytes": 125914,
+      "sha256": "b1b227f0aaf131b5d731c36e02f3f798ee85a25f298499fe8c7849647ef2fca8"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
-      "bytes": 3758,
-      "sha256": "f3a85ea4c0288514e6d8f11df7b155e5dfe6f6b4cd53e5b30cdb90fb0ed92c07"
+      "bytes": 3412,
+      "sha256": "9d91b2e8df71443886333e41a564f40cb330ead10c356f7f6396209d9a14b086"
     },
     {
       "path": "docs/development/product-version.md",
@@ -1235,13 +1235,13 @@
     },
     {
       "path": "scripts/build-support.ps1",
-      "bytes": 9699,
-      "sha256": "8d312cc80f0fdc230a02229298bd1faf7d2927a89e23975508df0a3b8b0810e9"
+      "bytes": 10228,
+      "sha256": "6d6f4a0758401ae23afaca05eed524b60c3a8a971b37aba5906aa5f8a127f3c3"
     },
     {
       "path": "scripts/build.ps1",
-      "bytes": 454,
-      "sha256": "cb9d4059535e34c6a8bb3d527347fcd082adeda3cdece90d21da8006c3d74228"
+      "bytes": 510,
+      "sha256": "8b187bab354dbdf44c84b2b0f2130c6ce77352e0a75ab909dd976026d0904d04"
     },
     {
       "path": "scripts/check-user-guide.ps1",

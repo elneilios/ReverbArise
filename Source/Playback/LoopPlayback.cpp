@@ -154,7 +154,7 @@ std::optional<int64_t> LoopPlayback::decodeLeadIn(uint64_t word) noexcept
 
 LoopPlayback::LeadInDisplay LoopPlayback::leadInDisplay() const noexcept
 {
-    const auto word = statusWord.load(std::memory_order_acquire);
+    const auto word = currentStatusWord();
     const auto leadIn = decodeLeadIn(word);
     if (!leadIn) return {};
     const auto& publication = slots[(word >> displaySlotShift) & displaySlotMask].data;
@@ -162,9 +162,16 @@ LoopPlayback::LeadInDisplay LoopPlayback::leadInDisplay() const noexcept
     return {leadIn,publication->leadInPeaks,(word & fixedGridDisplay) ? publication->fixedGridGain : publication->gain};
 }
 
+uint64_t LoopPlayback::currentStatusWord() const noexcept
+{
+    const auto publishedReset = statusResetEpoch.load(std::memory_order_acquire);
+    const auto word = statusWord.load(std::memory_order_acquire);
+    return publishedReset == resetEpoch.load(std::memory_order_acquire) ? word : 0;
+}
+
 LoopPlayback::Status LoopPlayback::status() const noexcept
 {
-    const auto word = statusWord.load(std::memory_order_acquire);
+    const auto word = currentStatusWord();
     const auto position = static_cast<int64_t>((word >> playheadShift) & playheadMask);
     return {static_cast<LoopLiveReference::State>(word & 7),
             static_cast<LoopCueScheduler::State>((word >> 3) & 7),
@@ -274,6 +281,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             | (leadIn << leadInShift)
             | (leadIn ? (static_cast<uint64_t>(held) << displaySlotShift) : 0)
             | (leadIn && scheduler.usesGrid() ? fixedGridDisplay : 0),std::memory_order_release);
+        statusResetEpoch.store(reset,std::memory_order_release);
     };
     if (!canPlay && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {

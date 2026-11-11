@@ -1349,6 +1349,8 @@ ObservedSnapshot recoveryMetadata(const Input& input,juce::String& legacyXml,juc
         // Decode only known creative references. No synthetic source manifest,
         // invented chunk list or inferred capture coverage is published.
         auto known=std::make_unique<juce::XmlElement>(*xml);known->setAttribute("manifestReference",juce::String{});known->setAttribute("manifestRevision","0");
+        if (auto* loop = known->getChildByName("AcceptedLoopSource"))
+            known->removeChildElement(loop, true);
         require(legacy(known->toString(),{},observed,error),error);
         observed.reference=reference;observed.capture.revision=static_cast<uint64_t>(revision.getLargeIntValue());
         observed.dependencies.push_back({reference,{},{},{}});

@@ -98,7 +98,9 @@ private:
     static constexpr uint64_t playheadMask = (uint64_t{1} << (leadInShift - playheadShift)) - 1;
     static constexpr uint64_t leadInMask = (uint64_t{1} << (displaySlotShift - leadInShift)) - 1;
     static std::optional<int64_t> decodeLeadIn(uint64_t word) noexcept;
+    uint64_t currentStatusWord() const noexcept;
     std::atomic<uint64_t> statusWord{0};
+    std::atomic<uint64_t> statusResetEpoch{0};
     std::atomic<bool> fixedWetGrid{true};
 
     LoopCueScheduler scheduler;
