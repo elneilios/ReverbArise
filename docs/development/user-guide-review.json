@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synchronized C3 requirements against the existing Settings Swell source-range guidance and the delivered #122 behavior. The guide already covers wrapped help and validation, correction, and the accepted source range. This closeout changes no user behavior.",
+  "summary": "Reviewed the Recovery onset selector and synchronized specification. The guide explains choosing a sample, keyboard inspection and dismissal, retention during refresh, and the separate Confirm action.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -505,13 +505,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 102766,
-      "sha256": "b6c7818bfeb18068f38ed3453bb75edcea218fae67aa077e5b57fb6ace0f33ce"
+      "bytes": 102700,
+      "sha256": "2fcbb72b6dd36aebc1b520ddc0fd8c1259ca914ba66029b213cbf92db82b20b9"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 16096,
-      "sha256": "461c364a4b0651a3b9d61c243ec0db7d9f524f5245e7fd09252518f5d2d4b1ce"
+      "bytes": 16145,
+      "sha256": "a41dc5b1a7aed19aab77d2be13bd5542e81b6001ea437bc504cd40351d44f541"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -535,8 +535,13 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 23978,
-      "sha256": "c3d5d1de2e3a0cadf78c63b78ba8cbd2a944031fd4b30db73405b9f91f9cf75a"
+      "bytes": 24003,
+      "sha256": "a2e2152c3e7ac9b635c29f4e2772598048ca7faada981683bd58ab58f75c0cb8"
+    },
+    {
+      "path": "Source/Plugin/RecoveryOnsetSelector.h",
+      "bytes": 2817,
+      "sha256": "34fe4205505c099d0f07a2aca9c5b44b1ec193277c01757eabf90b6bccfd0cea"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -995,8 +1000,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 32701,
-      "sha256": "ee54256a83529400dda320b5939a17d5405897e3871cc7d4a67415b691605ced"
+      "bytes": 33087,
+      "sha256": "79d1bd6f056b751b8c323655070ec6f27c04983108852daebb449469731b9495"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1115,8 +1120,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 64308,
-      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
+      "bytes": 65810,
+      "sha256": "35ac44f005580e44b80937db02b5771b9ce2679729cf903c224e9e744eef4820"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

@@ -1,6 +1,7 @@
 #pragma once
 #include <UI/Controls/FieldTextEditor.h>
 #include "PluginProcessor.h"
+#include "RecoveryOnsetSelector.h"
 #include <UI/SwellTimeline.h>
 #include <UI/WorkspaceTheme.h>
 #include <UI/WorkspaceLayout.h>
@@ -197,7 +198,7 @@ private:
     std::optional<uint64_t> markerPass,separationPass,automaticPass,markingPass,refreshPass;
     struct FlagScope { uint64_t epoch,pass;juce::String primary; };
     std::optional<FlagScope> enabledScope,soloScope,freezeScope,muteScope;
-    juce::ComboBox candidateBox;
+    RecoveryOnsetSelector candidateBox;
     m3::ui::controls::ChoiceSelector inCurveBox,outCurveBox;
     std::array<m3::ui::controls::EllipsisLabel,fieldCount> fieldLabels;
     std::array<m3::ui::controls::FieldTextEditor,fieldCount> fields;
@@ -208,7 +209,7 @@ private:
     juce::String sourceRangeMessage;
     bool sourceRangeHasError=false;
     uint64_t presentationSession=0;
-    std::optional<int64_t> chosenCandidate;
+    std::pair<juce::String, uint64_t> onsetSource;
     bool updating=false,destroying=false;
     m3::ui::controls::FocusViewport inspectorViewport,diagnosticsViewport;
     juce::Component inspectorContent;
