@@ -181,6 +181,10 @@ remains independent of host transport; Song-synchronized playback is M4.
 
 Set `PREVERB_UI_M3_OUTPUT` to an output directory when running `preverb_swell_ui_test`
 to render software PNGs for ready, shaped, stale, error, empty and many-swell states.
+Set `PREVERB_SWELL_UI_PROFILE=1` and run the exact CTest case with `-V` to
+log elapsed time at scenario and snapshot checkpoints, queued keyboard commands
+and worker waits of at least 100 ms. For timing comparisons, leave screenshot
+output variables unset and use the same build configuration and toolchain.
 
 See [Automatic swell workspace](automatic-swell-workspace.md) for successor v4
 state/defaults, automatic capture/detection/rendering, monitoring gain/blend and
