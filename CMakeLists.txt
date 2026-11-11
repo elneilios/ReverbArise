@@ -158,8 +158,21 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-manifest.json"
 )
 
+# These standalone executables use only juce_core with its default module
+# configuration. Forward its header requirements while compiling it once.
+add_library(preverb_standalone_juce_core STATIC)
+target_link_libraries(preverb_standalone_juce_core PRIVATE juce::juce_core)
+target_include_directories(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_INCLUDE_DIRECTORIES>")
+target_compile_definitions(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_DEFINITIONS>")
+target_compile_features(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_FEATURES>")
+target_compile_options(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_OPTIONS>")
+
 add_executable(preverb_build_smoke tests/build_smoke.cpp)
-target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
+target_link_libraries(preverb_build_smoke PRIVATE preverb_standalone_juce_core)
 
 if(BUILD_TESTING)
     add_executable(preverb_boolean_toggle_test tests/boolean_toggle_test.cpp)
@@ -169,7 +182,7 @@ if(BUILD_TESTING)
     add_test(NAME preverb_boolean_toggle_test COMMAND preverb_boolean_toggle_test)
     add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
     target_include_directories(preverb_presentation_policy_test PRIVATE Source)
-    target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)
+    target_link_libraries(preverb_presentation_policy_test PRIVATE preverb_standalone_juce_core)
     add_test(NAME preverb_presentation_policy_test COMMAND preverb_presentation_policy_test)
     add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
     target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
