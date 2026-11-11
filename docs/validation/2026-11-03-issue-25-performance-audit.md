@@ -113,7 +113,7 @@ measured FL Studio input-latency claim. `drawWave` scans before clipping; detail
 painting visits every other wet summary, with repeated linear ID lookup. Overview
 draws each summary's peaks even when they collapse into the same pixels. Disabled
 inline-overview geometry does not skip its traversal. This combination justifies
-the narrow [OpenSpec proposal](../../openspec/changes/bound-waveform-paint-work/proposal.md)
+the narrow [OpenSpec proposal](../../openspec/changes/archive/2026-11-11-bound-waveform-paint-work/proposal.md)
 for visible-range/pixel summaries and cached waveform layers. Proposal, delta,
 design and unchecked future tasks pass strict validation; none is applied or
 archived. There is no evidence here for replacing the FFT or threading design.

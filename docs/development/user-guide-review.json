@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the single-pass Diagnostics layout and existing Loop transport and peak readouts. The focused runner and shared JUCE test objects change build and test tooling only. The existing musician instructions remain accurate.",
+  "summary": "Reviewed the waveform paint closeout against the existing Perform navigation and inspection guidance. The canonical spec now records the already delivered display behavior. The Loop capture, recovery, timing and WAV Export instructions still apply.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1210,8 +1210,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 121397,
-      "sha256": "a2f2cc16a743f25a7cfcd37b6e79e6110cefda6a6855182761ae5b33ccfb6eb1"
+      "bytes": 124476,
+      "sha256": "e46996a7eea31cc5af3013a0373737d575f02f4b4269fff8de266629ea522417"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
