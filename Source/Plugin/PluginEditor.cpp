@@ -1219,7 +1219,6 @@ void PreverbAudioProcessorEditor::refresh()
     if(const auto omitted=processor.getOmittedCaptureFailureCount())
         captured<<"\nDiagnostic capacity: "<<juce::String(static_cast<juce::int64>(omitted))<<" failure events omitted";
     captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);
-    layoutLiveDiagnostics();
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
     policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
         +"\nLive Wet "+juce::String(state.session.liveWetDb,1)+" dB | wet peak "+peakText(wetPeak)+" | output peak "+peakText(outputPeak)+overload
@@ -1267,6 +1266,7 @@ void PreverbAudioProcessorEditor::refresh()
     for(size_t i=0;i<fields.size();++i)
         if(fields[i].getText()!=exactValues[i])fields[i].setText(exactValues[i],false);
     if(placementEditor.getText()!=placement)placementEditor.setText(placement,false);
+    layoutLiveDiagnostics();
     // Measure the refresh interval from completion. Slow native text layout
     // must leave a quiet interval for input instead of making the timer due
     // again before its previous callback has returned.

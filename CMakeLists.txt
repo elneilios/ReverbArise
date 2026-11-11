@@ -168,8 +168,21 @@ add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
         "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources/IR-manifest.json"
 )
 
+# These standalone executables use only juce_core with its default module
+# configuration. Forward its header requirements while compiling it once.
+add_library(preverb_standalone_juce_core STATIC)
+target_link_libraries(preverb_standalone_juce_core PRIVATE juce::juce_core)
+target_include_directories(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_INCLUDE_DIRECTORIES>")
+target_compile_definitions(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_DEFINITIONS>")
+target_compile_features(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_FEATURES>")
+target_compile_options(preverb_standalone_juce_core INTERFACE
+    "$<TARGET_PROPERTY:juce_core,INTERFACE_COMPILE_OPTIONS>")
+
 add_executable(preverb_build_smoke tests/build_smoke.cpp)
-target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
+target_link_libraries(preverb_build_smoke PRIVATE preverb_standalone_juce_core)
 
 if(BUILD_TESTING)
     add_executable(preverb_boolean_toggle_test tests/boolean_toggle_test.cpp)
@@ -179,7 +192,7 @@ if(BUILD_TESTING)
     add_test(NAME preverb_boolean_toggle_test COMMAND preverb_boolean_toggle_test)
     add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
     target_include_directories(preverb_presentation_policy_test PRIVATE Source)
-    target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)
+    target_link_libraries(preverb_presentation_policy_test PRIVATE preverb_standalone_juce_core)
     add_test(NAME preverb_presentation_policy_test COMMAND preverb_presentation_policy_test)
     add_executable(preverb_source_edges_test tests/source_edges_test.cpp)
     target_link_libraries(preverb_source_edges_test PRIVATE preverb_preview)
@@ -511,6 +524,39 @@ if(BUILD_TESTING)
 endif()
 
 if(BUILD_TESTING)
+    # These executables share the same headless preverb_preview compile settings.
+    # Keep JUCE's usage requirements on each consumer, but compile its module
+    # sources once and link the resulting objects directly into each executable.
+    add_library(preverb_headless_juce OBJECT)
+    target_link_libraries(preverb_headless_juce PRIVATE preverb_preview)
+
+    foreach(module IN ITEMS juce_core juce_audio_basics juce_audio_formats juce_dsp)
+        get_target_property(module_sources ${module} INTERFACE_SOURCES)
+        set_property(TARGET ${module} PROPERTY INTERFACE_SOURCES
+            "$<$<NOT:$<BOOL:$<TARGET_PROPERTY:PREVERB_USE_HEADLESS_JUCE_OBJECTS>>>:${module_sources}>")
+    endforeach()
+
+    foreach(test_target IN ITEMS
+        preverb_audition_mix_test
+        preverb_audition_voice_test
+        preverb_automatic_coordinator_test
+        preverb_export_voice_test
+        preverb_generation_configuration_test
+        preverb_ir_choices_test
+        preverb_ir_handover_test
+        preverb_ir_streaming_test
+        preverb_preview_engine_test
+        preverb_song_export_engine_test
+        preverb_source_edges_test
+        preverb_transition_feedback_test
+        preverb_transport_playback_test
+    )
+        set_property(TARGET ${test_target} PROPERTY PREVERB_USE_HEADLESS_JUCE_OBJECTS TRUE)
+        target_sources(${test_target} PRIVATE $<TARGET_OBJECTS:preverb_headless_juce>)
+    endforeach()
+endif()
+
+if(BUILD_TESTING)
     set(preverb_pr_regression_executables
         preverb_build_smoke
         preverb_product_version_test
@@ -531,4 +577,27 @@ if(BUILD_TESTING)
         APPEND PROPERTY LABELS pr-regression)
     add_custom_target(preverb_pr_regression)
     add_dependencies(preverb_pr_regression preverb_plugin_VST3 ${preverb_pr_regression_executables})
+endif()
+
+if(BUILD_TESTING)
+    # These cases have no native windows or shared writable fixtures.
+    set(preverb_parallel_tests
+        preverb_automatic_generation_test
+        preverb_capture_failure_test
+        preverb_capture_transaction_test
+        preverb_persistent_capture_test
+        preverb_reverse_convolution_test
+        preverb_song_export_engine_test
+        preverb_song_export_test
+        preverb_source_edges_test
+        preverb_source_range_test
+        preverb_swell_engine_test
+        preverb_swell_session_test
+        preverb_transport_playback_test
+    )
+    set_property(TEST ${preverb_parallel_tests} APPEND PROPERTY LABELS parallel-safe)
+
+    get_property(preverb_serial_tests DIRECTORY PROPERTY TESTS)
+    list(REMOVE_ITEM preverb_serial_tests ${preverb_parallel_tests})
+    set_property(TEST ${preverb_serial_tests} PROPERTY RUN_SERIAL TRUE)
 endif()

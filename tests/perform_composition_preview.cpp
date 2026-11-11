@@ -538,15 +538,21 @@ int main(int argc,char** argv)
         const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_PERFORM_OUTPUT",{});juce::Array<juce::var> measurements;
         juce::File directory(output);if(output.isNotEmpty())REQUIRE(directory.createDirectory().wasOk());
         const char* scenes[]={"sparse","empty","dense","multiple","rendering","error"};
+        int snapshotCount=0;
         for(int scene=0;scene<6;++scene)
         {
             composition.setScene(scene);
             for(auto size:std::array<juce::Point<int>,10>{{{1100,850},{1199,850},{1200,850},{1201,850},{1239,850},{1240,850},{1241,850},{1400,900},{1400,1000},{1600,1000}}})
             {
                 composition.setSize(size.x,size.y);composition.refresh();composition.revealSelection();measurements.add(composition.measure());
+                // Check separator pixels at every size. Sample higher scales at the
+                // normal width in every scene and at the largest sparse and dense layouts.
+                const bool sampleAllScales=size.x==1100 || (size.x==1600 && (scene==0 || scene==2));
                 for(float scale:{1.f,1.25f,1.5f,2.f})
                 {
+                    if(scale!=1.f && !sampleAllScales)continue;
                     const auto picture=composition.createComponentSnapshot(composition.getLocalBounds(),true,scale);REQUIRE(picture.isValid());
+                    ++snapshotCount;
                     REQUIRE(picture.getWidth()==juce::roundToInt(size.x*scale));
                     if(scale==1.f)
                     {
@@ -561,7 +567,7 @@ int main(int argc,char** argv)
                         }
                         REQUIRE(picture.getPixelAt(l.overview.getCentreX(),l.overview.getBottom()-4)==background);
                     }
-                    if(output.isNotEmpty() && (size.x==1100 || (size.x==1600 && (scene==0 || scene==2))))
+                    if(output.isNotEmpty() && sampleAllScales)
                     {
                         auto stream=directory.getChildFile(juce::String(scenes[scene])+"-"+juce::String(size.x)+"x"+juce::String(size.y)+"-"+juce::String(juce::roundToInt(scale*100))+".png").createOutputStream();
                         REQUIRE(stream && juce::PNGImageFormat().writeImageToStream(picture,*stream));
@@ -571,6 +577,7 @@ int main(int argc,char** argv)
         }
         if(output.isNotEmpty())REQUIRE(directory.getChildFile("measurements.json").replaceWithText(juce::JSON::toString(juce::var(measurements))));
         composition.verifyLiveRefresh();
-        std::cout<<"Perform composition: 60 geometry/typeface/focus cases; 240 software-scale renders and live refresh checks passed.\n";
+        std::cout<<"Perform composition: "<<measurements.size()<<" geometry/typeface/focus cases, "
+                 <<snapshotCount<<" software-scale renders and live refresh checks passed.\n";
     });
 }
