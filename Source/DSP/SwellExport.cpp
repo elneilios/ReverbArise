@@ -95,16 +95,19 @@ void SwellEngine::serviceExportDelivery()
     exportState.deliveryPath=exportState.dragReady?job->directory.getChildFile(job->file.path).getFullPathName():juce::String{};
     exportState.deliveryMessage=success?(job->drag?"WAV verified; Save remains available":"WAV saved to "+job->destination.getFileName()):error;
 }
-bool SwellEngine::playExport(uint64_t expectedSession)
+bool SwellEngine::playExport(uint64_t expectedSession,double deviceRate)
 {
     const juce::ScopedLock guard(lock);
     if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise
         || exportState.pass!=workflowState->snapshot().pass || exportState.session!=sessionGeneration.load()
         || exportState.phase!=ExportPhase::ready || !exportState.prepared || !exportState.prepared->metrics.audibleStart)return false;
+    if(exportState.prepared->plan->loop && deviceRate>0 && deviceRate!=exportState.prepared->plan->timing.rate)return false;
     exportState.message="Export WAV ready";
     exportPreviewPin=exportState.prepared;exportPreviewSession=expectedSession;exportPreviewPass=exportState.pass;exportPreviewRevision=liveRevision;exportPreviewWetAvailable=true;
+    exportPreviewLoop.store(exportPreviewPin->plan->loop.has_value());
     setExpected(exportState.prepared->plan->timing);const auto ticket=exportVoice->requestStart();
-    exportVoice->setLevels(ticket,model.exportState.dry,model.exportState.wet,*exportPreviewPin->metrics.audibleEnd);notify();return true;
+    const auto levels=model.exportState.levels(exportPreviewPin->plan->loop.has_value());
+    exportVoice->setLevels(ticket,levels.dry,levels.wet,*exportPreviewPin->metrics.audibleEnd);notify();return true;
 }
 bool SwellEngine::seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition)
 {
@@ -120,7 +123,9 @@ bool SwellEngine::seekExport(int64_t sample,uint64_t expectedSession,uint64_t ex
     exportState.previewPosition=std::clamp(sample,*metrics.audibleStart,*metrics.audibleEnd-1);
     if(exportVoice->requested(exportVoice->request())){const auto ticket=exportVoice->requestStart();
         exportPreviewPin=exportState.prepared;exportPreviewSession=expectedSession;exportPreviewPass=expectedPass;exportPreviewRevision=liveRevision;exportPreviewWetAvailable=true;
-        exportVoice->setLevels(ticket,model.exportState.dry,model.exportState.wet,*metrics.audibleEnd);}
+        exportPreviewLoop.store(exportPreviewPin->plan->loop.has_value());
+        const auto levels=model.exportState.levels(exportPreviewPin->plan->loop.has_value());
+        exportVoice->setLevels(ticket,levels.dry,levels.wet,*metrics.audibleEnd);}
     notify();return true;
 }
 void SwellEngine::serviceExportPreview()
@@ -151,6 +156,17 @@ void SwellEngine::serviceExportPreview()
                 && std::none_of(layerPlan->members.begin(),layerPlan->members.end(),[&](const auto& m){return m.accepted.id==w.id;}))wetAvailable=false;
         }
         if(!wetAvailable)layerPlan->wet=0;
+        if(wetAvailable && pin->plan->loop){
+            // Warm the complete accepted layer window for fader edits. The
+            // delivered dry-only file still starts at zero and has no wet tail.
+            Session fixed;fixed.timing=pin->plan->timing;fixed.gainPolicy=pin->plan->gainPolicy;fixed.gainRevision=pin->plan->gainRevision;
+            for(const auto& member:pin->plan->members)fixed.swells.push_back(member.accepted);
+            std::shared_ptr<const SongExportPlan> expanded;
+            if(prepareLoopExportPlan(fixed,pin->plan->source,pin->plan->sourceReference,*pin->plan->loop,1,1,expanded,error))
+                layerPlan=std::make_shared<SongExportPlan>(*expanded);
+            else if(pin->plan->wet>0){fail();return;}
+            else {error.clear();wetAvailable=false;layerPlan->wet=0;}
+        }
         uint64_t largestChunk=0;for(const auto& range:layerPlan->source.ranges)largestChunk=std::max(largestChunk,range.frameCount);
         const auto budget=uint64_t{1024*1024}+layerPlan->members.size()*16384+largestChunk*4*sizeof(float);
         if(budget>available()){if(activeJobBytes)return;error="Preview layer working budget unavailable";fail();return;}
@@ -163,14 +179,14 @@ void SwellEngine::serviceExportPreview()
             if(!reader->prepare(layerPlan,budget,error,cancelled)){fail();return;}
         }
         {const juce::ScopedLock guard(lock);exportPreviewWetAvailable=wetAvailable;
-            if(!wetAvailable && model.exportState.wet>0){error="Accepted wet layer unavailable";}}
+            if(!wetAvailable && model.exportState.levels(pin->plan->loop.has_value()).wet>0){error="Accepted wet layer unavailable";}}
         if(error.isNotEmpty()){fail();return;}
         if(pin->plan->dry>0 && reader->plan()->warnings!=pin->plan->warnings){error="Captured dry availability changed";fail();return;}
         if(cancelled()){error="Preview superseded";fail();return;}
         exportPreviewReader=std::move(reader);exportPreviewTicket=ticket;
         exportPreviewStart=std::clamp(parked.value_or(*pin->metrics.audibleStart),pin->plan->origin,pin->plan->end-1);exportPreviewNext=exportPreviewStart;
     }
-    const auto end=pin->plan->end;if(exportPreviewNext==end){exportVoice->arm(ticket);return;}
+    const auto end=exportPreviewReader->plan()->end;if(exportPreviewNext==end){exportVoice->arm(ticket);return;}
     std::array<float,exportPageFrames*2> dry{},wet{};size_t supplied=0;
     while(exportPreviewNext<end && !cancelled() && exportVoice->hasRoom(ticket)){
         const auto frames=static_cast<size_t>(std::min(int64_t{exportPageFrames},end-exportPreviewNext));
@@ -202,7 +218,8 @@ void SwellEngine::prepareExport(const PreviewContext& context)
             +":"+context.capture.reference+":"+juce::String(context.captureGeneration)+":"+juce::String(static_cast<int>(mapped))+":"+juce::String(origin)
             +":"+juce::String(context.time.rate,12)+":"+juce::String(context.time.bpm,12)+":"+juce::String(context.time.numerator)+":"+juce::String(context.time.denominator);
         if(key==exportAttempt)return;
-        if(model.exportState.dry==0 && model.exportState.wet==0){
+        const auto levels=model.exportState.levels(context.capture.sourceKind()==CaptureSourceKind::loop);
+        if(levels.dry==0 && levels.wet==0){
             exportAttempt=key;exportVoice->stop();exportRetryFile.reset();detailWork.reset();detailSerial.fetch_add(1);
             exportState={ExportPhase::idle,"Silent: Dry 0% / Wet 0%",{}};exportState.session=owner.session;exportState.pass=pass;return;
         }
@@ -215,7 +232,7 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         juce::StringArray retained;
         const bool solo=std::any_of(accepted.swells.begin(),accepted.swells.end(),[](const auto& w){return w.solo;});
         for(auto& w:accepted.swells){
-            if(accepted.exportState.wet==0 || !w.enabled || w.muted || (solo && !w.solo))continue;
+            if(levels.wet==0 || !w.enabled || w.muted || (solo && !w.solo))continue;
             if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end() && retainedCompatible(kept->second,w,context)
                 && (w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content))){
                 const auto enabled=w.enabled,muted=w.muted,isSolo=w.solo;w=kept->second.accepted;
@@ -236,7 +253,11 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         if(!cancelled()){auto summary=exportState.preview;exportState={ExportPhase::error,reason,{}};exportState.preview=std::move(summary);exportState.session=owner.session;exportState.pass=pass;exportState.previous=previous;exportState.detail=previousDetail;exportState.delivery=failedDelivery;exportState.deliveryMessage=deliveryFailure;}};
     if(error.isNotEmpty()){fail(error);return;}
     std::shared_ptr<const SongExportPlan> plan;
-    if(!prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,accepted.exportState.dry,accepted.exportState.wet,plan,error)){
+    const auto levels=accepted.exportState.levels(context.capture.sourceKind()==CaptureSourceKind::loop);
+    const auto planned=context.capture.sourceKind()==CaptureSourceKind::loop
+        ?prepareLoopExportPlan(accepted,context.capture.manifest,context.capture.reference,accepted.exportState.loop.options,levels.dry,levels.wet,plan,error)
+        :prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,levels.dry,levels.wet,plan,error);
+    if(!planned){
         fail(error);return;
     }
     // The same worker owns transport, render and composition preparation. Reserve

@@ -712,6 +712,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration,rackEvents,!offline);
             if(loopSource && !offline)swells->processLoopAudition(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),
                 diagnostics.sampleRate,captureGeneration,captureWorker.acceptedLoopRevision(),workflow.mode==workflow::Mode::live && !captureWorker.isLoading());
+            if(loopSource && !offline)swells->processLoopExport(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),diagnostics.sampleRate);
         }
         if (!loopSource)
         {
@@ -871,7 +872,10 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
 {
     const auto capture=captureWorker.snapshot();
     if (capture.sourceKind()==CaptureSourceKind::loop)
-        return {captureWorker.hasUsefulSource(),getSourceEditTime(capture).valid,false,false};
+    {
+        const auto time=getSourceEditTime(capture);
+        return {captureWorker.hasUsefulSource(),time.valid,swells->hasExportableWet(time),false};
+    }
     const auto time=getSongTime();
     const auto session=swells->savedSession();
     const auto solo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});

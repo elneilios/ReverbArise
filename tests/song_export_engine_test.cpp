@@ -8,7 +8,9 @@ using namespace m3;
 template<class F>static void waitFor(F predicate,const std::source_location line=std::source_location::current())
 {const auto end=juce::Time::getMillisecondCounter()+30000;while(!predicate()){
     if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("Export engine timeout "+std::to_string(line.line()));juce::Thread::sleep(2);}}
+#include "LoopExportEngineCases.h"
 int main(){return runTest([]{
+    loopExportEngineCases();
     TestDirectory root;CaptureSession capture(root.file);std::vector<float> source(10000,.125f);
     for(int pass=0;pass<16;++pass){for(int n=0;n<5000;++n){source[n*2]=.04f+pass*.003f+(n%31)*.0001f;source[n*2+1]=.03f+pass*.002f+(n%17)*.0002f;}
         REQUIRE(capture.commit(pass*5000,1000,source.data(),5000));}const PreviewContext context{capture.snapshot(),{true,950,3.8,1000,240,4,4},0};

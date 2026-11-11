@@ -2,7 +2,7 @@
 #include "SongMix.h"
 namespace m3
 {
-enum class ExportFileStage { write, shortWrite, close, verify, publish };
+enum class ExportFileStage { write, shortWrite, close, verify, publish, space };
 using ExportCommit=std::function<bool(const std::function<bool()>&)>;
 using ExportFileFault=std::function<bool(ExportFileStage)>;
 bool verifyExportFile(const juce::File& instance,const ExportFile&,juce::String& error,const RenderCancellation& cancel={});

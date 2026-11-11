@@ -328,4 +328,49 @@ static void loopPerformReview(bool review,const juce::File& output)
     Window window(editor,fixture);
     juce::MessageManager::getInstance()->runDispatchLoop();
 }
+
+static void loopExportBindingCases()
+{
+    LoopCaptureFixture fixture;fixture.simpleClock=true;fixture.percussive=true;
+    auto& processor=*fixture.processor;auto& engine=processor.swellEngine();engine.setAutomaticProcessing(false);
+    auto settings=processor.getLoopCapturePreference();settings.count=1;
+    REQUIRE(processor.setLoopCapturePreference(settings) && processor.armLoopCapture());
+    fixture.through(fixture.marker(4),true);
+    REQUIRE(processor.getCaptureSnapshot().manifest.loop);
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    const auto until=[&](const auto& predicate){
+        const auto deadline=juce::Time::getMillisecondCounter()+15000;
+        while(!predicate() && juce::Time::getMillisecondCounter()<deadline){fixture.tick();juce::Thread::sleep(2);}
+        if(!predicate())throw std::runtime_error(engine.snapshot().message.toStdString());
+    };
+    until([&]{return engine.savedSession().defaultIR.present();});
+    REQUIRE(engine.addTarget(0));const auto id=engine.savedSession().primary;
+    const auto ir=fixture.root.file.getChildFile("export-binding.wav");writeTestWav(ir,1,48000,std::vector<float>(201,.002f));
+    engine.loadIR(ir);until([&]{return m3::find(engine.savedSession(),id)->irName==ir.getFileName();});
+    REQUIRE(engine.generate(true).accepted);until([&]{return m3::find(engine.savedSession(),id)->phase==m3::Phase::ready;});
+    fixture.clockEnabled=false;fixture.through(fixture.marker(fixture.nextBeat+8));
+    REQUIRE(!processor.requestLoopCue());
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::finalise));
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    PreverbAudioProcessorEditor editor(processor);editor.enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
+    REQUIRE(editor.setPresentationSize(900,600));editor.setVisible(true);editor.refresh();
+    auto& workspace=require<ExportWorkspace>(editor,"exportWorkspace");auto& mix=workspace.mixControl();
+    REQUIRE(workspace.isVisible() && workspace.loopOptions().isVisible() && mix.isVisible());
+    REQUIRE(mix.selector.getText()=="Wet Layer" && mix.dry.getValue()==0 && mix.wet.getValue()==100);
+    workspace.loopOptions().beforeInvocation();workspace.loopOptions().repeats.onStep(1);
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    REQUIRE(engine.snapshot().songExport.prepared->file.loop->options.repeats==2);
+    mix.beforeInvocation();mix.selector.setSelectedId(5,juce::sendNotificationSync);
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    REQUIRE(engine.snapshot().songExport.prepared->file.dry==1 && engine.snapshot().songExport.prepared->file.wet==1);
+    REQUIRE(workspace.placementHelp().getText().contains("Mute the original dry"));
+    REQUIRE(engine.savedSession().exportState.dry==0 && engine.savedSession().exportState.wet==1);
+    processor.prepareToPlay(44100,fixture.frames);fixture.tick();
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    auto& play=require<controls::ActionButton>(editor,"exportPlay");auto& save=require<controls::ActionButton>(editor,"exportSave");
+    REQUIRE(!play.isEnabled() && play.getTooltip().contains("48.0 kHz") && save.isEnabled());
+    REQUIRE(engine.snapshot().songExport.prepared->file.rate==48000);
+    processor.prepareToPlay(48000,fixture.frames);fixture.tick();editor.refresh();
+    REQUIRE(play.isEnabled());
+}
 }

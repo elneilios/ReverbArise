@@ -1,5 +1,39 @@
 # Song export composition
 
+## Loop composition foundation — issue #128
+
+The finite Loop planner and bounded source/mix readers extend this pipeline.
+The production workflow/UI and host delivery integration are still in progress.
+`prepareLoopExportPlan` takes accepted capture-local metadata and independent
+Dry/Wet levels, without a live host position or Phrase reference. Its revision
+identity includes the Loop repeat count and lead-in grid while Song identities
+retain their existing format.
+
+Every pass starts at `cycle * accepted endSample`, using the shared checked
+`loopCycleAnchor`. The accepted integer extent is authoritative: Duration,
+End on Signal and End on repeat converge on this same saved timing contract.
+Repeats do not repeatedly add a rounded beat duration or reinterpret the take
+from a later host tempo. Fractional musical beat periods can yield a floor or
+ceil accepted sample extent; that exact captured extent repeats intact, including
+non-whole-bar takes. Musical lead-in alignment uses the accepted tempo and meter,
+rounding the initial included wet start backward to the chosen grid.
+
+The shared bounded cycle visitor covers only scheduled passes. Initial wet
+lead-in is retained once, internal negative wet and tails overlap once per pass,
+and only the last scheduled pass supplies the final tail. Dry occupies each
+scheduled pass interval once and is zero outside it. Source verification and
+warned-silence coverage are reused, with repeated warning metadata bounded by
+the worker budget. Reads and writes remain page-based; no expanded repeated PCM
+is retained. Preview and WAV consume the same transparent Dry/Wet sum; live
+output peak protection is excluded. Dry-only export starts at Loop Bar 1.
+
+Independent sample-sum and decoded-WAV oracles are in `LoopExportMixCases.h`;
+`LoopExportPlanCases.h` covers bounds, grid placement, identity and invalid inputs.
+The live Loop regression also exercises the shared cycle helpers. Full Release
+and host delivery qualification are separate remaining gates.
+
+## Song pipeline
+
 Issue #6 implementation in progress. `SongExportPlan` is immutable metadata,
 published through `shared_ptr<const SongExportPlan>`; it contains no song PCM.
 Its builder accepts verified **accepted** swell versions, never requested IR

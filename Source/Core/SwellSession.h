@@ -106,14 +106,19 @@ struct Session
     std::vector<ImportedIR> importedIRs;
     std::vector<int64_t> suppressed;
 };
-inline bool initializeExport(Session& session,juce::String& error)
+inline bool initializeExport(Session& session,juce::String& error,bool loopSource=false)
 {
+    if(loopSource){session.exportState.initialized=true;session.exportState.loop.initialized=true;error.clear();return true;}
     if(session.exportState.initialized){error.clear();return true;}
     session.exportState.initialized=true;session.exportState.dry=0;session.exportState.wet=1;error.clear();return true;
 }
-inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error)
+inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error,bool loopSource=false)
 {
     if(!std::isfinite(dry) || dry<0 || dry>1 || !std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export levels";return false;}
+    if(loopSource){
+        if(session.exportState.loop.levels!=ExportMixLevels{dry,wet})session.exportState.desiredIdentity.clear();
+        session.exportState.initialized=true;session.exportState.loop.initialized=true;session.exportState.loop.levels={dry,wet};error.clear();return true;
+    }
     if(session.exportState.dry!=dry || session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
     session.exportState.initialized=true;session.exportState.dry=dry;session.exportState.wet=wet;error.clear();return true;
 }

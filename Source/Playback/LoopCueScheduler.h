@@ -2,6 +2,7 @@
 
 #include "LoopLiveReference.h"
 #include "LoopClockGrid.h"
+#include "LoopCycles.h"
 #include <algorithm>
 #include <array>
 
@@ -172,8 +173,9 @@ public:
         if (first < 0 || cycle < first) return {};
         if (usesGrid())
         {
-            if (cycle > (INT64_MAX - gridOrigin) / gridLength) return {};
-            return sample - (gridOrigin + cycle * gridLength);
+            const auto anchor=loopCycleAnchor(gridOrigin,cycle,gridLength);
+            if(!anchor)return {};
+            return sample-*anchor;
         }
         const auto& anchor = anchors[static_cast<size_t>(cycle % anchorCapacity)];
         if (anchor.cycle == cycle) return sample - anchor.sample;

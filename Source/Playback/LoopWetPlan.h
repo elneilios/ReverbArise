@@ -2,6 +2,7 @@
 
 #include "LoopCueScheduler.h"
 #include "TransportPlayback.h"
+#include "LoopCycles.h"
 
 namespace m3
 {
@@ -20,17 +21,15 @@ struct LoopWetPlan
     LoopWetSample sample(int64_t near, int64_t first, int64_t last, PositionAt&& position) const noexcept
     {
         LoopWetSample wet;
-        const auto low = std::max(first,near - pastCycles);
-        const auto high = std::min(last,near + futureCycles);
-        for (auto cycle = low; cycle <= high; ++cycle)
+        visitLoopCycles(near,first,last,pastCycles,futureCycles,[&](int64_t cycle)
         {
             const auto local = position(cycle);
-            if (!local || *local < audio.start || *local >= audio.end) continue;
+            if (!local || *local < audio.start || *local >= audio.end) return;
             const auto it = std::upper_bound(audio.segments.begin(),audio.segments.end(),*local,
                 [](int64_t at, const LiveSegment& segment){ return at < segment.start; });
-            if (it == audio.segments.begin()) continue;
+            if (it == audio.segments.begin()) return;
             const auto& segment = *std::prev(it);
-            if (*local >= segment.end) continue;
+            if (*local >= segment.end) return;
             wet.present |= segment.count != 0;
             for (size_t index = 0; index < segment.count; ++index)
             {
@@ -39,7 +38,7 @@ struct LoopWetPlan
                 wet.left += render.samples[offset];
                 wet.right += render.samples[offset + 1];
             }
-        }
+        });
         return wet;
     }
 };
