@@ -116,9 +116,9 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
         dryReady=budget>0 && readSourceInterval(source,context.capture.manifest,requested.sourceStart,dryEnd,budget/8,dry,dryError,cancel);
         if(!dryReady)error=needed;
     }
-    auto prepared=std::make_shared<WetRender>();float branch=0,sum=0;
+    auto prepared=std::make_shared<WetRender>();
     if(error.isEmpty() && !prepareAuditionMix(aggregate,dryReady?&dry:nullptr,mode,saved.wetBlend,
-        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,branch,sum,error,false,saved.gainPolicy,saved.auditionFollowsLive?std::optional<float>{saved.liveWetDb}:std::nullopt)){}
+        available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,error,false,saved.auditionFollowsLive?std::optional<float>{saved.liveWetDb}:std::nullopt)){}
     const auto latest=contextProvider();const juce::ScopedLock guard(lock);if(cancel())return;
     bool changed=context.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(context.time,latest.time);
     if(context.capture.manifest.loop)changed=changed || latest.capture.reference!=context.capture.reference;
@@ -126,7 +126,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     for(const auto& member:members)if(!member.frozen)changed=changed || sourceDependency(context.capture.manifest,member.sourceStart,renderInputEnd(member))!=sourceDependency(latest.capture.manifest,member.sourceStart,renderInputEnd(member));
     if(changed){stopLocked();return;}
     auto& r=runtime[requested.id];r.monitorRevision=juce::String(sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd));
-    r.dryAvailable=dryReady;r.dryStatus=error.isNotEmpty()?error:anyRecovered?juce::String("Last-committed Wet Only recovery: source unavailable"):juce::String{};r.members=ids;r.wetAttenuation=branch;r.blendAttenuation=sum;r.preparedMonitor=settings;
+    r.dryAvailable=dryReady;r.dryStatus=error.isNotEmpty()?error:anyRecovered?juce::String("Last-committed Wet Only recovery: source unavailable"):juce::String{};r.members=ids;r.preparedMonitor=settings;
     if(error.isEmpty()){r.monitor=std::move(prepared);if(voice.isActiveOrPending() && !voice.replace(r.monitor))message="Audition update queue full; retry";}
     else {r.monitor.reset();message=error;stopLocked();}
 }

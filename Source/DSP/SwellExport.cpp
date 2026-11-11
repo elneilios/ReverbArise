@@ -189,15 +189,12 @@ void SwellEngine::serviceExportPreview()
             // Warm the complete accepted layer window for fader edits. The
             // delivered dry-only file still starts at zero and has no wet tail.
             Session fixed;fixed.timing=pin->plan->timing;fixed.gainPolicy=pin->plan->gainPolicy;fixed.gainRevision=pin->plan->gainRevision;
+            fixed.liveWetDb=liveWetDb;
             for(const auto& member:pin->plan->members)fixed.swells.push_back(member.accepted);
             std::shared_ptr<const SongExportPlan> expanded;
             if(prepareLoopExportPlan(fixed,pin->plan->source,pin->plan->sourceReference,*pin->plan->loop,dry,1,expanded,error)){
                 layerPlan=std::make_shared<SongExportPlan>(*expanded);
-                if(pin->plan->wet>0)layerPlan->loopWetGain=pin->plan->loopWetGain;
-                else if(!prepareLoopExportWetGain(*layerPlan,liveWetDb,instanceRoot(layerPlan->source),error,cancelled)){
-                    if(cancelled()){fail();return;}
-                    error.clear();wetAvailable=false;layerPlan->wet=0;
-                }
+                layerPlan->loopWetGain=pin->plan->loopWetGain;
             }
             else if(pin->plan->wet>0){fail();return;}
             else {error.clear();wetAvailable=false;layerPlan->wet=0;}
@@ -301,11 +298,6 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         :prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,time,levels.dry,levels.wet,plan,error);
     if(!planned){
         fail(error);return;
-    }
-    if(plan->loop && plan->wet>0){
-        auto matched=std::make_shared<SongExportPlan>(*plan);
-        if(!prepareLoopExportWetGain(*matched,accepted.liveWetDb,directory,error,cancelled)){fail(error);return;}
-        plan=std::move(matched);
     }
     // The same worker owns transport, render and composition preparation. Reserve
     // the remaining shared budget, including publication scratch, for this job.

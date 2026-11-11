@@ -70,7 +70,7 @@ PreverbAudioProcessor::PreverbAudioProcessor(juce::File projectsRoot, bool useFl
         auto capture=captureWorker.snapshot();if(captureWorker.isLoading())capture.status="Loading capture state";
         const auto editTime=getSourceEditTime(capture);
         return PreviewContext{std::move(capture), editTime, captureWorker.captureGeneration()};
-    },[this]{persistentStateChanged();});
+    },[this]{persistentStateChanged();},flStudioLoopHost);
     swells->setGainPolicy(m3::GainPolicy::musical);
     swells->setAuditionWetOnly(false,swells->assignmentEpoch());
     swells->useWorkflow(workflowState,[this]{return captureWorker.captureGeneration();});
@@ -709,7 +709,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             if ((loopSource || observeLearnTiming) && !offline && !captureWorker.isLoading()
                 && (workflow.mode!=workflow::Mode::finalise || observeLearnTiming))
                 access=workflow.mode==workflow::Mode::live && swells->livePlaybackEnabled()?Access::perform:Access::observe;
-            processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration,rackEvents,!offline);
+            processLoopPlayback(buffer,midi,diagnostics,access,captureGeneration,rackEvents);
             if(loopSource && !offline)swells->processLoopAudition(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),
                 diagnostics.sampleRate,captureGeneration,captureWorker.acceptedLoopRevision(),workflow.mode==workflow::Mode::live && !captureWorker.isLoading());
             if(loopSource && !offline)swells->processLoopExport(buffer.getWritePointer(0),buffer.getWritePointer(1),buffer.getNumSamples(),diagnostics.sampleRate);
@@ -729,7 +729,7 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 
 void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midi,
     const HostPositionDiagnostics& timing, m3::LoopPlayback::Access access, uint64_t generation,
-    loop_capture::MidiObservations& observations, bool protectLiveOutput) noexcept
+    loop_capture::MidiObservations& observations) noexcept
 {
     using loop_capture::MidiProtocol;
     const auto frames = buffer.getNumSamples();
@@ -771,7 +771,7 @@ void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer
     if (hasPosition && timing.samplePosition <= INT64_MAX - frames) loopPlaybackHostEnd = timing.samplePosition + frames;
     swells->loopTransport().process(buffer.getWritePointer(0),buffer.getWritePointer(1),frames,observations,
         timing.sampleRate,generation,captureWorker.acceptedLoopRevision(),access,gap || seek || stopped || gridChanged,
-        observedLoopReference,playlist,protectLiveOutput);
+        observedLoopReference,playlist);
 }
 
 HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() const noexcept
@@ -1015,7 +1015,7 @@ void PreverbAudioProcessor::setAuditionLevelDb(float db)
 PreviewSnapshot PreverbAudioProcessor::getPreviewSnapshot() const
 {
     const auto snapshot=swells->snapshot();PreviewSnapshot result;
-    result.status=snapshot.message;result.playing=snapshot.playing;result.auditionLevelDb=snapshot.session.auditionDb;result.auditionAttenuationDb=snapshot.attenuationDb;
+    result.status=snapshot.message;result.playing=snapshot.playing;result.auditionLevelDb=snapshot.session.liveWetDb;
     const auto w=m3::find(snapshot.session,snapshot.session.primary);if(!w)return result;
     result.irName=w->irName;result.irRate=w->ir.rate;result.irChannels=w->ir.channels;result.progress=w->progress;result.status=w->status;
     switch(w->phase)
@@ -1023,7 +1023,7 @@ PreviewSnapshot PreverbAudioProcessor::getPreviewSnapshot() const
         case m3::Phase::empty:result.phase=PreviewPhase::empty;break;
         case m3::Phase::ready:result.phase=snapshot.auditionReady?PreviewPhase::ready:PreviewPhase::rendering;break;
         case m3::Phase::checking:result.phase=w->status=="Importing IR"?PreviewPhase::loadingIR:PreviewPhase::rendering;break;
-        case m3::Phase::queued:case m3::Phase::rendering:case m3::Phase::restoring:result.phase=PreviewPhase::rendering;break;
+        case m3::Phase::queued:case m3::Phase::rendering:case m3::Phase::restoring:case m3::Phase::headroom:result.phase=PreviewPhase::rendering;break;
         case m3::Phase::error:result.phase=PreviewPhase::error;break;
         case m3::Phase::stale:result.phase=w->status.startsWith("IR:")?PreviewPhase::canGenerate:PreviewPhase::stale;break;
     }

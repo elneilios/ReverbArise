@@ -16,8 +16,8 @@ bool SwellEngine::permitCreative(juce::String* rejection)
     if(rejection) *rejection=message;
     return false;
 }
-SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed)
-    :Thread("Preverb Swells"),persistentChange(std::move(changed)),legacyProjectsRoot(path),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context))
+SwellEngine::SwellEngine(juce::File path,std::function<PreviewContext()> context,std::function<void()> changed,bool fixedGrid)
+    :Thread("Preverb Swells"),persistentChange(std::move(changed)),legacyProjectsRoot(path),storageLocation(std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{path,path,{}})),contextProvider(std::move(context)),fixedLoopGrid(fixedGrid)
 { if(const auto initial=contextProvider().capture.location)storageLocation.store(initial);voice.setLevel(1);startThread(); }
 SwellEngine::~SwellEngine() { signalThreadShouldExit(); sessionGeneration.fetch_add(1); stopThread(-1); }
 void SwellEngine::stopLocked() { audioAllowed.store(false); voice.stop(true);exportVoice->stop(true); }
@@ -114,7 +114,10 @@ EditorSnapshot SwellEngine::snapshot() const
     s.livePreparation=livePreparation;
     s.liveObservation=live.observation();s.liveLastRejection=live.lastRejection();
     s.liveCausal=live.causalObservation();
-    s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;s.liveAttenuationDb=liveAttenuationDb;
+    s.liveActive=live.active();s.liveMissing=live.missing();s.liveIncompatible=live.incompatible();s.liveStatus=liveStatus;
+    const auto peaks=live.peaks();
+    s.liveWetPeak=peaks.wet;s.liveOutputPeak=peaks.output;
+    s.loopPeaks=loopPlayback.peaks();
     s.gainPlanPeak=gainPlanPeak;s.gainPlanPreparationMs=gainPlanPreparationMs;s.gainPlanBuilds=gainPlanBuilds;s.gainPlanCacheHits=gainPlanCacheHits;
     s.liveReady=preparedLiveRevision>0 && preparedLiveRevision==liveRevision;
     s.liveLoopDestination=preparedLoopStart;
@@ -138,9 +141,7 @@ EditorSnapshot SwellEngine::snapshot() const
                 && (model.auditionMode==AuditionMode::wetOnly || at->second.dryAvailable);
             s.auditionMembers=at->second.members;s.dryAvailable=at->second.dryAvailable;s.dryStatus=at->second.dryStatus;s.cachedWetOnly=at->second.cachedWetOnly;
             if(at->second.monitor){s.auditionDryStart=at->second.monitor->sourceStart;s.auditionDryEnd=at->second.monitor->sourceEnd;}
-            s.blendAttenuationDb=at->second.blendAttenuation;
             if(at->second.monitor)s.monitorPeak=at->second.monitor->peak*juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb);
-            s.attenuationDb=at->second.wetAttenuation;
         }
     }
     return s;
@@ -677,7 +678,7 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto modeAllows=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
     const auto priority=modeAllows && liveEnabled.load() && time.playing;
     if(priority && !songPriority)voice.stop();songPriority=priority;
-    live.process(left,right,frames,time,modeAllows,&clock,true);
+    live.process(left,right,frames,time,modeAllows,&clock);
     processAudio(left,right,frames,time.song);
 }
 void SwellEngine::captureStopped() noexcept
@@ -777,7 +778,7 @@ void SwellEngine::inspect(const PreviewContext& context)
     if(timingChanged.exchange(false) || (model.timing.valid && !sameMusicalMapping(model.timing,context.time)))
     {
         invalidateLiveLocked();liveCache.clear();
-        stopLocked(); for(auto& w:model.swells) if(w.phase==Phase::ready || w.phase==Phase::rendering || w.phase==Phase::queued || w.phase==Phase::checking || w.phase==Phase::restoring)
+        stopLocked(); for(auto& w:model.swells) if(w.phase==Phase::ready || w.phase==Phase::rendering || w.phase==Phase::queued || w.phase==Phase::checking || w.phase==Phase::restoring || w.phase==Phase::headroom)
         { ++w.inputGeneration; w.phase=Phase::stale; w.status="Host timing changed; checking dependencies"; }
         if(!context.capture.unavailable && context.capture.manifest.sampleRate==context.time.rate
             && std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return !w.frozen;}))model.timing=context.time;
@@ -966,7 +967,9 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         r.preparedShape=UINT64_MAX;r.preparedMonitor=UINT64_MAX;
         r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
         if(!sameMusicalMapping(model.timing,time))model.timing=time;
-        auto& w=*find(model,requested.id);w.phase=Phase::ready;w.progress=1;w.status="Frozen render";
+        auto& w=*find(model,requested.id);
+        w.phase=w.generatedGain?Phase::ready:Phase::headroom;
+        w.progress=1;w.status=w.generatedGain?"Frozen render":"Checking generated headroom";
         if(model.gainPolicy==GainPolicy::musical && w.calibration.state==CalibrationState::unavailable)
             w.status+=" | Calibration unavailable: unfreeze and restore source";
         ++liveRevision;forceRefresh.erase(w.id);return;
@@ -1009,7 +1012,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     if(!sourceFingerprint(sourceStore,context.capture.manifest,requested.sourceStart,renderInputEnd(requested),dependency,error,cancel))
     {
         WetRender recovered;juce::String verifyError;
-        if(restoreOrCheck && requested.render.present() && requested.render.rate==context.time.rate
+        if(restoreOrCheck && requested.generatedGain && requested.render.present() && requested.render.rate==context.time.rate
             && requested.render.irContent==requested.ir.content && requested.render.sourceStart==requested.sourceStart
             && requested.render.sourceEnd==renderInputEnd(requested) && assets.verify(requested.ir,verifyError)
             && assets.readRender(requested.render,available(),recovered,verifyError))
@@ -1041,7 +1044,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
                 && requested.calibration.renderIdentity==requested.render.content
                 && requested.calibration.revision==model.gainRevision);
         alreadyVerified=matching && calibrationReady && at!=runtime.end() && !at->second.cachedWetOnly && at->second.verifiedRender==requested.render;}
-    if(restoreOrCheck && alreadyVerified && assets.verify(requested.render,error)){
+    if(restoreOrCheck && alreadyVerified && requested.generatedGain && assets.verify(requested.render,error)){
         const auto latest=contextProvider();
         if(latest.captureGeneration!=context.captureGeneration || !sameMusicalMapping(context.time,latest.time)
             || sourceDependency(latest.capture.manifest,requested.sourceStart,renderInputEnd(requested))!=sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)))return;
@@ -1114,8 +1117,11 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     const juce::ScopedLock guard(lock); if(cancel()) return;
     auto& w=*find(model,requested.id); ++monitoringGeneration;
     const auto support=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd);
-    if(w.render!=committed || w.calibration!=calibration || w.supportOffset!=support)persistentChangedLocked(false);
-    w.render=committed;w.calibration=calibration;w.supportOffset=support;w.phase=Phase::ready; w.progress=1; w.status=cached?"Ready (verified saved render)":"Ready (committed render)";
+    const auto reuseGain=w.generatedGain && w.render==committed && w.calibration==calibration && w.supportOffset==support;
+    if(!reuseGain){w.generatedGain.reset();persistentChangedLocked(false);}
+    w.render=committed;w.calibration=calibration;w.supportOffset=support;
+    w.phase=reuseGain?Phase::ready:Phase::headroom;
+    w.progress=1;w.status=reuseGain?"Ready (verified saved render)":"Checking generated headroom";
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);
     else ++liveRevision;
@@ -1191,7 +1197,7 @@ void SwellEngine::run()
             if(!storageReady(context)){wait(2);continue;}
             collectCompletedPass(context);inspect(context);prepareDefault(context);
             if(learnGenerationStep(context))continue;
-            reconcileRenders(context);prepareTransport(context);serviceExportPreview();
+            reconcileRenders(context);prepareGeneratedHeadroom(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);
             const auto frozenLoopTime=!validTime && context.capture.sourceKind()==CaptureSourceKind::loop
                 && context.exportTime().valid;
@@ -1236,7 +1242,7 @@ void SwellEngine::run()
         {
             const juce::ScopedLock guard(lock); message="Background operation failed: "+juce::String(e.what()); stopLocked();
             if(exportState.phase==ExportPhase::preparing)exportState={ExportPhase::error,message,{}};
-            for(auto& w:model.swells) if(w.phase==Phase::rendering || w.phase==Phase::checking) {w.phase=Phase::error;w.status=message;}
+            for(auto& w:model.swells) if(w.phase==Phase::rendering || w.phase==Phase::checking || w.phase==Phase::headroom) {w.phase=Phase::error;w.status=message;}
             wait(10);
         }
     }

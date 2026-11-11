@@ -3,6 +3,7 @@
 #include "LoopCueScheduler.h"
 #include "TransportPlayback.h"
 #include "LoopCycles.h"
+#include <span>
 
 namespace m3
 {
@@ -10,18 +11,14 @@ struct LoopWetSample { float left = 0, right = 0; bool present = false; };
 
 struct LoopWetPlan
 {
+    enum class PeakAnalysis { measure, skip };
     LivePublication audio;
     float peakBound = 0, fixedGridPeak = 0;
     int pastCycles = 0, futureCycles = 0;
 
     bool prepare(int64_t phraseFrames, uint64_t budget, juce::String& error,
-                 const RenderCancellation& cancelled = {});
-    float wetGain(float requested, float ceiling, bool fixedGrid) const noexcept
-    {
-        const auto peak = fixedGrid ? fixedGridPeak : peakBound;
-        return peak > 0 ? std::min(requested, ceiling / peak) : requested;
-    }
-
+                 const RenderCancellation& cancelled = {}, std::span<const float> analysisGains = {},
+                 PeakAnalysis peakAnalysis = PeakAnalysis::measure);
     template <typename PositionAt>
     LoopWetSample sample(int64_t near, int64_t first, int64_t last, PositionAt&& position) const noexcept
     {

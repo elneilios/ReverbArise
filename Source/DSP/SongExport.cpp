@@ -104,6 +104,7 @@ bool prepareLoopExportPlan(const Session& session,const CaptureManifest& source,
     std::shared_ptr<const SongExportPlan> accepted;
     if(!prepareSongExportPlan(session,source,reference,time,dry,wet,accepted,error))return false;
     auto plan=std::make_shared<SongExportPlan>(*accepted);plan->loop=options;
+    plan->loopWetGain=juce::Decibels::decibelsToGain(session.liveWetDb);
     plan->origin=0;
     const auto endAnchor=loopExportEnd(*plan,wet>0);
     if(!endAnchor){error="Loop export extent overflows";return false;}

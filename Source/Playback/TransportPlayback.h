@@ -2,7 +2,7 @@
 #include <Core/SwellSession.h>
 #include <Core/TransportTime.h>
 #include <DSP/ReverseConvolution.h>
-#include "LiveOutputPeakGuard.h"
+#include "PlaybackPeaks.h"
 #include "LiveTransportClock.h"
 #include <array>
 #include <atomic>
@@ -32,8 +32,6 @@ struct LivePublication
     uint64_t revision=0;
     int64_t start=0,end=0;
     int64_t loopStart=0,loopEnd=0;
-    float attenuation=1;
-    bool measuredAttenuation=false;
     std::vector<LiveEntry> entries;
     std::vector<LiveSegment> segments;
     uint64_t bytes() const noexcept;
@@ -55,10 +53,11 @@ public:
     void primeForOffline() noexcept {gain=gainTarget=level.load();dry=dryTarget=enabled.load() && wetOnly.load()?0.0f:1.0f;gainRemaining=dryRemaining=0;}
     void reset() noexcept {epoch.fetch_add(1);}
     void process(float*,float*,int,const TransportTime&,bool workflowAllows=true,
-                 const LiveClockSnapshot* clock=nullptr,bool protectLiveOutput=false) noexcept;
+                 const LiveClockSnapshot* clock=nullptr) noexcept;
     bool missing() const noexcept {return missed.load();}
     bool incompatible() const noexcept {return badMapping.load();}
     bool active() const noexcept {return liveActive.load();}
+    PlaybackPeaks::Values peaks() const noexcept { return signalPeaks.read(); }
     std::optional<LiveCallbackObservation> observation() const noexcept {return callbackObservation.read();}
     std::optional<LiveCallbackObservation> lastRejection() const noexcept {return rejectionObservation.read();}
     std::optional<LiveCausalObservation> causalObservation() const noexcept {return causalPublication.read();}
@@ -78,7 +77,6 @@ private:
         float lastL=0,lastR=0,fromL=0,fromR=0;
         int remaining=0;
         bool audible=false;
-        float attenuation=1;
     };
     std::array<Slot,4> slots;
     std::array<std::atomic<uint64_t>,maximumSwells> generations{};
@@ -91,7 +89,7 @@ private:
     int current=-1;
     int64_t expectedPosition=0;
     bool wasRunning=false;
-    LiveOutputPeakGuard outputGuard;
+    PlaybackPeaks signalPeaks;
     float gain=1,gainTarget=1,gainStep=0,dry=1,dryTarget=1,dryStep=0;
     int gainRemaining=0,dryRemaining=0;
 };

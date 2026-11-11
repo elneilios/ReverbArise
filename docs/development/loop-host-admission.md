@@ -195,11 +195,12 @@ The host must match the accepted Loop's sample rate for both Audition and
 Cue. Their disabled controls report the required rate in the existing
 Perform hover-help footer.
 
-Fixed-grid Perform protects the measured wet sum at the requested Live Wet
-level. The worker measures every phase of the prepared Loop and includes
-partial pass overlap at Cue and Stop. The guard stays fixed for that mix.
-Legacy phase correction retains the conservative bound. Dry + Wet still
-passes the live dry signal at unity.
+The worker reserves headroom for newly generated Loop wet at default Levels
+and Live Wet 0 dB. On the fixed host grid it measures the positioned sum,
+including partial pass overlap at Cue and finish. Variable phase routes use
+a conservative bound. Perform uses the accepted starting gains and applies
+subsequent gain edits directly. Dry + Wet adds the live dry signal at unity
+and reports overload if the resulting float sum exceeds full scale.
 
 ## Capture end and disconnect
 

@@ -65,8 +65,11 @@ inline void loopExportPlanCases(const m3::Session& baseline,const CaptureManifes
     auto overflowing=session;overflowing.swells.front().placement=INT64_MAX;
     REQUIRE(!prepareLoopExportPlan(overflowing,source,"loop-v1",{2,16},0,1,other,error) && other==prior);
     // Presentation/monitoring and unrelated current host position are not plan inputs.
-    auto ignored=session;ignored.selected={swell.id};ignored.primary=swell.id;ignored.liveWetDb=-12;ignored.auditionDb=-24;
+    auto ignored=session;ignored.selected={swell.id};ignored.primary=swell.id;ignored.auditionDb=-24;
     REQUIRE(prepareLoopExportPlan(ignored,source,"loop-v1",{2,16},0,1,other,error) && other->identity==plan->identity);
+    auto lowerWet=session;lowerWet.liveWetDb=-12;
+    REQUIRE(prepareLoopExportPlan(lowerWet,source,"loop-v1",{2,16},0,1,other,error));
+    REQUIRE(other->identity!=plan->identity && other->loopWetGain==juce::Decibels::decibelsToGain(-12.0f));
     auto songCopy=*plan;songCopy.loop.reset();REQUIRE(songExportIdentity(songCopy)!=plan->identity);
     Session preferences;
     REQUIRE(setExportLevels(preferences,.8f,.2f,error));

@@ -116,15 +116,14 @@ inline void multipleExportCases()
     // irregular and independently interleaved callbacks remain deterministic.
     for(int i=0;i<2;++i){processors[i]->setNonRealtime(false);position(i,0,false);tick.clear();processors[i]->processBlock(tick,midi);}
     for(auto& processor:processors){REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::musical));
-        waitM3([&]{const auto session=processor->swellEngine().savedSession();return std::all_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.phase!=m3::Phase::checking && w.phase!=m3::Phase::rendering;});});}
+        waitM3([&]{const auto session=processor->swellEngine().savedSession();return std::all_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready && w.generatedGain.has_value();});});}
     const auto musical0=bounce(0,37),musical1=bounce(1,509);
     auto musicalFuture0=std::async(std::launch::async,[&]{return bounce(0,2048);});
     auto musicalFuture1=std::async(std::launch::async,[&]{return bounce(1,19);});
     REQUIRE(musical0==musicalFuture0.get() && musical1==musicalFuture1.get());
     for(const auto& processor:processors){const auto metrics=processor->swellEngine().snapshot();
-        REQUIRE(metrics.gainPlanBuilds>0 && metrics.gainPlanPreparationMs>=0 && metrics.gainPlanPeak>=0);
-        std::cout<<"Musical gain plan: builds="<<metrics.gainPlanBuilds<<" cacheHits="<<metrics.gainPlanCacheHits
-            <<" lastMs="<<metrics.gainPlanPreparationMs<<" peak="<<metrics.gainPlanPeak<<"\n";}
+        REQUIRE(metrics.gainPlanBuilds>0 && metrics.gainPlanPreparationMs>=0);
+        std::cout<<"Generated headroom scans: "<<metrics.gainPlanBuilds<<" | lastMs="<<metrics.gainPlanPreparationMs<<"\n";}
     for(auto& processor:processors)REQUIRE(processor->swellEngine().setGainPolicy(m3::GainPolicy::legacy));
     // Hosts can reset/freeze PPQ while processing an offline tail after every
     // prepared wet interval has already ended. That cannot invalidate prior wet.

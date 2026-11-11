@@ -159,7 +159,7 @@ LoopPlayback::LeadInDisplay LoopPlayback::leadInDisplay() const noexcept
     if (!leadIn) return {};
     const auto& publication = slots[(word >> displaySlotShift) & displaySlotMask].data;
     if (!publication) return {};
-    return {leadIn,publication->leadInPeaks,(word & fixedGridDisplay) ? publication->fixedGridGain : publication->gain};
+    return {leadIn,publication->leadInPeaks,publication->gain};
 }
 
 LoopPlayback::Status LoopPlayback::status() const noexcept
@@ -175,8 +175,7 @@ LoopPlayback::Status LoopPlayback::status() const noexcept
 
 void LoopPlayback::process(float* left, float* right, int frames, const loop_capture::MidiObservations& observations,
                            double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist,
-                           bool protectLiveOutput) noexcept
+                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist) noexcept
 {
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
@@ -235,8 +234,6 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const bool canObserve = access != Access::disabled && validFrames && observations.error == MidiObservations::Error::none;
     const bool canPlay = canObserve && access == Access::perform;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
-    if (seenGeneration != generation || seenRevision != revision)
-        fixedWetGrid.store(true, std::memory_order_release);
     const bool timingInterrupted = discontinuity || (wasObserving && !canObserve) || reset != seenReset;
     const bool interrupted = timingInterrupted || sourceChanged;
     seenReset = reset;
@@ -245,7 +242,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     wasObserving = canObserve;
     if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
     if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
-    if (!validFrames) { cursor = 0; outputGuard.reset(); return; }
+    if (!validFrames) { cursor = 0; signalPeaks.publish(0,0,frames,rate); return; }
     const auto observePlaylistPhrase = [&](uint16_t roles, int offset)
     {
         if ((roles & phrase) && playlist && playlist->valid && scheduler.state() == LoopCueScheduler::State::standby)
@@ -254,8 +251,6 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const auto local = commands.exchange(0,std::memory_order_acq_rel);
     const auto preparation = currentMatches && current->dependencies == epoch ? current->preparation : Preparation::waiting;
     const auto publishStatus = [&]{
-        if (canPlay && currentMatches && scheduler.phase() == LoopLiveReference::State::ready)
-            fixedWetGrid.store(scheduler.usesGrid(), std::memory_order_release);
         auto position = scheduler.playheadAt(cursor - 1);
         uint64_t leadIn = 0;
         if (held >= 0)
@@ -272,12 +267,11 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         statusWord.store(static_cast<unsigned>(scheduler.phase()) | (static_cast<unsigned>(scheduler.state()) << 3)
             | (static_cast<unsigned>(preparation) << 6) | (encoded << playheadShift)
             | (leadIn << leadInShift)
-            | (leadIn ? (static_cast<uint64_t>(held) << displaySlotShift) : 0)
-            | (leadIn && scheduler.usesGrid() ? fixedGridDisplay : 0),std::memory_order_release);
+            | (leadIn ? (static_cast<uint64_t>(held) << displaySlotShift) : 0),std::memory_order_release);
     };
     if (!canPlay && scheduler.state() == LoopCueScheduler::State::standby && dry == 1)
     {
-        outputGuard.reset();
+        signalPeaks.publish(0,0,frames,rate);
         // In Learn, verify the bounded event batch without processing dry samples.
         if (canObserve)
         {
@@ -302,7 +296,6 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         return;
     }
     using State = LoopCueScheduler::State;
-    outputGuard.prepare(rate);
     const auto fadeSamples = std::isfinite(rate) ? std::clamp(rate * .005,1.0,960.0) : 1.0;
     const auto dryStep = static_cast<float>(1.0 / fadeSamples);
     if (canPlay && !interrupted && scheduler.state() == State::repeating && held >= 0
@@ -314,6 +307,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         editFadeRemaining = editFadeLength = static_cast<int>(fadeSamples);
     }
     unsigned event = 0;
+    float wetPeak = 0, outputPeak = 0;
     for (int offset = 0; offset < frames; ++offset)
     {
         const auto sample = cursor + offset;
@@ -345,7 +339,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             const auto position = [&](int64_t index){ return scheduler.positionFor(index,sample); };
             const auto samplePlan = [&](const LoopPlaybackPublication& publication){
                 const auto mix = publication.plan.sample(cycle,scheduler.firstCycle(),scheduler.lastCycle(),position);
-                const auto gain = scheduler.usesGrid() ? publication.fixedGridGain : publication.gain;
+                const auto gain = publication.gain;
                 return LoopWetSample{mix.left * gain,mix.right * gain,mix.present};
             };
             wet = samplePlan(*plan);
@@ -358,7 +352,6 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
                 if (editFadeRemaining == 0) releaseEditFade();
             }
             lastWet = wet;
-            lastWetOnly = plan->wetOnly;
         }
         else if (state == LoopCueScheduler::State::stopping)
         {
@@ -371,9 +364,13 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         dry += std::clamp(dryTarget-dry,-dryStep,dryStep);
         if (dry != 1 || wet.left != 0) left[offset] = dry * left[offset] + wet.left;
         if (dry != 1 || wet.right != 0) right[offset] = dry * right[offset] + wet.right;
-        if (protectLiveOutput && !lastWetOnly) outputGuard.protectMix(left[offset],right[offset],wet.left,wet.right,wet.present);
-        else outputGuard.reset();
+        if (wet.present)
+        {
+            wetPeak = std::max({wetPeak,std::abs(wet.left),std::abs(wet.right)});
+            outputPeak = std::max({outputPeak,std::abs(left[offset]),std::abs(right[offset])});
+        }
     }
+    signalPeaks.publish(wetPeak,outputPeak,frames,rate);
     retireLatestWithoutSource(revision);
     cursor += frames;
     publishStatus();

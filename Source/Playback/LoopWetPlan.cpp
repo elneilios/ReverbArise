@@ -14,7 +14,8 @@ struct PeakPrefix
 };
 
 std::optional<double> measureFixedGridPeak(const LivePublication& audio, int64_t period,
-    const std::vector<PhaseRange>& occupied, const RenderCancellation& cancelled)
+    const std::vector<PhaseRange>& occupied, const RenderCancellation& cancelled,
+    std::span<const float> analysisGains)
 {
     constexpr int64_t chunkFrames = 1024;
     std::array<PeakPrefix, chunkFrames> prefixes;
@@ -45,13 +46,15 @@ std::optional<double> measureFixedGridPeak(const LivePublication& audio, int64_t
                     const auto to = std::min(stop, segment->end);
                     for (size_t index = 0; index < segment->count; ++index)
                     {
-                        const auto& render = *audio.entries[segment->members[index]].audio;
+                        const auto member = segment->members[index];
+                        const auto& render = *audio.entries[member].audio;
+                        const auto gain = analysisGains.empty() ? 1.0 : static_cast<double>(analysisGains[member]);
                         for (auto at = from; at < to; ++at)
                         {
                             const auto offset = static_cast<size_t>(at - render.start) * 2;
                             auto& value = pass[static_cast<size_t>(at - start)];
-                            value[0] += render.samples[offset];
-                            value[1] += render.samples[offset + 1];
+                            value[0] += render.samples[offset] * gain;
+                            value[1] += render.samples[offset + 1] * gain;
                         }
                     }
                 }
@@ -75,10 +78,13 @@ std::optional<double> measureFixedGridPeak(const LivePublication& audio, int64_t
 }
 
 bool LoopWetPlan::prepare(int64_t phraseFrames, uint64_t budget, juce::String& error,
-                         const RenderCancellation& cancelled)
+                         const RenderCancellation& cancelled, std::span<const float> analysisGains,
+                         PeakAnalysis peakAnalysis)
 {
     if (phraseFrames <= 1 || phraseFrames > INT32_MAX || audio.entries.empty() || audio.entries.size() > maximumSwells)
     { error = "Loop wet has no valid prepared entries"; return false; }
+    if (!analysisGains.empty() && analysisGains.size() != audio.entries.size())
+    { error = "Loop wet has incomplete analysis gains"; return false; }
     audio.start = 0;
     audio.end = 0;
     for (const auto& entry : audio.entries)
@@ -109,16 +115,18 @@ bool LoopWetPlan::prepare(int64_t phraseFrames, uint64_t budget, juce::String& e
     const auto margin = past + future + 2;
     int count = 0;
     double peak = 0;
-    for (const auto& entry : audio.entries)
+    for (size_t index = 0; index < audio.entries.size(); ++index)
     {
+        const auto& entry = audio.entries[index];
         if (!std::isfinite(entry.peak) || entry.peak < 0)
         { error = "Loop wet contains invalid peak data"; return false; }
+        const auto memberPeak = static_cast<double>(entry.peak) * (analysisGains.empty() ? 1.0f : analysisGains[index]);
         const auto length = entry.end - entry.start + 2 * margin;
         const auto full = length / phraseFrames;
         if (full > static_cast<int64_t>(liveMaximumOverlap))
         { error = "Loop wet exceeds the simultaneous contribution limit"; return false; }
         count += static_cast<int>(full);
-        peak += static_cast<double>(entry.peak) * full;
+        peak += memberPeak * full;
         const auto remaining = length % phraseFrames;
         if (!remaining) continue;
         auto first = (entry.start - margin) % phraseFrames;
@@ -127,11 +135,11 @@ bool LoopWetPlan::prepare(int64_t phraseFrames, uint64_t budget, juce::String& e
         if (end > phraseFrames)
         {
             ++count;
-            peak += entry.peak;
-            edges.push_back({end - phraseFrames,-1,-entry.peak});
+            peak += memberPeak;
+            edges.push_back({end - phraseFrames,-1,-memberPeak});
         }
-        else edges.push_back({end,-1,-entry.peak});
-        edges.push_back({first,1,entry.peak});
+        else edges.push_back({end,-1,-memberPeak});
+        edges.push_back({first,1,memberPeak});
     }
     std::sort(edges.begin(),edges.end(),[](const auto& a,const auto& b){
         return a.at == b.at ? a.count < b.count : a.at < b.at;
@@ -160,9 +168,9 @@ bool LoopWetPlan::prepare(int64_t phraseFrames, uint64_t budget, juce::String& e
     if (audio.bytes() > budget)
     { error = "Loop wet exceeds the shared PCM budget"; return false; }
     fixedGridPeak = peakBound;
-    if (maximumOverlap > 1)
+    if (maximumOverlap > 1 && peakAnalysis == PeakAnalysis::measure)
     {
-        const auto measured = measureFixedGridPeak(audio, phraseFrames, occupied, cancelled);
+        const auto measured = measureFixedGridPeak(audio, phraseFrames, occupied, cancelled, analysisGains);
         if (!measured) { error = "Loop wet preparation superseded"; return false; }
         // Keep headroom for float accumulation in the callback.
         const auto rounding = maximumPeak * std::numeric_limits<float>::epsilon() * maximumOverlap;
