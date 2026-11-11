@@ -504,6 +504,39 @@ if(BUILD_TESTING)
 endif()
 
 if(BUILD_TESTING)
+    # These executables share the same headless preverb_preview compile settings.
+    # Keep JUCE's usage requirements on each consumer, but compile its module
+    # sources once and link the resulting objects directly into each executable.
+    add_library(preverb_headless_juce OBJECT)
+    target_link_libraries(preverb_headless_juce PRIVATE preverb_preview)
+
+    foreach(module IN ITEMS juce_core juce_audio_basics juce_audio_formats juce_dsp)
+        get_target_property(module_sources ${module} INTERFACE_SOURCES)
+        set_property(TARGET ${module} PROPERTY INTERFACE_SOURCES
+            "$<$<NOT:$<BOOL:$<TARGET_PROPERTY:PREVERB_USE_HEADLESS_JUCE_OBJECTS>>>:${module_sources}>")
+    endforeach()
+
+    foreach(test_target IN ITEMS
+        preverb_audition_mix_test
+        preverb_audition_voice_test
+        preverb_automatic_coordinator_test
+        preverb_export_voice_test
+        preverb_generation_configuration_test
+        preverb_ir_choices_test
+        preverb_ir_handover_test
+        preverb_ir_streaming_test
+        preverb_preview_engine_test
+        preverb_song_export_engine_test
+        preverb_source_edges_test
+        preverb_transition_feedback_test
+        preverb_transport_playback_test
+    )
+        set_property(TARGET ${test_target} PROPERTY PREVERB_USE_HEADLESS_JUCE_OBJECTS TRUE)
+        target_sources(${test_target} PRIVATE $<TARGET_OBJECTS:preverb_headless_juce>)
+    endforeach()
+endif()
+
+if(BUILD_TESTING)
     set(preverb_pr_regression_executables
         preverb_build_smoke
         preverb_product_version_test
