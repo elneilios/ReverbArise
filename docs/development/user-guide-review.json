@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed main through 88bd5d0 with Loop capture, phrase-local navigation, Perform, shared wrapped helper/status text, protected Song source-bar entry and Song-only WAV Export. Preserved Loop timing diagrams and source identities. Diagnostics scheduling and hidden-idle storage polling change presentation work only; root-scoped reload refresh fixes stale inventory after folder association. Existing guide flows remain accurate; no host acceptance claimed.",
+  "summary": "Reviewed P8 keyboard dismissal and focus return, and the archived C3 Settings source-range help and validation contract, against the existing guide and production bindings. The merged guide retains Loop diagrams, capture and timing guidance, and Song-only WAV export. The C3 closeout documents existing behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 34477,
-      "sha256": "b357614a9dba0929c1b8cf3598d6f268307120891caaaad6b0ab4a6f01af35a9"
+      "bytes": 34582,
+      "sha256": "09f404d6231d379a06c6168e6ba483d069e02593a3ad1cbcd86f18554285cb55"
     },
     {
       "path": "CMakePresets.json",
@@ -580,8 +580,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 115110,
-      "sha256": "707cf33cceaacde533b24afccd30bba765bb23bb9a3ac0d1ba0fc733e7f1d6ae"
+      "bytes": 115538,
+      "sha256": "a4dd59a52ddfb3e60583d4a96eb60cb65e53343b2e283c18518c9abe05742a2d"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -610,8 +610,8 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 26676,
-      "sha256": "be0eeef05b7cb889f7e744c9d4e5e891be9f81bee8f6b7439df11bb26710b556"
+      "bytes": 24301,
+      "sha256": "27649d7e72ee031aaba860bd7fce5bb1c89ecd5de4cb76328f8441738ea72b92"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -789,6 +789,11 @@
       "sha256": "08d873d6290d3de579ffeccd164c20a860af127820bc361d3d9d762b125b6ff0"
     },
     {
+      "path": "Source/UI/Controls/OwnedAlertWindow.h",
+      "bytes": 3144,
+      "sha256": "a564d7ed0a4a0687cd092d1f03ab98be553f71c36461aa951861dec698181451"
+    },
+    {
       "path": "Source/UI/Controls/PopupInteraction.h",
       "bytes": 2304,
       "sha256": "fa51963c52188bf07f43f9ac2a7116a61248e4c5bd81ee4030053a724ec95d05"
@@ -812,6 +817,11 @@
       "path": "Source/UI/Controls/SliderControl.h",
       "bytes": 2521,
       "sha256": "e39f8e3f9635e195835dffe52a420d683f88985e3dde29f24a5a8f0395d76e81"
+    },
+    {
+      "path": "Source/UI/Controls/SurfaceLifecycle.h",
+      "bytes": 4973,
+      "sha256": "bda48a19cd5f2a7e5be81d55f8cfb025869d880866316ae25b818a726fb47832"
     },
     {
       "path": "Source/UI/Controls/SwellList.h",
@@ -854,14 +864,19 @@
       "sha256": "05ffd6a7484bae4ac1621237867a5956fc5229c98861247ee10b8ba22c2d0125"
     },
     {
+      "path": "Source/UI/Controls/WorkspaceWindow.h",
+      "bytes": 3607,
+      "sha256": "883b2d05fe3a66ad2da9fa48bac55232550ad8788dc949302a42f3a022de7f8e"
+    },
+    {
       "path": "Source/UI/Controls/WrappedLabel.h",
       "bytes": 1283,
       "sha256": "47f7d0f66362f83d29a481a32a3f76abb3601e047cd2fd59fb4cd0ad4b7dcc4b"
     },
     {
       "path": "Source/UI/ConvolutionIrBinding.h",
-      "bytes": 7390,
-      "sha256": "e07d3fed78cacac7950031887d3218cca5d0eb2da6bf771e98e7394d7d8707b5"
+      "bytes": 7938,
+      "sha256": "9c37d8923e14449286b03f1374b2d47aa71d97d3c9b4a047b46cc5f2f308715b"
     },
     {
       "path": "Source/UI/EditorPresentationState.h",
@@ -875,8 +890,8 @@
     },
     {
       "path": "Source/UI/ExportFileInvocations.h",
-      "bytes": 6826,
-      "sha256": "9cbc3d1db6aa9926428837b8ff2c52477ed7d7e6e8304c8e8e10381985a4f8d3"
+      "bytes": 7262,
+      "sha256": "2594f6d93425f06c9cae8c753bdcf4a785273054036f815d331770339db6e61d"
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
@@ -900,8 +915,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 54100,
-      "sha256": "295e6c3206e239ae26a1a8f04438254abec1a1c50d036e95d47a2342f2ca3062"
+      "bytes": 54137,
+      "sha256": "23049f2fe1549eb0cc4994920916b1d3817a3e7bdc4b12216d1fff075a77b607"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -930,8 +945,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 22506,
-      "sha256": "ad7b629044c7723cc3a2c071ebbc822fb1461595ccf38cb3f0f159ce484159a2"
+      "bytes": 23129,
+      "sha256": "29c248c6caccb707ad8f4af0a7a2df8b6311e5aaf137d912cee3c9ead7e9d9db"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -1010,8 +1025,8 @@
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
-      "bytes": 15903,
-      "sha256": "0a26b4ff788a57de0b9fb02d3d3b85cc44fd06edbca923ec27ea27fb7de97e84"
+      "bytes": 16283,
+      "sha256": "c559bf9586bb9aa48d4c10a135095aea7a932fb53dab4fef385016a87447abaa"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",
@@ -1055,8 +1070,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 120144,
-      "sha256": "13b98a7889c759afcdb46f68006e4182ea419bf6ee3e5e9c9a09015518508413"
+      "bytes": 120592,
+      "sha256": "b02528d78550864a1b0624eb49bb949e6fe6b631426b9c960f4255070af6df89"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1185,8 +1200,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 53276,
-      "sha256": "d16e21f70c2957cff6b41909d3a1b077a5abb584f04afcf92681a0eaa9fdf51d"
+      "bytes": 64308,
+      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",

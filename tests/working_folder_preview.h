@@ -21,6 +21,10 @@ static int workingFolderPreview(bool review)
         if(review){juce::MessageManager::getInstance()->runDispatchLoop();window.setVisible(false);window.clearContentComponent();panel.setLookAndFeel(nullptr);return;}
         REQUIRE(!use.isEnabled());const auto originalRoot=input.instanceRoot;
         panel.picker=[](auto complete){complete({});};choose.onClick();REQUIRE(!panel.busy() && !panel.ready() && saves==0);
+        int pickerCount=0;std::function<void(juce::File)> cancelled;
+        panel.picker=[&](auto complete){++pickerCount;cancelled=std::move(complete);};choose.onClick();choose.onClick();REQUIRE(pickerCount==1);
+        cancelled({});cancelled(target.file);REQUIRE(!panel.busy() && !panel.ready() && saves==0 && input.instanceRoot==originalRoot);
+        choose.onClick();window.setVisible(false);cancelled(target.file);REQUIRE(!panel.busy() && !panel.ready() && saves==0);window.setVisible(true);
         std::function<void(juce::File)> delayed;panel.picker=[&](auto complete){delayed=std::move(complete);};choose.onClick();++input.controlEpoch;delayed(target.file);REQUIRE(panel.statusText().contains("session changed") && saves==0);
         panel.picker=[&](auto complete){complete(target.file);};choose.onClick();wait();if(!panel.ready())throw std::runtime_error(panel.statusText().toStdString());
         REQUIRE(use.isEnabled() && input.instanceRoot==originalRoot && saves==0);

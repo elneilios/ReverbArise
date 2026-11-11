@@ -113,8 +113,26 @@ void Composition::verifyResponsiveScale()
     processor->flushHostStateChangesForTesting();REQUIRE(notices.dirty==0);
     REQUIRE(m3::encode(engine.savedSession(),after,error));REQUIRE(before==after);
     // Owned windows use the same magnification without resizing the editor.
+    NativeEditorPeer nativeOwner(*panel,"ReverbArise - P8 auxiliary lifecycle native validation");
+    const bool nativeFocusRequired=juce::SystemStats::getEnvironmentVariable("PREVERB_REQUIRE_NATIVE_AUX_FOCUS",{})=="1";
+    if(nativeFocusRequired)
+    {
+        const auto deadline=juce::Time::getMillisecondCounterHiRes()+30000;
+        while((!juce::Process::isForegroundProcess() || !nativeOwner.getPeer()->isFocused()) && juce::Time::getMillisecondCounterHiRes()<deadline)
+            juce::MessageManager::getInstance()->runDispatchLoopUntil(10);
+        REQUIRE(juce::Process::isForegroundProcess() && nativeOwner.getPeer()->isFocused());
+    }
     auto& header=require<WorkflowHeader>(*panel,"workflowHeader");header.onSettings();
     auto* settingsWindow=dynamic_cast<juce::DocumentWindow*>(panel->settingsPanel()->getTopLevelComponent());REQUIRE(settingsWindow);
+    {
+        auto& actualTabs=*panel->settingsPanel();actualTabs.selectPage(Page::about);
+        juce::SharedResourcePointer<controls::FocusVisibility> input;input->keyboardInput();
+        REQUIRE(settingsWindow->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(40);
+        REQUIRE(!settingsWindow->isVisible() && actualTabs.selectedPage()==Page::about);
+        if(nativeFocusRequired || juce::Process::isForegroundProcess())REQUIRE(juce::Process::isForegroundProcess() && header.settingsAction().hasKeyboardFocus(false));
+        header.onSettings();REQUIRE(actualTabs.getTopLevelComponent()==settingsWindow && actualTabs.selectedPage()==Page::about);
+    }
     settingsWindow->setVisible(false);
     auto& ownedTabs=*panel->settingsPanel();
     ownedTabs.selectPage(Page::about);
@@ -144,6 +162,10 @@ void Composition::verifyResponsiveScale()
     auto& focusViewport=require<controls::FocusViewport>(*settingsWindow,"auxiliaryPresentationViewport");
     REQUIRE(copyAction.hasKeyboardFocus(true));
     REQUIRE(focusViewport.getViewArea().contains(auxiliary.getLocalArea(&copyAction,copyAction.getLocalBounds()).expanded(static_cast<int>(controlGeometry::focusPadding))));
+    ownedTabs.selector().grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    REQUIRE(focusViewport.getViewArea().intersects(auxiliary.getLocalArea(&ownedTabs.selector(),ownedTabs.selector().getLocalBounds())));
+    copyAction.grabKeyboardFocus();juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    REQUIRE(copyAction.hasKeyboardFocus(true));
     const auto revealVertically=[](controls::FocusViewport& viewport,juce::Component& target)
     {
         auto* viewed=viewport.getViewedComponent();
@@ -184,6 +206,7 @@ void Composition::verifyResponsiveScale()
     }
     settingsWindow->setVisible(false);
     ownedTabs.selectPage(Page::recovery);
+    settingsWindow->setVisible(true);
     require<m3::ui::controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();
     auto* diagnosticsWindow=dynamic_cast<juce::DocumentWindow*>(panel->diagnosticsPanel()->getTopLevelComponent());REQUIRE(diagnosticsWindow);
     for(const auto percent : {100,125})
@@ -192,7 +215,13 @@ void Composition::verifyResponsiveScale()
         auto& diagnostics=require<controls::FocusViewport>(*diagnosticsWindow,"diagnosticsViewport");
         revealVertically(diagnostics,require<juce::Component>(*diagnosticsWindow,"copyDiagnostics"));
     }
-    diagnosticsWindow->closeButtonPressed();REQUIRE(!diagnosticsWindow->isVisible());
+    REQUIRE(diagnosticsWindow->keyPressed(juce::KeyPress(juce::KeyPress::escapeKey)));REQUIRE(!diagnosticsWindow->isVisible());
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(40);
+    if(nativeFocusRequired || juce::Process::isForegroundProcess())REQUIRE(juce::Process::isForegroundProcess() && require<controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").hasKeyboardFocus(false));
+    require<controls::ActionButton>(*panel->settingsPanel(),"openDiagnostics").onClick();settingsWindow->setVisible(false);
+    diagnosticsWindow->closeButtonPressed();juce::MessageManager::getInstance()->runDispatchLoopUntil(40);
+    REQUIRE(!settingsWindow->isVisible() && !diagnosticsWindow->isVisible());
+    if(nativeFocusRequired || juce::Process::isForegroundProcess())REQUIRE(juce::Process::isForegroundProcess() && header.settingsAction().hasKeyboardFocus(false));
     REQUIRE(panel->setPresentationScale(125));panel->refresh();
     REQUIRE(!diagnosticsWindow->isVisible());
     REQUIRE(panel->setPresentationScale(100));REQUIRE(panel->setPresentationSize(900,600));

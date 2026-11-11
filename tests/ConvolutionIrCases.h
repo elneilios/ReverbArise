@@ -142,6 +142,26 @@ inline void bindingCases()
     ConvolutionIrBinding defaultBinding(defaults,engine),selectedBinding(selected,engine);
     const auto refresh=[&]{const auto state=engine.snapshot();defaultBinding.displayDefault(state);selectedBinding.displaySelected(state);};
     defaultBinding.onRefresh=refresh;selectedBinding.onRefresh=refresh;refresh();
+    int pickerCount=0;std::function<void(const juce::File&)> pickerResult;
+    defaultBinding.chooseFile=[&](auto complete){++pickerCount;pickerResult=std::move(complete);};
+    const auto beforePicker=engine.savedSession().defaultIR;
+    defaultBinding.openFile();defaultBinding.openFile();REQUIRE(pickerCount==1);
+    pickerResult({});pickerResult(fixture.second);
+    REQUIRE(engine.savedSession().defaultIR==beforePicker && !engine.snapshot().defaultIRPending);
+    defaultBinding.openFile();REQUIRE(pickerCount==2);pickerResult({});
+    {
+        // Settings delegates to this binding while the Learn IR field is hidden.
+        struct ReturnWindow:juce::DocumentWindow
+        {ReturnWindow():DocumentWindow("ReverbArise - IR opener validation",background,closeButton){}void closeButtonPressed()override{}} window;
+        controls::ActionButton delegated("Settings default IR"),alternate("Other action");juce::Component content;
+        content.addAndMakeVisible(delegated);content.addAndMakeVisible(alternate);content.setSize(400,120);
+        delegated.setBounds(20,30,170,36);alternate.setBounds(210,30,170,36);
+        window.setUsingNativeTitleBar(true);window.setContentNonOwned(&content,true);window.centreWithSize(420,180);window.setVisible(true);window.toFront(true);
+        delegated.grabKeyboardFocus();defaultBinding.openFile(&delegated);alternate.grabKeyboardFocus();pickerResult({});
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+        if(juce::Process::isForegroundProcess())REQUIRE(delegated.hasKeyboardFocus(false));
+        window.setContentNonOwned(nullptr,false);
+    }
     auto unavailable=engine.snapshot();unavailable.session.defaultIR={};defaultBinding.displayDefault(unavailable);
     REQUIRE(defaults.selector.getSelectedId()==0 && defaults.status.getText()=="Default IR unavailable");refresh();
     const auto saved=engine.savedSession();const auto jobs=engine.snapshot().renderCount;
@@ -208,6 +228,11 @@ inline void bindingCases()
     // A dialog completion after its binding dies is harmless even while the editor survives.
     std::function<void(const juce::File&)> destroyed;
     {ConvolutionIrEditor control;auto binding=std::make_unique<ConvolutionIrBinding>(control,engine);binding->displayDefault(engine.snapshot());destroyed=binding->beginFileImport();binding.reset();destroyed(fixture.second);}
+    std::function<void(const juce::File&)> destroyedPicker;
+    {ConvolutionIrEditor control;auto binding=std::make_unique<ConvolutionIrBinding>(control,engine);binding->displayDefault(engine.snapshot());
+        binding->chooseFile=[&](auto complete){destroyedPicker=std::move(complete);};binding->openFile();binding.reset();}
+    REQUIRE(destroyedPicker);const auto retainedDefault=engine.savedSession().defaultIR;destroyedPicker(fixture.second);
+    REQUIRE(engine.savedSession().defaultIR==retainedDefault && !engine.snapshot().defaultIRPending);
     REQUIRE(engine.savedSession().defaultIR==restore.defaultIR);
     // Reopen retained choices through the binding with both external originals
     // gone. The saved assignment/cache identities survive; instances stay isolated.

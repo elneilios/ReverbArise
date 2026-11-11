@@ -191,7 +191,7 @@ public:
         refreshing=false;resized();repaint();
     }
     void visibilityChanged()override{mouseUpGesture();if(isVisible()){resetNavigation();clearInspection();}}
-    void openDefaultIrFile(){irBinding.displayDefault(engine.snapshot());irBinding.openFile();}
+    void openDefaultIrFile(juce::Component* opener=nullptr){irBinding.displayDefault(engine.snapshot());irBinding.openFile(opener);}
     void fitDrySource(){resetNavigation();view.update(capture,progress,clock);viewport=fullExtent();repaint();}
     std::pair<double,double> dryViewport()const noexcept{return {viewport.first,viewport.last};}
     const juce::String& coverageTotalsText()const noexcept{return totalsText;}

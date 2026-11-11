@@ -1,5 +1,6 @@
 #pragma once
 #include "Controls/ConvolutionIrEditor.h"
+#include "Controls/SurfaceLifecycle.h"
 #include <DSP/SwellEngine.h>
 #include <variant>
 
@@ -54,13 +55,17 @@ public:
             if(owner.onRefresh)owner.onRefresh();
         };
     }
-    void openFile()
+    void openFile(juce::Component* opening=nullptr)
     {
+        const auto ticket=pickerInvocation.begin(opening?*opening:editor.fileButton,opening?opening->getTopLevelComponent():&editor.selector);if(!ticket)return;
         auto complete=beginFileImport();
+        auto deliver=[ticket=*ticket,complete=std::move(complete)](const juce::File& file){if(ticket.complete())complete(file);};
+        if(chooseFile){chooseFile(std::move(deliver));return;}
         chooser=std::make_unique<juce::FileChooser>("Import impulse response",juce::File{},"*.wav;*.wv");
         chooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-            [complete=std::move(complete)](const auto& dialog){complete(dialog.getResult());});
+            [deliver=std::move(deliver)](const auto& dialog){deliver(dialog.getResult());});
     }
+    std::function<void(std::function<void(const juce::File&)>)> chooseFile;
     std::function<void()> onRefresh;
 private:
     struct Request {Target target;std::vector<IRChoice> choices;};
@@ -132,5 +137,6 @@ private:
     Target target{FutureDefault{}};std::vector<IRChoice> choices;std::optional<Request> invocation;
     std::shared_ptr<Lifetime> lifetime;uint64_t fileSerial=0;
     std::unique_ptr<juce::FileChooser> chooser;
+    controls::SurfaceInvocation pickerInvocation;
 };
 }
