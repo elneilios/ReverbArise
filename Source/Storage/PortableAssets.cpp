@@ -270,6 +270,18 @@ void copy(Root& destination,const juce::String& relative,HANDLE source,const Ent
 }
 bool sameMetadata(const juce::String& bytes,const juce::String& descriptor)
 {return json(boundedJson(bytes))==json(boundedJson(descriptor));}
+void requireMatchingPinnedLoop(const juce::String& pinned, const juce::String& candidate)
+{
+    if (pinned.isEmpty() || pinned == candidate) return;
+    CaptureManifest accepted, recovered;
+    juce::String error, acceptedJson, recoveredJson;
+    require(jsonShape(pinned) && parseCaptureManifest(pinned, accepted, error), "Invalid pinned capture manifest");
+    if (accepted.kind() != CaptureSourceKind::loop) return;
+    require(jsonShape(candidate) && parseCaptureManifest(candidate, recovered, error)
+        && serializeCaptureManifest(accepted, acceptedJson, error)
+        && serializeCaptureManifest(recovered, recoveredJson, error)
+        && acceptedJson == recoveredJson, "The recovery manifest differs from the accepted Loop");
+}
 void checkClosure(const Snapshot& s)
 {
     require(s.files.size()==s.observed.dependencies.size(),"Portable dependency closure is incomplete or has extra aliases");
@@ -365,6 +377,7 @@ bool prepareLegacyRecovery(const juce::File& selected,const Input& target,std::s
         Input candidate=target;candidate.instanceRoot=selected;candidate.sourceUnavailable=false;
         const auto reference=xml->getStringAttribute("manifestReference");
         if(reference.isNotEmpty()){Root root(selected);candidate.manifestJson=readText(root,reference,maximumMetadataBytes);}
+        requireMatchingPinnedLoop(target.manifestJson, candidate.manifestJson);
         return prepare(candidate,out,error,hooks);
     }catch(const std::exception& e){return fail(error,e.what());}
 }
@@ -1104,6 +1117,7 @@ bool matchesRecoveryTarget(const Verified& verified,const Input& target,juce::St
     try{
         ObservedSnapshot current;
         require(legacy(target.processorXml,verified.state.manifestJson,current,error),"Backup source does not match the project reference: "+error);
+        requireMatchingPinnedLoop(target.manifestJson, verified.state.manifestJson);
         require(current.project==verified.state.observed.project && current.instance==verified.state.observed.instance
             && current.reference==verified.state.observed.reference && current.capture.revision==verified.state.observed.capture.revision
             && target.instanceRoot.getFileName()==current.instance && target.instanceRoot.getParentDirectory().getFileName()==current.project,

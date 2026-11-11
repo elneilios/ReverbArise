@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed current-build Loop persistence and the Rack storage handoff fix against both host recovery runs. Added the Settings Storage recovery route, stop-playback guidance and the reminder to save the recovered project.",
+  "summary": "Reviewed Loop recovery preflight and the shared Cue and Storage handoff fence. The existing guide already covers stopped playback, verified recovery through Settings Storage and fresh Cue, so no prose changes were needed.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -545,13 +545,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 18915,
-      "sha256": "bd46d4af663312028aa3332e460e7669297c694fce22891a735b03767c47ef55"
+      "bytes": 19805,
+      "sha256": "97ba3c91e937a8c3888e57c0b5ff0667c7063a674e0d6068a02dc012c0a2b274"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 5044,
-      "sha256": "7c0aefa74d576b3f29fe353e3889e51e4634745b8af1c3952d7b9f6e19719312"
+      "bytes": 5203,
+      "sha256": "6f40600eea641d50834e9119ae59fa030bf39d8116412dbcc2a06709fa444792"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -605,8 +605,8 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 82633,
-      "sha256": "e041c6e9d9e33d7f26a6e970e8bb93c1d94c37799f988f698477ddc683d8a093"
+      "bytes": 83127,
+      "sha256": "769717d2fd6723f35b66ff8be8466de545054000ebe31a05eb1e8f3116401abc"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
@@ -635,8 +635,8 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 103182,
-      "sha256": "9abc730c7696afa11c7b43315238664befcdba2ead2f8a2986a8b59fca4a675c"
+      "bytes": 104089,
+      "sha256": "4425b45c8d938e708396c2a8aa2b0f18f68995c9f50ea33d5f00f36d53856e4b"
     },
     {
       "path": "Source/Storage/PortableAssets.h",

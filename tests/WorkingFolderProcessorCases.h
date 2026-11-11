@@ -112,6 +112,44 @@ static void workingFolderLoopCases()
     REQUIRE(packed.success);
     prepared.reset();
     const auto receipt = backupRoot.file.getChildFile("receipts/" + packed.receipt.locator.snapshot + ".json");
+    {
+        TestDirectory defaultCache, conflictingCopy, conflictingBackup;
+        for (const auto& path : {defaultCache.file, conflictingCopy.file, conflictingBackup.file})
+            REQUIRE(path.createDirectory().wasOk());
+        std::shared_ptr<Verified> correct;
+        REQUIRE(locateReceipt(receipt, correct, error));
+        REQUIRE(restoreCopy(correct, conflictingCopy.file).success);
+        const auto instanceFolder = [&](const juce::File& root){
+            return root.getChildFile(original.observed.project).getChildFile(original.observed.instance);
+        };
+        auto target = input;
+        m3::storage::Association association;
+        REQUIRE(m3::storage::decodeAssociatedState(input.processorXml, association, target.processorXml, target.manifestJson, error));
+        target.instanceRoot = instanceFolder(defaultCache.file);
+        target.sourceUnavailable = true;
+        auto conflict = original.observed.capture;
+        ++conflict.loop->originSample;
+        auto candidate = target;
+        candidate.instanceRoot = instanceFolder(conflictingCopy.file);
+        candidate.sourceUnavailable = false;
+        REQUIRE(serializeCaptureManifest(conflict, candidate.manifestJson, error));
+        REQUIRE(candidate.instanceRoot.getChildFile(original.observed.reference).replaceWithText(candidate.manifestJson));
+        std::shared_ptr<Prepared> conflictSnapshot;
+        REQUIRE(prepare(candidate, conflictSnapshot, error));
+        const auto conflictPack = backup(conflictSnapshot, conflictingBackup.file);
+        REQUIRE(conflictPack.success);
+        std::shared_ptr<Verified> wrong;
+        REQUIRE(locateReceipt(conflictingBackup.file.getChildFile("receipts/" + conflictPack.receipt.locator.snapshot + ".json"), wrong, error));
+        std::shared_ptr<Prepared> located;
+        REQUIRE(!prepareLegacyRecovery(candidate.instanceRoot, target, located, error));
+        REQUIRE(error.contains("differs from the accepted Loop"));
+        REQUIRE(!matchesRecoveryTarget(*wrong, target, error));
+        REQUIRE(error.contains("differs from the accepted Loop"));
+        REQUIRE(!target.instanceRoot.getChildFile(original.observed.reference).exists());
+        REQUIRE(matchesRecoveryTarget(*correct, target, error));
+        REQUIRE(restoreCopy(correct, defaultCache.file).success);
+        REQUIRE(target.instanceRoot.getChildFile(original.observed.reference).existsAsFile());
+    }
     juce::MemoryBlock saved;
     processor.getStateInformation(saved);
     fixture.processor.reset();

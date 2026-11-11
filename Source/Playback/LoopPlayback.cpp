@@ -2,6 +2,14 @@
 
 namespace m3
 {
+bool LoopPlayback::requestCue() noexcept
+{
+    const auto fence = tryFenceCue();
+    if (!fence.isLocked()) return false;
+    commands.fetch_or(loop_capture::cue, std::memory_order_release);
+    return true;
+}
+
 namespace
 {
 std::optional<int64_t> playlistDownbeat(const SongTime& time, int64_t blockStart,
@@ -237,10 +245,20 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     scheduler.setProcessingRate(rate);
     scheduler.configure(setup,currentMatches ? current->rate : 0,currentMatches ? std::optional{current->timing} : std::nullopt,
                         playlist && playlist->valid,autoClock);
-    const auto reset = resetEpoch.load(std::memory_order_acquire);
     const bool validFrames = frames > 0 && cursor <= INT64_MAX - frames;
     const bool canObserve = access != Access::disabled && validFrames && observations.error == MidiObservations::Error::none;
     const bool canPlay = canObserve && access == Access::perform;
+    const auto commandEpoch = resetEpoch.load(std::memory_order_acquire);
+    const auto local = commands.exchange(0, std::memory_order_acq_rel);
+    const bool midiCue = canPlay && externalAllowed
+        && std::any_of(observations.samples.begin(), observations.samples.begin() + observations.size,
+                       [](const auto& event){return (event.roles & loop_capture::cue) != 0;});
+    std::optional<juce::SpinLock::ScopedTryLockType> fence;
+    if (canPlay && (midiCue || (local & loop_capture::cue)))
+        fence.emplace(cueFence);
+    const auto reset = resetEpoch.load(std::memory_order_acquire);
+    // Hold through status publication so Storage sees any Cue admitted by this block.
+    const bool canCue = fence && fence->isLocked() && commandEpoch == reset;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
     if (seenGeneration != generation || seenRevision != revision)
         fixedWetGrid.store(true, std::memory_order_release);
@@ -258,7 +276,6 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if ((roles & phrase) && playlist && playlist->valid && scheduler.state() == LoopCueScheduler::State::standby)
             playlistPhrasePpq = std::fmod(playlist->ppq + offset * (playlist->bpm / (playlist->rate * 60)),4.0);
     };
-    const auto local = commands.exchange(0,std::memory_order_acq_rel);
     const auto preparation = currentMatches && current->dependencies == epoch ? current->preparation : Preparation::waiting;
     const auto publishStatus = [&]{
         if (canPlay && currentMatches && scheduler.phase() == LoopLiveReference::State::ready)
@@ -330,6 +347,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
             roles = observations.samples[event++].roles;
         if (!canPlay || !externalAllowed) roles &= ~(cue | finish | stop);
         if (offset == 0 && !interrupted && canPlay) roles |= local;
+        if (!canCue) roles &= ~cue;
         if (offset == 0 && interrupted && (!playlist || discontinuity))
             roles = autoClock && (roles & captureClock) ? roles & (captureClock | rackBeatMask | bar | phrase) : 0;
         if (roles & phrase) observePlaylistPhrase(roles,offset);

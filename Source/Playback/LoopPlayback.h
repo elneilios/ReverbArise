@@ -54,7 +54,9 @@ public:
     // Configuration has a serialized control writer. The callback reads one bounded snapshot.
     void setReference(const LoopReferenceSetup&, bool externalCommands) noexcept;
     void invalidateReference() noexcept { resetEpoch.fetch_add(1,std::memory_order_release); }
-    void requestCue() noexcept { commands.fetch_or(loop_capture::cue,std::memory_order_release); }
+    bool requestCue() noexcept;
+    // Storage holds this from the final playback check through adoption.
+    juce::SpinLock::ScopedTryLockType tryFenceCue() const noexcept { return juce::SpinLock::ScopedTryLockType(cueFence); }
     void requestStop() noexcept { commands.fetch_or(loop_capture::stop,std::memory_order_release); }
     void requestFinish() noexcept { commands.fetch_or(LoopCueScheduler::finishCommand,std::memory_order_release); }
     Status status() const noexcept;
@@ -88,6 +90,7 @@ private:
     std::atomic<int> referenceBeats{0}, referenceNumerator{0}, referenceDenominator{0};
     std::atomic<bool> phraseInput{false}, external{false};
     std::atomic<uint16_t> commands{0};
+    juce::SpinLock cueFence;
     // A supported phrase fits in 23 bits. A signed cursor also covers
     // up to 64 phrases of pre-roll. A nonzero lead-in encodes the display's
     // slot and gain route in the same word.

@@ -927,8 +927,7 @@ bool PreverbAudioProcessor::requestLoopCue() noexcept
         || !swells->livePlaybackEnabled() || current.playback!=m3::LoopCueScheduler::State::standby
         || current.phase != m3::LoopLiveReference::State::ready
         || current.preparation != m3::LoopPlaybackPublication::Preparation::ready) return false;
-    swells->loopTransport().requestCue();
-    return true;
+    return swells->loopTransport().requestCue();
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {
@@ -1422,7 +1421,8 @@ bool PreverbAudioProcessor::storagePlaybackActive() const noexcept
 bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error)
 {
     const juce::ScopedLock guard(storageStateLock);m3::storage::portable::Input current;
-    if(workflowState.snapshot().locked() || storagePlaybackActive() || !pinPortableAssets(current,error,true))
+    const auto cueFence = swells->loopTransport().tryFenceCue();
+    if(!cueFence.isLocked() || workflowState.snapshot().locked() || storagePlaybackActive() || !pinPortableAssets(current,error,true))
     {if(error.isEmpty())error="Stop the DAW and wait for pending work before reloading recovered assets.";return false;}
     const auto a=juce::XmlDocument::parse(expected.processorXml),b=juce::XmlDocument::parse(current.processorXml);
     if(!a || !b || expected.instanceRoot!=current.instanceRoot || expected.controlEpoch!=current.controlEpoch
@@ -1450,6 +1450,7 @@ bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::I
     {
         loopRecapture.store(false, std::memory_order_release);
         invalidateLoopClock();
+        swells->loopTransport().invalidateReference();
     }
     captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,
         pendingHostCapture.reference,revision,workflowState.snapshot().mode,true);
@@ -1512,13 +1513,26 @@ bool PreverbAudioProcessor::useWorkingFolder(const std::shared_ptr<m3::storage::
         const bool applied=captureWorker.relocateStorage(capture,generation,location,std::move(recovered),[&](const std::function<bool()>& adopt){
           const juce::ScopedLock stateGuard(storageStateLock);
           return swells->withStorageModelLocked([&]{
-            if(cancelled()){error="Folder change stopped; current folder retained";return false;}Input final;if(storagePlaybackActive() || workflowState.snapshot().locked() || !pinPortableAssets(final,error,true) || final.processorXml!=current.processorXml || final.manifestJson!=current.manifestJson
-                || final.controlEpoch!=current.controlEpoch || final.instanceRoot!=current.instanceRoot){error="The accepted session changed during verification";return false;}
-            if(!adopt())return false;
-            if (capture.sourceKind() == CaptureSourceKind::loop && (info.located || info.incompleteRecovery))
+            const auto cueFence = swells->loopTransport().tryFenceCue();
+            if(cancelled()){error="Folder change stopped; current folder retained";return false;}
+            if (!cueFence.isLocked() || storagePlaybackActive())
             {
-                loopRecapture.store(false, std::memory_order_release);
-                invalidateLoopClock();
+                error = "Stop playback before changing the working folder";
+                return false;
+            }
+            Input final;
+            if(workflowState.snapshot().locked() || !pinPortableAssets(final,error,true)
+                || final.processorXml!=current.processorXml || final.manifestJson!=current.manifestJson
+                || final.controlEpoch!=current.controlEpoch || final.instanceRoot!=current.instanceRoot)
+            {error="The accepted session changed during verification";return false;}
+            if(!adopt())return false;
+            if (capture.sourceKind() == CaptureSourceKind::loop)
+            {
+                if (info.located || info.incompleteRecovery)
+                {
+                    loopRecapture.store(false, std::memory_order_release);
+                    invalidateLoopClock();
+                }
                 swells->loopTransport().invalidateReference();
             }
             swells->acceptStorageLocation(location);persistentStateChanged();error.clear();return true;
