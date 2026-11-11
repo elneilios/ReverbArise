@@ -11,10 +11,10 @@ changing destinations or diagnosing installation failures.
   only in supported system locations. Adding a custom user folder as a VST search
   path does not make it scan VST3 there. Do not install into user/sandbox folders
   for FL Studio testing.
-- Use the default plugin-only build for ordinary host testing. Add `-Test` only
-  for explicitly requested or required full Release CTest; building all test
-  executables can be slow in a fresh worktree. Do not substitute stale binaries
-  from another checkout.
+- Use the default plugin-only build for owner DAW checks. The contribution
+  workflow defers automated tests until the owner approves marking the draft
+  PR ready. The full Release suite runs during release packaging. Do not
+  substitute stale binaries from another checkout.
 - Use normal filesystem escalation for the system VST3 destination. The user's
   request to install authorizes that operation; do not ask them to copy files.
   Sandbox escalation does not grant Windows administrator rights. On an ACL

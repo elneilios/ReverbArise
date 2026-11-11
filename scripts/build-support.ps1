@@ -103,16 +103,18 @@ function Get-BuildRevision([string] $Git, [string] $Root) {
 
 function Invoke-ReverbBuild {
     [CmdletBinding()]
-    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '')
+    param([string] $Root, [ValidateSet('Debug', 'Release')][string] $Configuration = 'Debug', [switch] $Test, [switch] $PluginOnly, [string] $ReleaseTag = '', [string] $Candidate = '', [switch] $PrRegression)
     $ErrorActionPreference = 'Stop'
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
     $preset = 'windows-msvc-' + $Configuration.ToLowerInvariant()
     $stages = [ordered]@{ Preflight = 'not run'; Configure = 'not run'; Build = 'not run'; Test = 'not requested' }
-    if ($Test) { $stages.Test = 'not run' }
+    $runTests = $Test -or $PrRegression
+    if ($runTests) { $stages.Test = 'not run' }
     $revision = 'unavailable'; $logDirectory = 'unavailable'; $lock = $null; $code = 1; $stage = 'Preflight'
     Push-Location -LiteralPath $Root
     try {
         if ($PluginOnly -and $Test) { throw '-PluginOnly cannot be combined with -Test; tests require the full build.' }
+        if ($PrRegression -and ($PluginOnly -or $Test)) { throw '-PrRegression cannot be combined with -PluginOnly or -Test.' }
         $tools = Resolve-BuildTools
         $revision = Get-BuildRevision $tools.Git $Root
         # Resolve binaryDir from the unchanged configure preset rather than using a global lock.
@@ -127,8 +129,9 @@ function Invoke-ReverbBuild {
         $stages.Preflight = 'pass'
         Write-Host "Tools: $($tools.CMake); $($tools.CTest)"
         if ($PluginOnly) { Write-Host 'Build target: preverb_plugin_VST3 (plugin only; CTest not requested)' }
+        if ($PrRegression) { Write-Host 'Build target: preverb_pr_regression (CTest label: pr-regression)' }
         foreach ($stage in @('Configure', 'Build', 'Test')) {
-            if ($stage -eq 'Test' -and -not $Test) { continue }
+            if ($stage -eq 'Test' -and -not $runTests) { continue }
             $executable = $tools.CMake
             $arguments = switch ($stage) {
                 'Configure' { @('--preset', 'windows-msvc', '-DFETCHCONTENT_UPDATES_DISCONNECTED=ON', "-DPREVERB_RELEASE_TAG=$ReleaseTag", "-DPREVERB_RELEASE_CANDIDATE=$Candidate") }
@@ -136,7 +139,11 @@ function Invoke-ReverbBuild {
                 'Test' { @('--preset', $preset, '--no-tests=error') }
             }
             if ($stage -eq 'Build' -and $PluginOnly) { $arguments += @('--target', 'preverb_plugin_VST3') }
-            if ($stage -eq 'Test') { $executable = $tools.CTest }
+            if ($stage -eq 'Build' -and $PrRegression) { $arguments += @('--target', 'preverb_pr_regression') }
+            if ($stage -eq 'Test') {
+                $executable = $tools.CTest
+                if ($PrRegression) { $arguments += @('-L', '^pr-regression$') }
+            }
             $log = Join-Path $logDirectory ($stage.ToLowerInvariant() + '.log')
             Write-Host "$stage $Configuration... ($log)"
             $code = Invoke-BuildNative $executable $arguments $log
