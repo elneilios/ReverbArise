@@ -270,9 +270,16 @@ static void swellListBindingCases(PreverbAudioProcessor& processor,PreverbAudioP
     REQUIRE(engine.selectTargets({unaffected},unaffected));
     editor.refresh();
     auto* remove=dynamic_cast<CommandButton*>(named(*confirm,"confirmSwellDeletion"));
-    REQUIRE(remove);
+    REQUIRE(remove && remove->isEnabled());
+    const juce::Component::SafePointer<juce::Component> pendingConfirmation(confirm);
     remove->invokeCommand();
-    pump();
+    // The command posts a click and JUCE dispatches modal completion separately.
+    // Wait for the editor to retire the dialog before checking the deletion.
+    waitUI([&]
+    {
+        if(pendingConfirmation != nullptr) pump();
+        return pendingConfirmation == nullptr;
+    });
     const auto after=engine.savedSession();
     REQUIRE(after.swells.size()==1 && !m3::find(after,first) && !m3::find(after,second));
     REQUIRE(after.selected==std::vector<juce::String>{unaffected} && after.primary==unaffected);
