@@ -235,6 +235,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const bool canObserve = access != Access::disabled && validFrames && observations.error == MidiObservations::Error::none;
     const bool canPlay = canObserve && access == Access::perform;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
+    if (seenGeneration != generation || seenRevision != revision)
+        fixedWetGrid.store(true, std::memory_order_release);
     const bool timingInterrupted = discontinuity || (wasObserving && !canObserve) || reset != seenReset;
     const bool interrupted = timingInterrupted || sourceChanged;
     seenReset = reset;
@@ -252,6 +254,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const auto local = commands.exchange(0,std::memory_order_acq_rel);
     const auto preparation = currentMatches && current->dependencies == epoch ? current->preparation : Preparation::waiting;
     const auto publishStatus = [&]{
+        if (canPlay && currentMatches && scheduler.phase() == LoopLiveReference::State::ready)
+            fixedWetGrid.store(scheduler.usesGrid(), std::memory_order_release);
         auto position = scheduler.playheadAt(cursor - 1);
         uint64_t leadIn = 0;
         if (held >= 0)

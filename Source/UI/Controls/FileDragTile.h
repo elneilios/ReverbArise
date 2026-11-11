@@ -12,7 +12,15 @@ public:
         setTooltip("Drag the ready WAV to your Playlist. Click or press Enter to Save WAV.");setHelpText(getTooltip());
         onClick=[this]{if(!dragged && onSave)onSave();};
     }
-    void setStatusText(const juce::String& value){if(status!=value){status=value;setDescription(value);setTooltip(value+" | Drag when ready; click or press Enter to Save WAV.");setHelpText(getTooltip());repaint();}}
+    void setStatusText(const juce::String& value)
+    {
+        if(status!=value){status=value;refreshDescription();}
+    }
+    void setPlacementText(const juce::String& value)
+    {
+        if(placement!=value){placement=value;refreshDescription();}
+    }
+    const juce::String& placementText() const noexcept { return placement; }
     void setDragFeedbackActive(bool active)
     {
         if(dragFeedbackActive==active)return;
@@ -66,12 +74,35 @@ public:
         g.strokePath(file,juce::PathStrokeType(1.7f));
         for(int n=0;n<7;++n){const auto h=5.f+static_cast<float>((n*7)%13);g.drawLine(c.x-16+n*5.f,top+34-h*.5f,c.x-16+n*5.f,top+34+h*.5f,1.5f);}
         g.setColour(aqua.withMultipliedAlpha(alpha));g.fillRect(c.x-24,top+48,48.f,18.f);g.setColour(background.withMultipliedAlpha(alpha));g.setFont(interFont(bodySize,InterFace::semibold));g.drawText("WAV",juce::Rectangle<float>(c.x-24,top+48,48,18),juce::Justification::centred);
-        g.setColour(m3::ui::text.withMultipliedAlpha(alpha));g.setFont(componentTextFont(*this,TextRole::sectionHeading));g.drawFittedText(getButtonText(),juce::Rectangle<int>(8,juce::roundToInt(top+83),getWidth()-16,30),juce::Justification::centred,1,.75f);
-        g.setColour(status.isEmpty()?secondary.withMultipliedAlpha(alpha):textStyle(TextRole::helper).ink);g.setFont(status.isEmpty()?interFont(bodySize,InterFace::italic):componentTextFont(*this,TextRole::helper));g.drawText(status.isEmpty()?juce::String("Song-aligned ")+juce::String::charToString(0x2022)+" preserves timing":status,juce::Rectangle<float>(8,top+120,getWidth()-16.f,24),juce::Justification::centred);
+        const bool hasPlacement=placement.isNotEmpty();
+        g.setColour(m3::ui::text.withMultipliedAlpha(alpha));
+        g.setFont(componentTextFont(*this,TextRole::sectionHeading));
+        const juce::Rectangle<int> title(8,juce::roundToInt(top+(hasPlacement?74:83)),getWidth()-16,hasPlacement?22:30);
+        g.drawFittedText(getButtonText(),title,juce::Justification::centred,1,.75f);
+        auto details=juce::Rectangle<int>(8,juce::roundToInt(top+120),getWidth()-16,24);
+        if(hasPlacement){
+            const auto lines=placement.containsChar('\n')?2:1;
+            const auto help=title.withY(title.getBottom()).withHeight(lines*responsiveGeometry::captionHeight);
+            g.setColour(textStyle(TextRole::helper).ink);
+            g.setFont(componentTextFont(*this,TextRole::helper));
+            g.drawFittedText(placement,help,juce::Justification::centred,lines);
+            details=help.withY(help.getBottom()+spacing::related).withHeight(responsiveGeometry::captionHeight);
+        }
+        g.setColour(status.isEmpty()?secondary.withMultipliedAlpha(alpha):textStyle(TextRole::helper).ink);
+        g.setFont(status.isEmpty()?interFont(bodySize,InterFace::italic):componentTextFont(*this,TextRole::helper));
+        g.drawText(status.isEmpty()?juce::String("Song-aligned ")+juce::String::charToString(0x2022)+" preserves timing":status,details,juce::Justification::centred);
     }
 private:
+    void refreshDescription()
+    {
+        const auto description=placement.isEmpty()?status:placement+"\n"+status;
+        setDescription(description);
+        setTooltip(description+"\nDrag when ready; click or press Enter to Save WAV.");
+        setHelpText(getTooltip());
+        repaint();
+    }
     PressId draggedPress=0;
     bool dragFeedbackActive=false;
-    bool dragged=false;juce::String status;
+    bool dragged=false;juce::String status,placement;
 };
 }

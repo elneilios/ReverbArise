@@ -58,6 +58,7 @@ public:
     void requestStop() noexcept { commands.fetch_or(loop_capture::stop,std::memory_order_release); }
     void requestFinish() noexcept { commands.fetch_or(LoopCueScheduler::finishCommand,std::memory_order_release); }
     Status status() const noexcept;
+    bool performUsesFixedWetGrid() const noexcept { return fixedWetGrid.load(std::memory_order_acquire); }
     // Call under the same control lock as publish and collect.
     LeadInDisplay leadInDisplay() const noexcept;
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
@@ -98,6 +99,7 @@ private:
     static constexpr uint64_t leadInMask = (uint64_t{1} << (displaySlotShift - leadInShift)) - 1;
     static std::optional<int64_t> decodeLeadIn(uint64_t word) noexcept;
     std::atomic<uint64_t> statusWord{0};
+    std::atomic<bool> fixedWetGrid{true};
 
     LoopCueScheduler scheduler;
     std::optional<double> playlistPhrasePpq;

@@ -539,10 +539,11 @@ void SwellEngine::setPreferences(float db,float sensitivity,double separation,bo
 }
 bool SwellEngine::initializeExport()
 {
+    const bool loopSource=contextProvider().capture.sourceKind()==CaptureSourceKind::loop;
     const juce::ScopedLock guard(lock);
     if(!workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
     const auto before=model.exportState;
-    if(!m3::initializeExport(model,message))return false;
+    if(!m3::initializeExport(model,message,loopSource))return false;
     if(model.exportState!=before){persistentChangedLocked();notify();}return true;
 }
 bool SwellEngine::setPerformNavigation(PerformNavigationState preferences,uint64_t expectedSession)
@@ -557,16 +558,56 @@ bool SwellEngine::setExportMix(float wet,uint64_t expectedSession,uint64_t expec
 {return setExportLevels(1-wet,wet,expectedSession,expectedPass);}
 bool SwellEngine::setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass)
 {
+    const bool loopSource=contextProvider().capture.sourceKind()==CaptureSourceKind::loop;
     const juce::ScopedLock guard(lock);
     if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise || workflowState->snapshot().locked())return false;
     if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return false;
     const auto before=model.exportState;
-    if(!m3::setExportLevels(model,dry,wet,message))return false;
-    if(before!=model.exportState){auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();if((dry==0 && wet==0) || (wet>0 && !exportPreviewWetAvailable))exportVoice->stop();else if(exportVoice->requested(exportVoice->request()) && exportPreviewPin && exportPreviewSession==sessionGeneration.load() && exportPreviewPass==workflowState->snapshot().pass && exportPreviewRevision==liveRevision)exportVoice->setLevels(exportVoice->request(),dry,wet,exportPreviewPin->plan->end);else exportVoice->stop();exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();}return true;
+    if(!m3::setExportLevels(model,dry,wet,message,loopSource))return false;
+    if(before==model.exportState)return true;
+    auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;
+    exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();
+    if((dry==0 && wet==0) || (wet>0 && !exportPreviewWetAvailable))exportVoice->stop();
+    else if(exportVoice->requested(exportVoice->request()) && exportPreviewPin && exportPreviewSession==sessionGeneration.load()
+        && exportPreviewPass==workflowState->snapshot().pass && exportPreviewRevision==liveRevision){
+        const auto end=exportPreviewPin->plan->loop?loopExportEnd(*exportPreviewPin->plan,wet>0):std::optional<int64_t>{exportPreviewPin->plan->end};
+        if(end){
+            auto ticket=exportVoice->request();
+            if(loopSource && dry>0 && !exportPreviewDryRequested){
+                exportPreviewResume=exportVoice->position();
+                exportPreviewDryRequested=true;
+                ticket=exportVoice->requestStart();
+            }
+            exportVoice->setLevels(ticket,dry,wet,*end);
+        }else exportVoice->stop();
+    }else exportVoice->stop();
+    exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};
+    exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();
+    exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();return true;
+}
+bool SwellEngine::setLoopExportOptions(LoopExportOptions options,uint64_t expectedSession,uint64_t expectedPass)
+{
+    const auto context=contextProvider();
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=sessionGeneration.load() || !workflowState || workflowState->snapshot().mode!=workflow::Mode::finalise
+        || workflowState->snapshot().locked() || context.capture.sourceKind()!=CaptureSourceKind::loop || !context.capture.manifest.loop)return false;
+    if(expectedPass!=UINT64_MAX && workflowState->snapshot().pass!=expectedPass)return false;
+    const auto numerator=static_cast<int64_t>(context.capture.manifest.loop->meterNumerator);
+    if(options.repeats<1 || options.repeats>LoopExportOptions::maximumRepeats
+        || (options.gridBeats!=1 && options.gridBeats!=numerator && options.gridBeats!=2*numerator && options.gridBeats!=4*numerator))return false;
+    if(model.exportState.loop.initialized && model.exportState.loop.options==options)return true;
+    auto previous=exportState.prepared?exportState.prepared:exportState.previous;auto detail=exportState.detail;
+    model.exportState.initialized=true;model.exportState.loop.initialized=true;model.exportState.loop.options=options;model.exportState.desiredIdentity.clear();
+    exportRequest.fetch_add(1);detailSerial.fetch_add(1);detailWork.reset();exportVoice->stop();
+    const auto levels=model.exportState.loop.levels;
+    exportState={levels.dry==0 && levels.wet==0?ExportPhase::idle:ExportPhase::preparing,
+        levels.dry==0 && levels.wet==0?"Silent: Dry 0% / Wet 0%":"Preparing Loop export",{}};
+    exportState.previous=std::move(previous);exportState.detail=std::move(detail);
+    exportState.session=sessionGeneration.load();exportState.pass=workflowState->snapshot().pass;persistentChangedLocked();notify();return true;
 }
 bool SwellEngine::audition(double deviceRate)
 {
-    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise)return playExport(sessionGeneration.load());
+    if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise)return playExport(sessionGeneration.load(),deviceRate);
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::capture)return false;
     const juce::ScopedLock guard(lock); const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
     if(!w || at==runtime.end() || !at->second.monitor || at->second.preparedMonitor!=monitoringGeneration
@@ -596,9 +637,15 @@ void SwellEngine::processAudio(float* left,float* right,int frames,const SongTim
     { if(time.valid)timingChanged=true; allowed=false; audioAllowed=false; }
     voice.process(left,right,frames,time.rate,allowed);
     const auto exportAllowed=workflowState && workflowState->snapshot().mode==workflow::Mode::finalise
-        && time.valid && time.rate==expectedRate.load() && time.bpm==expectedBpm.load()
+        && !exportPreviewLoop.load() && time.valid && time.rate==expectedRate.load() && time.bpm==expectedBpm.load()
         && time.numerator==expectedNumerator.load() && time.denominator==expectedDenominator.load();
     exportVoice->process(left,right,frames,time.rate,exportAllowed);
+}
+void SwellEngine::processLoopExport(float* left,float* right,int frames,double rate) noexcept
+{
+    const auto allowed=workflowState && workflowState->snapshot().mode==workflow::Mode::finalise
+        && exportPreviewLoop.load() && rate==expectedRate.load();
+    exportVoice->process(left,right,frames,rate,allowed);
 }
 void SwellEngine::processLoopAudition(float* left,float* right,int frames,double rate,uint64_t generation,uint64_t revision,bool allowed) noexcept
 {
@@ -905,8 +952,9 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     const auto failure=[&](const juce::String& error){report(requested,session,Phase::error,error);};
     if(requested.frozen){
         const auto& asset=requested.render;
-        if(!context.time.valid || asset.rate!=context.time.rate || asset.bpm!=context.time.bpm
-            || asset.numerator!=context.time.numerator || asset.denominator!=context.time.denominator){
+        const auto time=context.exportTime();
+        if(!time.valid || asset.rate!=time.rate || asset.bpm!=time.bpm
+            || asset.numerator!=time.numerator || asset.denominator!=time.denominator){
             report(requested,session,Phase::stale,"Frozen render needs original host timing");return;}
         SwellAssetStore assets(instanceRoot(context.capture.manifest));juce::String error;
         if(!assets.verify(asset,error)){failure("Frozen render unavailable: "+error);return;}
@@ -917,7 +965,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         if(requested.id==model.primary)r.raw=std::move(raw);
         r.preparedShape=UINT64_MAX;r.preparedMonitor=UINT64_MAX;
         r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
-        if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+        if(!sameMusicalMapping(model.timing,time))model.timing=time;
         auto& w=*find(model,requested.id);w.phase=Phase::ready;w.progress=1;w.status="Frozen render";
         if(model.gainPolicy==GainPolicy::musical && w.calibration.state==CalibrationState::unavailable)
             w.status+=" | Calibration unavailable: unfreeze and restore source";
@@ -1145,6 +1193,8 @@ void SwellEngine::run()
             if(learnGenerationStep(context))continue;
             reconcileRenders(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);
+            const auto frozenLoopTime=!validTime && context.capture.sourceKind()==CaptureSourceKind::loop
+                && context.exportTime().valid;
             if(analysisTurn && automaticJob()){analysisTurn=false;continue;}
             analysisTurn=true;
             std::optional<Import> import; std::optional<Reset> reset; std::optional<Analysis> analyzingJob; std::optional<Swell> work,shape,monitor;
@@ -1154,7 +1204,7 @@ void SwellEngine::run()
                 if(!resets.empty()){reset=std::move(resets.front());resets.pop_front();}
                 else if(!imports.empty()) { import=std::move(imports.front()); imports.pop_front(); }
                 else if(analysis) { analyzingJob=analysis; analysis.reset(); }
-                else if(validTime && !context.capture.status.startsWith("Loading")
+                else if((validTime || frozenLoopTime) && !context.capture.status.startsWith("Loading")
                     && (awaitingCaptureReference.isEmpty() || context.capture.reference==awaitingCaptureReference))
                 {
                     for(const auto& w:model.swells) if(w.phase==Phase::queued || w.phase==Phase::restoring || w.phase==Phase::checking)
@@ -1163,10 +1213,10 @@ void SwellEngine::run()
                         if(w.status=="Importing IR") continue;
                         if(learnRenderHold.load() && w.status=="Queued after Generate Swells")continue;
                         if(w.status=="Preparing extended wet support" && juce::Time::getMillisecondCounterHiRes()<nextAutomaticEdit)continue;
-                        if(!context.time.valid && w.phase==Phase::restoring) continue;
+                        if(!validTime && (!w.frozen || w.phase==Phase::queued))continue;
                         work=w;restoreOrCheck=w.phase!=Phase::queued; break;
                     }
-                    if(!work)
+                    if(!work && validTime)
                     if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
                     {
                         const auto& r=runtime[w->id]; if(!r.shaped || r.preparedShape!=w->shapeGeneration || r.preparedRender!=w->render.content) shape=*w;

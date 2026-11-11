@@ -96,7 +96,8 @@ private:
 
         const auto name = intent.scope.file.path.fromLastOccurrenceOf("/", false, false);
         const auto destination = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(name);
-        chooser = std::make_unique<juce::FileChooser>("Save song-aligned WAV", destination, "*.wav");
+        chooser = std::make_unique<juce::FileChooser>(intent.scope.file.loop ? "Save Loop WAV" : "Save song-aligned WAV",
+                                                      destination, "*.wav");
         chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
                                 | juce::FileBrowserComponent::warnAboutOverwriting,
             [complete = std::move(complete)](const auto& dialog) { complete(dialog.getResult()); });
@@ -142,7 +143,9 @@ private:
         weak->tile.updateMouseCursor();
         if (!weak->isCurrent(intent)) return;
         using controls::WavDragResult;
-        weak->report(result == WavDragResult::dropped ? "Place the WAV at song origin. Its managed file is retained."
+        const auto placement = weak->tile.placementText();
+        weak->report(result == WavDragResult::dropped
+             ? (placement.isNotEmpty() ? placement : juce::String("Place the WAV at song origin. Its managed file is retained."))
              : result == WavDragResult::cancelled ? "Drag cancelled. Use Save WAV, or drag again."
              : "External dragging is unavailable. Use Save WAV.");
     }

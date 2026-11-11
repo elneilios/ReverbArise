@@ -202,6 +202,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     const m3::SwellViewport finalBar{phraseEnd * .75,static_cast<double>(phraseEnd)};
     timeline.setViewport(finalBar);
     fixture.through(fixture.marker(112)-4096);
+    const auto lastSimulatedBlock=std::chrono::steady_clock::now();
     editor.refresh();
     const auto playing=processor.loopPlaybackStatus();
     REQUIRE(playing.playhead && playing.nextLeadInStart && *playing.playhead > *playing.nextLeadInStart);
@@ -225,6 +226,11 @@ static void loopPerformReview(bool review,const juce::File& output)
     timeline.setViewport(previousView);
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    // These blocks represent continuous sample time; painting runs serially
+    // here, whereas a host continues audio callbacks while the editor paints.
+    if(std::chrono::steady_clock::now()-lastSimulatedBlock>std::chrono::milliseconds(500))
+        std::cout<<"Continuing simulated Loop callbacks after slow waveform paint.\n";
+    processor.resumeContinuousLoopPlaybackForTesting();
     fixture.tick();editor.refresh();
     if(!(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now"))
         std::cerr<<"Loop finish state="<<static_cast<int>(processor.loopPlaybackStatus().playback)<<" phase="<<static_cast<int>(processor.loopPlaybackStatus().phase)<<" status="<<status.getText()<<" button="<<cue.getButtonText()<<"\n";
@@ -367,5 +373,122 @@ static void loopPerformReview(bool review,const juce::File& output)
     };
     Window window(editor,fixture);
     juce::MessageManager::getInstance()->runDispatchLoop();
+}
+
+static void loopExportBindingCases()
+{
+    LoopCaptureFixture fixture;fixture.simpleClock=true;fixture.percussive=true;
+    auto& processor=*fixture.processor;auto& engine=processor.swellEngine();engine.setAutomaticProcessing(false);
+    auto settings=processor.getLoopCapturePreference();settings.count=1;
+    REQUIRE(processor.setLoopCapturePreference(settings) && processor.armLoopCapture());
+    fixture.through(fixture.marker(4),true);
+    REQUIRE(processor.getCaptureSnapshot().manifest.loop);
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    const auto until=[&](const auto& predicate){
+        const auto deadline=juce::Time::getMillisecondCounter()+15000;
+        while(!predicate() && juce::Time::getMillisecondCounter()<deadline){fixture.tick();juce::Thread::sleep(2);}
+        if(!predicate())throw std::runtime_error(engine.snapshot().message.toStdString());
+    };
+    until([&]{return engine.savedSession().defaultIR.present();});
+    REQUIRE(engine.addTarget(0));const auto id=engine.savedSession().primary;
+    const auto ir=fixture.root.file.getChildFile("export-binding.wav");writeTestWav(ir,1,48000,std::vector<float>(201,.002f));
+    engine.loadIR(ir);until([&]{return m3::find(engine.savedSession(),id)->irName==ir.getFileName();});
+    engine.setLivePlayback(true,m3::LiveRouting::wetOnly,-6);
+    REQUIRE(engine.generate(true).accepted);until([&]{return m3::find(engine.savedSession(),id)->phase==m3::Phase::ready;});
+    using Playing=m3::LoopCueScheduler::State;
+    using Prep=m3::LoopPlaybackPublication::Preparation;
+    until([&]{const auto status=processor.loopPlaybackStatus();return status.preparation==Prep::ready
+        && status.phase==m3::LoopLiveReference::State::ready;});
+    REQUIRE(processor.requestLoopCue());
+    float livePeak=0;
+    int64_t wetPosition=0;
+    juce::AudioBuffer<float> liveWet(2,fixture.frames);
+    const auto cueDeadline=fixture.marker(fixture.nextBeat+12);
+    while(fixture.cursor<cueDeadline){
+        fixture.tick(true);
+        const auto status=processor.loopPlaybackStatus();
+        if(status.playback==Playing::repeating)break;
+        if(status.playback!=Playing::leadIn || !status.playhead)continue;
+        const auto peak=fixture.audio.getMagnitude(0,fixture.frames);
+        if(peak>livePeak){
+            livePeak=peak;
+            wetPosition=*status.playhead-fixture.frames+1;
+            liveWet.makeCopyOf(fixture.audio);
+        }
+    }
+    REQUIRE(livePeak>1e-5f && wetPosition<0);
+    fixture.clockEnabled=false;fixture.through(fixture.marker(fixture.nextBeat+8));
+    REQUIRE(!processor.requestLoopCue());
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::finalise));
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    {
+        const auto file=engine.snapshot().songExport.prepared->file;
+        juce::WavAudioFormat format;
+        std::unique_ptr<juce::AudioFormatReader> reader(format.createReaderFor(
+            engine.assetDirectory().getChildFile(file.path).createInputStream().release(),true));
+        juce::AudioBuffer<float> decoded(2,fixture.frames);
+        REQUIRE(reader && wetPosition>=file.origin
+            && reader->read(&decoded,0,fixture.frames,wetPosition-file.origin,true,true));
+        for(int channel=0;channel<2;++channel)
+            for(int frame=0;frame<fixture.frames;++frame)
+                REQUIRE(std::abs(decoded.getSample(channel,frame)-liveWet.getSample(channel,frame))<1e-6f);
+    }
+    PreverbAudioProcessorEditor editor(processor);editor.enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
+    REQUIRE(editor.setPresentationSize(900,600));editor.setVisible(true);editor.refresh();
+    auto& workspace=require<ExportWorkspace>(editor,"exportWorkspace");auto& mix=workspace.mixControl();
+    REQUIRE(workspace.isVisible() && workspace.loopOptions().isVisible() && mix.isVisible());
+    REQUIRE(mix.selector.getText()=="Wet Layer" && mix.dry.getValue()==0 && mix.wet.getValue()==100);
+    engine.holdExportForTesting(true);
+    workspace.loopOptions().beforeInvocation();workspace.loopOptions().repeats.onStep(1);
+    until([&]{return engine.exportWaitingForTesting();});editor.refresh();
+    REQUIRE(workspace.displayedLoopRepeats()==1 && workspace.loopOptions().settings().repeats==2);
+    REQUIRE(!require<controls::ActionButton>(editor,"exportSave").isEnabled());
+    engine.holdExportForTesting(false);
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    REQUIRE(workspace.displayedLoopRepeats()==2);
+    REQUIRE(engine.snapshot().songExport.prepared->file.loop->options.repeats==2);
+    mix.beforeInvocation();mix.selector.setSelectedId(5,juce::sendNotificationSync);
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    REQUIRE(engine.snapshot().songExport.prepared->file.dry==1 && engine.snapshot().songExport.prepared->file.wet==1);
+    REQUIRE(workspace.placementText().contains("Mute the original dry"));
+    REQUIRE(engine.savedSession().exportState.dry==0 && engine.savedSession().exportState.wet==1);
+    processor.prepareToPlay(44100,fixture.frames);fixture.tick();
+    until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    auto& play=require<controls::ActionButton>(editor,"exportPlay");auto& save=require<controls::ActionButton>(editor,"exportSave");
+    REQUIRE(!play.isEnabled() && play.getTooltip().contains("48.0 kHz") && save.isEnabled());
+    REQUIRE(engine.snapshot().songExport.prepared->file.rate==48000);
+    processor.prepareToPlay(48000,fixture.frames);fixture.tick();editor.refresh();
+    REQUIRE(play.isEnabled());
+
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(engine.setFrozen(id,true));
+    juce::MemoryBlock saved;
+    processor.getStateInformation(saved);
+    const auto captured=processor.getCaptureSnapshot();
+    REQUIRE(saved.getSize()>0 && !captured.manifest.ranges.empty());
+    const auto dry=engine.assetDirectory().getChildFile(
+        juce::String(captured.manifest.ranges.front().assetPath));
+    REQUIRE(dry.deleteFile());
+
+    auto reopened=std::make_unique<PreverbAudioProcessor>(fixture.root.file);
+    auto& restored=*reopened;
+    restored.prepareToPlay(48000,fixture.frames);
+    restored.setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    const auto waitFor=[&](const auto& condition){
+        const auto deadline=juce::Time::getMillisecondCounter()+15000;
+        while(!condition() && juce::Time::getMillisecondCounter()<deadline)juce::Thread::sleep(2);
+        REQUIRE(condition());
+    };
+    waitFor([&]{const auto capture=restored.getCaptureSnapshot();return capture.unavailable
+        && capture.manifestKnown && restored.getWorkflowReadiness().readySwell;});
+    REQUIRE(!restored.getSourceEditTime(restored.getCaptureSnapshot()).valid);
+    REQUIRE(!restored.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(restored.requestWorkflowMode(workflow::Mode::finalise));
+    auto& restoredEngine=restored.swellEngine();
+    waitFor([&]{return restoredEngine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    REQUIRE(!restoredEngine.snapshot().songExport.prepared->plan->warnings.empty());
+    REQUIRE(restoredEngine.setExportLevels(0,1,restoredEngine.assignmentEpoch()));
+    waitFor([&]{return restoredEngine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    REQUIRE(restoredEngine.snapshot().songExport.prepared->plan->warnings.empty());
 }
 }

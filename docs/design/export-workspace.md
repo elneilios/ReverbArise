@@ -1,5 +1,33 @@
 # Export workspace implementation reference
 
+## Loop Export — issue #128
+
+The owner approved the native Loop Export revision on 2026-11-10. It uses the
+same `ExportLevelsControl` Mix Character and Dry/Wet faders as Song Export,
+defaulting a fresh Loop mix to Wet Layer. Loop and Song preferences are separate;
+the pair applies to both preview and file delivery.
+
+Lead-in grid and Repeats sit above the dominant waveform. The ruler distinguishes
+WAV start, Loop Bar 1, the second repeat when present, and End. The file tile
+shows placement help just below its title, with a gap before the file details.
+The instruction derives from the accepted file origin. A dry-inclusive mix
+adds the original-dry doubling reminder. Save WAV and Return to Perform share
+one row in Loop presentation so the existing file tile retains its full height
+at 900x600. Song keeps its existing action layout. No shared-family visual
+variant, token or production standards exception was introduced.
+
+The workspace binds loop options and the shared mix pair to session/pass guarded
+engine commands. Refresh does not emit edits. Musical file timing comes from
+the accepted capture, independently of live Cue availability. A mismatched or
+unavailable device rate disables preview with context help while valid Save/Drag
+remains available at the captured rate. Pending/previous waveform and current
+delivery ownership retain the existing Export policies.
+
+See [native preview evidence](../validation/2026-11-10-issue-128-export-preview.md)
+for approval and component scope; host/DPI qualification remains separate.
+
+## Song Export
+
 Issue #51 replaces the right-column crossfade with the owner-reviewed Mix Character
 selector and two shared editable Dry/Wet rows. Each level ranges from 0–100%;
 100% is unity for that branch. Presets modify only the pair; unmatched pairs show

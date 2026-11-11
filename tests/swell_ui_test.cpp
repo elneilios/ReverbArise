@@ -327,9 +327,13 @@ static void sourceRangeFeedbackCases()
     processor->setPlayHead(nullptr);
 }
 
+#include "LoopExportReview.h"
+
 int main(int argc,char* argv[]){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && (juce::String(argv[1])=="--test-loop-export" || juce::String(argv[1])=="--review-loop-export")){
+        loopExportReview::cases();if(juce::String(argv[1])=="--review-loop-export")loopExportReview::review();return;}
     if(argc>1 && juce::String(argv[1])=="--test-surface-lifecycle")
     {surfaceLifecycleCases([]{juce::MessageManager::getInstance()->runDispatchLoopUntil(30);});return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}

@@ -103,6 +103,10 @@ public:
     juce::String loopCaptureStatus() const;
     bool flushCaptureForTesting() { return captureWorker.flush(); }
     void flushHostStateChangesForTesting() { handleUpdateNowIfNeeded(); }
+    // A serial UI fixture can pause for software painting without simulating a
+    // host callback gap. Keep that fixture's next block continuous in wall time.
+    void resumeContinuousLoopPlaybackForTesting() noexcept
+    { previousLoopPlaybackCallback=std::chrono::steady_clock::now(); }
     SongTime getSongTime() const noexcept;
     SongTime getSourceEditTime(const CaptureSessionSnapshot&) const noexcept;
     workflow::Snapshot getWorkflowSnapshot() const noexcept {return workflowState.snapshot();}

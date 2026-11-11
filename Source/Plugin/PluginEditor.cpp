@@ -167,6 +167,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     hoverHelp.setColour(juce::Label::textColourId,m3::ui::contextHelpInk);hoverHelp.setInterceptsMouseClicks(false,false);
     addChildComponent(learnWorkspace);addChildComponent(exportWorkspace);
     exportWorkspace.onReturn=[this]{processor.requestWorkflowMode(workflow::Mode::live);refresh();};
+    exportWorkspace.onLoopSettings=[this](auto settings,uint64_t session,uint64_t pass){processor.swellEngine().setLoopExportOptions({settings.repeats,settings.gridBeats},session,pass);refresh();};
+    exportWorkspace.onLoopLevels=[this](auto levels,uint64_t session,uint64_t pass){processor.swellEngine().setExportLevels(levels.dry,levels.wet,session,pass);refresh();};
     learnWorkspace.onRecapture=[this](bool enabled){
         if(processor.getLoopCapturePreference().enabled)processor.setLoopRecapture(enabled);
         else processor.setRecaptureExisting(enabled);
@@ -1355,7 +1357,15 @@ void PreverbAudioProcessorEditor::refresh()
             processor.loopRecaptureEnabled(),loopStatus);
         learnWorkspace.display(capture,state,time,flow,songPlayheadAvailable,processor.getCaptureProgress(),songTimingIssue.has_value());
     }
-    if(exportLayout){exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());}
+    if(exportLayout){
+        if(loopSource && capture.manifest.loop){
+            const auto& loop=*capture.manifest.loop;const auto options=state.session.exportState.loop.options;
+            const auto bar=capture.manifest.sampleRate*240*loop.meterNumerator/(loop.tempoBpm*loop.meterDenominator);
+            exportWorkspace.setLoopPresentation(m3::ui::ExportWorkspace::LoopPresentation{{options.repeats,options.gridBeats},static_cast<double>(loop.endSample),bar,loop.meterNumerator});
+        }else exportWorkspace.setLoopPresentation({});
+        exportWorkspace.setPreviewDeviceRate(diagnostics.sampleRate);
+        exportWorkspace.display(state);noticeBar.display(exportWorkspace.notice());
+    }
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);
     refreshPerformNavigation();

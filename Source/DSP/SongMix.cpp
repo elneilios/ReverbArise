@@ -1,4 +1,5 @@
 #include "SongMix.h"
+#include <Playback/LoopCycles.h>
 #include "SwellShape.h"
 #include <Core/MonitoringSafety.h>
 #include <algorithm>
@@ -13,6 +14,8 @@ bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t avail
     ready=false;layersReady=false;current.reset();readers.clear();occupied.clear();measured={};
     const auto reserve=fixedPages+maximumPeaks*2*sizeof(CapturePeak)+(input?input->members.size():0)*readerAllowance;
     if(!input || available<reserve){error="Export reader working budget exceeded";return false;}
+    if(!std::isfinite(input->loopWetGain) || input->loopWetGain<=0)
+    {error="Invalid Perform wet gain";return false;}
     if(!dry.prepare(input,available-reserve,error,cancel))return false;
     auto verified=std::make_shared<SongExportPlan>(*input);verified->warnings=dry.warnings();verified->identity=songExportIdentity(*verified);
     if(verified->identity.isEmpty()){error="Invalid verified Export composition";return false;}current=std::move(verified);
@@ -33,6 +36,7 @@ bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t avail
     }
     if(current->dry>0)for(const auto& r:current->source.ranges)if(r.kind==CaptureCoverageKind::audio)
         occupied.emplace_back(std::max(r.startSample,current->origin),std::min(r.startSample+static_cast<int64_t>(r.frameCount),current->end));
+    if(current->loop){occupied.clear();occupied.emplace_back(current->origin,current->end);}
     std::sort(occupied.begin(),occupied.end());std::vector<std::pair<int64_t,int64_t>> merged;
     for(const auto& range:occupied){if(range.second<=range.first)continue;
         if(!merged.empty() && range.first<=merged.back().second)merged.back().second=std::max(merged.back().second,range.second);else merged.push_back(range);}
@@ -47,14 +51,31 @@ bool SongMix::branches(int64_t at,std::span<float> source,std::span<float> wet,j
     if(!dry.read(at,source,error))return false;std::fill(wet.begin(),wet.end(),0.f);
     if(current->wet==0)return true;
     for(size_t i=0;i<current->members.size();++i){const auto& member=current->members[i];const auto& w=member.accepted;
-        const auto a=std::max(at,member.start),b=std::min(end,member.end);if(a>=b)continue;
-        const auto count=static_cast<int>(b-a);const auto raw=a-w.placement-w.render.start;
-        if(!readers[i]->read(&scratch,0,count,raw,true,true)){error="Export wet read failed: "+w.id;return false;}
+        bool success=true;
+        const auto contribution=[&](int64_t offset){
+        if(!success)return;
+        const auto a=std::max(at,member.start+offset),b=std::min(end,member.end+offset);if(a>=b)return;
+        const auto count=static_cast<int>(b-a);const auto raw=a-offset-w.placement-w.render.start;
+        if(!readers[i]->read(&scratch,0,count,raw,true,true)){error="Export wet read failed: "+w.id;success=false;return;}
         for(int n=0;n<count;++n){const auto pos=a+n;
-            const auto gain=swellEnvelope(w,pos,member.start,member.end)*monitorEdgeGain(static_cast<size_t>(pos-member.start),static_cast<size_t>(member.end-member.start),current->timing.rate,.002);
+            const auto local=pos-offset;
+            const auto gain=swellEnvelope(w,local,member.start,member.end)*monitorEdgeGain(static_cast<size_t>(local-member.start),static_cast<size_t>(member.end-member.start),current->timing.rate,.002);
             for(int c=0;c<2;++c){auto& sum=wet[static_cast<size_t>(pos-at)*2+c];sum+=static_cast<float>(scratch.getSample(c,n)*gain);
-                if(!std::isfinite(sum)){error="Non-finite Export wet sum";return false;}}}
+                if(!std::isfinite(sum)){error="Non-finite Export wet sum";success=false;return;}}}
+        };
+        if(current->loop){
+            const auto period=current->source.loop->endSample;
+            const auto past=std::max(int64_t{0},member.end)/period+1;
+            const auto future=std::max(int64_t{0},-member.start)/period+1+(end-at)/period+1;
+            visitLoopCycles(loopFloorCycle(at,period),0,current->loop->repeats-1,past,future,[&](int64_t cycle){
+                if(const auto offset=loopCycleAnchor(0,cycle,period))contribution(*offset);
+                else {error="Loop wet extent overflows";success=false;}
+            });
+        }else contribution(0);
+        if(!success)return false;
     }
+    if(current->loop && current->loopWetGain!=1)
+        for(auto& sample:wet)sample*=current->loopWetGain;
     return true;
 }
 bool SongMix::scan(const std::function<bool(int64_t,int)>& visit,juce::String& error,const RenderCancellation& cancel)

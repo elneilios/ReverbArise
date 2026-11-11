@@ -129,6 +129,54 @@ bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const
         && (liveContext?liveContext->accepts(kept.timing,context.time)==LiveGate::admitted:transportMappingMatches(kept.timing,context.time))
         && kept.revision==juce::String(sourceDependency(context.capture.manifest,a.sourceStart,renderInputEnd(a)));
 }
+
+bool SwellEngine::prepareLoopExportWetGain(SongExportPlan& plan, float liveWetDb,
+    const juce::File& directory, juce::String& error, const RenderCancellation& cancel)
+{
+    if (!plan.loop || plan.wet == 0) return true;
+    LoopWetPlan playback;
+    SwellAssetStore store(directory);
+    constexpr uint64_t scratch = 8ULL * 1024 * 1024;
+    const auto budget = available(scratch);
+    uint64_t referencedPcm = 0;
+    for (const auto& member : plan.members)
+    {
+        if (cancel()) { error = "Export preparation superseded"; return false; }
+        const auto& swell = member.accepted;
+        std::shared_ptr<const WetRender> render;
+        {
+            const juce::ScopedLock guard(lock);
+            if (const auto cached = liveCache.find(swell.id);
+                cached != liveCache.end() && cached->second.key == memberKey(swell))
+                render = cached->second.main.lock();
+        }
+        const auto frames = static_cast<uint64_t>(member.end) - static_cast<uint64_t>(member.start);
+        if (!render || render->start != member.start || render->frames() != frames)
+        {
+            if (frames > (budget - referencedPcm) / (2 * sizeof(float)))
+            { error = "Perform wet reference exceeds the export working budget"; return false; }
+            auto shaped = std::make_shared<WetRender>();
+            float peak = 0;
+            if (!store.verify(swell.render, error)
+                || !readShaped(swell, store, member.start, member.end, shaped.get(), peak, error, cancel))
+                return false;
+            render = std::move(shaped);
+        }
+        referencedPcm += render->samples.capacity() * sizeof(float);
+        if (referencedPcm > budget)
+        { error = "Perform wet reference exceeds the export working budget"; return false; }
+        const auto slot = playback.audio.entries.size();
+        playback.audio.entries.push_back({slot, 0, member.start, member.end, render->peak, std::move(render), {}, 0});
+    }
+    if (!playback.prepare(plan.source.loop->endSample, budget, error, cancel))
+        return false;
+    Session policy;
+    policy.gainPolicy = plan.gainPolicy;
+    const auto requested = juce::Decibels::decibelsToGain(liveWetDb);
+    const auto ceiling = juce::Decibels::decibelsToGain(gainCeilingDb(policy));
+    plan.loopWetGain = playback.wetGain(requested, ceiling, loopPlayback.performUsesFixedWetGrid());
+    return true;
+}
 bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,const juce::String& requestedName)
 {
     const auto clock=liveClock.snapshot(sessionGeneration.load());
@@ -586,9 +634,8 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
         {
             const auto requested = juce::Decibels::decibelsToGain(snapshot.liveWetDb);
             const auto ceiling = juce::Decibels::decibelsToGain(gainCeilingDb(snapshot));
-            const auto protectedGain = [&](float peak){ return peak > 0 ? std::min(requested, ceiling / peak) : requested; };
-            publication->gain = protectedGain(publication->plan.peakBound);
-            publication->fixedGridGain = protectedGain(publication->plan.fixedGridPeak);
+            publication->gain = publication->plan.wetGain(requested, ceiling, false);
+            publication->fixedGridGain = publication->plan.wetGain(requested, ceiling, true);
             if (!publication->prepareLeadInPeaks(cancel)) return;
             if (publication->bytes() > available()) result = Preparation::budget;
         }

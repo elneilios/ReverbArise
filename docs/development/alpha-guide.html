@@ -694,6 +694,16 @@
 <ol><li>Select <strong>Export</strong>. Wait for preparation to complete. Resolve any missing-source or wet-render warnings before relying on the result.</li><li>Choose a <strong>Mix Character</strong> starting point or edit <strong>Dry</strong> and <strong>Wet</strong> independently. Each ranges from 0–100%; 100% is unity for that branch. Dry 0% / Wet 100% is wet-only, 100% / 0% is dry-only, and 100% / 100% adds both at full level. Unmatched edits show Custom. At 0% / 0%, preview and WAV delivery are disabled. These levels are independent of Perform's listening switch and Live Wet gain.</li><li>Use Export's preview Play and Stop to check the prepared mix. While it plays, change Mix Character or Dry/Wet: playback continues from the moving playhead with a short, smooth gain transition. Left-click or drag the waveform to position a ready preview. Scroll to zoom at the pointer and press the wheel while dragging to pan. Use Fit or Home to restore the view. You can still navigate a previous waveform while the new mix prepares. These actions leave the DAW transport alone. Gain edits keep your view; Save and Drag wait for the current WAV. A previous waveform is labelled while its replacement is measured. Stop or 0% / 0% stops playback; later level edits do not start it again.</li><li>Use <strong>Save WAV</strong> to choose a destination, or drag the WAV tile into your DAW or a folder as soon as it is ready. The WAV cursor shows where you can drop it. If you see a stop sign, move to a target that accepts files or use Save WAV. The tile returns to its dotted outline when the drag ends. When layering a dry/wet WAV in the DAW, mute the original source to avoid doubling dry audio; use Dry 0% / Wet 100% for a wet-only layer. Keep your exported WAV separate from the plugin's working cache.</li></ol>
 <figure><img class="screenshot" src="{{alpha-ready-export}}" alt="Export workspace with a prepared waveform and enabled WAV delivery controls" width="1400" height="1000"><figcaption>Ready Export. The fixture checks completed preparation and enabled Save/drag controls. A later edit can require a new prepared mix.</figcaption></figure>
 
+<h3>Export a captured Loop</h3>
+<p>With an accepted Loop and a ready enabled swell, open <strong>Export</strong>. Export uses the captured Loop's own timing and exact length. It does not need the transport, Clock or Phrase to keep running, and it can be ready while Cue Loop is unavailable. Preview needs an audio device at the captured sample rate; Save and Drag can still deliver the captured-rate WAV when Preview is disabled. Hover over Preview for the reason.</p>
+<ol>
+<li>Choose <strong>Repeats</strong>: the number of Loop passes to include. The first swell lead-in is included once, swells and tails overlap across internal repeat boundaries, and the final scheduled pass keeps its complete tail. There is no extra unscheduled pass.</li>
+<li>Choose a <strong>Lead-in grid</strong>. ReverbArise rounds the WAV start backward to that grid so no initial swell is cut off. The waveform labels <strong>WAV start</strong> separately from <strong>Loop Bar 1</strong>. Follow the placement instruction inside the WAV tile. For example, if the earliest wet starts 2.4 bars early and the grid is 4 bars, the file begins 4 bars early with 1.6 bars of silence. To put Loop Bar 1 at project bar 17, place the WAV at bar 13.</li>
+<li>Use the same <strong>Mix Character</strong> and <strong>Dry/Wet</strong> controls as Song Export. A fresh Loop mix starts at <strong>Wet Layer</strong> (Dry 0%, Wet 100%). Raising Dry includes the captured dry Loop once per pass in both Preview and the WAV. Dry is silent before the first pass and in the final wet tail. A dry-only WAV starts at Loop Bar 1. At 0% / 0%, Preview and file delivery are disabled.</li>
+<li>In Loop Export, <strong>Wet 100%</strong> uses the swell level from Perform, including Live Wet and protection against loud overlapping swells. A different Wet setting scales that level in Preview and the WAV. For Wet Layer, adjust the original dry in your host mixer and check the combined peak there.</li>
+<li>Preview, then <strong>Save WAV</strong> or drag the ready tile. Keep the destination tempo at the captured tempo for the stated bar offset; Export does not stretch the take. Mute or replace the original dry when using a dry-inclusive WAV to avoid doubling it. Song and Loop keep their own mix preferences, and previous exported files remain unchanged.</li>
+</ol>
+
 <h2 id="save">6. Save, close and reopen safely</h2>
 <p>Developer-state transition: opening a project with the older single-blend Export preference resets that preference to wet-only and prepares a fresh revision. Previously exported WAVs and their stored history remain intact. Keep your earlier project copy for rollback; do not remove older WAVs already used by your DAW.</p>
 <ol><li>Stop internal preview and save a <strong>copy</strong> of your DAW project. Keep captured source, render/cache assets and any exported WAVs available.</li><li>Close and reopen that copy. Check plugin recognition, captured waveform, swell list, settings and playback. Restoring a session does not automatically start audition.</li><li>Send the sender any missing-asset or restore warning. Do not rename plugin identities or delete caches as a repair. To roll back, close the DAW, restore the preserved installation and rescan; retain the original project copy and its assets.</li></ol>
@@ -724,7 +734,7 @@ Save the DAW project and its external audio separately, and back up every plugin
 <p>Reply directly to the person who privately supplied this candidate. Include <strong>{{IDENTITY}}</strong>, source <code>{{SHA}}</code>, Windows and DAW versions, sample rate/buffer, numbered reproduction steps, what you expected and what happened. Attach relevant screenshots or error text. For a crash, note what you were doing immediately beforehand. Ask before sharing projects or recordings containing private material.</p>
 <h2 id="host-setups">Host setup appendices</h2>
 <p>Start with your host's setup, then choose a Learn or Perform workflow. The <a href="#loop-signals">shared signal map</a> lists the MIDI numbers behind the host's note names.</p>
-<nav aria-label="Host appendices"><a href="#rack-setup">A. VCV Rack</a><a href="#rack-learn">Rack Learn</a><a href="#rack-perform">Rack Perform</a><a href="#fl-studio-setup">B. FL Studio</a><a href="#fl-learn">FL Studio Learn</a><a href="#fl-perform">FL Studio Perform</a></nav>
+<nav aria-label="Host appendices"><a href="#rack-setup">A. VCV Rack</a><a href="#rack-learn">Rack Learn</a><a href="#rack-perform">Rack Perform</a><a href="#rack-export">Rack Export</a><a href="#fl-studio-setup">B. FL Studio</a><a href="#fl-learn">FL Studio Learn</a><a href="#fl-perform">FL Studio Perform</a><a href="#fl-export">FL Studio Export</a></nav>
 
 <h3 id="rack-setup">Appendix A. VCV Rack</h3>
 <ol>
@@ -764,6 +774,13 @@ Save the DAW project and its external audio separately, and back up every plugin
 <h5>Cue and stop from a sequencer</h5>
 <p>Keep Clock connected. Patch separate trigger outputs to Cue <strong>E0 (16)</strong>, Stop <strong>F0 (17)</strong> and Stop Now <strong>F&#9839;0 (18)</strong> as needed. To align future cues to a sequencer phrase, send its Step 1 pulse to Phrase <strong>C0 (12)</strong> with a Clock pulse while the Loop is idle. Cue early enough to hear the full lead-in. After a clock loss or reset, restore timing and send a fresh Cue.</p>
 <p>Hover over a disabled playback button for its reason. If the status asks for 44.1 kHz or another rate, set Rack to that rate to use the saved capture and swells.</p>
+
+<h4 id="rack-export">Export a Loop from Rack</h4>
+<ol>
+<li>Capture a Loop using any Learn method, then generate swells and wait for an enabled swell to be ready. Open <strong>Export</strong>. No additional control cable is needed; you can stop Clock while preparing the WAV.</li>
+<li>Choose Repeats, Lead-in grid and a Mix Character or Dry/Wet pair. Match Rack's audio rate to the captured rate to use Preview. The captured-rate WAV can still be saved when Preview is unavailable.</li>
+<li>Use <strong>Save WAV</strong> to a folder outside the plug-in's working storage, then import it into your destination DAW. Follow the placement instruction inside the tile. Use Wet Layer to add swells alongside the original dry; mute or replace the original dry for a dry-inclusive mix.</li>
+</ol>
 
 <h3 id="fl-studio-setup">Appendix B. FL Studio</h3>
 <ol>
@@ -816,5 +833,12 @@ Save the DAW project and its external audio separately, and back up every plugin
 <li>To shift the next launch off the Playlist bar line, send Phrase <strong>C1 (12)</strong> at the desired beat-one position while playback is idle, then Cue. Stopping or seeking restores the Playlist grid until a new Phrase arrives.</li>
 </ol>
 <p>Use realtime playback for Loop wet. In the tested offline Loop bounce, FL Studio rendered the dry input. The current shared playback-note example has native processor coverage and awaits a desktop replay with the revised note map.</p>
+<h4 id="fl-export">Export a Loop into the FL Studio Playlist</h4>
+<ol>
+<li>Capture a Loop from Pattern or Song playback, generate swells, and select <strong>Export</strong> once an enabled swell is ready. You can stop FL Studio transport; export follows the captured Loop, not the current Playlist position.</li>
+<li>Set Repeats and Lead-in grid, choose Mix Character or the Dry/Wet levels, and check Preview. Keep the project tempo at the captured tempo for musical placement. Match the audio device rate to the captured rate when previewing.</li>
+<li>Drag the ready WAV tile into the Playlist, placing the file's beginning at the position shown by the placement instruction. For a four-bar lead-in and a desired Loop Bar 1 at bar 17, drop at bar 13. Use <strong>Save WAV</strong> and import the file if dragging is unavailable. Both delivery methods use the same prepared audio.</li>
+<li>Stay in Export while playing the delivered file so the plug-in does not add live swells again. With nonzero Dry in the WAV, mute or replace the original dry clip. Return to Perform when you want live swells instead of the delivered WAV.</li>
+</ol>
 <p class="identity">Required dependency notices are in licenses/ and ReverbArise.vst3/Contents/Resources/. guide-provenance.json records native screenshot provenance. Keep README.txt and the checksum/manifest supplied with this package.</p>
 </main></body></html>

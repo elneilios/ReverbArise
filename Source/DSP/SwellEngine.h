@@ -205,7 +205,9 @@ public:
     bool initializeExport();
     bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
-    bool playExport(uint64_t expectedSession);
+    bool setLoopExportOptions(LoopExportOptions,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
+    bool playExport(uint64_t expectedSession,double deviceRate=0);
+    void processLoopExport(float*,float*,int,double deviceRate) noexcept;
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
     uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
@@ -331,6 +333,8 @@ private:
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     void prepareTransport(const PreviewContext&);
     void prepareLoopTransport(const PreviewContext&);
+    bool prepareLoopExportWetGain(SongExportPlan&, float liveWetDb, const juce::File&,
+                                  juce::String&, const RenderCancellation&);
     void invalidateLiveLocked(const juce::String& id={});
     bool prepareSourceWave(const Swell&,const PreviewContext&,uint64_t extra,std::shared_ptr<Waveform>&,juce::String& error);
     bool cancelled(const juce::String&,uint64_t input,uint64_t session) const;
@@ -371,6 +375,8 @@ private:
     std::shared_ptr<const PreparedExport> exportPreviewPin;
     uint64_t exportPreviewSession=0,exportPreviewPass=0,exportPreviewRevision=0;
     bool exportPreviewWetAvailable=true;
+    bool exportPreviewDryRequested=false;
+    std::optional<int64_t> exportPreviewResume;
     std::atomic<uint64_t> exportPreviewBytes{0};
     uint64_t exportPreviewTicket=0;
     int64_t exportPreviewNext=0,exportPreviewStart=0;
@@ -380,6 +386,7 @@ private:
     std::atomic<bool> exportHold{false},exportWaiting{false};
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};
     std::atomic<bool> audioAllowed{false},timingChanged{false};
+    std::atomic<bool> exportPreviewLoop{false};
     std::atomic<double> expectedRate{0},expectedBpm{0};
     std::atomic<uint64_t> auditionLoopRevision{0},auditionLoopGeneration{0};
     std::atomic<int> expectedNumerator{0},expectedDenominator{0};

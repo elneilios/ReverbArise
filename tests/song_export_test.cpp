@@ -5,11 +5,14 @@
 #include <limits>
 #include "SongMixCases.h"
 #include "ExportPresetListening.h"
+#include "LoopExportPlanCases.h"
+#include "LoopExportMixCases.h"
 #include <UI/Controls/ExternalFileDrag.h>
 using namespace m3;
 int main(int argc,char** argv){return runTest([&]{
     if(argc==3 && juce::String(argv[1])=="--render-preset-listening"){renderExportPresetListening(juce::File(argv[2]));return;}
     songMixCases();
+    loopExportMixCases();
     {
         juce::String error;
         ExportState pair;pair.initialized=true;pair.dry=.87321f;pair.wet=.45678f;
@@ -78,6 +81,7 @@ int main(int argc,char** argv){return runTest([&]{
     w.render.path="renders/aaaa.wav";w.render.content=juce::String::repeatedString("a",64);w.render.checksum=juce::String::repeatedString("b",64);
     w.render.start=0;w.render.frames=96000;w.render.sourceStart=48000;w.render.sourceEnd=96000;w.render.channels=2;w.render.rate=48000;w.render.bpm=120;
     w.phase=Phase::ready;session.swells.push_back(w);
+    loopExportPlanCases(session,source);
     std::shared_ptr<const SongExportPlan> first,other;juce::String error;
     REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,.65f,first,error));
     REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,1,.65f,other,error));
