@@ -32,6 +32,8 @@ The owner reported that the listening checks sounded good and identified no issu
 
 ## Readiness
 
+The owner approved PR #170 for archive and merge into `feature/loop-mode` on 2026-11-11. The archived checklist leaves 4.1 and 4.3 open for the remaining hosted audio, sample-rate and suspension checks, including direct FL Studio dry Standby measurement. The earlier asset recovery, listening and targeted native results remain recorded. Integration into `main` and candidate packaging are separate steps.
+
 Integrated acceptance is in progress. Strict OpenSpec validation, UI standards and offline guide currency passed. The seven cases that failed in the first full Release run passed targeted reruns after the fixture fixes below. The full suite for the exact release candidate and the remaining technical host cases are still open. Host UI observations and WAV measurements are recorded separately from listening.
 
 ## Same-build MIDI, transport and asset recovery follow-up
