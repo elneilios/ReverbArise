@@ -873,8 +873,8 @@ workflow::Readiness PreverbAudioProcessor::getWorkflowReadiness() const
     const auto capture=captureWorker.snapshot();
     if (capture.sourceKind()==CaptureSourceKind::loop)
     {
-        const auto time=getSourceEditTime(capture);
-        return {captureWorker.hasUsefulSource(),time.valid,swells->hasExportableWet(time),false};
+        const auto time=captureWorker.isLoading()?SongTime{}:loopExportTime(capture);
+        return {captureWorker.hasUsefulSource(),getSourceEditTime(capture).valid,swells->hasExportableWet(time),false,time.valid};
     }
     const auto time=getSongTime();
     const auto session=swells->savedSession();

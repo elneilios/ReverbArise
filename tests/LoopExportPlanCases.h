@@ -23,6 +23,24 @@ inline void loopExportPlanCases(const m3::Session& baseline,const CaptureManifes
     REQUIRE(other->dry==.35f && other->wet==.65f && other->identity!=plan->identity);
     REQUIRE(prepareLoopExportPlan(session,source,"loop-v1",{3,16},0,1,other,error) && other->end==1152000 && other->identity!=plan->identity);
     REQUIRE(prepareLoopExportPlan(session,source,"loop-v1",{2,4},0,1,other,error) && other->origin==-288000 && other->identity!=plan->identity);
+    {
+        auto fractional=session;
+        auto capture=source;
+        fractional.timing.bpm=137;
+        capture.loop->tempoBpm=137;
+        capture.loop->endSample=336350;
+        capture.ranges.front().frameCount=336350;
+        capture.contextSpans.front().end=336350;
+        auto& member=fractional.swells.front();
+        member.render.bpm=137;
+        for(const auto start:{-84089,-84088,-84087}){
+            member.render.start=start;
+            member.render.frames=member.render.sourceEnd-start;
+            REQUIRE(prepareLoopExportPlan(fractional,capture,"fractional-grid",{1,4},0,1,other,error));
+            REQUIRE(other->members.front().start==start);
+            REQUIRE(other->origin==(start==-84089?-168175:-84088));
+        }
+    }
     REQUIRE(prepareLoopExportPlan(session,source,"loop-v2",{2,16},0,1,other,error) && other->identity!=plan->identity);
     REQUIRE(prepareLoopExportPlan(session,source,"loop-v1",{2,16},1,0,other,error));
     REQUIRE(other->origin==0 && other->end==768000 && other->wet==0);

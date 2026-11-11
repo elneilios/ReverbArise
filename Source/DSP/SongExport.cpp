@@ -115,7 +115,9 @@ bool prepareLoopExportPlan(const Session& session,const CaptureManifest& source,
         if(earliest<0){
             const auto grid=static_cast<long double>(source.sampleRate)*240*options.gridBeats
                 /(static_cast<long double>(loop.tempoBpm)*loop.meterDenominator);
-            const auto origin=std::round(std::floor(static_cast<long double>(earliest)/grid)*grid);
+            const auto index=std::floor(static_cast<long double>(earliest)/grid);
+            const auto nearer=std::round((index+1)*grid);
+            const auto origin=nearer<=earliest?nearer:std::round(index*grid);
             if(!std::isfinite(grid) || grid<=0 || !std::isfinite(origin) || origin< -9223372036854775808.0L || origin>=9223372036854775808.0L)
             {error="Loop lead-in grid overflows";return false;}
             plan->origin=static_cast<int64_t>(origin);

@@ -375,6 +375,8 @@ private:
     std::shared_ptr<const PreparedExport> exportPreviewPin;
     uint64_t exportPreviewSession=0,exportPreviewPass=0,exportPreviewRevision=0;
     bool exportPreviewWetAvailable=true;
+    bool exportPreviewDryRequested=false;
+    std::optional<int64_t> exportPreviewResume;
     std::atomic<uint64_t> exportPreviewBytes{0};
     uint64_t exportPreviewTicket=0;
     int64_t exportPreviewNext=0,exportPreviewStart=0;

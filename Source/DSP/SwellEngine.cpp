@@ -571,7 +571,15 @@ bool SwellEngine::setExportLevels(float dry,float wet,uint64_t expectedSession,u
     else if(exportVoice->requested(exportVoice->request()) && exportPreviewPin && exportPreviewSession==sessionGeneration.load()
         && exportPreviewPass==workflowState->snapshot().pass && exportPreviewRevision==liveRevision){
         const auto end=exportPreviewPin->plan->loop?loopExportEnd(*exportPreviewPin->plan,wet>0):std::optional<int64_t>{exportPreviewPin->plan->end};
-        if(end)exportVoice->setLevels(exportVoice->request(),dry,wet,*end);else exportVoice->stop();
+        if(end){
+            auto ticket=exportVoice->request();
+            if(loopSource && dry>0 && !exportPreviewDryRequested){
+                exportPreviewResume=exportVoice->position();
+                exportPreviewDryRequested=true;
+                ticket=exportVoice->requestStart();
+            }
+            exportVoice->setLevels(ticket,dry,wet,*end);
+        }else exportVoice->stop();
     }else exportVoice->stop();
     exportState={dry==0 && wet==0?ExportPhase::idle:ExportPhase::preparing,dry==0 && wet==0?"Silent: Dry 0% / Wet 0%":"Preparing export mix",{}};
     exportState.previous=std::move(previous);exportState.detail=std::move(detail);exportState.session=sessionGeneration.load();
@@ -944,8 +952,9 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     const auto failure=[&](const juce::String& error){report(requested,session,Phase::error,error);};
     if(requested.frozen){
         const auto& asset=requested.render;
-        if(!context.time.valid || asset.rate!=context.time.rate || asset.bpm!=context.time.bpm
-            || asset.numerator!=context.time.numerator || asset.denominator!=context.time.denominator){
+        const auto time=context.exportTime();
+        if(!time.valid || asset.rate!=time.rate || asset.bpm!=time.bpm
+            || asset.numerator!=time.numerator || asset.denominator!=time.denominator){
             report(requested,session,Phase::stale,"Frozen render needs original host timing");return;}
         SwellAssetStore assets(instanceRoot(context.capture.manifest));juce::String error;
         if(!assets.verify(asset,error)){failure("Frozen render unavailable: "+error);return;}
@@ -956,7 +965,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         if(requested.id==model.primary)r.raw=std::move(raw);
         r.preparedShape=UINT64_MAX;r.preparedMonitor=UINT64_MAX;
         r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
-        if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+        if(!sameMusicalMapping(model.timing,time))model.timing=time;
         auto& w=*find(model,requested.id);w.phase=Phase::ready;w.progress=1;w.status="Frozen render";
         if(model.gainPolicy==GainPolicy::musical && w.calibration.state==CalibrationState::unavailable)
             w.status+=" | Calibration unavailable: unfreeze and restore source";
@@ -1184,6 +1193,8 @@ void SwellEngine::run()
             if(learnGenerationStep(context))continue;
             reconcileRenders(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);
+            const auto frozenLoopTime=!validTime && context.capture.sourceKind()==CaptureSourceKind::loop
+                && context.exportTime().valid;
             if(analysisTurn && automaticJob()){analysisTurn=false;continue;}
             analysisTurn=true;
             std::optional<Import> import; std::optional<Reset> reset; std::optional<Analysis> analyzingJob; std::optional<Swell> work,shape,monitor;
@@ -1193,7 +1204,7 @@ void SwellEngine::run()
                 if(!resets.empty()){reset=std::move(resets.front());resets.pop_front();}
                 else if(!imports.empty()) { import=std::move(imports.front()); imports.pop_front(); }
                 else if(analysis) { analyzingJob=analysis; analysis.reset(); }
-                else if(validTime && !context.capture.status.startsWith("Loading")
+                else if((validTime || frozenLoopTime) && !context.capture.status.startsWith("Loading")
                     && (awaitingCaptureReference.isEmpty() || context.capture.reference==awaitingCaptureReference))
                 {
                     for(const auto& w:model.swells) if(w.phase==Phase::queued || w.phase==Phase::restoring || w.phase==Phase::checking)
@@ -1202,10 +1213,10 @@ void SwellEngine::run()
                         if(w.status=="Importing IR") continue;
                         if(learnRenderHold.load() && w.status=="Queued after Generate Swells")continue;
                         if(w.status=="Preparing extended wet support" && juce::Time::getMillisecondCounterHiRes()<nextAutomaticEdit)continue;
-                        if(!context.time.valid && w.phase==Phase::restoring) continue;
+                        if(!validTime && (!w.frozen || w.phase==Phase::queued))continue;
                         work=w;restoreOrCheck=w.phase!=Phase::queued; break;
                     }
-                    if(!work)
+                    if(!work && validTime)
                     if(const auto w=find(model,model.primary); w && (w->phase==Phase::ready || runtime[w->id].cachedWetOnly))
                     {
                         const auto& r=runtime[w->id]; if(!r.shaped || r.preparedShape!=w->shapeGeneration || r.preparedRender!=w->render.content) shape=*w;

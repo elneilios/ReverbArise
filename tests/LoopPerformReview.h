@@ -459,5 +459,33 @@ static void loopExportBindingCases()
     REQUIRE(engine.snapshot().songExport.prepared->file.rate==48000);
     processor.prepareToPlay(48000,fixture.frames);fixture.tick();editor.refresh();
     REQUIRE(play.isEnabled());
+
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(engine.setFrozen(id,true));
+    juce::MemoryBlock saved;
+    processor.getStateInformation(saved);
+    const auto dry=engine.assetDirectory().getChildFile(
+        juce::String(processor.getCaptureSnapshot().manifest.ranges.front().assetPath));
+    REQUIRE(dry.deleteFile());
+
+    PreverbAudioProcessor restored(fixture.root.file);
+    restored.prepareToPlay(48000,fixture.frames);
+    restored.setStateInformation(saved.getData(),static_cast<int>(saved.getSize()));
+    const auto waitFor=[&](const auto& condition){
+        const auto deadline=juce::Time::getMillisecondCounter()+15000;
+        while(!condition() && juce::Time::getMillisecondCounter()<deadline)juce::Thread::sleep(2);
+        REQUIRE(condition());
+    };
+    waitFor([&]{const auto capture=restored.getCaptureSnapshot();return capture.unavailable
+        && capture.manifestKnown && restored.getWorkflowReadiness().readySwell;});
+    REQUIRE(!restored.getSourceEditTime(restored.getCaptureSnapshot()).valid);
+    REQUIRE(!restored.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(restored.requestWorkflowMode(workflow::Mode::finalise));
+    auto& restoredEngine=restored.swellEngine();
+    waitFor([&]{return restoredEngine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    REQUIRE(!restoredEngine.snapshot().songExport.prepared->plan->warnings.empty());
+    REQUIRE(restoredEngine.setExportLevels(0,1,restoredEngine.assignmentEpoch()));
+    waitFor([&]{return restoredEngine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    REQUIRE(restoredEngine.snapshot().songExport.prepared->plan->warnings.empty());
 }
 }

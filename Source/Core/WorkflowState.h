@@ -9,7 +9,7 @@ namespace workflow
 enum class Mode : uint8_t { capture, live, finalise };
 enum class Phase : uint8_t { idle, recording, draining, validating, failed, armed };
 enum class Result : uint8_t { none, accepted, empty, failed, cancelled };
-struct Readiness { bool usefulSource=false, compatible=false, readySwell=false,frozenWet=false; };
+struct Readiness { bool usefulSource=false, compatible=false, readySwell=false,frozenWet=false,exportCompatible=false; };
 struct Snapshot
 {
     Mode mode=Mode::capture;Phase phase=Phase::idle;Result result=Result::none;
@@ -32,7 +32,7 @@ inline EntryBlock entryBlock(Snapshot s,Mode target,Readiness r) noexcept
 {
     if(s.locked())return s.phase==Phase::recording?EntryBlock::recording:EntryBlock::settling;
     if(target==Mode::live && !r.usefulSource && !r.frozenWet)return EntryBlock::source;
-    if(target!=Mode::capture && !r.compatible)return EntryBlock::timing;
+    if(target!=Mode::capture && !r.compatible && !(target==Mode::finalise && r.exportCompatible))return EntryBlock::timing;
     if(target==Mode::finalise && !r.readySwell)return EntryBlock::wet;
     return EntryBlock::none;
 }
