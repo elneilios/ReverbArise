@@ -131,3 +131,12 @@ and observing worker completion. The fixture now polls once more after the
 worker finishes, before asserting that the prepared folder is ready. The
 Release build and all three focused CTest cases passed on the final run.
 Logs are retained in `out/build-logs/p8-escape-review-retest.log`.
+
+## OpenSpec closeout
+
+After owner approval of PR #149, the six approved requirements were added to
+the canonical UI design system spec and the change was archived. All 20
+canonical specs passed standard validation, and the completed change passed
+strict validation before archival. Strict validation of the canonical UI spec
+reports the existing length warning on the density requirement. This closeout
+changes documentation only and uses the native validation recorded above.

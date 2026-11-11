@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed PR #149 F1. Escape now records keyboard input before closing Settings or Diagnostics, so returned focus uses the documented aqua keyboard brackets. The existing guide remains accurate.",
+  "summary": "Reviewed the synchronized P8 dialog, chooser and auxiliary window requirements against the delivered guide. The guide already describes keyboard cancellation, focus return, native pickers and the existing operation guards.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1115,8 +1115,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 53276,
-      "sha256": "d16e21f70c2957cff6b41909d3a1b077a5abb584f04afcf92681a0eaa9fdf51d"
+      "bytes": 61332,
+      "sha256": "bcd0dce0b199c3a1d8ddfc8c11fbd280ae025807628577b609da4b912ffa1ca6"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
