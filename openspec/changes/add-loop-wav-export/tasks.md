@@ -26,7 +26,7 @@
 - [x] 4.0a Move Loop placement guidance into the existing drag tile under the action title, with a gap before file details. Verify at compact and expanded sizes and show the revised native preview for owner approval.
 
 - [ ] 4.1 Validate a proven Clock-only Rack capture through finite export with live recurrence unavailable, then import Drag and Save results into FL Studio and compare placement, repeat spacing, initial lead-in, final tail, and Dry/Wet balance against preview for wet-layer and dry-inclusive mixes; use install-test-vst3 for any host build installation and record exact revision, host versions, results and remaining limitations in dated docs/validation evidence, keeping physical DPI qualification in #130.
-- [ ] 4.2 Run scripts/build.ps1 -Configuration Release -Test and required OpenSpec/UI checks on the final implementation; record the full native result separately from fixture/host evidence and resolve any regression before marking delivery ready.
+- [x] 4.2 Run scripts/build.ps1 -Configuration Release -Test and required OpenSpec/UI checks on the final implementation; record the full native result separately from fixture/host evidence and resolve any regression before marking delivery ready.
 - [ ] 4.3 Open a review-ready PR referencing #128 against feature/loop-mode with scope, automated/native/host evidence and known limitations; verify base/head and required CI checks and leave the PR open for owner review without merging.
 
 ## Workflow follow-up

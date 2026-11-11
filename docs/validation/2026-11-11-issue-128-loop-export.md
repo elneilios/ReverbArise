@@ -162,8 +162,7 @@ Focused Release checks passed for the Loop playback compositor, the independent
 export sample tests, worker/WAV and Preview parity with a non-unity Live Wet
 setting, and native Loop Export UI and processor binding. The Windows logs are
 `out/issue-128/perform-wet-test.log` and
-`out/issue-128/perform-wet-and-tile-test.log`. The revised production build
-still needs the full Release run and FL Studio kick comparison.
+`out/issue-128/perform-wet-and-tile-test.log`.
 
 The native processor binding test also recorded an audible wet lead-in block
 from actual Loop Perform at Live Wet −6 dB, stopped the clock, and exported at
@@ -175,3 +174,22 @@ followed by the file details. Wet Layer and Dry + Wet were rendered at 900x600
 and 1400x900. A single native review window was opened and the owner approved
 the tile arrangement.
 Screenshots are under `out/issue-128/preview-in-tile/`.
+
+The Windows Release build of `3ba8364` passed. The full CTest run passed
+103/104 in 378.58 seconds. The existing Perform knob reset fixture could
+not obtain Windows foreground focus (`peer=1 foreground=0`). It passed in
+3.07 seconds on the focused rerun of the same build, covering all 104 tests
+across both runs. Rerun log: `out/issue-128/perform-wet-focus-rerun.log`. Full log:
+`out/build-logs/Release/20261111-012742-13c42605/test.log`.
+
+The repository installer installed Release `3ba8364` in the system VST3
+folder for the manual listening check. Installed SHA256:
+`A6E017FF5C8BB1E64E797A8E3C7047C3809F425AA7885BEF0A7B58FA338AAE3D`.
+Rollback bundle:
+`out/vst3-install-backups/20261111-013659-c26e021807994af6b6cc742266411a85/ReverbArise.vst3`.
+The plugin-only install did not rerun CTest. The owner confirmed that the
+fresh FL Studio kick Wet Layer export matches the wet level in Perform.
+Decoded one- through four-pass Wet Layer files from that project each peak
+at −1.00 dBFS, with zero samples above full scale. Each has the 96,000-frame
+lead-in and the requested number of 96,000-frame passes. Rack-to-FL Drag and
+Save placement and listening acceptance remain separate from these results.
