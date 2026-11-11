@@ -198,6 +198,13 @@ row. `canCommit` is an optional read-only predicate captured after
 `beforeInvocation`; Settings bindings use it to reject a changed session/pass or
 selected swell before the original command runs. The control owns no engine.
 
+Settings Recovery uses the same selector for Onset suggestions. Its binding
+retains the chosen sample across refresh when available, including a sample
+outside the visible source range. A popup cannot select against a replaced
+source, session, pass or displayed sample mapping. Confirm owns the existing
+engine operation. The owner approved adoption using the existing C2 design on
+11 November 2026.
+
 The popup's root owns real keyboard focus while unavailable child rows remain
 disabled and accessible. Keyboard/accessibility inspection can reach such a row,
 but neither its press action nor Return/Space grants permission to select it.
@@ -523,7 +530,7 @@ native review must use the actual prepared fixture and retain one review window.
 | Policy | Current authority / disposition |
 | --- | --- |
 | Neutral/primary/destructive/latching command state | Shared resolver/roles and IR geometry approved at revision 12; keyboard/accessibility-only decoration approved at revision 13; shared C1 implementation, other families retain their staged jobs |
-| No-wheel selector | ChoiceSelector explicit C2 consumers approved at revision 14; Recovery candidateBox and action menus remain separate debt |
+| No-wheel selector | ChoiceSelector explicit C2 consumers approved at revision 14, including the later Recovery adoption. Action menus use the shared popup. |
 | Knob corner focus, Level step/fine interaction | Production guide revision 4 / #46 evidence; retained, no global focus redesign |
 | Segmented inspected versus accepted selection and joined-edge painting | Existing header/control policy and scoped #35/#37/#58 acceptance; not generic tab behavior |
 | Stable fixed transport typography and bounded notice wrapping | Production guide revisions 6/7 and no-forced-speech spec; not generic text shrink permission |

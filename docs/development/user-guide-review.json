@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed canonical Loop Export and workflow-mode sync against the implemented workflow. The guide already covers capture-local export readiness, Perform wet level, dry mix, repeat composition and WAV placement.",
+  "summary": "Reviewed Recovery Onset suggestions selection, keyboard dismissal and Confirm against the merged editor bindings. Retained the new Recovery guidance and the Loop capture, timing diagrams and WAV Export instructions from the Loop baseline.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -585,13 +585,13 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 116515,
-      "sha256": "23691115dc39f145c94c75bc8a9cbffe5cebabeb4870228dbddd3534ddbff0f2"
+      "bytes": 116449,
+      "sha256": "20013bc80fddab645fab13ed033433b10ebbbc02d96bd30ebb3f955f69d73485"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 16651,
-      "sha256": "650359d8d4fc6d1931290a14cf1672350f5e77b8544daa462703b2ab98cdd257"
+      "bytes": 16700,
+      "sha256": "d30f4e184dd43a3c472f4615eaf707b3d17425889d09327ceb9df0db7a96ffc1"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
@@ -615,8 +615,13 @@
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 24301,
-      "sha256": "27649d7e72ee031aaba860bd7fce5bb1c89ecd5de4cb76328f8441738ea72b92"
+      "bytes": 24326,
+      "sha256": "1e126616718de7d51790d451ea76c6fa835b5814307a4452472b02dd12c95d59"
+    },
+    {
+      "path": "Source/Plugin/RecoveryOnsetSelector.h",
+      "bytes": 2817,
+      "sha256": "34fe4205505c099d0f07a2aca9c5b44b1ec193277c01757eabf90b6bccfd0cea"
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
@@ -1080,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 124921,
-      "sha256": "b9d35fe3742fc69d43a5bf0b605ae266344c3acfa5e53bbd678126ed8c428520"
+      "bytes": 125307,
+      "sha256": "2aa58759488b2bfdc23bfafacde983e8f2c8fb7bc4f71471bfadade291a57b53"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1215,8 +1220,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 64308,
-      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
+      "bytes": 65810,
+      "sha256": "35ac44f005580e44b80937db02b5771b9ce2679729cf903c224e9e744eef4820"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
