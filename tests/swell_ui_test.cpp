@@ -334,6 +334,7 @@ int main(int argc,char* argv[]){return runTest([&]
     {surfaceLifecycleCases([]{juce::MessageManager::getInstance()->runDispatchLoopUntil(30);});return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-source-range-feedback"){sourceRangeFeedbackCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-connected-tabs"){controlReview::connectedTabCases();return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-levels"){exportLevelsReview::cases();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-command-buttons" || juce::String(argv[1])=="--review-command-buttons"))
     {

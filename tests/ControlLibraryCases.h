@@ -115,7 +115,13 @@ inline void connectedTabCases()
     button.mouseDrag(mouse(centre,juce::ModifierKeys::rightButtonModifier));
     button.mouseUp(mouse(centre,{}));
     REQUIRE(!middle.isDown() && requests==0);
-    pointerClick(middle);
+    // JUCE's native mouseUp retains the old button mask in the event while
+    // the input source already reports the released state.
+    const auto primary=mouse(centre,juce::ModifierKeys::leftButtonModifier);
+    REQUIRE(!primary.source.getCurrentModifiers().isAnyMouseButtonDown());
+    button.mouseDown(primary);
+    REQUIRE(middle.isDown() && requests==0);
+    button.mouseUp(primary);
     REQUIRE(requests==1 && last==2 && tabs.selectedId()==1 && !tabs.isFocusVisible());
     checkNativeFocus(2);
 

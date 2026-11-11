@@ -59,3 +59,34 @@ handler separately from the accepted page and the painted brackets.
 The focused Windows MSVC Release rebuild passed both CTest entries
 (`preverb_swell_ui_test` and `preverb_storage_settings_test`). Results are in
 `out/build-logs/p7-uia-release-test.log`.
+
+## 11 November 2026 pointer regression from FL Studio smoke testing
+
+The installed `5fc1240` build cancelled normal tab clicks. JUCE dispatches
+`mouseUp` with the modifiers from before release, so the tab interpreted a
+normal left release as a button still being held. The old tests called
+`mouseUp` directly with empty modifiers. Settings integration tests selected
+pages programmatically or with keys and did not cover the missing pointer path.
+
+The failure was reproduced by sending a click through a JUCE component peer.
+Against `5fc1240`, hit-testing and press succeeded but release emitted no
+selection request. The same peer check passed with the fix in the Release
+suite. The permanent test reproduces the native event/source modifier mismatch
+without relying on desktop hit-testing through potentially overlapping windows.
+The fix retains same-source, in-bounds and availability checks. The focused
+test is available via `preverb_swell_ui_test --test-connected-tabs`.
+
+Windows MSVC Release built successfully. The full sweep passed 98/100 tests,
+including the native-peer tab check. The reset and readability fixtures stopped
+while waiting for native focus. After replacing the peer fixture with the
+deterministic release-event regression, the focused tab check and all four
+targeted CTest entries passed, including both focus retries and the Swell UI and
+Storage Settings tests. Logs are under
+`out/build-logs/Release/20261111-084404-6c0be8fc/` and
+`out/build-logs/tab-pointer-release-focus-retry.log`. FL Studio confirmation
+remains pending for the corrected build.
+
+The Debug build and standalone tab check passed. The full Debug run failed at
+the Swells multi-delete assertion in `SwellListBindingCases.h:277` and was
+stopped during the later composition fixture. The full Debug gate remains open.
+See `out/build-logs/Debug/20261111-085722-42028b05/`.
