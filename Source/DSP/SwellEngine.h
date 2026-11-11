@@ -77,8 +77,7 @@ struct EditorSnapshot
     std::optional<int64_t> auditionSample;
     int64_t auditionDryStart=0,auditionDryEnd=0;
     bool playing=false,auditionReady=false,auditionPreparing=false,analyzing=false;
-    float attenuationDb=0;
-    float blendAttenuationDb=0,monitorPeak=0;
+    float monitorPeak=0;
     bool dryAvailable=false,cachedWetOnly=false;
     juce::String dryStatus;
     juce::String defaultIRError;
@@ -94,7 +93,8 @@ struct EditorSnapshot
     std::optional<LiveCausalObservation> liveCausal;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
-    float liveAttenuationDb=0;
+    float liveWetPeak=0,liveOutputPeak=0;
+    PlaybackPeaks::Values loopPeaks{};
     float gainPlanPeak=0;double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     int64_t liveLoopDestination=0;
@@ -115,7 +115,8 @@ struct RegenerationResult
 class SwellEngine final : private juce::Thread
 {
 public:
-    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={});
+    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={},
+                bool fixedLoopGrid=false);
     ~SwellEngine() override;
     void useWorkflow(workflow::State&,std::function<uint64_t()> captureEpoch={});
     // Non-realtime only: the worker copies the pinned configuration before settlement.
@@ -295,7 +296,6 @@ private:
         uint64_t preparedMonitor=UINT64_MAX;
         juce::String monitorRevision;
         std::vector<juce::String> members;
-        float wetAttenuation=0,blendAttenuation=0;
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
@@ -332,9 +332,8 @@ private:
     void shapeJob(Swell,uint64_t session);
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     void prepareTransport(const PreviewContext&);
+    void prepareGeneratedHeadroom(const PreviewContext&);
     void prepareLoopTransport(const PreviewContext&);
-    bool prepareLoopExportWetGain(SongExportPlan&, float liveWetDb, const juce::File&,
-                                  juce::String&, const RenderCancellation&);
     void invalidateLiveLocked(const juce::String& id={});
     bool prepareSourceWave(const Swell&,const PreviewContext&,uint64_t extra,std::shared_ptr<Waveform>&,juce::String& error);
     bool cancelled(const juce::String&,uint64_t input,uint64_t session) const;
@@ -349,6 +348,7 @@ private:
     const juce::File legacyProjectsRoot;
     std::atomic<std::shared_ptr<const CaptureStorageLocation>> storageLocation;
     std::function<PreviewContext()> contextProvider;
+    const bool fixedLoopGrid;
     mutable juce::CriticalSection lock;
     juce::CriticalSection workLock;
     Session model;
@@ -409,7 +409,6 @@ private:
     int64_t offlineWindowStart=0,offlineWindowEnd=0;
     int64_t offlineLastPosition=INT64_MIN;
     juce::String offlineError;
-    float offlineGainAttenuation=1,offlineGainPeak=0;
     std::atomic<uint64_t> offlineBlockCount{0};
     juce::String offlineStatus="No offline callbacks observed";
     std::atomic<bool> liveEnabled{true},hostObserved{false};
@@ -431,8 +430,7 @@ private:
     std::array<uint64_t,maximumSwells> liveGenerations{};
     struct LiveCache {juce::String key;float peak=0;std::weak_ptr<const WetRender> main,loop;};
     std::map<juce::String,LiveCache> liveCache;
-    juce::String gainPlanKey;
-    float gainPlanAttenuation=1,gainPlanPeak=0;
+    float gainPlanPeak=0;
     double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     LivePreparationObservation livePreparation;
@@ -441,7 +439,6 @@ private:
     uint64_t preparedLoopGeneration=0, preparedLoopSource=0, preparedLoopRender=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";
-    float liveAttenuationDb=0;
     bool analyzing=false;
     std::vector<std::pair<int64_t,int64_t>> dirty,passDirty;
     std::optional<CaptureManifest> acceptedSource;

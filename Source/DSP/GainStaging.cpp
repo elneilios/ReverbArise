@@ -44,7 +44,7 @@ bool prepareSourceEnergyCalibration(const Session& session,const Swell& swell,co
         return unavailable("invalid or missing local reference");
     int64_t end;if(!checkedAdd(swell.arrival,std::max<int64_t>(1,std::llround(raw.rate*candidateAttackSeconds)),end))return unavailable("reference overflow");
     end=std::min({end,referenceLimit,swell.sourceEnd,source.end});if(end<=swell.arrival)return unavailable("empty reference");
-    auto neutral=swell;neutral.shape=initialShape(raw.rate);neutral.placement=0;neutral.calibration={};int64_t rawEnd,a,b;juce::String error;
+    auto neutral=swell;neutral.shape=initialShape(raw.rate);neutral.placement=0;neutral.calibration={};neutral.generatedGain.reset();int64_t rawEnd,a,b;juce::String error;
     if(raw.frames()>INT64_MAX || !checkedAdd(raw.start,static_cast<int64_t>(raw.frames()),rawEnd)
         || !shapeBounds(neutral,raw.start,rawEnd,a,b,error))return unavailable("default wet support missing");
     const auto dryFrames=end-swell.arrival,wetFrames=b-a;
@@ -115,7 +115,7 @@ bool prepareSourcePeakCalibration(const Session& session,const Swell& swell,cons
     attackEnd=std::min({attackEnd,source.end,swell.sourceEnd,referenceLimit});
     if(attackEnd<=swell.arrival){note="Matching unavailable: local dry reference is empty";output=result;return true;}
     const auto dryPeak=peakBetween(source,swell.arrival,attackEnd);
-    auto neutral=swell;neutral.shape=initialShape(raw.rate);neutral.placement=0;neutral.calibration={};
+    auto neutral=swell;neutral.shape=initialShape(raw.rate);neutral.placement=0;neutral.calibration={};neutral.generatedGain.reset();
     WetRender wet;juce::String error;
     if(!prepareShape(neutral,raw,previewMemoryBudget,wet,error))
     {note="Matching unavailable: "+error;output=result;return true;}

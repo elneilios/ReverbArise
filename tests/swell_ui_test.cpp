@@ -1327,7 +1327,7 @@ int main(int argc,char* argv[]){return runTest([&]
         auto mixedState=baseline;mixedState.auditionFollowsLive=false;mixedState.auditionMode=m3::AuditionMode::dryWet;mixedState.wetBlend=.65f;
         engine.restore(mixedState);waitUI([&]{return engine.snapshot().auditionReady;});
         {auto reopenedOwner=std::make_unique<PreverbAudioProcessorEditor>(*processor);auto& reopened=*reopenedOwner;reopened.refresh();auto value=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(reopened,"auditionWetOnly"));
-            REQUIRE(value && !value->getToggleState() && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f && !engine.savedSession().auditionFollowsLive);}
+            REQUIRE(value && !value->getToggleState() && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f && engine.savedSession().auditionFollowsLive);}
         engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.setSize(1100,850);editor.refresh();
     }
     {

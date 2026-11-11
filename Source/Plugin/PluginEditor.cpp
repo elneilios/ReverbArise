@@ -17,6 +17,7 @@ juce::String phaseName(m3::Phase phase)
         case m3::Phase::empty:return "No IR";case m3::Phase::checking:return "Checking";case m3::Phase::queued:return "Queued";
         case m3::Phase::rendering:return "Rendering";case m3::Phase::ready:return "Ready";case m3::Phase::stale:return "Stale";
         case m3::Phase::error:return "Error";case m3::Phase::restoring:return "Restoring";
+        case m3::Phase::headroom:return "Checking";
     }return {};
 }
 juce::String peakText(float peak){return peak>0?juce::String(juce::Decibels::gainToDecibels(peak),1)+" dBFS":juce::String("silent");}
@@ -427,7 +428,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     defaultIRButton.onClick=[this]{learnWorkspace.openDefaultIrFile(&defaultIRButton);};
     auditionWetOnly.beforeInvocation=[this]{auditionInvocation=std::pair{state.sessionEpoch,processor.getWorkflowSnapshot().pass};};
     auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
-    auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop; safety protection remains active.");
+    auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop.");
     enabledButton.setTooltip("Include this swell in wet playback and audition.");soloButton.setTooltip("Solo this swell: exclude other non-solo swells from wet playback and audition.");
     stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
     inspectorViewport.setViewedComponent(&inspectorContent,false);diagnosticsViewport.setViewedComponent(&diagnosticsContent,false);
@@ -1081,12 +1082,13 @@ void PreverbAudioProcessorEditor::refresh()
         !state.session.liveEnabled?juce::String("Live off | dry passthrough"):
         state.liveIncompatible?juce::String("Live: awaiting compatible timing/preparation"):
         state.liveMissing?juce::String("Live: missing prepared coverage | ")+state.liveStatus:
-        (diagnostics.isPlaying?juce::String("Live Song | "):juce::String("Stopped | "))+state.liveStatus+" | guard "+juce::String(state.liveAttenuationDb,1)+" dB";
-    helper.setText(liveText,juce::dontSendNotification);helper.setTooltip(liveText);
+        (diagnostics.isPlaying?juce::String("Live Song | "):juce::String("Stopped | "))+state.liveStatus;
     const auto musical=state.session.gainPolicy==m3::GainPolicy::musical;
-    const auto protection=musical && state.liveReady && state.liveAttenuationDb<-.01f?juce::String(" | ceiling-constrained"):juce::String{};
-    helper.setText(liveText+protection,juce::dontSendNotification);
-    helper.setTooltip(liveText+protection+(musical?" | Musical source-relative calibration; wet ceiling -1 dBFS":" | Legacy wet ceiling -6 dBFS"));
+    const auto wetPeak=loopSource?state.loopPeaks.wet:state.liveWetPeak;
+    const auto outputPeak=loopSource?state.loopPeaks.output:state.liveOutputPeak;
+    const auto overload=outputPeak>1?juce::String(" | Output overload"):wetPeak>1?juce::String(" | Wet overload"):juce::String{};
+    helper.setText(liveText+overload,juce::dontSendNotification);
+    helper.setTooltip(liveText+overload+" | Generated wet ceiling at defaults: -1 dBFS");
     songOverview.repaint();
     const auto w=m3::find(state.session,state.session.primary);
     juce::String timingText="Target: --    |    Pre-roll: --    |    Length: --";
@@ -1138,7 +1140,7 @@ void PreverbAudioProcessorEditor::refresh()
     const bool wetOnly=state.session.auditionMode==m3::AuditionMode::wetOnly;
     auditionWetOnly.display(wetOnly);auditionWetOnly.setButtonText(wetOnly?"Wet only":"Dry + wet");
     auditionWetOnly.setTitle(wetOnly?"Audition mode: Wet only":"Audition mode: Dry + wet");
-    auditionWetOnly.setTooltip(wetOnly?"Selected: Wet only. Click to include captured dry at live levels.":"Selected: Dry + wet. Click to hear wet only. Wet uses Live Wet gain; safety protection remains active.");
+    auditionWetOnly.setTooltip(wetOnly?"Selected: Wet only. Click to include captured dry at live levels.":"Selected: Dry + wet. Click to hear wet only. Wet uses Live Wet gain.");
     auditionSlider.setEnabled(!state.session.auditionFollowsLive);
     auditionSlider.setTooltip(state.session.auditionFollowsLive?"Stored legacy trim is inactive: audition follows Live Wet gain. Reset to 0 dB by double-click in legacy monitoring.":"Legacy monitoring trim, -60 to 0 dB. Double-click resets to 0 dB.");
     selectedStatus.setText(w?phaseName(w->phase)+" | "+w->name:"Select a swell",juce::dontSendNotification);
@@ -1175,7 +1177,7 @@ void PreverbAudioProcessorEditor::refresh()
     if(!state.session.liveEnabled)aggregate<<" | Live off";
     else if(state.session.liveRouting==m3::LiveRouting::wetOnly)aggregate<<" | Live Wet Only";
     if(state.session.liveWetDb!=0)aggregate<<" | Live wet "<<juce::String(state.session.liveWetDb,1)<<" dB";
-    if(musical && state.liveReady && state.liveAttenuationDb<-.01f)aggregate<<" | Wet protection "<<juce::String(state.liveAttenuationDb,1)<<" dB";
+    aggregate<<overload;
     if(state.actionError.isNotEmpty() && !state.liveStatus.startsWith("Export"))aggregate=state.actionError;
     headerStatus.setText(aggregate,juce::dontSendNotification);headerStatus.setTooltip(aggregate+"\n"+((state.liveStatus.startsWith("Export incomplete") || state.liveStatus.startsWith("Export warning"))?state.liveStatus:state.message));
     const auto source=std::pair{capture.reference,capture.manifest.revision};
@@ -1220,7 +1222,7 @@ void PreverbAudioProcessorEditor::refresh()
     layoutLiveDiagnostics();
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
     policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
-        +"\nLive requested "+juce::String(state.session.liveWetDb,1)+" dB | protection "+(state.liveReady?juce::String(state.liveAttenuationDb,1)+" dB":"pending preparation")+protection
+        +"\nLive Wet "+juce::String(state.session.liveWetDb,1)+" dB | wet peak "+peakText(wetPeak)+" | output peak "+peakText(outputPeak)+overload
         +"\nMarker "+juce::String(state.session.sensitivity*100,1)+"% | Regeneration "+juce::String(state.session.regenerationSensitivity*100,1)+"%",juce::dontSendNotification);
     juce::String text="Selection / render\n"+state.message;
     if(w)
@@ -1234,7 +1236,8 @@ void PreverbAudioProcessorEditor::refresh()
             if(m3::isEnergyRevision(g.revision))text<<" | RMS dry "<<peakText(g.dryRms)<<" / wet "<<peakText(g.wetRms)
                 <<" | window/hop "<<juce::String(g.windowFrames)<<"/"<<juce::String(g.hopFrames)<<" frames";}
         if(state.raw)text<<" | full wet ["<<juce::String(state.raw->start)<<", "<<juce::String(state.raw->end)<<") | "<<juce::String(w->render.frames)<<" frames";
-        if(state.raw && state.shaped)text<<"\nRaw peak "<<peakText(state.raw->peak)<<" | shaped "<<peakText(state.shaped->peak)<<" | audition "<<peakText(state.monitorPeak)<<" (aggregate wet guard "<<juce::String(state.attenuationDb,1)<<" dB; sum guard "<<juce::String(state.blendAttenuationDb,1)<<" dB)";
+        if(w->generatedGain)text<<"\nGenerated wet trim "<<juce::String(juce::Decibels::gainToDecibels(*w->generatedGain),1)<<" dB";
+        if(state.raw && state.shaped)text<<"\nRaw peak "<<peakText(state.raw->peak)<<" | shaped "<<peakText(state.shaped->peak)<<" | audition "<<peakText(state.monitorPeak);
     }
     if(w && state.message.isNotEmpty())text<<"\n"<<state.message;
     detail.setText(text,juce::dontSendNotification);detail.setTooltip(text);
@@ -1349,10 +1352,9 @@ void PreverbAudioProcessorEditor::refresh()
         if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
         if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
         if(!state.session.auditionFollowsLive)monitoring<<" | saved balance";
-        if(state.attenuationDb<0)monitoring<<" | wet protection "<<juce::String(state.attenuationDb,1)<<" dB";
-        if(state.blendAttenuationDb<0)monitoring<<" | mix protection "<<juce::String(state.blendAttenuationDb,1)<<" dB";}
+        if(state.auditionReady && state.monitorPeak>1)monitoring<<" | Audition overload";}
     monitorStatus.setText(monitoring,juce::dontSendNotification);
-    monitorStatus.setTooltip(monitoring+"\nSelected mode: "+(wetOnly?"Wet only":"Dry + wet")+"\nManual audition loops captured audio until Stop; DAW transport is independent.\n"+(state.session.auditionFollowsLive?"Unity captured dry; Live Wet "+juce::String(state.session.liveWetDb,1)+" dB. Legacy trim is inactive.":"Legacy saved wet blend "+juce::String(state.session.wetBlend*100,1)+"%; trim "+juce::String(state.session.auditionDb,1)+" dB. Toggle Wet only to adopt live levels.")+"\n2 ms wet edges / 5 ms replay edges; wet and combined-mix protection can reduce audition level.\n"+state.dryStatus);
+    monitorStatus.setTooltip(monitoring+"\nSelected mode: "+(wetOnly?"Wet only":"Dry + wet")+"\nManual audition loops captured audio until Stop.\nLive Wet "+juce::String(state.session.liveWetDb,1)+" dB. Audition peak "+peakText(state.monitorPeak)+".\n"+state.dryStatus);
     if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
     if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());

@@ -49,10 +49,12 @@ int main() { return runTest([]
         REQUIRE(duplicate.swells.back().name=="Swell Bar 1.1.004166667 (2)");
         auto& edited=definitions.swells[0];edited.name="My saved name";edited.placement=1000;edited.shape.gainDb=-9;
         edited.shape.fadeIn=123;edited.shape.inTension=.7;edited.enabled=false;edited.solo=true;edited.frozen=true;
+        edited.generatedGain=.375f;
         const auto identity=edited.id;
         REQUIRE(resetWetDefaults(edited,48000,error));
         REQUIRE(edited.shape==initialShape(48000) && edited.shape.endOffset==960 && edited.shape.fadeOut==960 && edited.shape.outCurve==Curve::smooth);
         REQUIRE(edited.placement==0 && edited.name=="My saved name" && edited.id==identity && !edited.enabled && edited.solo && edited.frozen);
+        REQUIRE(edited.generatedGain==.375f);
         const auto unchanged=edited;REQUIRE(!resetWetDefaults(edited,0,error) && edited.shape==unchanged.shape && edited.frozen);
         Swell result;REQUIRE(!resetSwellDefaults(definitions,identity,covered,timing,result,error));
         definitions.defaultIR.path="irs/default.wav";definitions.defaultIRName="Future default";
@@ -232,10 +234,12 @@ int main() { return runTest([]
     calibrated.calibration.dryPeak=.5f;calibrated.calibration.wetPeak=.25f;calibrated.calibration.referenceStart=0;
     calibrated.calibration.referenceEnd=100;calibrated.calibration.sourceIdentity="source";calibrated.calibration.irIdentity="ir";
     calibrated.calibration.renderIdentity="render";calibrated.calibration.revision=candidateGainRevision;
+    calibrated.generatedGain=0.375f;
     REQUIRE(musical.gainPolicy==GainPolicy::musical && encode(musical,json,error));
     REQUIRE(json.contains("\"version\": 11") && decode(json,restored,error));
     REQUIRE(restored.gainPolicy==GainPolicy::musical && restored.gainRevision==candidateGainRevision && restored.liveWetDb==4);
     REQUIRE(restored.swells[0].calibration==calibrated.calibration);
+    REQUIRE(restored.swells[0].generatedGain==calibrated.generatedGain);
     for(int version=1;version<=7;++version){auto old=juce::JSON::parse(json);old.getDynamicObject()->setProperty("version",version);
         old.getDynamicObject()->setProperty("liveWetDb",0.0);
         REQUIRE(decode(juce::JSON::toString(old),restored,error));

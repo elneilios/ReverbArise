@@ -29,6 +29,25 @@ inline void levelAudioPathsCases()
     const auto capture=p->getCaptureSnapshot();const auto renders=engine.snapshot().renderCount;
     REQUIRE(original.calibration.state==CalibrationState::matched && original.calibration.baselineDb!=0);
     const auto tick=[&]{position(0,false);block.setSize(2,1);block.clear();p->processBlock(block,midi);};
+    // Reopening an old blend/trim setting must sound like the current
+    // Dry + Wet route on its first audition, without toggling the mode.
+    auto currentAudition=engine.savedSession();
+    currentAudition.auditionMode=AuditionMode::dryWet;
+    currentAudition.postRollSeconds=0;
+    currentAudition.liveWetDb=-6;
+    engine.restore(currentAudition);tick();
+    waitM3([&]{return engine.snapshot().auditionReady;});
+    const auto expectedAuditionPeak=engine.snapshot().monitorPeak;
+    auto oldAudition=currentAudition;
+    oldAudition.auditionFollowsLive=false;
+    oldAudition.wetBlend=0.35f;
+    oldAudition.auditionDb=-24;
+    engine.restore(oldAudition);tick();
+    waitM3([&]{return engine.snapshot().auditionReady;});
+    REQUIRE(engine.savedSession().auditionFollowsLive && engine.snapshot().monitorPeak==expectedAuditionPeak);
+    REQUIRE(engine.savedSession().auditionMode==AuditionMode::dryWet && !engine.snapshot().playing);
+    engine.setLivePlayback(true,LiveRouting::wetOnly,0);
+    REQUIRE(engine.setAuditionWetOnly(true,engine.assignmentEpoch()));
     SongMixMetrics deliveredMetrics;
     const auto readWav=[&]
     {
@@ -49,7 +68,8 @@ inline void levelAudioPathsCases()
     {
         p->setNonRealtime(false);tick();REQUIRE(engine.edit(id,[&](auto& w,auto&){w.shape.gainDb=db;return true;}));
         waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().liveReady;});
-        REQUIRE(find(engine.savedSession(),id)->calibration==original.calibration && engine.snapshot().liveAttenuationDb==0);
+        REQUIRE(find(engine.savedSession(),id)->calibration==original.calibration);
+        REQUIRE(find(engine.savedSession(),id)->generatedGain==original.generatedGain);
         REQUIRE(engine.audition());
         float left=0,right=0;engine.processAudio(&left,&right,1,p->getSongTime());
         const auto cursor=engine.snapshot().auditionSample;REQUIRE(cursor && *cursor<=450);
@@ -63,7 +83,7 @@ inline void levelAudioPathsCases()
         position(450,true);for(int n=0;n<32;++n){block.setSample(0,n,.125f);block.setSample(1,n,-.25f);}p->processBlock(block,midi);
         for(int n=10;n<32;++n)for(int c=0;c<2;++c)
         {
-            const auto wet=(51+n)*.01*(c==0?.01:-.005)*std::pow(10.,(original.calibration.baselineDb+db)/20.);
+            const auto wet=(51+n)*.01*(c==0?.01:-.005)*original.generatedGain.value()*std::pow(10.,(original.calibration.baselineDb+db)/20.);
             REQUIRE(std::abs(block.getSample(c,n)-((c==0?.125:-.25)+wet))<1.e-7);
         }
         engine.setLivePlayback(true,LiveRouting::wetOnly,0);waitM3([&]{return engine.snapshot().liveReady;});
@@ -75,7 +95,7 @@ inline void levelAudioPathsCases()
         // Sample 450 is 50 frames into the 101-frame IR lead-in. Ignore joins.
         for(int n=10;n<32;++n)for(int c=0;c<2;++c)
         {
-            const auto expected=(51+n)*.01*(c==0?.01:-.005)*std::pow(10.,(original.calibration.baselineDb+db)/20.);
+            const auto expected=(51+n)*.01*(c==0?.01:-.005)*original.generatedGain.value()*std::pow(10.,(original.calibration.baselineDb+db)/20.);
             const auto tolerance=std::max(1.e-9,std::abs(expected)*2.e-5);
             REQUIRE(std::abs(live[n*2+c]-expected)<tolerance && std::abs(offline[n*2+c]-expected)<tolerance
                 && std::abs(wav[n*2+c]-expected)<tolerance && std::abs((c==0?auditionL[n]:auditionR[n])-expected)<tolerance);
@@ -84,17 +104,66 @@ inline void levelAudioPathsCases()
         REQUIRE(fileHash(directory.getChildFile(original.render.path))==rawHash && fileHash(directory.getChildFile(original.ir.path))==irHash);
         REQUIRE(p->getCaptureSnapshot().reference==capture.reference);
     }
-    // Real correlated overlapping members require one disclosed wet guard.
-    auto hot=engine.savedSession();const auto member=*find(hot,id);
-    for(int n=1;n<32;++n){auto copy=member;copy.id=juce::Uuid().toDashedString();hot.swells.push_back(copy);}
+    // A fresh batch of correlated swells needs shared headroom at generation.
+    auto hot=engine.savedSession();auto& first=hot.swells.front();
+    first.generatedGain.reset();first.shape.gainDb=0;
+    const auto member=first;
+    for(int n=1;n<56;++n){auto copy=member;copy.id=juce::Uuid().toDashedString();hot.swells.push_back(copy);}
+    for (int filter=0;filter<3;++filter)
+    {
+        auto filtered=hot;
+        filtered.swells.front().solo=filter==2;
+        for (size_t i=1;i<filtered.swells.size();++i)
+        {
+            filtered.swells[i].enabled=filter!=0;
+            filtered.swells[i].muted=filter==1;
+        }
+        engine.restore(filtered);tick();
+        waitM3([&]{const auto state=engine.savedSession();return std::all_of(state.swells.begin(),state.swells.end(),
+            [](const auto& swell){return swell.phase==Phase::ready;});});
+        REQUIRE(find(engine.savedSession(),id)->generatedGain==1.0f);
+    }
     engine.restore(hot);tick();waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().liveReady;});
-    REQUIRE(engine.snapshot().liveAttenuationDb<0 && engine.snapshot().attenuationDb<0);
+    auto accepted=engine.savedSession();
+    const auto generatedGain=accepted.swells.front().generatedGain;
+    REQUIRE(generatedGain && *generatedGain<1);
     position(450,true);block.setSize(2,32);block.clear();p->processBlock(block,midi);
-    REQUIRE(block.getMagnitude(10,22)>0 && block.getMagnitude(10,22)<=juce::Decibels::decibelsToGain(candidateWetCeilingDb)+1.e-6f);
-    // Plugin float WAV intentionally preserves aggregate overs rather than
-    // inheriting audition/live protection; keep that existing path policy.
+    const auto basePeak=block.getMagnitude(10,22);
+    REQUIRE(basePeak>0 && basePeak<=juce::Decibels::decibelsToGain(candidateWetCeilingDb)+1.e-6f);
+    for(auto& swell:accepted.swells){REQUIRE(swell.generatedGain==generatedGain);swell.shape.gainDb=12;}
+    accepted.swells.front().frozen=true;
+    engine.restore(accepted);tick();waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().liveReady;});
+    REQUIRE(engine.savedSession().swells.front().frozen && engine.savedSession().swells.front().generatedGain==generatedGain);
+    position(450,true);block.setSize(2,32);block.clear();p->processBlock(block,midi);
+    REQUIRE(std::abs(block.getMagnitude(10,22)-basePeak*juce::Decibels::decibelsToGain(12.0f))<1.e-5f);
+    REQUIRE(engine.snapshot().liveWetPeak>1 && engine.snapshot().monitorPeak>1);
     tick();const auto hotWav=readWav();
-    REQUIRE(deliveredMetrics.wetGain==1 && deliveredMetrics.wetPeak>juce::Decibels::decibelsToGain(candidateWetCeilingDb));
+    REQUIRE(deliveredMetrics.wetGain==1 && deliveredMetrics.wetPeak>1);
     for(const auto value:hotWav)REQUIRE(std::isfinite(value));
     REQUIRE(engine.snapshot().renderCount==renders && fileHash(directory.getChildFile(original.render.path))==rawHash);
+
+    // An addition gets its own starting gain without trimming the accepted batch.
+    for(auto& swell:accepted.swells)swell.shape.gainDb=0;
+    auto added=member;
+    added.id=juce::Uuid().toDashedString();
+    added.placement=256;
+    accepted.swells.push_back(added);
+    engine.restore(accepted);tick();
+    waitM3([&]{const auto state=engine.savedSession();return find(state,added.id)->phase==Phase::ready;});
+    auto afterAdd=engine.savedSession();
+    REQUIRE(find(afterAdd,added.id)->generatedGain==1.0f);
+    REQUIRE(find(afterAdd,id)->generatedGain==generatedGain);
+
+    // User placement can exhaust the retained mix's headroom. A later
+    // generation must report that conflict and leave accepted gains alone.
+    find(afterAdd,added.id)->placement=0;
+    auto blocked=added;
+    blocked.id=juce::Uuid().toDashedString();
+    blocked.placement=512;
+    afterAdd.swells.push_back(blocked);
+    engine.restore(afterAdd);tick();
+    waitM3([&]{const auto state=engine.savedSession();return find(state,blocked.id)->phase==Phase::error;});
+    const auto afterBlocked=engine.savedSession();
+    REQUIRE(find(afterBlocked,blocked.id)->status.containsIgnoreCase("generated wet ceiling"));
+    REQUIRE(find(afterBlocked,id)->generatedGain==generatedGain && find(afterBlocked,added.id)->generatedGain==1.0f);
 }

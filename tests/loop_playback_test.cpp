@@ -279,6 +279,10 @@ void fixedGridPeakCases()
     right->samples[0] = .7f;
     REQUIRE(plan.prepare(20,1024*1024,error));
     REQUIRE(std::abs(plan.fixedGridPeak - 1.4f) < 1e-6f);
+    const std::array candidateGains{1.0f,.2f};
+    REQUIRE(plan.prepare(20,1024*1024,error,{},candidateGains));
+    REQUIRE(std::abs(plan.fixedGridPeak - .84f) < 1e-6f);
+    REQUIRE(left->samples[0] == .7f && right->samples[0] == .7f);
 
     plan.audio.entries = {testEntry(0,-121,360,.01f),testEntry(1,-30,96,.02f),testEntry(2,62,213,.03f)};
     constexpr int64_t period = 101, near = 5;
@@ -309,7 +313,6 @@ void publicationCases()
         next->timing = {300,4,4,4,123,6400};
         next->dependencies = playback.dependencies();
         next->preparation = silent ? Prep::noWet : Prep::ready;
-        next->fixedGridGain = .5f; // The variable-phase route uses the conservative gain instead.
         next->intentionallySilent = silent;
         if (!silent)
         {
@@ -415,7 +418,7 @@ void gridCueCases()
         publication->preparation = LoopPlaybackPublication::Preparation::ready;
         publication->plan.audio.entries = {testEntry(0,-16,80,.01f)};
         publication->gain = .25f;
-        publication->fixedGridGain = .75f;
+        publication->gain = .75f;
         juce::String error;
         REQUIRE(publication->plan.prepare(loopLength,1024*1024,error));
         REQUIRE(publication->prepareLeadInPeaks([]{return false;}));
@@ -472,12 +475,12 @@ void gridCueCases()
         REQUIRE(through(3*loopLength) == 0 && playback.status().playback == State::queued);
         dryLevel = .9f;
         REQUIRE(through(4*loopLength-17) == dryLevel);
-        REQUIRE(through(4*loopLength-16) == LiveOutputPeakGuard::ceiling && playback.status().playhead == -16);
-        REQUIRE(std::abs(lastRight - (-.45f - .0075f) * LiveOutputPeakGuard::ceiling / (.9f + .0075f)) < 1e-6f);
+        REQUIRE(std::abs(through(4*loopLength-16) - (.9f + .0075f)) < 1e-6f && playback.status().playhead == -16);
+        REQUIRE(std::abs(lastRight - (-.45f - .0075f)) < 1e-6f);
         playback.requestFinish();
         REQUIRE(through(4*loopLength-15) > 0 && playback.status().playback == State::finishing);
         playback.requestFinish();
-        REQUIRE(through(4*loopLength-14) == LiveOutputPeakGuard::ceiling && playback.status().playback == State::stopping);
+        REQUIRE(through(4*loopLength-14) > dryLevel && playback.status().playback == State::stopping);
         REQUIRE(through(4*loopLength+240) == dryLevel && playback.status().playback == State::standby);
         dryLevel = 0;
         REQUIRE(through(4*loopLength+241,cue | finish) == 0 && playback.status().playback == State::standby);
@@ -513,8 +516,7 @@ void offlineFadeCases()
 {
     using State = LoopCueScheduler::State;
     constexpr int64_t beatFrames = 24000, loopFrames = 4 * beatFrames;
-    constexpr float dryLeft = .9f, dryRight = -.45f, wetLevel = .0075f;
-    for (const bool realtime : {false,true})
+    constexpr float dryLeft = 1.1f, dryRight = -.55f, wetLevel = .0075f;
     for (const bool alreadyStopping : {false,true})
     {
         LoopPlayback playback;
@@ -524,18 +526,18 @@ void offlineFadeCases()
         publication->timing = {120,4,4,4,0,loopFrames};
         publication->preparation = LoopPlaybackPublication::Preparation::ready;
         publication->plan.audio.entries = {testEntry(0,-16,80,.01f)};
-        publication->fixedGridGain = .75f;
+        publication->gain = .75f;
         juce::String error;
         REQUIRE(publication->plan.prepare(loopFrames,1024*1024,error));
         REQUIRE(playback.publish(std::move(publication)));
         int64_t cursor = 0;
-        const auto process = [&](int frames, LoopPlayback::Access access, bool protectLiveOutput = true)
+        const auto process = [&](int frames, LoopPlayback::Access access)
         {
             std::vector<float> left(frames,dryLeft),right(frames,dryRight);
             const SongTime grid{true,cursor,static_cast<double>(cursor)/beatFrames,48000,120,4,4};
             {
                 AudioAllocationGuard guard;
-                playback.process(left.data(),right.data(),frames,{},48000,1,1,access,false,{},grid,protectLiveOutput);
+                playback.process(left.data(),right.data(),frames,{},48000,1,1,access,false,{},grid);
             }
             REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
             cursor += frames;
@@ -545,8 +547,9 @@ void offlineFadeCases()
         REQUIRE(playback.status().phase == LoopLiveReference::State::ready);
         playback.requestCue();
         const auto lead = process(static_cast<int>(loopFrames-16),LoopPlayback::Access::perform);
-        REQUIRE(lead.first.back() == LiveOutputPeakGuard::ceiling);
+        REQUIRE(std::abs(lead.first.back() - (dryLeft + wetLevel)) < 1e-7f);
         REQUIRE(playback.status().playback == State::leadIn);
+        REQUIRE(playback.peaks().output > 1 && playback.peaks().wet == wetLevel);
         const auto precedingFade = alreadyStopping ? 17 : 0;
         if (alreadyStopping)
         {
@@ -554,17 +557,14 @@ void offlineFadeCases()
             process(precedingFade,LoopPlayback::Access::perform);
             REQUIRE(playback.status().playback == State::stopping);
         }
-        const auto fade = process(256,LoopPlayback::Access::disabled,realtime);
-        std::cout << (realtime ? "Realtime" : "Offline") << " Loop fade, preceding samples "
-                  << precedingFade << ", first output " << fade.first.front() << '\n';
+        const auto fade = process(256,LoopPlayback::Access::disabled);
         for (int n = 0; n < 256; ++n)
         {
             const auto weight = static_cast<float>(std::max(0,239-precedingFade-n))/240;
             const auto wet = wetLevel * weight;
             const auto rawLeft = dryLeft + wet,rawRight = dryRight - wet;
-            const auto gain = realtime && weight > 0 ? LiveOutputPeakGuard::ceiling / rawLeft : 1.0f;
-            REQUIRE(std::abs(fade.first[n]-rawLeft*gain) < 1e-7f);
-            REQUIRE(std::abs(fade.second[n]-rawRight*gain) < 1e-7f);
+            REQUIRE(std::abs(fade.first[n]-rawLeft) < 1e-7f);
+            REQUIRE(std::abs(fade.second[n]-rawRight) < 1e-7f);
         }
         REQUIRE(fade.first.back() == dryLeft && fade.second.back() == dryRight);
         REQUIRE(playback.status().playback == State::standby);

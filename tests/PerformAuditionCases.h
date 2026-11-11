@@ -20,7 +20,8 @@ void Composition::verifyAudition()
     juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
     engine.processAudio(left,right,4096,processor->getSongTime());panel->refresh();REQUIRE(!engine.snapshot().playing && status.getText().startsWith("Ready"));
     auto legacy=saved;legacy.auditionFollowsLive=false;legacy.wetBlend=.65f;legacy.auditionDb=-24;engine.restore(legacy);
-    wait([&]{return engine.snapshot().auditionReady;});panel->refresh();REQUIRE(status.getText().contains("saved balance") && status.getTooltip().contains("65.0%") && !toggle.getToggleState());
+    wait([&]{return engine.snapshot().auditionReady;});panel->refresh();
+    REQUIRE(engine.savedSession().auditionFollowsLive && status.getTooltip().contains("Live Wet") && !toggle.getToggleState());
     toggle.beforeInvocation();toggle.setToggleState(true,juce::dontSendNotification);toggle.onClick();wait([&]{return engine.snapshot().auditionReady;});panel->refresh();
     REQUIRE(engine.savedSession().auditionFollowsLive && engine.savedSession().wetBlend==.65f && engine.savedSession().auditionDb==-24);
     const auto unityPeak=engine.snapshot().monitorPeak;engine.setPreferences(-60,saved.sensitivity,saved.separationSeconds,saved.autoRegenerate);

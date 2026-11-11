@@ -6,6 +6,6 @@
 namespace m3
 {
 bool prepareAuditionMix(const WetRender& shaped,const SourceInterval* dry,AuditionMode mode,float blend,
-                        uint64_t budget,WetRender& output,float& wetAttenuationDb,float& sumAttenuationDb,juce::String& error,
-                        bool wetEdges=true,GainPolicy policy=GainPolicy::legacy,std::optional<float> liveWetDb={});
+                        uint64_t budget,WetRender& output,juce::String& error,
+                        bool wetEdges=true,std::optional<float> liveWetDb={});
 }

@@ -218,8 +218,7 @@ private:
     void processLoopCapture(const juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&,
                             bool, uint64_t, const loop_capture::MidiObservations& rackEvents) noexcept;
     void processLoopPlayback(juce::AudioBuffer<float>&, const juce::MidiBuffer&, const HostPositionDiagnostics&,
-                             m3::LoopPlayback::Access, uint64_t, loop_capture::MidiObservations&,
-                             bool protectLiveOutput) noexcept;
+                             m3::LoopPlayback::Access, uint64_t, loop_capture::MidiObservations&) noexcept;
     void updateHostPositionDiagnostics(int blockSize) noexcept;
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
