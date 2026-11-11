@@ -229,3 +229,14 @@ Focused Release tests for workflow, export composition and worker, Loop
 Export UI and bindings, and the shared surface lifecycle passed across the
 focused run and corrected recovery fixture rerun. The fixture uses a heap
 allocation for the second processor to avoid overflowing the test stack.
+
+The integrated review revision `0bc8763`, based on `f42ff14`, passed all
+106 Windows Release CTest cases in 276.71 seconds. Debug built successfully
+and passed 105 of 106 in 666.27 seconds. Windows reported stack overflow
+(`0xc00000fd`) in the export engine test executable. Moving the large test
+objects to the heap fixed the failure without changing product code or
+assertions. The corrected export engine test passed in Debug (10.52 seconds)
+and Release (8.21 seconds), accounting for all 106 cases in both configurations.
+Logs are under `out/build-logs/Release/20261111-021639-1dd11d9c/`,
+`out/build-logs/Debug/20261111-024118-1a7e8a16/` and
+`out/issue-128/review-{debug,release}-fixture-test.log`.
