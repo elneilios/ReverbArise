@@ -258,7 +258,14 @@ void PreverbAudioProcessorEditor::refreshStorageScope(const CaptureSessionSnapsh
     const auto identity=(capture.location?capture.location->projectsRoot.getFullPathName():juce::String{})+"/"+juce::String(capture.manifest.projectId)+"/"+juce::String(capture.manifest.instanceId)+"/"+juce::String(static_cast<juce::int64>(epoch));
     if(storageInventory)
     {
-        if(identity!=storageIdentity){storageIdentity=identity;if(!storageInventory->reloadPending() && !storageInventory->consumeReloadEpoch(epoch))storageInventory->bind([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);});}
+        if(identity!=storageIdentity)
+        {
+            storageIdentity=identity;
+            const auto root=capture.location?capture.location->projectsRoot.getChildFile(capture.manifest.projectId).getChildFile(capture.manifest.instanceId):juce::File{};
+            // Association can move the source without advancing its session epoch.
+            if(!storageInventory->reloadPending() && !storageInventory->consumeReloadScope(epoch,root))
+                storageInventory->bind([this](auto& input,auto& error){return processor.pinPortableAssets(input,error,true);});
+        }
         storageInventory->setSize(std::max(1,storageViewport.getWidth()-storageViewport.getScrollBarThickness()),
             std::max(1,storageViewport.getHeight()));
         storageInventory->poll();

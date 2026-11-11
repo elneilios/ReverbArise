@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include "CaptureFailure.h"
+#include "CaptureManifest.h"
 #include <algorithm>
 
 inline constexpr int maxCaptureBlockFrames = 8192;
@@ -18,6 +19,8 @@ struct AudioCaptureBlock
     uint64_t recaptureToken = 0;
     uint64_t queueOrdinal = 0;
     CaptureHostTiming timing;
+    bool loop = false;
+    std::optional<LoopPhraseTiming> loopEnd;
     std::array<float, maxCaptureBlockFrames * 2> interleavedSamples{};
 };
 
@@ -26,7 +29,8 @@ class SpscAudioCaptureQueue
 {
 public:
     bool tryPush(int64_t startSample, double sampleRate, const float* left, const float* right,
-                 int frameCount, uint64_t generation = 0, uint64_t recaptureToken = 0, CaptureHostTiming timing = {}) noexcept
+                 int frameCount, uint64_t generation = 0, uint64_t recaptureToken = 0, CaptureHostTiming timing = {},
+                 bool loop = false) noexcept
     {
         if (frameCount <= 0 || frameCount > maxCaptureBlockFrames
             || startSample > std::numeric_limits<int64_t>::max() - frameCount)
@@ -45,6 +49,8 @@ public:
         block.recaptureToken = recaptureToken;
         block.queueOrdinal = write+1;
         block.timing = timing;
+        block.loop = loop;
+        block.loopEnd.reset();
 
         for (int frame = 0; frame < frameCount; ++frame)
         {
@@ -52,6 +58,21 @@ public:
             block.interleavedSamples[static_cast<size_t>(frame) * 2 + 1] = right[frame];
         }
 
+        writeIndex.store(write + 1, std::memory_order_release);
+        return true;
+    }
+
+    bool tryFinishLoop(uint64_t generation, uint64_t pass, const LoopPhraseTiming& timing) noexcept
+    {
+        const auto write = writeIndex.load(std::memory_order_relaxed);
+        if (write - readIndex.load(std::memory_order_acquire) >= Capacity)
+            return false;
+        auto& block = blocks[write % Capacity];
+        block.generation = generation;
+        block.recaptureToken = pass;
+        block.frameCount = 0;
+        block.loop = true;
+        block.loopEnd = timing;
         writeIndex.store(write + 1, std::memory_order_release);
         return true;
     }

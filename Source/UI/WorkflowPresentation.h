@@ -44,6 +44,7 @@ inline const char* workflowStatus(workflow::Snapshot state) noexcept
         return "Capture could not start - stop and play again";
     switch(state.phase)
     {
+        case workflow::Phase::armed:return "Armed - waiting for the next phrase";
         case workflow::Phase::recording:return "Recording - stop the DAW to commit";
         case workflow::Phase::draining:return "Committing captured source";
         case workflow::Phase::validating:return "Validating captured source";

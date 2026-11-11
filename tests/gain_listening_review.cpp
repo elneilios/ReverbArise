@@ -83,21 +83,21 @@ int main(int argc,char** argv){return runTest([&]{
                     const auto originalDry=dry.samples;listeningDry.samples.resize(originalDry.size()+offset*2);listeningDry.end+=offset;
                     for(size_t n=0;n<originalDry.size()/2;++n)for(int c=0;c<2;++c)listeningDry.samples[(n+offset)*2+c]+=originalDry[n*2+c];}
                 shaped.peak=peak(shaped.samples);listeningDry.end+=96000;listeningDry.samples.resize(static_cast<size_t>(listeningDry.end-listeningDry.start)*2);
-                WetRender wet,mix;float wetDb=0,sumDb=0,dummy=0;
-                REQUIRE(prepareAuditionMix(shaped,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,wet,wetDb,dummy,error,false,policy.gainPolicy));
-                REQUIRE(prepareAuditionMix(shaped,&listeningDry,AuditionMode::dryWet,.5f,previewMemoryBudget,mix,wetDb,sumDb,error,false,policy.gainPolicy));
+                WetRender wet,mix;
+                REQUIRE(prepareAuditionMix(shaped,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,wet,error,false));
+                REQUIRE(prepareAuditionMix(shaped,&listeningDry,AuditionMode::dryWet,.5f,previewMemoryBudget,mix,error,false));
                 const auto stem=juce::String(ids[response])+"-"+juce::String(kind)+"-"+variantName;writeAudio(output.getChildFile(stem+"-wet.wav"),wet.samples);writeAudio(output.getChildFile(stem+"-mix.wav"),mix.samples);
                 auto row=object();put(row,"candidate",variantName);put(row,"level_db",w.shape.gainDb);put(row,"baseline_db",w.calibration.baselineDb);put(row,"dry_reference_peak_dbfs",db(energy.dryPeak));
                 put(row,"dry_rms_dbfs",db(energy.dryRms));put(row,"default_wet_rms_dbfs",db(energy.wetRms));put(row,"window_frames",energy.windowFrames);put(row,"hop_frames",energy.hopFrames);
                 put(row,"reference_start",energy.referenceStart);put(row,"reference_end",energy.referenceEnd);put(row,"target_offset_db",levelReview?6:variant>=2?(variant-2)*3:0);
-                put(row,"wet_to_dry_energy_db",db(energy.wetRms)+w.calibration.baselineDb+w.shape.gainDb+wetDb-db(energy.dryRms));
+                put(row,"wet_to_dry_energy_db",db(energy.wetRms)+w.calibration.baselineDb+w.shape.gainDb-db(energy.dryRms));
                 const auto dryDb=db(peak(drySamples)),wetPeakDb=db(wet.peak);
                 put(row,"default_wet_peak_dbfs",db(matched.wetPeak));put(row,"prepared_peak_dbfs",wetPeakDb);put(row,"prepared_rms_dbfs",db(rms(wet.samples)));
                 put(row,"wet_to_dry_peak_db",wetPeakDb-dryDb);put(row,"ceiling_occupancy_db",wetPeakDb-candidateWetCeilingDb);
-                put(row,"wet_protection_db",wetDb);put(row,"sum_protection_db",sumDb);put(row,"matching_state",static_cast<int>(w.calibration.state));put(row,"matching_capped",w.calibration.state==CalibrationState::capped);candidates.add(row);
+                put(row,"matching_state",static_cast<int>(w.calibration.state));put(row,"matching_capped",w.calibration.state==CalibrationState::capped);candidates.add(row);
                 const auto status=w.calibration.state==CalibrationState::unavailable?juce::String("Matching unavailable; baseline 0 dB"):
                     "Baseline "+juce::String(w.calibration.baselineDb,1)+" dB"+(w.calibration.state==CalibrationState::capped?" (capped)":"");
-                html+="<tr data-source='"+juce::String(kind)+"'><td>"+juce::String(fixtures[kind])+"</td><td><code>"+juce::String(variantName)+"</code><br><small>"+status+"<br>Wet protection "+juce::String(wetDb,1)+" dB</small></td><td><audio controls preload='none' src='"+stem+"-wet.wav'></audio></td><td><audio controls preload='none' src='"+stem+"-mix.wav'></audio></td></tr>";
+                html+="<tr data-source='"+juce::String(kind)+"'><td>"+juce::String(fixtures[kind])+"</td><td><code>"+juce::String(variantName)+"</code><br><small>"+status+"</small></td><td><audio controls preload='none' src='"+stem+"-wet.wav'></audio></td><td><audio controls preload='none' src='"+stem+"-mix.wav'></audio></td></tr>";
             }auto fixture=object();ContentHash checksum;checksum.update(drySamples.data(),drySamples.size()*sizeof(float));put(fixture,"source_pcm_sha256",checksum.finish());
             put(fixture,"name",fixtures[kind]);put(fixture,"source_peak_dbfs",db(peak(drySamples)));put(fixture,"candidates",candidates);rows.add(fixture);
         }html+="</table></section>";put(section,"fixtures",rows);responses.add(section);

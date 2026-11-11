@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the completed waveform paint requirements against the existing Perform zoom, pan and inspection guide. This closeout records existing behavior. Reviewed the Diagnostics layout and build, validation and install workflow updates already on main. The guide instructions still match the shipped workflows.",
+  "summary": "Reviewed the integrated Loop guide examples for a four-step Rack take and two FL Studio Pattern passes alongside the waveform paint closeout. The current Perform navigation and waveform inspection guidance covers the canonical display behavior. No additional guide prose was required.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 37419,
-      "sha256": "95095f87479a711741d27d8e0fdec5023ab36ba8d501c58dc550f48e3648cdfa"
+      "bytes": 38806,
+      "sha256": "0c04681d1037c15e6d1545709dc04e2cb315046e034ad8258245e4db32e80cdb"
     },
     {
       "path": "CMakePresets.json",
@@ -30,8 +30,8 @@
     },
     {
       "path": "Source/Analysis/AutomaticTargets.cpp",
-      "bytes": 7963,
-      "sha256": "0f81f08866b8c87981abaa9104e7ae09bdf1e152e556c9f019c998f07a883f80"
+      "bytes": 8013,
+      "sha256": "c2deb04cd62dfe1e624a1f6cc2c49f8dc485b0706801d8c1f499a23426a11fe2"
     },
     {
       "path": "Source/Analysis/AutomaticTargets.h",
@@ -40,13 +40,13 @@
     },
     {
       "path": "Source/Analysis/LearnCandidates.cpp",
-      "bytes": 2819,
-      "sha256": "6dccef6ea7d52f5183e58be313d7c89dc4fa2a73d5bea114b674c7763d9bc240"
+      "bytes": 2977,
+      "sha256": "f998366e041243a489aaa77cdeddfb36e4ec8dcfc65819b74aa19b95c0d3cea3"
     },
     {
       "path": "Source/Analysis/LearnCandidates.h",
-      "bytes": 1730,
-      "sha256": "0b9d491812559e37326a6cea3a5ddde1e7dd86b69fe99061431cffc10e6558ed"
+      "bytes": 1814,
+      "sha256": "b3070a8a1b3ecfa3d6d303c37d339241d69e4491ac22f868e390ecd5125098ad"
     },
     {
       "path": "Source/Analysis/OnsetAnalysis.cpp",
@@ -60,8 +60,8 @@
     },
     {
       "path": "Source/Capture/AudioCaptureQueue.h",
-      "bytes": 2901,
-      "sha256": "12722feab2be1ddb57a4bfc2e42e2bbb74b7ca711c1b9d087d3ba3094cfe62a2"
+      "bytes": 3675,
+      "sha256": "4ba3da2643bbb463acddc38709b2a380846c7ea6d5b160385e9c8235db7a12c4"
     },
     {
       "path": "Source/Capture/CaptureAssetStore.cpp",
@@ -110,13 +110,13 @@
     },
     {
       "path": "Source/Capture/CaptureManifest.cpp",
-      "bytes": 10705,
-      "sha256": "df5f78b8b7884d780276fecae68c250900764c612bc66a0bd9b75d32f2b2c8b1"
+      "bytes": 14143,
+      "sha256": "8d51ad019b1fab71e0b34da3220f152f370ca9becca3fd36ea91a68166e3dbb7"
     },
     {
       "path": "Source/Capture/CaptureManifest.h",
-      "bytes": 1467,
-      "sha256": "e9bd29ee94ae885484ef9c7bd0f2bacae966b9dc5b3e1ccaea2d325c38c8ba80"
+      "bytes": 2079,
+      "sha256": "f43d0b51db2eef845d43aa47e8eb117e747ba1f602db8ec5df0a990f310a1048"
     },
     {
       "path": "Source/Capture/CaptureProgress.h",
@@ -125,23 +125,58 @@
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
-      "bytes": 20742,
-      "sha256": "584c37cd9fcd7b94fb76cbd5d00d1c378e8fe76cc211daf4b692eb0b8be01954"
+      "bytes": 23280,
+      "sha256": "0219eb2c7cebd2d3801d7ab8e8dd6566f8666519a51f56db6167f120dab992db"
     },
     {
       "path": "Source/Capture/CaptureSession.h",
-      "bytes": 4786,
-      "sha256": "fa5b7134d7cf29157aaf00bb2b55870720d0f776a1a8c48f8f1df204bfb85fcc"
+      "bytes": 5225,
+      "sha256": "02926260ee2700832c05728be19e324ee0d3363daebdde1b95a198d11a603569"
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 29942,
-      "sha256": "98007ec6aa1975fe235b76971e7e73444e5cee1cfa13882a4464c59bce1b28ed"
+      "bytes": 32327,
+      "sha256": "d9326dc1591608b4a012b300cdcbfb91695f4ac037966e6633f0f701616ac294"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
-      "bytes": 8674,
-      "sha256": "22eeec19e4944aa408022b21bdb61f6abb67075d5b140770347a6288dbc70d3d"
+      "bytes": 9287,
+      "sha256": "a9d217aef1d5d334fa16e1035071b5303fb8f4eca824c0f8663e1d41a6e7e7a8"
+    },
+    {
+      "path": "Source/Capture/LoopBeatClock.h",
+      "bytes": 2104,
+      "sha256": "44f87f9c41626c547d2f8896b208c1473b5d492760dc0ca6731a8d95835496f3"
+    },
+    {
+      "path": "Source/Capture/LoopCapturePreference.h",
+      "bytes": 1447,
+      "sha256": "d0565facf541a2e64ad7871e832451716b5316fd87f7ecf0a9d4c75590d04e10"
+    },
+    {
+      "path": "Source/Capture/LoopCaptureState.h",
+      "bytes": 2248,
+      "sha256": "15b9977301c21f04068443647fb1ebc8b4ac7ae47bb16791ff167f2308b9a3d9"
+    },
+    {
+      "path": "Source/Capture/LoopHostGrid.h",
+      "bytes": 2682,
+      "sha256": "16eb9a22488fcb4424f105acc07d33b4f38ec63c7e9f22c81f985b785000358d"
+    },
+    {
+      "path": "Source/Capture/LoopMidiObservations.h",
+      "bytes": 4730,
+      "sha256": "2d2a4b7ceeebc8693524e6adb6c1564b30287a45238bf0ed409f7582759147ea"
+    },
+    {
+      "path": "Source/Capture/LoopPhraseClock.h",
+      "bytes": 5939,
+      "sha256": "12241214d3e952d94f71dd430a352cd61ebe298ec373948516ca04e497414f94"
+    },
+    {
+      "path": "Source/Capture/LoopTake.h",
+      "bytes": 3562,
+      "sha256": "82a02029b5ef4a5b9479bd5994c98032ec3f157d40879040f6673e5fc0dd1844"
     },
     {
       "path": "Source/Capture/PerformanceComparison.h",
@@ -160,8 +195,8 @@
     },
     {
       "path": "Source/Capture/SourceRangeReader.cpp",
-      "bytes": 3884,
-      "sha256": "b6d94c0787ca85546603007442c8fca0d272214964df3de75d27780702928a06"
+      "bytes": 3956,
+      "sha256": "7587286c0fe07c6c7c301efe400370c252ad50831b54a0fb57ecbf85e67b6bd3"
     },
     {
       "path": "Source/Capture/SourceRangeReader.h",
@@ -190,8 +225,8 @@
     },
     {
       "path": "Source/Core/AssetAssociation.h",
-      "bytes": 9929,
-      "sha256": "e9a1ff4217f1f022cf887b8286a9666cd732d7c7d93a7442362ce946b2668661"
+      "bytes": 10574,
+      "sha256": "b6b1cbaaf629cc41bd0f2b35a14087f407d00d5b71891ee6a27c075990502c62"
     },
     {
       "path": "Source/Core/BuildInformation.h",
@@ -210,13 +245,13 @@
     },
     {
       "path": "Source/Core/ExportState.cpp",
-      "bytes": 5159,
-      "sha256": "fd8a9cfa33079dfa69340bbcaca926ec377ed215c929c470337837e0ff0bd88d"
+      "bytes": 7411,
+      "sha256": "5d0c7b2122d090b0e103725def7478f07aeedbdd0177bbbbdf74aefc524e3e88"
     },
     {
       "path": "Source/Core/ExportState.h",
-      "bytes": 769,
-      "sha256": "842d747e26bb252d4033aa556649b6ba47d50161fee7af4f766d562fc0d72759"
+      "bytes": 1598,
+      "sha256": "4a509e40ff6648aef2ed187422b14f40b5298f95ec8aa284da0d99f27790b07b"
     },
     {
       "path": "Source/Core/HostGrid.h",
@@ -260,33 +295,33 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 32990,
-      "sha256": "d4940c876e36b88d52879091dccfa1c21d1a5dc9ff6aec8f81311d7f5cbc23b8"
+      "bytes": 33478,
+      "sha256": "3719c3f65b98e5fe76b66fff329a0fb65d6349b5b119675b9acb644402d00d9e"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 9192,
-      "sha256": "383a878451de7304403b944d587c2974a900204c2a72559844dc910ea8392639"
+      "bytes": 9698,
+      "sha256": "130adb2a3314a81962ead2303f5ac569e7d90e495eb78c3940e32192c93aba5b"
     },
     {
       "path": "Source/Core/TransportTime.h",
-      "bytes": 1664,
-      "sha256": "2bdc4f2c9c026aa063e1c3750e7f99efe43efa00e171904d20a205c1e26dfa9f"
+      "bytes": 2175,
+      "sha256": "83cb8efed600124b564daad3d1db1d6e47455b4c52751a7da6022dfe79115f68"
     },
     {
       "path": "Source/Core/WorkflowState.h",
-      "bytes": 7677,
-      "sha256": "3057c66aeffde719aaae28dc900d2d051af3bc1f752c74f03f786afc9bee8207"
+      "bytes": 10121,
+      "sha256": "2d1ffa48240ee834bf21a407bd477f3e09912d2fa81cd55e5f8fe3aabfa85b65"
     },
     {
       "path": "Source/DSP/AuditionMix.cpp",
-      "bytes": 3351,
-      "sha256": "ef6b44dc29ac697f27cd54232fa6b88347667949bfe0177a0d645eb1d130ffe3"
+      "bytes": 2656,
+      "sha256": "c8e2d0c74cfff7f9df18ebcc32b344d44af5ffee439d1a24983d1e686bc76644"
     },
     {
       "path": "Source/DSP/AuditionMix.h",
-      "bytes": 481,
-      "sha256": "08ea1f178116131af828eb3d3493146e7d21f1274ffce7db92661847032deb2a"
+      "bytes": 396,
+      "sha256": "c7e83d68f76b9a2491e3c42a8e18c3011aba8753beb60da61a1ff403800cc1b7"
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
@@ -310,28 +345,28 @@
     },
     {
       "path": "Source/DSP/ExportFiles.cpp",
-      "bytes": 10286,
-      "sha256": "9043cff30adc75e6bd700d4b17d857845087490e5403bdb77d20b0d49ad5a44d"
+      "bytes": 11201,
+      "sha256": "7482e1f258c505f9a3ab9a4cd35cee63d6fbff24ff27302bf7aff308f0e8dcbc"
     },
     {
       "path": "Source/DSP/ExportFiles.h",
-      "bytes": 823,
-      "sha256": "c6e6594d2b854d77232daee3fe66551b20e1f30c5cfd74fe1ad7d1ea66ec08d9"
+      "bytes": 830,
+      "sha256": "f7e1de7fc9f790cdb8ee3a0f0220e162136191bc1f2430e4c006105646c75237"
     },
     {
       "path": "Source/DSP/ExportSource.cpp",
-      "bytes": 3703,
-      "sha256": "ee0c359df51015459da84722b83a585bcd441baf891d36d093378d500edab835"
+      "bytes": 6557,
+      "sha256": "a27b76b45da24adfd4eb4837cd1323ba8dece67ed623881ab14c6c2da2e68d9d"
     },
     {
       "path": "Source/DSP/ExportSource.h",
-      "bytes": 1181,
-      "sha256": "2aa840bc83b4ea155b66ec8b5269f0e2e2ff4fba8d376a18a76023c8aeb0b1db"
+      "bytes": 1330,
+      "sha256": "00acb90f9e6f8a8d6efef813a56ab9298ed02b4caaee136126f97c820eef3f08"
     },
     {
       "path": "Source/DSP/GainStaging.cpp",
-      "bytes": 9647,
-      "sha256": "7ff13890ba01a201b7070619fb05b698715c70dc2c486ddd73b09a0025a2c398"
+      "bytes": 9707,
+      "sha256": "dcf07c0af0718571959e022117317ff1ef50e8c00f0e769d404f171c5537acd5"
     },
     {
       "path": "Source/DSP/GainStaging.h",
@@ -345,8 +380,8 @@
     },
     {
       "path": "Source/DSP/LearnGeneration.cpp",
-      "bytes": 16971,
-      "sha256": "6abbb55c8b99f630e46aa08c95d59ae266333830eecdf07177d1db60e8c307b8"
+      "bytes": 17369,
+      "sha256": "f3b4b0c9d867a466be98732a9d126297bddc0f16dfbcbd2d2ceb8f44476f3f57"
     },
     {
       "path": "Source/DSP/PreviewEngine.cpp",
@@ -355,8 +390,8 @@
     },
     {
       "path": "Source/DSP/PreviewEngine.h",
-      "bytes": 2745,
-      "sha256": "6353ba5fc6e98b53335461ebd3a18a31ad8b99c85677fe3a777d0524bf9e3b62"
+      "bytes": 3309,
+      "sha256": "b42b9f51837305fd042dd4c9364fd86d56078ce46a3aa4be3223267b07e4b9a8"
     },
     {
       "path": "Source/DSP/ReverseConvolution.cpp",
@@ -370,18 +405,18 @@
     },
     {
       "path": "Source/DSP/SongExport.cpp",
-      "bytes": 5348,
-      "sha256": "6e99f2ac762c1382e081dac24752e5e607f922027c909e75648d2f0fa6556e5f"
+      "bytes": 8914,
+      "sha256": "c374205f466ffc09fbfe885fd8ab5cf201d8d1b7651a4e6c57c5bdfadaff4a45"
     },
     {
       "path": "Source/DSP/SongExport.h",
-      "bytes": 1830,
-      "sha256": "3d2e110546fbd42c08a1c9aad81d61d39703c377307da7df64ca21da50498ea7"
+      "bytes": 2398,
+      "sha256": "19885583baf80a8489409e929aea4fef7ce1a8d35124caa010f23013c23e025f"
     },
     {
       "path": "Source/DSP/SongMix.cpp",
-      "bytes": 10001,
-      "sha256": "58548c18b5566ad1faa66d29aa712fa4f5bdffc4e96b9385386f7123dae5f4d2"
+      "bytes": 11166,
+      "sha256": "21c3745510d1532fcd79a6556d59ea16d9c907a43a3ade96aa007b1cf4df0f77"
     },
     {
       "path": "Source/DSP/SongMix.h",
@@ -410,28 +445,28 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 86005,
-      "sha256": "158959aa225afe989e2e46f591de2fe899eeb66faf29ecaabd51e965b4d98416"
+      "bytes": 92260,
+      "sha256": "d6d883c6109f6d6fed05e2a9846600f447357f16b3af97ff26f63c4f57a3b63e"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 24589,
-      "sha256": "53942460393f5089a526bf2db555fbd94260caf283af240c1993ae0eb43cc126"
+      "bytes": 25868,
+      "sha256": "0de3763e8f6204cdb3ade8dac08c443ee868f1dccce2f45112100674cdbebd39"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 25784,
-      "sha256": "b5e10d80473e85e23ba7fd9c8affd9bce1e3681445cceb652ae24804eea46f45"
+      "bytes": 28725,
+      "sha256": "c9e0ac82aab7463e48be6b50d4b963447b6f2e4f3ce23ca9b05b3f7782b08f55"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
-      "bytes": 9316,
-      "sha256": "5825377434e765d3880bc079aa9bf995c70e841464b2665c59344fa4036e09f7"
+      "bytes": 9442,
+      "sha256": "c65bda2e4e110969cc2f70d6cec13c2cbc6bb5f6594940173a42e120cf150968"
     },
     {
       "path": "Source/DSP/SwellShape.cpp",
-      "bytes": 2631,
-      "sha256": "b762b976f48824bd60b4ad2e952e68074a9a11dd8ecd8a12bad52a05c4cb97a0"
+      "bytes": 2666,
+      "sha256": "ef8e5a30f1d31a80253ab55a642c43f4ae260c86ce10507e7cb0ab090019a14b"
     },
     {
       "path": "Source/DSP/SwellShape.h",
@@ -440,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 38288,
-      "sha256": "00c3d5bb6423cec2ae39d60f27181cf2108bcae12b234d496eef194439c4f13a"
+      "bytes": 51960,
+      "sha256": "154b3710cde806b7bad6acf7bcf9a4108ce4eb4a73102b8f6b1d7a81c95f9f58"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -484,6 +519,51 @@
       "sha256": "bd11c7db6d909d780c61ae40e2ce9a2774e04fff8156931170eb234a42b4e88c"
     },
     {
+      "path": "Source/Playback/LoopClockGrid.h",
+      "bytes": 2321,
+      "sha256": "0db226fc530a71d87291ee052ce87640654255562cb410cc6f33628da17b0a7b"
+    },
+    {
+      "path": "Source/Playback/LoopCueScheduler.h",
+      "bytes": 9844,
+      "sha256": "aa341f420d1132667bf1b2f7eb06fdec2e966ce5ef4fcfffa04c4a59ed67b3fb"
+    },
+    {
+      "path": "Source/Playback/LoopCycles.h",
+      "bytes": 1063,
+      "sha256": "7b0f77f1bfffa44ef5b81ada356684c7ce4e28489843776699ef2caa5d658331"
+    },
+    {
+      "path": "Source/Playback/LoopLiveReference.h",
+      "bytes": 6512,
+      "sha256": "8ab97c5ed583a411827fccc3d5c3288b5e78e2ff5d5c73f5c8f437c0284eb72d"
+    },
+    {
+      "path": "Source/Playback/LoopPlayback.cpp",
+      "bytes": 19390,
+      "sha256": "19148ffa001a4950568973c333c3bc45520b3c68a13d9e5a0206e7faa8cbc576"
+    },
+    {
+      "path": "Source/Playback/LoopPlayback.h",
+      "bytes": 4941,
+      "sha256": "aaaa3d07e0d79cf1b2c360b08428fcce73a7132774672296300815d705120c6a"
+    },
+    {
+      "path": "Source/Playback/LoopWetPlan.cpp",
+      "bytes": 8685,
+      "sha256": "881e02603d470d835ed5eaa557f223ada33d48b495efa7b6f25c4342ddfa64b3"
+    },
+    {
+      "path": "Source/Playback/LoopWetPlan.h",
+      "bytes": 1831,
+      "sha256": "a1f6bd71b2279018228d07dd45617c69ffd6b4b1d935f79b153fff0833a5fb83"
+    },
+    {
+      "path": "Source/Playback/PlaybackPeaks.h",
+      "bytes": 1108,
+      "sha256": "88e3126ed668284afc85be01a6a0460bd05209afbc9b3a9f1d2ce5cf6c3ee5b6"
+    },
+    {
       "path": "Source/Playback/ScheduledTestTone.cpp",
       "bytes": 4959,
       "sha256": "4b98a4f2665c263d7f69b3516b681c6ca5e491a34a7469777358708cf6c2ecd3"
@@ -495,28 +575,28 @@
     },
     {
       "path": "Source/Playback/TransportPlayback.cpp",
-      "bytes": 12013,
-      "sha256": "cfb65fac7bd19bf7bd5d19e8db0bfdff0b49ba2fc87855a42a65c3a6e028eb27"
+      "bytes": 12079,
+      "sha256": "3c3e76ffde62898288adc67bf1f7a68b14cb241ac11171a3e36c9e2c3da7a0c8"
     },
     {
       "path": "Source/Playback/TransportPlayback.h",
-      "bytes": 3914,
-      "sha256": "aefb397399872dee192b70c3b248a0ea131e5ae3f39da1fd74f7d187a59ebb49"
+      "bytes": 3980,
+      "sha256": "6ae587530b05e39687387ef90afc9f8fafb8026786e48fbe96ebbc1aa8c42c09"
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 102675,
-      "sha256": "a6632dff975b02db7981ffdfeac4387aa5d448680044287917aaef754e7fecd0"
+      "bytes": 115739,
+      "sha256": "0d72d0a232830212eef0931143eb4a1db521a30f910de10a9f7c68bdfeb3ec35"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
-      "bytes": 16145,
-      "sha256": "a41dc5b1a7aed19aab77d2be13bd5542e81b6001ea437bc504cd40351d44f541"
+      "bytes": 16700,
+      "sha256": "d30f4e184dd43a3c472f4615eaf707b3d17425889d09327ceb9df0db7a96ffc1"
     },
     {
       "path": "Source/Plugin/PluginInspector.cpp",
-      "bytes": 25489,
-      "sha256": "24903e75533a498580c9aba24b09ebadd3b72f54e45f93a4b50907b791b48763"
+      "bytes": 26032,
+      "sha256": "0206dfe639ec6488d24609a9c1600057454f44fab2447e73024a174074335a53"
     },
     {
       "path": "Source/Plugin/PluginPresentation.cpp",
@@ -525,18 +605,18 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 47636,
-      "sha256": "42ef24bb30a45c33924396cb5ac2b622541c95dfab8841a282d14c5456a4499d"
+      "bytes": 83065,
+      "sha256": "5812e10b9f19ed08991b67824c9606f84f728df1738fd9145d748ce622175ee7"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 8736,
-      "sha256": "12ad2d0b4e3bd0692c96d869af38e230e9ccc724e222c8aff24768e04a2e3abf"
+      "bytes": 13482,
+      "sha256": "71471e6cca325f15cdce92a9793c2cd32737ab8e3c542bddf669a47d6e3b6416"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
-      "bytes": 24003,
-      "sha256": "a2e2152c3e7ac9b635c29f4e2772598048ca7faada981683bd58ab58f75c0cb8"
+      "bytes": 24326,
+      "sha256": "1e126616718de7d51790d451ea76c6fa835b5814307a4452472b02dd12c95d59"
     },
     {
       "path": "Source/Plugin/RecoveryOnsetSelector.h",
@@ -545,8 +625,8 @@
     },
     {
       "path": "Source/Storage/AssetInventory.cpp",
-      "bytes": 26698,
-      "sha256": "c80b19479f1d42f1a8182112668f06b8b3883bef66211c912e4d87bec61eddce"
+      "bytes": 27011,
+      "sha256": "39bb3f7f658a162012191194931a834af3cb6a638d69701a49b316672749daef"
     },
     {
       "path": "Source/Storage/AssetInventory.h",
@@ -555,8 +635,8 @@
     },
     {
       "path": "Source/Storage/PortableAssets.cpp",
-      "bytes": 103061,
-      "sha256": "da448e8ce03d3772147029eb5abb310b682aca85d7ff72690939498fbc0fd1c4"
+      "bytes": 104089,
+      "sha256": "4425b45c8d938e708396c2a8aa2b0f18f68995c9f50ea33d5f00f36d53856e4b"
     },
     {
       "path": "Source/Storage/PortableAssets.h",
@@ -575,8 +655,8 @@
     },
     {
       "path": "Source/UI/Controls/ActionButton.h",
-      "bytes": 7909,
-      "sha256": "e58c052611b290e67cffcabfba0c130819c9b0a9a14038fc289478f968bc4fef"
+      "bytes": 7994,
+      "sha256": "91f184ce0859a863a6022c0c318048377dae9a00b97b4f54c56ccf4a4de17ae3"
     },
     {
       "path": "Source/UI/Controls/BooleanToggle.h",
@@ -645,8 +725,8 @@
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
-      "bytes": 4486,
-      "sha256": "25074247a307d916c4e1474b74f30725d42af96d9688177c7723805cd3b97cd6"
+      "bytes": 5642,
+      "sha256": "9a8e6bb4abe77746141c81ca2f797f62fbc87a74562dbafa13df8c3810e0db85"
     },
     {
       "path": "Source/UI/Controls/FocusViewport.h",
@@ -685,8 +765,8 @@
     },
     {
       "path": "Source/UI/Controls/LatchingActionButton.h",
-      "bytes": 593,
-      "sha256": "bbbe1a07550ddf523e2ddf8ed14584c2b67cc5069ea62c4d328fa077b636a7a2"
+      "bytes": 675,
+      "sha256": "028444bc1ef2ab1d52d9acf2d5f54424fa8011fbb3efcf4548409835283c37a1"
     },
     {
       "path": "Source/UI/Controls/ModeIcon.h",
@@ -785,8 +865,8 @@
     },
     {
       "path": "Source/UI/Controls/TransportReadout.h",
-      "bytes": 4197,
-      "sha256": "bfb92296cfbc99d4191078cf8ef3ea571fc553f735d23c6d91f4e2d4c0081319"
+      "bytes": 4138,
+      "sha256": "5128e7048ba3c0c9d1f50c8c31960b9cadb14c50c39beb5dee2eca9f9e977a5e"
     },
     {
       "path": "Source/UI/Controls/WaveformGestures.h",
@@ -820,13 +900,13 @@
     },
     {
       "path": "Source/UI/ExportFileInvocations.h",
-      "bytes": 7262,
-      "sha256": "2594f6d93425f06c9cae8c753bdcf4a785273054036f815d331770339db6e61d"
+      "bytes": 7484,
+      "sha256": "0293a726a4516ae61a686a731e5e3accfb16b78f74dadba13897474d2d467712"
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 24052,
-      "sha256": "18c896492e1385ba2e384bbd82d8d54a97e650f800d769009b346c72858723c5"
+      "bytes": 30744,
+      "sha256": "fd35da38cb9640c6fa77d6b265d15a19dc6f19ff5ba4a5b6830814afacc32032"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -840,13 +920,13 @@
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
-      "bytes": 6803,
-      "sha256": "a5c90d06c5973b82cbb3ea8013d23885feb96c7ef0cb4794186cd291a97a1db8"
+      "bytes": 6999,
+      "sha256": "05530ad2534219b55f9abf2189092b0e5ef446e63d650a3f72e236b6c8fea879"
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 37457,
-      "sha256": "4c782ff61886fc8ffc015ebddd845c166aa0866f81017e5fec2c31c56db6af24"
+      "bytes": 54137,
+      "sha256": "23049f2fe1549eb0cc4994920916b1d3817a3e7bdc4b12216d1fff075a77b607"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -857,6 +937,11 @@
       "path": "Source/UI/LiveDiagnosticsText.h",
       "bytes": 9105,
       "sha256": "67e865b761f63df50cc17df16ed3dbcb33896a059ed0170f7780a34030eac5a0"
+    },
+    {
+      "path": "Source/UI/LoopExportControls.h",
+      "bytes": 5271,
+      "sha256": "62d247348e49fea9e0095323699c582d1bd4970b342fb7976bf2acbcad5659b4"
     },
     {
       "path": "Source/UI/MusicalPosition.h",
@@ -875,8 +960,8 @@
     },
     {
       "path": "Source/UI/PortableStoragePanel.h",
-      "bytes": 22491,
-      "sha256": "32875818e75e640cc2267afb36885d0ea4e5959a5d8d9e25c6d520a4be3c2f9e"
+      "bytes": 23129,
+      "sha256": "29c248c6caccb707ad8f4af0a7a2df8b6311e5aaf137d912cee3c9ead7e9d9db"
     },
     {
       "path": "Source/UI/PresentationFit.h",
@@ -910,13 +995,13 @@
     },
     {
       "path": "Source/UI/SwellTimeline.cpp",
-      "bytes": 53089,
-      "sha256": "2780d7afc404d7464f2ce09a0b4a635f81a55f40ca07947eab68455ce44d6135"
+      "bytes": 55645,
+      "sha256": "ee137fb743a672392d0e644fb37e2c178b85ed27dbfbf830eaed49635adb7d25"
     },
     {
       "path": "Source/UI/SwellTimeline.h",
-      "bytes": 9505,
-      "sha256": "27f5125314fc3c73e6d20c287828e624f5ca58b8f9b2a7acc5aaa869c1c4a5a4"
+      "bytes": 10117,
+      "sha256": "e860ea54d1e4d4af8620761cedbf3180ec1a03a12852a532e14c6c524dd8002d"
     },
     {
       "path": "Source/UI/SwellViewport.h",
@@ -930,8 +1015,8 @@
     },
     {
       "path": "Source/UI/TransportPresentation.h",
-      "bytes": 1354,
-      "sha256": "53ba01bed0f6af6bebfc8e57854603c40bd740a2c5657ff68aabec39d6bc3af2"
+      "bytes": 1986,
+      "sha256": "d0a6e79d1632bbe83bfdd302fcbf74758eae6ef0640de8c9f9f9aad6c52ebd6e"
     },
     {
       "path": "Source/UI/UiGeometry.h",
@@ -950,13 +1035,13 @@
     },
     {
       "path": "Source/UI/WorkflowPresentation.h",
-      "bytes": 3188,
-      "sha256": "dfdb1ba32bb2a60cbe301db713e95cba6958ef88b5d91a58bb0eb2c9bd4f11ce"
+      "bytes": 3270,
+      "sha256": "fe08eb9cd17085871eb04027053eb7f5cdebe396d8202d0a28f68ec04491d9f4"
     },
     {
       "path": "Source/UI/WorkingFolderPanel.h",
-      "bytes": 16155,
-      "sha256": "93db7b1cac0540403aaf0b095ca94245ade36cdc379bc2fa28fbecbbe3ac6716"
+      "bytes": 16283,
+      "sha256": "c559bf9586bb9aa48d4c10a135095aea7a932fb53dab4fef385016a87447abaa"
     },
     {
       "path": "Source/UI/WorkspaceLayout.h",
@@ -965,13 +1050,13 @@
     },
     {
       "path": "Source/UI/WorkspaceNotice.h",
-      "bytes": 4815,
-      "sha256": "a6ed333eeae750158c3c0759ed0dc94fef0df1b7cdfc22c7b1bd6062f271aedc"
+      "bytes": 4995,
+      "sha256": "be8312a0380ced8b96dddd8afaa0862fa2496aad71f866f1a0972d6cee5b703b"
     },
     {
       "path": "Source/UI/WorkspaceTheme.h",
-      "bytes": 17158,
-      "sha256": "f81bc6343fe55ec0d1b813f737e40299ec28ccdcbe56a8a92f60b1c888e02be7"
+      "bytes": 17302,
+      "sha256": "6e8acfddd3324f88a9fc33076e6815004d9a1e7a234ddec6059917d0a3f2e077"
     },
     {
       "path": "cmake/BuildInformation.cmake",
@@ -1000,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 33087,
-      "sha256": "79d1bd6f056b751b8c323655070ec6f27c04983108852daebb449469731b9495"
+      "bytes": 126095,
+      "sha256": "3e9fc4e9d577fca270f70f5e2758f99a02777af6e1ac876857ecd8a47afae527"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1035,8 +1120,8 @@
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
-      "bytes": 17359,
-      "sha256": "2a00638a4f9211d48d554da0cddef902987bc0a9d4e8ebbc8409da11c9103bba"
+      "bytes": 15443,
+      "sha256": "1d1117fac6c6f54e6ba09a8318f8a76c4af2d2ca9865146fb544ed707a3de39e"
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
@@ -1064,24 +1149,39 @@
       "sha256": "69d1af646d8568ec3c322c67df058115994dc89208407a4038d666bae2fa4c27"
     },
     {
+      "path": "openspec/specs/loop-export/spec.md",
+      "bytes": 10171,
+      "sha256": "709b1f5b7e340d44721922d79d25f60ab34b0ed1e935b2758e0bc1ff30f9ee7b"
+    },
+    {
+      "path": "openspec/specs/loop-host-admission/spec.md",
+      "bytes": 16535,
+      "sha256": "4221d6d18bc46ca6a0ed27f1bab728d9a0ea53fda5f5d769043c732f0b1fb3c6"
+    },
+    {
+      "path": "openspec/specs/loop-phrase-capture/spec.md",
+      "bytes": 12075,
+      "sha256": "6d5d83b20cc0d63b6d73b2c4e0bacb6b753f947e22f3a8b4aa6d75503085877b"
+    },
+    {
       "path": "openspec/specs/product-release-identity/spec.md",
       "bytes": 4505,
       "sha256": "0a55c956f171853f145af1dbfba5e8d2854e34c859651c60e764824ed0f16dc6"
     },
     {
       "path": "openspec/specs/project-asset-portability/spec.md",
-      "bytes": 15503,
-      "sha256": "6b8c982885d8ed2531316588e27c21876d5855cf6a4ab1092cbb10fbd9556d38"
+      "bytes": 17138,
+      "sha256": "bc8daae250091400691d1e2a1f8954f9a3134531649e365b9401e128d4ff35c8"
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 20641,
-      "sha256": "32828a6c73642a59690f919a099e112abc9f434bdb5a017eb4fcaf43b2b79c1d"
+      "bytes": 20278,
+      "sha256": "b6cbcb7b513156710d07728fae553b0be7cc5e79c1a721b0aa66dc7af3392760"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
-      "bytes": 21554,
-      "sha256": "a46a0d5de402e0a2c9ebd3b028d86853aac9e16e91a8374daea2a5017f5f6672"
+      "bytes": 21532,
+      "sha256": "88ae33a697e5bac428a236d5df00f7673e8056555ff7961b17bddd3627beb4c7"
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
@@ -1095,8 +1195,8 @@
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
-      "bytes": 16276,
-      "sha256": "9306aec627b8032dce1c411eb1c04a5c4922f1d419317e32e9c1d66d0fd7f670"
+      "bytes": 13658,
+      "sha256": "06db935a5e4e197b8758012aa83168d1e297a2d8f267bd23afdf5f5aa0721d4d"
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
@@ -1110,13 +1210,13 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 120217,
-      "sha256": "20c1f4c0c67c76113566eaf12ead47c802ecb91fe742442bfcbd948c1067bc0d"
+      "bytes": 124476,
+      "sha256": "e46996a7eea31cc5af3013a0373737d575f02f4b4269fff8de266629ea522417"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 42398,
-      "sha256": "e13a99da384a0c5dd5a3576247cb34a2382a974ee9cd0b3c60e0c736ccf2f521"
+      "bytes": 50593,
+      "sha256": "804f23d5c7dc82095db4abb308bd653149f43f0f129e86af4868d13c9c065964"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
@@ -1125,8 +1225,8 @@
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
-      "bytes": 14179,
-      "sha256": "f779d63c0eb5108a97e50ceb5c62e4f6c5d86a4e1688452c65fc651f69f1b662"
+      "bytes": 15347,
+      "sha256": "801379e5984ecfdaac490f0ad030f8fca21a0b5660adc5e657c417f789261f76"
     },
     {
       "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",
@@ -1200,8 +1300,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 32610,
-      "sha256": "5c5f938d0318b4ecd1a2b399d2445835fc290ca74308d0d748ba9ab60faaa76c"
+      "bytes": 51575,
+      "sha256": "d28e3941bbe01fadcbc6ebaa1f412d2a268289da9741891320163b1c53cc4d1b"
     }
   ]
 }

@@ -6,7 +6,8 @@ static int workingFolderPreview(bool review)
         using namespace m3::storage::portable;Input input{fixture.root,fixture.xml,fixture.manifest};
         std::shared_ptr<WorkingFolder> live;int saves=0;bool reject=false;
         m3::ui::WorkspaceTheme theme;
-        m3::ui::WorkingFolderPanel panel([&](auto& value,auto& error){value=input;error.clear();return true;},registry.file,
+        int providerReads=0;
+        m3::ui::WorkingFolderPanel panel([&](auto& value,auto& error){++providerReads;value=input;error.clear();return true;},registry.file,
             [&](const auto& folder,const auto& expected,auto& error){
                 if(reject || input.controlEpoch!=expected.controlEpoch){error="The session is busy or changed. Try again.";return false;}
                 live=folder;const auto& info=workingFolderInfo(*folder);input.instanceRoot=info.projectsRoot.getChildFile(fixture.observed.project).getChildFile(fixture.observed.instance);
@@ -35,7 +36,11 @@ static int workingFolderPreview(bool review)
         REQUIRE(originalRoot.exists());
         for(const auto size:{juce::Point<int>(420,240),juce::Point<int>(680,420)}){panel.setSize(size.x,size.y);REQUIRE(panel.getLocalBounds().contains(choose.getBounds()) && panel.getLocalBounds().contains(use.getBounds()));REQUIRE(choose.getBottom()==panel.getHeight()-m3::ui::spacing::related);}
         window.centreWithSize(680,420);panel.picker={};
+        window.setVisible(false);const auto idleReads=providerReads;
+        for(int i=0;i<3;++i)panel.poll();
+        REQUIRE(providerReads==idleReads);
+        window.setVisible(true);panel.poll();REQUIRE(providerReads>idleReads && live && saves==1);
         window.setVisible(false);window.clearContentComponent();panel.setLookAndFeel(nullptr);
-        std::cout<<"Working-folder control bindings: picker cancellation, stale choices, prepare without switch, late edits, binding rejection, explicit use/save request and pinned footer passed.\n";
+        std::cout<<"Working-folder control bindings: hidden idle polling/reopen, picker cancellation, stale choices, prepare without switch, late edits, binding rejection, explicit use/save request and pinned footer passed.\n";
     });
 }

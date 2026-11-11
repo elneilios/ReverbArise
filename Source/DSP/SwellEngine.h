@@ -1,4 +1,5 @@
 #pragma once
+#include <Playback/LoopPlayback.h>
 #include "PreviewEngine.h"
 #include "SwellAssetStore.h"
 #include "SwellShape.h"
@@ -70,13 +71,13 @@ struct EditorSnapshot
     std::vector<Candidate> candidates;
     std::shared_ptr<const Waveform> raw,shaped,sourceDetail;
     std::map<juce::String,std::shared_ptr<const Waveform>> wetSummaries;
+    LoopPlayback::LeadInDisplay loopLeadIn;
     juce::String message;
     juce::String actionError;
     std::optional<int64_t> auditionSample;
     int64_t auditionDryStart=0,auditionDryEnd=0;
     bool playing=false,auditionReady=false,auditionPreparing=false,analyzing=false;
-    float attenuationDb=0;
-    float blendAttenuationDb=0,monitorPeak=0;
+    float monitorPeak=0;
     bool dryAvailable=false,cachedWetOnly=false;
     juce::String dryStatus;
     juce::String defaultIRError;
@@ -92,7 +93,8 @@ struct EditorSnapshot
     std::optional<LiveCausalObservation> liveCausal;
     bool liveActive=false,liveMissing=false,liveIncompatible=false,liveReady=false;
     juce::String liveStatus="Awaiting host position";
-    float liveAttenuationDb=0;
+    float liveWetPeak=0,liveOutputPeak=0;
+    PlaybackPeaks::Values loopPeaks{};
     float gainPlanPeak=0;double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     int64_t liveLoopDestination=0;
@@ -113,7 +115,8 @@ struct RegenerationResult
 class SwellEngine final : private juce::Thread
 {
 public:
-    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={});
+    SwellEngine(juce::File projectsRoot,std::function<PreviewContext()>,std::function<void()> persistentChange={},
+                bool fixedLoopGrid=false);
     ~SwellEngine() override;
     void useWorkflow(workflow::State&,std::function<uint64_t()> captureEpoch={});
     // Non-realtime only: the worker copies the pinned configuration before settlement.
@@ -127,9 +130,15 @@ public:
     bool setPerformNavigation(PerformNavigationState,uint64_t expectedSession);
     void restore(Session,juce::String expectedCaptureReference={});
     void clear();
-    bool addTarget(int64_t arrival,juce::String* rejection=nullptr);
+    struct TargetIdentity
+    {
+        uint64_t session, revision;
+        juce::String reference;
+        CaptureSourceKind sourceKind;
+    };
+    bool addTarget(int64_t arrival,juce::String* rejection=nullptr,std::optional<TargetIdentity> expected={});
     bool confirmCandidate(size_t index);
-    bool confirmCandidateAt(int64_t sample);
+    bool confirmCandidateAt(int64_t sample,std::optional<TargetIdentity> expected={});
     void removeSelected();
     bool removeTarget(const juce::String&,uint64_t expectedSession);
     bool removeTargets(const std::vector<juce::String>&,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
@@ -137,7 +146,7 @@ public:
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession,
-              juce::String* rejection=nullptr);
+              juce::String* rejection=nullptr,uint64_t expectedLoop=0);
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
@@ -186,7 +195,7 @@ public:
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
     void captureStopped() noexcept;
-    void resetTransportClock() noexcept {liveClock.reset();}
+    void resetTransportClock() noexcept {liveClock.reset();loopPlayback.invalidateReference();}
     std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
@@ -197,18 +206,24 @@ public:
     bool initializeExport();
     bool setExportMix(float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool setExportLevels(float dry,float wet,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
-    bool playExport(uint64_t expectedSession);
+    bool setLoopExportOptions(LoopExportOptions,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
+    bool playExport(uint64_t expectedSession,double deviceRate=0);
+    void processLoopExport(float*,float*,int,double deviceRate) noexcept;
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
     uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
     juce::File readyExportFile(uint64_t expectedSession,uint64_t expectedPass,const ExportFile&) const;
     void holdExportForTesting(bool hold) noexcept {exportHold.store(hold);notify();}
     bool exportWaitingForTesting()const noexcept{return exportWaiting.load();}
-    bool audition();
+    bool audition(double deviceRate = 0);
     void stop();
     void diagnostic(const juce::String& text) { const juce::ScopedLock guard(lock);message=text; }
     void processAudio(float*,float*,int,const SongTime&) noexcept;
+    void processLoopAudition(float*,float*,int,double,uint64_t,uint64_t,bool) noexcept;
     void processTransportAudio(float*,float*,int,const TransportTime&) noexcept;
+    LoopPlayback& loopTransport() noexcept { return loopPlayback; }
+    const LoopPlayback& loopTransport() const noexcept { return loopPlayback; }
+    bool livePlaybackEnabled() const noexcept { return liveEnabled.load(std::memory_order_acquire); }
     void processOfflineAudio(float*,float*,int,const TransportTime&);
     void endOffline() noexcept {offlineActive.store(false);}
     void recaptureCompleted(int64_t start,int64_t end);
@@ -281,7 +296,6 @@ private:
         uint64_t preparedMonitor=UINT64_MAX;
         juce::String monitorRevision;
         std::vector<juce::String> members;
-        float wetAttenuation=0,blendAttenuation=0;
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
@@ -312,12 +326,14 @@ private:
     void importJob(const Import&);
     void resetJob(const Reset&);
     bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,
-                     uint64_t expectedSession=0,juce::String* rejection=nullptr);
+                     uint64_t expectedSession=0,juce::String* rejection=nullptr,uint64_t expectedLoop=0);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
     void shapeJob(Swell,uint64_t session);
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     void prepareTransport(const PreviewContext&);
+    void prepareGeneratedHeadroom(const PreviewContext&);
+    void prepareLoopTransport(const PreviewContext&);
     void invalidateLiveLocked(const juce::String& id={});
     bool prepareSourceWave(const Swell&,const PreviewContext&,uint64_t extra,std::shared_ptr<Waveform>&,juce::String& error);
     bool cancelled(const juce::String&,uint64_t input,uint64_t session) const;
@@ -332,6 +348,7 @@ private:
     const juce::File legacyProjectsRoot;
     std::atomic<std::shared_ptr<const CaptureStorageLocation>> storageLocation;
     std::function<PreviewContext()> contextProvider;
+    const bool fixedLoopGrid;
     mutable juce::CriticalSection lock;
     juce::CriticalSection workLock;
     Session model;
@@ -358,6 +375,8 @@ private:
     std::shared_ptr<const PreparedExport> exportPreviewPin;
     uint64_t exportPreviewSession=0,exportPreviewPass=0,exportPreviewRevision=0;
     bool exportPreviewWetAvailable=true;
+    bool exportPreviewDryRequested=false;
+    std::optional<int64_t> exportPreviewResume;
     std::atomic<uint64_t> exportPreviewBytes{0};
     uint64_t exportPreviewTicket=0;
     int64_t exportPreviewNext=0,exportPreviewStart=0;
@@ -367,7 +386,9 @@ private:
     std::atomic<bool> exportHold{false},exportWaiting{false};
     std::atomic<uint64_t> sessionGeneration{1},analysisRequest{0};
     std::atomic<bool> audioAllowed{false},timingChanged{false};
+    std::atomic<bool> exportPreviewLoop{false};
     std::atomic<double> expectedRate{0},expectedBpm{0};
+    std::atomic<uint64_t> auditionLoopRevision{0},auditionLoopGeneration{0};
     std::atomic<int> expectedNumerator{0},expectedDenominator{0};
     AuditionVoice voice;
     std::atomic<bool> livePublicationHold{false},livePublicationWaiting{false},livePublicationFail{false};
@@ -388,7 +409,6 @@ private:
     int64_t offlineWindowStart=0,offlineWindowEnd=0;
     int64_t offlineLastPosition=INT64_MIN;
     juce::String offlineError;
-    float offlineGainAttenuation=1,offlineGainPeak=0;
     std::atomic<uint64_t> offlineBlockCount{0};
     juce::String offlineStatus="No offline callbacks observed";
     std::atomic<bool> liveEnabled{true},hostObserved{false};
@@ -410,15 +430,15 @@ private:
     std::array<uint64_t,maximumSwells> liveGenerations{};
     struct LiveCache {juce::String key;float peak=0;std::weak_ptr<const WetRender> main,loop;};
     std::map<juce::String,LiveCache> liveCache;
-    juce::String gainPlanKey;
-    float gainPlanAttenuation=1,gainPlanPeak=0;
+    float gainPlanPeak=0;
     double gainPlanPreparationMs=0;
     uint64_t gainPlanBuilds=0,gainPlanCacheHits=0;
     LivePreparationObservation livePreparation;
     uint64_t liveRevision=1,preparedLiveRevision=0;
+    LoopPlayback loopPlayback;
+    uint64_t preparedLoopGeneration=0, preparedLoopSource=0, preparedLoopRender=0;
     int64_t liveWindowStart=0,liveWindowEnd=0;
     juce::String liveStatus="Awaiting host position";
-    float liveAttenuationDb=0;
     bool analyzing=false;
     std::vector<std::pair<int64_t,int64_t>> dirty,passDirty;
     std::optional<CaptureManifest> acceptedSource;

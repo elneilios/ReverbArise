@@ -192,6 +192,14 @@ lists the integration baseline, component ownership and remaining legacy consume
 - Native OS file choosers and window chrome may remain native. Their invocation,
   ownership and safe completion paths must still be shared and tested.
 
+The Loop Learn policy viewport reuses the labeled `Switch` family and
+`FieldNumericInput` for duration count. Loop status and helper prose allocate
+`WrappedLabel` preferred heights within that viewport. Its Arm command retains the approved
+destructive latch. Shared waveform navigation stays bounded to the accepted
+phrase, and a replacement source clears its inspection/navigation context.
+See the [first main/Loop integration evidence](../validation/2026-11-10-loop-main-integration.md)
+for combined validation and remaining host/DPI coverage.
+
 ## Consistent interaction
 
 - Define common defaults once for each control family: wheel direction/travel,

@@ -43,20 +43,20 @@ Dry + Wet SHALL provide a saved, typeable post-roll preference from zero to five
 - **THEN** the UI reports the missing context and needed range, retains the requested duration, and keeps independently verified Wet Only available without padding or silently shortening Dry + Wet
 
 ### Requirement: Monitoring protection and trim remain transparent
-The aggregate wet branch SHALL follow the saved gain policy: legacy -6 dBFS protection without upward normalization, or the shared musical calibration/protection contract. The prepared audition sum SHALL receive additional attenuation only when needed to stay within that policy's ceiling before trim. Neither guard SHALL alter saved renders. Legacy monitoring SHALL apply saved -60 to 0 dB trim after the sum, defaulting to 0 dB when absent, visible/resettable in Settings. Live-level monitoring SHALL retain but ignore stored legacy trim and use Live Wet gain before wet protection, unity captured dry in mixed mode and disclosed combined-sum protection.
+Wet Only SHALL apply accepted starting gains, Level and Live Wet to the positioned wet sum. Dry + Wet SHALL add captured dry at unity. Both routes SHALL preserve finite above-unity float samples and disclose measured overload without changing gain.
 
 #### Scenario: Hot correlated blend
-- **WHEN** protected wet and captured dry combine above the audition ceiling
-- **THEN** only the manual audition contribution is attenuated to the saved policy's ceiling before trim, and Diagnostics identifies branch and blend attenuation separately
+- **WHEN** the audition sum of captured dry and wet exceeds full scale
+- **THEN** the original float sum is played and overload is identified as a mixed output peak
 
 #### Scenario: Existing low trim
-- **WHEN** a saved legacy session contains -24 dB trim
-- **THEN** it restores unchanged with a visible Settings trim value and a double-click reset-to-0 action, without auto-starting audition
+- **WHEN** older pre-release state contains a legacy audition trim
+- **THEN** the first audition after reopening uses Live Wet and unity captured dry in Dry + Wet
+- **AND** the stored legacy trim and blend do not affect playback
 
 #### Scenario: Level rises below protection onset
-- **WHEN** musical swell Level increases by 6 dB during a unity-trim Wet Only comparison with sufficient headroom
-- **THEN** its prepared wet amplitude increases accordingly without a compensating hidden guard change
-- **AND** if the actual ceiling is reached, requested gain and protection attenuation remain separately visible
+- **WHEN** a user raises a swell by 6 dB in Wet Only
+- **THEN** its wet contribution increases by the requested ratio even above full scale, with any overload reported
 
 ### Requirement: Audition changes do not alter rendering or capture
 Scope, mode, blend and transport-independent manual Play/Stop SHALL change only audition monitoring. They SHALL not run convolution, rewrite IR/render assets or change dry passthrough or future scheduled wet gain. Dry capture SHALL precede all audition output. Selection changes and incompatible dependencies SHALL stop the previous voice; preparation and buffer retirement SHALL remain outside the callback.
@@ -96,25 +96,24 @@ Audition SHALL default to eligible wet swells intersecting the selected anchor's
 - **THEN** it contributes no wet; muting the anchor does not independently exclude eligible neighbours, and empty wet membership is reported explicitly
 
 ### Requirement: Group monitoring preserves dry and relative wet levels
-Overlapping wet SHALL retain each member's saved fixed or source-matched baseline, user gain/envelope and positioned offsets before shared aggregate protection. Captured dry SHALL be mixed once. Legacy Dry=1-wet and wet=wet blend SHALL remain compatible. Live-level monitoring SHALL use dry=1 and wet=Live Wet gain (or dry=0 for Wet only). Policy ceiling, combined-sum protection and legacy trim SHALL remain separate from transition editing. No additional per-member normalization beyond the saved calibration or dry duplication SHALL occur.
+Overlapping wet SHALL retain each member's saved starting gain, Level, envelope and positioned offset. Captured dry SHALL be mixed once at unity in Dry + Wet. Wet Only SHALL exclude captured dry. Live Wet SHALL set wet gain independently of the shape and listening window.
 
 #### Scenario: Correlated overlapping wet and one dry branch
-- **WHEN** two hot wet contributions overlap with captured dry at legacy 0%, 50% and 100% Wet, or live-level Dry + wet/Wet only
-- **THEN** a sample oracle matches the aligned wet sum and single dry branch with disclosed policy-specific aggregate/sum attenuation, raw assets and live dry remain unchanged, and relative member gains are preserved
+- **WHEN** two hot wet contributions overlap in Dry + Wet or Wet Only
+- **THEN** the wet samples match the aligned sum of both accepted contributions
+- **AND** Dry + Wet includes captured dry once and original assets retain their bytes
 
 #### Scenario: Audition and export compare equal membership
-- **WHEN** the same musical-policy membership is monitored at 100% Wet and exported Wet Only with corresponding unity output controls
-- **THEN** the wet gain plan and interior samples agree within declared tolerance, with monitoring boundary ramps identified separately
-- **AND** switching isolation or blend does not rewrite the musical baseline or saved live preferences
+- **WHEN** equal membership is auditioned and exported Wet Only at corresponding unity controls
+- **THEN** the wet samples agree within tolerance, apart from documented monitoring boundary ramps
 
 #### Scenario: Matching stays fixed across audition scope
-- **WHEN** a source-matched swell is auditioned with different isolation, blend, listening-tail or trim settings
-- **THEN** its measured baseline is reused without remeasuring against the audition dry window or counteracting envelope edits
-- **AND** only the explicit monitoring factors and aggregate protection context change
+- **WHEN** a source-matched swell is auditioned with different isolation, routing or listening tail
+- **THEN** its accepted starting gain and Live Wet preference are retained
 
 #### Scenario: Energy calibration does not follow monitoring loudness
-- **WHEN** an energy-calibrated swell is monitored Wet Only or Dry + Wet with changed blend, trim, isolation or tail
-- **THEN** its accepted dry/default-wet RMS measurement and baseline remain fixed, Level remains relative to that baseline, and only the explicit monitoring/protection factors change
+- **WHEN** Live Wet changes for energy-calibrated swells
+- **THEN** their source-energy measurements, starting gains and Level values remain fixed
 
 ### Requirement: Group preparation is bounded and dependency complete
 Monitoring SHALL prepare an immutable group keyed by anchor/window, scope, member IDs/placements/generations/assets and capture dependencies under the shared budget. Required unavailable members SHALL block playback with identity/reason; excluded members SHALL NOT block. Changes SHALL invalidate obsolete groups. Scope and pure placement SHALL reuse raw renders without convolution. Decoding, preparation and retirement SHALL remain off the callback.
@@ -160,27 +159,20 @@ extend the window or implement whole-song arrangement audition.
 - **THEN** existing smooth-stop or immediate-invalidation behavior terminates it and releases buffers outside the callback
 
 ### Requirement: Perform audition exposes a Wet only toggle
-Perform SHALL replace blend/row Trim reset with a latching button naming its
-selected mode: Dry + wet when Off, Wet only when On. New instances default Off
-with unity captured dry plus Live Wet gain; On excludes dry. Protection/ramps
-remain disclosed and Export/live routing independent. Status SHALL truthfully
-state Ready, Looping, Preparing or Unavailable, with full reasons available
-without shrinking text.
+Perform SHALL provide a latching button naming the selected mode, with Dry + wet when Off and Wet only when On. New instances SHALL default to Off. Existing status roles SHALL disclose readiness, monitoring ramps and overload. Audition routing SHALL remain independent of Export and live routing.
 
 #### Scenario: Toggle live-level listening
 - **WHEN** Wet only is toggled with an unchanged valid invocation
 - **THEN** accepted pressed state, prepared sound and status agree without autoplay, convolution, asset edits or Export mix changes
-- **AND** stale/disabled invocations cannot change a different session or workflow
+- **AND** stale or disabled invocations cannot change a different session or workflow
 
 #### Scenario: Restore old and new preferences
-- **WHEN** legacy mode/blend/trim or new live-level monitoring preferences restore
-- **THEN** their saved behavior is retained without playback; legacy switches to live-level behavior only after explicit toggle
-- **AND** missing optional metadata defaults to legacy behavior, malformed metadata is handled transactionally and current round trips preserve mode/identity
+- **WHEN** a session saved under the generated-headroom policy reopens
+- **THEN** its accepted Wet only choice restores without starting playback, and malformed metadata is handled transactionally
 
 #### Scenario: Monitoring protection and unavailable source
-- **WHEN** live-level monitoring needs protection or requested captured dry is unavailable
-- **THEN** attenuation is disclosed, and unavailable dry is not padded or silently replaced by Wet only
-- **AND** saved legacy trim remains available in Settings for legacy monitoring, while live-level mode ignores it explicitly
+- **WHEN** the user auditions Dry + Wet with unavailable captured dry
+- **THEN** the reason is disclosed and dry is neither padded nor silently replaced with Wet Only
 
 ### Requirement: Audition strip uses one compact aligned row
 Following owner approval of actual native metrics, Perform SHALL put status to

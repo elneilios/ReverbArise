@@ -12,10 +12,6 @@ float calibrationDb(const Session& s,const Swell& w) noexcept
     if(s.gainPolicy!=GainPolicy::musical)return 0;
     return w.calibration.state==CalibrationState::unavailable?0:w.calibration.baselineDb;
 }
-float gainCeilingDb(const Session& s) noexcept
-{
-    return s.gainPolicy==GainPolicy::musical?candidateWetCeilingDb:-6.0f;
-}
 bool checkedAdd(int64_t a, int64_t b, int64_t& result) noexcept
 {
     if ((b > 0 && a > INT64_MAX - b) || (b < 0 && a < INT64_MIN - b)) return false;
@@ -63,6 +59,8 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     if (s.swells.size() >= maximumSwells) { error = "Session capacity: 4096 swells"; return false; }
     if (! time.valid || ! std::isfinite(time.rate) || ! std::isfinite(time.bpm) || time.rate <= 0 || time.bpm <= 0)
     { error = "Valid fixed host timing is required"; return false; }
+    if (map.loop && (arrival<0 || arrival>=map.loop->endSample))
+    { error = "Target must stay within the captured Loop"; return false; }
     std::optional<int64_t> coveredEnd;
     for (const auto& range : map.ranges)
     {
@@ -84,6 +82,11 @@ bool add(Session& s, int64_t arrival, const CaptureManifest& map, const SongTime
     if (end <= arrival) { error = "Source interval is empty"; return false; }
     Swell w; w.name = defaultSwellName(arrival,time,&s);
     w.arrival = w.sourceStart = arrival; w.sourceEnd = end; w.shape=initialShape(time.rate);
+    if (map.loop)
+    {
+        w.shape.endOffset=std::min(w.shape.endOffset,map.loop->endSample-arrival);
+        w.shape.fadeOut=std::min(w.shape.fadeOut,w.shape.endOffset);
+    }
     const auto id = w.id; s.swells.push_back(std::move(w)); s.timing = time;
     select(s, {id}, id); error.clear(); return true;
 }
@@ -270,6 +273,7 @@ bool validate(const Session& s, juce::String& error)
             || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/"))
             || static_cast<int>(w.calibration.state)<0 || static_cast<int>(w.calibration.state)>3
             || !std::isfinite(w.calibration.baselineDb) || w.calibration.baselineDb < -60 || w.calibration.baselineDb > candidateMaximumBoostDb
+            || (w.generatedGain && (!std::isfinite(*w.generatedGain) || *w.generatedGain<=0 || *w.generatedGain>1))
             || !std::isfinite(w.calibration.dryPeak) || w.calibration.dryPeak<0
             || !std::isfinite(w.calibration.wetPeak) || w.calibration.wetPeak<0
             || !std::isfinite(w.calibration.dryRms) || w.calibration.dryRms<0
@@ -334,6 +338,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(a,"placement",integer(w.placement)); put(a,"supportOffset",integer(w.supportOffset)); put(a,"sourceStart",integer(w.sourceStart)); put(a,"sourceEnd",integer(w.sourceEnd));
         put(a,"enabled",w.enabled); put(a,"muted",w.muted); put(a,"solo",w.solo);
         put(a,"frozen",w.frozen);
+        if(w.generatedGain)put(a,"generatedGain",*w.generatedGain);
         auto g=object();put(g,"state",static_cast<int>(w.calibration.state));put(g,"baselineDb",w.calibration.baselineDb);
         put(g,"dryPeak",w.calibration.dryPeak);put(g,"wetPeak",w.calibration.wetPeak);
         if(isEnergyRevision(w.calibration.revision)){put(g,"dryRms",w.calibration.dryRms);put(g,"wetRms",w.calibration.wetRms);
@@ -435,6 +440,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         w.sourceStart=p.big(a,"sourceStart"); w.sourceEnd=p.big(a,"sourceEnd");
         w.enabled=p.boolean(a,"enabled"); w.muted=p.boolean(a,"muted"); w.solo=p.boolean(a,"solo");
         if(version>=6)w.frozen=p.boolean(a,"frozen");
+        if(a.hasProperty("generatedGain"))w.generatedGain=static_cast<float>(p.number(a,"generatedGain"));
         if(version>=8){const auto g=p.field(a,"calibration");w.calibration.state=static_cast<CalibrationState>(p.small(g,"state"));
             w.calibration.baselineDb=static_cast<float>(p.number(g,"baselineDb"));w.calibration.dryPeak=static_cast<float>(p.number(g,"dryPeak"));
             w.calibration.wetPeak=static_cast<float>(p.number(g,"wetPeak"));w.calibration.referenceStart=p.big(g,"referenceStart");

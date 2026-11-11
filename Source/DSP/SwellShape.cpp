@@ -22,7 +22,7 @@ double envelope(const Shape& shape,int64_t position,int64_t start,int64_t end) n
 double swellEnvelope(const Swell& swell,int64_t position,int64_t start,int64_t end) noexcept
 {
     const auto baseline=swell.calibration.state==CalibrationState::unavailable?1.0:std::pow(10.0,swell.calibration.baselineDb/20.0);
-    return baseline*envelope(swell.shape,position,start,end);
+    return baseline*swell.generatedGain.value_or(1.0f)*envelope(swell.shape,position,start,end);
 }
 bool prepareShape(const Swell& swell,const WetRender& raw,uint64_t available,WetRender& output,
                   juce::String& error,const RenderCancellation& cancelled)

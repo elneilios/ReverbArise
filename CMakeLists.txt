@@ -95,7 +95,7 @@ add_library(preverb_assets STATIC Source/DSP/ExportFiles.cpp Source/DSP/SongMix.
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
-add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/LearnGeneration.cpp Source/DSP/SwellMonitoring.cpp)
+add_library(preverb_preview STATIC Source/Playback/ExportVoice.cpp Source/Playback/AuditionVoice.cpp Source/Playback/TransportPlayback.cpp Source/Playback/LoopWetPlan.cpp Source/Playback/LoopPlayback.cpp Source/DSP/PreviewEngine.cpp Source/DSP/SwellEngine.cpp Source/DSP/SwellExport.cpp Source/DSP/SwellTransport.cpp Source/DSP/AutomaticCoordinator.cpp Source/DSP/LearnGeneration.cpp Source/DSP/SwellMonitoring.cpp)
 target_include_directories(preverb_preview PUBLIC Source)
 target_link_libraries(preverb_preview PUBLIC preverb_capture preverb_dsp preverb_session preverb_assets preverb_analysis)
 
@@ -108,7 +108,7 @@ juce_add_plugin(preverb_plugin
     PRODUCT_NAME "ReverbArise"
     FORMATS VST3
     IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_INPUT TRUE
     VST3_CATEGORIES Fx Stereo
 )
 
@@ -134,6 +134,16 @@ target_sources(preverb_plugin PRIVATE
 )
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
+
+if("$ENV{PREVERB_FL_STUDIO_TRACE}" STREQUAL "1")
+    if(PREVERB_RELEASE_TAG OR PREVERB_RELEASE_CANDIDATE)
+        message(FATAL_ERROR "Disable PREVERB_FL_STUDIO_TRACE before tagged/candidate builds")
+    endif()
+    target_sources(preverb_plugin PRIVATE tests/diagnostics/FlStudioHostTrace.cpp)
+    target_compile_definitions(preverb_plugin PUBLIC PREVERB_FL_STUDIO_TRACE=1)
+    target_compile_definitions(preverb_plugin PRIVATE
+        PREVERB_FL_STUDIO_TRACE_DIR="${CMAKE_CURRENT_BINARY_DIR}/fl-studio-trace")
+endif()
 
 target_link_libraries(preverb_plugin PUBLIC preverb_capture preverb_preview preverb_ui_resources)
 target_link_libraries(preverb_plugin PRIVATE
@@ -228,6 +238,13 @@ if(BUILD_TESTING)
     add_executable(preverb_workflow_processor_test tests/workflow_processor_test.cpp)
     target_link_libraries(preverb_workflow_processor_test PRIVATE preverb_plugin)
     add_test(NAME preverb_workflow_processor_test COMMAND preverb_workflow_processor_test)
+    add_executable(preverb_loop_playback_test tests/loop_playback_test.cpp)
+    target_link_libraries(preverb_loop_playback_test PRIVATE preverb_preview)
+    add_test(NAME preverb_loop_playback_test COMMAND preverb_loop_playback_test)
+    foreach (bpm 137 280)
+        add_test(NAME preverb_loop_rack_replay_${bpm} COMMAND preverb_loop_playback_test
+            "${CMAKE_SOURCE_DIR}/docs/validation/issue-125-rack-replay/alignment-${bpm}.txt" "${bpm}")
+    endforeach()
     add_executable(preverb_capture_transaction_test tests/capture_transaction_test.cpp)
     target_link_libraries(preverb_capture_transaction_test PRIVATE preverb_capture)
     add_test(NAME preverb_capture_transaction_test COMMAND preverb_capture_transaction_test)
@@ -315,6 +332,7 @@ if(BUILD_TESTING)
         target_link_options(preverb_swell_ui_test PRIVATE /STACK:8388608)
     endif()
     add_test(NAME preverb_swell_ui_test COMMAND preverb_swell_ui_test)
+    add_test(NAME preverb_loop_export_ui_test COMMAND preverb_swell_ui_test --test-loop-export)
     add_test(NAME preverb_surface_lifecycle_test COMMAND preverb_swell_ui_test --test-surface-lifecycle)
     add_executable(preverb_selector_popup_test tests/selector_popup_test.cpp)
     target_compile_definitions(preverb_selector_popup_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
@@ -347,6 +365,8 @@ if(BUILD_TESTING)
     add_test(NAME preverb_perform_navigation_test COMMAND preverb_perform_composition_preview --test-navigation)
     add_test(NAME preverb_perform_gesture_test COMMAND preverb_perform_composition_preview --test-gestures)
     add_test(NAME preverb_perform_binding_test COMMAND preverb_perform_composition_preview --test-editor)
+    add_test(NAME preverb_loop_perform_ui_test COMMAND preverb_perform_composition_preview --test-loop-perform)
+    add_test(NAME preverb_loop_export_binding_test COMMAND preverb_perform_composition_preview --test-loop-export-bindings)
     add_test(NAME preverb_selector_binding_test COMMAND preverb_perform_composition_preview --test-selectors)
     add_test(NAME preverb_perform_fit_test COMMAND preverb_perform_composition_preview --test-fit)
     add_test(NAME preverb_perform_knob_test COMMAND preverb_perform_composition_preview --test-knobs)

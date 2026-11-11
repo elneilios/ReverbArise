@@ -97,6 +97,7 @@ public:
         :ActionButton(label,role,primary?CommandVariant::primary:CommandVariant::neutral){}
     ActionButton(const juce::String& label,CommandIcon role,CommandVariant presentation)
         :CommandButton(label,role==CommandIcon::play || role==CommandIcon::stop || role==CommandIcon::add),icon(role),variant(presentation){}
+    void setVariant(CommandVariant next){if(variant!=next){variant=next;repaint();}}
     juce::Rectangle<float> focusInkBounds()const noexcept{return controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);}
     // Shared surface for text and glyph-only command buttons. Content colour
     // and focus are resolved independently from hover and held-press feedback.

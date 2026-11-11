@@ -32,7 +32,10 @@ inline CommandInk commandInk(CommandVariant variant,CommandState state)
     const auto filled=emphasized || (destructive && down);
     const auto border=destructive?danger:down?aqua:over?hover:outline;
     const auto content=filled?background:destructive?danger:text;
-    return {(down?(destructive?danger:emphasized?aqua:separator):emphasized?(over?hover:aqua):background).withMultipliedAlpha(alpha),
+    const auto accent=destructive ? (over && !down ? danger.interpolatedWith(background,.14f) : danger)
+                                  : (over && !down ? hover : aqua);
+    const auto fill=filled?accent:down?separator:background;
+    return {fill.withMultipliedAlpha(alpha),
             border.withMultipliedAlpha(alpha),content.withMultipliedAlpha(alpha),
             content.withMultipliedAlpha(alpha),
             aqua,

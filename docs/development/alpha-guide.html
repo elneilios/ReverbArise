@@ -3,6 +3,17 @@
 <title>ReverbArise {{IDENTITY}} — offline user guide</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#11171c;color:#edf2f5;font:18px/1.65 system-ui,Segoe UI,sans-serif}main{max-width:1080px;margin:auto;padding:48px 28px 90px}h1{font-size:42px;line-height:1.15}h2{margin-top:64px;font-size:28px;line-height:1.3}h3{margin-top:30px}a{color:#8be5d6}code{overflow-wrap:anywhere;font-size:.85em}figure{margin:30px 0;background:#1c262e;border:1px solid #43515c;border-radius:10px;overflow:hidden}img{display:block;width:100%;height:auto}.brand{width:320px;max-width:100%;margin:0 0 28px}figcaption{padding:14px 20px;color:#c5d0d8;font-size:15px}.note{padding:18px 22px;border-left:4px solid #8be5d6;background:#1c262e}.identity{font-size:14px;color:#bdcbd5;overflow-wrap:anywhere}li{margin:8px 0}nav{padding:20px 0}nav a{display:inline-block;margin-right:20px}@media print{.brand{background:#11171c;print-color-adjust:exact;-webkit-print-color-adjust:exact}body{background:white;color:#111}main{max-width:none;padding:0}figure{break-inside:avoid}a,figcaption,.identity{color:#222}.note{background:#eee}h2{break-after:avoid}}
+.table-scroll{overflow-x:auto}table{width:100%;min-width:40rem;border-collapse:collapse}caption{text-align:left;font-weight:600;margin-bottom:8px}th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid #43515c}thead th{background:#1c262e}td.note-name{white-space:nowrap}@media print{.table-scroll{overflow:visible}table{min-width:0}thead th{background:#eee}tr{break-inside:avoid}}
+
+/* Static timing diagrams remain embedded in the offline release guide. */
+.timing{--timeline-surface:#1c262e;--timeline-ink:#edf2f5;--timeline-dry:#bdcbd5;--timeline-grid:#43515c;--timeline-wet:#00efff;--timeline-target:#ffc700}
+.timing h4{margin:18px 20px 12px;font-size:18px;line-height:1.4}
+.timing-scroll{overflow-x:auto;padding:0 20px}
+.timing-chart{display:block;width:100%;min-width:800px;height:auto;font:16px system-ui,Segoe UI,sans-serif}
+.timing-chart text{fill:var(--timeline-ink)}.timing-chart .tick{fill:var(--timeline-dry);font-size:14px}.timing-chart .label,.timing-chart .event{font-size:14px}
+.timing-events{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px 30px;margin:12px 20px 0;padding-left:26px;font-size:15px}
+.timing-events li{margin:0;padding-left:2px}.timing figcaption{padding-top:12px}
+@media print{.timing{--timeline-surface:#fff;--timeline-ink:#111;--timeline-dry:#444;--timeline-grid:#ccc;--timeline-wet:#006e75;--timeline-target:#765500;background:white;border-color:#ccc;print-color-adjust:exact;-webkit-print-color-adjust:exact}.timing-scroll{overflow:visible}.timing-chart{min-width:0}}
 </style></head><body><main>
 <img class="brand" src="{{LOGO}}" alt="ReverbArise" width="320">
 <p>PRIVATE WINDOWS ALPHA · VST3 · 64-BIT</p>
@@ -10,7 +21,7 @@
 <p>ReverbArise turns captured audio into reverse-reverb swells. Capture a phrase in <strong>Learn</strong>, generate swells, then shape, audition and play them in <strong>Perform</strong>. Stay in Perform for DAW playback and your DAW's normal render or bounce. <strong>Export is optional</strong>: use it when you want ReverbArise to create a separate WAV.</p>
 <p class="identity">Candidate: <strong>{{IDENTITY}}</strong> · Plugin numeric version: {{VERSION}}<br>Source: <code>{{SHA}}</code></p>
 <p class="note">This is an unsigned internal evaluation candidate. The package itself grants no permission to share it. Private external use requires the sender's explicit redistribution approval. Start with a low monitoring volume.</p>
-<nav><a href="#install">1 Install</a><a href="#capture">2 Capture</a><a href="#markers">3 Inspect</a><a href="#perform">4 Perform</a><a href="#export">5 Optional WAV export</a><a href="#save">6 Save</a><a href="#help">Help &amp; feedback</a></nav>
+<nav><a href="#install">1 Install</a><a href="#capture">2 Capture</a><a href="#markers">3 Inspect</a><a href="#perform">4 Perform</a><a href="#loop-signals">Loop signals &amp; examples</a><a href="#export">5 Optional WAV export</a><a href="#save">6 Save</a><a href="#help">Help &amp; feedback</a><a href="#host-setups">Host setup appendices</a></nav>
 <p>Use Tab to move keyboard focus between available controls. Aqua corner brackets show command-button focus during keyboard or accessibility navigation; press Return or Space to activate it. Mouse clicks keep the button keyboard-operable without leaving the brackets visible. Hovering and holding the mouse changes the button border or background. Red Reset buttons keep red mouse feedback, while their keyboard-focus brackets remain aqua. Dimmed buttons are unavailable.</p>
 <p>Hover a control to read its contextual help in softer aqua at the bottom of the plugin. Longer explanations wrap within their section. A shortened name or path keeps its complete description available to accessibility tools and through its existing help or copy action. Red messages beside a field explain a correction; they remain visible while you inspect help elsewhere. Longer Settings and Diagnostics content can be scrolled.</p>
 <p>Use Tab and Shift+Tab through dialogs and auxiliary windows. Rename starts in Name; group Delete starts on Cancel, and recovery starts on Continue. Escape or the title-bar close button cancels a dialog or closes Settings/Diagnostics. Focus returns to the available opening control. Windows pickers keep their normal navigation and cancellation. Closing Settings keeps accepted values; Storage work still follows its safe cancellation rules.</p>
@@ -19,50 +30,687 @@
 <h2 id="install">1. Install and route your audio</h2>
 <ol><li>Extract the complete ZIP into a new folder. Keep <strong>ReverbArise.vst3</strong> as a whole directory, including its <strong>Contents</strong> folder. Do not copy only the inner binary.</li>
 <li>Close your DAW. If ReverbArise is already installed, preserve the existing bundle somewhere safe for rollback. Do not overwrite an installation during testing. Ask the sender to help if you cannot isolate the test installation.</li>
-<li>For FL Studio, install the complete bundle into the supported system folder <code>%PROGRAMFILES%\Common Files\VST3</code>, normally <code>C:\Program Files\Common Files\VST3</code>. Windows may request administrator permission. FL Studio does not discover VST3 plugins from custom user search folders.</li>
-<li>In FL Studio, open Plugin Manager, enable <strong>Verify plugins</strong> and <strong>Rescan previously verified plugins</strong>, then run <strong>Find installed plugins</strong>. Confirm the resolved path is the system bundle you installed. Load ReverbArise once on a mixer insert receiving the audio you want to process. Keep the insert routed to your normal monitoring output. Avoid duplicate installed copies.</li>
+<li>Follow the <a href="#host-setups">setup for your host</a> to make the bundle available and load ReverbArise as an effect on the audio you want to process. Route its output to your normal monitoring path.</li>
 <li>Use a copy of a project for alpha testing. Choose a short phrase with clear attacks, set a normal musical tempo, and check that you can hear the dry source through the insert.</li></ol>
-<p>This build targets Windows x64 VST3. FL Studio is the primary test host; ask the sender for the exact host/build acceptance record for this candidate. A screenshot from a native fixture does not establish DAW compatibility. Clean-machine installation and other DAWs remain unverified unless separately recorded.</p>
+<p>This build targets Windows x64 VST3. Ask the sender for the exact host and build acceptance record for this candidate. Clean-machine installation and other hosts remain unverified unless separately recorded.</p>
 
 <h2 id="capture">2. Learn: capture a phrase</h2>
 <p>The left column has <strong>Capture &amp; Generate</strong> and <strong>Sound</strong> tabs. Capture &amp; Generate holds Recapture audio, Detect events, Generate on Stop and Event sensitivity. Sound holds the Default IR picker and import action; it stays available with detection off. These defaults do not change existing swells. Generate and its readiness guidance remain below either tab when automatic swells are enabled.</p>
-<ol><li>Select <strong>Learn</strong> in the header. An empty capture view is normal in a fresh project.</li><li>Start playback in your DAW and play the phrase through the plugin. <strong>Capture requires DAW playback</strong>; an internal Audition button does not start capture or move your DAW.</li><li>Stop the DAW after the phrase. Wait for the source and event analysis to settle before generating. Follow the inline status if capture is still processing or unavailable.</li></ol>
+<ol><li>Select <strong>Learn</strong> in the header. An empty capture view is normal in a fresh project.</li><li>With <strong>Loop Mode</strong> off, start playback in your DAW and play the phrase through the plugin. <strong>Song capture requires DAW playback.</strong> The Audition button does not start capture or move your DAW.</li><li>Stop the DAW after the phrase. Wait for the source and event analysis to settle before generating. Follow the inline status if capture is still processing or unavailable.</li></ol>
+<p>Song Mode needs bar and beat position, tempo and time signature from the host. If those are unavailable, Learn explains what it needs and hides the playhead. For a setup driven by clock pulses, use Loop Mode.</p>
+<figure class="timing" id="timing-song">
+<h4>Song Mode — learn the arrangement, then play in sync</h4>
+<div class="timing-scroll" role="region" aria-label="Song Mode — learn the arrangement, then play in sync" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-song-title timing-song-desc">
+<title id="timing-song-title">Song Mode — learn the arrangement, then play in sync</title>
+<desc id="timing-song-desc">Learn maps the audio you play through, including a whole song. The two lanes show separate Learn and Perform passes on the same song ruler. After generation, start transport early enough to hear each swell build into its saved arrival. Grey is source audio, aqua is prepared wet, and yellow marks an example arrival. All diagrams use schematic audio and steady 4/4 timing.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 1</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="331" y="31" text-anchor="middle" class="tick">Bar 5</text>
+<line x1="331" y1="36" x2="331" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="536" y="31" text-anchor="middle" class="tick">Bar 9</text>
+<line x1="536" y1="36" x2="536" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="741" y="31" text-anchor="middle" class="tick">Bar 13</text>
+<line x1="741" y1="36" x2="741" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="946" y="31" text-anchor="end" class="tick">End</text>
+<line x1="946" y1="36" x2="946" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="126" y1="62" x2="126" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="331" y1="62" x2="331" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="946" y1="62" x2="946" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Learn · source</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<rect x="126" y="67" width="820" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M126.0,76.2v3.6M128.7,74.6v6.8M131.4,74.2v7.5M134.1,75.2v5.5M136.8,76.1v3.8M139.5,76.2v3.6M142.2,74.8v6.4M144.9,73.4v9.1M147.6,73.4v9.2M150.3,74.8v6.5M153.0,76.1v3.7M155.7,75.8v4.3M158.4,75.6v4.8M161.1,74.6v6.9M163.8,74.8v6.4M166.5,76.1v3.9M169.2,74.4v7.2M171.9,74.0v8.1M174.6,74.9v6.2M177.3,76.1v3.8M179.9,76.1v3.7M182.6,74.9v6.2M185.3,73.5v9.0M188.0,73.4v9.2M190.7,74.8v6.5M193.4,76.0v3.9M196.1,75.6v4.9M198.8,76.0v4.0M201.5,74.9v6.2M204.2,75.0v6.0M206.9,75.9v4.2M209.6,74.2v7.6M212.3,73.7v8.6M215.0,74.6v6.7M217.7,75.9v4.2M220.4,76.1v3.7M223.1,75.0v6.0M225.8,73.7v8.7M228.5,73.5v9.0M231.2,74.8v6.4M233.9,75.9v4.2M236.6,75.3v5.5M239.3,76.0v3.9M242.0,75.3v5.5M244.7,75.2v5.5M247.4,75.8v4.4M250.1,74.1v7.8M252.8,73.5v9.0M255.5,74.4v7.2M258.2,75.8v4.5M260.9,76.2v3.7M263.6,75.2v5.6M266.3,73.9v8.3M269.0,73.6v8.7M271.7,74.9v6.2M274.4,75.7v4.5M277.1,75.0v6.1M279.8,75.6v4.7M282.4,75.6v4.7M285.1,75.5v5.1M287.8,75.7v4.6M290.5,74.0v8.0M293.2,73.3v9.3M295.9,74.2v7.6M298.6,75.7v4.7M301.3,76.2v3.7M304.0,75.4v5.2M306.7,74.1v7.7M309.4,73.8v8.4M312.1,75.0v5.9M314.8,75.6v4.8M317.5,74.7v6.7M320.2,75.2v5.5M322.9,76.0v4.0M325.6,75.7v4.7M328.3,75.6v4.7M331.0,62.1v31.9M333.7,59.6v36.8M336.4,65.6v24.8M339.1,73.5v9.0M341.8,75.6v4.7M344.5,74.4v7.3M347.2,70.5v15.0M349.9,69.9v16.1M352.6,73.5v9.0M355.3,74.3v7.4M358.0,72.2v11.6M360.7,73.5v9.1M363.4,76.0v4.1M366.1,75.6v4.9M368.8,75.2v5.6M371.5,72.7v10.6M374.2,71.7v12.6M376.9,73.0v10.0M379.6,75.3v5.3M382.3,75.8v4.4M384.9,75.9v4.2M387.6,74.4v7.2M390.3,73.9v8.2M393.0,75.2v5.7M395.7,75.1v5.8M398.4,73.9v8.3M401.1,74.3v7.3M403.8,75.7v4.5M406.5,76.0v4.0M409.2,75.6v4.9M411.9,73.9v8.2M414.6,73.1v9.9M417.3,73.8v8.3M420.0,75.6v4.9M422.7,75.7v4.6M425.4,76.1v3.8M428.1,75.1v5.8M430.8,74.5v6.9M433.5,75.5v5.0M436.2,75.1v5.8M438.9,73.9v8.3M441.6,74.2v7.6M444.3,75.5v5.0M447.0,76.1v3.7M449.7,75.6v4.7M452.4,74.2v7.7M455.1,73.3v9.4M457.8,74.0v8.1M460.5,75.6v4.7M463.2,75.5v4.9M465.9,75.7v4.5M468.6,75.5v5.0M471.3,74.9v6.3M474.0,75.7v4.7M476.7,75.0v6.1M479.4,73.7v8.6M482.1,73.9v8.1M484.8,75.2v5.5M487.4,76.2v3.6M490.1,75.7v4.5M492.8,74.3v7.3M495.5,73.4v9.1M498.2,74.0v7.9M500.9,75.7v4.5M503.6,75.3v5.4M506.3,75.4v5.2M509.0,75.9v4.2M511.7,75.2v5.7M514.4,75.8v4.3M517.1,74.9v6.3M519.8,73.6v8.9M522.5,73.7v8.6M525.2,75.1v5.9M527.9,76.1v3.7M530.6,75.9v4.3M533.3,74.6v6.9M536.0,59.9v36.2M538.7,64.7v26.5M541.4,74.4v7.1M544.1,71.3v13.3M546.8,71.6v12.8M549.5,75.9v4.3M552.2,73.8v8.4M554.9,75.5v4.9M557.6,72.5v11.0M560.3,69.6v16.9M563.0,70.3v15.3M565.7,73.5v8.9M568.4,76.0v3.9M571.1,75.9v4.2M573.8,73.9v8.2M576.5,72.5v11.0M579.2,73.3v9.3M581.9,75.9v4.2M584.6,74.4v7.2M587.3,74.2v7.6M589.9,75.6v4.8M592.6,75.6v4.7M595.3,76.1v3.9M598.0,74.5v7.0M600.7,73.0v10.0M603.4,73.1v9.8M606.1,74.6v6.7M608.8,76.1v3.7M611.5,76.2v3.7M614.2,75.1v5.9M616.9,74.0v8.0M619.6,74.4v7.2M622.3,76.1v3.8M625.0,74.6v6.8M627.7,74.3v7.4M630.4,75.3v5.3M633.1,76.0v4.0M635.8,76.2v3.6M638.5,74.8v6.5M641.2,73.4v9.2M643.9,73.4v9.3M646.6,74.7v6.6M649.3,76.2v3.6M652.0,75.9v4.2M654.7,75.5v5.0M657.4,74.4v7.1M660.1,74.7v6.6M662.8,76.1v3.7M665.5,74.5v7.1M668.2,74.0v7.9M670.9,75.0v6.0M673.6,76.2v3.7M676.3,76.2v3.7M679.0,74.9v6.3M681.7,73.5v9.0M684.4,73.4v9.2M687.1,74.7v6.5M689.8,76.1v3.8M692.4,75.6v4.7M695.1,75.9v4.3M697.8,74.8v6.4M700.5,74.9v6.2M703.2,76.0v4.0M705.9,74.3v7.4M708.6,73.8v8.4M711.3,74.7v6.6M714.0,76.0v4.1M716.7,76.1v3.7M719.4,75.0v6.0M722.1,73.6v8.8M724.8,73.5v9.1M727.5,74.8v6.5M730.2,76.0v4.1M732.9,75.4v5.3M735.6,76.2v3.7M738.3,75.2v5.7M741.0,69.5v16.9M743.7,74.3v7.4M746.4,66.0v24.0M749.1,64.5v27.0M751.8,69.3v17.4M754.5,74.8v6.5M757.2,76.0v3.9M759.9,73.1v9.7M762.6,69.9v16.2M765.3,69.9v16.3M768.0,73.2v9.6M770.7,75.4v5.2M773.4,74.0v7.9M776.1,75.4v5.2M778.8,75.1v5.9M781.5,74.9v6.2M784.2,75.5v5.0M786.9,73.1v9.8M789.6,72.3v11.3M792.3,73.6v8.8M794.9,75.5v5.0M797.6,76.2v3.6M800.3,75.2v5.7M803.0,73.7v8.7M805.7,73.4v9.3M808.4,74.8v6.4M811.1,75.6v4.8M813.8,74.6v6.7M816.5,75.3v5.4M819.2,75.8v4.3M821.9,75.5v4.9M824.6,75.6v4.7M827.3,73.9v8.2M830.0,73.1v9.7M832.7,74.0v8.0M835.4,75.6v4.9M838.1,76.1v3.8M840.8,75.6v4.8M843.5,74.3v7.4M846.2,73.9v8.2M848.9,75.1v5.8M851.6,75.5v5.0M854.3,74.5v7.1M857.0,75.0v6.0M859.7,76.2v3.6M862.4,75.8v4.4M865.1,75.6v4.8M867.8,74.0v8.0M870.5,73.2v9.6M873.2,74.0v8.0M875.9,75.6v4.9M878.6,76.0v4.1M881.3,75.9v4.2M884.0,74.6v6.7M886.7,74.2v7.6M889.4,75.2v5.5M892.1,75.3v5.3M894.8,74.2v7.6M897.4,74.6v6.7M900.1,75.9v4.3M902.8,76.0v4.1M905.5,75.6v4.8M908.2,74.0v7.9M910.9,73.2v9.6M913.6,73.9v8.1M916.3,75.6v4.9M919.0,75.8v4.4M921.7,76.2v3.6M924.4,75.0v6.0M927.1,74.5v7.1M929.8,75.4v5.2M932.5,75.2v5.7M935.2,74.0v8.0M937.9,74.3v7.4M940.6,75.6v4.9M943.3,76.1v3.8M946.0,75.6v4.7" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Perform · wet</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<path d="M246.4375,132 Q300.5575,131 331,113 L331,147 Q298.86625,133 246.4375,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M456.5625,132 Q507.40250000000003,131 536,113 L536,147 Q505.81375,133 456.5625,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M664.125,132 Q713.325,131 741,113 L741,147 Q711.7875,133 664.125,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="331" y1="113" x2="331" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M327,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="536" y1="113" x2="536" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M532,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="741" y1="113" x2="741" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M737,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="331" y1="90" x2="331" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="331" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<line x1="536" y1="90" x2="536" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="536" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<line x1="741" y1="90" x2="741" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="741" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<circle cx="126" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="126" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="331" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="331" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="946" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="946" y="53" text-anchor="middle" class="event">3</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Start DAW playback in Learn</li><li>Detected event and swell arrival</li><li>Stop to commit the captured range</li></ol>
+<figcaption>Learn maps the audio you play through, including a whole song. The two lanes show separate Learn and Perform passes on the same song ruler. After generation, start transport early enough to hear each swell build into its saved arrival. Grey is source audio, aqua is prepared wet, and yellow marks an example arrival. All diagrams use schematic audio and steady 4/4 timing.</figcaption>
+</figure>
 <figure><img class="screenshot" src="{{alpha-empty-learn}}" alt="Production Learn workspace before audio is captured" width="1400" height="1000"><figcaption>Empty Learn. All screenshots in this guide use the ordinary production editor and deterministic native test audio at this package's source revision.</figcaption></figure>
 <p><strong>Recapture audio</strong> replaces audio on a later pass when enabled. Leave it off to retain captured audio. Protect your original projects and captured/cache assets; do not delete them to resolve a display or scan problem.</p>
 
+<h3>Capture one Loop</h3>
+<p>Turn on <strong>Loop Mode</strong> in Source Capture, route stereo audio through ReverbArise, and supply a steady timing source. Use <strong>Duration</strong> for a set number of <strong>Bars</strong> or <strong>Beats</strong>. Click <strong>Arm</strong> before the downbeat you want to record. With <strong>End on Signal</strong>, click Arm to request a start and click it again during recording to finish at the next downbeat. Choose <strong>End on repeat</strong> to record one complete pass. If you arm partway through a pass, recording waits for the next repeat to start. Click Arm again to cancel. See the <a href="#host-setups">host appendices</a> for repeat setup.</p>
+<figure class="timing" id="timing-duration">
+<h4>Duration — record a fixed length</h4>
+<div class="timing-scroll" role="region" aria-label="Duration — record a fixed length" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-duration-title timing-duration-desc">
+<title id="timing-duration-title">Duration — record a fixed length</title>
+<desc id="timing-duration-desc">FL Studio example. Arm partway through bar 2, record from bar 3, and finish at bar 5 with two complete bars. Timing keeps running. Bars and Beats use the same duration method. With Rack Clock, Duration starts at the first pulse of a new run or the next downbeat of a running clock.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 2</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="360.2857142857143" y="31" text-anchor="middle" class="tick">Bar 3</text>
+<line x1="360.2857142857143" y1="36" x2="360.2857142857143" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="594.5714285714286" y="31" text-anchor="middle" class="tick">Bar 4</text>
+<line x1="594.5714285714286" y1="36" x2="594.5714285714286" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="828.8571428571429" y="31" text-anchor="middle" class="tick">Bar 5</text>
+<line x1="828.8571428571429" y1="36" x2="828.8571428571429" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="184.57142857142856" y1="62" x2="184.57142857142856" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="360.2857142857143" y1="62" x2="360.2857142857143" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="828.8571428571429" y1="62" x2="828.8571428571429" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Incoming audio</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<path d="M126.0,76.2v3.6M128.7,74.6v6.8M131.4,74.2v7.5M134.1,75.2v5.5M136.8,76.1v3.8M139.5,76.2v3.6M142.2,74.8v6.4M144.9,73.4v9.1M147.6,73.4v9.2M150.3,74.8v6.5M153.0,76.1v3.7M155.7,75.8v4.3M158.4,75.6v4.8M161.1,74.6v6.9M163.8,74.8v6.4M166.5,76.1v3.9M169.2,74.4v7.2M171.9,74.0v8.1M174.6,74.9v6.2M177.3,76.1v3.8M179.9,76.1v3.7M182.6,74.9v6.2M185.3,73.5v9.0M188.0,73.4v9.2M190.7,74.8v6.5M193.4,76.0v3.9M196.1,75.6v4.9M198.8,76.0v4.0M201.5,74.9v6.2M204.2,75.0v6.0M206.9,75.9v4.2M209.6,74.2v7.6M212.3,73.7v8.6M215.0,74.6v6.7M217.7,75.9v4.2M220.4,76.1v3.7M223.1,75.0v6.0M225.8,73.7v8.7M228.5,73.5v9.0M231.2,74.8v6.4M233.9,75.9v4.2M236.6,75.3v5.5M239.3,76.0v3.9M242.0,75.3v5.5M244.7,75.2v5.5M247.4,75.8v4.4M250.1,74.1v7.8M252.8,73.5v9.0M255.5,74.4v7.2M258.2,75.8v4.5M260.9,76.2v3.7M263.6,75.2v5.6M266.3,73.9v8.3M269.0,73.6v8.7M271.7,74.9v6.2M274.4,75.7v4.5M277.1,75.0v6.1M279.8,75.6v4.7M282.4,75.6v4.7M285.1,75.5v5.1M287.8,75.7v4.6M290.5,74.0v8.0M293.2,73.3v9.3M295.9,74.2v7.6M298.6,75.7v4.7M301.3,76.2v3.7M304.0,75.4v5.2M306.7,74.1v7.7M309.4,73.8v8.4M312.1,75.0v5.9M314.8,75.6v4.8M317.5,74.7v6.7M320.2,75.2v5.5M322.9,76.0v4.0M325.6,75.7v4.7M328.3,75.6v4.7M331.0,74.0v8.1M333.7,73.2v9.5M336.4,74.1v7.9M339.1,75.6v4.8M341.8,76.1v3.9M344.5,75.7v4.6M347.2,74.4v7.1M349.9,74.0v7.9M352.6,75.2v5.7M355.3,75.4v5.2M358.0,74.4v7.2M360.7,67.9v20.1M363.4,75.5v4.9M366.1,74.4v7.1M368.8,73.4v9.1M371.5,67.0v21.9M374.2,65.0v26.1M376.9,68.6v18.8M379.6,74.2v7.5M382.3,75.4v5.3M384.9,75.6v4.8M387.6,72.7v10.6M390.3,71.9v12.2M393.0,74.4v7.3M395.7,74.3v7.4M398.4,72.4v11.3M401.1,73.3v9.5M403.8,75.5v5.0M406.5,75.9v4.2M409.2,75.3v5.4M411.9,73.1v9.9M414.6,72.0v11.9M417.3,73.2v9.7M420.0,75.4v5.2M422.7,75.6v4.8M425.4,76.1v3.9M428.1,74.9v6.2M430.8,74.3v7.5M433.5,75.4v5.2M436.2,74.9v6.1M438.9,73.6v8.8M441.6,74.0v8.0M444.3,75.4v5.2M447.0,76.1v3.7M449.7,75.6v4.8M452.4,74.0v7.9M455.1,73.1v9.7M457.8,73.9v8.3M460.5,75.6v4.8M463.2,75.5v5.0M465.9,75.7v4.5M468.6,75.5v5.0M471.3,74.8v6.3M474.0,75.7v4.7M476.7,74.9v6.1M479.4,61.6v32.9M482.1,64.3v27.4M484.8,71.7v12.6M487.4,76.1v3.8M490.1,74.4v7.2M492.8,69.6v16.8M495.5,67.2v21.5M498.2,69.8v16.4M500.9,74.9v6.2M503.6,74.0v8.0M506.3,74.3v7.4M509.0,75.6v4.9M511.7,74.1v7.8M514.4,75.5v5.0M517.1,73.8v8.4M519.8,71.7v12.6M522.5,72.2v11.6M525.2,74.4v7.1M527.9,76.1v3.8M530.6,75.7v4.6M533.3,74.0v8.1M536.0,72.8v10.4M538.7,73.6v8.9M541.4,75.8v4.5M544.1,74.9v6.3M546.8,74.8v6.4M549.5,76.1v3.8M552.2,75.3v5.3M554.9,75.9v4.1M557.6,74.6v6.7M560.3,73.2v9.6M563.0,73.3v9.4M565.7,74.8v6.4M568.4,76.1v3.8M571.1,76.0v3.9M573.8,74.8v6.5M576.5,73.8v8.5M579.2,74.2v7.5M581.9,76.0v4.1M584.6,74.8v6.3M587.3,74.6v6.7M589.9,75.7v4.6M592.6,75.7v4.5M595.3,75.5v4.9M598.0,68.4v19.3M600.7,62.3v31.3M603.4,63.8v28.3M606.1,70.5v15.0M608.8,76.0v4.0M611.5,76.0v3.9M614.2,73.0v10.1M616.9,70.4v15.2M619.6,71.7v12.5M622.3,76.0v4.0M625.0,72.8v10.5M627.7,72.3v11.3M630.4,74.5v6.9M633.1,75.8v4.3M635.8,76.2v3.6M638.5,73.9v8.2M641.2,71.8v12.3M643.9,72.0v12.0M646.6,74.1v7.8M649.3,76.2v3.6M652.0,75.8v4.4M654.7,75.3v5.4M657.4,74.0v8.0M660.1,74.3v7.3M662.8,76.1v3.8M665.5,74.2v7.7M668.2,73.7v8.6M670.9,74.9v6.3M673.6,76.2v3.7M676.3,76.2v3.7M679.0,74.7v6.5M681.7,73.3v9.5M684.4,73.2v9.6M687.1,74.6v6.7M689.8,76.1v3.8M692.4,75.6v4.8M695.1,75.8v4.3M697.8,74.7v6.5M700.5,74.9v6.2M703.2,76.0v4.0M705.9,74.2v7.5M708.6,73.7v8.5M711.3,74.7v6.6M714.0,76.0v4.1M716.7,76.1v3.7M719.4,75.0v6.1M722.1,73.6v8.8M724.8,73.4v9.1M727.5,74.8v6.5M730.2,76.0v4.1M732.9,75.4v5.3M735.6,76.1v3.7M738.3,75.1v5.7M741.0,75.1v5.7M743.7,75.9v4.3M746.4,74.1v7.7M749.1,73.6v8.9M751.8,74.5v7.1M754.5,75.8v4.4M757.2,76.1v3.7M759.9,75.1v5.7M762.6,73.8v8.4M765.3,73.6v8.9M768.0,74.8v6.3M770.7,73.8v8.3M773.4,69.9v16.2M776.1,74.0v8.1M778.8,73.1v9.8M781.5,72.8v10.4M784.2,74.5v7.0M786.9,68.9v18.3M789.6,67.4v21.2M792.3,70.6v14.8M794.9,74.8v6.4M797.6,76.2v3.6M800.3,74.3v7.5M803.0,71.6v12.7M805.7,71.3v13.3M808.4,73.9v8.2M811.1,75.3v5.5M813.8,73.8v8.3M816.5,74.9v6.2M819.2,75.7v4.6M821.9,75.3v5.4M824.6,75.5v5.1M827.3,73.2v9.5M830.0,72.4v11.3M832.7,73.5v9.0M835.4,75.4v5.1M838.1,76.1v3.8M840.8,75.5v5.0M843.5,74.0v7.9M846.2,73.6v8.7M848.9,75.0v6.1M851.6,75.4v5.2M854.3,74.3v7.3M857.0,74.9v6.2M859.7,76.2v3.6M862.4,75.8v4.5M865.1,75.6v4.8M867.8,73.9v8.2M870.5,73.1v9.8M873.2,73.9v8.2M875.9,75.5v4.9M878.6,76.0v4.1M881.3,75.9v4.2M884.0,74.6v6.8M886.7,74.2v7.7M889.4,75.2v5.5M892.1,75.3v5.4M894.8,74.2v7.6M897.4,74.6v6.8M900.1,75.9v4.3M902.8,76.0v4.1M905.5,75.6v4.8M908.2,74.0v8.0M910.9,73.2v9.6M913.6,73.9v8.2M916.3,75.6v4.9M919.0,75.8v4.4M921.7,76.2v3.6M924.4,75.0v6.0M927.1,74.5v7.1M929.8,75.4v5.2M932.5,75.2v5.7M935.2,74.0v8.0M937.9,74.3v7.4M940.6,75.6v4.9M943.3,76.1v3.8M946.0,75.6v4.7" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Capture</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<rect x="184.57142857142856" y="121" width="175.71428571428572" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<text x="272.42857142857144" y="136" text-anchor="middle" class="label">Armed</text>
+<rect x="360.2857142857143" y="121" width="468.5714285714286" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<text x="594.5714285714286" y="136" text-anchor="middle" class="label">Recording · 2 bars</text>
+<circle cx="184.57142857142856" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="184.57142857142856" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="360.2857142857143" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="360.2857142857143" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="828.8571428571429" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="828.8571428571429" y="53" text-anchor="middle" class="event">3</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Arm during bar 2</li><li>Recording starts at bar 3</li><li>Length reached at bar 5</li></ol>
+<figcaption>FL Studio example. Arm partway through bar 2, record from bar 3, and finish at bar 5 with two complete bars. Timing keeps running. Bars and Beats use the same duration method. With Rack Clock, Duration starts at the first pulse of a new run or the next downbeat of a running clock.</figcaption>
+</figure>
+<figure class="timing" id="timing-signal">
+<h4>End on Signal — request a finish at the next downbeat</h4>
+<div class="timing-scroll" role="region" aria-label="End on Signal — request a finish at the next downbeat" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-signal-title timing-signal-desc">
+<title id="timing-signal-title">End on Signal — request a finish at the next downbeat</title>
+<desc id="timing-signal-desc">FL Studio Playlist example. Request Stop during bar 4 and keep playback running through bar 5 beat 1. The take contains bars 3 and 4. Use the Arm button again or Learn Stop (25) to request the finish. Rack End on Signal starts on the next Clock beat and uses its capture origin for the closing bar. A Stop exactly on a downbeat includes the bar starting there and closes at the following downbeat.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 2</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="360.2857142857143" y="31" text-anchor="middle" class="tick">Bar 3</text>
+<line x1="360.2857142857143" y1="36" x2="360.2857142857143" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="594.5714285714286" y="31" text-anchor="middle" class="tick">Bar 4</text>
+<line x1="594.5714285714286" y1="36" x2="594.5714285714286" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="828.8571428571429" y="31" text-anchor="middle" class="tick">Bar 5</text>
+<line x1="828.8571428571429" y1="36" x2="828.8571428571429" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="184.57142857142856" y1="62" x2="184.57142857142856" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="360.2857142857143" y1="62" x2="360.2857142857143" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="711.7142857142857" y1="62" x2="711.7142857142857" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="828.8571428571429" y1="62" x2="828.8571428571429" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Incoming audio</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<path d="M126.0,76.2v3.6M128.7,74.6v6.8M131.4,74.2v7.5M134.1,75.2v5.5M136.8,76.1v3.8M139.5,76.2v3.6M142.2,74.8v6.4M144.9,73.4v9.1M147.6,73.4v9.2M150.3,74.8v6.5M153.0,76.1v3.7M155.7,75.8v4.3M158.4,75.6v4.8M161.1,74.6v6.9M163.8,74.8v6.4M166.5,76.1v3.9M169.2,74.4v7.2M171.9,74.0v8.1M174.6,74.9v6.2M177.3,76.1v3.8M179.9,76.1v3.7M182.6,74.9v6.2M185.3,73.5v9.0M188.0,73.4v9.2M190.7,74.8v6.5M193.4,76.0v3.9M196.1,75.6v4.9M198.8,76.0v4.0M201.5,74.9v6.2M204.2,75.0v6.0M206.9,75.9v4.2M209.6,74.2v7.6M212.3,73.7v8.6M215.0,74.6v6.7M217.7,75.9v4.2M220.4,76.1v3.7M223.1,75.0v6.0M225.8,73.7v8.7M228.5,73.5v9.0M231.2,74.8v6.4M233.9,75.9v4.2M236.6,75.3v5.5M239.3,76.0v3.9M242.0,75.3v5.5M244.7,75.2v5.5M247.4,75.8v4.4M250.1,74.1v7.8M252.8,73.5v9.0M255.5,74.4v7.2M258.2,75.8v4.5M260.9,76.2v3.7M263.6,75.2v5.6M266.3,73.9v8.3M269.0,73.6v8.7M271.7,74.9v6.2M274.4,75.7v4.5M277.1,75.0v6.1M279.8,75.6v4.7M282.4,75.6v4.7M285.1,75.5v5.1M287.8,75.7v4.6M290.5,74.0v8.0M293.2,73.3v9.3M295.9,74.2v7.6M298.6,75.7v4.7M301.3,76.2v3.7M304.0,75.4v5.2M306.7,74.1v7.7M309.4,73.8v8.4M312.1,75.0v5.9M314.8,75.6v4.8M317.5,74.7v6.7M320.2,75.2v5.5M322.9,76.0v4.0M325.6,75.7v4.7M328.3,75.6v4.7M331.0,74.0v8.1M333.7,73.2v9.5M336.4,74.1v7.9M339.1,75.6v4.8M341.8,76.1v3.9M344.5,75.7v4.6M347.2,74.4v7.1M349.9,74.0v7.9M352.6,75.2v5.7M355.3,75.4v5.2M358.0,74.4v7.2M360.7,67.9v20.1M363.4,75.5v4.9M366.1,74.4v7.1M368.8,73.4v9.1M371.5,67.0v21.9M374.2,65.0v26.1M376.9,68.6v18.8M379.6,74.2v7.5M382.3,75.4v5.3M384.9,75.6v4.8M387.6,72.7v10.6M390.3,71.9v12.2M393.0,74.4v7.3M395.7,74.3v7.4M398.4,72.4v11.3M401.1,73.3v9.5M403.8,75.5v5.0M406.5,75.9v4.2M409.2,75.3v5.4M411.9,73.1v9.9M414.6,72.0v11.9M417.3,73.2v9.7M420.0,75.4v5.2M422.7,75.6v4.8M425.4,76.1v3.9M428.1,74.9v6.2M430.8,74.3v7.5M433.5,75.4v5.2M436.2,74.9v6.1M438.9,73.6v8.8M441.6,74.0v8.0M444.3,75.4v5.2M447.0,76.1v3.7M449.7,75.6v4.8M452.4,74.0v7.9M455.1,73.1v9.7M457.8,73.9v8.3M460.5,75.6v4.8M463.2,75.5v5.0M465.9,75.7v4.5M468.6,75.5v5.0M471.3,74.8v6.3M474.0,75.7v4.7M476.7,74.9v6.1M479.4,61.6v32.9M482.1,64.3v27.4M484.8,71.7v12.6M487.4,76.1v3.8M490.1,74.4v7.2M492.8,69.6v16.8M495.5,67.2v21.5M498.2,69.8v16.4M500.9,74.9v6.2M503.6,74.0v8.0M506.3,74.3v7.4M509.0,75.6v4.9M511.7,74.1v7.8M514.4,75.5v5.0M517.1,73.8v8.4M519.8,71.7v12.6M522.5,72.2v11.6M525.2,74.4v7.1M527.9,76.1v3.8M530.6,75.7v4.6M533.3,74.0v8.1M536.0,72.8v10.4M538.7,73.6v8.9M541.4,75.8v4.5M544.1,74.9v6.3M546.8,74.8v6.4M549.5,76.1v3.8M552.2,75.3v5.3M554.9,75.9v4.1M557.6,74.6v6.7M560.3,73.2v9.6M563.0,73.3v9.4M565.7,74.8v6.4M568.4,76.1v3.8M571.1,76.0v3.9M573.8,74.8v6.5M576.5,73.8v8.5M579.2,74.2v7.5M581.9,76.0v4.1M584.6,74.8v6.3M587.3,74.6v6.7M589.9,75.7v4.6M592.6,75.7v4.5M595.3,75.5v4.9M598.0,68.4v19.3M600.7,62.3v31.3M603.4,63.8v28.3M606.1,70.5v15.0M608.8,76.0v4.0M611.5,76.0v3.9M614.2,73.0v10.1M616.9,70.4v15.2M619.6,71.7v12.5M622.3,76.0v4.0M625.0,72.8v10.5M627.7,72.3v11.3M630.4,74.5v6.9M633.1,75.8v4.3M635.8,76.2v3.6M638.5,73.9v8.2M641.2,71.8v12.3M643.9,72.0v12.0M646.6,74.1v7.8M649.3,76.2v3.6M652.0,75.8v4.4M654.7,75.3v5.4M657.4,74.0v8.0M660.1,74.3v7.3M662.8,76.1v3.8M665.5,74.2v7.7M668.2,73.7v8.6M670.9,74.9v6.3M673.6,76.2v3.7M676.3,76.2v3.7M679.0,74.7v6.5M681.7,73.3v9.5M684.4,73.2v9.6M687.1,74.6v6.7M689.8,76.1v3.8M692.4,75.6v4.8M695.1,75.8v4.3M697.8,74.7v6.5M700.5,74.9v6.2M703.2,76.0v4.0M705.9,74.2v7.5M708.6,73.7v8.5M711.3,74.7v6.6M714.0,76.0v4.1M716.7,76.1v3.7M719.4,75.0v6.1M722.1,73.6v8.8M724.8,73.4v9.1M727.5,74.8v6.5M730.2,76.0v4.1M732.9,75.4v5.3M735.6,76.1v3.7M738.3,75.1v5.7M741.0,75.1v5.7M743.7,75.9v4.3M746.4,74.1v7.7M749.1,73.6v8.9M751.8,74.5v7.1M754.5,75.8v4.4M757.2,76.1v3.7M759.9,75.1v5.7M762.6,73.8v8.4M765.3,73.6v8.9M768.0,74.8v6.3M770.7,73.8v8.3M773.4,69.9v16.2M776.1,74.0v8.1M778.8,73.1v9.8M781.5,72.8v10.4M784.2,74.5v7.0M786.9,68.9v18.3M789.6,67.4v21.2M792.3,70.6v14.8M794.9,74.8v6.4M797.6,76.2v3.6M800.3,74.3v7.5M803.0,71.6v12.7M805.7,71.3v13.3M808.4,73.9v8.2M811.1,75.3v5.5M813.8,73.8v8.3M816.5,74.9v6.2M819.2,75.7v4.6M821.9,75.3v5.4M824.6,75.5v5.1M827.3,73.2v9.5M830.0,72.4v11.3M832.7,73.5v9.0M835.4,75.4v5.1M838.1,76.1v3.8M840.8,75.5v5.0M843.5,74.0v7.9M846.2,73.6v8.7M848.9,75.0v6.1M851.6,75.4v5.2M854.3,74.3v7.3M857.0,74.9v6.2M859.7,76.2v3.6M862.4,75.8v4.5M865.1,75.6v4.8M867.8,73.9v8.2M870.5,73.1v9.8M873.2,73.9v8.2M875.9,75.5v4.9M878.6,76.0v4.1M881.3,75.9v4.2M884.0,74.6v6.8M886.7,74.2v7.7M889.4,75.2v5.5M892.1,75.3v5.4M894.8,74.2v7.6M897.4,74.6v6.8M900.1,75.9v4.3M902.8,76.0v4.1M905.5,75.6v4.8M908.2,74.0v8.0M910.9,73.2v9.6M913.6,73.9v8.2M916.3,75.6v4.9M919.0,75.8v4.4M921.7,76.2v3.6M924.4,75.0v6.0M927.1,74.5v7.1M929.8,75.4v5.2M932.5,75.2v5.7M935.2,74.0v8.0M937.9,74.3v7.4M940.6,75.6v4.9M943.3,76.1v3.8M946.0,75.6v4.7" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Capture</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<rect x="184.57142857142856" y="121" width="175.71428571428572" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<text x="272.42857142857144" y="136" text-anchor="middle" class="label">Armed</text>
+<rect x="360.2857142857143" y="121" width="351.4285714285714" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<text x="536" y="136" text-anchor="middle" class="label">Recording</text>
+<rect x="711.7142857142857" y="121" width="117.14285714285722" height="22" fill="var(--timeline-ink)" opacity="0.17">
+</rect>
+<text x="770.2857142857142" y="136" text-anchor="middle" class="label">Finishing</text>
+<circle cx="184.57142857142856" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="184.57142857142856" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="360.2857142857143" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="360.2857142857143" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="711.7142857142857" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="711.7142857142857" y="53" text-anchor="middle" class="event">3</text>
+<circle cx="828.8571428571429" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="828.8571428571429" y="53" text-anchor="middle" class="event">4</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Arm</li><li>Recording starts</li><li>Request Stop at bar 4 beat 3</li><li>Recording ends at the next downbeat</li></ol>
+<figcaption>FL Studio Playlist example. Request Stop during bar 4 and keep playback running through bar 5 beat 1. The take contains bars 3 and 4. Use the Arm button again or Learn Stop (25) to request the finish. Rack End on Signal starts on the next Clock beat and uses its capture origin for the closing bar. A Stop exactly on a downbeat includes the bar starting there and closes at the following downbeat.</figcaption>
+</figure>
+<figure class="timing" id="timing-repeat">
+<h4>End on repeat — record one complete pass</h4>
+<div class="timing-scroll" role="region" aria-label="End on repeat — record one complete pass" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-repeat-title timing-repeat-desc">
+<title id="timing-repeat-title">End on repeat — record one complete pass</title>
+<desc id="timing-repeat-desc">Arm partway through the prior pass. Recording waits for the next repeat start and ends at the following boundary. FL Studio supplies its declared Pattern or Playlist repeat. Rack uses Phrase (12) aligned with Clock (23). Keep audio and timing running until the take is accepted.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Prior pass</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="360.2857142857143" y="31" text-anchor="middle" class="tick">Repeat start</text>
+<line x1="360.2857142857143" y1="36" x2="360.2857142857143" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="828.8571428571429" y="31" text-anchor="middle" class="tick">Next repeat</text>
+<line x1="828.8571428571429" y1="36" x2="828.8571428571429" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="184.57142857142856" y1="62" x2="184.57142857142856" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="360.2857142857143" y1="62" x2="360.2857142857143" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="828.8571428571429" y1="62" x2="828.8571428571429" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Incoming audio</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<path d="M126.0,76.2v3.6M128.7,67.0v22.1M131.4,66.2v23.6M134.1,71.8v12.4M136.8,75.7v4.6M139.5,76.1v3.8M142.2,71.3v13.3M144.9,67.4v21.1M147.6,68.1v19.9M150.3,72.3v11.3M153.0,76.1v3.9M155.7,75.3v5.3M158.4,74.9v6.1M161.1,72.9v10.1M163.8,73.5v8.9M166.5,75.9v4.1M169.2,73.2v9.7M171.9,72.6v10.8M174.6,74.3v7.5M177.3,76.0v3.9M179.9,76.1v3.8M182.6,74.4v7.2M185.3,72.7v10.6M188.0,72.7v10.7M190.7,74.4v7.2M193.4,76.0v4.0M196.1,75.4v5.1M198.8,75.9v4.1M201.5,74.7v6.5M204.2,74.9v6.3M206.9,75.9v4.2M209.6,74.0v7.9M212.3,73.5v9.0M215.0,74.5v7.0M217.7,75.9v4.2M220.4,76.1v3.8M223.1,75.0v6.1M225.8,73.6v8.9M228.5,73.4v9.2M231.2,74.8v6.5M233.9,75.9v4.2M236.6,75.2v5.5M239.3,76.0v4.0M242.0,75.3v5.5M244.7,70.5v15.1M247.4,74.0v7.9M250.1,66.0v24.0M252.8,64.4v27.2M255.5,69.1v17.9M258.2,74.6v6.8M260.9,76.1v3.9M263.6,73.2v9.7M266.3,69.8v16.5M269.0,69.7v16.7M271.7,73.1v9.7M274.4,75.2v5.6M277.1,73.7v8.7M279.8,75.1v5.8M282.4,75.2v5.7M285.1,74.9v6.2M287.8,75.4v5.2M290.5,72.8v10.4M293.2,71.9v12.1M295.9,73.4v9.3M298.6,75.4v5.1M301.3,76.2v3.7M304.0,75.2v5.6M306.7,73.6v8.8M309.4,73.3v9.4M312.1,74.8v6.4M314.8,75.5v5.1M317.5,74.4v7.1M320.2,75.1v5.8M322.9,76.0v4.1M325.6,75.6v4.8M328.3,75.6v4.9M331.0,73.8v8.4M333.7,73.0v9.9M336.4,73.9v8.1M339.1,75.6v4.9M341.8,76.0v3.9M344.5,75.7v4.7M347.2,74.4v7.3M349.9,74.0v8.1M352.6,75.1v5.7M355.3,75.4v5.2M358.0,74.4v7.3M360.7,67.9v20.1M363.4,75.5v4.9M366.1,74.4v7.1M368.8,73.4v9.1M371.5,67.0v21.9M374.2,65.0v26.1M376.9,68.6v18.8M379.6,74.2v7.5M382.3,75.4v5.3M384.9,75.6v4.8M387.6,72.7v10.6M390.3,71.9v12.2M393.0,74.4v7.3M395.7,74.3v7.4M398.4,72.4v11.3M401.1,73.3v9.5M403.8,75.5v5.0M406.5,75.9v4.2M409.2,75.3v5.4M411.9,73.1v9.9M414.6,72.0v11.9M417.3,73.2v9.7M420.0,75.4v5.2M422.7,75.6v4.8M425.4,76.1v3.9M428.1,74.9v6.2M430.8,74.3v7.5M433.5,75.4v5.2M436.2,74.9v6.1M438.9,73.6v8.8M441.6,74.0v8.0M444.3,75.4v5.2M447.0,76.1v3.7M449.7,75.6v4.8M452.4,74.0v7.9M455.1,73.1v9.7M457.8,73.9v8.3M460.5,75.6v4.8M463.2,75.5v5.0M465.9,75.7v4.5M468.6,75.5v5.0M471.3,74.8v6.3M474.0,75.7v4.7M476.7,74.9v6.1M479.4,61.6v32.9M482.1,64.3v27.4M484.8,71.7v12.6M487.4,76.1v3.8M490.1,74.4v7.2M492.8,69.6v16.8M495.5,67.2v21.5M498.2,69.8v16.4M500.9,74.9v6.2M503.6,74.0v8.0M506.3,74.3v7.4M509.0,75.6v4.9M511.7,74.1v7.8M514.4,75.5v5.0M517.1,73.8v8.4M519.8,71.7v12.6M522.5,72.2v11.6M525.2,74.4v7.1M527.9,76.1v3.8M530.6,75.7v4.6M533.3,74.0v8.1M536.0,72.8v10.4M538.7,73.6v8.9M541.4,75.8v4.5M544.1,74.9v6.3M546.8,74.8v6.4M549.5,76.1v3.8M552.2,75.3v5.3M554.9,75.9v4.1M557.6,74.6v6.7M560.3,73.2v9.6M563.0,73.3v9.4M565.7,74.8v6.4M568.4,76.1v3.8M571.1,76.0v3.9M573.8,74.8v6.5M576.5,73.8v8.5M579.2,74.2v7.5M581.9,76.0v4.1M584.6,74.8v6.3M587.3,74.6v6.7M589.9,75.7v4.6M592.6,75.7v4.5M595.3,75.5v4.9M598.0,68.4v19.3M600.7,62.3v31.3M603.4,63.8v28.3M606.1,70.5v15.0M608.8,76.0v4.0M611.5,76.0v3.9M614.2,73.0v10.1M616.9,70.4v15.2M619.6,71.7v12.5M622.3,76.0v4.0M625.0,72.8v10.5M627.7,72.3v11.3M630.4,74.5v6.9M633.1,75.8v4.3M635.8,76.2v3.6M638.5,73.9v8.2M641.2,71.8v12.3M643.9,72.0v12.0M646.6,74.1v7.8M649.3,76.2v3.6M652.0,75.8v4.4M654.7,75.3v5.4M657.4,74.0v8.0M660.1,74.3v7.3M662.8,76.1v3.8M665.5,74.2v7.7M668.2,73.7v8.6M670.9,74.9v6.3M673.6,76.2v3.7M676.3,76.2v3.7M679.0,74.7v6.5M681.7,73.3v9.5M684.4,73.2v9.6M687.1,74.6v6.7M689.8,76.1v3.8M692.4,75.6v4.8M695.1,75.8v4.3M697.8,74.7v6.5M700.5,74.9v6.2M703.2,76.0v4.0M705.9,74.2v7.5M708.6,73.7v8.5M711.3,74.7v6.6M714.0,74.8v6.4M716.7,75.9v4.3M719.4,70.5v15.0M722.1,65.3v25.5M724.8,65.7v24.7M727.5,71.2v13.6M730.2,75.5v5.1M732.9,73.7v8.5M735.6,76.1v3.9M738.3,73.6v8.8M741.0,73.8v8.5M743.7,75.5v5.1M746.4,72.1v11.9M749.1,71.2v13.6M751.8,73.1v9.8M754.5,75.5v5.0M757.2,76.1v3.8M759.9,74.6v6.8M762.6,72.7v10.6M765.3,72.5v11.0M768.0,74.4v7.3M770.7,75.7v4.6M773.4,74.8v6.5M776.1,75.6v4.7M778.8,75.4v5.3M781.5,75.2v5.6M784.2,75.7v4.6M786.9,73.7v8.5M789.6,73.0v10.0M792.3,74.0v7.9M794.9,75.6v4.8M797.6,76.2v3.6M800.3,75.3v5.4M803.0,73.9v8.2M805.7,73.6v8.8M808.4,74.9v6.2M811.1,75.6v4.7M813.8,74.7v6.6M816.5,75.3v5.3M819.2,75.9v4.3M821.9,75.6v4.9M824.6,75.7v4.7M827.3,73.9v8.1M830.0,58.5v39.0M832.7,64.7v26.5M835.4,73.2v9.6M838.1,75.8v4.5M840.8,73.8v8.4M843.5,69.4v17.2M846.2,68.7v18.6M848.9,72.8v10.3M851.6,74.2v7.6M854.3,71.8v12.4M857.0,73.3v9.4M859.7,76.2v3.7M862.4,75.3v5.3M865.1,75.1v5.9M867.8,72.2v11.7M870.5,71.0v13.9M873.2,72.6v10.9M875.9,75.2v5.6M878.6,75.9v4.3M881.3,75.8v4.5M884.0,74.1v7.9M886.7,73.5v9.0M889.4,75.0v6.1M892.1,75.1v5.8M894.8,73.8v8.5M897.4,74.3v7.4M900.1,75.8v4.4M902.8,75.9v4.2M905.5,75.5v4.9M908.2,73.8v8.4M910.9,72.9v10.2M913.6,73.7v8.6M916.3,75.5v5.0M919.0,75.8v4.4M921.7,76.2v3.6M924.4,74.9v6.1M927.1,74.4v7.2M929.8,75.4v5.2M932.5,75.1v5.7M935.2,73.9v8.2M937.9,74.3v7.5M940.6,75.6v4.9M943.3,76.1v3.8M946.0,75.6v4.7" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Capture</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<rect x="184.57142857142856" y="121" width="175.71428571428572" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<text x="272.42857142857144" y="136" text-anchor="middle" class="label">Waiting</text>
+<rect x="360.2857142857143" y="121" width="468.5714285714286" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<text x="594.5714285714286" y="136" text-anchor="middle" class="label">Recording · one pass</text>
+<circle cx="184.57142857142856" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="184.57142857142856" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="360.2857142857143" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="360.2857142857143" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="828.8571428571429" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="828.8571428571429" y="53" text-anchor="middle" class="event">3</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Arm midway through a pass</li><li>Next repeat starts recording</li><li>Following repeat closes the take</li></ol>
+<figcaption>Arm partway through the prior pass. Recording waits for the next repeat start and ends at the following boundary. FL Studio supplies its declared Pattern or Playlist repeat. Rack uses Phrase (12) aligned with Clock (23). Keep audio and timing running until the take is accepted.</figcaption>
+</figure>
+<p>Before recording starts, switch <strong>Arm</strong> off to cancel, even if timing is stopped. Switching Arm off or sending Learn Stop cancels a Duration take. For End on Signal, keep timing running through the closing downbeat. A timing interruption before it cancels the take and keeps the prior recording. See <a href="#loop-signals">Loop signals and examples</a> to sequence Start/Arm and Stop, and the <a href="#host-setups">host appendices</a> for how each setup chooses the start.</p>
+<p><strong>Recapture Audio</strong> off protects an accepted Loop. Turn it on before arming to replace the Loop after a valid take. This applies to both Learn Arm and sequenced Start/Arm. The accepted source stays visible until the replacement settles. <strong>Detect events</strong> and <strong>Event sensitivity</strong> work on the accepted Loop waveform. Use <strong>Generate Swells</strong> to build swells from those markers. <strong>Generate on Stop</strong> is available for Song capture.</p>
+
 <h2 id="markers">3. Inspect markers, then Generate Swells</h2>
 <ol><li>Keep <strong>Detect events</strong> enabled for automatic swells. Inspect the waveform and event markers after playback stops. Hover to inspect. Left-click or drag to place an inspection pin. Scroll to zoom at the pointer and press the wheel while dragging to pan. Escape clears the pin when the waveform has focus.</li><li>Adjust <strong>Event sensitivity</strong> to preview fewer stronger attacks or finer event detail. Wait for analysis to update. These markers preview the next generation; they do not yet mean playable swells exist.</li><li>Open <strong>Sound</strong> and choose a <strong>Default IR</strong> (the reverb sound used for generation). Click <strong>Generate Swells</strong> when it becomes available.</li><li>Wait for the resulting swells to render. The initial successful generation opens Perform and selects the first chronological swell. Returning to an existing editing session retains its navigation context.</li></ol>
+<figure class="timing" id="timing-prepare">
+<h4>Prepare a Loop — source events become swells</h4>
+<div class="timing-scroll" role="region" aria-label="Prepare a Loop — source events become swells" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-prepare-title timing-prepare-desc">
+<title id="timing-prepare-title">Prepare a Loop — source events become swells</title>
+<desc id="timing-prepare-desc">After acceptance, inspect the detected markers and click Generate Swells. This shared preparation step follows any Loop capture method. The source ruler now starts at Loop Bar 1. The first wet swell can extend before beat one, creating the lead-in that Cue Loop must allow for.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="121" y="31" text-anchor="end" class="tick">Lead-in</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="290" y="31" text-anchor="middle" class="tick">Loop bar 1</text>
+<line x1="290" y1="36" x2="290" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="618" y="31" text-anchor="middle" class="tick">Loop bar 2</text>
+<line x1="618" y1="36" x2="618" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="946" y="31" text-anchor="end" class="tick">End</text>
+<line x1="946" y1="36" x2="946" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="126" y1="62" x2="126" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="290" y1="62" x2="290" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="946" y1="62" x2="946" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Accepted source</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<rect x="290" y="67" width="656" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M290.0,76.2v3.6M292.7,66.7v22.7M295.4,65.6v24.8M298.1,71.4v13.2M300.8,75.6v4.7M303.5,76.1v3.8M306.2,70.5v15.0M308.9,65.7v24.6M311.6,66.3v23.5M314.3,71.4v13.2M317.0,76.0v4.0M319.7,75.1v5.8M322.4,74.6v6.9M325.1,72.0v12.1M327.8,72.7v10.6M330.5,75.9v4.3M333.2,72.2v11.7M335.9,71.5v13.1M338.6,73.6v8.7M341.3,76.0v4.0M344.0,76.1v3.8M346.7,73.9v8.3M349.4,71.6v12.7M352.1,71.6v12.7M354.8,73.9v8.1M357.5,75.9v4.1M360.2,75.2v5.5M362.9,75.9v4.2M365.6,74.4v7.2M368.3,74.6v6.9M371.0,75.8v4.4M373.7,73.6v8.8M376.4,73.0v10.0M379.1,74.2v7.5M381.8,75.8v4.3M384.5,76.1v3.8M387.2,74.8v6.4M389.9,73.2v9.5M392.6,73.1v9.9M395.3,74.6v6.8M398.0,75.9v4.3M400.7,75.1v5.7M403.4,76.0v4.0M406.1,75.2v5.6M408.8,75.1v5.7M411.5,75.8v4.5M414.2,73.9v8.1M416.9,73.3v9.4M419.6,74.3v7.4M422.3,75.7v4.5M425.0,76.2v3.7M427.7,75.1v5.7M430.4,73.8v8.5M433.1,73.5v8.9M435.8,74.9v6.3M438.5,75.7v4.5M441.2,74.9v6.1M443.9,75.6v4.8M446.6,75.6v4.8M449.3,75.4v5.1M452.0,75.7v4.6M454.7,74.0v8.1M457.4,73.3v9.4M460.1,74.2v7.7M462.8,75.6v4.7M465.5,76.2v3.7M468.2,75.4v5.2M470.9,74.1v7.8M473.6,73.8v8.4M476.3,75.0v6.0M479.0,75.6v4.9M481.7,74.7v6.7M484.4,75.2v5.5M487.1,76.0v4.0M489.8,75.7v4.7M492.5,75.6v4.8M495.2,74.0v8.1M497.9,73.2v9.5M500.6,74.1v7.9M503.3,75.6v4.8M506.0,76.1v3.9M508.7,75.7v4.6M511.4,74.4v7.2M514.1,74.0v7.9M516.8,75.2v5.7M519.5,75.4v5.2M522.2,74.4v7.2M524.9,74.9v6.3M527.6,76.1v3.8M530.3,75.8v4.3M533.0,75.6v4.8M535.7,74.0v8.0M538.4,73.2v9.6M541.1,74.0v8.0M543.8,75.6v4.9M546.5,75.9v4.2M549.2,76.0v4.0M551.9,74.8v6.5M554.6,74.3v7.4M557.3,75.3v5.3M560.0,75.2v5.5M562.7,74.1v7.7M565.4,74.5v6.9M568.1,75.8v4.5M570.8,76.0v4.0M573.5,75.6v4.8M576.2,74.0v7.9M578.9,73.2v9.6M581.6,73.9v8.1M584.3,75.6v4.8M587.0,75.7v4.5M589.7,76.1v3.8M592.4,75.1v5.7M595.1,74.6v6.9M597.8,75.5v5.0M600.5,75.1v5.8M603.2,73.9v8.2M605.9,74.2v7.6M608.6,75.5v5.0M611.3,76.1v3.7M614.0,75.6v4.7M616.7,74.2v7.7M619.3,58.5v38.9M622.0,63.6v28.8M624.7,73.3v9.4M627.4,73.0v10.0M630.1,74.1v7.7M632.8,73.3v9.4M635.5,70.9v14.1M638.2,74.2v7.5M640.9,72.0v12.1M643.6,68.2v19.7M646.3,69.4v17.2M649.0,73.5v9.0M651.7,76.1v3.7M654.4,75.0v6.0M657.1,71.7v12.5M659.8,69.9v16.2M662.5,71.5v13.0M665.2,75.2v5.5M667.9,74.5v7.0M670.6,74.7v6.7M673.3,75.7v4.7M676.0,74.4v7.2M678.7,75.6v4.8M681.4,74.1v7.9M684.1,72.1v11.8M686.8,72.5v11.1M689.5,74.5v7.0M692.2,76.1v3.8M694.9,75.7v4.5M697.6,74.0v8.0M700.3,72.8v10.4M703.0,73.6v8.9M705.7,75.8v4.5M708.4,74.8v6.3M711.1,74.8v6.5M713.8,76.1v3.8M716.5,75.3v5.4M719.2,75.9v4.1M721.9,74.6v6.8M724.6,73.1v9.9M727.3,73.2v9.6M730.0,74.7v6.5M732.7,76.1v3.8M735.4,76.0v4.0M738.1,74.7v6.6M740.8,73.7v8.6M743.5,74.2v7.7M746.2,76.0v4.1M748.9,74.8v6.4M751.6,74.6v6.8M754.3,75.7v4.6M757.0,75.7v4.6M759.7,76.1v3.8M762.4,74.7v6.6M765.1,73.3v9.4M767.8,73.4v9.3M770.5,74.8v6.5M773.2,76.1v3.7M775.9,76.2v3.7M778.6,75.1v5.8M781.3,74.1v7.8M784.0,66.0v24.0M786.7,75.8v4.5M789.4,68.3v19.4M792.1,67.4v21.2M794.8,72.4v11.1M797.5,75.4v5.2M800.2,76.1v3.7M802.9,71.1v13.7M805.6,66.8v22.4M808.3,67.3v21.4M811.0,71.9v12.3M813.7,76.2v3.7M816.4,75.4v5.1M819.1,74.4v7.1M821.8,72.1v11.8M824.5,72.8v10.4M827.2,76.1v3.9M829.9,72.7v10.7M832.6,72.0v12.0M835.3,74.0v8.0M838.0,76.1v3.7M840.7,76.1v3.8M843.4,74.0v8.0M846.1,71.9v12.2M848.8,71.9v12.3M851.5,74.0v8.0M854.2,76.0v3.9M856.9,75.4v5.2M859.6,75.7v4.5M862.3,74.3v7.4M865.0,74.5v7.0M867.7,75.9v4.1M870.4,73.8v8.4M873.1,73.2v9.6M875.8,74.4v7.2M878.5,75.9v4.2M881.2,76.1v3.8M883.9,74.8v6.4M886.6,73.2v9.5M889.3,73.1v9.8M892.0,74.6v6.8M894.7,75.9v4.1M897.4,75.3v5.4M900.1,76.1v3.7M902.8,75.1v5.9M905.5,75.1v5.9M908.2,75.8v4.3M910.9,74.0v8.0M913.6,73.4v9.2M916.3,74.4v7.3M919.0,75.8v4.4M921.7,76.1v3.7M924.4,75.1v5.8M927.1,73.7v8.6M929.8,73.5v9.0M932.5,74.8v6.4M935.2,75.8v4.4M937.9,75.0v5.9M940.6,75.7v4.5M943.3,75.5v5.0M946.0,75.4v5.3" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Prepared wet</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<path d="M126,132 Q230.96,131 290,113 L290,147 Q227.68,133 126,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M495,132 Q573.72,131 618,113 L618,147 Q571.26,133 495,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M683.6,132 Q746.576,131 782,113 L782,147 Q744.6080000000001,133 683.6,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="290" y1="113" x2="290" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M286,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="618" y1="113" x2="618" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M614,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="782" y1="113" x2="782" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M778,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="290" y1="90" x2="290" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="290" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<line x1="618" y1="90" x2="618" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="618" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<line x1="782" y1="90" x2="782" y2="109" stroke="var(--timeline-target)" stroke-dasharray="3 3">
+</line>
+<circle cx="782" cy="78" r="3" fill="var(--timeline-target)">
+</circle>
+<circle cx="126" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="126" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="290" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="290" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="946" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="946" y="53" text-anchor="middle" class="event">3</text>
+</svg>
+</div>
+<ol class="timing-events"><li>First wet swell starts before beat one</li><li>First source event sits on beat one</li><li>End of the accepted two-bar take</li></ol>
+<figcaption>After acceptance, inspect the detected markers and click Generate Swells. This shared preparation step follows any Loop capture method. The source ruler now starts at Loop Bar 1. The first wet swell can extend before beat one, creating the lead-in that Cue Loop must allow for.</figcaption>
+</figure>
 <figure><img class="screenshot" src="{{alpha-captured-markers}}" alt="Learn with real captured waveform and detected event markers, ready to generate" width="1400" height="1000"><figcaption>Captured Learn: inspect markers before generating. The fixture has stopped DAW playback and passed real generation-readiness checks.</figcaption></figure>
-<p><strong>Generate on Stop</strong> is off in new projects. If enabled, stopping a capture can request generation automatically. Supported older projects can restore this preference as on, so check it when opening an old session. Regeneration can replace eligible automatic swells; manual, edited and frozen work has protection. Empty, unchanged or failed generation keeps existing work. For deliberate manual placement, turn detection off and add swells in Perform.</p>
+<p><strong>Generate on Stop</strong> is off in new projects. For Song capture, enabling it lets stopping a capture request generation automatically. Supported older projects can restore this preference as on, so check it when opening an old session. Regeneration can replace eligible automatic swells; manual, edited and frozen work has protection. Empty, unchanged or failed generation keeps existing work. For deliberate manual placement, turn detection off and add swells in Perform.</p>
 
 <h2 id="perform">4. Perform: shape, audition and play in your DAW</h2>
 <p>In <strong>Swells</strong>, use the arrow keys to select a swell and Tab to reach its <strong>Enabled</strong> checkbox and <strong>More actions</strong>. Right-click a row or click its three dots to open the same menu. Select multiple swells, then open the menu on a selected row to delete the group. The menu shows the count and asks for confirmation. Rename is unavailable during multiselect. Delete from an unselected row affects only that row. In the menu, use the arrows to inspect actions, Enter or Space to run an available action, and Escape to close it. In <strong>Rename</strong>, enter a name and choose <strong>OK</strong> or press Return. If the name is empty, the dialog shows how to correct it. Choose <strong>Cancel</strong> or press Escape to discard your draft.</p>
 <p>Right-click an inspector knob to see its Reset action. The label tells you whether it returns to the initial position, the default value, or automatic start. The same menu keys work here.</p>
 <p>The selected-swell inspector has <strong>Timing</strong>, <strong>Envelope</strong> and <strong>Sound</strong> sections. Timing holds target, placement and source bounds; Envelope holds pre-roll, end offset, fades and curves; Sound holds the selected swell's IR and Level. <strong>Reset</strong> and <strong>Reset All</strong> stay below the sections without inspector scrolling. Other settings remain available from the gear button.</p>
-<p>To set the selected swell's source by whole bars, open <strong>Settings &rarr; Swell</strong>. Enter <strong>Bar start</strong> and <strong>End excl.</strong>, then choose <strong>Set source from bars</strong> or press Return in either field. The end bar is excluded, so a start of 4 and an end of 8 use bars 4 through 7. Leaving a field checks the range and shows any error below it. To apply the corrected range, use the button or Return. Selecting a different swell clears both bar fields so you can enter a range for that swell. Unfreeze a frozen swell before changing its source.</p>
+<p>For an accepted Song, to set the selected swell's source by whole bars, open <strong>Settings &rarr; Swell</strong>. Enter <strong>Bar start</strong> and <strong>End excl.</strong>, then choose <strong>Set source from bars</strong> or press Return in either field. The end bar is excluded, so a start of 4 and an end of 8 use bars 4 through 7. Leaving a field checks the range and shows any error below it. To apply the corrected range, use the button or Return. Selecting a different swell clears both bar fields so you can enter a range for that swell. Unfreeze a frozen swell before changing its source.</p>
 <p>In the Perform inspector, press Return or move focus away to apply an exact typed value. A rejected value leaves the last accepted value in place and shows the reason below the field. Press Escape to cancel an edit. Where a number box has stepper arrows, scroll over the box or arrows to change the value one step at a time.</p>
-<p><strong>Level</strong> adjusts the selected swell relative to its calibrated starting balance. Turn the dial or type a value from <strong>&minus;12 to +12 dB</strong>. <strong>0 dB</strong> is at 12 o'clock. When you drag across it, a small detent helps you find neutral. Use the wheel or arrow keys for 1 dB steps. Hold Ctrl while scrolling for 0.1 dB steps. Shift also gives fine adjustment on Level. Older projects can show a value below &minus;12 dB in the input. That value stays applied until you edit Level. Press the dial to bring it to &minus;12 dB, or type a valid value to go straight to it. Double-click the dial to reset Level to 0 dB, or right-click for the reset action. Learn's IR default, Live wet, and Export's Dry/Wet levels are separate controls.</p>
+<p><strong>Level</strong> adjusts the selected swell relative to its saved starting level. Changing one swell leaves the other swells at their set levels. Turn the dial or type a value from <strong>&minus;12 to +12 dB</strong>. <strong>0 dB</strong> is at 12 o'clock. When you drag across it, a small detent helps you find neutral. Use the wheel or arrow keys for 1 dB steps. Hold Ctrl while scrolling for 0.1 dB steps. Shift also gives fine adjustment on Level. Older projects can show a value below &minus;12 dB in the input. That value stays applied until you edit Level. Press the dial to bring it to &minus;12 dB, or type a valid value to go straight to it. Double-click the dial to reset Level to 0 dB, or right-click for the reset action. Learn's IR default, Live wet, and Export's Dry/Wet levels are separate controls.</p>
 <p>Learn and Perform use the same IR picker and file-import controls. The surrounding Sound section explains their scope: Learn changes the default for newly generated or manually added swells; Perform changes only the selected swell. Existing swells keep their assignments when the Learn default changes. While another response loads, the picker retains the accepted assignment and feedback identifies the request. A failed load shows a red message directly below the field; choose another response or retry. Frozen swells must be unfrozen before their IR can change.</p>
 <p>To review suggested onsets, use <strong>Settings &rarr; Recovery &rarr; Onset suggestions</strong>. Choose a sample from the dropdown or select it in the source lane. In the dropdown, use the arrow keys to inspect choices, Return to select, or Escape to dismiss. The choice survives a refresh while the sample remains available. Use <strong>Confirm</strong> to apply the choice.</p>
-<ol><li>Select a swell in the chronological <strong>Swells</strong> list. The timeline automatically pans and zooms just like <strong>Fit</strong>, showing the complete swell context. Click the selected row again to return after panning or zooming away. Wait until its render is ready to audition; the inspector shows the selected swell's editable settings.</li><li>Stop DAW playback before using <strong>Audition</strong>. It loops the finite selected listening window until <strong>Stop</strong>; it does not start the DAW. Host playback and safety guards can interrupt audition.</li><li>The listening button shows <strong>Dry + wet</strong> for captured dry plus wet. Click it to switch to <strong>Wet only</strong>, and click again to return. The Live Wet level affects wet audition gain; monitoring protection remains active. Export has its own blend.</li><li>Use the inspector to adjust the selected swell's timing, shape, level and IR. Read the bottom context help for each control. Changes to source audio, the assigned IR or material timing rebuild existing unfrozen sounds automatically, even in Learn with Detect events and Generate on Stop off. Wait for readiness. Fades, curves, level, name and pure placement reuse the prepared sound; extending beyond captured support needs real source audio.</li><li>Use Zoom and Fit to inspect the timeline. Scroll over the waveform to zoom at the pointer and press the wheel while dragging to pan. Left-click or drag open waveform to move the local playhead. Drag a handle to edit it. Left-drag the Overview to pan at the current zoom. The local playhead is independent of DAW playback and Audition. Snap follows the chosen musical grid when timing is reliable. Ctrl bypasses Snap; Shift fine-adjusts timing gestures; both can be combined. Exact value entry is available in value fields. Hold Ctrl while scrolling over a dial or track for finer adjustment where its range allows it. On snapped timing dials, Ctrl+wheel moves in small increments between grid points.</li></ol>
+<ol><li>Select a swell in the chronological <strong>Swells</strong> list. The timeline automatically pans and zooms just like <strong>Fit</strong>, showing the complete swell context. Click the selected row again to return after panning or zooming away. Wait until its render is ready to audition; the inspector shows the selected swell's editable settings.</li><li>Stop DAW playback before using <strong>Audition</strong>. It loops the finite selected listening window until <strong>Stop</strong>; it does not start the DAW. Starting host playback can interrupt audition.</li><li>The listening button shows <strong>Dry + wet</strong> for captured dry plus wet. Click it to switch to <strong>Wet only</strong>, and click again to return. Live wet sets the wet audition gain. Audition reports an overload if the mix exceeds full scale. Export has its own blend.</li><li>Use the inspector to adjust the selected swell's timing, shape, level and IR. Read the bottom context help for each control. Changes to source audio, the assigned IR or material timing rebuild existing unfrozen sounds automatically, even in Learn with Detect events and Generate on Stop off. Wait for readiness. Fades, curves, level, name and pure placement reuse the prepared sound; extending beyond captured support needs real source audio.</li><li>Use Zoom and Fit to inspect the timeline. Scroll over the waveform to zoom at the pointer and press the wheel while dragging to pan. Left-click or drag open waveform to move the local playhead. Drag a handle to edit it. Left-drag the Overview to pan at the current zoom. The local playhead is independent of DAW playback and Audition. Snap follows the chosen musical grid when timing is reliable. Ctrl bypasses Snap; Shift fine-adjusts timing gestures; both can be combined. Exact value entry is available in value fields. Hold Ctrl while scrolling over a dial or track for finer adjustment where its range allows it. On snapped timing dials, Ctrl+wheel moves in small increments between grid points.</li></ol>
 <figure><img class="screenshot" src="{{alpha-ready-perform}}" alt="Perform showing generated ready swells, the first selected swell and its inspector" width="1400" height="1000"><figcaption>Generated Perform. The fixture waits for real render completion, a selected swell and enabled Audition before capturing this image.</figcaption></figure>
 <p>Newly generated swells use a short source-edge taper to reduce cut-edge clicks in overlapping swells. Opening a saved project preserves its existing wet renders. To adopt this processing for older unfrozen swells, stay in Perform and use <strong>Settings &rarr; Recovery &rarr; Regenerate all</strong>. This forces fresh renders for all eligible swells, including already current ready, disabled and muted swells; <strong>Regenerate selected</strong> explicitly rerenders only the selection. Frozen swells stay unchanged until you unfreeze and regenerate them, and swells importing an IR are skipped. Feedback directly below the buttons reports how many were queued or skipped, or why nothing was queued. Queued means work was accepted; check each swell's status for completion or errors. Existing captured source is sufficient; no recapture is needed.</p>
-<h3>Play and render through your DAW</h3>
+<h3>Cue a Loop in Perform</h3>
+<p>After Learn accepts a Loop, generate swells and open <strong>Perform</strong>. Keep your timing source running and enable <strong>Live playback</strong> in Settings. <strong>Cue Loop</strong> becomes available when timing and the swells are ready.</p>
+<ol><li>Click <strong>Cue Loop</strong> at any point while playback is running. Beat one of the Loop lands on the first bar with room for the full lead-in. The captured Loop then repeats at its recorded length. Click <strong>Cancel Loop</strong> while waiting to cancel the start.</li><li>Click <strong>Stop Loop</strong> to finish the current pass and skip the next lead-in. Click <strong>Stop Now</strong> while it is finishing for an immediate short fade. With Dry + Wet routing, incoming dry audio continues.</li><li>After stopping the transport, seeking, or losing the Clock, restore timing and Cue again. If Cue is disabled, read the status beside it.</li></ol>
+<figure class="timing" id="timing-cue">
+<h4>Cue Loop — leave room for the complete lead-in</h4>
+<div class="timing-scroll" role="region" aria-label="Cue Loop — leave room for the complete lead-in" tabindex="0">
+<svg viewBox="0 0 960 184" class="timing-chart" aria-labelledby="timing-cue-title timing-cue-desc">
+<title id="timing-cue-title">Cue Loop — leave room for the complete lead-in</title>
+<desc id="timing-cue-desc">Two separate launch examples with a two-beat lead-in. Cue on bar 7 beat 2 allows the full build into bar 8. Cue on beat 4 is too late for that build, so the second example waits and lands on bar 9. The aqua shapes show wet audio before loop beat one. The Loop then repeats at its recorded length. Cue Loop and Perform Cue (16) use the same launch rule.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="84" x2="946" y2="84" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 7</text>
+<line x1="126" y1="36" x2="126" y2="176" stroke="var(--timeline-grid)">
+</line>
+<text x="454" y="31" text-anchor="middle" class="tick">Bar 8</text>
+<line x1="454" y1="36" x2="454" y2="176" stroke="var(--timeline-grid)">
+</line>
+<text x="782" y="31" text-anchor="middle" class="tick">Bar 9</text>
+<line x1="782" y1="36" x2="782" y2="176" stroke="var(--timeline-grid)">
+</line>
+<line x1="208" y1="84" x2="208" y2="175" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="372" y1="84" x2="372" y2="175" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="454" y1="84" x2="454" y2="175" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="782" y1="84" x2="782" y2="175" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="104" text-anchor="start" class="label">Cue on beat 2</text>
+<line x1="126" y1="100" x2="946" y2="100" stroke="var(--timeline-grid)">
+</line>
+<rect x="208" y="89" width="82" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<rect x="454" y="89" width="492" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<text x="700" y="104" text-anchor="middle" class="label">Pass starts at bar 8</text>
+<path d="M290,100 Q394.96000000000004,99 454,81 L454,115 Q391.68,101 290,100 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="454" y1="81" x2="454" y2="118" stroke="var(--timeline-target)">
+</line>
+<path d="M450,78h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<text x="0" y="158" text-anchor="start" class="label">Cue on beat 4</text>
+<line x1="126" y1="154" x2="946" y2="154" stroke="var(--timeline-grid)">
+</line>
+<rect x="372" y="143" width="246" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<text x="495" y="158" text-anchor="middle" class="label">Queued</text>
+<rect x="782" y="143" width="164" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M618,154 Q722.96,153 782,135 L782,169 Q719.68,155 618,154 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="782" y1="135" x2="782" y2="172" stroke="var(--timeline-target)">
+</line>
+<path d="M778,132h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<circle cx="208" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="208" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="372" cy="71" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="372" y="75" text-anchor="middle" class="event">2</text>
+<circle cx="454" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="454" y="53" text-anchor="middle" class="event">3</text>
+<circle cx="782" cy="71" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="782" y="75" text-anchor="middle" class="event">4</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Early Cue → bar 8</li><li>Late Cue → bar 9</li><li>First example lands at bar 8</li><li>Second example lands at bar 9</li></ol>
+<figcaption>Two separate launch examples with a two-beat lead-in. Cue on bar 7 beat 2 allows the full build into bar 8. Cue on beat 4 is too late for that build, so the second example waits and lands on bar 9. The aqua shapes show wet audio before loop beat one. The Loop then repeats at its recorded length. Cue Loop and Perform Cue (16) use the same launch rule.</figcaption>
+</figure>
+<figure class="timing" id="timing-stop">
+<h4>Stop Loop — finish the current pass</h4>
+<div class="timing-scroll" role="region" aria-label="Stop Loop — finish the current pass" tabindex="0">
+<svg viewBox="0 0 960 270" class="timing-chart" aria-labelledby="timing-stop-title timing-stop-desc">
+<title id="timing-stop-title">Stop Loop — finish the current pass</title>
+<desc id="timing-stop-desc">A two-bar Loop repeats at its recorded length. Pass 2 starts building during pass 1. Stop Loop or Perform Stop (17) during pass 2 finishes that pass and suppresses the next lead-in, shown dashed. Stop Now or Perform Stop Now (18) instead fades wet immediately. Live dry continues with Dry + Wet routing. The yellow marks show example swell arrivals.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 7</text>
+<line x1="126" y1="36" x2="126" y2="262" stroke="var(--timeline-grid)">
+</line>
+<text x="275.0909090909091" y="31" text-anchor="middle" class="tick">Bar 8</text>
+<line x1="275.0909090909091" y1="36" x2="275.0909090909091" y2="262" stroke="var(--timeline-grid)">
+</line>
+<text x="573.2727272727273" y="31" text-anchor="middle" class="tick">Bar 10</text>
+<line x1="573.2727272727273" y1="36" x2="573.2727272727273" y2="262" stroke="var(--timeline-grid)">
+</line>
+<text x="871.4545454545455" y="31" text-anchor="middle" class="tick">Bar 12</text>
+<line x1="871.4545454545455" y1="36" x2="871.4545454545455" y2="262" stroke="var(--timeline-grid)">
+</line>
+<line x1="275.0909090909091" y1="62" x2="275.0909090909091" y2="261" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="573.2727272727273" y1="62" x2="573.2727272727273" y2="261" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="722.3636363636364" y1="62" x2="722.3636363636364" y2="261" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="871.4545454545455" y1="62" x2="871.4545454545455" y2="261" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Live dry input</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<path d="M126.0,76.2v3.6M128.7,74.6v6.8M131.4,74.2v7.5M134.1,75.2v5.5M136.8,76.1v3.8M139.5,76.2v3.6M142.2,74.8v6.4M144.9,73.4v9.1M147.6,73.4v9.2M150.3,74.8v6.5M153.0,76.1v3.7M155.7,75.8v4.3M158.4,75.6v4.8M161.1,74.6v6.9M163.8,74.8v6.4M166.5,76.1v3.9M169.2,74.4v7.2M171.9,74.0v8.1M174.6,74.9v6.2M177.3,76.1v3.8M179.9,76.1v3.7M182.6,74.9v6.2M185.3,73.5v9.0M188.0,73.4v9.2M190.7,74.8v6.5M193.4,76.0v3.9M196.1,75.6v4.9M198.8,76.0v4.0M201.5,74.9v6.2M204.2,75.0v6.0M206.9,75.9v4.2M209.6,74.2v7.6M212.3,73.7v8.6M215.0,74.6v6.7M217.7,75.9v4.2M220.4,76.1v3.7M223.1,75.0v6.0M225.8,73.7v8.7M228.5,73.5v9.0M231.2,74.8v6.4M233.9,75.9v4.2M236.6,75.3v5.5M239.3,76.0v3.9M242.0,75.3v5.5M244.7,75.2v5.5M247.4,75.8v4.4M250.1,74.1v7.8M252.8,73.5v9.0M255.5,74.4v7.2M258.2,75.8v4.5M260.9,76.2v3.7M263.6,75.2v5.6M266.3,73.9v8.3M269.0,73.6v8.7M271.7,74.9v6.2M274.4,75.7v4.5M277.1,69.3v17.4M279.8,73.5v9.0M282.4,73.9v8.2M285.1,73.6v8.8M287.8,74.7v6.7M290.5,70.3v15.3M293.2,69.4v17.1M295.9,72.0v12.0M298.6,75.2v5.7M301.3,76.1v3.7M304.0,74.9v6.1M306.7,73.1v9.8M309.4,72.9v10.3M312.1,74.6v6.7M314.8,75.4v5.2M317.5,74.3v7.3M320.2,75.1v5.9M322.9,76.0v4.1M325.6,75.6v4.8M328.3,75.6v4.9M331.0,73.8v8.4M333.7,73.0v9.9M336.4,74.0v8.1M339.1,75.6v4.9M341.8,76.1v3.9M344.5,75.7v4.7M347.2,74.4v7.2M349.9,74.0v8.0M352.6,75.2v5.7M355.3,75.4v5.2M358.0,74.4v7.3M360.7,74.9v6.3M363.4,76.1v3.8M366.1,75.8v4.3M368.8,75.6v4.8M371.5,74.0v8.1M374.2,73.2v9.6M376.9,74.0v8.1M379.6,75.6v4.9M382.3,75.9v4.2M384.9,76.0v4.0M387.6,74.8v6.5M390.3,74.3v7.4M393.0,75.3v5.3M395.7,75.2v5.5M398.4,74.1v7.7M401.1,74.5v6.9M403.8,75.8v4.5M406.5,76.0v4.0M409.2,75.6v4.8M411.9,74.0v7.9M414.6,73.2v9.6M417.3,73.9v8.1M420.0,75.6v4.8M422.7,75.7v4.5M425.4,76.1v3.8M428.1,75.1v5.7M430.8,74.6v6.9M433.5,75.5v5.0M436.2,75.1v5.8M438.9,73.9v8.2M441.6,74.2v7.6M444.3,75.5v5.0M447.0,76.1v3.7M449.7,75.6v4.7M452.4,74.2v7.7M455.1,73.3v9.4M457.8,74.0v8.1M460.5,75.6v4.7M463.2,72.4v11.1M465.9,74.0v8.0M468.6,73.3v9.3M471.3,71.4v13.1M474.0,74.6v6.9M476.7,72.9v10.3M479.4,70.2v15.5M482.1,71.4v13.2M484.8,74.4v7.3M487.4,76.2v3.7M490.1,75.4v5.1M492.8,73.4v9.2M495.5,72.3v11.4M498.2,73.3v9.4M500.9,75.6v4.8M503.6,75.1v5.7M506.3,75.2v5.5M509.0,75.9v4.3M511.7,75.0v5.9M514.4,75.8v4.4M517.1,74.8v6.5M519.8,73.4v9.2M522.5,73.6v8.8M525.2,75.0v6.0M527.9,76.1v3.7M530.6,75.9v4.3M533.3,74.5v6.9M536.0,73.6v8.8M538.7,74.1v7.8M541.4,75.8v4.3M544.1,75.1v5.8M546.8,75.0v6.0M549.5,76.1v3.8M552.2,75.5v5.1M554.9,76.0v4.1M557.6,74.8v6.4M560.3,73.4v9.1M563.0,73.6v8.9M565.7,74.9v6.2M568.4,76.1v3.8M571.1,76.0v3.9M573.8,67.8v20.3M576.5,64.1v27.8M579.2,67.8v20.4M581.9,75.4v5.3M584.6,71.9v12.3M587.3,71.9v12.3M589.9,75.0v6.0M592.6,75.2v5.7M595.3,76.0v4.0M598.0,73.6v8.8M600.7,71.5v13.0M603.4,71.9v12.2M606.1,74.2v7.7M608.8,76.1v3.7M611.5,76.1v3.7M614.2,74.9v6.2M616.9,73.7v8.5M619.6,74.2v7.6M622.3,76.1v3.8M625.0,74.5v7.0M627.7,74.2v7.6M630.4,75.3v5.4M633.1,76.0v4.0M635.8,76.2v3.6M638.5,74.7v6.5M641.2,73.3v9.3M643.9,73.3v9.4M646.6,74.7v6.6M649.3,76.2v3.6M652.0,75.9v4.2M654.7,75.5v5.0M657.4,74.4v7.1M660.1,74.7v6.6M662.8,76.1v3.7M665.5,74.5v7.1M668.2,74.0v7.9M670.9,75.0v6.0M673.6,76.2v3.7M676.3,76.2v3.7M679.0,74.9v6.3M681.7,73.5v9.0M684.4,73.4v9.2M687.1,74.7v6.5M689.8,76.1v3.8M692.4,75.6v4.7M695.1,75.9v4.3M697.8,74.8v6.4M700.5,74.9v6.2M703.2,76.0v4.0M705.9,74.3v7.4M708.6,73.8v8.4M711.3,74.7v6.6M714.0,76.0v4.1M716.7,76.1v3.7M719.4,75.0v6.0M722.1,73.6v8.8M724.8,73.5v9.1M727.5,74.8v6.5M730.2,76.0v4.1M732.9,75.4v5.3M735.6,76.2v3.7M738.3,75.2v5.7M741.0,75.1v5.7M743.7,75.9v4.3M746.4,74.2v7.7M749.1,73.6v8.9M751.8,74.5v7.1M754.5,75.8v4.4M757.2,76.2v3.7M759.9,69.6v16.8M762.6,63.6v28.8M765.3,64.4v27.1M768.0,71.0v14.0M770.7,74.9v6.1M773.4,72.9v10.1M776.1,75.1v5.9M778.8,74.6v6.7M781.5,74.5v7.0M784.2,75.4v5.3M786.9,72.6v10.9M789.6,71.8v12.4M792.3,73.4v9.3M794.9,75.5v5.1M797.6,76.2v3.6M800.3,75.1v5.7M803.0,73.6v8.8M805.7,73.3v9.3M808.4,74.8v6.4M811.1,75.6v4.8M813.8,74.6v6.7M816.5,75.3v5.4M819.2,75.9v4.3M821.9,75.6v4.9M824.6,75.6v4.7M827.3,73.9v8.2M830.0,73.2v9.6M832.7,74.0v7.9M835.4,75.6v4.8M838.1,76.1v3.8M840.8,75.6v4.8M843.5,74.3v7.4M846.2,73.9v8.1M848.9,75.1v5.8M851.6,75.5v5.0M854.3,74.5v7.0M857.0,75.0v6.0M859.7,76.2v3.6M862.4,75.8v4.4M865.1,75.6v4.8M867.8,74.0v8.0M870.5,73.2v9.6M873.2,63.6v28.8M875.9,73.1v9.8M878.6,75.2v5.5M881.3,75.1v5.8M884.0,71.4v13.1M886.7,70.8v14.4M889.4,73.9v8.1M892.1,74.3v7.3M894.8,72.4v11.2M897.4,73.4v9.1M900.1,75.7v4.7M902.8,75.8v4.3M905.5,75.4v5.3M908.2,73.3v9.4M910.9,72.4v11.2M913.6,73.4v9.1M916.3,75.4v5.1M919.0,75.7v4.5M921.7,76.2v3.6M924.4,74.9v6.2M927.1,74.3v7.3M929.8,75.4v5.3M932.5,75.1v5.8M935.2,73.9v8.2M937.9,74.2v7.5M940.6,75.5v4.9M943.3,76.1v3.8M946.0,75.6v4.7" stroke="var(--timeline-dry)" opacity="0.85">
+</path>
+<text x="0" y="136" text-anchor="start" class="label">Pass 1 · wet</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<rect x="275.0909090909091" y="121" width="298.18181818181813" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M200.54545454545456,132 Q248.25454545454548,131 275.0909090909091,113 L275.0909090909091,147 Q246.76363636363638,133 200.54545454545456,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M390.6363636363636,132 Q435.96,131 461.45454545454544,113 L461.45454545454544,147 Q434.5436363636363,133 390.6363636363636,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="275.0909090909091" y1="113" x2="275.0909090909091" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M271.0909090909091,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="461.45454545454544" y1="113" x2="461.45454545454544" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M457.45454545454544,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<text x="0" y="190" text-anchor="start" class="label">Pass 2 · wet</text>
+<line x1="126" y1="186" x2="946" y2="186" stroke="var(--timeline-grid)">
+</line>
+<rect x="573.2727272727273" y="175" width="298.18181818181824" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M498.72727272727275,186 Q546.4363636363636,185 573.2727272727273,167 L573.2727272727273,201 Q544.9454545454546,187 498.72727272727275,186 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<path d="M688.8181818181819,186 Q734.1418181818182,185 759.6363636363636,167 L759.6363636363636,201 Q732.7254545454546,187 688.8181818181819,186 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="573.2727272727273" y1="167" x2="573.2727272727273" y2="204" stroke="var(--timeline-target)">
+</line>
+<path d="M569.2727272727273,164h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="759.6363636363636" y1="167" x2="759.6363636363636" y2="204" stroke="var(--timeline-target)">
+</line>
+<path d="M755.6363636363636,164h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<text x="0" y="244" text-anchor="start" class="label">Pass 3 skipped</text>
+<line x1="126" y1="240" x2="946" y2="240" stroke="var(--timeline-grid)">
+</line>
+<rect x="871.4545454545455" y="229" width="74.5454545454545" height="22" fill="var(--timeline-ink)" opacity="0.08">
+</rect>
+<path d="M796.9090909090909,240 Q834.1818181818182,238 871.4545454545455,223" fill="none" stroke="var(--timeline-dry)" stroke-dasharray="3 3">
+</path>
+<text x="834.1818181818182" y="256" text-anchor="middle" class="tick">Skipped</text>
+<circle cx="275.0909090909091" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="275.0909090909091" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="573.2727272727273" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="573.2727272727273" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="722.3636363636364" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="722.3636363636364" y="53" text-anchor="middle" class="event">3</text>
+<circle cx="871.4545454545455" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="871.4545454545455" y="53" text-anchor="middle" class="event">4</text>
+</svg>
+</div>
+<ol class="timing-events"><li>First pass lands</li><li>Pass 2 lands after its overlapping lead-in</li><li>Stop Loop during pass 2</li><li>Finish pass 2 and skip the next lead-in</li></ol>
+<figcaption>A two-bar Loop repeats at its recorded length. Pass 2 starts building during pass 1. Stop Loop or Perform Stop (17) during pass 2 finishes that pass and suppresses the next lead-in, shown dashed. Stop Now or Perform Stop Now (18) instead fades wet immediately. Live dry continues with Dry + Wet routing. The yellow marks show example swell arrivals.</figcaption>
+</figure>
+<p>Hover over a disabled <strong>Audition</strong> or <strong>Cue Loop</strong> button to see why it is unavailable. Both need the host to use the sample rate of the accepted Loop. Set the host to the displayed rate to play the existing capture.</p>
+<p>You can edit swells while the Loop plays. Playback keeps its place and switches smoothly to the updated mix as soon as the new render is ready during repeating playback. If you mute every swell, the Loop continues in time so you can bring the wet sound back in.</p>
+<p>During Loop playback the yellow playhead follows the current pass in the waveform and Overview. The footer shows the Loop's captured tempo and time signature, and its Bar and Beat follow the playhead. They return to Bar 1, Beat 1 each time the Loop repeats. Position is unavailable until beat one and after stopping. The tinted <strong>Lead-In</strong> region shows where the next pass starts building. Its faint waveform shows the prepared wet mix that wraps into that region, regardless of which swell you select.</p>
+<p>Audition plays the captured dry audio around the selected swell. In Loop Perform, <strong>Dry + Wet</strong> keeps the incoming dry signal and adds the repeating swells. When ReverbArise generates swells in Song or Loop, it reserves enough headroom to keep the wet mix at or below &minus;1 dBFS at default settings. The check uses the swells that are enabled, unmuted and included by Solo. For Loop it also includes overlaps across the wrap.</p>
+<p>In Song and Loop, <strong>Dry + Wet</strong> adds wet to the original dry signal. A boost or a hot dry signal can push the combined output above 0 dBFS. ReverbArise reports overload and leaves the levels as set. To reduce the wet mix, turn down <strong>Live wet</strong> in Settings &rarr; Playback. To reduce the combined level, adjust gain in your DAW before any stage that clips.</p>
+<p>Use the <strong>+</strong> beside Swells to add a swell at the Loop playhead. When there is no playhead inside the phrase, <strong>+</strong> adds at the start of the visible loop. Double-click the waveform to choose a different point.</p>
+<h3>Play and render Song swells through your DAW</h3>
 <ol><li>Stay in <strong>Perform</strong> and start your DAW transport. Prepared swells play at their saved song positions independently of the current incoming source audio. Internal Audition is a separate way to inspect a selected listening window.</li><li>Open the gear button, then <strong>Settings &rarr; Playback</strong>, to check <strong>Live playback</strong>, <strong>Routing</strong> and <strong>Live wet</strong>. Enable Live playback. Choose <strong>Dry + Wet</strong> for incoming dry audio plus the prepared wet swells, or <strong>Wet Only</strong> for the wet swells alone. Set Live wet to suit your mix. Routing here controls DAW playback; the Audition listening button controls internal preview. Live wet also affects Audition's wet gain.</li><li>To render the effect with your track or mix, leave ReverbArise in <strong>Perform</strong> and use your DAW's normal render, bounce or export command. <strong>You do not need to enter ReverbArise's Export mode.</strong></li></ol>
 <p><strong>Caution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.</strong> This warning remains in the message bar when no more urgent message is displayed, and returns when that message clears. Its full help explains: &ldquo;Perform plays prepared swells at saved Song positions, including before notes and through silence. Pattern playback or muting a Playlist track or Channel Rack instrument may not stop them. Bypass the effect or mute its mixer track to stop these swells.&rdquo; Bypassing can restore dry audio; mixer mute silences the whole mixer path. Neither action deletes captured source or prepared swells. The warning is general guidance, not an indication that the plugin has detected Pattern mode or a muted source.</p>
 <p>Watch readiness and inline notices if wet audio is missing. Prepared playback needs compatible song timing and available rendered audio. Export mode bypasses the DAW wet effect while you prepare a separate WAV, so return to Perform for DAW playback or rendering.</p>
 
+<h2 id="loop-signals">Loop control signals and examples</h2>
+<p>Send control notes to the effect instance on <strong>MIDI channel 1</strong>. A short note with positive velocity triggers the action when it starts. Keep the control notes on a separate route from any notes that play your instruments. Use the MIDI number as the reference because hosts display octaves differently. A dash means the host has no mapping for that signal.</p>
+<div class="table-scroll" role="region" aria-labelledby="loop-signal-table" tabindex="0">
+<table>
+<caption id="loop-signal-table">ReverbArise Loop signal map</caption>
+<thead><tr><th scope="col">Signal</th><th scope="col">MIDI number</th><th scope="col">Rack Note Gate</th><th scope="col">FL Studio note</th><th scope="col">What it does</th></tr></thead>
+<tbody>
+<tr><th scope="row">Clock</th><td>23</td><td class="note-name">B0</td><td>&mdash;</td><td>Supplies one beat per pulse for Learn and Perform. This input uses note events. FL Studio supplies timing through its transport.</td></tr>
+<tr><th scope="row">Learn Start/Arm</th><td>24</td><td class="note-name">C1</td><td class="note-name">C2</td><td>Arms Learn to capture at the next eligible beat or downbeat.</td></tr>
+<tr><th scope="row">Learn Stop</th><td>25</td><td class="note-name">C&#9839;1</td><td class="note-name">C&#9839;2</td><td>Finishes End on Signal capture at the next downbeat after the request. Cancels a Duration or End on repeat take.</td></tr>
+<tr><th scope="row">Phrase</th><td>12</td><td class="note-name">C0</td><td class="note-name">C1</td><td>Sets beat one for future Cues while Loop playback is idle. In Rack Learn, it also marks the repeat boundary for End on repeat when aligned with Clock.</td></tr>
+<tr><th scope="row">Perform Cue</th><td>16</td><td class="note-name">E0</td><td class="note-name">E1</td><td>Queues the prepared Loop for the first downbeat with room for the full lead-in.</td></tr>
+<tr><th scope="row">Perform Stop</th><td>17</td><td class="note-name">F0</td><td class="note-name">F1</td><td>Finishes the current pass without the next lead-in, or cancels a queued start.</td></tr>
+<tr><th scope="row">Perform Stop Now</th><td>18</td><td class="note-name">F&#9839;0</td><td class="note-name">F&#9839;1</td><td>Fades the wet signal immediately, or cancels a queued start.</td></tr>
+<tr><th scope="row">Reset</th><td>22</td><td class="note-name">A&#9839;0</td><td>&mdash;</td><td>Clears Rack timing and cancels an in-progress take or Loop playback. Cue again once timing returns.</td></tr>
+<tr><th scope="row">Bar</th><td>19</td><td class="note-name">G0</td><td>&mdash;</td><td>Marks bar boundaries for older marker-based patches. In Perform, it can also align an idle Loop if it arrives with Clock.</td></tr>
+<tr><th scope="row">Beat</th><td>21</td><td class="note-name">A0</td><td>&mdash;</td><td>Marks beats in the older marker-based route.</td></tr>
+<tr><th scope="row">Capture Gate</th><td>14</td><td class="note-name">D0</td><td>&mdash;</td><td>Recognized for older marker-based patches. For sequenced capture, use Learn Start/Arm and Learn Stop. Releasing Capture Gate does not finish an End on Signal take.</td></tr>
+</tbody>
+</table>
+</div>
+<p>For a new setup that sends Clock notes, leave the older Beat and Bar inputs disconnected during Learn. The older marker-based Duration setup uses its own Beat, Bar and recurring Phrase signals.</p>
+<h3>Capture two bars from a sequence</h3>
+<ol>
+<li>In Learn, select <strong>Loop Mode</strong> and <strong>End on Signal</strong>. Leave the Arm button off. Turn on <strong>Recapture Audio</strong> only if you want a successful take to replace an accepted Loop.</li>
+<li>Start the timing source and play the audio through the effect. Send <strong>Learn Start/Arm (24)</strong> on beat one of the first bar you want to record.</li>
+<li>Send <strong>Learn Stop (25)</strong> during the second bar, before the next downbeat. Keep timing running through that downbeat. The take closes there and contains two bars.</li>
+<li>Once the Loop is accepted, click <strong>Generate Swells</strong> and open Perform when the swells are ready. The MIDI notes automate recording and playback requests. Generating the swells and choosing Perform are separate steps.</li>
+</ol>
+<h3>Launch and stop the prepared Loop from a sequence</h3>
+<ol>
+<li>In Perform, wait for <strong>Ready</strong> beside Cue Loop. Send <strong>Perform Cue (16)</strong> far enough ahead of the target downbeat for the longest swell lead-in. If Cue arrives too late, playback waits for a later downbeat.</li>
+<li>Send <strong>Perform Stop (17)</strong> during the final pass you want to hear. The Loop finishes that pass without the next lead-in. For an immediate fade, send <strong>Perform Stop Now (18)</strong>.</li>
+<li>To shift the playback grid, send <strong>Phrase (12)</strong> at the desired beat-one position while playback is idle, then Cue. For example, place Phrase on beat 2 of an earlier bar so the next eligible launch can land on beat 2 of a later bar. Allow room for the lead-in. In Perform, Phrase affects future launches. A queued or playing Loop keeps its current origin.</li>
+</ol>
+<figure class="timing" id="timing-phrase">
+<h4>Phrase — align future cues to a different beat one</h4>
+<div class="timing-scroll" role="region" aria-label="Phrase — align future cues to a different beat one" tabindex="0">
+<svg viewBox="0 0 960 162" class="timing-chart" aria-labelledby="timing-phrase-title timing-phrase-desc">
+<title id="timing-phrase-title">Phrase — align future cues to a different beat one</title>
+<desc id="timing-phrase-desc">While Loop playback is idle, send Phrase (12) on host beat 2, then Cue early enough for the full lead-in. Future launch boundaries follow that shifted grid. In this example, Loop beat one lands on bar 8 beat 2. Rack requires Phrase to coincide with Clock. An already queued or playing Loop keeps its origin.</desc>
+<text x="126" y="13" text-anchor="start" class="tick">Musical time (bars)</text>
+<line x1="126" y1="62" x2="946" y2="62" stroke="var(--timeline-grid)">
+</line>
+<text x="126" y="31" text-anchor="start" class="tick">Bar 6</text>
+<line x1="126" y1="36" x2="126" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="344.66666666666663" y="31" text-anchor="middle" class="tick">Bar 7</text>
+<line x1="344.66666666666663" y1="36" x2="344.66666666666663" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="563.3333333333333" y="31" text-anchor="middle" class="tick">Bar 8</text>
+<line x1="563.3333333333333" y1="36" x2="563.3333333333333" y2="154" stroke="var(--timeline-grid)">
+</line>
+<text x="782" y="31" text-anchor="middle" class="tick">Bar 9</text>
+<line x1="782" y1="36" x2="782" y2="154" stroke="var(--timeline-grid)">
+</line>
+<line x1="180.66666666666666" y1="62" x2="180.66666666666666" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="454" y1="62" x2="454" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<line x1="618" y1="62" x2="618" y2="153" stroke="var(--timeline-grid)" stroke-dasharray="2 3">
+</line>
+<text x="0" y="82" text-anchor="start" class="label">Host grid</text>
+<line x1="126" y1="78" x2="946" y2="78" stroke="var(--timeline-grid)">
+</line>
+<line x1="126" y1="59" x2="126" y2="96" stroke="var(--timeline-dry)">
+</line>
+<line x1="344.66666666666663" y1="59" x2="344.66666666666663" y2="96" stroke="var(--timeline-dry)">
+</line>
+<line x1="563.3333333333333" y1="59" x2="563.3333333333333" y2="96" stroke="var(--timeline-dry)">
+</line>
+<line x1="782" y1="59" x2="782" y2="96" stroke="var(--timeline-dry)">
+</line>
+<text x="0" y="136" text-anchor="start" class="label">Phrase grid</text>
+<line x1="126" y1="132" x2="946" y2="132" stroke="var(--timeline-grid)">
+</line>
+<rect x="618" y="121" width="328" height="22" fill="var(--timeline-wet)" opacity="0.18">
+</rect>
+<path d="M508.6666666666667,132 Q578.64,131 618,113 L618,147 Q576.4533333333334,133 508.6666666666667,132 Z" fill="var(--timeline-wet)" opacity="0.72">
+</path>
+<line x1="180.66666666666666" y1="113" x2="180.66666666666666" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M176.66666666666666,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="399.3333333333333" y1="113" x2="399.3333333333333" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M395.3333333333333,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="618" y1="113" x2="618" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M614,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<line x1="836.6666666666666" y1="113" x2="836.6666666666666" y2="150" stroke="var(--timeline-target)">
+</line>
+<path d="M832.6666666666666,110h8l-4,5Z" fill="var(--timeline-target)">
+</path>
+<circle cx="180.66666666666666" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="180.66666666666666" y="53" text-anchor="middle" class="event">1</text>
+<circle cx="454" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="454" y="53" text-anchor="middle" class="event">2</text>
+<circle cx="618" cy="49" r="8.5" fill="var(--timeline-surface)" stroke="var(--timeline-dry)">
+</circle>
+<text x="618" y="53" text-anchor="middle" class="event">3</text>
+</svg>
+</div>
+<ol class="timing-events"><li>Send Phrase on beat 2 while idle</li><li>Cue</li><li>Loop beat one lands on host beat 2</li></ol>
+<figcaption>While Loop playback is idle, send Phrase (12) on host beat 2, then Cue early enough for the full lead-in. Future launch boundaries follow that shifted grid. In this example, Loop beat one lands on bar 8 beat 2. Rack requires Phrase to coincide with Clock. An already queued or playing Loop keeps its origin.</figcaption>
+</figure>
+<p>After a seek, reset or loss of timing, restore the timing source and send a fresh Cue. Resend Phrase first if you want to reestablish a custom playback origin. Use MIDI notes to sequence these actions. ReverbArise currently has no dedicated Loop automation parameters. See the <a href="#host-setups">host appendices</a> for the audio and control routing.</p>
+
 <h2 id="export">5. Optional: Export a WAV directly from ReverbArise</h2>
+<p>Direct WAV Export currently requires an accepted Song. For an accepted Loop, use Perform playback and DAW rendering.</p>
 <p>Export does not automatically attenuate the wet aggregate or combined mix. Float32 WAV preserves samples above 0 dBFS; a peak warning means downstream playback or conversion may clip. Per-swell calibration and shaping still apply. Preview uses the same prepared audio, with short monitoring-only boundary ramps.</p>
 <p>Use this mode when you want a separate WAV to place in your DAW or send elsewhere. You can skip it and keep using Perform for playback and DAW rendering, then save your project in step 6.</p>
-<ol><li>Select <strong>Export</strong>. Wait for preparation to complete. Resolve any missing-source or wet-render warnings before relying on the result.</li><li>Choose a <strong>Mix Character</strong> starting point or edit <strong>Dry</strong> and <strong>Wet</strong> independently. Each ranges from 0–100%; 100% is unity for that branch. Dry 0% / Wet 100% is wet-only, 100% / 0% is dry-only, and 100% / 100% adds both at full level. Unmatched edits show Custom. At 0% / 0%, preview and WAV delivery are disabled. These levels are independent of Perform's listening switch and Live Wet gain.</li><li>Use Export's preview Play and Stop to check the prepared mix. While it plays, change Mix Character or Dry/Wet: playback continues from the moving playhead with a short, smooth gain transition. Left-click or drag the waveform to position a ready preview. Scroll to zoom at the pointer and press the wheel while dragging to pan. Use Fit or Home to restore the view. You can still navigate a previous waveform while the new mix prepares. These actions leave the DAW transport alone. Gain edits keep your view; Save and Drag wait for the current WAV. A previous waveform is labelled while its replacement is measured. Stop or 0% / 0% stops playback; later level edits do not start it again.</li><li>Use <strong>Save WAV</strong> to choose a destination, or drag the WAV tile into your DAW or a folder as soon as it is ready. The WAV cursor shows where you can drop it. If you see a stop sign, move to a target that accepts files or use Save WAV. The tile returns to its dotted outline when the drag ends. When layering a dry/wet WAV in the DAW, mute the original source to avoid doubling dry audio; use Dry 0% / Wet 100% for a wet-only layer. Keep your exported WAV separate from the plugin's working cache.</li></ol>
+<ol><li>Select <strong>Export</strong>. Wait for preparation to complete. Resolve any missing-source or wet-render warnings before relying on the result.</li><li>Choose a <strong>Mix Character</strong> starting point or edit <strong>Dry</strong> and <strong>Wet</strong> independently. Each ranges from 0–100%; 100% is unity for that branch. Dry 0% / Wet 100% is wet-only, 100% / 0% is dry-only, and 100% / 100% adds both at full level. Unmatched edits show Custom. At 0% / 0%, preview and WAV delivery are disabled. These levels are independent of Perform's listening switch. Loop Export scales the Perform wet mix, including Live wet.</li><li>Use Export's preview Play and Stop to check the prepared mix. While it plays, change Mix Character or Dry/Wet: playback continues from the moving playhead with a short, smooth gain transition. Left-click or drag the waveform to position a ready preview. Scroll to zoom at the pointer and press the wheel while dragging to pan. Use Fit or Home to restore the view. You can still navigate a previous waveform while the new mix prepares. These actions leave the DAW transport alone. Gain edits keep your view; Save and Drag wait for the current WAV. A previous waveform is labelled while its replacement is measured. Stop or 0% / 0% stops playback; later level edits do not start it again.</li><li>Use <strong>Save WAV</strong> to choose a destination, or drag the WAV tile into your DAW or a folder as soon as it is ready. The WAV cursor shows where you can drop it. If you see a stop sign, move to a target that accepts files or use Save WAV. The tile returns to its dotted outline when the drag ends. When layering a dry/wet WAV in the DAW, mute the original source to avoid doubling dry audio; use Dry 0% / Wet 100% for a wet-only layer. Keep your exported WAV separate from the plugin's working cache.</li></ol>
 <figure><img class="screenshot" src="{{alpha-ready-export}}" alt="Export workspace with a prepared waveform and enabled WAV delivery controls" width="1400" height="1000"><figcaption>Ready Export. The fixture checks completed preparation and enabled Save/drag controls. A later edit can require a new prepared mix.</figcaption></figure>
+
+<h3>Export a captured Loop</h3>
+<p>With an accepted Loop and a ready enabled swell, open <strong>Export</strong>. Export uses the captured Loop's own timing and exact length. It does not need the transport, Clock or Phrase to keep running, and it can be ready while Cue Loop is unavailable. Preview needs an audio device at the captured sample rate; Save and Drag can still deliver the captured-rate WAV when Preview is disabled. Hover over Preview for the reason.</p>
+<ol>
+<li>Choose <strong>Repeats</strong>: the number of Loop passes to include. The first swell lead-in is included once, swells and tails overlap across internal repeat boundaries, and the final scheduled pass keeps its complete tail. There is no extra unscheduled pass.</li>
+<li>Choose a <strong>Lead-in grid</strong>. ReverbArise rounds the WAV start backward to that grid so no initial swell is cut off. The waveform labels <strong>WAV start</strong> separately from <strong>Loop Bar 1</strong>. Follow the placement instruction inside the WAV tile. For example, if the earliest wet starts 2.4 bars early and the grid is 4 bars, the file begins 4 bars early with 1.6 bars of silence. To put Loop Bar 1 at project bar 17, place the WAV at bar 13.</li>
+<li>Use the same <strong>Mix Character</strong> and <strong>Dry/Wet</strong> controls as Song Export. A fresh Loop mix starts at <strong>Wet Layer</strong> (Dry 0%, Wet 100%). Raising Dry includes the captured dry Loop once per pass in both Preview and the WAV. Dry is silent before the first pass and in the final wet tail. A dry-only WAV starts at Loop Bar 1. At 0% / 0%, Preview and file delivery are disabled.</li>
+<li>In Loop Export, <strong>Wet 100%</strong> uses the swell level from Perform, including its saved starting gains, each swell's Level and Live wet. A different Wet setting scales that level in Preview and the WAV. For Wet Layer, adjust the original dry in your host mixer and check the combined peak there.</li>
+<li>Preview, then <strong>Save WAV</strong> or drag the ready tile. Keep the destination tempo at the captured tempo for the stated bar offset; Export does not stretch the take. Mute or replace the original dry when using a dry-inclusive WAV to avoid doubling it. Song and Loop keep their own mix preferences, and previous exported files remain unchanged.</li>
+</ol>
 
 <h2 id="save">6. Save, close and reopen safely</h2>
 <p>Developer-state transition: opening a project with the older single-blend Export preference resets that preference to wet-only and prepares a fresh revision. Previously exported WAVs and their stored history remain intact. Keep your earlier project copy for rollback; do not remove older WAVs already used by your DAW.</p>
 <ol><li>Stop internal preview and save a <strong>copy</strong> of your DAW project. Keep captured source, render/cache assets and any exported WAVs available.</li><li>Close and reopen that copy. Check plugin recognition, captured waveform, swell list, settings and playback. Restoring a session does not automatically start audition.</li><li>Send the sender any missing-asset or restore warning. Do not rename plugin identities or delete caches as a repair. To roll back, close the DAW, restore the preserved installation and rescan; retain the original project copy and its assets.</li></ol>
 
 <p>Open the gear button, then <strong>Settings &rarr; Storage</strong>, to see this instance's working folder, file counts and disk usage. The page scans automatically when opened. When you return, the last scan stays visible with its timestamp while a fresh scan runs. <strong>Stop scan</strong> appears only while scanning. Scanning never changes audio or project files. If coverage is incomplete, let capture or rendering settle and reopen the page. Older saved projects may still depend on retained or duplicate audio: these figures do not identify files that are safe to delete.</p>
+<p>When you reopen a project with an accepted Loop, Learn opens with Arm and Recapture Audio off. The saved Loop and its swell edits are available when the referenced assets can be verified. To play the swells, open Perform, start your timing source and cue the Loop again. Stop playback before recovering assets. If you moved an associated asset folder, use <strong>Locate assets...</strong>. To recover from a complete backup, use <strong>Restore backup...</strong>. You can find both actions in <strong>Settings &rarr; Storage</strong>. Save the host project again after adopting a recovered folder.</p>
 <p><strong>Choose folder...</strong> prepares and verifies a copy in a dedicated asset folder, for example beside your DAW project. Your working folder stays unchanged until you click <strong>Use This Folder</strong>. After it succeeds, save the DAW project to retain the association. Original assets stay in place. To make an independent physical copy of an associated project, choose a new empty folder and use the same verified-copy flow. Save As alone never moves assets.</p>
 <p>If an associated store moves, <strong>Locate assets...</strong> verifies its folder before using it. If that store is unavailable, <strong>Restore backup...</strong> asks for a completed receipt and then an empty destination. If recovery is impossible, <strong>Choose recovery folder...</strong> can prepare an explicitly incomplete workspace, preserving swell markers, edits, original locators and verified surviving files. It is not a complete copy or backup. After explicitly using it, follow normal Learn with Detect events off and Recapture audio on; existing unfrozen swells rebuild when complete required source and IRs are available. Missing frozen audio requires explicit unfreezing, and lost exported/Playlist files cannot be recreated exactly.</p>
 <p>Keep a pre-upgrade DAW project, its original plugin binary and original asset folder. Associated projects use a newer state format that an older binary may reject; rollback uses the retained old project.</p>
@@ -86,5 +734,113 @@ Save the DAW project and its external audio separately, and back up every plugin
 <p>Open the gear button and choose <strong>About</strong>, the last Settings tab after Storage. Use <strong>Copy build information</strong>. A message beneath the button confirms that the information was copied to the clipboard. The About ReverbArise section shows the product version, release candidate/build identifier and full Git commit. Paste the copied report into your bug report so the sender can identify the plugin you are actually running. A local development build or modified source is labelled accordingly.</p>
 <h3>Send useful feedback</h3>
 <p>Reply directly to the person who privately supplied this candidate. Include <strong>{{IDENTITY}}</strong>, source <code>{{SHA}}</code>, Windows and DAW versions, sample rate/buffer, numbered reproduction steps, what you expected and what happened. Attach relevant screenshots or error text. For a crash, note what you were doing immediately beforehand. Ask before sharing projects or recordings containing private material.</p>
+<h2 id="host-setups">Host setup appendices</h2>
+<p>Start with your host's setup, then choose a Learn or Perform workflow. The <a href="#loop-signals">shared signal map</a> lists the MIDI numbers behind the host's note names.</p>
+<nav aria-label="Host appendices"><a href="#rack-setup">A. VCV Rack</a><a href="#rack-learn">Rack Learn</a><a href="#rack-perform">Rack Perform</a><a href="#rack-export">Rack Export</a><a href="#fl-studio-setup">B. FL Studio</a><a href="#fl-learn">FL Studio Learn</a><a href="#fl-perform">FL Studio Perform</a><a href="#fl-export">FL Studio Export</a></nav>
+
+<h3 id="rack-setup">Appendix A. VCV Rack</h3>
+<ol>
+<li>Load ReverbArise in <strong>VCV Host-FX</strong>. Add the VST3 search folder in Host-FX if needed. Patch stereo source audio into Host-FX and its stereo outputs into your audio output module. The Clocked examples use 48 kHz, 4/4 and 137 BPM.</li>
+<li>To assign a control input, right-click its label on Host-FX and choose the corresponding <strong>Note Gate</strong>. Patch the source pulse into that input. The rising edge sends the note. Keep the sound and control pulses on the same clock.</li>
+</ol>
+<h4 id="rack-learn">Learn in Rack</h4>
+<h5>Song Mode</h5>
+<p>Song Mode needs the host to supply absolute musical position, tempo and meter. The Rack Host-FX setup here supplies beat pulses, so use <strong>Loop Mode</strong> to capture this source.</p>
+<h5>Loop Mode with Duration</h5>
+<ol>
+<li>Patch one pulse per beat from the master clock to Clock <strong>B0 (23)</strong>. In Learn, enable <strong>Loop Mode</strong>, select <strong>Duration</strong>, and set the number of bars or beats.</li>
+<li>Click <strong>Arm</strong>. Start the clock if it is stopped. The first pulse of a new clock run counts as beat one. With the clock already running, recording starts on the next bar line. Keep the clock running until the take is accepted.</li>
+</ol>
+<h5>Loop Mode with End on Signal</h5>
+<p>For a manual take, use the same Clock cable, select <strong>End on Signal</strong>, and click <strong>Arm</strong>. Recording starts on the next beat. Click <strong>Arm</strong> again during the last bar you want to record. Keep the clock running through the next bar line.</p>
+<p>For a sequenced one-bar take, keep Clock connected and run a four-step sequence at one step per beat. Send Start/Arm <strong>C1 (24)</strong> on step 1 and Stop <strong>C&#9839;1 (25)</strong> on step 4. Leave the Arm button off so the sequence starts the take. The next step 1 closes the capture. For a two-bar take, use eight steps and move Stop to step 8.</p>
+<p>With Impromptu Clocked, patch Master to Clock, <strong>CLK 1</strong> divided by 8 with zero delay to Start/Arm, and <strong>CLK 2</strong> divided by 8 with a three-quarter-cycle delay to Stop. Start arrives on beat 1, Stop on beat 7 and the take closes on beat 9. Set stopped outputs to low and reset Clocked before pressing <strong>Run</strong>.</p>
+<h5>Loop Mode with End on repeat</h5>
+<ol>
+<li>Patch one pulse per beat to Clock <strong>B0 (23)</strong> and a Step 1 pulse from each pass to Phrase <strong>C0 (12)</strong>. The two pulses must arrive together at each repeat start. With Impromptu Clocked, use Master for Clock and zero-delay <strong>CLK 1</strong> divided by 8 for a two-bar Phrase.</li>
+<li>Select <strong>End on repeat</strong> and click <strong>Arm</strong>. Keep the timing and audio running through two Phrase pulses. Capture starts at the first one after arming and ends at the next.</li>
+</ol>
+<p>After a Loop is accepted, review the detected events and click <strong>Generate Swells</strong>. Enable <strong>Recapture audio</strong> before arming only when you want a successful new take to replace the accepted one.</p>
+
+<h4 id="rack-perform">Perform in Rack</h4>
+<h5>Song playback</h5>
+<p>The Clock and Phrase cables cannot supply the song positions required for Song playback in this Rack setup. Use a captured Loop with the steps below for live wet swells.</p>
+<h5>Audition a swell</h5>
+<p>With a Loop accepted, open <strong>Perform</strong>, select a ready swell and use the <strong>Audition</strong> play button. Use <strong>Dry + wet</strong> to hear its captured context or <strong>Wet only</strong> to isolate the swell mix. Stop any active Loop playback before auditioning.</p>
+<h5>Cue and stop a Loop by hand</h5>
+<ol>
+<li>Keep Clock connected and running. After generating swells, open <strong>Perform</strong> and enable <strong>Live playback</strong> in Settings. Match Rack's sample rate to the captured Loop.</li>
+<li>When <strong>Cue Loop</strong> shows <strong>Ready</strong>, click it. Beat one lands on the next bar line that leaves room for the full lead-in. Click <strong>Cancel Loop</strong> while it is waiting if you change your mind.</li>
+<li>Click <strong>Stop Loop</strong> to finish the current pass without the next lead-in. Click <strong>Stop Now</strong> while it is finishing for a short immediate fade. Choose <strong>Dry + Wet</strong> in playback settings to hear the live input alongside swells.</li>
+</ol>
+<h5>Cue and stop from a sequencer</h5>
+<p>Keep Clock connected. Patch separate trigger outputs to Cue <strong>E0 (16)</strong>, Stop <strong>F0 (17)</strong> and Stop Now <strong>F&#9839;0 (18)</strong> as needed. To align future cues to a sequencer phrase, send its Step 1 pulse to Phrase <strong>C0 (12)</strong> with a Clock pulse while the Loop is idle. Cue early enough to hear the full lead-in. After a clock loss or reset, restore timing and send a fresh Cue.</p>
+<p>Hover over a disabled playback button for its reason. If the status asks for 44.1 kHz or another rate, set Rack to that rate to use the saved capture and swells.</p>
+
+<h4 id="rack-export">Export a Loop from Rack</h4>
+<ol>
+<li>Capture a Loop using any Learn method, then generate swells and wait for an enabled swell to be ready. Open <strong>Export</strong>. No additional control cable is needed; you can stop Clock while preparing the WAV.</li>
+<li>Choose Repeats, Lead-in grid and a Mix Character or Dry/Wet pair. Match Rack's audio rate to the captured rate to use Preview. The captured-rate WAV can still be saved when Preview is unavailable.</li>
+<li>Use <strong>Save WAV</strong> to a folder outside the plug-in's working storage, then import it into your destination DAW. Follow the placement instruction inside the tile. Use Wet Layer to add swells alongside the original dry; mute or replace the original dry for a dry-inclusive mix.</li>
+</ol>
+
+<h3 id="fl-studio-setup">Appendix B. FL Studio</h3>
+<ol>
+<li>Install the complete bundle into <code>%PROGRAMFILES%\Common Files\VST3</code>. In Plugin Manager, enable <strong>Verify plugins</strong> and <strong>Rescan previously verified plugins</strong>, then run <strong>Find installed plugins</strong>. Confirm the resolved bundle path.</li>
+<li>Load ReverbArise in the mixer insert receiving your source audio. Route the insert to your monitoring output. Use the supported Loop setup of 48 kHz and steady 4/4 timing. The FL Studio transport supplies timing for Learn and Perform.</li>
+<li>For MIDI control, add a <strong>MIDI Out</strong> channel on <strong>Channel 1</strong> with a free port, such as 0. Set the effect wrapper's MIDI <strong>Input port</strong> to match. Put control notes in the MIDI Out Piano Roll and place that pattern in the Playlist. Manual capture and playback use the plug-in buttons without this route.</li>
+</ol>
+<h4 id="fl-learn">Learn in FL Studio</h4>
+<h5>Song Mode from the Playlist</h5>
+<ol>
+<li>Choose FL Studio's <strong>Song</strong> playback and open <strong>Learn</strong> with <strong>Loop Mode</strong> off. Start at the beginning of the Playlist or the first section you want to map.</li>
+<li>Play through the source audio and stop FL Studio to commit the captured ranges. Leave <strong>Recapture audio</strong> off to retain existing audio, or enable it before playing the range you want to replace.</li>
+<li>Review event markers, then click <strong>Generate Swells</strong>. With <strong>Generate on Stop</strong> enabled, Learn starts generation after a successful Song capture.</li>
+</ol>
+<h5>Loop Mode with Duration</h5>
+<ol>
+<li>Select <strong>Song</strong> for the Playlist or <strong>Pattern</strong> for the selected pattern. In Learn, enable <strong>Loop Mode</strong>, select <strong>Duration</strong> and choose the length. For example, choose two bars and let a one-bar Pattern play twice to capture both passes.</li>
+<li>Click <strong>Arm</strong> and play. From a bar line, recording can start immediately. If playback starts or you arm mid-bar, capture waits for the next bar line. Let playback continue through the end of the take.</li>
+</ol>
+<p>Set <strong>2 Bars</strong> to capture two passes of a repeating one-bar pattern. FL Studio must report the repeat boundaries and keep playback continuous at each wrap.</p>
+<h5>Loop Mode with End on Signal</h5>
+<p>For a manual Playlist take, arm before the bar you want, then start or continue <strong>Song</strong> playback. Click <strong>Arm</strong> again during the last bar you want to keep. Recording closes at the next bar line while FL Studio is still playing.</p>
+<p>In <strong>Pattern</strong> playback, the same manual stop can close at the pattern's declared wrap. For a one-bar pattern, arm before Play, then click Arm again during that bar and leave playback running through the wrap.</p>
+<p>For MIDI control, leave Arm off. Put Learn Start/Arm <strong>C2 (24)</strong> at bar 3 beat 1 and Learn Stop <strong>C&#9839;2 (25)</strong> at bar 4 beat 3 on the MIDI Out pattern. Start Song playback before bar 3 and let it run through bar 5 beat 1. The take contains bars 3 and 4.</p>
+<h5>Loop Mode with End on repeat</h5>
+<ol>
+<li>Choose <strong>Pattern</strong> playback and select a whole-bar pattern. For <strong>Song</strong> playback, choose a Playlist repeat range that starts and ends on bar lines.</li>
+<li>Select <strong>End on repeat</strong> in Learn and click <strong>Arm</strong>. Play through a complete repeat. If you arm midway through a pass, capture waits for the next repeat to start and closes at the following boundary. A seek before the repeat ends cancels the take.</li>
+</ol>
+<p>After any Loop capture method accepts the take, inspect the markers and click <strong>Generate Swells</strong>. Enable <strong>Recapture audio</strong> before arming only if you want to replace the accepted Loop.</p>
+
+<h4 id="fl-perform">Perform in FL Studio</h4>
+<h5>Song playback and DAW rendering</h5>
+<ol>
+<li>Open <strong>Perform</strong> with a prepared Song source. Enable <strong>Live playback</strong> in Settings and choose the routing you want. Start <strong>Song</strong> playback early enough to hear the lead-in to the first swell.</li>
+<li>Swells play at their saved Playlist positions. To include them in a normal FL Studio bounce, leave ReverbArise in <strong>Perform</strong> and render from FL Studio. Keep the song timing compatible with the capture.</li>
+</ol>
+<h5>Audition a Song or Loop swell</h5>
+<p>Stop FL Studio transport and stop any active Loop playback. Select a ready swell in <strong>Perform</strong>, choose <strong>Dry + wet</strong> or <strong>Wet only</strong>, and press the <strong>Audition</strong> play button. Use the adjacent Stop button to end the preview.</p>
+<h5>Cue and stop a Loop by hand</h5>
+<ol>
+<li>Open <strong>Perform</strong> with an accepted Loop and prepared swells. Choose <strong>Pattern</strong> playback for the selected pattern or <strong>Song</strong> playback for the Playlist.</li>
+<li>Enable <strong>Live playback</strong> and start transport. When <strong>Cue Loop</strong> shows <strong>Ready</strong>, click it. The Loop begins on the first bar line with room for the full lead-in. A verified repeat keeps the Loop queued or playing as the transport wraps. Click <strong>Cancel Loop</strong> to cancel a waiting launch.</li>
+<li>Click <strong>Stop Loop</strong> to finish the current pass. Click <strong>Stop Now</strong> while it is finishing for a short immediate fade. After stopping transport or seeking, start playback and Cue again.</li>
+</ol>
+<h5>Sequence Cue and Stop from the Playlist</h5>
+<ol>
+<li>Place Cue <strong>E1 (16)</strong> on the MIDI Out pattern before your target bar. For a two-bar Loop with at most two beats of lead-in, put Cue at bar 7 beat 3 to launch at bar 8 beat 1.</li>
+<li>Put Stop <strong>F1 (17)</strong> at bar 9 beat 3 to finish that pass at bar 10 beat 1. Use Stop Now <strong>F&#9839;1 (18)</strong> for an immediate fade. Start Song playback before the first command you want to use.</li>
+<li>To shift the next launch off the Playlist bar line, send Phrase <strong>C1 (12)</strong> at the desired beat-one position while playback is idle, then Cue. Stopping or seeking restores the Playlist grid until a new Phrase arrives.</li>
+</ol>
+<p>Use realtime playback for Loop wet. In the tested offline Loop bounce, FL Studio rendered the dry input. The current shared playback-note example has native processor coverage and awaits a desktop replay with the revised note map.</p>
+<h4 id="fl-export">Export a Loop into the FL Studio Playlist</h4>
+<ol>
+<li>Capture a Loop from Pattern or Song playback, generate swells, and select <strong>Export</strong> once an enabled swell is ready. You can stop FL Studio transport; export follows the captured Loop, not the current Playlist position.</li>
+<li>Set Repeats and Lead-in grid, choose Mix Character or the Dry/Wet levels, and check Preview. Keep the project tempo at the captured tempo for musical placement. Match the audio device rate to the captured rate when previewing.</li>
+<li>Drag the ready WAV tile into the Playlist, placing the file's beginning at the position shown by the placement instruction. For a four-bar lead-in and a desired Loop Bar 1 at bar 17, drop at bar 13. Use <strong>Save WAV</strong> and import the file if dragging is unavailable. Both delivery methods use the same prepared audio.</li>
+<li>Stay in Export while playing the delivered file so the plug-in does not add live swells again. With nonzero Dry in the WAV, mute or replace the original dry clip. Return to Perform when you want live swells instead of the delivered WAV.</li>
+</ol>
 <p class="identity">Required dependency notices are in licenses/ and ReverbArise.vst3/Contents/Resources/. guide-provenance.json records native screenshot provenance. Keep README.txt and the checksum/manifest supplied with this package.</p>
 </main></body></html>

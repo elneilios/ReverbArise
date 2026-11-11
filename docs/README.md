@@ -84,6 +84,8 @@ This directory covers product identity, the existing implementation, development
 
 - [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.
 
+- [First main → Loop integration](validation/2026-11-10-loop-main-integration.md) — merge decisions, combined native verification and explicit host/DPI limits.
+
 - [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
 
 - [Issue #25 performance audit](validation/2026-11-03-issue-25-performance-audit.md) — delivered source/thread audit and original measurements; waveform optimisation subsequently shipped in #67 / PR #69. Host/resource follow-up remains tracked by #25.
@@ -99,6 +101,10 @@ This directory covers product identity, the existing implementation, development
 - [IR Level range investigation — issue #108](validation/2026-11-06-issue-108-ir-level.md) — verified per-swell semantics and the focused-dial proposal with sound-preserving extended entry. [Approved production integration](validation/2026-11-06-issue-108-integration.md) records the owner-accepted -12/+12 dial, full -60/+12 exact domain, isolation/audio-path checks and final Debug/Release results. The [earlier native checkpoint](validation/2026-11-06-issue-108-control-checkpoint.md) preserves candidate results and subsequent approval.
 - [Learn source/context protocol](development/learn-source-context-protocol.md) — captured-source persistence, read-only candidates and guarded Generate transactions; implemented by merged #56 and synced/archived through #66.
 - [Learn capture failure diagnostics](development/capture-failure-diagnostics.md) — bounded first-cause evidence, provisional/committed source feedback and native fault harness; [issue #54 evidence](validation/2026-11-04-issue-54-capture-failure.md) distinguishes injected failures from the unknown original FL Studio incident.
+- [Loop host timing and admission](development/loop-host-admission.md) — Rack input authority, independent readiness and recovery rules for Loop integration. [Issue #123 evidence](validation/2026-11-09-issue-123-rack-timing.md) records the measured configurations and owner decision.
+- [Loop capture state](development/loop-capture-state.md) — managed source identity, next-capture preference and the restore contract for #129.
+- [Loop playback scheduler](development/loop-playback.md) — live phase, Cue and Stop, and shared wet preparation. The [measured Rack replays](validation/issue-125-rack-replay/README.md) record the two #125 timing fixtures and results.
+- [Issue #124 Loop capture validation](validation/2026-11-09-issue-124-loop-capture.md) — hosted Rack capture and reopen, saved audio verification and native host timing coverage.
 - [Learn workspace](design/learn-workspace.md) — approved Learn foundation plus #38 waveform/event refinement, Generate controls, diagnostic inspection and stable dry fitting.
 - [Issue #38 validation](validation/2026-11-04-issue-38-generation-workflow.md) — native generation, initial Perform navigation, dense fixtures and retained owner/host acceptance; [latest-main reconciliation](validation/2026-11-04-issue-38-main-reconciliation.md) records integrated gates.
 - [Song export composition](development/song-export.md) and [Export workspace reference](design/export-workspace.md) — delivered issue #6 contracts and approved control mapping; independent additive Dry/Wet levels and continuous gain preview are implemented by #51.

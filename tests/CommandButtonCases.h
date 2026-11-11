@@ -45,6 +45,7 @@ inline void cases()
         else REQUIRE(ink.border==(dangerRole?danger:outline).withMultipliedAlpha(alpha));
         if(enabled && !emphasized && !dangerRole && held)REQUIRE(ink.fill==separator && ink.glyph==text);
         if(enabled && !emphasized && dangerRole && held)REQUIRE(ink.fill==danger && ink.content==background);
+        if(dangerRole && latched && !hovered)REQUIRE(ink.fill==danger.withMultipliedAlpha(alpha));
         if(enabled && !emphasized && !dangerRole)REQUIRE(ink.glyph==text);
         for(const auto bounds:{juce::Rectangle<int>{0,0,24,32},juce::Rectangle<int>{0,0,150,34}})
         {

@@ -72,6 +72,11 @@ bool publishSongExport(SongMix& mix,const juce::File& instance,ExportFile& outpu
     try{
         const auto plan=mix.plan();if(!plan){error="Export composition is not prepared";return false;}
         const auto dir=instance.getChildFile("exports");if(!noLinks(dir,instance) || ensureManagedDirectory(dir).failed()){error="Cannot create safe Export directory";return false;}
+        if(plan->loop){
+            const auto free=fault && fault(ExportFileStage::space)?int64_t{0}:dir.getBytesFreeOnVolume();
+            const auto bytes=static_cast<uint64_t>(plan->end-plan->origin)*8+1024;
+            if(free<0 || static_cast<uint64_t>(free)<bytes){error="Not enough free space to prepare this Loop WAV";return false;}
+        }
         ScratchFile scratch{dir.getChildFile(".unpublished-"+juce::Uuid().toString()+".wav")};
         juce::WavAudioFormat format;auto staged=scratch.file.createOutputStream();
         if(!staged || staged->failedToOpen()){error="Cannot open staged Export WAV";return false;}
@@ -92,8 +97,10 @@ bool publishSongExport(SongMix& mix,const juce::File& instance,ExportFile& outpu
         ExportFile candidate;candidate.composition=plan->identity;candidate.rate=plan->timing.rate;candidate.origin=plan->origin;candidate.frames=plan->end-plan->origin;candidate.wet=plan->wet;
         auto percent=juce::String(static_cast<double>(plan->wet)*100,3);while(percent.endsWithChar('0'))percent=percent.dropLastCharacters(1);if(percent.endsWithChar('.'))percent=percent.dropLastCharacters(1);
         candidate.dry=plan->dry;candidate.gainLaw=2;
+        if(plan->loop)candidate.loop=LoopExportDescriptor{*plan->loop,plan->source.loop->endSample};
         const auto dryPercent=juce::String(static_cast<double>(plan->dry)*100,3);
-        candidate.path="exports/Swells-v2-"+dryPercent+"pct-dry-"+percent+"pct-wet-"+juce::Uuid().toString()+".wav";candidate.checksum=checksum(scratch.file,cancel);
+        const auto prefix=plan->loop?"exports/Swells-loop-v1-"+juce::String(plan->loop->repeats)+"passes-":"exports/Swells-v2-";
+        candidate.path=prefix+dryPercent+"pct-dry-"+percent+"pct-wet-"+juce::Uuid().toString()+".wav";candidate.checksum=checksum(scratch.file,cancel);
         if(!metadataValid(candidate,error) || injected(fault,ExportFileStage::verify,error) || !verify(scratch.file,candidate,error,cancel))return false;
         const auto destination=instance.getChildFile(candidate.path);
         if(interrupted(cancel,error) || injected(fault,ExportFileStage::publish,error))return false;
@@ -111,6 +118,11 @@ bool saveExportFile(const juce::File& instance,const ExportFile& meta,const juce
         if(destination==instance || destination.isAChildOf(instance)){error="Managed source, render and Export storage cannot be overwritten";return false;}
         if(destination.exists() && !overwrite){error="Save destination exists; overwrite confirmation required";return false;}
         if(ensureManagedDirectory(destination.getParentDirectory()).failed()){error="Cannot create Save destination";return false;}
+        if(meta.loop){
+            const auto free=fault && fault(ExportFileStage::space)?int64_t{0}:destination.getParentDirectory().getBytesFreeOnVolume();
+            if(free<0 || static_cast<uint64_t>(free)<static_cast<uint64_t>(meta.frames)*8+1024)
+            {error="Not enough free space at the Save destination";return false;}
+        }
         ScratchFile scratch{destination.getSiblingFile(destination.getFileName()+".unpublished-"+juce::Uuid().toString())};
         auto input=source.createInputStream();auto output=scratch.file.createOutputStream();if(!input || !output || output->failedToOpen()){error="Cannot open Save streams";return false;}
         std::array<char,65536> bytes;

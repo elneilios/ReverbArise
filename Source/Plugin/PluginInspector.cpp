@@ -25,10 +25,13 @@ void PreverbAudioProcessorEditor::beginValueEdit(int index)
     ++valueResetRevision;
     valueWorkflowTokens[index]=processor.getWorkflowSnapshot().pass;
     const auto current=processor.swellEngine().snapshot();const auto w=m3::find(current.session,current.session.primary);
+    const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSourceEditTime(capture);
+    const auto loop=capture.sourceKind()==CaptureSourceKind::loop;
     valueAnchors[index]=w?std::optional<m3::Swell>(*w):std::nullopt;
-    valueInvocations[index]={current.sessionEpoch,current.session.selected,processor.getSongTime(),current.session.timing,
-        processor.getCaptureSnapshot().manifest.sampleRate,processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
-    valueInvocations[index].clock=m3::gridClockContext(current.gridClock,processor.getHostPositionDiagnostics().isPlaying);
+    valueInvocations[index]={current.sessionEpoch,current.session.selected,time,current.session.timing,
+        capture.manifest.sampleRate,loop?time.valid:processor.getHostPositionDiagnostics().samplePositionAvailable,w?w->render.content:juce::String{}};
+    valueInvocations[index].clock=m3::gridClockContext(current.gridClock,!loop && processor.getHostPositionDiagnostics().isPlaying);
+    valueInvocations[index].loopRevision=loop?capture.manifest.revision:0;
     valueTokens[index]=w?w->inputGeneration:0;
     valueRawStarts[index]=current.raw?current.raw->start:0;valueRawEnds[index]=current.raw?current.raw->end:0;
 }
@@ -76,7 +79,7 @@ void PreverbAudioProcessorEditor::resetValueEdit(int index,InitialValuePositions
         auto candidate=w;if(!m3::setShape(candidate,shape,valueRawStarts[index],valueRawEnds[index],error))return false;
         if(candidate.shape==w.shape && candidate.supportOffset==w.supportOffset)return false;
         w=std::move(candidate);return true;
-    },invocation.epoch);
+    },invocation.epoch,nullptr,invocation.loopRevision);
     refresh();
 }
 bool PreverbAudioProcessorEditor::valueIntentCurrent(int index)const
@@ -84,13 +87,16 @@ bool PreverbAudioProcessorEditor::valueIntentCurrent(int index)const
     if(!valueAnchors[index])return false;const auto& invocation=valueInvocations[index];
     const auto flow=processor.getWorkflowSnapshot();const auto current=processor.swellEngine().savedSession();const auto latest=m3::find(current,valueAnchors[index]->id);
     const auto currentClock=processor.swellEngine().transportClockSnapshot();
-    const auto gridClock=m3::gridClockContext(currentClock,processor.getHostPositionDiagnostics().isPlaying);
+    const auto capture=processor.getCaptureSnapshot();const auto time=processor.getSourceEditTime(capture);
+    const auto loop=capture.sourceKind()==CaptureSourceKind::loop;
+    const auto gridClock=m3::gridClockContext(currentClock,!loop && processor.getHostPositionDiagnostics().isPlaying);
     return flow.pass==valueWorkflowTokens[index] && flow.mode==workflow::Mode::live && invocation.epoch==processor.swellEngine().assignmentEpoch()
+        && invocation.loopRevision==(loop?capture.manifest.revision:0)
         && invocation.clock.sameAuthority(gridClock)
         && current.primary==valueAnchors[index]->id && current.selected==invocation.selected && latest && latest->inputGeneration==valueTokens[index]
-        && latest->frozen==valueAnchors[index]->frozen && transportMappingMatches(invocation.time,processor.getSongTime())
+        && latest->frozen==valueAnchors[index]->frozen && transportMappingMatches(invocation.time,time)
         && invocation.accepted.valid==current.timing.valid && (!invocation.accepted.valid || transportMappingMatches(invocation.accepted,current.timing))
-        && processor.getHostPositionDiagnostics().samplePositionAvailable==invocation.sampleAvailable
+        && (loop?time.valid:processor.getHostPositionDiagnostics().samplePositionAvailable)==invocation.sampleAvailable
         && (index<=sourceEndValue || latest->render.content==invocation.render);
 }
 void PreverbAudioProcessorEditor::rebaseValueEdit(int index)
@@ -223,7 +229,7 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
         if(index==fadeInValue || index==fadeOutValue)
         {if(value<0){error="Fade length cannot be negative";return false;}(index==fadeInValue?shape.fadeIn:shape.fadeOut)=value;}
         return m3::setShape(w,shape,valueRawStarts[index],valueRawEnds[index],error);
-    },invocation.epoch,&rejection);
+    },invocation.epoch,&rejection,invocation.loopRevision);
     // Refresh is listener-suppressed. The cell keeps its typed text/gesture anchor
     // until completion, while the rest of the editor shows actual canonical state.
     if(ok){const auto saved=processor.swellEngine().savedSession();if(const auto w=m3::find(saved,anchor.id))valueTokens[index]=w->inputGeneration;}

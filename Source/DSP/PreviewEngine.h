@@ -28,7 +28,23 @@ struct PreviewSnapshot
     float auditionLevelDb = -12, auditionAttenuationDb = 0;
     std::shared_ptr<const PreviewWaveform> waveform;
 };
-struct PreviewContext { CaptureSessionSnapshot capture; SongTime time; uint64_t captureGeneration = 0; };
+inline SongTime loopExportTime(const CaptureSessionSnapshot& capture) noexcept
+{
+    const auto& manifest=capture.manifest;
+    if(!capture.manifestKnown || capture.reference.isEmpty() || !manifest.loop || !manifest.revision
+       || capture.status.startsWith("Loading"))return {};
+    const auto& loop=*manifest.loop;
+    return {true,0,0,manifest.sampleRate,loop.tempoBpm,loop.meterNumerator,loop.meterDenominator};
+}
+
+struct PreviewContext
+{
+    CaptureSessionSnapshot capture;
+    SongTime time;
+    uint64_t captureGeneration = 0;
+    SongTime exportTime() const noexcept
+    {return capture.sourceKind()==CaptureSourceKind::loop?loopExportTime(capture):time;}
+};
 
 class PreviewEngine final : private juce::Thread
 {

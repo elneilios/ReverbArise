@@ -12,7 +12,97 @@ static std::unique_ptr<LivePublication> fixture(int64_t first=-20,int64_t last=1
         p->entries.push_back({n,1,a->start,a->start+120,.08f,a});}
     juce::String error;REQUIRE(prepareLiveSegments(*p,error));return p;
 }
+
+static void verifySongOutputSum()
+{
+    TransportPlayback live, offline;
+    for (auto* player : {&live, &offline})
+    {
+        player->invalidate(0, 1);
+        player->invalidate(1, 1);
+        REQUIRE(player->publish(fixture()));
+    }
+    offline.primeForOffline();
+    using Frame = std::array<float, 2>;
+    const auto render = [&](int64_t position, Frame input, bool playing = true)
+    {
+        TransportTime time{{true,position,position / 500.0,1000,120,4,4},playing};
+        auto guarded = input, unguarded = input;
+        {
+            AudioAllocationGuard allocations;
+            live.process(&guarded[0], &guarded[1], 1, time);
+            offline.process(&unguarded[0], &unguarded[1], 1, time);
+        }
+        REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+        return std::pair{guarded, unguarded};
+    };
+    for (int position = 0; position < 6; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, {0.4f, -0.2f});
+        REQUIRE(liveFrame == offlineFrame && liveFrame[0] > 0.4f);
+    }
+    const Frame hotDry{1.1f, -0.55f};
+    const auto [peak, offlinePeak] = render(6, hotDry);
+    REQUIRE(peak == offlinePeak && peak[0] > hotDry[0]);
+    REQUIRE(live.peaks().output == peak[0] && live.peaks().wet > 0);
+    const auto [afterSeek, offlineAfterSeek] = render(50, {0.4f, -0.2f});
+    REQUIRE(afterSeek == offlineAfterSeek);
+    const auto [fading, offlineFade] = render(51, hotDry, false);
+    REQUIRE(fading == offlineFade && fading[0] > hotDry[0]);
+    for (int position = 52; position <= 56; ++position)
+        render(position, hotDry, false);
+    REQUIRE(render(57, hotDry, false).first == hotDry);
+    live.configure(true, LiveRouting::wetOnly, 0);
+    offline.configure(true, LiveRouting::wetOnly, 0);
+    for (int position = 58; position < 69; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, hotDry);
+        REQUIRE(liveFrame == offlineFrame);
+    }
+    live.configure(true, LiveRouting::dryWet, 0);
+    offline.configure(true, LiveRouting::dryWet, 0);
+    for (int position = 69; position < 75; ++position)
+    {
+        const auto [liveFrame, offlineFrame] = render(position, {1.2f, -0.6f});
+        REQUIRE(liveFrame == offlineFrame);
+    }
+}
+
+static void verifyDisjointSwellGain()
+{
+    const auto render = [](float firstGain)
+    {
+        auto publication = std::make_unique<LivePublication>();
+        publication->mapping = {true,0,0,1000,120,4,4};
+        publication->end = 128;
+        for (size_t index = 0; index < 2; ++index)
+        {
+            auto audio = std::make_shared<WetRender>();
+            audio->rate = 1000;
+            audio->start = static_cast<int64_t>(index) * 64;
+            audio->peak = index == 0 ? .5f * firstGain : .25f;
+            audio->samples.assign(64,audio->peak);
+            publication->entries.push_back({index,1,audio->start,audio->start+32,audio->peak,audio});
+        }
+        juce::String error;
+        REQUIRE(prepareLiveSegments(*publication,error));
+        TransportPlayback playback;
+        playback.invalidate(0,1);
+        playback.invalidate(1,1);
+        REQUIRE(playback.publish(std::move(publication)));
+        std::array<float,128> left{}, right{};
+        playback.process(left.data(),right.data(),128,{{true,0,0,1000,120,4,4},true});
+        return left;
+    };
+    const auto boost = juce::Decibels::decibelsToGain(12.0f);
+    const auto initial = render(1), boosted = render(boost);
+    REQUIRE(boosted[16] > 1 && boosted[16] == initial[16] * boost);
+    REQUIRE(std::equal(initial.begin()+64,initial.end(),boosted.begin()+64));
+}
+
 int main(int argc,char* argv[]){return runTest([&]{
+    verifySongOutputSum();
+    verifyDisjointSwellGain();
     {LiveTransportClock first,second;TransportTime at{{true,16,0,48000,122,4,4},true};
         REQUIRE(!first.snapshot(3));REQUIRE(!gridClockContext(first.snapshot(3),true).available);
         first.observe(at,73,3);const auto original=gridClockContext(first.snapshot(3),true);
@@ -233,7 +323,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         for(int i=0;i<10;++i){const auto current=(61+i)*.001f,neighbour=(21+i)*.0005f;
             const auto blend=i<5?static_cast<float>(4-i)/5:0.f;
             REQUIRE(std::abs(left[i]-(current*(1-blend)+.03f*blend+neighbour))<1e-7f);}}
-    TransportPlayback player;player.invalidate(0,1);player.invalidate(1,1);auto p=fixture();REQUIRE(p->attenuation==1);REQUIRE(player.publish(std::move(p)));
+    TransportPlayback player;player.invalidate(0,1);player.invalidate(1,1);auto p=fixture();REQUIRE(player.publish(std::move(p)));
     float l[200]{},r[200]{};TransportTime t{{true,-20,-.04,1000,120,4,4},true};
     {AudioAllocationGuard guard;player.process(l,r,200,t);}
     REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
@@ -253,26 +343,26 @@ int main(int argc,char* argv[]){return runTest([&]{
         {AudioAllocationGuard guard;player.process(l,r,20,t);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);player.collect();}
     REQUIRE(player.pinnedBytes()<100000);
     auto loud=fixture();loud->entries[0].peak=2;loud->entries[1].peak=3;juce::String error;
-    REQUIRE(prepareLiveSegments(*loud,error));REQUIRE(std::abs(loud->attenuation-std::pow(10.0f,-6.0f/20)/5)<1e-6f);
-    loud->start=100;loud->end=110;REQUIRE(prepareLiveSegments(*loud,error));REQUIRE(std::abs(loud->attenuation-std::pow(10.0f,-6.0f/20)/5)<1e-6f);
+    REQUIRE(prepareLiveSegments(*loud,error));
+    loud->start=100;loud->end=110;REQUIRE(prepareLiveSegments(*loud,error));
     auto full=fixture();full->entries.resize(65,full->entries[0]);for(size_t i=0;i<full->entries.size();++i)full->entries[i].slot=i;REQUIRE(!prepareLiveSegments(*full,error));
-    // A musical publication carries one fixed full-support measurement; page
-    // segmentation must not replace it with the legacy member-peak bound.
-    auto musical=fixture();musical->measuredAttenuation=true;musical->attenuation=.75f;
+    // Publication segmentation keeps accepted sample gains even when
+    // member peak metadata is high.
+    auto musical=fixture();
     musical->entries[0].peak=20;musical->entries[1].peak=30;
-    REQUIRE(prepareLiveSegments(*musical,error) && musical->attenuation==.75f);
+    REQUIRE(prepareLiveSegments(*musical,error));
     TransportPlayback musicalPlayer;musicalPlayer.invalidate(0,1);musicalPlayer.invalidate(1,1);
     musicalPlayer.configure(true,LiveRouting::wetOnly,6);REQUIRE(musicalPlayer.publish(std::move(musical)));
     float musicalL[32]{},musicalR[32]{};TransportTime musicalTime{{true,60,.12,1000,120,4,4},true};
     musicalPlayer.process(musicalL,musicalR,32,musicalTime);
-    REQUIRE(std::abs(musicalL[31]-((102+62)*.0005f*.75f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
+    REQUIRE(std::abs(musicalL[31]-((102+62)*.0005f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
     musicalTime.song.sample=92;musicalTime.song.ppq=.184;std::fill_n(musicalL,32,.125f);std::fill_n(musicalR,32,.125f);
     {AudioAllocationGuard guard;musicalPlayer.process(musicalL,musicalR,32,musicalTime,false);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
     for(int n=5;n<32;++n)REQUIRE(musicalL[n]==.125f && musicalR[n]==.125f);
     REQUIRE(!musicalPlayer.active() && !musicalPlayer.missing());
     musicalTime.song.sample=70;musicalTime.song.ppq=.14;std::fill_n(musicalL,32,.125f);std::fill_n(musicalR,32,.125f);
     musicalPlayer.process(musicalL,musicalR,32,musicalTime,true);
-    REQUIRE(std::abs(musicalL[15]-((96+56)*.0005f*.75f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
+    REQUIRE(std::abs(musicalL[15]-((96+56)*.0005f*juce::Decibels::decibelsToGain(6.0f)))<1e-6f);
     player.configure(true,LiveRouting::wetOnly,0);t.playing=true;t.song.sample=10000;t.song.ppq=20;
     std::fill_n(l,20,.125f);std::fill_n(r,20,.125f);player.process(l,r,20,t);REQUIRE(l[19]==0 && player.missing());
     player.configure(false,LiveRouting::wetOnly,0);player.process(l,r,20,t);REQUIRE(!player.active());
@@ -294,7 +384,7 @@ int main(int argc,char* argv[]){return runTest([&]{
     b.process(l,r,20,at);at.playing=false;for(int i=0;i<5;++i){l[0]=r[0]=0;b.process(l,r,1,at);}REQUIRE(l[0]==0 && r[0]==0);
     at.playing=true;
     auto noOverlap=fixture();noOverlap->entries[0].peak=2;noOverlap->entries[1].start=1000;noOverlap->entries[1].end=1100;noOverlap->entries[1].peak=3;
-    REQUIRE(prepareLiveSegments(*noOverlap,error));REQUIRE(std::abs(noOverlap->attenuation-std::pow(10.0f,-6.0f/20)/3)<1e-6f);
+    REQUIRE(prepareLiveSegments(*noOverlap,error));
     // A far loop destination can be resident without allocating intervening PCM.
     auto loop=fixture();loop->loopStart=10000;loop->loopEnd=10200;auto late=std::make_shared<WetRender>();late->start=10000;late->rate=1000;late->samples.resize(400,.01f);
     loop->entries.push_back({2,1,10000,10200,.01f,{},late});REQUIRE(prepareLiveSegments(*loop,error));

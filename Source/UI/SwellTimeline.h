@@ -15,6 +15,12 @@ class SwellTimeline final : public juce::Component,public juce::SettableTooltipC
 public:
     explicit SwellTimeline(SwellEngine& engine);
     void setData(CaptureSessionSnapshot capture,EditorSnapshot session,SongTime time,bool samplePositionAvailable=true,bool hostPlaying=false);
+    void setLoopPlayhead(std::optional<int64_t> sample) noexcept { loopPlayhead = sample; }
+    void setSongPlayheadAvailable(bool available) noexcept { songPlayheadAvailable = available; }
+    std::optional<int64_t> transportPlayhead() const noexcept;
+    SwellEngine::TargetIdentity targetIdentity() const
+    {return {data.sessionEpoch,capture.manifest.revision,capture.reference,capture.sourceKind()};}
+    std::optional<int64_t> loopInsertionSample() const noexcept;
     void paint(juce::Graphics&) override;
     void resized() override;
     void lookAndFeelChanged()override{invalidateWaveforms();}
@@ -121,6 +127,9 @@ private:
     bool snapEnabled=true,snapBypassed=false,updatingScroll=false;
     GridDivision gridDivision=GridDivision::quarterBeat;
     bool playheadAvailable=false;
+    std::optional<int64_t> loopPlayhead;
+    juce::Rectangle<float> loopLeadInBounds() const noexcept;
+    bool songPlayheadAvailable=true;
     bool inlineOverview=true,responsivePresentation=false;
     bool editingEnabled=true;
     ui::WaveformLayer waveformLayer,wetWaveformLayer;

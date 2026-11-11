@@ -6,7 +6,7 @@ Provide a usable single-screen workspace for inspecting captured audio and editi
 ## Requirements
 
 ### Requirement: Workspace reflects actual processing and selection
-The workspace SHALL adapt to mode: Learn shows capture settings and one full-song dry timeline; Perform shows the production three-column editor, audition and compact Overview; Export shows its dedicated preview and mix/file controls. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
+The workspace SHALL adapt to mode: Learn shows capture settings and one dry timeline for the accepted source; Perform shows the production three-column editor, audition and compact Overview; Export shows its dedicated preview and mix/file controls. Processing and selection SHALL remain identity-bound, truthful and mode-appropriate. A requested render or mode SHALL NOT be shown as already ready.
 
 #### Scenario: Select while background work completes
 - **WHEN** the user selects a swell in Perform while allowed analysis or another swell's rendering completes
@@ -31,10 +31,10 @@ The workspace SHALL adapt to mode: Learn shows capture settings and one full-son
 
 ### Requirement: Timeline navigation preserves exact edits
 
-The editor SHALL align dry, wet, arrivals and handles on one absolute Song scale
+The editor SHALL align dry, wet, arrivals and handles on the accepted source's absolute Song or phrase-local Loop scale
 with bar references, zoom, pan and snap. The Overview SHALL distinguish audio,
 captured silence, unmapped and unavailable coverage. Left-drag on the Overview
-SHALL pan the detail viewport at the full-song scale without changing its span.
+SHALL pan the detail viewport at the full-source scale without changing its span.
 A click without dragging, wheel and other mouse buttons SHALL leave it unchanged.
 Navigation SHALL not edit render inputs. Display-only peak scaling SHALL remain
 disclosed.
@@ -227,7 +227,7 @@ The header SHALL display ReverbArise with light Reverb, aqua Arise and the appro
 - **THEN** the supplied resources/logo dark wordmark is reused with its integrated A, transparency and proportions intact; no whole prototype screenshot or contact sheet is embedded as UI, and any packaged font retains its required notice
 
 ### Requirement: Timeline depiction reflects real timing and audio
-Dry/wet lanes, ruler, handles and readouts SHALL share actual absolute positions. The selected target SHALL use a narrow yellow dashed line across both lanes. Drawn wet data SHALL reflect real samples/shape and disclosed display scaling, without forcing its energy peak onto the target. Negative lead-in SHALL not imply output before DAW playback starts.
+Dry/wet lanes, ruler, handles and readouts SHALL share positions in the accepted source's time domain. The selected target SHALL use a narrow yellow dashed line across both lanes. Drawn wet data SHALL reflect real samples/shape and disclosed display scaling, without forcing its energy peak onto the target. Negative lead-in SHALL respect the scheduling contract of the accepted source.
 
 #### Scenario: Shifted energy and negative endpoint
 - **WHEN** an asymmetric IR produces an off-target energy peak and the wet endpoint is moved before dry arrival
@@ -237,8 +237,8 @@ Dry/wet lanes, ruler, handles and readouts SHALL share actual absolute positions
 
 Perform SHALL retain its compact Overview with ruler, real dry/wet summaries and
 one detail-viewport highlight. Learn SHALL use one large dry waveform with an
-origin-anchored full-song fit, bounded inspection zoom and pan, explicit coverage
-states and no wet-envelope editing. Both views SHALL use actual absolute
+origin-anchored full-source fit, bounded inspection zoom and pan, explicit coverage
+states and no wet-envelope editing. Both views SHALL use the accepted source's actual
 positions, disclose display scaling and avoid seeking the host through viewport
 navigation.
 
@@ -1209,6 +1209,64 @@ Both Sound contexts SHALL retain discoverable labelled access, readable producti
 - **WHEN** the convolution foundation is displayed
 - **THEN** no Character, Tone, HP, LP, Stretch or Profile placeholder appears and no new Learn Level default is introduced
 - **AND** IR identity remains distinct from processing Character and Export Mix Character
+
+### Requirement: Loop editing reuses the shared Perform workspace
+Perform SHALL offer the shared multi-swell editing and Audition tools for an accepted Loop. The ruler, Overview, source controls and wet edits SHALL use the accepted phrase's local grid and exact extent. Source selections SHALL stay in bounds and wet placement SHALL retain supported negative offsets.
+
+#### Scenario: Edit two swells around Bar 1
+- **WHEN** a musician selects and edits two swells including wet that starts before Bar 1
+- **THEN** the list, inspector exact fields, source and wet handles, zoom and Overview stay aligned to the selected swell and accepted phrase
+- **AND** the existing IR, envelope, placement, reset, Freeze and audition bindings operate on the correct swell
+
+#### Scenario: Next-capture preference changes
+- **WHEN** the next-capture preference is changed or a replacement is pending
+- **THEN** existing Perform edits stay bound to the current accepted identity until a useful replacement settles
+- **AND** stale gestures and worker results cannot modify or publish against the replacement
+
+#### Scenario: Add a target in Loop Perform
+- **WHEN** the musician invokes Add while the Loop playhead is within the captured phrase
+- **THEN** the target is added at the displayed phrase position
+- **AND** when no in-phrase playhead is available, the action says it adds at the start of the visible loop
+- **AND** a source or session change before insertion cancels the action
+
+### Requirement: Loop playback controls report actual readiness
+
+An accepted Loop SHALL show one playback command and separate status beside Audition in Perform. Cue Loop SHALL require valid live timing and coherent prepared wet. Cancel Loop SHALL cancel a queued start. Stop Loop SHALL finish the current pass and suppress the next lead-in. Stop Now SHALL fade wet immediately while dry continues. These commands SHALL act independently of Audition. Song SHALL retain its existing composition.
+
+#### Scenario: Phase, preparation and playback change
+
+- **WHEN** a Loop enters Perform with unavailable live timing, unavailable preparation or disabled live output
+- **THEN** Cue is disabled with the specific actionable reason and dry remains available
+- **AND** valid live timing and prepared wet enable Cue Loop automatically with Ready status
+- **AND** the command becomes Cancel Loop with Waiting for bar status when queued, then Stop Loop with Playing lead-in or Playing loop status when wet starts
+- **AND** Stop Loop becomes Stop Now with Finishing loop status until completion or an immediate stop
+- **AND** the command is disabled while Fading out and offers Cue Loop again when ready
+
+#### Scenario: Lead-in wraps into the previous pass
+
+- **WHEN** Loop playback repeats with a scheduled lead-in for the next pass
+- **THEN** one yellow playhead follows the current phrase and wraps at the observed boundary
+- **AND** the wet lane shows a faint waveform of the next pass's prepared wet mix near the end of the phrase, regardless of the selected swell
+- **AND** a pending Stop hides the suppressed next lead-in
+
+#### Scenario: Compact review layout
+
+- **WHEN** Song and Loop Perform are viewed at 900×600 at 100% and 125%
+- **THEN** the Loop command and status fit on the Audition row with a separator and the command remains keyboard accessible
+- **AND** the rest of the shared editor stays usable and Song adds no Loop controls
+
+#### Scenario: Perform reads the current Loop position
+
+- **WHEN** an accepted Loop is in Perform
+- **THEN** the existing footer reports its captured tempo and meter
+- **AND** during the pass Bar and Beat follow the Loop playhead, returning to Bar 1, Beat 1 each time the Loop repeats, including in Rack without host song position
+- **AND** position is unavailable until beat one and after playback ends
+
+#### Scenario: Playback controls explain why they are disabled
+
+- **WHEN** Audition or Cue Loop is unavailable in Perform
+- **THEN** the control is disabled and its hover help explains the current prerequisite
+- **AND** if the host rate differs from the accepted Loop's rate, both controls report the rate required to play the captured audio
 
 ### Requirement: Swells row actions support pointer, keyboard and accessibility
 Swells rows SHALL expose named Enabled and More actions for their swell. The Enabled indicator SHALL be square. Keyboard and accessibility focus SHALL use the shared aqua brackets. Row action navigation and activation SHALL preserve the selected identities unless the requested action itself changes them.

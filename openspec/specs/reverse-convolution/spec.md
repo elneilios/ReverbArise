@@ -161,27 +161,27 @@ Manual Audition SHALL play the selected swell's complete prepared interval seque
 - **AND** Dry + Wet audition still requires genuine captured dry context
 
 ### Requirement: Audition has independent protected level control
-The plugin SHALL attenuate the safety-ramped aggregate wet branch above -6 dBFS without quiet boost or raw-sample changes. It SHALL expose raw, shaped, attenuation and predicted monitoring peaks, plus saved -60 to 0 dB trim defaulting to 0 dB when absent. Changes SHALL ramp over 5 ms without callback allocation or blocking. Restore SHALL preserve validated saved trim. Dry + Wet SHALL additionally follow audition-monitoring protection.
+Audition SHALL use the accepted generated starting gains and explicit monitoring gain. The wet branch SHALL report measured overload while preserving the float signal. Existing short gain and playback ramps SHALL operate without callback allocation or blocking.
 
 #### Scenario: Loud imported IR
-- **WHEN** the safety-ramped wet branch peak is +7.2 dBFS and new-instance trim is 0 dB
-- **THEN** wet branch attenuation is -13.2 dB and Wet Only peaks at -6 dBFS, while stored render samples and capture remain unchanged
+- **WHEN** a generated swell uses a loud imported IR
+- **THEN** it uses the accepted starting gain and a deliberate user boost can overload Wet Only without changing the stored render or capture
 
 #### Scenario: Quiet render and live adjustment
-- **WHEN** the safety-ramped aggregate wet branch peaks below -6 dBFS and the user changes audition level while playing
-- **THEN** no automatic boost occurs, the level change ramps smoothly without regeneration, and live dry input is unchanged
+- **WHEN** the user changes monitoring level while auditioning a quiet render
+- **THEN** only the requested gain is applied with a smooth transition and no regeneration
 
 #### Scenario: Combined output level
-- **WHEN** live dry audio or diagnostic tone accompanies audition
-- **THEN** the displayed monitoring peak describes only the prepared audition contribution, and its ceiling does not bound combined plugin output
+- **WHEN** live dry or diagnostic tone accompanies audition
+- **THEN** the displayed audition peak describes the prepared audition contribution
 
 #### Scenario: Restore audition preference
-- **WHEN** a project saved at -24 dB audition trim is reopened
-- **THEN** that trim is restored, visibly indicated and resettable, and no audition starts automatically
+- **WHEN** a project saved with an accepted audition route is reopened
+- **THEN** the route restores without starting audition
 
 #### Scenario: Legacy state without trim
-- **WHEN** supported legacy state has no saved audition trim
-- **THEN** it uses 0 dB; an explicitly stored old -12 dB value remains -12 dB
+- **WHEN** a pre-release snapshot loads with absent legacy trim
+- **THEN** the new monitoring gain is determined by the accepted starting gains, Level and Live Wet
 
 ### Requirement: Preview validity follows its inputs
 The system SHALL identify each result by source content dependencies, sample interval, prepared IR, and render rate. Selection/IR changes, overlapping recapture that changes source content, capture Clear, or host sample-rate/tempo/meter changes SHALL invalidate affected work and stop audition. Unrelated or sample-identical recapture SHALL preserve validity. Restored results SHALL be validated against saved dependencies before becoming current.

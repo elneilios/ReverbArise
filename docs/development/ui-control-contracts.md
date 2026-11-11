@@ -83,9 +83,12 @@ Focus uses four aqua corner brackets with a 2-pixel stroke and a 3-pixel gap
 outside the body border, contained within the component. Neutral hover uses the
 muted aqua outline; held press uses separator fill and a stronger aqua outline.
 Destructive hover strengthens the red outline; held press fills red. Neutral
-icons retain off-white ink. Primary/on-latch surfaces retain dark content on
-aqua fill. Disabled body ink is dimmed and suppresses mouse emphasis; any focus
-brackets remain aqua. Knob focus and FileDragTile's specialized painter are unchanged.
+icons retain off-white ink. Primary and neutral on-latch surfaces retain dark
+content on aqua fill. A destructive latch uses red text and outline when off and
+dark text on red fill when on. Learn Loop Arm uses this role to identify recording
+and distinguish its armed state. Disabled body ink is dimmed and suppresses mouse
+emphasis. Focus brackets remain aqua. Knob focus and FileDragTile keep their
+existing painters.
 
 Compositions reserve the action frame around the intended visible body size.
 The shared IR field aligns the import button's visible body with the dropdown's

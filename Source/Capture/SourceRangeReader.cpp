@@ -8,6 +8,8 @@ std::string sourceDependency(const CaptureManifest& manifest, int64_t start, int
     std::ostringstream result;
     result.precision(17);
     result << manifest.projectId << '/' << manifest.instanceId << '@' << manifest.sampleRate;
+    if (manifest.loop)
+        result << "/loop@" << manifest.revision;
     int64_t runStart = start, runEnd = start;
     uint64_t revision = 0;
     bool haveRun = false;

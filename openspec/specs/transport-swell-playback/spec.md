@@ -58,48 +58,52 @@ Playback SHALL include all current, enabled, unmuted swells intersecting the blo
 - **THEN** its wet contribution is excluded using a short transition without moving any source event
 
 ### Requirement: Live routing is independent of manual monitoring
-Within Live, saved enable, Dry + Wet/Wet Only routing and wet level SHALL remain independent of audition, defaulting to enabled Dry + Wet at 0 dB. Dry + Wet SHALL add only prepared wet to unchanged input. Wet Only SHALL suppress dry only during enabled valid Live playback. Capture/Finalise SHALL preserve dry passthrough without modifying saved Live preferences.
+Live enable, routing and wet level SHALL remain independent of audition, defaulting to enabled Dry + Wet at 0 dB. Dry + Wet SHALL add prepared wet to incoming dry at unity. Wet Only SHALL suppress dry during valid enabled playback. Capture and Finalise SHALL preserve dry passthrough and saved Live preferences.
 
 #### Scenario: Play in context
-- **WHEN** a prepared project plays in Live default Dry + Wet
-- **THEN** output is input plus protected positioned wet, without captured-dry replay or audition blend/trim
+- **WHEN** a prepared project plays in default Dry + Wet
+- **THEN** output is the live input plus positioned wet without captured-dry replay or audition controls
 
 #### Scenario: Route wet only and disable
-- **WHEN** Wet Only is selected during Live playback and live playback is subsequently disabled
-- **THEN** enabled Wet Only outputs prepared wet and disabling restores dry/removes wet with disclosed short routing ramps
+- **WHEN** Wet Only is selected during Live playback and playback is subsequently disabled
+- **THEN** enabled Wet Only outputs prepared wet and disabling restores dry and removes wet with the existing routing ramps
 
 #### Scenario: Enter Finalise from Wet Only
 - **WHEN** Finalise is entered from Live with Wet Only selected
-- **THEN** scheduled wet stops through the existing bounded transition, normal DAW output becomes dry passthrough and returning to Live restores the saved preference
+- **THEN** scheduled wet stops through its bounded transition, output becomes dry passthrough and returning to Live restores the preference
 
 ### Requirement: Wet level protection is transparent
-Playback SHALL follow the saved gain policy. Legacy sessions SHALL retain their -6 dBFS fixed aggregate guard and -60 to 0 dB wet level. Musical sessions SHALL use the approved musical ceiling and actual-aggregate preparation from swell-gain-staging, with -60 to +12 dB user wet level. Gain SHALL ramp over 5 ms, protection SHALL remain fixed for an accepted schedule, and stored renders SHALL remain unchanged. The wet ceiling SHALL not be claimed for dry plus wet output.
+Song and Loop wet playback SHALL apply the accepted generated starting gains, Level and Live Wet. Live Wet SHALL keep its -60 to +12 dB range and existing gain transition. The wet path SHALL preserve finite above-unity float samples and report overload without applying shared attenuation.
 
 #### Scenario: Loud overlapping IR results
-- **WHEN** several loud prepared swells overlap
-- **THEN** their protected aggregate stays within the saved policy's wet ceiling, relative contributions remain intact, and attenuation is visible separately from user gain
+- **WHEN** default generated swells overlap
+- **THEN** the wet signal uses the accepted starting gains that satisfy the default ceiling
 
 #### Scenario: Boost a musical schedule with headroom
-- **WHEN** musical live wet level changes from 0 to +6 dB and the actual sum has sufficient headroom
-- **THEN** positioned wet rises by the corresponding amplitude ratio after the 5 ms ramp while live dry is unchanged
-- **AND** the same saved wet level and fixed protection plan apply to offline export
+- **WHEN** Live Wet changes from 0 to +6 dB and the wet sum remains below full scale
+- **THEN** the wet sum rises by the corresponding ratio after its gain transition
+
+#### Scenario: Boost an already hot schedule
+- **WHEN** Live Wet changes from 0 to +6 dB
+- **THEN** the wet sum rises by the corresponding ratio after its gain transition
+- **AND** a peak above full scale is reported without reducing the wet sum
 
 #### Scenario: Publication pages do not change the balance
-- **WHEN** playback moves between prepared pages of the same accepted schedule, seeks or loops
-- **THEN** its musical protection gain stays unchanged, including when a loud member's own peak lies outside the current page
+- **WHEN** playback changes pages, seeks, or loops with the same accepted schedule
+- **THEN** the same accepted starting gains apply independently of peak placement and block partitioning
 
 #### Scenario: Accepted source-matched version
-- **WHEN** a source-matched swell plays while an IR/source replacement and its recalculated baseline are pending
-- **THEN** live and offline snapshots use the accepted audio with its corresponding saved baseline, never the replacement's baseline on the old audio
-- **AND** looping over unchanged captured performances does not continually remeasure the reference or alter the balance
+- **WHEN** a source-matched swell plays while an IR or source replacement is pending
+- **THEN** live and offline snapshots pair the last accepted audio with its corresponding starting gain
+- **AND** the replacement gains and audio publish as one coherent revision
 
 #### Scenario: Energy method survives export and looping
-- **WHEN** source-energy calibration is accepted with its method revision and RMS/reference metadata
-- **THEN** live and offline paths use that same saved baseline and disclose sample-peak protection separately
-- **AND** neither host block partitions, page boundaries nor a changed IR recording level introduces repeated normalization during playback
+- **WHEN** accepted swells play or export from their saved energy-calibrated revision
+- **THEN** both paths use the same saved starting gains and report the applicable measured overload
+- **AND** paging and repetition do not remeasure or normalize the mix
 
 ### Requirement: Transport discontinuities do not replay old positions
-Seeking and looping SHALL abandon the old wet position and join prepared audio at the new absolute offset. Stopping, disabling or losing valid timing SHALL stop wet with a bounded click-prevention transition. Old-position audio SHALL not continue beyond that transition. Host transport SHALL never be changed by plugin playback controls.
+Song seeking and looping SHALL abandon the old wet position and join prepared audio at the new absolute offset. Stopping, disabling or losing valid timing SHALL stop wet with a bounded click-prevention transition. Old-position audio SHALL not continue beyond that transition. Host transport SHALL never be changed by plugin playback controls.
 
 #### Scenario: Loop through a swell
 - **WHEN** a warm loop wraps into the middle of a swell
@@ -110,7 +114,7 @@ Seeking and looping SHALL abandon the old wet position and join prepared audio a
 - **THEN** wet reaches zero through a disclosed ramp no longer than 5 ms and does not restart until a subsequent valid Play
 
 ### Requirement: Timing incompatibility is explicit
-Live wet SHALL require valid absolute host samples and fixed rate/tempo/meter compatible with accepted assets. A fresh valid playing run SHALL establish an ephemeral sample-to-PPQ mapping independent of parked/source origin. Each run SHALL retain its mapping within the existing one-sample origin tolerance; unsupported changes SHALL suppress wet with a reason. Fresh validation SHALL precede resumption. Stored sample positions, edits and assets SHALL remain unchanged.
+Song live wet SHALL require valid absolute host samples and fixed rate/tempo/meter compatible with accepted assets. A fresh valid playing run SHALL establish an ephemeral sample-to-PPQ mapping independent of parked/source origin. Each run SHALL retain its mapping within the existing one-sample origin tolerance; unsupported changes SHALL suppress wet with a reason. Fresh validation SHALL precede resumption. Stored sample positions, edits and assets SHALL remain unchanged.
 
 #### Scenario: Change tempo or sample rate
 - **WHEN** the host mapping becomes incompatible with prepared assets
@@ -481,3 +485,126 @@ After host processing resumes during running transport, eligible prepared wet SH
 - **WHEN** processing resumes with unavailable timing, incompatible rate/tempo/meter, invalid assets, disabled saved Live output or a workflow outside Live
 - **THEN** existing exclusion and diagnostic rules remain effective and no stale wet is admitted
 - **AND** an ordinary seek, loop, missing callback interval or internal Live toggle alone does not authorize replacement of an established incompatible run mapping
+
+### Requirement: Loop Cue requires independent live phase
+
+Loop live playback SHALL use the running FL Studio host grid, the verified Rack Clock grid, or a verified legacy Phrase reference. Capture timing SHALL supply only the source grid and exact recorded extent. Standby SHALL check the active live route, pass dry and explain an unmet Cue prerequisite. Clock and FL Studio host playback SHALL repeat at the accepted sample length.
+
+#### Scenario: Accepted capture lacks matching recurrence
+
+- **WHEN** a legacy Phrase-only patch lacks recurrence matching the accepted take
+- **THEN** the take remains valid and the legacy route cannot enable Cue
+
+#### Scenario: Verify Phrase while still in Learn
+
+- **WHEN** Rack receives valid Clock pulses in Learn
+- **THEN** the current clock run can establish the grid used in Perform
+- **AND** a legacy Phrase-only route may still verify recurrence for the accepted take in Learn
+- **AND** Learn plays no Loop wet and entering Perform requires a fresh Cue
+
+#### Scenario: Valid fractional reference
+
+- **WHEN** required legacy marker intervals alternate within the verified adjacent integer lengths
+- **THEN** phase stays verified within the epoch drift bound and each observed marker fixes its actual downbeat
+- **AND** the accepted audio extent and render sample rate are preserved
+
+#### Scenario: Dry audio is deliberately out of phase
+
+- **WHEN** prepared wet is cued using valid live timing with dry audio offset from the target downbeat
+- **THEN** wet follows the live timing without manual confirmation, and Dry + Wet keeps the live dry at unity when the output guard is idle
+
+#### Scenario: Cue with a running grid
+
+- **WHEN** a coherent prepared Loop is in Perform and FL Studio Pattern or Playlist playback or Rack Clock supplies valid bar timing
+- **THEN** UI and supported MIDI Cue are eligible without a recurring Phrase input
+
+### Requirement: Loop Cue schedules a complete future entry
+
+An eligible Cue SHALL target the earliest future downbeat with room for the full negative lead-in. Playlist and Rack Clock routes SHALL schedule that downbeat from their respective bar grids. A legacy Phrase-only route SHALL use the observed phrase boundary. Playback SHALL repeat until stopped or invalidated.
+
+#### Scenario: Cue arrives too late for the next lead-in
+
+- **WHEN** the next possible boundary leaves insufficient time for the complete lead-in
+- **THEN** Cue targets the earliest later boundary that fits it and plays no partial launch at the missed boundary
+
+#### Scenario: Marker and Cue share an offset
+
+- **WHEN** a timing marker and Cue arrive at the same sample
+- **THEN** the marker is evaluated before Cue and the launch targets a future boundary
+
+### Requirement: Perform Stop and live sync loss end Loop wet
+
+MIDI Perform Stop SHALL cancel a queued launch or finish the current pass without mixing the next lead-in. Repeated Stop notes SHALL leave an existing finish request in place. The Stop Loop button SHALL finish the current pass and then offer Stop Now. MIDI and UI Stop Now SHALL cancel a queued launch or start the short wet fade immediately. Live timing loss or playback authority loss SHALL cancel queued launches and fade active wet. When MIDI commands coincide, Stop Now SHALL take precedence over Stop, and either stop SHALL take precedence over Cue.
+
+#### Scenario: Capture commands and boundaries are independent
+
+- **WHEN** Capture Start/Arm, Capture Stop or an ordinary phrase marker arrives during live Loop playback
+- **THEN** the capture roles and marker do not request Perform Stop or Cue and a valid scheduled repeat continues
+
+#### Scenario: Lost reference, seek or reset
+
+- **WHEN** a required clock or marker is late or invalid, a seek or reset occurs, or the live timing or session becomes incompatible
+- **THEN** any queued launch is cancelled and active wet fades. Dry + Wet keeps dry at unity after the wet fade ends
+- **AND** restored timing leaves the scheduler in Standby until a fresh Cue
+
+#### Scenario: Stop Loop is clicked during playback
+
+- **WHEN** the musician clicks Stop Loop during the lead-in or current pass
+- **THEN** the current pass continues to its end and the next lead-in is suppressed
+- **AND** clicking Stop Now before completion starts the short fade immediately
+
+#### Scenario: MIDI Stop and Stop Now are distinct
+
+- **WHEN** a Stop note arrives while the Loop is playing
+- **THEN** it finishes the current pass and suppresses the next lead-in even if another Stop note arrives
+- **AND** a Stop Now note arriving before completion starts the short fade immediately
+
+#### Scenario: FL Studio reaches a declared repeat boundary
+
+- **WHEN** consecutive playing callbacks retain their musical mapping and repeat range and meet its exact end and start samples
+- **THEN** a queued Cue and an active Loop retain their scheduled phase across the wrap
+- **AND** an early jump to the same start sample is handled as a seek
+
+### Requirement: Loop wet composition counts each cycle contribution once
+Loop playback SHALL mix every eligible prepared swell with source-relative placement and exclusive end bounds. All scheduled negative leads and tails that overlap another cycle SHALL be included exactly once. Phase correction SHALL be bounded and keep the prepared content at its native rate.
+
+#### Scenario: Lead and tail span multiple cycles
+- **WHEN** an eligible swell has a lead or tail longer than one phrase and overlaps other swells or repeats
+- **THEN** the wet sum equals the sample-level sum of the intersecting scheduled contributions
+- **AND** the first entry contains only contributions from the first scheduled cycle and later cycles
+
+#### Scenario: A downbeat differs from the earliest prediction
+- **WHEN** a valid marker arrives inside its rounding window
+- **THEN** bounded correction aligns the wet downbeat to the observed sample and retains the complete lead and tail content
+
+### Requirement: Loop playback pins coherent prepared revisions
+Loop wet SHALL use a complete prepared revision of the accepted source at the host sample rate. Queued launches SHALL require current render dependencies. An audible pass SHALL retain its last complete mix while a compatible edit prepares, then crossfade to the complete successor at the current Loop position without re-cueing. An intentionally silent mix SHALL allow a playing Loop to keep its position. Publication and retirement SHALL occur outside the callback. Resource admission SHALL account for pinned data and worst-case overlapping contributions within the shared preparation budget.
+
+#### Scenario: Edits invalidate a queued or active revision
+- **WHEN** placement or render dependencies change while a Loop is queued or playing
+- **THEN** a queued launch with obsolete dependencies is cancelled
+- **AND** an audible Loop keeps its phase and uses the last complete mix until a compatible successor crossfades in during repeating playback
+- **AND** a change to the accepted source identity or sample-rate compatibility cancels or fades the old playback
+
+#### Scenario: Prepared workload exceeds the supported bound
+- **WHEN** the pinned memory or worst-case scheduled overlap exceeds the admission budget
+- **THEN** Cue reports the limiting resource and dry continues without partial or truncated wet
+- **AND** an existing compatible pass retains its last complete mix
+- **AND** the callback performs no allocation, deallocation, disk I/O, convolution, blocking or locking
+
+#### Scenario: Fixed-grid Loop peak protection follows the rendered mix
+- **WHEN** a default generated Loop plays at its fixed sample period
+- **THEN** the accepted gains satisfy the default ceiling at launch, during repeat and through the final admitted pass
+- **AND** variable phase playback uses the same saved gains with its supported alignment accounted for during generation
+
+### Requirement: Realtime Dry + Wet preserves the float sum
+Realtime Song and Loop Dry + Wet SHALL output the direct sum, including finite samples above full scale. Overload reporting SHALL leave both contributions at their requested gains. Existing stop fades SHALL apply in realtime and host offline processing.
+
+#### Scenario: Dry and wet peaks coincide
+- **WHEN** live dry plus wet exceeds full scale during playback
+- **THEN** the output reports overload and preserves the exact float sum in each channel within numerical tolerance
+- **AND** later samples receive no recovery attenuation
+
+#### Scenario: Offline rendering begins during Loop playback
+- **WHEN** an offline callback disables Loop playback while wet audio is sounding or fading
+- **THEN** the existing wet stop fade is emitted with the same gain behavior as in realtime

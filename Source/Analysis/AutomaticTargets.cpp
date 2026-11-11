@@ -22,6 +22,7 @@ bool suppressAndErase(Session& s,const juce::String& id,juce::String& error)
 }
 CompletedPasses usableCompletedPasses(const CaptureManifest& map,const CompletedPasses& passes)
 {
+    if(map.loop)return {{0,map.loop->endSample}};
     CompletedPasses result;
     for(const auto& pass:passes){std::optional<int64_t> covered;
         for(const auto& range:map.ranges){int64_t end;

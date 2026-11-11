@@ -1,6 +1,7 @@
 #include "ExportSource.h"
 #include <algorithm>
 #include <cmath>
+#include <Playback/LoopCycles.h>
 namespace m3
 {
 void ExportSourceReader::warn(int64_t a,int64_t b,ExportCoverage kind)
@@ -26,14 +27,31 @@ bool ExportSourceReader::prepare(std::shared_ptr<const SongExportPlan> input,uin
 {
     plan.reset();cache={};cached=SIZE_MAX;missing.clear();readable.clear();allowance=availableBytes;
     if(!input || input->end<=input->origin || !isValidCaptureManifest(input->source,error))return false;
+    if(input->loop){
+        const auto count=input->loop->repeats;
+        if(!input->source.loop || count<1 || count>LoopExportOptions::maximumRepeats)
+        {error="Invalid finite Loop export plan";return false;}
+        const auto scheduled=loopCycleAnchor(0,count,input->source.loop->endSample);
+        const auto last=loopCycleAnchor(0,count-1,input->source.loop->endSample);
+        int64_t frames;
+        if(!scheduled || !last || input->origin>0 || input->end<*scheduled
+            || !checkedSubtract(input->end,input->origin,frames) || frames<=0 || static_cast<uint64_t>(frames)>(UINT32_MAX-1024ull)/8)
+        {error="Invalid finite Loop export bounds";return false;}
+        if(input->wet>0)for(const auto& member:input->members){int64_t end;
+            if(member.start<input->origin || member.start>=member.end || !checkedAdd(member.end,*last,end) || end>input->end)
+            {error="Invalid finite Loop wet bounds";return false;}
+        }
+    }
     plan=std::move(input);readable.resize(plan->source.ranges.size(),false);
     if(plan->dry==0){error.clear();return true;}
-    auto cursor=plan->origin;
+    const auto first=plan->loop?int64_t{0}:plan->origin;
+    const auto last=plan->loop?plan->source.loop->endSample:plan->end;
+    auto cursor=first;
     for(size_t i=0;i<plan->source.ranges.size();++i)
     {
         if(cancel && cancel()){error="Export source preparation cancelled";plan.reset();return false;}
-        const auto& range=plan->source.ranges[i];const auto a=std::max(plan->origin,range.startSample);
-        const auto b=std::min(plan->end,range.startSample+static_cast<int64_t>(range.frameCount));if(a>=b)continue;
+        const auto& range=plan->source.ranges[i];const auto a=std::max(first,range.startSample);
+        const auto b=std::min(last,range.startSample+static_cast<int64_t>(range.frameCount));if(a>=b)continue;
         warn(cursor,a,ExportCoverage::gap);
         if(range.kind==CaptureCoverageKind::audio){
             if(range.frameCount>allowance/(4*sizeof(float))){error="Export dry chunk exceeds available working memory";plan.reset();return false;}
@@ -41,7 +59,21 @@ bool ExportSourceReader::prepare(std::shared_ptr<const SongExportPlan> input,uin
         }else readable[i]=true;
         cursor=b;
     }
-    warn(cursor,plan->end,ExportCoverage::gap);error.clear();return true;
+    warn(cursor,last,ExportCoverage::gap);
+    if(plan->loop && !missing.empty()){
+        const auto count=static_cast<size_t>(plan->loop->repeats);
+        if(!count || missing.size()>allowance/(4*sizeof(ExportWarning))/count)
+        {error="Loop dry warning metadata exceeds available working memory";plan.reset();return false;}
+        auto local=std::move(missing);missing.clear();missing.reserve(local.size()*count);
+        allowance-=local.size()*count*sizeof(ExportWarning);
+        for(size_t cycle=0;cycle<count;++cycle){
+            if(cancel && cancel()){error="Export source preparation cancelled";plan.reset();return false;}
+            const auto offset=loopCycleAnchor(0,static_cast<int64_t>(cycle),last);
+            if(!offset){error="Loop dry extent overflows";plan.reset();return false;}
+            for(const auto& warning:local)warn(warning.start+*offset,warning.end+*offset,warning.kind);
+        }
+    }
+    error.clear();return true;
 }
 bool ExportSourceReader::read(int64_t start,std::span<float> stereo,juce::String& error)
 {
@@ -51,6 +83,23 @@ bool ExportSourceReader::read(int64_t start,std::span<float> stereo,juce::String
     {error="Invalid Export dry page";return false;}
     std::fill(stereo.begin(),stereo.end(),0.f);
     if(plan->dry==0){error.clear();return true;}
+    if(plan->loop){
+        const auto period=plan->source.loop->endSample;
+        const auto scheduledEnd=loopCycleAnchor(0,plan->loop->repeats,period);
+        if(!scheduledEnd){error="Loop dry extent overflows";return false;}
+        for(auto at=std::max(start,int64_t{0});at<std::min(end,*scheduledEnd);){
+            const auto local=at%period;
+            const auto frames=std::min(period-local,std::min(end,*scheduledEnd)-at);
+            if(!readCoverage(local,stereo.subspan(static_cast<size_t>(at-start)*2,static_cast<size_t>(frames)*2),error))return false;
+            at+=frames;
+        }
+        error.clear();return true;
+    }
+    return readCoverage(start,stereo,error);
+}
+bool ExportSourceReader::readCoverage(int64_t start,std::span<float> stereo,juce::String& error)
+{
+    const auto end=start+static_cast<int64_t>(stereo.size()/2);
     for(size_t i=0;i<plan->source.ranges.size();++i)
     {
         const auto& range=plan->source.ranges[i];const auto a=std::max(start,range.startSample);

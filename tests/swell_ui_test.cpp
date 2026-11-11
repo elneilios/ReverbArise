@@ -358,10 +358,14 @@ static void sourceRangeFeedbackCases()
     processor->setPlayHead(nullptr);
 }
 
+#include "LoopExportReview.h"
+
 int main(int argc,char* argv[]){return runTest([&]
 {
     profileCheckpoint("Start");
     juce::ScopedJuceInitialiser_GUI gui;
+    if(argc>1 && (juce::String(argv[1])=="--test-loop-export" || juce::String(argv[1])=="--review-loop-export")){
+        loopExportReview::cases();if(juce::String(argv[1])=="--review-loop-export")loopExportReview::review();return;}
     if(argc>1 && juce::String(argv[1])=="--test-surface-lifecycle")
     {surfaceLifecycleCases([]{juce::MessageManager::getInstance()->runDispatchLoopUntil(30);});return;}
     if(argc>1 && juce::String(argv[1])=="--test-export-file-invocations"){exportFileInvocationReview::cases();return;}
@@ -1362,7 +1366,7 @@ int main(int argc,char* argv[]){return runTest([&]
         auto mixedState=baseline;mixedState.auditionFollowsLive=false;mixedState.auditionMode=m3::AuditionMode::dryWet;mixedState.wetBlend=.65f;
         engine.restore(mixedState);waitUI([&]{return engine.snapshot().auditionReady;});
         {auto reopenedOwner=std::make_unique<PreverbAudioProcessorEditor>(*processor);auto& reopened=*reopenedOwner;reopened.refresh();auto value=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(reopened,"auditionWetOnly"));
-            REQUIRE(value && !value->getToggleState() && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f && !engine.savedSession().auditionFollowsLive);}
+            REQUIRE(value && !value->getToggleState() && !engine.snapshot().playing && engine.savedSession().wetBlend==.65f && engine.savedSession().auditionFollowsLive);}
         engine.restore(baseline);waitUI([&]{return engine.snapshot().auditionReady;});editor.setSize(1100,850);editor.refresh();
     }
     {
@@ -1624,7 +1628,9 @@ int main(int argc,char* argv[]){return runTest([&]
     auto gainStatus=dynamic_cast<juce::Label*>(named(editor,"selectedStatus"));REQUIRE(gainStatus && gainStatus->getTooltip().contains("Requested Level"));
     auto gainDetails=dynamic_cast<juce::Label*>(named(editor,"diagnosticPolicy"));REQUIRE(gainDetails && gainDetails->getHeight()>=80);
     auto openGainDiagnostics=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"openDiagnostics"));REQUIRE(openGainDiagnostics);openGainDiagnostics->onClick();editor.refresh();
-    REQUIRE(gainDetails->getText().contains(m3::approvedGainRevision) && gainDetails->getText().contains("protection"));
+    const auto gainReadout=gainDetails->getText();
+    REQUIRE(gainReadout.contains(m3::approvedGainRevision) && gainReadout.contains("wet peak")
+        && gainReadout.contains("output peak"));
     snapshotPanel(*editor.diagnosticsPanel(),"musical-gain-diagnostics");snapshotPanel(*editor.settingsPanel(),"musical-gain-settings");
     REQUIRE(liveLevel->getMaximum()==12);liveLevel->setValue(4,juce::sendNotificationSync);gainPolicy->setSelectedId(1,juce::sendNotificationSync);
     REQUIRE(engine.savedSession().gainPolicy==m3::GainPolicy::musical && engine.savedSession().liveWetDb==4);

@@ -6,6 +6,17 @@ namespace m3
 {
 namespace
 {
+bool isAudible(const Swell& swell, bool anySolo) noexcept
+{
+    return swell.enabled && !swell.muted && (!anySolo || swell.solo);
+}
+
+bool usesRetainedRender(const Swell& swell, const Swell& accepted, bool loop)
+{
+    return swell.phase != Phase::ready
+        || (swell.render == accepted.render && (loop || swell.ir.content != accepted.ir.content));
+}
+
 juce::String offlineTimingEvidence(const SongTime& prepared,const SongTime& reference,const SongTime& host)
 {
     const auto describe=[](const SongTime& t){return "sample="+juce::String(t.sample)+" PPQ="+juce::String(t.ppq,15)
@@ -22,8 +33,8 @@ juce::String memberKey(const Swell& w)
     +"/"+juce::String(w.shape.fadeIn)+"/"+juce::String(w.shape.fadeOut)+"/"+juce::String(static_cast<int>(w.shape.inCurve))+"/"+juce::String(static_cast<int>(w.shape.outCurve))
     +"/"+juce::String(w.shape.inTension,17)+"/"+juce::String(w.shape.outTension,17)+"/"+juce::String(w.shape.gainDb,9)
     +"/"+juce::String(static_cast<int>(w.calibration.state))+"/"+juce::String(w.calibration.baselineDb,9)+"/"+w.calibration.revision
+    +"/"+juce::String(w.generatedGain.value_or(1.0f),17)
     +"/"+w.calibration.sourceIdentity+"/"+w.calibration.irIdentity+"/"+w.calibration.renderIdentity+"/"+w.render.path+"/"+w.render.checksum+"/"+w.ir.path;}
-juce::String waveformKey(const Swell& w){auto unplaced=w;unplaced.placement=0;return memberKey(unplaced);}
 
 bool readShaped(const Swell& w,const SwellAssetStore& store,int64_t from,int64_t to,
     WetRender* output,float& peak,juce::String& error,const RenderCancellation& cancel)
@@ -50,60 +61,248 @@ bool readShaped(const Swell& w,const SwellAssetStore& store,int64_t from,int64_t
     if(output)output->peak=peak;return true;
 }
 
-juce::String gainKey(const Session& session,const std::vector<Swell>& members)
+struct HeadroomMember
 {
-    juce::String key=session.gainRevision+"/"+juce::String(session.liveWetDb,6);
-    for(const auto& w:members)key+="|"+memberKey(w)+"/"+juce::String(static_cast<int>(w.enabled))+"/"+juce::String(static_cast<int>(w.muted))+"/"+juce::String(static_cast<int>(w.solo));
-    return key;
-}
+    Swell swell;
+    int64_t start, end;
+    bool pending;
+};
 
-bool prepareMusicalPlan(const Session& session,const std::vector<Swell>& members,const SwellAssetStore& store,
-                        uint64_t budget,const RenderCancellation& cancel,float& attenuation,float& peak,juce::String& error)
+bool measureSongHeadroom(const std::vector<HeadroomMember>& members, const SwellAssetStore& store,
+                         double ceiling, const RenderCancellation& cancel, double& gain, juce::String& error)
 {
-    if(members.empty()){attenuation=1;peak=0;error.clear();return true;}
-    struct Group{const Swell* swell;int count;int64_t start,end;};std::vector<Group> groups;
-    std::map<juce::String,size_t> grouped;std::vector<std::pair<int64_t,int64_t>> intervals;
-    for(const auto& w:members){int64_t a,b;if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error))return false;
-        const auto key=memberKey(w);const auto found=grouped.find(key);
-        if(found!=grouped.end())++groups[found->second].count;
-        else {grouped[key]=groups.size();groups.push_back({&w,1,a,b});intervals.emplace_back(a,b);}}
-    std::sort(intervals.begin(),intervals.end());std::vector<std::pair<int64_t,int64_t>> occupied;
-    for(const auto& range:intervals){if(!occupied.empty() && range.first<occupied.back().second)occupied.back().second=std::max(occupied.back().second,range.second);
-        else occupied.push_back(range);}
-    peak=0;attenuation=1;
-    std::map<juce::String,float> isolatedPeaks;
-    for(const auto& range:occupied){float measured=0,guard=1;
-    const Group* isolated=nullptr;size_t count=0;for(const auto& g:groups)if(g.start<range.second && g.end>range.first){isolated=&g;++count;}
-    if(count==1 && isolated->count==1){
-        const auto key=waveformKey(*isolated->swell);auto cached=isolatedPeaks.find(key);float memberPeak=0;
-        if(cached==isolatedPeaks.end()){
-            if(!readShaped(*isolated->swell,store,range.first,range.second,nullptr,memberPeak,error,cancel))return false;
-            isolatedPeaks[key]=memberPeak;
-        }else memberPeak=cached->second;
-        measured=memberPeak*juce::Decibels::decibelsToGain(session.liveWetDb);
-        const auto ceiling=juce::Decibels::decibelsToGain(gainCeilingDb(session));guard=measured>ceiling?ceiling/measured:1;
-        peak=std::max(peak,measured);attenuation=std::min(attenuation,guard);continue;
+    std::vector<std::pair<int64_t,int64_t>> intervals;
+    for (const auto& member : members) intervals.emplace_back(member.start,member.end);
+    std::sort(intervals.begin(),intervals.end());
+    std::vector<std::pair<int64_t,int64_t>> occupied;
+    for (const auto& interval : intervals)
+    {
+        if (!occupied.empty() && interval.first < occupied.back().second)
+            occupied.back().second = std::max(occupied.back().second,interval.second);
+        else occupied.push_back(interval);
     }
-    if(!measureAggregateGain(range.first,range.second,gainCeilingDb(session),session.liveWetDb,budget,
-        [&](int64_t at,int frames,float* sum,juce::String& addError){
-            int64_t end;if(!checkedAdd(at,frames,end)){addError="Aggregate interval overflow";return false;}
-            for(const auto& group:groups){if(group.end<=at || group.start>=end)continue;WetRender part;float ignored=0;
-                if(!readShaped(*group.swell,store,at,end,&part,ignored,addError,cancel))return false;
-                for(size_t n=0;n<part.frames();++n){const auto offset=static_cast<size_t>(part.start-at+n)*2;
-                    // Repeat additions preserve the production mixer's float
-                    // accumulation for identical voices, while reading once.
-                    for(int copy=0;copy<group.count;++copy){sum[offset]+=part.samples[n*2];sum[offset+1]+=part.samples[n*2+1];}}}
-            return true;
-        },cancel,guard,measured,error))return false;
-        peak=std::max(peak,measured);attenuation=std::min(attenuation,guard);
+
+    struct Sample
+    {
+        double direct=0, ramped=0, absolute=0;
+    };
+    constexpr int64_t chunk = 4096;
+    std::vector<Sample> retained(chunk * 2), generated(chunk * 2);
+    for (const auto& [start,end] : occupied)
+    {
+        for (auto first = start; first < end;)
+        {
+            if (cancel()) return false;
+            const auto frames = std::min(chunk,end-first);
+            const auto last = first + frames;
+            std::fill_n(retained.begin(),frames*2,Sample{});
+            std::fill_n(generated.begin(),frames*2,Sample{});
+            for (const auto& member : members)
+            {
+                if (member.end <= first || member.start >= last) continue;
+                WetRender part;
+                float peak = 0;
+                if (!readShaped(member.swell,store,first,last,&part,peak,error,cancel)) return false;
+                auto& sum = member.pending ? generated : retained;
+                const auto offset = static_cast<size_t>(part.start-first)*2;
+                const auto ramp = std::clamp(std::round(member.swell.render.rate*.005),1.0,9600.0);
+                for (size_t i = 0; i < part.samples.size(); ++i)
+                {
+                    auto& sample = sum[offset+i];
+                    const auto value = part.samples[i];
+                    const auto age = part.start-member.start + static_cast<int64_t>(i/2);
+                    sample.direct += value;
+                    sample.ramped += value * std::min(1.0,(age+1)/ramp);
+                    sample.absolute += std::abs(value);
+                }
+            }
+            for (int64_t i = 0; i < frames*2; ++i)
+            {
+                const auto& old = retained[static_cast<size_t>(i)];
+                const auto& added = generated[static_cast<size_t>(i)];
+                constexpr auto rounding = std::numeric_limits<float>::epsilon() * (liveMaximumOverlap+4);
+                const auto cap = ceiling - old.absolute * rounding;
+                const auto constrain = [&](double accepted, double pending)
+                {
+                    if (std::abs(accepted) > cap) return false;
+                    const auto errorPerGain = added.absolute * rounding;
+                    const auto positive = pending + errorPerGain;
+                    const auto negative = -pending + errorPerGain;
+                    if (positive > 0) gain = std::min(gain,(cap-accepted)/positive);
+                    if (negative > 0) gain = std::min(gain,(cap+accepted)/negative);
+                    return true;
+                };
+                if (!constrain(old.direct,added.direct) || !constrain(old.ramped,added.ramped))
+                {
+                    error = "Retained swells exceed the generated wet ceiling";
+                    return false;
+                }
+            }
+            first = last;
+        }
     }
     return true;
 }
+
 }
+void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
+{
+    std::vector<HeadroomMember> members;
+    std::vector<std::pair<juce::String,bool>> pending;
+    uint64_t revision, session;
+    bool hasAudiblePending = false;
+    juce::String error;
+    {
+        const juce::ScopedLock guard(lock);
+        const auto anySolo = std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.solo;});
+        for (const auto& swell : model.swells)
+        {
+            if (swell.phase == Phase::headroom)
+            {
+                const auto audible = isAudible(swell,anySolo);
+                pending.emplace_back(swell.id,audible);
+                hasAudiblePending |= audible;
+            }
+            else if (swell.phase == Phase::queued || swell.phase == Phase::rendering
+                     || swell.phase == Phase::checking || swell.phase == Phase::restoring) return;
+        }
+        if (pending.empty()) return;
+        revision = liveRevision;
+        session = sessionGeneration.load();
+        const bool loop = context.capture.manifest.loop.has_value();
+        const auto clock = loop ? std::nullopt : liveClock.snapshot(session);
+        const auto* liveContext = clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted
+            ? &*clock : nullptr;
+        for (auto swell : model.swells)
+        {
+            if (!hasAudiblePending || !isAudible(swell,anySolo)) continue;
+            const auto isPending = swell.phase == Phase::headroom;
+            if (!isPending)
+            {
+                const auto kept = retainedIR.find(swell.id);
+                if (kept != retainedIR.end() && usesRetainedRender(swell,kept->second.accepted,loop)
+                    && retainedCompatible(kept->second,swell,context,liveContext))
+                    swell = kept->second.accepted;
+                else if (swell.phase != Phase::ready) continue;
+            }
+            if (model.gainPolicy == GainPolicy::legacy) swell.calibration = {};
+            swell.shape.gainDb = defaultSwellLevelDb;
+            if (isPending) swell.generatedGain.reset();
+            int64_t start, end;
+            if (!shapeBounds(swell,swell.render.start,swell.render.sourceEnd,start,end,error)) break;
+            members.push_back({std::move(swell),start,end,isPending});
+        }
+    }
+    const auto cancel = [&]{
+        const juce::ScopedLock guard(lock);
+        return threadShouldExit() || offlineActive.load() || sessionGeneration.load() != session || liveRevision != revision;
+    };
+    SwellAssetStore store(instanceRoot(context.capture.manifest));
+    const auto ceiling = juce::Decibels::decibelsToGain(static_cast<double>(candidateWetCeilingDb));
+    double gain = 1;
+    const auto started = juce::Time::getMillisecondCounterHiRes();
+    if (error.isEmpty() && hasAudiblePending)
+    {
+        if (available() < 512ULL*1024) error = "Working budget unavailable for generated headroom";
+        else if (const auto& loop = context.capture.manifest.loop)
+        {
+            LoopWetPlan plan;
+            std::vector<float> analysisGains(members.size(),1);
+            uint64_t reserved = 512ULL*1024;
+            for (const auto& member : members)
+            {
+                const auto frames = static_cast<uint64_t>(member.end-member.start);
+                if (frames > available(reserved)/(2*sizeof(float)))
+                { error = "Working budget unavailable for Loop generated headroom"; break; }
+                auto shaped = std::make_shared<WetRender>();
+                float peak = 0;
+                if (!readShaped(member.swell,store,member.start,member.end,shaped.get(),peak,error,cancel)) break;
+                reserved += shaped->samples.capacity()*sizeof(float);
+                plan.audio.entries.push_back({plan.audio.entries.size(),0,member.start,member.end,peak,std::move(shaped),{},0});
+            }
+            const auto measure = [&](float candidate, double& peak)
+            {
+                for (size_t i = 0; i < members.size(); ++i)
+                    analysisGains[i] = members[i].pending ? candidate : 1.0f;
+                const auto analysis = fixedLoopGrid ? LoopWetPlan::PeakAnalysis::measure : LoopWetPlan::PeakAnalysis::skip;
+                if (!plan.prepare(loop->endSample,available(),error,cancel,analysisGains,analysis)) return false;
+                peak = fixedLoopGrid ? plan.fixedGridPeak : plan.peakBound;
+                return true;
+            };
+            double peak = 0;
+            if (error.isEmpty() && measure(1,peak) && peak > ceiling)
+            {
+                if (std::all_of(members.begin(),members.end(),[](const auto& member){return member.pending;}))
+                    gain = ceiling/peak;
+                else if (measure(0,peak))
+                {
+                    if (peak > ceiling) error = "Retained swells exceed the generated wet ceiling";
+                    else
+                    {
+                        // The peak is convex in the new batch's common gain.
+                        // Since zero fits, find the highest tested gain that fits.
+                        float low = 0, high = 1;
+                        for (int step = 0; step < 14; ++step)
+                        {
+                            const auto mid = (low+high)*0.5f;
+                            if (!measure(mid,peak)) break;
+                            if (peak <= ceiling) low = mid;
+                            else high = mid;
+                        }
+                        gain = low;
+                    }
+                }
+            }
+        }
+        else if (!measureSongHeadroom(members,store,ceiling,cancel,gain,error) && error.isEmpty())
+            error = "Generated headroom preparation superseded";
+    }
+    if (error.isEmpty() && !(gain > 0)) error = "No headroom available for generated wet";
+    const auto acceptedGain = gain < 1 ? static_cast<float>(gain * 0.9999) : 1.0f;
+    if (error.isEmpty() && !(acceptedGain > 0)) error = "No representable gain fits the generated wet ceiling";
+    const auto latest = contextProvider();
+    const juce::ScopedLock guard(lock);
+    if (cancel() || latest.captureGeneration != context.captureGeneration
+        || latest.capture.manifest.loop != context.capture.manifest.loop
+        || latest.capture.location != context.capture.location) return;
+    for (const auto& member : members)
+    {
+        const auto& swell = member.swell;
+        if (!swell.frozen && sourceDependency(latest.capture.manifest,swell.sourceStart,renderInputEnd(swell))
+            != sourceDependency(context.capture.manifest,swell.sourceStart,renderInputEnd(swell))) return;
+    }
+    for (const auto& [id,audible] : pending)
+    {
+        auto& swell = *find(model,id);
+        if (!audible || error.isEmpty())
+        {
+            swell.generatedGain = audible ? acceptedGain : 1.0f;
+            swell.phase = Phase::ready;
+            swell.status = "Ready | Generated wet trim " + juce::String(20*std::log10(*swell.generatedGain),1) + " dB";
+        }
+        else
+        {
+            swell.phase = Phase::error;
+            swell.status = error;
+        }
+    }
+    if (error.isEmpty() && hasAudiblePending)
+    {
+        gainPlanPreparationMs = juce::Time::getMillisecondCounterHiRes()-started;
+        ++gainPlanBuilds;
+    }
+    if (error.isNotEmpty()) message = error;
+    if (error.isEmpty() || std::any_of(pending.begin(),pending.end(),[](const auto& item){return !item.second;}))
+        persistentChangedLocked(false);
+    ++liveRevision;
+    ++monitoringGeneration;
+}
+
 void SwellEngine::invalidateLiveLocked(const juce::String& id)
 {
     if(id.isEmpty())retainedIR.clear();else retainedIR.erase(id);
     ++liveRevision;
+    loopPlayback.invalidatePrepared();
     if(id.isEmpty()){for(const auto& [key,slot]:liveSlots)live.invalidate(slot,++liveGenerations[slot]);}
     else if(const auto at=liveSlots.find(id);at!=liveSlots.end())live.invalidate(at->second,++liveGenerations[at->second]);
     notify();
@@ -113,6 +312,7 @@ void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
     const juce::ScopedLock guard(lock);
     if(!std::isfinite(db) || db< -60 || db>(model.gainPolicy==GainPolicy::musical?12:0) || static_cast<int>(routing)<0 || static_cast<int>(routing)>1)return;
     const auto gainChanged=model.liveWetDb!=db;
+    if(model.liveRouting!=routing || gainChanged){loopPlayback.invalidatePrepared();preparedLoopRender=0;}
     if(model.liveEnabled!=enabled || model.liveRouting!=routing || gainChanged)persistentChangedLocked();
     model.liveEnabled=enabled;model.liveRouting=routing;model.liveWetDb=db;
     if(gainChanged && model.auditionFollowsLive)++monitoringGeneration;
@@ -127,10 +327,12 @@ bool SwellEngine::retainedCompatible(const RetainedIR& kept,const Swell& w,const
         && (liveContext?liveContext->accepts(kept.timing,context.time)==LiveGate::admitted:transportMappingMatches(kept.timing,context.time))
         && kept.revision==juce::String(sourceDependency(context.capture.manifest,a.sourceStart,renderInputEnd(a)));
 }
+
 bool SwellEngine::retainIRLocked(const Swell& w,const PreviewContext& context,const juce::String& requestedName)
 {
     const auto clock=liveClock.snapshot(sessionGeneration.load());
-    const auto useLive=!offlineActive.load() && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live)
+    const auto useLive=context.capture.sourceKind()!=CaptureSourceKind::loop && !offlineActive.load()
+        && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live)
         && clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted;
     const auto* liveContext=useLive?&*clock:nullptr;
     if(auto found=retainedIR.find(w.id);found!=retainedIR.end()){
@@ -209,19 +411,10 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
             const auto skip=[&](const Swell& w,const juce::String& reason){if(skipped.size()<8)skipped.add(w.name+": "+reason);};int skippedCount=0;
             if(offlineSession.liveEnabled)for(const auto& w:offlineSession.swells)if(w.enabled && !w.muted && (!solo || w.solo)){
                 if(w.phase!=Phase::ready){++skippedCount;skip(w,w.status);continue;}
-                int64_t a,b;float peak=0;
-                if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error) || (!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)
-                    || !readShaped(w,store,a,b,nullptr,peak,error,{})){++skippedCount;skip(w,error);continue;}
-                offlineEntries.push_back({offlineEntries.size(),1,a,b,peak,{},{}});offlineMembers.push_back(w);
-            }
-            offlineGainAttenuation=1;offlineGainPeak=0;
-            if(offlineSession.gainPolicy==GainPolicy::musical){
-                const auto key=gainKey(offlineSession,offlineMembers);bool cached=false;const auto started=juce::Time::getMillisecondCounterHiRes();
-                {const juce::ScopedLock guard(lock);cached=key==gainPlanKey;if(cached){offlineGainAttenuation=gainPlanAttenuation;offlineGainPeak=gainPlanPeak;++gainPlanCacheHits;}}
-                if(!cached && !prepareMusicalPlan(offlineSession,offlineMembers,store,available(),{},offlineGainAttenuation,offlineGainPeak,error))
-                {fail(error);return;}
-                if(!cached){const juce::ScopedLock guard(lock);gainPlanKey=key;gainPlanAttenuation=offlineGainAttenuation;gainPlanPeak=offlineGainPeak;
-                    gainPlanPreparationMs=juce::Time::getMillisecondCounterHiRes()-started;++gainPlanBuilds;}
+                int64_t a,b;
+                if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error) || (!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error))
+                {++skippedCount;skip(w,error);continue;}
+                offlineEntries.push_back({offlineEntries.size(),1,a,b,0,{},{}});offlineMembers.push_back(w);
             }
             {const juce::ScopedLock guard(lock);
                 if(skippedCount)offlineWarning="Export warning: "+juce::String(skippedCount)+(skippedCount==1?" swell skipped | ":" swells skipped | ")+skipped.joinIntoString("; ");
@@ -264,7 +457,6 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
                     if(required<=available())break;
                     if(length<=count){fail("256 MiB budget cannot admit required offline pages");return;}length=std::max(count,length/2);}
                 uint64_t reserved=8ULL*1024*1024;
-                if(offlineSession.gainPolicy==GainPolicy::musical){pub->attenuation=offlineGainAttenuation;pub->measuredAttenuation=true;}
                 size_t index=0;
                 for(const auto& w:offlineMembers){
                     auto& entry=pub->entries[index++];const auto a=std::max(at,entry.start),b=std::min(pub->end,entry.end);if(a>=b)continue;
@@ -287,8 +479,18 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
 }
 void SwellEngine::prepareTransport(const PreviewContext& context)
 {
+    if (context.capture.sourceKind() == CaptureSourceKind::loop)
+    {
+        prepareLoopTransport(context);
+        return;
+    }
     LivePreparationObservation observation;
     {const juce::ScopedLock guard(lock);observation=livePreparation;
+        if (preparedLoopSource)
+        {
+            loopPlayback.discardPending();
+            preparedLoopGeneration = preparedLoopSource = preparedLoopRender = 0;
+        }
         ++observation.service;observation.observed=context.time;observation.source=model.timing;
         observation.latest={};observation.clock.reset();observation.revision=liveRevision;observation.preparedRevision=preparedLiveRevision;
         observation.start=liveWindowStart;observation.end=liveWindowEnd;
@@ -339,7 +541,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         observation.result="Preparation cancelled or dependencies changed";observation.loopStart=loopFrom;observation.loopEnd=loopTo;
         for(auto& w:session.swells)if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end()){
             if(!retainedCompatible(kept->second,w,context,&*clock)){invalidateLiveLocked(w.id);observation.result="Retained dependencies incompatible";return;}
-            if(w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content)){
+            if(usesRetainedRender(w,kept->second.accepted,false)){
                 const auto enabled=w.enabled,muted=w.muted,solo=w.solo;w=kept->second.accepted;w.phase=Phase::ready;
                 w.enabled=enabled;w.muted=muted;w.solo=solo;held.insert(w.id);
             }else replacements.insert(w.id);}
@@ -361,10 +563,8 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(!checkedSubtract(loopFrom,behind,pub->loopStart) || !checkedAdd(loopFrom,frames,pub->loopEnd)){observation.result="Loop range overflow";return;}}
     const auto anySolo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     SwellAssetStore store(instanceRoot(context.capture.manifest));juce::String error;uint64_t reserved=8ULL*1024*1024;size_t unavailable=0;
-    std::vector<Swell> gainMembers;
-    std::map<juce::String,float> sharedMemberPeaks;
     for(const auto& w:session.swells){if(cancel())return;
-        if(!w.enabled || w.muted || (anySolo && !w.solo) || !w.render.present())continue;
+        if(!isAudible(w,anySolo) || !w.render.present())continue;
         LiveCache cached;size_t slot;uint64_t memberGeneration;bool recovered=false;
         {const juce::ScopedLock guard(lock);slot=liveSlots.at(w.id);memberGeneration=liveGenerations[slot];cached=liveCache[w.id];recovered=runtime[w.id].cachedWetOnly;}
         const auto key=memberKey(w);
@@ -378,16 +578,13 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
             const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}observation.result=error;return;}
         if(cached.key!=key){
             if(available(reserved)<512ULL*1024){error="256 MiB budget unavailable for bounded live verification scratch";break;}
-            float peak=0;const auto shared=sharedMemberPeaks.find(waveformKey(w));
-            if(shared!=sharedMemberPeaks.end())peak=shared->second;
-            else if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error) || !readShaped(w,store,a,b,nullptr,peak,error,cancel)){
+            if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)){
                 if(!cancel()){
                     if(held.contains(w.id)){const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}}
                     else report(w,generation,Phase::error,error);
                     if(error.isNotEmpty())observation.result=error;}
                 return;}
-            sharedMemberPeaks[waveformKey(w)]=peak;
-            cached={key,peak};const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;
+            cached={key,0};const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;
         }
         LiveEntry entry{slot,memberGeneration,a,b,cached.peak,{}};
         entry.version=w.inputGeneration;
@@ -410,19 +607,8 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
             reserved+=entry.loopAudio->samples.capacity()*sizeof(float);cached.loop=entry.loopAudio;}
         {const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;}
         pub->entries.push_back(std::move(entry));
-        gainMembers.push_back(w);
     }
     if(cancel())return;
-    if(error.isEmpty())prepareLiveSegments(*pub,error);
-    if(error.isEmpty() && session.gainPolicy==GainPolicy::musical){
-        const auto key=gainKey(session,gainMembers);float attenuation=1,peak=0;bool cached=false;
-        const auto started=juce::Time::getMillisecondCounterHiRes();
-        {const juce::ScopedLock guard(lock);cached=key==gainPlanKey;if(cached){attenuation=gainPlanAttenuation;peak=gainPlanPeak;++gainPlanCacheHits;}}
-        if(!cached && !prepareMusicalPlan(session,gainMembers,store,available(reserved),cancel,attenuation,peak,error)){}
-        if(error.isEmpty()){pub->attenuation=attenuation;pub->measuredAttenuation=true;
-            if(!cached){const juce::ScopedLock guard(lock);if(!cancel()){gainPlanKey=key;gainPlanAttenuation=attenuation;gainPlanPeak=peak;
-                gainPlanPreparationMs=juce::Time::getMillisecondCounterHiRes()-started;++gainPlanBuilds;}}}
-    }
     if(error.isEmpty() && !prepareLiveSegments(*pub,error)){}
     if(livePublicationHold.load()){
         livePublicationWaiting=true;
@@ -441,12 +627,168 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         observation.result="Live position left candidate coverage; retry";return;}
     const juce::ScopedLock guard(lock);if(cancel())return;
     if(error.isNotEmpty()){liveStatus=error;observation.result=error;return;}
-    const auto start=pub->start,end=pub->end;const auto attenuation=pub->attenuation;
+    const auto start=pub->start,end=pub->end;
     if(pub->bytes()>available()){liveStatus="256 MiB live publication budget exceeded";observation.result=liveStatus;return;}
     if(livePublicationFail.exchange(false)){++livePublicationFailures;observation.result="Injected transient live publication miss";return;}
     if(live.publish(std::move(pub))){for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;observation.preparedRevision=revision;observation.result="Published complete window";liveWindowStart=start;liveWindowEnd=end;
         preparedLoopStart=loopFrom;preparedLoopEnd=loopTo;
-        liveAttenuationDb=juce::Decibels::gainToDecibels(attenuation);liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}
+        liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}
     else {liveStatus="Live publication queue busy";observation.result=liveStatus;}
+}
+
+void SwellEngine::prepareLoopTransport(const PreviewContext& context)
+{
+    const auto& manifest = context.capture.manifest;
+    if (!manifest.loop || context.capture.unavailable || !manifest.revision) return;
+    const auto flow = workflowState ? workflowState->snapshot() : workflow::Snapshot{workflow::Mode::live};
+    const auto inLive = flow.mode == workflow::Mode::live && liveEnabled.load();
+    auto publication = std::make_unique<LoopPlaybackPublication>();
+    publication->captureGeneration = context.captureGeneration;
+    publication->sourceRevision = manifest.revision;
+    publication->rate = manifest.sampleRate;
+    publication->timing = *manifest.loop;
+    uint64_t revision, session;
+    Session snapshot;
+    std::vector<juce::String> replacements;
+    std::set<juce::String> retained;
+    {
+        const juce::ScopedLock guard(lock);
+        loopPlayback.collect();
+        const bool newSource = preparedLoopGeneration != context.captureGeneration || preparedLoopSource != manifest.revision;
+        publication->dependencies = loopPlayback.dependencies();
+        if (newSource)
+        {
+            if (!loopPlayback.publish(std::make_unique<LoopPlaybackPublication>(*publication))) return;
+            preparedLoopGeneration = context.captureGeneration;
+            preparedLoopSource = manifest.revision;
+            preparedLoopRender = 0;
+        }
+        if (!inLive || !context.time.valid || preparedLoopRender == liveRevision) return;
+        revision = liveRevision;
+        session = sessionGeneration.load();
+        snapshot = model;
+        for (auto& w : snapshot.swells)
+        {
+            // During the edit debounce the replacement is pending even though
+            // reconciliation has not moved it from Stale to Checking yet.
+            if (w.phase == Phase::stale && w.ir.present() && forceRefresh.contains(w.id))
+                w.phase = Phase::checking;
+            const auto kept = retainedIR.find(w.id);
+            if (kept == retainedIR.end()) continue;
+            if (!retainedCompatible(kept->second,w,context))
+            {
+                invalidateLiveLocked(w.id);
+                return;
+            }
+            if (usesRetainedRender(w,kept->second.accepted,true))
+            {
+                const auto enabled = w.enabled, muted = w.muted, solo = w.solo;
+                w = kept->second.accepted;
+                w.phase = Phase::ready;
+                w.enabled = enabled; w.muted = muted; w.solo = solo;
+                retained.insert(w.id);
+            }
+            else replacements.push_back(w.id);
+        }
+    }
+
+    using Preparation = LoopPlaybackPublication::Preparation;
+    const auto cancel = [&]{
+        const juce::ScopedLock guard(lock);
+        return threadShouldExit() || liveRevision != revision || sessionGeneration.load() != session
+            || publication->dependencies != loopPlayback.dependencies();
+    };
+    const auto anySolo = std::any_of(snapshot.swells.begin(),snapshot.swells.end(),[](const auto& w){return w.solo;});
+    SwellAssetStore store(instanceRoot(manifest));
+    juce::String error;
+    auto result = Preparation::noWet;
+    bool hasAudibleMember = false;
+    uint64_t reserved = 8ULL * 1024 * 1024;
+    for (auto& w : snapshot.swells)
+    {
+        if (cancel()) return;
+        if (!isAudible(w,anySolo)) continue;
+        hasAudibleMember = true;
+        if (w.phase != Phase::ready || !w.render.present())
+        {
+            if (w.phase == Phase::queued || w.phase == Phase::restoring || w.phase == Phase::checking || w.phase == Phase::rendering || w.phase == Phase::headroom)
+                result = Preparation::waiting;
+            if (result == Preparation::waiting) break;
+            continue;
+        }
+        if (snapshot.gainPolicy == GainPolicy::legacy) w.calibration = {};
+        int64_t first, end;
+        if (w.render.rate != manifest.sampleRate || w.render.bpm != manifest.loop->tempoBpm
+            || w.render.numerator != manifest.loop->meterNumerator || w.render.denominator != manifest.loop->meterDenominator
+            || !shapeBounds(w,w.render.start,w.render.sourceEnd,first,end,error)) continue;
+        const auto frames = static_cast<uint64_t>(end) - static_cast<uint64_t>(first);
+        if (frames > available(reserved) / (2 * sizeof(float))) { result = Preparation::budget; break; }
+        const auto key = memberKey(w);
+        std::shared_ptr<const WetRender> render;
+        {
+            const juce::ScopedLock guard(lock);
+            const auto resolved = runtime.find(w.id);
+            if (!retained.contains(w.id) && (resolved == runtime.end() || resolved->second.cachedWetOnly
+                || resolved->second.verifiedRender != w.render
+                || (!w.frozen && resolved->second.revision != juce::String(sourceDependency(manifest,w.sourceStart,renderInputEnd(w))))))
+                continue;
+            const auto cached = liveCache.find(w.id);
+            if (cached != liveCache.end() && cached->second.key == key) render = cached->second.main.lock();
+        }
+        if (!render || render->start != first || render->frames() != frames)
+        {
+            auto shaped = std::make_shared<WetRender>();
+            float peak = 0;
+            if ((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)
+                || !readShaped(w,store,first,end,shaped.get(),peak,error,cancel))
+            { result = Preparation::noWet; publication->plan.audio.entries.clear(); break; }
+            render = std::move(shaped);
+            const juce::ScopedLock guard(lock);
+            liveCache[w.id] = {key,render->peak,render,{}};
+        }
+        reserved += render->samples.capacity() * sizeof(float);
+        const auto slot = publication->plan.audio.entries.size();
+        publication->plan.audio.entries.push_back({slot,0,first,end,render->peak,std::move(render),{},0});
+    }
+    if (cancel()) return;
+    if (result == Preparation::noWet && !publication->plan.audio.entries.empty())
+    {
+        result = publication->plan.prepare(manifest.loop->endSample,available(),error,cancel,{},LoopWetPlan::PeakAnalysis::skip)
+            ? Preparation::ready : Preparation::budget;
+        if (cancel()) return;
+        if (result == Preparation::ready)
+        {
+            const auto requested = juce::Decibels::decibelsToGain(snapshot.liveWetDb);
+            publication->gain = requested;
+            if (!publication->prepareLeadInPeaks(cancel)) return;
+            if (publication->bytes() > available()) result = Preparation::budget;
+        }
+    }
+    publication->preparation = result;
+    publication->intentionallySilent = !hasAudibleMember;
+    publication->wetOnly = snapshot.liveRouting == LiveRouting::wetOnly;
+    if (result != Preparation::ready)
+    {
+        publication->plan = {};
+        publication->leadInPeaks.reset();
+    }
+    if (livePublicationHold.load())
+    {
+        livePublicationWaiting = true;
+        while (livePublicationHold.load() && !cancel()) juce::Thread::sleep(2);
+        livePublicationWaiting = false;
+    }
+    const auto latest = contextProvider();
+    if (latest.captureGeneration != context.captureGeneration || latest.capture.reference != context.capture.reference) return;
+    const juce::ScopedLock guard(lock);
+    if (cancel() || (workflowState && workflowState->snapshot().mode != workflow::Mode::live)) return;
+    if (result == Preparation::ready && !replacements.empty())
+    {
+        loopPlayback.invalidatePrepared();
+        publication->dependencies = loopPlayback.dependencies();
+    }
+    if (!loopPlayback.publish(std::move(publication))) return;
+    if (result == Preparation::ready) for (const auto& id : replacements) retainedIR.erase(id);
+    preparedLoopRender = revision;
 }
 }

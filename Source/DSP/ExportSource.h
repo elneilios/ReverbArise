@@ -15,9 +15,10 @@ public:
     bool read(int64_t start,std::span<float> stereo,juce::String& error);
     const std::vector<ExportWarning>& warnings()const noexcept{return missing;}
     uint64_t audioReads()const noexcept{return store.audioReadCount();}
-    uint64_t workingBytes()const noexcept{return cache.interleavedSamples.capacity()*sizeof(float);}
+    uint64_t workingBytes()const noexcept{return cache.interleavedSamples.capacity()*sizeof(float)+missing.capacity()*sizeof(ExportWarning)+(readable.capacity()+7)/8;}
 private:
     bool load(size_t index,juce::String& error);
+    bool readCoverage(int64_t start,std::span<float> stereo,juce::String& error);
     void warn(int64_t,int64_t,ExportCoverage);
     CaptureAssetStore store;
     std::shared_ptr<const SongExportPlan> plan;

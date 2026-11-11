@@ -8,19 +8,22 @@ using namespace m3;
 template<class F>static void waitFor(F predicate,const std::source_location line=std::source_location::current())
 {const auto end=juce::Time::getMillisecondCounter()+30000;while(!predicate()){
     if(juce::Time::getMillisecondCounter()>end)throw std::runtime_error("Export engine timeout "+std::to_string(line.line()));juce::Thread::sleep(2);}}
+#include "LoopExportEngineCases.h"
 int main(){return runTest([]{
+    loopExportEngineCases();
     TestDirectory root;CaptureSession capture(root.file);std::vector<float> source(10000,.125f);
     for(int pass=0;pass<16;++pass){for(int n=0;n<5000;++n){source[n*2]=.04f+pass*.003f+(n%31)*.0001f;source[n*2+1]=.03f+pass*.002f+(n%17)*.0002f;}
         REQUIRE(capture.commit(pass*5000,1000,source.data(),5000));}const PreviewContext context{capture.snapshot(),{true,950,3.8,1000,240,4,4},0};
     workflow::State flow;std::atomic<unsigned> changes{0},missingTimeReads{0};std::atomic<bool> missingTime{false};
     std::atomic<bool> publicationMissingTime{false};std::atomic<unsigned> publicationMisses{0};
     juce::File publicationDirectory;int publicationFileCount=0;
-    SwellEngine engine(root.file,[&]{auto next=context;if(missingTime.load()){next.time.valid=false;++missingTimeReads;}
+    auto owner=std::make_unique<SwellEngine>(root.file,[&]{auto next=context;if(missingTime.load()){next.time.valid=false;++missingTimeReads;}
         // A new final-name file exists only after publishSongExport completes.
         // The first provider read after it appears is the final publication check.
         if(publicationMissingTime.load() && publicationDirectory.findChildFiles(juce::File::findFiles,false,"Swells-*.wav").size()>publicationFileCount){
             next.time.valid=false;++publicationMisses;}
-        return next;},[&]{++changes;});engine.setAutomaticProcessing(false);
+        return next;},[&]{++changes;});
+    auto& engine=*owner;engine.setAutomaticProcessing(false);
     waitFor([&]{return engine.savedSession().defaultIR.present();});
     REQUIRE(engine.addTarget(1000));const auto id=engine.savedSession().primary;
     const auto ir=root.file.getChildFile("accepted.wav");writeTestWav(ir,1,1000,std::vector<float>(201,.001f));
@@ -167,7 +170,8 @@ int main(){return runTest([]{
     REQUIRE(verifyExportFile(engine.assetDirectory(),engine.snapshot().songExport.prepared->file,error));
     {
         workflow::State otherFlow;REQUIRE(otherFlow.requestMode(workflow::Mode::finalise,{true,true,true}));
-        SwellEngine other(root.file,[&]{return context;});other.useWorkflow(otherFlow);other.restore(saved);
+        auto otherOwner=std::make_unique<SwellEngine>(root.file,[&]{return context;});
+        auto& other=*otherOwner;other.useWorkflow(otherFlow);other.restore(saved);
         waitFor([&]{return other.snapshot().songExport.phase==ExportPhase::ready;});
         REQUIRE(other.setExportMix(.2f,other.assignmentEpoch()));waitFor([&]{return other.snapshot().songExport.phase==ExportPhase::ready;});
         REQUIRE(other.snapshot().songExport.prepared->file.wet==.2f && engine.snapshot().songExport.prepared->file.wet==.65f);
@@ -183,7 +187,8 @@ int main(){return runTest([]{
     REQUIRE(!engine.snapshot().songExport.cursor && std::all_of(stoppedL.begin(),stoppedL.end(),[](float x){return x==0;}));
     {
         workflow::State replacementFlow;REQUIRE(replacementFlow.requestMode(workflow::Mode::live,{true,true,true}));
-        SwellEngine replacement(root.file,[&]{return context;});replacement.useWorkflow(replacementFlow);replacement.restore(saved);
+        auto replacementOwner=std::make_unique<SwellEngine>(root.file,[&]{return context;});
+        auto& replacement=*replacementOwner;replacement.useWorkflow(replacementFlow);replacement.restore(saved);
         waitFor([&]{return find(replacement.savedSession(),id)->phase==Phase::ready;});
         const auto next=root.file.getChildFile("replacement.wav");writeTestWav(next,1,1000,std::vector<float>(301,.002f));
         REQUIRE(replacement.assignIR(id,find(replacement.savedSession(),id)->inputGeneration,next));
@@ -282,7 +287,8 @@ int main(){return runTest([]{
         TestDirectory missing;workflow::State unavailableFlow;REQUIRE(unavailableFlow.requestMode(workflow::Mode::finalise,{true,true,true}));
         auto missingContext=context;
         missingContext.capture.location=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{missing.file,missing.file,{}});
-        SwellEngine unavailable(missing.file,[&]{return missingContext;});unavailable.useWorkflow(unavailableFlow);unavailable.restore(saved);
+        auto unavailableOwner=std::make_unique<SwellEngine>(missing.file,[&]{return missingContext;});
+        auto& unavailable=*unavailableOwner;unavailable.useWorkflow(unavailableFlow);unavailable.restore(saved);
         waitFor([&]{return unavailable.snapshot().songExport.phase==ExportPhase::error;});
         REQUIRE(!unavailable.snapshot().songExport.prepared && unavailable.savedSession().exportState.history==saved.exportState.history);
     }

@@ -18,7 +18,7 @@ enum class AuditionMode { wetOnly, dryWet };
 enum class LiveRouting { dryWet, wetOnly };
 enum class GainPolicy { legacy, musical };
 enum class CalibrationState { unavailable, fixed, matched, capped };
-enum class Phase { empty, checking, queued, rendering, ready, stale, error, restoring };
+enum class Phase { empty, checking, queued, rendering, ready, stale, error, restoring, headroom };
 inline constexpr const char* legacyGainRevision="legacy-v1";
 inline constexpr const char* candidateGainRevision="candidate-source-peak-v1";
 inline constexpr const char* energyGainRevision="candidate-source-energy-v1";
@@ -62,6 +62,7 @@ struct Swell
     int64_t arrival = 0, sourceStart = 0, sourceEnd = 1;
     Shape shape;
     GainCalibration calibration;
+    std::optional<float> generatedGain;
     int64_t placement = 0;
     int64_t supportOffset = 0; // Retain genuine extended input when shortening the wet shape.
     Asset ir, render;
@@ -106,14 +107,19 @@ struct Session
     std::vector<ImportedIR> importedIRs;
     std::vector<int64_t> suppressed;
 };
-inline bool initializeExport(Session& session,juce::String& error)
+inline bool initializeExport(Session& session,juce::String& error,bool loopSource=false)
 {
+    if(loopSource){session.exportState.initialized=true;session.exportState.loop.initialized=true;error.clear();return true;}
     if(session.exportState.initialized){error.clear();return true;}
     session.exportState.initialized=true;session.exportState.dry=0;session.exportState.wet=1;error.clear();return true;
 }
-inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error)
+inline bool setExportLevels(Session& session,float dry,float wet,juce::String& error,bool loopSource=false)
 {
     if(!std::isfinite(dry) || dry<0 || dry>1 || !std::isfinite(wet) || wet<0 || wet>1){error="Invalid Export levels";return false;}
+    if(loopSource){
+        if(session.exportState.loop.levels!=ExportMixLevels{dry,wet})session.exportState.desiredIdentity.clear();
+        session.exportState.initialized=true;session.exportState.loop.initialized=true;session.exportState.loop.levels={dry,wet};error.clear();return true;
+    }
     if(session.exportState.dry!=dry || session.exportState.wet!=wet)session.exportState.desiredIdentity.clear();
     session.exportState.initialized=true;session.exportState.dry=dry;session.exportState.wet=wet;error.clear();return true;
 }
@@ -135,7 +141,7 @@ inline bool sameSavedSwell(const Swell& a,const Swell& b)
 {
     return a.id==b.id && a.name==b.name && a.irName==b.irName && a.arrival==b.arrival
         && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape
-        && a.calibration==b.calibration && a.placement==b.placement && a.supportOffset==b.supportOffset
+        && a.calibration==b.calibration && a.generatedGain==b.generatedGain && a.placement==b.placement && a.supportOffset==b.supportOffset
         && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
         && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor
         && a.generationSource==b.generationSource;
@@ -155,7 +161,6 @@ juce::String defaultSwellName(int64_t arrival,const SongTime&,const Session* exi
 bool resetWetDefaults(Swell&,double rate,juce::String& error);
 bool resetSwellDefaults(const Session&,const juce::String& id,const CaptureManifest&,const SongTime&,Swell&,juce::String& error);
 float calibrationDb(const Session&,const Swell&) noexcept;
-float gainCeilingDb(const Session&) noexcept;
 bool moveWet(Swell&,int64_t placement,juce::String& error);
 bool moveArrival(Swell&, int64_t arrival, juce::String& error);
 bool setSource(Swell&, int64_t start, int64_t end, juce::String& error);

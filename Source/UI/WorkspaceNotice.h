@@ -29,7 +29,8 @@ private:
 // Presentation only: choose one current notice, without changing model state.
 inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot flow,
     const CaptureSessionSnapshot& capture,const EditorSnapshot& editor,
-    std::optional<controls::NoticeMessage> irPreparation={})
+    std::optional<controls::NoticeMessage> irPreparation={}, const juce::String& loopStatus={},
+    std::optional<controls::NoticeMessage> songTimingIssue={})
 {
     using controls::NoticeMessage;using controls::NoticeTone;
     if(flow.mode==workflow::Mode::capture && flow.admissionFailed)
@@ -52,7 +53,7 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
         return NoticeMessage{editor.liveStatus,editor.offlineStatus,NoticeTone::warning};
     switch(flow.phase)
     {
-        case workflow::Phase::recording:return NoticeMessage{"Recording - stop your DAW when finished",{},NoticeTone::information};
+        case workflow::Phase::recording:return NoticeMessage{loopStatus.isNotEmpty()?loopStatus:"Recording - stop your DAW when finished",{},NoticeTone::information};
         case workflow::Phase::draining:return NoticeMessage{"Committing captured source",{},NoticeTone::information};
         case workflow::Phase::validating:return NoticeMessage{"Validating captured source",{},NoticeTone::information};
         default:break;
@@ -61,6 +62,7 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
         return NoticeMessage{"Recapture is armed - existing audio will be replaced","Turn Recapture off to protect existing source.",NoticeTone::warning};
     if(flow.mode==workflow::Mode::finalise)
         return NoticeMessage{"DAW wet is bypassed - use Audition to preview","Export delivery controls are not available in this workspace yet.",NoticeTone::information};
+    if(songTimingIssue)return songTimingIssue;
     if(irPreparation)return irPreparation;
     if(flow.mode==workflow::Mode::live)
         return NoticeMessage{"Caution: In Perform, swells can remain audible during DAW playback, even if the source is silent or muted.",

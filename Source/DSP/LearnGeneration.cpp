@@ -9,7 +9,8 @@ CandidateIdentity SwellEngine::learnIdentity(const PreviewContext& context,bool 
     identity.sourceRevision=context.capture.manifest.revision;identity.sourceReference=context.capture.reference;
     identity.scope=juce::String(context.capture.manifest.projectId)+"/"+context.capture.manifest.instanceId;
     identity.settings=markerGeneration.load();identity.sensitivity=model.sensitivity;identity.separationSeconds=model.separationSeconds;
-    identity.boundaries=acceptedPassSequence;
+    identity.loop=context.capture.manifest.loop;
+    identity.boundaries=identity.loop?0:acceptedPassSequence;
     identity.timing=context.time;identity.provisional=provisional;identity.pass=provisional?pass:0;return identity;
 }
 void SwellEngine::useProvisionalSource(std::function<std::optional<ProvisionalCandidateSource>()> provider)
@@ -29,7 +30,7 @@ LearnGenerationView SwellEngine::learnViewLocked()const
     view.generating=learnGenerating || learnRequest.has_value();view.notice=learnNotice;view.failed=learnFailed;
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!workflowState || flow.mode!=workflow::Mode::capture)view.reason="Generate Swells is available in Learn.";
-    else if(flow.locked() || transportActive.load())view.reason="Finish recording before generating swells.";
+    else if(flow.locked() || (transportActive.load() && (!learnCandidates || !learnCandidates->identity.loop)))view.reason="Finish recording before generating swells.";
     else if(view.generating)view.reason="Generating swells...";
     else if(!model.automaticProcessing || !model.autoMarkersEnabled)view.reason="Enable Automatic Swells to generate.";
     else if(!learnUsable)view.reason=learnReason.isNotEmpty()?learnReason:"Capture usable audio before generating swells.";
@@ -75,7 +76,7 @@ void SwellEngine::captureSettled(uint64_t pass,uint64_t capture,bool useful)
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!learnCandidates || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {learnUpdating=true;learnAttempt.reset();}
-    if(!useful || !workflowState || flow.pass!=pass || flow.phase!=workflow::Phase::validating
+    if(context.capture.manifest.loop || !useful || !workflowState || flow.pass!=pass || flow.phase!=workflow::Phase::validating
         || context.captureGeneration!=capture || !model.autoGenerateOnStop || !model.automaticProcessing || !model.autoMarkersEnabled)return;
     StopIntent intent;intent.source=learnIdentity(context);intent.pass=pass;intent.configuration=configurationRevision;
     intent.revision=learnGenerationCancellation.load();intent.ir=model.defaultIR;stopIntent=std::move(intent);notify();
@@ -112,7 +113,8 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
     if(flow.mode!=workflow::Mode::capture)
     {const juce::ScopedLock guard(lock);stopIntent.reset();return false;}
     PreviewContext context=accepted;
-    const bool provisional=flow.locked();
+    const bool loop=accepted.capture.sourceKind()==CaptureSourceKind::loop;
+    const bool provisional=flow.locked() && !loop;
     std::function<std::optional<ProvisionalCandidateSource>()> provider;
     {const juce::ScopedLock guard(lock);provider=provisionalSource;}
     if(provisional && provider)if(const auto staged=provider();staged && staged->pass==flow.pass && staged->epoch==accepted.captureGeneration)
@@ -123,9 +125,10 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
         identity=learnIdentity(context,provisional,flow.pass);
         if(!provisional && learnCandidates && learnCandidates->identity.provisional)
         {learnCandidates=settledLearnCandidates;learnAttempt.reset();}
-        learnUsable=!context.capture.unavailable && !context.capture.status.startsWith("Loading") && context.time.valid
+        const bool compatible=loop?context.capture.manifest.loop.has_value():context.time.valid
             && context.capture.manifest.sampleRate==context.time.rate
-            && (!model.timing.valid || transportMappingMatches(model.timing,context.time))
+            && (!model.timing.valid || transportMappingMatches(model.timing,context.time));
+        learnUsable=!context.capture.unavailable && !context.capture.status.startsWith("Loading") && compatible
             && std::any_of(context.capture.manifest.ranges.begin(),context.capture.manifest.ranges.end(),[](const auto& range)
                 {return range.kind==CaptureCoverageKind::audio;});
         if(!model.automaticProcessing || !model.autoMarkersEnabled)
@@ -148,7 +151,9 @@ bool SwellEngine::learnGenerationStep(const PreviewContext& accepted)
         {learnUpdating=false;learnReason.clear();return false;}
         learnUpdating=true;learnReason="Analysing captured audio... markers updating.";
         if(juce::Time::getMillisecondCounterHiRes()<nextMarkerAnalysis || (learnAttempt && sameCandidateIdentity(*learnAttempt,identity)))return false;
-        learnAttempt=identity;completed=applicableCompletedPasses(context.capture.manifest);cancellation=learnAnalysisCancellation.load();
+        learnAttempt=identity;
+        if(!loop)completed=applicableCompletedPasses(context.capture.manifest);
+        cancellation=learnAnalysisCancellation.load();
     }
     const auto cancel=[&]{return threadShouldExit() || identity.session!=sessionGeneration.load()
         || identity.settings!=markerGeneration.load() || cancellation!=learnAnalysisCancellation.load()
@@ -190,7 +195,7 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
     {
         const auto flow=workflowState->snapshot();
         return threadShouldExit() || request.candidates->identity.session!=sessionGeneration.load()
-            || request.cancellation!=learnGenerationCancellation.load() || transportActive.load()
+            || request.cancellation!=learnGenerationCancellation.load() || (!request.candidates->identity.loop && transportActive.load())
             || flow.mode!=workflow::Mode::capture || flow.locked() || flow.pass!=request.flow.pass
             || flow.configurationSlot!=request.flow.configurationSlot
             || (captureEpochProvider && captureEpochProvider()!=request.candidates->identity.captureGeneration);

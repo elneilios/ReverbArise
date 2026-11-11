@@ -41,6 +41,24 @@ int main(){return runTest([]
     REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,"monumental"));
     REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::error;});
     REQUIRE(engine.snapshot().retainedIRName=="accepted.wav" && find(engine.savedSession(),b)->render==find(original,b)->render);
+    // A failed row still contributes its accepted wet audio to the mix.
+    // Generate a hot, overlapping neighbour while that fallback is audible.
+    REQUIRE(engine.addTarget(1000));const auto c=engine.savedSession().primary;
+    const auto hotFile=root.file.getChildFile("hot.wav");
+    writeTestWav(hotFile,1,1000,std::vector<float>(201,.125f));
+    engine.loadIR(hotFile);waitFor([&]{return find(engine.savedSession(),c)->irName=="hot.wav";});
+    engine.generate();waitFor([&]{return find(engine.savedSession(),c)->phase==Phase::ready;});
+    const auto withNeighbour=engine.savedSession();
+    const auto& neighbour=*find(withNeighbour,c);
+    REQUIRE(find(withNeighbour,a)->phase==Phase::error && neighbour.generatedGain && *neighbour.generatedGain<1);
+    WetRender rawC;REQUIRE(assets.readRender(neighbour.render,previewMemoryBudget,rawC,error));
+    float combinedPeak=0;
+    for (int64_t at=800;at<1150;++at)
+        combinedPeak=std::max(combinedPeak,std::abs(sample(*find(original,a),rawA,at)+sample(*find(original,b),rawB,at)
+            +sample(neighbour,rawC,at) * *neighbour.generatedGain));
+    REQUIRE(combinedPeak>0.85f && combinedPeak<=juce::Decibels::decibelsToGain(candidateWetCeilingDb));
+    engine.removeSelected();
+    REQUIRE(engine.selectTargets({a},a) && engine.snapshot().retainedIRName=="accepted.wav");
     // A bounce intentionally uses the accepted version despite the requested error.
     time=position(950,true);time.playing=false;std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);engine.processOfflineAudio(l,r,80,time);
     for(int i=5;i<80;++i)REQUIRE(std::abs(l[i]-sample(*find(original,a),rawA,950+i)-sample(*find(original,b),rawB,950+i))<1e-6);

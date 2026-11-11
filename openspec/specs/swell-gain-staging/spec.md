@@ -84,64 +84,63 @@ A measured baseline SHALL persist with its method/revision, effective measuremen
 - **THEN** it reports the missing calibration prerequisite without silently inventing a baseline or presenting itself as matched
 
 ### Requirement: Level provides useful adjustment around the baseline
-New swell Level edits SHALL use one finite -12 to +12 dB range for drag, wheel, keys, numeric entry and accessibility. The dial SHALL use the standard appearance and drag response, with 0 dB at 12 o'clock. Creation and reset SHALL use 0 dB. Wheel and keys SHALL step by 1/0.1 dB. Below protection onset, edits SHALL produce the corresponding amplitude ratio. Protection SHALL engage only when the prepared aggregate requires it and disclose reduction. Gain edits SHALL reuse raw convolution.
+New Level edits SHALL use the existing finite -12 to +12 dB range, 0 dB neutral, and 1/0.1 dB coarse and fine steps. Level SHALL apply the exact requested gain relative to the accepted starting gain and reuse raw convolution. Editing one swell SHALL leave the gains of all other swells unchanged.
 
 #### Scenario: Turn down and boost
-- **GIVEN** a prepared swell with sufficient headroom
-- **WHEN** its Level moves from 0 dB to -6 dB and +6 dB
-- **THEN** the wet sample amplitudes follow the respective dB ratios within declared floating-point tolerance, without hidden inverse compensation, changed dry, or another convolution
+- **WHEN** a prepared swell moves from 0 dB to -6 dB and +6 dB
+- **THEN** its contribution follows the corresponding amplitude ratios within declared floating-point tolerance, without changing another swell or triggering convolution
 
 #### Scenario: Reach the protection limit
-- **WHEN** a requested boost would exceed the musical wet ceiling
-- **THEN** protection keeps the prepared wet within that ceiling and reports requested gain and applied attenuation separately
-- **AND** reducing Level restores unprotected adjustment once sufficient headroom exists; the UI does not claim unlimited boost at a fixed ceiling
+- **WHEN** Swell 1 goes from 0 dB to +12 dB and its peak exceeds full scale
+- **THEN** the wet float signal retains the full increase and reports overload
+- **AND** a nonoverlapping Swell 2 emits the same samples as before the edit
 
 #### Scenario: Use the focused sweep
-- **WHEN** a user adjusts an ordinary in-range Level with the main dial
-- **THEN** the dial and input look like the other knobs, 0 dB points to 12 o'clock, and coarse/fine wheel and key steps are 1/0.1 dB
-- **AND** dragging, wheel and key movement stop at those same limits; new typed/accessibility values outside them or nonfinite values are rejected without changing the accepted value
+- **WHEN** Level is edited using drag, wheel, keys, numeric entry or accessibility
+- **THEN** all inputs use the same limits and accepted values, with the existing knob appearance and interaction
+- **AND** invalid typed or accessibility input leaves the accepted value unchanged
 
 #### Scenario: Adjust both directions through neutral
-- **GIVEN** an ordinary swell at 0 dB
-- **WHEN** the user drags the real native knob down and up, and uses fine adjustment
-- **THEN** gain moves in the corresponding direction inside [-12,+12] and neutral points to 12 o'clock at the supported compact size and user scales
+- **WHEN** the user drags the native knob below and above 0 dB and uses fine adjustment
+- **THEN** gain moves in the corresponding direction and neutral points to 12 o'clock at supported sizes and scales
 
 ### Requirement: Protection uses the actual positioned aggregate
-Musical-policy protection SHALL use verified aligned wet samples, including envelopes, placement, user gains and eligible overlaps. Independent member peak sums SHALL NOT cause attenuation when the actual aggregate fits. A fixed gain plan SHALL remain stable across pages, block sizes and seeks for the same accepted schedule. Live dry SHALL not be processed by this protection.
+At unity wet and 0 dB Level the generated wet composition SHALL peak at or below -1 dBFS. Before accepting generated wet, the system SHALL reserve any needed headroom from verified, positioned wet samples. The resulting reduction SHALL be saved with the generated starting gains and SHALL never boost quiet material.
 
 #### Scenario: Independent peaks do not coincide
-- **WHEN** overlapping swell intervals have their largest samples at different times and their actual sum remains below the ceiling
-- **THEN** their sum is not attenuated solely because the sum of independent maxima exceeds the ceiling
+- **WHEN** fixed-grid wet intervals overlap but their actual sum fits below the ceiling
+- **THEN** the generated mix is not reduced solely because the sum of separate maxima exceeds the ceiling
 
 #### Scenario: Correlated hot overlap
-- **WHEN** aligned wet samples genuinely exceed the ceiling
-- **THEN** one disclosed fixed aggregate gain protects the sum while preserving relative member levels
-- **AND** paging, seeking or changing host block partition does not change that gain or introduce pumping
+- **WHEN** default generated wet from a batch would exceed the ceiling, including Loop wrap or partial passes
+- **THEN** the batch receives a common reduction that brings the measured peak within the ceiling while preserving its starting balance
+- **AND** paging, seeking and block partitioning do not change the saved gain
+
+#### Scenario: Add to an accepted mix
+- **WHEN** generation adds or replaces a swell while retaining other accepted swells
+- **THEN** the headroom check applies to the new material and leaves retained starting gains and Level edits intact
+- **AND** if the new material cannot be admitted within the default ceiling, the last coherent accepted wet revision remains available and the failure is reported
+
+#### Scenario: Measure the audible membership
+- **WHEN** the generated mix contains disabled, muted or solo-excluded swells
+- **THEN** their samples do not affect the starting gains of the swells that will play
+
+#### Scenario: A failed replacement still plays its accepted render
+- **WHEN** a new swell is admitted alongside a failed IR replacement whose accepted audio is still compatible
+- **THEN** the headroom check includes the fallback audio at its accepted starting gain
+
+#### Scenario: Verify before making wet audible
+- **WHEN** the render or headroom measurement is pending, fails or is superseded
+- **THEN** the unchecked generated wet does not become audible
+- **AND** playback and export may use the last compatible accepted revision under their existing readiness rules
 
 ### Requirement: Wet gain semantics agree across playback paths
-The musical baseline, selected-swell gain and wet protection calculation SHALL be shared by manual audition, live Song playback and offline export for identical admitted membership and settings. Explicit audition blend/trim, live wet level, listening windows and boundary ramps SHALL remain distinct, documented factors rather than hidden calibration differences.
+Manual audition, live Song and Loop playback, and export SHALL use the same accepted starting gains and Level adjustments. Explicit mix controls, listening windows and boundary ramps SHALL remain separate. Wet paths SHALL preserve finite above-unity samples and report overload.
 
 #### Scenario: Compare the same wet signal
-- **WHEN** the same accepted swells and interval are played Wet Only with unity monitoring controls in all three paths
-- **THEN** interior wet samples match within declared numerical tolerance, excluding only documented boundary ramps
-- **AND** subset isolation or different routing is identified when it legitimately changes the protection context
-
-### Requirement: Saved projects preserve their gain policy
-The saved session SHALL identify its gain policy and calibration revision. States predating this change SHALL restore legacy gain and protection with their saved Level, trim and routing intact. New instances SHALL default to musical staging. Adopting musical staging in an existing instance SHALL require an explicit Settings action and SHALL preserve definitions, assets and numerical edits.
-
-#### Scenario: Reopen an old project
-- **WHEN** a supported pre-change state reopens with edited, imported and frozen swells
-- **THEN** its audible gain behavior and saved control values remain legacy-compatible without automatic adoption or playback
-
-#### Scenario: Adopt and restore musical staging
-- **WHEN** the user explicitly adopts musical staging, saves and reopens
-- **THEN** the chosen policy/revision and unchanged numerical edits restore deterministically without accumulating baseline gain
-- **AND** invalid or unknown policy data is rejected transactionally, not interpreted as permission to boost
-
-#### Scenario: Restore a peak-prototype project
-- **WHEN** a supported version-8 peak-matched prototype state reopens after energy matching is added
-- **THEN** its revision retains peak-matching semantics and saved output until explicit adoption of the energy revision
-- **AND** missing energy-specific metadata is not fabricated or interpreted as a valid energy measurement
+- **WHEN** the same accepted swells and interval play Wet Only with unity monitoring controls
+- **THEN** interior wet samples match across the applicable paths within numerical tolerance, excluding documented boundary ramps
+- **AND** changing isolation selects membership without recalibrating members
 
 ### Requirement: Reset retains a clear neutral Level
 Wet reset SHALL retain the documented timing/fade defaults and reset Level to 0 dB relative to the instance's gain policy. Full response SHALL remain independent of calibration. Neither reset, reanalysis, repeated rendering nor IR replacement SHALL accumulate gain or silently change the policy.
@@ -158,29 +157,10 @@ Gain analysis and preparation SHALL remain within the shared 256 MiB working bud
 - **WHEN** a long replacement is pending while gain preparation, looping and a two-instance export occur
 - **THEN** output uses the correct accepted versions and independently snapshotted gain plans, without stale publication, missing neighbours, unbounded memory or callback work
 
-### Requirement: Older saved Level values remain unchanged until edited
-Supported saved Level values below -12 dB SHALL retain their exact value and sound until the user operates Level. The ordinary input field SHALL show the actual saved value. A primary press on the dial SHALL bring an older value to -12 dB. Loading, displaying, focusing, saving, unrelated edits and rejected/cancelled entry SHALL preserve it. New accepted edits SHALL be within [-12,+12]. Reset SHALL set 0 dB.
+### Requirement: Saved projects restore generated starting gains
+Projects saved under the generated-headroom policy SHALL restore the accepted starting gain, calibration revision and Level together without starting playback. Pre-release snapshots have no audible compatibility or migration requirement.
 
-#### Scenario: Reopen an extended value
-- **GIVEN** a Legacy or Musical project with Level -30 dB or -60 dB, including a frozen swell
-- **WHEN** it is reopened, inspected, focused and saved without an accepted Level edit
-- **THEN** Level, calibration, raw asset identities and sound are preserved without clamping or automatic gain-policy adoption
-- **AND** the ordinary input field shows the actual saved value while the dial rests at its lower endpoint
-
-#### Scenario: Replace an older value deliberately
-- **GIVEN** a swell at -30 dB
-- **WHEN** the user enters a valid new Level of -6 dB, selects -12 dB through absolute accessibility entry, or explicitly resets Level
-- **THEN** the chosen values become -6, -12 and 0 dB respectively, without changing other shape fields, calibration or raw assets
-- **AND** saving/reopening retains the newly chosen value and ordinary bounded editing applies
-
-#### Scenario: First touch brings an older value into range
-- **GIVEN** a saved -30 dB value displayed with the dial at its -12 dB lower endpoint
-- **WHEN** the user presses the dial with the primary button, even without dragging, or takes an outward wheel/key step
-- **THEN** the value becomes -12 dB
-- **AND** inward drag, wheel and key motion starts at the displayed lower limit, so an inward coarse wheel/key step selects -11 dB
-
-#### Scenario: Reject or cancel a new out-of-range value
-- **GIVEN** a preserved -30 dB value
-- **WHEN** the user attempts a new typed or absolute-accessibility value of -24 dB or cancels an uncommitted edit
-- **THEN** the new out-of-range entry is rejected and the accepted saved value/sound remain unchanged
-- **AND** hover, text focus, unchanged text and stale selection/session intents preserve the old value
+#### Scenario: Restore a generated mix
+- **WHEN** a project with adjusted and frozen swells is saved and reopened
+- **THEN** each accepted starting gain and Level restore without accumulated attenuation or a new measurement
+- **AND** invalid gain data cannot admit unchecked new wet

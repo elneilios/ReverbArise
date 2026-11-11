@@ -6,6 +6,7 @@
 namespace m3
 {
 inline constexpr const char* songExportRevision="song-export-v2-independent-levels";
+inline constexpr const char* loopExportRevision="loop-export-v2-perform-wet";
 enum class ExportCoverage { gap, unavailable };
 struct ExportWarning
 {
@@ -38,6 +39,8 @@ struct SongExportPlan
     int64_t origin=0,end=0;
     std::vector<ExportWetMember> members;
     std::vector<ExportWarning> warnings;
+    std::optional<LoopExportOptions> loop;
+    float loopWetGain=1;
 };
 // Input session must contain accepted versions (pending IR intent is resolved
 // by the engine before calling). This pure builder does not verify asset bytes.
@@ -48,4 +51,9 @@ juce::String songExportIdentity(const SongExportPlan&);
 bool prepareSongExportPlan(const Session&,const CaptureManifest&,const juce::String& sourceReference,
                            const SongTime&,float dry,float wet,std::shared_ptr<const SongExportPlan>&,
                            juce::String& error);
+// Capture-local authority only: no live host timing or Cue reference is input.
+bool prepareLoopExportPlan(const Session&,const CaptureManifest&,const juce::String& sourceReference,
+                           LoopExportOptions,float dry,float wet,std::shared_ptr<const SongExportPlan>&,
+                           juce::String& error);
+std::optional<int64_t> loopExportEnd(const SongExportPlan&,bool includeWet) noexcept;
 }

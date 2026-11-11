@@ -290,6 +290,8 @@ production standards revision; this revision does not change plugin/state versio
 | 25 | #107 P3 native text and aqua footer approved 2026-11-10 | Shared measured wrapping and complete label descriptions across the plugin. Context help uses the existing softer aqua #00C2CC. Existing local errors, notice severity and transport geometry retain their established roles. |
 | 26 | #107 P8 native dialogs, choosers and auxiliary windows approved by the owner; adoption 2026-11-11 | Shared dismissal and input-appropriate focus return, native dialog close chrome, retained Windows pickers and operation guards, existing single-transform scaling and scroll access. |
 
+Loop Arm retains the owner-approved #133 destructive latch appearance (2026-11-09): red text and outline when off, red fill with dark text when armed, and independent aqua keyboard focus. This reuses the existing command variant.
+
 ### Stable Perform transport information
 
 `Controls/TransportReadout` owns the four read-only slots, fixed separators and

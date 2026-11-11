@@ -1,6 +1,7 @@
 #include "LearnGenerationSupport.h"
 #include "AudioTestFiles.h"
 #include "ControlLibraryCases.h"
+#include "LoopCaptureFixture.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/InitialPerformView.h>
 #include <Core/BuildInformation.h>
@@ -139,6 +140,311 @@ static void captureImage(juce::Component& editor,const juce::String& tag,float s
     auto output=directory.getChildFile(tag+".png").createOutputStream();REQUIRE(output);
     REQUIRE(juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,scale),*output));
 }
+
+static void songHostTimingFeedback(bool review=false)
+{
+    LoopCaptureFixture fixture;
+    auto& processor=*fixture.processor;
+    auto preference=processor.getLoopCapturePreference();
+    preference.enabled=false;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    await([&]{return processor.swellEngine().savedSession().defaultIR.present();});
+    auto preview=std::make_unique<PreverbAudioProcessorEditor>(processor);
+    auto& editor=*preview;
+    editor.setVisible(true);
+    auto* learn=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
+    auto* notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));
+    REQUIRE(learn && notice);
+    processor.setPlayHead(&fixture.host);
+    fixture.host.position.setTimeInSamples(128);
+    fixture.host.position.setBpm(120);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(processor.getHostPositionDiagnostics().samplePositionAvailable && !learn->songPlayhead());
+    REQUIRE(!learn->timelineStatusText().contains("Ready"));
+    REQUIRE(notice->currentMessage() && notice->currentMessage()->text.contains("Song Mode")
+            && notice->currentMessage()->detail.contains("Loop Mode"));
+    captureImage(editor,"song-host-timing-unavailable");
+    if(review)
+    {
+        controlReview::run(std::move(preview));
+        return;
+    }
+
+    preference.enabled=true;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    editor.refresh();
+    REQUIRE(!notice->currentMessage());
+    preference.enabled=false;
+    REQUIRE(processor.setLoopCapturePreference(preference));
+    fixture.host.position.setTimeInSamples(256);
+    fixture.host.position.setPpqPosition(256./24000);
+    fixture.host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(learn->songPlayhead()==256 && !notice->currentMessage());
+    processor.setPlayHead(nullptr);
+}
+
+static void loopUiCases(bool review)
+{
+    LoopCaptureFixture fixture;
+    fixture.percussive=true;
+    auto& processor=*fixture.processor;
+    auto initial=processor.getLoopCapturePreference();
+    initial.enabled=false;
+    REQUIRE(processor.setLoopCapturePreference(initial));
+    PreverbAudioProcessorEditor editor(processor);
+    editor.enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
+    editor.setVisible(true);
+    editor.refresh();
+    auto* toggle=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"learnLoopMode"));
+    auto* arm=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"learnLoopArm"));
+    auto* method=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopMethod"));
+    auto* unit=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopUnit"));
+    auto* count=dynamic_cast<m3::ui::controls::FieldNumericInput*>(named(editor,"learnLoopCount"));
+    auto* status=dynamic_cast<juce::Label*>(named(editor,"learnLoopStatus"));
+    auto* automatic=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutomaticSwells"));
+    auto* recapture=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"recaptureExisting"));
+    auto* generate=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"learnGenerateSwells"));
+    auto* onStop=named(editor,"learnAutoGenerateOnStop");
+    auto* sensitivity=named(editor,"learnMarkerSensitivity");
+    auto* policies=dynamic_cast<m3::ui::controls::FocusViewport*>(named(editor,"learnLoopPolicies"));
+    auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));
+    REQUIRE(toggle && arm && method && unit && count && status && automatic && recapture && generate && onStop && sensitivity && policies && workspace);
+    const auto activate=[](m3::ui::controls::CommandButton& button){
+        button.invokeCommand();
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    };
+    const auto buttonFill=[](m3::ui::controls::ActionButton& button){
+        juce::Image image(juce::Image::ARGB,button.getWidth(),button.getHeight(),true,juce::SoftwareImageType{});
+        juce::Graphics graphics(image);
+        button.paintButton(graphics,false,false);
+        return image.getPixelAt(12,button.getHeight()/2);
+    };
+    REQUIRE(visible(toggle) && toggle->getButtonText()=="Loop Mode" && !toggle->getToggleState());
+    REQUIRE(visible(named(editor,"recaptureExisting")) && !visible(arm));
+    const auto controlBounds=[&](const char* name){
+        auto* control=named(editor,name);
+        REQUIRE(control);
+        return workspace->getLocalArea(control,control->getLocalBounds());
+    };
+    const auto emptyLearnGeometry=[&]{
+        const auto recaptureBounds=controlBounds("recaptureExisting");
+        return std::make_tuple(editor.getLocalBounds(),workspace->timelineBounds(),
+                               controlBounds("learnSections"),controlBounds("learnSourceCaptureHeading"),
+                               controlBounds("learnLoopMode"),recaptureBounds.getX(),recaptureBounds.getWidth());
+    };
+    const auto songGeometry=emptyLearnGeometry();
+    captureImage(editor,"issue133-empty-song");
+    activate(*toggle);
+    REQUIRE(processor.getLoopCapturePreference().enabled && visible(recapture) && !recapture->getToggleState());
+    REQUIRE(toggle->getToggleState());
+    REQUIRE(emptyLearnGeometry()==songGeometry);
+    captureImage(editor,"issue133-empty-loop");
+    activate(*toggle);
+    REQUIRE(!processor.getLoopCapturePreference().enabled && !toggle->getToggleState() && !visible(arm));
+    REQUIRE(emptyLearnGeometry()==songGeometry);
+    activate(*toggle);
+    REQUIRE(processor.getLoopCapturePreference().enabled && toggle->getToggleState());
+    REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
+    REQUIRE(!visible(status));
+    REQUIRE(buttonFill(*arm)==m3::ui::background && buttonFill(*toggle)==m3::ui::aqua);
+    REQUIRE(visible(automatic) && automatic->isEnabled());
+    automatic->setToggleState(true,juce::dontSendNotification);
+    automatic->onClick();
+    REQUIRE(processor.swellEngine().savedSession().autoMarkersEnabled);
+    REQUIRE(visible(sensitivity) && visible(generate) && visible(onStop) && !onStop->isEnabled());
+    method->setSelectedId(2,juce::sendNotificationSync);
+    REQUIRE(method->getText()=="End on Signal");
+    REQUIRE(arm->isEnabled() && !visible(count));
+    REQUIRE(!visible(status) && arm->getTooltip()=="Arm the next recording.");
+    REQUIRE(method->getTooltip().contains("Stop MIDI note") && method->getTooltip().contains("next bar line"));
+    REQUIRE(controlBounds("recaptureExisting").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
+    captureImage(editor,"issue126-learn-end-signal");
+    activate(*arm);
+    REQUIRE(arm->getToggleState() && processor.getWorkflowSnapshot().phase==workflow::Phase::armed);
+    REQUIRE(visible(status) && controlBounds("recaptureExisting").getY()>controlBounds("learnLoopStatus").getBottom());
+    activate(*arm); // The preview has no audio callbacks between these clicks.
+    REQUIRE(!arm->getToggleState() && toggle->isEnabled());
+    REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
+    method->setSelectedId(3,juce::sendNotificationSync);
+    REQUIRE(processor.getLoopCapturePreference().method==LoopCapturePreference::Method::endOnRepeat);
+    REQUIRE(!visible(count) && arm->getTooltip().contains("one pass"));
+    method->setSelectedId(1,juce::sendNotificationSync);
+    REQUIRE(visible(count) && arm->getTooltip().contains("bar line"));
+    unit->setSelectedId(2,juce::sendNotificationSync);
+    count->onStep(1);
+    REQUIRE(processor.getLoopCapturePreference().count==2);
+    REQUIRE(processor.getLoopCapturePreference().unit==LoopCapturePreference::Unit::beats);
+    fixture.through(fixture.marker(2));
+    editor.refresh();
+    REQUIRE(arm->isEnabled());
+    activate(*arm);
+    REQUIRE(processor.loopCaptureArmed() && arm->getButtonText()=="Arm" && arm->getToggleState() && !count->isEnabled());
+    REQUIRE(buttonFill(*arm)==m3::ui::danger);
+    REQUIRE(status->getText().contains("Waiting") && !toggle->isEnabled());
+    REQUIRE(workspace->coverageTotalsText()=="No accepted source");
+    activate(*arm);
+    REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState() && toggle->isEnabled());
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState() && toggle->isEnabled());
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+    auto previewPreference=processor.getLoopCapturePreference();
+    previewPreference.unit=LoopCapturePreference::Unit::bars;
+    previewPreference.count=1;
+    REQUIRE(processor.setLoopCapturePreference(previewPreference));
+    editor.refresh();
+    activate(*arm);
+    REQUIRE(processor.loopCaptureArmed());
+    fixture.through(fixture.marker(16));
+    editor.refresh();
+    REQUIRE(arm->getToggleState() && status->getText().contains("Recording Loop"));
+    fixture.through(fixture.marker(20)-fixture.frames,true);
+    processor.holdCaptureValidationForTesting(true);
+    fixture.through(fixture.marker(20));
+    await([&]{return processor.getWorkflowSnapshot().phase==workflow::Phase::validating;});
+    editor.refresh();
+    REQUIRE(!arm->getToggleState() && !arm->isEnabled() && status->getText().contains("Checking captured audio"));
+    processor.holdCaptureValidationForTesting(false);
+    REQUIRE(processor.flushCaptureForTesting());
+    const auto accepted=processor.getCaptureSnapshot();
+    REQUIRE(accepted.sourceKind()==CaptureSourceKind::loop);
+    const auto markers=[&]{return processor.swellEngine().snapshot().learnGeneration;};
+    await([&]{
+        const auto view=markers();
+        return view.displayed && view.displayed->identity.loop==accepted.manifest.loop && !view.updating;
+    });
+    const auto view=markers();
+    REQUIRE(!view.displayed->positions.empty() && !view.displayed->identity.provisional);
+    REQUIRE(view.displayed->identity.sourceReference==accepted.reference);
+    for(const auto& marker:view.displayed->positions)
+        REQUIRE(marker.sample>=0 && marker.sample<accepted.manifest.loop->endSample);
+    editor.refresh();
+    REQUIRE(workspace->coverageTotalsText().startsWith("Accepted Loop"));
+    REQUIRE(!arm->getToggleState() && !arm->isEnabled() && toggle->getToggleState());
+    REQUIRE(status->getText().contains("Recapture audio"));
+    REQUIRE(!onStop->isEnabled());
+    REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(accepted.manifest.loop->endSample)));
+    // Shared P3 wrapping must allocate the full Loop status and move following
+    // controls inside the existing scroll region, including long explanations.
+    const auto longStatus=juce::String::repeatedString("Wait for the accepted Loop and its timing reference before recording again. ",12);
+    workspace->displayLoop(processor.getLoopCapturePreference(),false,false,false,false,false,longStatus);
+    workspace->resized();
+    const auto* wrappedStatus=dynamic_cast<m3::ui::controls::WrappedLabel*>(status);REQUIRE(wrappedStatus);
+    REQUIRE(status->getHeight()==wrappedStatus->preferredHeight(status->getWidth()));
+    REQUIRE(recapture->getY()>=status->getBottom() && policies->getViewedComponent()->getHeight()>=generate->getBottom());
+    REQUIRE(status->getTooltip()==longStatus);
+    editor.refresh();
+    // Main's waveform navigation must use the accepted phrase, even when the
+    // host has no Song position. Refresh retains inspection; a new source resets it.
+    const auto fullLoopView=workspace->dryViewport();
+    const auto point=workspace->timelineBounds().getCentre().toFloat();
+    const auto stamp=juce::Time::getCurrentTime();
+    const auto pointer=[&](juce::Point<float> at,juce::ModifierKeys keys){
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),at,keys,
+            0,0,0,0,0,workspace,workspace,stamp,point,stamp,1,at!=point);
+    };
+    juce::MouseWheelDetails wheel{};wheel.deltaY=.5f;
+    workspace->mouseWheelMove(pointer(point,{}),wheel);
+    const auto zoomed=workspace->dryViewport();
+    REQUIRE(zoomed.second-zoomed.first<fullLoopView.second-fullLoopView.first);
+    workspace->mouseDown(pointer(point,juce::ModifierKeys::leftButtonModifier));
+    workspace->mouseUp(pointer(point,{}));
+    const auto pin=workspace->inspectedSample();
+    REQUIRE(pin && workspace->hasPinnedInspection());
+    REQUIRE(workspace->inspectionText().contains("Bar ") && !workspace->inspectionText().contains("Timing unavailable"));
+    workspace->mouseDown(pointer(point,juce::ModifierKeys::middleButtonModifier));
+    workspace->mouseDrag(pointer(point.translated(40,0),juce::ModifierKeys::middleButtonModifier));
+    workspace->mouseUp(pointer(point.translated(40,0),{}));
+    const auto panned=workspace->dryViewport();
+    REQUIRE(panned!=zoomed && panned.first>=0 && panned.second<=fullLoopView.second);
+    editor.refresh();
+    REQUIRE(workspace->dryViewport()==panned && workspace->inspectedSample()==pin);
+    auto replacement=accepted;replacement.reference+="-replacement";++replacement.manifest.revision;
+    workspace->display(replacement,processor.swellEngine().snapshot(),processor.getSongTime(),processor.getWorkflowSnapshot(),false);
+    REQUIRE(workspace->dryViewport()==fullLoopView && !workspace->hasPinnedInspection());
+    editor.refresh();
+    REQUIRE(workspace->dryViewport()==fullLoopView && processor.getCaptureSnapshot().reference==accepted.reference);
+    for (const auto scale : {100,125})
+    {
+        REQUIRE(editor.setPresentationScale(scale));
+        editor.refresh();
+        policies->setViewPosition(0,0);
+        REQUIRE(visible(status) && workspace->getLocalBounds().contains(workspace->getLocalArea(status,status->getLocalBounds())));
+        REQUIRE(arm->getBottom()<=status->getY() && count->getRight()<unit->getRight());
+        REQUIRE(m3::ui::controls::commandBodyBounds(method->getBounds()).getX()==count->getX());
+        REQUIRE(m3::ui::controls::commandBodyBounds(arm->getBounds()).getX()==status->getX());
+        REQUIRE(m3::ui::controls::commandBodyBounds(toggle->getBounds()).getX()==status->getX());
+        REQUIRE(count->getX()==status->getX());
+        captureImage(editor,"issue124-loop-markers-"+juce::String(scale));
+        policies->reveal(*generate);
+        REQUIRE(policies->getViewArea().contains(generate->getBounds()));
+        policies->setViewPosition(0,policies->getViewedComponent()->getHeight());
+        captureImage(editor,"issue124-loop-options-"+juce::String(scale));
+    }
+    policies->setViewPosition(0,0);
+    recapture->setToggleState(true,juce::dontSendNotification);
+    recapture->onClick();
+    REQUIRE(processor.loopRecaptureEnabled() && arm->isEnabled());
+    activate(*arm);
+    REQUIRE(arm->getToggleState() && !generate->isEnabled() && markers().displayed->serial==view.displayed->serial);
+    for(const auto scale : {100,125})
+    {
+        REQUIRE(editor.setPresentationScale(scale));
+        captureImage(editor,"issue124-loop-armed-"+juce::String(scale));
+    }
+    activate(*arm);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(!processor.loopCaptureArmed() && !arm->getToggleState());
+    if (!review)
+    {
+        auto& engine=processor.swellEngine();
+        const auto ir=fixture.root.file.getChildFile("Loop generation impulse.wav");
+        writeTestWav(ir,1,48000,{.4f,0,.2f,0,.1f});
+        REQUIRE(engine.assignDefaultIR(ir,engine.assignmentEpoch(),processor.getWorkflowSnapshot().pass));
+        await([&]{return markers().canGenerate;});
+        const auto ready=markers();
+        REQUIRE(!engine.generateLearn(engine.assignmentEpoch(),processor.getWorkflowSnapshot().pass,ready.displayed->serial+1));
+        editor.refresh();REQUIRE(generate->isEnabled());
+        activate(*generate);
+        await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+        const auto swells=engine.savedSession().swells;
+        REQUIRE(!swells.empty() && processor.getCaptureSnapshot().reference==accepted.reference);
+        for(const auto& swell:swells) REQUIRE(swell.sourceStart>=0 && swell.sourceEnd<=accepted.manifest.loop->endSample);
+        return;
+    }
+
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+    fixture.simpleClock=true;
+    fixture.through(fixture.marker(fixture.nextBeat));
+    previewPreference.method=LoopCapturePreference::Method::endSignal;
+    REQUIRE(processor.setLoopCapturePreference(previewPreference));
+    REQUIRE(processor.setLoopRecapture(false));
+    editor.refresh();
+    REQUIRE(editor.setPresentationScale(100));
+    class Window final : public juce::DocumentWindow, private juce::Timer
+    {
+    public:
+        Window(PreverbAudioProcessorEditor& view,LoopCaptureFixture& input)
+            : juce::DocumentWindow("ReverbArise #133 - Learn preview",m3::ui::background,closeButton), fixture(input)
+        {
+            setUsingNativeTitleBar(true);
+            setContentNonOwned(&view,true);
+            centreWithSize(getWidth(),getHeight());
+            setVisible(true);
+            startTimerHz(100);
+        }
+        void closeButtonPressed() override {juce::MessageManager::getInstance()->stopDispatchLoop();}
+    private:
+        void timerCallback() override {for(int i=0;i<4;++i)fixture.tick();}
+        LoopCaptureFixture& fixture;
+    };
+    Window window(editor,fixture);
+    juce::MessageManager::getInstance()->runDispatchLoop();
+}
 static void candidateOverlay(PreverbAudioProcessorEditor& editor,GenerationFixture& fixture)
 {
     auto* workspace=dynamic_cast<m3::ui::LearnWorkspace*>(named(editor,"learnWorkspace"));REQUIRE(workspace);
@@ -269,10 +575,45 @@ static void alphaGuide()
 }
 int main(int argc,char** argv){return runTest([&]
 {
+    const auto option=argc==2 ? juce::String(argv[1]) : juce::String{};
+    if(option=="--review-song-timing")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        songHostTimingFeedback(true);
+        return;
+    }
+    if (option=="--review-empty-loop" || option=="--review-end-signal" || option=="--review-end-on-repeat")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        LoopCaptureFixture fixture;
+        auto& processor=*fixture.processor;
+        auto preference=processor.getLoopCapturePreference();
+        preference.enabled=option!="--review-empty-loop";
+        if (preference.enabled) preference.method=option=="--review-end-on-repeat"
+            ? LoopCapturePreference::Method::endOnRepeat : LoopCapturePreference::Method::endSignal;
+        REQUIRE(processor.setLoopCapturePreference(preference));
+        auto editor=std::make_unique<PreverbAudioProcessorEditor>(processor);
+        editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
+        controlReview::run(std::move(editor));
+        return;
+    }
+    if (argc==2 && juce::String(argv[1])=="--review-loop")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        loopUiCases(true);
+        return;
+    }
+    if (argc==2 && juce::String(argv[1])=="--test-loop")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        loopUiCases(false);
+        return;
+    }
     juce::ScopedJuceInitialiser_GUI gui;
     if(argc>1 && juce::String(argv[1])=="--guide-only"){alphaGuide();aboutBindings();return;}
     if(argc>1 && juce::String(argv[1])=="--review-about"){aboutBindings(true);return;}
     const bool review=argc>1 && juce::String(argv[1])=="--review";
+    if(!review){songHostTimingFeedback();loopUiCases(false);}
     if(!review)aboutBindings();
     if(!review)controlBindings();
     if(!review)sharedSoundBindings();

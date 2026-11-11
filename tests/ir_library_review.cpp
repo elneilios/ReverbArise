@@ -73,9 +73,9 @@ int main(int argc,char** argv){return runTest([&]
             auto common=w;common.shape.automaticStart=false;common.shape.startOffset=-12000;WetRender commonShape;
             REQUIRE(prepareShape(common,raw,previewMemoryBudget,commonShape,error));
             SourceInterval dry;dry.start=arrival;dry.end=arrival+source.size()/2;dry.rate=rate;dry.samples=source;
-            WetRender mixed,wet;float wetDb=0,sumDb=0,dummy=0;
-            REQUIRE(prepareAuditionMix(shaped,&dry,AuditionMode::dryWet,.5f,previewMemoryBudget,mixed,wetDb,sumDb,error));
-            REQUIRE(prepareAuditionMix(shaped,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,wet,dummy,dummy,error));
+            WetRender mixed,wet;
+            REQUIRE(prepareAuditionMix(shaped,&dry,AuditionMode::dryWet,.5f,previewMemoryBudget,mixed,error));
+            REQUIRE(prepareAuditionMix(shaped,nullptr,AuditionMode::wetOnly,1,previewMemoryBudget,wet,error));
             const auto stem=folder.getChildFile(names[kind]);
             writeAudio(stem.getSiblingFile(stem.getFileName()+"-dry.wav"),source);
             writeAudio(stem.getSiblingFile(stem.getFileName()+"-wet.wav"),wet.samples);
@@ -87,7 +87,7 @@ int main(int argc,char** argv){return runTest([&]
             writeAudio(stem.getSiblingFile(stem.getFileName()+"-forward.wav"),forward.samples);
             auto row=object();put(row,"fixture",names[kind]);put(row,"raw",measure(raw));put(row,"shaped",measure(shaped));put(row,"mix",measure(mixed));
             put(row,"common_250ms_preroll",measure(commonShape));
-            put(row,"wet_attenuation_db",wetDb);put(row,"sum_attenuation_db",sumDb);put(row,"forward_display_gain_db",db(forwardGain));entry.add(row);
+            put(row,"forward_display_gain_db",db(forwardGain));entry.add(row);
             // Fixed 12-second slots align all presets to the same dry event time.
             const size_t first=sequence.size();sequence.resize(first+15*48000*2,0);
             const auto leading=static_cast<size_t>(std::max(int64_t{0},mixed.start))*2;

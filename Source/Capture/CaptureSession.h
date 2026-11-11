@@ -38,6 +38,9 @@ struct CaptureSessionSnapshot
     CaptureFailureRecord failure;
     std::shared_ptr<const CaptureStorageLocation> location;
     bool manifestKnown=true;
+    // Identifies an unavailable saved source without making it readable.
+    std::optional<CaptureSourceKind> savedKind;
+    CaptureSourceKind sourceKind() const noexcept { return savedKind.value_or(manifest.kind()); }
 };
 struct ProvisionalCaptureSnapshot
 {
@@ -51,7 +54,8 @@ class CaptureSession
 public:
     explicit CaptureSession(juce::File projectsRoot,std::shared_ptr<const CaptureStorageLocation> location={});
     bool restore(const std::string& projectId, const std::string& instanceId,
-                 const juce::String& reference, uint64_t revision,const juce::String& savedManifest={});
+                 const juce::String& reference, uint64_t revision,const juce::String& savedManifest={},
+                 std::optional<CaptureSourceKind> expectedKind={});
     bool relocateVerified(std::shared_ptr<const CaptureStorageLocation>);
     bool reload(const std::string& projectId,const std::string& instanceId,const juce::String& reference,uint64_t revision);
     bool commit(int64_t start, double rate, const float* samples, uint32_t frames,double tolerance=0,const CaptureGenerationContext* context=nullptr);
@@ -63,13 +67,14 @@ public:
         std::vector<std::pair<int64_t,int64_t>> changedIntervals;
         std::vector<std::pair<int64_t,int64_t>> contextChangedIntervals;
     };
-    bool beginPass(uint64_t token,uint64_t epoch,bool replace,const CaptureGenerationContext* context=nullptr);
+    bool beginPass(uint64_t token,uint64_t epoch,bool replace,const CaptureGenerationContext* context=nullptr,
+                   CaptureSourceKind kind=CaptureSourceKind::song);
     // Explicit worker-only recovery. Fresh PCM remains provisional until every
     // supplied required interval is covered; ordinary capture admission is unchanged.
     bool beginRecoveryPass(uint64_t token,uint64_t epoch,const std::vector<std::pair<int64_t,int64_t>>& required,const CaptureGenerationContext* context=nullptr);
     bool stagePass(uint64_t token,int64_t start,double rate,const float* samples,uint32_t frames);
     PassResult finishPass(uint64_t token,uint64_t epoch);
-    PassResult preparePass(uint64_t token,uint64_t epoch);
+    PassResult preparePass(uint64_t token,uint64_t epoch,std::optional<LoopPhraseTiming> timing={});
     bool acceptPreparedPass(uint64_t token,uint64_t epoch);
     void abortPass();
     bool passActive() const noexcept {return staged!=nullptr;}
@@ -96,6 +101,7 @@ private:
     uint64_t passToken=0,passEpoch=0,baseRevision=0;
     std::vector<std::pair<int64_t,int64_t>> recoveryRequired;
     bool provisional=false,replaceMapped=false,passUseful=false,passReplaced=false;
+    bool loopPass=false,freshDomain=false;
     bool lastCommitAudioChanged=false,passAnyChanged=false;
     std::optional<CaptureGenerationContext> passContext;
     juce::String passError;

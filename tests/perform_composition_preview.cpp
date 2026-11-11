@@ -3,6 +3,7 @@
 #include "AudioTestFiles.h"
 #include "WorkflowTestSupport.h"
 #include "NativeEditorPeer.h"
+#include "LoopCaptureFixture.h"
 #include <Plugin/PluginEditor.h>
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/PerformLayout.h>
@@ -46,6 +47,8 @@ using Layout=PerformLayout;
 class Composition final:public juce::Component,private juce::Timer
 {
 public:
+    std::unique_ptr<PreverbAudioProcessorEditor> createComparisonEditor()
+    {return std::make_unique<PreverbAudioProcessorEditor>(*processor);}
     explicit Composition(bool independentRefresh=true)
     {
         setLookAndFeel(&theme);
@@ -476,12 +479,17 @@ private:
 };
 }
 
+#include "LoopPerformReview.h"
+
 int main(int argc,char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
     return runTest([&]
     {
         using namespace preview46;const auto command=argc>1?juce::String(argv[1]):juce::String{};
+        if(command=="--test-loop-perform" || command=="--review-loop-perform")
+        {loopPerformReview(command=="--review-loop-perform",argc>2?juce::File(argv[2]):juce::File{});return;}
+        if(command=="--test-loop-export-bindings"){loopExportBindingCases();return;}
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
         if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}

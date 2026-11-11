@@ -6,8 +6,98 @@
 #include <Capture/SourceRangeReader.h>
 #include <limits>
 
+namespace
+{
+void verifyLoopManifest()
+{
+    TestDirectory root;
+    CaptureSession session(root.file);
+    CaptureGenerationContext context;
+    context.id = captureGenerationContextId(context);
+    constexpr int64_t frames = 84088;
+    std::vector<float> samples(frames * 2, 0.25f);
+    REQUIRE(session.commit(0, 48000, samples.data(), frames, 0, &context));
+    const auto song = session.snapshot().manifest;
+    auto loop = song;
+    loop.schemaVersion = CaptureManifest::loopSchemaVersion;
+    loop.loop = LoopPhraseTiming{137, 4, 4, 4, 42, frames};
+
+    juce::String error, reference;
+    CaptureAssetStore store(root.file.getChildFile(loop.projectId).getChildFile(loop.instanceId));
+    REQUIRE(store.publishSnapshot(loop, reference, error));
+    CaptureManifest restored;
+    REQUIRE(store.loadSnapshot(reference, restored, error));
+    REQUIRE(restored.kind() == CaptureSourceKind::loop && restored.loop == loop.loop);
+    REQUIRE(restored.revision == loop.revision && restored.sampleRate == loop.sampleRate);
+    REQUIRE(song.kind() == CaptureSourceKind::song);
+    REQUIRE(sourceDependency(song, 0, 2) != sourceDependency(restored, 0, 2));
+    auto newer = restored;
+    ++newer.revision;
+    REQUIRE(sourceDependency(newer, 0, 2) != sourceDependency(restored, 0, 2));
+
+    SourceInterval interval;
+    REQUIRE(readSourceInterval(store, restored, frames - 1, frames, 1, interval, error));
+    REQUIRE(interval.samples == std::vector<float>({0.25f, 0.25f}));
+    REQUIRE(!readSourceInterval(store, restored, -1, 1, 2, interval, error));
+    REQUIRE(!readSourceInterval(store, restored, frames - 1, frames + 1, 2, interval, error));
+
+    auto malformed = restored;
+    malformed.ranges.front().startSample = 1;
+    REQUIRE(!isValidCaptureManifest(malformed, error));
+    malformed = restored;
+    --malformed.ranges.front().frameCount;
+    REQUIRE(!isValidCaptureManifest(malformed, error));
+    malformed = restored;
+    --malformed.ranges.front().revision;
+    REQUIRE(!isValidCaptureManifest(malformed, error));
+    malformed = restored;
+    malformed.loop->meterDenominator = 0;
+    REQUIRE(!isValidCaptureManifest(malformed, error));
+    malformed = restored;
+    malformed.loop.reset();
+    REQUIRE(!isValidCaptureManifest(malformed, error));
+
+    // A prepared replacement is still provisional until the current pass is accepted.
+    REQUIRE(session.beginPass(10, 1, false, &context, CaptureSourceKind::loop));
+    REQUIRE(session.stagePass(10, 0, 48000, samples.data(), frames / 2));
+    REQUIRE(session.stagePass(10, frames / 2, 48000, samples.data(), frames / 2));
+    REQUIRE(!session.preparePass(10, 2, loop.loop).success);
+    REQUIRE(session.preparePass(10, 1, loop.loop).success);
+    REQUIRE(session.snapshot().sourceKind() == CaptureSourceKind::song);
+    REQUIRE(session.snapshot().manifest.revision == song.revision);
+    REQUIRE(!session.acceptPreparedPass(10, 2));
+    REQUIRE(session.acceptPreparedPass(10, 1));
+    const auto accepted = session.snapshot();
+    REQUIRE(accepted.sourceKind() == CaptureSourceKind::loop && accepted.manifest.loop == loop.loop);
+    REQUIRE(accepted.manifest.revision == song.revision + 1);
+
+    REQUIRE(session.beginPass(11, 1, false, &context, CaptureSourceKind::loop));
+    REQUIRE(!session.stagePass(11, 1, 48000, samples.data(), frames));
+    REQUIRE(!session.preparePass(11, 1, loop.loop).success);
+    REQUIRE(!session.acceptPreparedPass(11, 1));
+    session.abortPass();
+    REQUIRE(session.snapshot().reference == accepted.reference);
+
+    const std::vector<float> quiet(frames*2);
+    REQUIRE(session.beginPass(12, 1, false, &context, CaptureSourceKind::loop));
+    REQUIRE(session.stagePass(12, 0, 48000, quiet.data(), frames));
+    REQUIRE(!session.preparePass(12, 1, loop.loop).success);
+    REQUIRE(session.snapshot().reference == accepted.reference);
+    session.abortPass();
+
+    REQUIRE(session.beginPass(13, 1, false, &context));
+    REQUIRE(session.stagePass(13, 512, 44100, samples.data(), 512));
+    REQUIRE(session.finishPass(13, 1).success);
+    REQUIRE(session.snapshot().sourceKind() == CaptureSourceKind::song);
+    REQUIRE(session.snapshot().manifest.revision == accepted.manifest.revision + 1);
+    REQUIRE(session.snapshot().manifest.ranges.front().startSample == 512);
+    REQUIRE(store.loadSnapshot(accepted.reference, restored, error) && restored.loop == loop.loop);
+}
+}
+
 int main(){return runTest([]
 {
+    verifyLoopManifest();
     TestDirectory root;CaptureSession source(root.file);const float audio[]{.25f,-.25f,.5f,-.5f,.1f,-.1f,.2f,-.2f};float zeros[4]{};
     REQUIRE(source.commit(0,48000,audio,4) && source.commit(4,48000,zeros,2) && source.commit(10,48000,audio,4));
     const auto accepted=source.snapshot();juce::String error,legacyJson;

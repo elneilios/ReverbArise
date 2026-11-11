@@ -100,6 +100,7 @@ void Composition::verifyReadability()
             REQUIRE(footer.presentation().values[0]==juce::String(bar) && footer.presentation().values[1]=="1");
             REQUIRE(footer.presentation().values[2]==m3::ui::compactValue(bpm,2) && footer.presentation().values[3]==juce::String(numerator)+" / 8");
             REQUIRE(footer.getTooltip().contains("Exact: "+m3::musicalPosition(processor->getSongTime().sample,processor->getSongTime())));
+            REQUIRE(!timeline.transportPlayhead());
         }
         head.position=juce::AudioPlayHead::PositionInfo{};transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
         for(const auto& value:footer.presentation().values)REQUIRE(value=="unavailable");
@@ -107,6 +108,7 @@ void Composition::verifyReadability()
         const auto help=find(*panel,"hoverHelp");REQUIRE(help && footer.getBottom()<=help->getY());
     }
     head.position=originalHead;transportAudio.clear();processor->processBlock(transportAudio,transportMidi);panel->refresh();
+    REQUIRE(timeline.transportPlayhead()==processor->getSongTime().sample);
     wait([&]{const auto s=engine.savedSession();return std::all_of(s.swells.begin(),s.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     const auto returnGeometry=footer.geometry();
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();REQUIRE(!footer.isVisible());

@@ -1,5 +1,77 @@
 # Song export composition
 
+## Loop export — issue #128
+
+The finite Loop planner, worker delivery and approved Export workspace extend
+this pipeline. Native processor/binding coverage is separate from the remaining
+desktop host qualification recorded in validation evidence.
+`prepareLoopExportPlan` takes accepted capture-local metadata and independent
+Dry/Wet levels, without a live host position or Phrase reference. Its revision
+identity includes the Loop repeat count and lead-in grid while Song identities
+retain their existing format.
+
+Every pass starts at `cycle * accepted endSample`, using the shared checked
+`loopCycleAnchor`. The accepted integer extent is authoritative: Duration,
+End on Signal and End on repeat converge on this same saved timing contract.
+Repeats do not repeatedly add a rounded beat duration or reinterpret the take
+from a later host tempo. Fractional musical beat periods can yield a floor or
+ceil accepted sample extent; that exact captured extent repeats intact, including
+non-whole-bar takes. Musical lead-in alignment uses the accepted tempo and meter,
+rounding the initial included wet start backward to the chosen grid. Compare
+grid points as rounded sample positions so a swell already on a grid point
+keeps that boundary.
+
+The shared bounded cycle visitor covers only scheduled passes. Initial wet
+lead-in is retained once, internal negative wet and tails overlap once per pass,
+and only the last scheduled pass supplies the final tail. Dry occupies each
+scheduled pass interval once and is zero outside it. Source verification and
+warned-silence coverage are reused, with repeated warning metadata bounded by
+the worker budget. Reads and writes remain page-based; no expanded repeated PCM
+is retained. The Loop worker pins Perform's Live Wet and shared wet overlap
+gain in the composition identity. Wet at 100% uses that reference and the
+fader scales it in both Preview and delivery. It is independent of repeats,
+lead-in rounding and dry reads. The host mixer owns the external dry level
+and combined output protection. Dry-only export starts at Loop Bar 1.
+
+Independent sample-sum and decoded-WAV oracles are in `LoopExportMixCases.h`;
+`LoopExportPlanCases.h` covers bounds, grid placement, identity and invalid inputs.
+The live Loop regression also exercises the shared cycle helpers. Full Release
+and host delivery qualification are separate remaining gates.
+
+Loop preferences are an optional `loopSettings` version-1 object inside the
+existing version-2 Export metadata. It saves repeat/grid choices and the Dry/Wet
+pair, independently of Song's existing pair. Absence means fresh Wet Layer
+defaults. Completed Loop revisions add an optional version-1 `loop` descriptor
+containing repeat/grid choices and exact period frames; existing Song history
+and paths remain intact. Loop files use the `Swells-loop-v1-` prefix; Song files
+keep their existing naming and identity revision. No outer plugin-state or
+capture-schema migration is introduced by these additive fields.
+
+Export entry uses accepted capture-local timing and an eligible verified wet
+render. The current Cue clock/Phrase state is not an entry or file dependency.
+When dry assets are missing, a known accepted Loop manifest can supply timing
+for independently verified frozen wet. Dry-inclusive export reports unavailable
+dry ranges and fills them with silence. Perform and capture keep their separate
+source requirements.
+`processLoopExport` consumes prepared pages with a device-rate gate independently
+of Song timing admission; the UI disables Preview with an explanation when the
+device rate differs while leaving valid file delivery available. Song's callback
+and workflow rules are retained.
+
+Gain-only preview edits keep the advancing cursor when verified layers remain
+available, including raising Wet from a dry-only mix. The worker can warm the
+full immutable layer window while the delivered dry-only WAV still has no wet
+lead-in or tail. Monitoring transitions are excluded from file samples. Count
+or grid changes prepare a new finite composition. At 0/0 current delivery and
+preview stop; raising a level does not autoplay.
+
+Loop preparation and Save preflight disk space for stereo Float32 data plus WAV
+overhead. Allocation, source/wet verification, measurements and file operations
+remain on workers. Failed/cancelled writes never publish partial files or
+replace an existing destination before safe completion.
+
+## Song pipeline
+
 Issue #6 implementation in progress. `SongExportPlan` is immutable metadata,
 published through `shared_ptr<const SongExportPlan>`; it contains no song PCM.
 Its builder accepts verified **accepted** swell versions, never requested IR
@@ -251,6 +323,8 @@ and last-good display remain intact. No waiting loop blocks the worker.
 Play pins the session, Export pass, captured-source reference, timing and render
 revision independently of the requested WAV generation. The worker prepares the
 existing SongMix reader at unit dry/wet levels and reads two stereo branches.
+Loop Wet Layer starts without opening dry chunks. The first edit that raises
+Dry prepares that layer and resumes from the current preview position.
 Wet samples retain accepted calibration, envelopes and true-boundary conditioning.
 A dry-only pin can omit unavailable wet dependencies; requesting that missing
 branch stops preview until a valid composition is ready. Dependency changes,

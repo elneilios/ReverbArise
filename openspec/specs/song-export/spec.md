@@ -19,16 +19,20 @@ Export SHALL snapshot accepted source/timing, eligible wet versions, shapes/plac
 - **THEN** current mixdown readiness is blocked with an identity/reason rather than presenting an incomplete wet layer as complete
 
 ### Requirement: Mix endpoints use a shared disclosed gain plan
-Export SHALL sum independently scaled dry and accepted wet, each level in [0,1] with 1 meaning unity. Saved per-swell calibration, Level, shape and edge treatment SHALL remain shared by preview and WAV. Export SHALL NOT apply aggregate wet attenuation, combined attenuation, normalization or limiting. It SHALL preserve finite above-unity Float32 samples and disclose measured peak/overload. Monitoring boundary and live gain-transition ramps SHALL remain separately disclosed and excluded from file samples.
+Song Export SHALL sum independently scaled dry and accepted wet at levels in [0,1]. Preview and WAV SHALL share each swell's accepted generated starting gain, Level, shape and edge treatment. Export SHALL preserve finite above-unity Float32 samples and report measured overload without aggregate attenuation. Documented monitoring ramps remain excluded from the file.
 
 #### Scenario: Endpoint and blend oracle
 - **WHEN** the same snapshot is prepared at Dry/Wet 0/100, 100/0, 100/100, 35/65 and 0/0
-- **THEN** its samples equal respectively accepted wet, captured dry, dry plus wet, 0.35 dry plus 0.65 wet, and silence, without aggregate attenuation
-- **AND** correlated wet overlaps retain their relative levels and original source/render bytes remain unchanged
+- **THEN** its samples equal accepted wet, captured dry, dry plus wet, 0.35 dry plus 0.65 wet, and silence respectively
+- **AND** overlapping wet retains its relative levels and original assets retain their bytes
 
 #### Scenario: Monitoring preferences are independent
-- **WHEN** Export mix changes while Perform has nonzero monitoring trim or a different live wet level/routing
-- **THEN** only Export's composition preference changes, those other preferences remain saved unchanged and excluded monitoring factors are not silently baked into the file
+- **WHEN** Song Export mix changes while Perform uses a different live wet level or routing
+- **THEN** only Export's composition preference changes and Perform preferences are not baked into the file
+
+#### Scenario: Boosted Song wet exceeds full scale
+- **WHEN** the accepted wet mix includes a deliberately boosted swell and the file peak exceeds full scale
+- **THEN** preview and Float32 WAV retain the requested gain and report the measured overload
 
 ### Requirement: Missing dry becomes warned silence
 Dry-inclusive compositions SHALL substitute zero samples for uncaptured or unavailable dry spans within the export range. Captured silence, gaps and missing/corrupt dry assets SHALL remain distinguishable. A persistent accessible warning SHALL identify the affected ranges and substitution, including missing entire dry coverage. When Dry is zero, absent dry SHALL NOT block readiness or imply a missing wet dependency.
