@@ -27,3 +27,8 @@
 - Five focused native Debug CTest cases passed on the revised code. They cover Level audio paths, IR handover, Loop and Song playback, and the Perform Audition control.
 - The follow-up fixtures cover disabled, muted and solo-excluded swells, an overlapping swell generated after a failed IR replacement, and the first Dry + Wet audition after restoring a saved legacy blend and trim.
 - The FL Studio listening result above applies to the initial candidate.
+
+### PR readiness and archive
+
+- On `b2a371f`, all 15 standard PR regression cases passed in native MSVC Release. The five focused native Debug checks also passed on that revision.
+- The archive includes the owner's FL Studio listening confirmation of the original Level regression. No separate host peak measurement or overload smoke was reported. Those cases were covered by the native tests.

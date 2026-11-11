@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the audible headroom membership and compatible IR fallbacks, and verified restored Audition uses Live wet immediately.",
+  "summary": "Reviewed the synced gain and Audition specifications against the delivered guide. The documented controls and behavior match the implementation.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1120,8 +1120,8 @@
     },
     {
       "path": "openspec/specs/audition-monitoring/spec.md",
-      "bytes": 17359,
-      "sha256": "2a00638a4f9211d48d554da0cddef902987bc0a9d4e8ebbc8409da11c9103bba"
+      "bytes": 15443,
+      "sha256": "1d1117fac6c6f54e6ba09a8318f8a76c4af2d2ca9865146fb544ed707a3de39e"
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
@@ -1150,8 +1150,8 @@
     },
     {
       "path": "openspec/specs/loop-export/spec.md",
-      "bytes": 10181,
-      "sha256": "4a29458131d463ede517c88bbca47471e9509d2ed65f3fe786e2db210e534ff4"
+      "bytes": 10171,
+      "sha256": "709b1f5b7e340d44721922d79d25f60ab34b0ed1e935b2758e0bc1ff30f9ee7b"
     },
     {
       "path": "openspec/specs/loop-host-admission/spec.md",
@@ -1175,13 +1175,13 @@
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 20641,
-      "sha256": "32828a6c73642a59690f919a099e112abc9f434bdb5a017eb4fcaf43b2b79c1d"
+      "bytes": 20278,
+      "sha256": "b6cbcb7b513156710d07728fae553b0be7cc5e79c1a721b0aa66dc7af3392760"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
-      "bytes": 21554,
-      "sha256": "a46a0d5de402e0a2c9ebd3b028d86853aac9e16e91a8374daea2a5017f5f6672"
+      "bytes": 21532,
+      "sha256": "88ae33a697e5bac428a236d5df00f7673e8056555ff7961b17bddd3627beb4c7"
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
@@ -1195,8 +1195,8 @@
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
-      "bytes": 16276,
-      "sha256": "9306aec627b8032dce1c411eb1c04a5c4922f1d419317e32e9c1d66d0fd7f670"
+      "bytes": 13658,
+      "sha256": "06db935a5e4e197b8758012aa83168d1e297a2d8f267bd23afdf5f5aa0721d4d"
     },
     {
       "path": "openspec/specs/swell-regeneration/spec.md",
@@ -1215,8 +1215,8 @@
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 52368,
-      "sha256": "e39a0ff22774b81d2e9a558bba2c02427c99f32909f9134fdf75a9cf6fed613a"
+      "bytes": 50593,
+      "sha256": "804f23d5c7dc82095db4abb308bd653149f43f0f129e86af4868d13c9c065964"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
