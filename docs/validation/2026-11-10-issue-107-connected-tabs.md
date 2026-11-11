@@ -83,8 +83,10 @@ deterministic release-event regression, the focused tab check and all four
 targeted CTest entries passed, including both focus retries and the Swell UI and
 Storage Settings tests. Logs are under
 `out/build-logs/Release/20261111-084404-6c0be8fc/` and
-`out/build-logs/tab-pointer-release-focus-retry.log`. FL Studio confirmation
-remains pending for the corrected build.
+`out/build-logs/tab-pointer-release-focus-retry.log`.
+
+The owner confirmed that clicking tabs worked in FL Studio on the installed
+Release build from `4844c92` on 11 November 2026.
 
 The Debug build and standalone tab check passed. The full Debug run failed at
 the Swells multi-delete assertion in `SwellListBindingCases.h:277` and was
