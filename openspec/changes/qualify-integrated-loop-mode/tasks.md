@@ -12,8 +12,8 @@
 
 ## 3. FL Studio
 
-- [ ] 3.1 Verify Playlist Duration from a bar line and mid-bar, End on Signal using UI and MIDI, and Pattern/Playlist End on repeat. Include multi-pass Duration across a declared wrap and an arbitrary seek that cannot close a take. Compare accepted boundaries and the capture-local grid.
-- [ ] 3.2 Verify Playlist and Pattern Cue, the default host bar grid, optional MIDI Phrase origin and Cue/Stop/Stop Now, lead-in and stop behavior. Exercise seeks, declared wraps, transport stop and fresh Cue. Verify current Song snapshots, live playback and bounce on the supported timeline.
+- [x] 3.1 Verify Playlist Duration from a bar line and mid-bar, End on Signal using UI and MIDI, and Pattern/Playlist End on repeat. Include multi-pass Duration across a declared wrap and an arbitrary seek that cannot close a take. Compare accepted boundaries and the capture-local grid.
+- [x] 3.2 Verify Playlist and Pattern Cue, the default host bar grid, optional MIDI Phrase origin and Cue/Stop/Stop Now, lead-in and stop behavior. Exercise seeks, declared wraps, transport stop and fresh Cue. Verify current Song snapshots, live playback and bounce on the supported timeline.
 
 ## 4. Audio, delivery and recovery
 
@@ -27,6 +27,6 @@
 
 ## 6. Documentation and readiness
 
-- [ ] 6.1 Publish dated validation evidence in the repository with a host capability matrix separating capture method, local grid, live timing, commands, export/offline, recovery and physical DPI. State unsupported and unverified conditions explicitly. Update the offline guide and Rack/FL Studio appendices with tested wiring, Playlist/Pattern workflows, timing and recovery instructions.
+- [x] 6.1 Publish dated validation evidence in the repository with a host capability matrix separating capture method, local grid, live timing, commands, export/offline, recovery and physical DPI. State unsupported and unverified conditions explicitly. Update the offline guide and Rack/FL Studio appendices with tested wiring, Playlist/Pattern workflows, timing and recovery instructions.
 - [ ] 6.2 At the approved readiness gate, run focused native Loop, Song, UI and recovery checks and the standard Windows Release PR regression set. Check UI standards, strict OpenSpec validation and guide currency. Use the full registered suite if preparing a release package. Record revisions, commands, results and any rerun rationale.
 - [ ] 6.3 Present the integrated evidence for one consolidated owner acceptance, including the listening check and any open gaps. Record the decision and prepare the #130 review PR against feature/loop-mode. Leave feature release and integration into main for separate approval.
