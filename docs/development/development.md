@@ -34,7 +34,19 @@ including a checkout path containing spaces; the caller's location is restored.
 During implementation and draft review, build the binaries needed for owner
 previews and DAW checks. Start automated testing after the owner approves
 marking the draft ready. For targeted checks, run the relevant CTest cases
-against current binaries in an idle build tree using the matching preset with
+through the wrapper by naming the test executable target. By default it runs
+the CTest case with the same name. Supply `-TestFilter` for cases registered
+under other names. The wrapper builds the target, checks that every matching
+case uses that executable in the selected configuration, and runs the cases
+under the same build-tree lock.
+
+```powershell
+./scripts/build.ps1 -Configuration Debug -TestTarget preverb_reverse_convolution_test
+./scripts/build.ps1 -Configuration Release -TestTarget preverb_swell_ui_test -TestFilter '^(preverb_swell_ui_test|preverb_surface_lifecycle_test)$'
+```
+
+For script-based checks or tests that need multiple targets, build their
+prerequisites and run CTest in an idle tree using the matching preset with
 `-R` and `--no-tests=error`. Choose Debug, Release or both based on which
 configuration exercises the affected behaviour. For guidance-only diffs, use
 relevant document checks as the targeted checks. The full Release suite runs
@@ -62,6 +74,23 @@ cases labelled `pr-regression` under the same build-tree lock.
 
 Record the tested revision, configuration, selected cases and outcomes in the
 PR. Keep manual FL Studio acceptance separate in the record.
+
+### Comparing parallel CTest runs
+
+With current Release binaries and an idle build tree, use the same headless
+cases for both measurements. Start with two jobs and compare total CTest time
+and any failures.
+
+```powershell
+ctest --preset windows-msvc-release --no-tests=error -L '^parallel-safe$' --parallel 1
+ctest --preset windows-msvc-release --no-tests=error -L '^parallel-safe$' --parallel 2
+```
+
+The `parallel-safe` label is limited to cases that have no native windows or
+shared writable fixtures. CTest runs the other cases alone within the same
+invocation, including when a caller explicitly requests parallel jobs. For
+measurements involving native windows, run one desktop test session at a time
+across worktrees.
 
 ### Build tools and troubleshooting
 

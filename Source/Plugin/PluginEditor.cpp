@@ -1054,7 +1054,7 @@ void PreverbAudioProcessorEditor::refresh()
     diagnosticsRefreshedAt=now;
     const auto timingEvidence=(mode==workflow::Mode::live?m3::ui::gridDiagnosticsText(timeline.gridEvidence())
         :juce::String("Fixed grid: not evaluated outside Perform\n"))+"\n"+m3::ui::liveDiagnosticsText(state);
-    liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);layoutLiveDiagnostics();
+    liveDiagnostic.setText(timingEvidence,juce::dontSendNotification);liveDiagnostic.setDescription(timingEvidence);
     juce::String diagnostic="Transport: ";diagnostic<<(!diagnostics.positionAvailable?"unavailable":diagnostics.isPlaying?"playing":"stopped")<<" | sample "<<(diagnostics.samplePositionAvailable?juce::String(time.sample):"unavailable")<<" | PPQ "<<(diagnostics.ppqPositionAvailable?juce::String(time.ppq,3):"unavailable")
         <<" | "<<(diagnostics.tempoAvailable?juce::String(time.bpm,2):"unavailable")<<" BPM | "<<(diagnostics.meterAvailable?juce::String(time.numerator)+"/"+juce::String(time.denominator):"meter unavailable")<<" | "<<juce::String(time.rate,0)<<" Hz | block "<<diagnostics.blockSize;
     status.setText("Timing\n"+diagnostic,juce::dontSendNotification);
@@ -1065,7 +1065,6 @@ void PreverbAudioProcessorEditor::refresh()
     if(const auto omitted=processor.getOmittedCaptureFailureCount())
         captured<<"\nDiagnostic capacity: "<<juce::String(static_cast<juce::int64>(omitted))<<" failure events omitted";
     captureDiagnostic.setText(captured,juce::dontSendNotification);captureDiagnostic.setTooltip(captured);
-    layoutLiveDiagnostics();
     playbackDiagnostic.setText("Playback / export\n"+liveText+"\nOffline blocks: "+juce::String(static_cast<juce::int64>(state.offlineBlocks))+" | "+state.offlineStatus,juce::dontSendNotification);
     policyDiagnostic.setText("Processing / gain\n"+juce::String(musical?"Musical":"Legacy")+" | "+state.session.gainRevision
         +"\nLive requested "+juce::String(state.session.liveWetDb,1)+" dB | protection "+(state.liveReady?juce::String(state.liveAttenuationDb,1)+" dB":"pending preparation")+protection
@@ -1112,7 +1111,7 @@ void PreverbAudioProcessorEditor::refresh()
     for(size_t i=0;i<fields.size();++i)
         if(fields[i].getText()!=exactValues[i])fields[i].setText(exactValues[i],false);
     if(placementEditor.getText()!=placement)placementEditor.setText(placement,false);
-
+    layoutLiveDiagnostics();
     }
     const auto arm=processor.getRecaptureSnapshot();cancelButton.setEnabled(arm.active);recaptureButton.setEnabled(hasSelection && !arm.active);
     juce::String recapture=arm.status;
