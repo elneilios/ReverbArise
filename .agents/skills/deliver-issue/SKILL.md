@@ -38,13 +38,13 @@ A `plan-only` invocation stops after the permitted planning operation, never imp
 
 When OpenSpec Apply is authorised and ready, read `references/apply-policy.md`. Classify *each task* by work type, technical risk and dependency, not by the issue's overall label. Group related investigation, source edits and test setup when sensible, but maintain individual task completion, verification and mandatory OpenSpec status checks.
 
-Preserve real-time safety, transaction atomicity, durable assets, concurrency semantics and session identity. Use focused checks during Apply and follow the pre-PR full-suite gate in `CONTRIBUTING.md`. Preserve explicitly required acceptance checks.
+Preserve real-time safety, transaction atomicity, durable assets, concurrency semantics and session identity. Inspect affected code and prepare targeted tests during Apply. Defer automated tests through owner previews and draft review. Record any test-dependent OpenSpec tasks as pending until their checks pass.
 
 After delivered user-facing code/spec or release-input changes, use [maintain-user-guide](../maintain-user-guide/SKILL.md) to review the implementation against the offline guide and record currency. Run the read-only `scripts/check-user-guide.ps1` before release packaging, even when no prose change was needed. Packaging must fail stale review; it must not invoke a skill or rewrite the guide.
 
 ## 4. Deliver for review
 
-Use `references/delivery-checklist.md` and the authoritative PR issue-reference convention in `CONTRIBUTING.md`. Commit on an issue-specific branch and open or update one PR with issue/change links, key decisions, test evidence and remaining limitations. Do not push directly to `main`, self-merge, independently close issues or auto-archive OpenSpec.
+Use `references/delivery-checklist.md` and the five-stage workflow in `CONTRIBUTING.md`. After owner acceptance, commit on an issue-specific branch and open or update one draft PR with issue/change links, key decisions and pending verification. Address review findings in draft. After the owner approves marking it ready, run targeted tests and the standard PR regression set, record results and mark it ready only after passing. Leave merge to the owner. Use the build-release skill when the owner requests packaging.
 
 If a standard OpenSpec phase must stop, report its outcome and exact next invocation; do not silently continue across the boundary.
 

@@ -14,20 +14,20 @@ Group compatible investigation, edits or test setup around logical integration b
 
 ## Verification matrix
 
-| Risk and examples | During implementation | At meaningful boundary |
+| Risk and examples | During implementation and draft review | After owner approval to mark the draft ready |
 | --- | --- | --- |
-| Low — docs, layout-only, static assets | Relevant formatting, links, asset or build checks | Consolidated doc/visual review where useful |
-| Medium — UI bindings, general logic, state | Focused component/unit tests and affected build | Related integration/regression coverage |
-| High — DSP, transport alignment, audio callback, races, atomic writes, restore, identity | Targeted edge, fault, lifetime, boundary, concurrency and recovery tests | Focused native regression for affected paths and specified host checks |
+| Low — docs, layout-only, static assets | Inspect the diff and prepare owner previews as applicable | Relevant document, component or asset checks |
+| Medium — UI bindings, general logic, state | Trace changed bindings and affected paths | Focused component or unit tests and related integration coverage |
+| High — DSP, transport alignment, audio callback, races, atomic writes, restore, identity | Trace invariants and failure paths, and prepare any specified host checks | Targeted native tests for affected paths, including applicable edge, fault, lifetime, concurrency and recovery cases |
 
-Increase focused coverage when shared interfaces or cross-cutting code affect more paths. Perform tests required by the specification or issue at any explicitly required stage.
+Increase targeted coverage when shared interfaces or cross-cutting code affect more paths. Run the standard PR regression set at the same gate.
 
 ## Efficiency without weakened correctness
 
 - Read relevant code and affected focused tests before editing; prefer targeted searches and slices over repetitive full-file dumps.
 - Combine related inspections and test preparations when useful. Avoid re-reading unchanged logs absent a new question.
-- Run changed/focused tests frequently enough to catch errors early. Re-run a test when affected code, fixtures or environment changed, or new evidence casts doubt on its result.
-- Reserve full project suites for the pre-PR gate in `CONTRIBUTING.md`, except for an explicitly required earlier gate. Task completion, integration checkpoints and evidence edits use focused checks.
+- Defer automated testing until the owner approves marking the draft PR ready. Use code inspection, builds for previews and manual acceptance during implementation and review.
+- Run the full Release CTest suite when the owner requests release packaging.
 - Use straightforward edits for simple docs; retain OpenSpec's task-line identity check rather than using brittle fixed line numbers.
 - Keep evidence lean: record important commands/results, failures, recovery behaviour, architecture decisions and remaining coverage gaps; avoid copying routine long logs.
 - Do not misrepresent fixtures as MSVC/CTest or automated tests as FL Studio validation.
@@ -39,4 +39,4 @@ Increase focused coverage when shared interfaces or cross-cutting code affect mo
 
 A task is complete only when its implementation and applicable acceptance checks are satisfied. Follow vanilla Apply's step-by-step progress updates, guarded checkbox editing and post-task instruction refresh **even if that administrative cost is noticeable**. Pause on blocked state, unexpected scope, unresolved requirements, failing critical tests or conflict between artifacts and code. Do not silently relax a requirement.
 
-At each integration boundary, run focused tests for the affected paths and document meaningful outcomes. Before the PR, apply the `CONTRIBUTING.md` gate and review implemented behaviour against the selected specification.
+Review implemented behaviour against the selected specification. Leave test-dependent task checkboxes pending through draft review. After the owner authorises the ready transition, run the `CONTRIBUTING.md` gate and use the vanilla Apply confirmation steps for tasks verified by those results.
