@@ -85,6 +85,8 @@ public:
     controls::ExportLevelsControl& mixControl()noexcept{return mix;}
     juce::Label& placementHelp()noexcept{return placement;}
     void setPreviewDeviceRate(double rate){deviceRate=rate;}
+    int displayedLoopRepeats()const noexcept
+    {return !loopPresentation?0:displayed && displayed->plan->loop?displayed->plan->loop->repeats:loopPresentation->settings.repeats;}
     void display(const EditorSnapshot& editor)
     {
         const juce::ScopedValueSetter<bool> update(refreshing,true);
@@ -286,7 +288,7 @@ private:
         const auto startBars=loopPresentation->barFrames>0?plan.origin/loopPresentation->barFrames:0;
         if(plan.origin==0)label(0,"WAV start / Loop Bar 1",true);
         else {label(static_cast<double>(plan.origin),"WAV start "+juce::String(startBars,2).trimCharactersAtEnd("0").trimCharactersAtEnd(".")+" bars",true);label(0,"Loop Bar 1");}
-        if(loopPresentation->settings.repeats>1)label(loopPresentation->periodFrames,"Repeat 2");
+        if(displayedLoopRepeats()>1)label(loopPresentation->periodFrames,"Repeat 2");
         label(static_cast<double>(plan.end),"End",false,true);
     }
     bool zoomIntentCurrent()const{return displayed && zoomInvocation && zoomInvocation->session==state.session

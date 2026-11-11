@@ -55,7 +55,8 @@ inline void loopExportMixCases()
         for(int n=0;n<decoded.getNumSamples();++n)for(int c=0;c<2;++c)REQUIRE(std::abs(decoded.getSample(c,n)-samples[static_cast<size_t>(n)*2+c])<2e-6f);
         REQUIRE(fileHash(directory.file.getChildFile(range.assetPath))==dryHash && fileHash(directory.file.getChildFile(swell.render.path))==wetHash);
         if(repeats==1 && levels.first==1 && levels.second==1){
-            TestDirectory saveRoot;const auto target=saveRoot.file.getChildFile("kept.wav");REQUIRE(target.replaceWithText("previous bytes"));
+            TestDirectory saveRoot;REQUIRE(saveRoot.file.createDirectory().wasOk());
+            const auto target=saveRoot.file.getChildFile("kept.wav");REQUIRE(target.replaceWithText("previous bytes"));
             REQUIRE(!saveExportFile(directory.file,file,target,true,error,{},[](auto stage){return stage==ExportFileStage::space;}));
             REQUIRE(target.loadFileAsString()=="previous bytes" && error.contains("space"));
         }

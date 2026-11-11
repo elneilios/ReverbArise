@@ -170,6 +170,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     const m3::SwellViewport finalBar{phraseEnd * .75,static_cast<double>(phraseEnd)};
     timeline.setViewport(finalBar);
     fixture.through(fixture.marker(112)-4096);
+    const auto lastSimulatedBlock=std::chrono::steady_clock::now();
     editor.refresh();
     const auto playing=processor.loopPlaybackStatus();
     REQUIRE(playing.playhead && playing.nextLeadInStart && *playing.playhead > *playing.nextLeadInStart);
@@ -193,6 +194,11 @@ static void loopPerformReview(bool review,const juce::File& output)
     timeline.setViewport(previousView);
     cue.invokeCommand();
     juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    // These blocks represent continuous sample time; painting runs serially
+    // here, whereas a host continues audio callbacks while the editor paints.
+    if(std::chrono::steady_clock::now()-lastSimulatedBlock>std::chrono::milliseconds(500))
+        std::cout<<"Continuing simulated Loop callbacks after slow waveform paint.\n";
+    processor.resumeContinuousLoopPlaybackForTesting();
     fixture.tick();editor.refresh();
     REQUIRE(processor.loopPlaybackStatus().playback==Playing::finishing && cue.getButtonText()=="Stop Now");
     REQUIRE(!processor.loopPlaybackStatus().nextLeadInStart);
@@ -357,8 +363,14 @@ static void loopExportBindingCases()
     auto& workspace=require<ExportWorkspace>(editor,"exportWorkspace");auto& mix=workspace.mixControl();
     REQUIRE(workspace.isVisible() && workspace.loopOptions().isVisible() && mix.isVisible());
     REQUIRE(mix.selector.getText()=="Wet Layer" && mix.dry.getValue()==0 && mix.wet.getValue()==100);
+    engine.holdExportForTesting(true);
     workspace.loopOptions().beforeInvocation();workspace.loopOptions().repeats.onStep(1);
+    until([&]{return engine.exportWaitingForTesting();});editor.refresh();
+    REQUIRE(workspace.displayedLoopRepeats()==1 && workspace.loopOptions().settings().repeats==2);
+    REQUIRE(!require<controls::ActionButton>(editor,"exportSave").isEnabled());
+    engine.holdExportForTesting(false);
     until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
+    REQUIRE(workspace.displayedLoopRepeats()==2);
     REQUIRE(engine.snapshot().songExport.prepared->file.loop->options.repeats==2);
     mix.beforeInvocation();mix.selector.setSelectedId(5,juce::sendNotificationSync);
     until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();

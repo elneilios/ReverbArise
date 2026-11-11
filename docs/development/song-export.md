@@ -1,9 +1,10 @@
 # Song export composition
 
-## Loop composition foundation — issue #128
+## Loop export — issue #128
 
-The finite Loop planner and bounded source/mix readers extend this pipeline.
-The production workflow/UI and host delivery integration are still in progress.
+The finite Loop planner, worker delivery and approved Export workspace extend
+this pipeline. Native processor/binding coverage is separate from the remaining
+desktop host qualification recorded in validation evidence.
 `prepareLoopExportPlan` takes accepted capture-local metadata and independent
 Dry/Wet levels, without a live host position or Phrase reference. Its revision
 identity includes the Loop repeat count and lead-in grid while Song identities
@@ -31,6 +32,34 @@ Independent sample-sum and decoded-WAV oracles are in `LoopExportMixCases.h`;
 `LoopExportPlanCases.h` covers bounds, grid placement, identity and invalid inputs.
 The live Loop regression also exercises the shared cycle helpers. Full Release
 and host delivery qualification are separate remaining gates.
+
+Loop preferences are an optional `loopSettings` version-1 object inside the
+existing version-2 Export metadata. It saves repeat/grid choices and the Dry/Wet
+pair, independently of Song's existing pair. Absence means fresh Wet Layer
+defaults. Completed Loop revisions add an optional version-1 `loop` descriptor
+containing repeat/grid choices and exact period frames; existing Song history
+and paths remain intact. Loop files use the `Swells-loop-v1-` prefix; Song files
+keep their existing naming and identity revision. No outer plugin-state or
+capture-schema migration is introduced by these additive fields.
+
+Export entry uses accepted capture-local timing and an eligible verified wet
+render. The current Cue clock/Phrase state is not an entry or file dependency.
+`processLoopExport` consumes prepared pages with a device-rate gate independently
+of Song timing admission; the UI disables Preview with an explanation when the
+device rate differs while leaving valid file delivery available. Song's callback
+and workflow rules are retained.
+
+Gain-only preview edits keep the advancing cursor when verified layers remain
+available, including raising Wet from a dry-only mix. The worker can warm the
+full immutable layer window while the delivered dry-only WAV still has no wet
+lead-in or tail. Monitoring transitions are excluded from file samples. Count
+or grid changes prepare a new finite composition. At 0/0 current delivery and
+preview stop; raising a level does not autoplay.
+
+Loop preparation and Save preflight disk space for stereo Float32 data plus WAV
+overhead. Allocation, source/wet verification, measurements and file operations
+remain on workers. Failed/cancelled writes never publish partial files or
+replace an existing destination before safe completion.
 
 ## Song pipeline
 

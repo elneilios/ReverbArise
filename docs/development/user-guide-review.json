@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the eight owner-approved timing storyboards against Loop capture preferences and Learn/Perform bindings, loop-host-admission, loop-phrase-capture and transport-swell-playback requirements. Added embedded static SVG diagrams beside Song capture, all three Loop capture methods, marker generation, Loop cue/stop and Phrase alignment instructions. Captions distinguish FL Studio and Rack start boundaries, full lead-in cueing and incoming live dry. Existing screenshots and release identity slots are preserved.",
+  "summary": "Reviewed Loop Export shared mix and placement guidance, timing/readiness, host appendices and retained-waveform behavior; the serial UI fixture continuity hook does not change product behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 33910,
-      "sha256": "1e85f978708ae2fdde407bfccdcd2f3baea1d99dcbf02ae178c910df823f56c8"
+      "bytes": 34130,
+      "sha256": "5f5195a5ea50e747d8a3ddf10a2cf4e4efe795cf250979f33b2981ed0d987b5f"
     },
     {
       "path": "CMakePresets.json",
@@ -245,13 +245,13 @@
     },
     {
       "path": "Source/Core/ExportState.cpp",
-      "bytes": 5159,
-      "sha256": "fd8a9cfa33079dfa69340bbcaca926ec377ed215c929c470337837e0ff0bd88d"
+      "bytes": 7411,
+      "sha256": "5d0c7b2122d090b0e103725def7478f07aeedbdd0177bbbbdf74aefc524e3e88"
     },
     {
       "path": "Source/Core/ExportState.h",
-      "bytes": 769,
-      "sha256": "842d747e26bb252d4033aa556649b6ba47d50161fee7af4f766d562fc0d72759"
+      "bytes": 1598,
+      "sha256": "4a509e40ff6648aef2ed187422b14f40b5298f95ec8aa284da0d99f27790b07b"
     },
     {
       "path": "Source/Core/HostGrid.h",
@@ -300,8 +300,8 @@
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 9192,
-      "sha256": "383a878451de7304403b944d587c2974a900204c2a72559844dc910ea8392639"
+      "bytes": 9658,
+      "sha256": "413a4e9d6a9f606ec090aaad90b931ded24a685e42da18d1c5acbb3beb2c42ca"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -345,23 +345,23 @@
     },
     {
       "path": "Source/DSP/ExportFiles.cpp",
-      "bytes": 10286,
-      "sha256": "9043cff30adc75e6bd700d4b17d857845087490e5403bdb77d20b0d49ad5a44d"
+      "bytes": 11201,
+      "sha256": "7482e1f258c505f9a3ab9a4cd35cee63d6fbff24ff27302bf7aff308f0e8dcbc"
     },
     {
       "path": "Source/DSP/ExportFiles.h",
-      "bytes": 823,
-      "sha256": "c6e6594d2b854d77232daee3fe66551b20e1f30c5cfd74fe1ad7d1ea66ec08d9"
+      "bytes": 830,
+      "sha256": "f7e1de7fc9f790cdb8ee3a0f0220e162136191bc1f2430e4c006105646c75237"
     },
     {
       "path": "Source/DSP/ExportSource.cpp",
-      "bytes": 3703,
-      "sha256": "ee0c359df51015459da84722b83a585bcd441baf891d36d093378d500edab835"
+      "bytes": 6557,
+      "sha256": "a27b76b45da24adfd4eb4837cd1323ba8dece67ed623881ab14c6c2da2e68d9d"
     },
     {
       "path": "Source/DSP/ExportSource.h",
-      "bytes": 1181,
-      "sha256": "2aa840bc83b4ea155b66ec8b5269f0e2e2ff4fba8d376a18a76023c8aeb0b1db"
+      "bytes": 1330,
+      "sha256": "00acb90f9e6f8a8d6efef813a56ab9298ed02b4caaee136126f97c820eef3f08"
     },
     {
       "path": "Source/DSP/GainStaging.cpp",
@@ -405,18 +405,18 @@
     },
     {
       "path": "Source/DSP/SongExport.cpp",
-      "bytes": 5348,
-      "sha256": "6e99f2ac762c1382e081dac24752e5e607f922027c909e75648d2f0fa6556e5f"
+      "bytes": 8639,
+      "sha256": "bc765947bea727ec12c2ed6d75d56b9b35e4fcf93a2c58dc97abc8b5f8b16bdb"
     },
     {
       "path": "Source/DSP/SongExport.h",
-      "bytes": 1830,
-      "sha256": "3d2e110546fbd42c08a1c9aad81d61d39703c377307da7df64ca21da50498ea7"
+      "bytes": 2380,
+      "sha256": "d7598c9b428fe4439a71b0a92d9bea8ddbd24771aebe3e313521b4de2581ba61"
     },
     {
       "path": "Source/DSP/SongMix.cpp",
-      "bytes": 10001,
-      "sha256": "58548c18b5566ad1faa66d29aa712fa4f5bdffc4e96b9385386f7123dae5f4d2"
+      "bytes": 10937,
+      "sha256": "42d3248e655825cc4eeb870e58f556a28e0d4a196176243401d56795a19912e1"
     },
     {
       "path": "Source/DSP/SongMix.h",
@@ -445,18 +445,18 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 87751,
-      "sha256": "a854091a99099df3c975fd4ffe04a017f618fd7becbb4f6c9b98e2638ebd3f78"
+      "bytes": 90367,
+      "sha256": "b5b5b93a150266c248f025582955dcf88f80cee60b4a401821b1b4716852e494"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25337,
-      "sha256": "584439691da676d507926ac78df9b26df5974468d88dd36f7c62eee1b98bbb80"
+      "bytes": 25587,
+      "sha256": "f003061777a72a01494efddaf54ed24c160b95cb5b7741773e26b2340dd30c50"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 24822,
-      "sha256": "c7500ab8da3f959a9feaf1be60d3c063e46432ab72550479ef2c2b27a984cff8"
+      "bytes": 26536,
+      "sha256": "7d8b2d6034c4605ba0a05319893f9103a6827209b910c26b15d3fce6dae19b92"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -530,8 +530,13 @@
     },
     {
       "path": "Source/Playback/LoopCueScheduler.h",
-      "bytes": 9812,
-      "sha256": "5b52b01294f18e7ba28dcdc3ff58665995fce7ba14b8e74e503a1a22e85be0c1"
+      "bytes": 9844,
+      "sha256": "aa341f420d1132667bf1b2f7eb06fdec2e966ce5ef4fcfffa04c4a59ed67b3fb"
+    },
+    {
+      "path": "Source/Playback/LoopCycles.h",
+      "bytes": 1063,
+      "sha256": "7b0f77f1bfffa44ef5b81ada356684c7ce4e28489843776699ef2caa5d658331"
     },
     {
       "path": "Source/Playback/LoopLiveReference.h",
@@ -555,8 +560,8 @@
     },
     {
       "path": "Source/Playback/LoopWetPlan.h",
-      "bytes": 1732,
-      "sha256": "22609e1a811efb0597331c4ccfcb8b5c572daf4d314060753e69cee39260e31e"
+      "bytes": 1658,
+      "sha256": "d08f1676f192ef4883e0b81aa4b32eb50b34f02e9683cb745db07b0a0a267a0c"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -580,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 103696,
-      "sha256": "a82ca8b32e244f75d39680974b5b94067ae90523995420af97762439f836952b"
+      "bytes": 104673,
+      "sha256": "db835fac28812112f4163070d28e91f834f9217df53fc4c620d27ff06394525d"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -600,13 +605,13 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 79264,
-      "sha256": "6acd7cc4ff5a21947d4336069350c22fbfdf7d9202adf48ab7eb29ccd255479a"
+      "bytes": 79495,
+      "sha256": "1c583d93fd8b3165836dbd6d934945aeeebd6156c7f3f5d066f6aecbcdeed4e1"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
-      "bytes": 12771,
-      "sha256": "d3b954b9afdb02ddc73fb9843a0f0d0fc06d2c423e1eeacad4a4425748742bfd"
+      "bytes": 13063,
+      "sha256": "8229e1ce4427e5b27fe04562c532b66dfa4ce3838326c788c88f6204bf4af3a6"
     },
     {
       "path": "Source/Plugin/PluginSettings.cpp",
@@ -830,8 +835,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 24054,
-      "sha256": "fd79b5f6b095cabf12da462d791a2e549bf812fa0eace7933e3fba5702cca66c"
+      "bytes": 31110,
+      "sha256": "4af5938d6812b6722e85360f2047e68766def2c8c00e698da2ce2c334cf5263c"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -862,6 +867,11 @@
       "path": "Source/UI/LiveDiagnosticsText.h",
       "bytes": 9105,
       "sha256": "67e865b761f63df50cc17df16ed3dbcb33896a059ed0170f7780a34030eac5a0"
+    },
+    {
+      "path": "Source/UI/LoopExportControls.h",
+      "bytes": 5271,
+      "sha256": "62d247348e49fea9e0095323699c582d1bd4970b342fb7976bf2acbcad5659b4"
     },
     {
       "path": "Source/UI/MusicalPosition.h",
@@ -1000,8 +1010,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 117189,
-      "sha256": "b18ed43456e9c3e8f88b0158e8c3d089c443572ed2530edf4b2ec23cf8a9a3a0"
+      "bytes": 121206,
+      "sha256": "875abf45d1485467bdb0ac86a0dbe53b85fad075ecd073392daaf1b858c350ac"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
