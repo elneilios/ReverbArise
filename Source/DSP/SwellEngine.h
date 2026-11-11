@@ -331,6 +331,8 @@ private:
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     void prepareTransport(const PreviewContext&);
     void prepareLoopTransport(const PreviewContext&);
+    bool prepareLoopExportWetGain(SongExportPlan&, float liveWetDb, const juce::File&,
+                                  juce::String&, const RenderCancellation&);
     void invalidateLiveLocked(const juce::String& id={});
     bool prepareSourceWave(const Swell&,const PreviewContext&,uint64_t extra,std::shared_ptr<Waveform>&,juce::String& error);
     bool cancelled(const juce::String&,uint64_t input,uint64_t session) const;

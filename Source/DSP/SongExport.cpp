@@ -14,8 +14,8 @@ void put(juce::var& v,const char* key,const juce::var& value){v.getDynamicObject
 juce::String songExportIdentity(const SongExportPlan& plan)
 {
     // Reuse the canonical, validated swell serializer, but retain only the
-    // accepted members' musical definitions. Selection and monitor/live fields
-    // cannot influence the resulting audio identity.
+    // accepted members' musical definitions. Loop also pins its effective
+    // Perform wet gain separately from the requested fader percentage.
     Session definition;definition.timing=plan.timing;definition.gainPolicy=plan.gainPolicy;definition.gainRevision=plan.gainRevision;
     for(const auto& member:plan.members)definition.swells.push_back(member.accepted);
     juce::String encoded,error,source;
@@ -23,7 +23,10 @@ juce::String songExportIdentity(const SongExportPlan& plan)
     auto values=juce::JSON::parse(encoded)["swells"];
     for(auto& v:*values.getArray())for(const char* key:{"name","irName","provenance","detectorAnchor","generationSource"})v.getDynamicObject()->removeProperty(key);
     auto metadata=object();put(metadata,"revision",plan.loop?loopExportRevision:songExportRevision);put(metadata,"members",values);
-    if(plan.loop){put(metadata,"loopRepeats",plan.loop->repeats);put(metadata,"leadGridBeats",plan.loop->gridBeats);}
+    if(plan.loop){
+        put(metadata,"loopRepeats",plan.loop->repeats);put(metadata,"leadGridBeats",plan.loop->gridBeats);
+        put(metadata,"performWetGain",plan.loopWetGain);
+    }
     put(metadata,"source",source);put(metadata,"sourceReference",plan.sourceReference);
     put(metadata,"origin",juce::String(plan.origin));put(metadata,"end",juce::String(plan.end));
     put(metadata,"rate",plan.timing.rate);put(metadata,"bpm",plan.timing.bpm);put(metadata,"numerator",plan.timing.numerator);put(metadata,"denominator",plan.timing.denominator);

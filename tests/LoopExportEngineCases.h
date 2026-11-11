@@ -16,12 +16,20 @@ static void loopExportEngineCases()
     const auto ir=root.file.getChildFile("loop-ir.wav");writeTestWav(ir,1,1000,std::vector<float>(101,.002f));
     engine.loadIR(ir);waitFor([&]{return find(engine.savedSession(),id)->irName==ir.getFileName();});
     REQUIRE(engine.generate(true).accepted);waitFor([&]{return find(engine.savedSession(),id)->phase==Phase::ready;});
+    engine.setLivePlayback(true,LiveRouting::wetOnly,-12);
     workflow::State flow;REQUIRE(flow.requestMode(workflow::Mode::finalise,{true,true,true}));engine.useWorkflow(flow);
     REQUIRE(engine.initializeExport());
     waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
     const auto first=engine.snapshot().songExport.prepared;
     REQUIRE(first && first->plan->loop && first->file.loop && first->file.dry==0 && first->file.wet==1);
+    const auto performGain=juce::Decibels::decibelsToGain(-12.f);
+    REQUIRE(std::abs(first->plan->loopWetGain-performGain)<1e-6f);
     juce::String error;REQUIRE(verifyExportFile(engine.assetDirectory(),first->file,error));
+    auto unscaled=std::make_shared<SongExportPlan>(*first->plan);unscaled->loopWetGain=1;
+    SongMix reference(engine.assetDirectory());
+    REQUIRE(reference.prepare(unscaled,previewMemoryBudget,error) && reference.measure(error));
+    REQUIRE(reference.plan()->identity!=first->plan->identity);
+    REQUIRE(std::abs(first->metrics.peak-reference.metrics().peak*performGain)<1e-6f);
     REQUIRE(!engine.playExport(engine.assignmentEpoch(),44100));
     REQUIRE(engine.setLoopExportOptions({2,16},engine.assignmentEpoch(),flow.snapshot().pass));
     REQUIRE(engine.setExportLevels(.35f,.65f,engine.assignmentEpoch(),flow.snapshot().pass));
@@ -29,6 +37,7 @@ static void loopExportEngineCases()
     auto ready=engine.snapshot().songExport.prepared;
     REQUIRE(ready->plan->loop->repeats==2 && ready->file.loop->options.gridBeats==16);
     REQUIRE(ready->file.dry==.35f && ready->file.wet==.65f);
+    REQUIRE(ready->plan->loopWetGain==first->plan->loopWetGain);
     REQUIRE(engine.savedSession().exportState.dry==0 && engine.savedSession().exportState.wet==1);
     REQUIRE(!engine.setLoopExportOptions({3,4},engine.assignmentEpoch(),flow.snapshot().pass+1));
     REQUIRE(!engine.setExportLevels(1,1,engine.assignmentEpoch()+1,flow.snapshot().pass));

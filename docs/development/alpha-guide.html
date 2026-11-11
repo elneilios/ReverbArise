@@ -694,8 +694,9 @@
 <p>With an accepted Loop and a ready enabled swell, open <strong>Export</strong>. Export uses the captured Loop's own timing and exact length. It does not need the transport, Clock or Phrase to keep running, and it can be ready while Cue Loop is unavailable. Preview needs an audio device at the captured sample rate; Save and Drag can still deliver the captured-rate WAV when Preview is disabled. Hover over Preview for the reason.</p>
 <ol>
 <li>Choose <strong>Repeats</strong>: the number of Loop passes to include. The first swell lead-in is included once, swells and tails overlap across internal repeat boundaries, and the final scheduled pass keeps its complete tail. There is no extra unscheduled pass.</li>
-<li>Choose a <strong>Lead-in grid</strong>. ReverbArise rounds the WAV start backward to that grid so no initial swell is cut off. The waveform labels <strong>WAV start</strong> separately from <strong>Loop Bar 1</strong>. Follow the placement instruction beside the WAV tile. For example, if the earliest wet starts 2.4 bars early and the grid is 4 bars, the file begins 4 bars early with 1.6 bars of silence. To put Loop Bar 1 at project bar 17, place the WAV at bar 13.</li>
+<li>Choose a <strong>Lead-in grid</strong>. ReverbArise rounds the WAV start backward to that grid so no initial swell is cut off. The waveform labels <strong>WAV start</strong> separately from <strong>Loop Bar 1</strong>. Follow the placement instruction inside the WAV tile. For example, if the earliest wet starts 2.4 bars early and the grid is 4 bars, the file begins 4 bars early with 1.6 bars of silence. To put Loop Bar 1 at project bar 17, place the WAV at bar 13.</li>
 <li>Use the same <strong>Mix Character</strong> and <strong>Dry/Wet</strong> controls as Song Export. A fresh Loop mix starts at <strong>Wet Layer</strong> (Dry 0%, Wet 100%). Raising Dry includes the captured dry Loop once per pass in both Preview and the WAV. Dry is silent before the first pass and in the final wet tail. A dry-only WAV starts at Loop Bar 1. At 0% / 0%, Preview and file delivery are disabled.</li>
+<li>In Loop Export, <strong>Wet 100%</strong> uses the swell level from Perform, including Live Wet and protection against loud overlapping swells. A different Wet setting scales that level in Preview and the WAV. For Wet Layer, adjust the original dry in your host mixer and check the combined peak there.</li>
 <li>Preview, then <strong>Save WAV</strong> or drag the ready tile. Keep the destination tempo at the captured tempo for the stated bar offset; Export does not stretch the take. Mute or replace the original dry when using a dry-inclusive WAV to avoid doubling it. Song and Loop keep their own mix preferences, and previous exported files remain unchanged.</li>
 </ol>
 
@@ -773,7 +774,7 @@ Save the DAW project and its external audio separately, and back up every plugin
 <ol>
 <li>Capture a Loop using any Learn method, then generate swells and wait for an enabled swell to be ready. Open <strong>Export</strong>. No additional control cable is needed; you can stop Clock while preparing the WAV.</li>
 <li>Choose Repeats, Lead-in grid and a Mix Character or Dry/Wet pair. Match Rack's audio rate to the captured rate to use Preview. The captured-rate WAV can still be saved when Preview is unavailable.</li>
-<li>Use <strong>Save WAV</strong> to a folder outside the plug-in's working storage, then import it into your destination DAW. Follow the placement instruction beside the tile. Use Wet Layer to add swells alongside the original dry; mute or replace the original dry for a dry-inclusive mix.</li>
+<li>Use <strong>Save WAV</strong> to a folder outside the plug-in's working storage, then import it into your destination DAW. Follow the placement instruction inside the tile. Use Wet Layer to add swells alongside the original dry; mute or replace the original dry for a dry-inclusive mix.</li>
 </ol>
 
 <h3 id="fl-studio-setup">Appendix B. FL Studio</h3>

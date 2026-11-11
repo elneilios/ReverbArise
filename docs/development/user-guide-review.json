@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Loop Export shared mix and placement guidance, timing/readiness, host appendices and retained-waveform behavior; the serial UI fixture continuity hook does not change product behavior.",
+  "summary": "Reviewed Loop Wet 100% against Perform Live Wet and overlap protection, host dry ownership, and placement guidance inside the file tile.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -405,18 +405,18 @@
     },
     {
       "path": "Source/DSP/SongExport.cpp",
-      "bytes": 8639,
-      "sha256": "bc765947bea727ec12c2ed6d75d56b9b35e4fcf93a2c58dc97abc8b5f8b16bdb"
+      "bytes": 8723,
+      "sha256": "75a7e1a1c602e9c36316606de6269691f0ecd57ea7b82e1e5f808df3d57d1fc1"
     },
     {
       "path": "Source/DSP/SongExport.h",
-      "bytes": 2380,
-      "sha256": "d7598c9b428fe4439a71b0a92d9bea8ddbd24771aebe3e313521b4de2581ba61"
+      "bytes": 2398,
+      "sha256": "19885583baf80a8489409e929aea4fef7ce1a8d35124caa010f23013c23e025f"
     },
     {
       "path": "Source/DSP/SongMix.cpp",
-      "bytes": 10937,
-      "sha256": "42d3248e655825cc4eeb870e58f556a28e0d4a196176243401d56795a19912e1"
+      "bytes": 11166,
+      "sha256": "21c3745510d1532fcd79a6556d59ea16d9c907a43a3ade96aa007b1cf4df0f77"
     },
     {
       "path": "Source/DSP/SongMix.h",
@@ -450,13 +450,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25587,
-      "sha256": "f003061777a72a01494efddaf54ed24c160b95cb5b7741773e26b2340dd30c50"
+      "bytes": 25751,
+      "sha256": "549a20304533a575cccedb87ea6bd3ecee88fb4ceb0bb87d42a5f0534e548e1f"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 26536,
-      "sha256": "7d8b2d6034c4605ba0a05319893f9103a6827209b910c26b15d3fce6dae19b92"
+      "bytes": 27213,
+      "sha256": "60f369eb5a4c28219d2451f2174922241f93481687f1b4384231dcc8d2efead9"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 46760,
-      "sha256": "c99f2a459c3867000dec4e59726c01c252421d8e55ada0d453da9fb987d6022c"
+      "bytes": 49058,
+      "sha256": "515001fb03aa3f7b27bae6f9b60c40fffff31357d832ae0ff5890e8aef5370a4"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -545,13 +545,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 18298,
-      "sha256": "6d8f6eb1df4383b9e9da7128e9bd284e21f77103f64eeac22d849e30571dca0e"
+      "bytes": 18601,
+      "sha256": "8c2b951b160cfdc2d7d2ea8577aba2c9c9f6e89ae120c1f8064a76a05598d035"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 4799,
-      "sha256": "36fe38d9e3015cbce32a664d36f82c478761ee213af994bec0c29cbeef2ad074"
+      "bytes": 4948,
+      "sha256": "9ededfe15f3c3ab9c887e7a512def918c3f2737311f55257c5c2bcee75ef4a16"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -560,8 +560,8 @@
     },
     {
       "path": "Source/Playback/LoopWetPlan.h",
-      "bytes": 1658,
-      "sha256": "d08f1676f192ef4883e0b81aa4b32eb50b34f02e9683cb745db07b0a0a267a0c"
+      "bytes": 1891,
+      "sha256": "3deb9abf86612bb39afac3bff6942e16a94d9c03e43c15a42141beee7133034a"
     },
     {
       "path": "Source/Playback/ScheduledTestTone.cpp",
@@ -700,8 +700,8 @@
     },
     {
       "path": "Source/UI/Controls/FileDragTile.h",
-      "bytes": 3484,
-      "sha256": "23674bfab23a47d7d7cbbafe1a85fd47c0cfd103ee58e80fe72ccb63095c83a5"
+      "bytes": 4640,
+      "sha256": "db496f7adcfc79af984dd544249ad7b0442f267cdf0c37709c5df26e0383baf6"
     },
     {
       "path": "Source/UI/Controls/FocusViewport.h",
@@ -835,8 +835,8 @@
     },
     {
       "path": "Source/UI/ExportWorkspace.h",
-      "bytes": 31110,
-      "sha256": "4af5938d6812b6722e85360f2047e68766def2c8c00e698da2ce2c334cf5263c"
+      "bytes": 30834,
+      "sha256": "85a889c43cc878448cba1c4a70e43237c58a23d8871ce073e529b72f93da9169"
     },
     {
       "path": "Source/UI/InitialPerformView.h",
@@ -1010,8 +1010,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 121206,
-      "sha256": "875abf45d1485467bdb0ac86a0dbe53b85fad075ecd073392daaf1b858c350ac"
+      "bytes": 121518,
+      "sha256": "5293c94025ad01ab3c3579b0be74bc12ab7608c155d875b354398f0afd381224"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

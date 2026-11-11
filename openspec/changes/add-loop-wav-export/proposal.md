@@ -12,7 +12,7 @@ Issue #128 completes the Loop workflow with a WAV that can be placed predictably
 - Reuse existing Export preview, waveform navigation, Drag WAV, Save WAV and atomic file delivery; share wrap composition with Loop playback rather than creating a second overlap algorithm.
 - Identify WAV start and Loop Bar 1 and show placement guidance beside Drag WAV.
 - Require owner approval of the native Loop Export preview before rollout, followed by sample-level oracles, the full Release suite and a focused FL Studio import/alignment check.
-- Preserve Song export behavior, immutable files, captured audio, render caches and the existing offline transparent gain policy. Live output protection is not baked into exported PCM.
+- Match the Perform wet level at Loop Export's 100% Wet setting, including Live Wet and the shared Loop wet overlap protection. The default remains a wet stem for the host mixer. Preserve Song export behavior, immutable files, captured audio and render caches.
 
 ## Capabilities
 

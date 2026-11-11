@@ -8,8 +8,9 @@ defaulting a fresh Loop mix to Wet Layer. Loop and Song preferences are separate
 the pair applies to both preview and file delivery.
 
 Lead-in grid and Repeats sit above the dominant waveform. The ruler distinguishes
-WAV start, Loop Bar 1, the second repeat when present, and End. Placement help
-beside the file tile derives from the accepted file origin; a dry-inclusive mix
+WAV start, Loop Bar 1, the second repeat when present, and End. The file tile
+shows placement help just below its title, with a gap before the file details.
+The instruction derives from the accepted file origin. A dry-inclusive mix
 adds the original-dry doubling reminder. Save WAV and Return to Perform share
 one row in Loop presentation so the existing file tile retains its full height
 at 900x600. Song keeps its existing action layout. No shared-family visual

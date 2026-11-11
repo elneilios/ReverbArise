@@ -25,8 +25,11 @@ and only the last scheduled pass supplies the final tail. Dry occupies each
 scheduled pass interval once and is zero outside it. Source verification and
 warned-silence coverage are reused, with repeated warning metadata bounded by
 the worker budget. Reads and writes remain page-based; no expanded repeated PCM
-is retained. Preview and WAV consume the same transparent Dry/Wet sum; live
-output peak protection is excluded. Dry-only export starts at Loop Bar 1.
+is retained. The Loop worker pins Perform's Live Wet and shared wet overlap
+gain in the composition identity. Wet at 100% uses that reference and the
+fader scales it in both Preview and delivery. It is independent of repeats,
+lead-in rounding and dry reads. The host mixer owns the external dry level
+and combined output protection. Dry-only export starts at Loop Bar 1.
 
 Independent sample-sum and decoded-WAV oracles are in `LoopExportMixCases.h`;
 `LoopExportPlanCases.h` covers bounds, grid placement, identity and invalid inputs.

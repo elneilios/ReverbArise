@@ -20,7 +20,7 @@ Loop Export SHALL snapshot the accepted source, exact Loop extent, capture-local
 - **AND** superseded work cannot become the current revision or alter earlier completed files
 
 ### Requirement: Initial lead-in rounds outward to the selected grid
-Loop Export SHALL preserve all included initial negative wet audio and round WAV start backward to the selected verified beat or bar grid, inserting silence as needed. WAV frame zero and Loop Bar 1 SHALL be distinct labelled coordinates with placement guidance beside Drag WAV. Missing accepted beat or meter authority SHALL disable affected musical grid choices with a clear explanation rather than invent timing.
+Loop Export SHALL preserve all included initial negative wet audio and round WAV start backward to the selected verified beat or bar grid, inserting silence as needed. WAV frame zero and Loop Bar 1 SHALL be distinct labelled coordinates. The drag tile SHALL show placement guidance directly below its action title, followed by a gap and the file details. Missing accepted beat or meter authority SHALL disable affected musical grid choices with a clear explanation rather than invent timing.
 
 #### Scenario: Four-bar placement
 - **WHEN** the earliest contribution starts at minus 2.4 bars and the lead-in grid is four bars
@@ -47,14 +47,22 @@ Loop Export SHALL compose the requested positive integer count of Loop passes wi
 - **WHEN** Duration, End on Signal or End on repeat produces a valid exact extent whose beat mapping has a fractional sample period
 - **THEN** repeat spacing follows that extent using absolute boundary conversion and remains aligned over many repeats
 
-### Requirement: Preview and delivery share a transparent Loop mix
-Loop Export preview, waveform and decoded WAV SHALL use the same finite accepted composition and independent Dry/Wet levels, each in [0,1] with 1 meaning unity. Files SHALL be stereo Float32 at the accepted rate, retaining per-swell calibration and shape without live monitoring gain, live peak guard, normalization or limiting. Finite above-unity samples SHALL remain intact with truthful measured peak warnings. Monitoring-only preview ramps SHALL be disclosed separately.
+### Requirement: Preview and delivery share the Perform wet reference
+Loop Export preview, waveform and stereo Float32 WAV SHALL share one finite mix at the accepted rate. Dry 100% SHALL be unity captured dry. Wet 100% SHALL use Perform's Live Wet and Loop overlap protection before the combined output guard. Wet fader edits SHALL scale that reference. File peak warnings SHALL describe the measured result.
 
 #### Scenario: Preview and WAV comparison
 - **WHEN** the same Loop is mixed at Dry/Wet 0/100, 100/0, 100/100 and 35/65, previewed and delivered through Drag WAV and Save WAV
 - **THEN** steady interior preview samples and both decoded files agree within documented floating-point tolerance
-- **AND** the composition equals respectively wet, repeated captured dry, dry plus wet, and 0.35 dry plus 0.65 wet without aggregate attenuation
-- **AND** source/render bytes remain unchanged and peak warnings describe the actual transparent sum
+- **AND** the composition equals respectively Perform wet, repeated captured dry, dry plus Perform wet, and 0.35 dry plus 0.65 Perform wet
+- **AND** source/render bytes remain unchanged and peak warnings describe the actual file
+- **AND** any preview-only boundary ramps are disclosed
+
+#### Scenario: Export an edited Perform loop as a wet stem
+- **WHEN** a user fine-tunes a Loop in Perform and exports at the default Dry 0% / Wet 100%
+- **THEN** the stem uses the same accepted swell levels and effective wet gain as Perform
+- **AND** repeat count and lead-in placement preserve the finite composition without changing the effective wet gain
+- **AND** missing dry does not change the wet reference or prevent verified wet-only export
+- **AND** original dry remains a separate host mixer decision
 
 ### Requirement: Dry audio repeats once per scheduled pass
 A nonzero Dry level SHALL include accepted capture-local dry audio exactly once per scheduled pass using the same exact boundaries as wet composition. Dry SHALL be silent before the first pass and after the final pass; wet lead-in and tails SHALL NOT repeat dry outside those bounds. Missing dry coverage SHALL follow the existing warned-silence policy, without fabricating source or changing accepted assets. Dry at zero SHALL require no dry reads.

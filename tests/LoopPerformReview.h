@@ -353,11 +353,46 @@ static void loopExportBindingCases()
     REQUIRE(engine.addTarget(0));const auto id=engine.savedSession().primary;
     const auto ir=fixture.root.file.getChildFile("export-binding.wav");writeTestWav(ir,1,48000,std::vector<float>(201,.002f));
     engine.loadIR(ir);until([&]{return m3::find(engine.savedSession(),id)->irName==ir.getFileName();});
+    engine.setLivePlayback(true,m3::LiveRouting::wetOnly,-6);
     REQUIRE(engine.generate(true).accepted);until([&]{return m3::find(engine.savedSession(),id)->phase==m3::Phase::ready;});
+    using Playing=m3::LoopCueScheduler::State;
+    using Prep=m3::LoopPlaybackPublication::Preparation;
+    until([&]{const auto status=processor.loopPlaybackStatus();return status.preparation==Prep::ready
+        && status.phase==m3::LoopLiveReference::State::ready;});
+    REQUIRE(processor.requestLoopCue());
+    float livePeak=0;
+    int64_t wetPosition=0;
+    juce::AudioBuffer<float> liveWet(2,fixture.frames);
+    const auto cueDeadline=fixture.marker(fixture.nextBeat+12);
+    while(fixture.cursor<cueDeadline){
+        fixture.tick(true);
+        const auto status=processor.loopPlaybackStatus();
+        if(status.playback==Playing::repeating)break;
+        if(status.playback!=Playing::leadIn || !status.playhead)continue;
+        const auto peak=fixture.audio.getMagnitude(0,fixture.frames);
+        if(peak>livePeak){
+            livePeak=peak;
+            wetPosition=*status.playhead-fixture.frames+1;
+            liveWet.makeCopyOf(fixture.audio);
+        }
+    }
+    REQUIRE(livePeak>1e-5f && wetPosition<0);
     fixture.clockEnabled=false;fixture.through(fixture.marker(fixture.nextBeat+8));
     REQUIRE(!processor.requestLoopCue());
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::finalise));
     until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});
+    {
+        const auto file=engine.snapshot().songExport.prepared->file;
+        juce::WavAudioFormat format;
+        std::unique_ptr<juce::AudioFormatReader> reader(format.createReaderFor(
+            engine.assetDirectory().getChildFile(file.path).createInputStream().release(),true));
+        juce::AudioBuffer<float> decoded(2,fixture.frames);
+        REQUIRE(reader && wetPosition>=file.origin
+            && reader->read(&decoded,0,fixture.frames,wetPosition-file.origin,true,true));
+        for(int channel=0;channel<2;++channel)
+            for(int frame=0;frame<fixture.frames;++frame)
+                REQUIRE(std::abs(decoded.getSample(channel,frame)-liveWet.getSample(channel,frame))<1e-6f);
+    }
     PreverbAudioProcessorEditor editor(processor);editor.enableResponsiveReview({},PresentationFitContext{{1920,1080},{16,80}});
     REQUIRE(editor.setPresentationSize(900,600));editor.setVisible(true);editor.refresh();
     auto& workspace=require<ExportWorkspace>(editor,"exportWorkspace");auto& mix=workspace.mixControl();
@@ -375,7 +410,7 @@ static void loopExportBindingCases()
     mix.beforeInvocation();mix.selector.setSelectedId(5,juce::sendNotificationSync);
     until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();
     REQUIRE(engine.snapshot().songExport.prepared->file.dry==1 && engine.snapshot().songExport.prepared->file.wet==1);
-    REQUIRE(workspace.placementHelp().getText().contains("Mute the original dry"));
+    REQUIRE(workspace.placementText().contains("Mute the original dry"));
     REQUIRE(engine.savedSession().exportState.dry==0 && engine.savedSession().exportState.wet==1);
     processor.prepareToPlay(44100,fixture.frames);fixture.tick();
     until([&]{return engine.snapshot().songExport.phase==m3::ExportPhase::ready;});editor.refresh();

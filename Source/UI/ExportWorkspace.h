@@ -23,8 +23,7 @@ public:
     {
         setName("exportWorkspace");
         for(auto* c:std::initializer_list<juce::Component*>{&play,&stop,&mix,&tile,&save,&back,&zoom,&navigation})addAndMakeVisible(c);
-        addChildComponent(loopControls);addChildComponent(placement);
-        applyTextRole(placement,TextRole::helper,juce::Justification::topLeft);placement.setBorderSize({});
+        addChildComponent(loopControls);
         loopControls.beforeInvocation=[this]{loopInvocation=std::pair{state.session,state.pass};};
         loopControls.onChange=[this](auto settings){
             if(loopPresentation && loopInvocation && loopInvocation->first==state.session && loopInvocation->second==state.pass && onLoopSettings)
@@ -75,15 +74,15 @@ public:
     {
         loopPresentation=std::move(value);
         save.setButtonText(loopPresentation?"Save WAV":"Save WAV...");
-        loopControls.setVisible(loopPresentation.has_value());placement.setVisible(loopPresentation.has_value());
+        loopControls.setVisible(loopPresentation.has_value());
         if(loopPresentation){loopControls.setMeter(loopPresentation->beatsPerBar,loopPresentation->beatAvailable,loopPresentation->meterAvailable);loopControls.display(loopPresentation->settings);}
-        else loopInvocation.reset();
+        else {loopInvocation.reset();tile.setPlacementText({});}
         setTitle(loopPresentation?"Loop-aligned export preview":"Song-aligned export preview");
         resized();repaint();
     }
     LoopExportControls& loopOptions()noexcept{return loopControls;}
     controls::ExportLevelsControl& mixControl()noexcept{return mix;}
-    juce::Label& placementHelp()noexcept{return placement;}
+    const juce::String& placementText()const noexcept{return tile.placementText();}
     void setPreviewDeviceRate(double rate){deviceRate=rate;}
     int displayedLoopRepeats()const noexcept
     {return !loopPresentation?0:displayed && displayed->plan->loop?displayed->plan->loop->repeats:loopPresentation->settings.repeats;}
@@ -120,19 +119,22 @@ public:
             navigation.setRange(static_cast<double>(loopPresentation?p.origin:m.audibleStart.value_or(p.origin)),static_cast<double>(loopPresentation?p.end:m.audibleEnd.value_or(p.end)),static_cast<double>(p.origin),static_cast<double>(p.end),p.timing.rate,reset);
         }
         if(ready)identity=state.prepared->plan->identity;
-        if(loopPresentation && displayed){
-            const auto bars=loopPresentation->barFrames>0?-displayed->plan->origin/loopPresentation->barFrames:0;
-            const auto text=(bars>0?"Place WAV "+juce::String(bars,2).trimCharactersAtEnd("0").trimCharactersAtEnd(".")+" bars before Loop Bar 1.":"Place WAV start at Loop Bar 1.")
-                +(displayed->plan->dry>0?juce::String("\nMute the original dry when using this WAV."):juce::String{});
-            placement.setText(text,juce::dontSendNotification);placement.setTooltip(text);
-        }
+        const auto deliveryPlan=ready?state.prepared:displayed;
+        if(loopPresentation && deliveryPlan){
+            const auto bars=loopPresentation->barFrames>0?-deliveryPlan->plan->origin/loopPresentation->barFrames:0;
+            const auto count=juce::String(bars,2).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
+            auto instruction=bars>0?"Place WAV "+count+(count=="1"?" bar":" bars")+" before Loop Bar 1."
+                                   :juce::String("Place WAV start at Loop Bar 1.");
+            if(deliveryPlan->plan->dry>0)instruction+="\nMute the original dry when using this WAV.";
+            tile.setPlacementText(instruction);
+        }else tile.setPlacementText({});
         updateZoom();
         if(dragRequest && state.delivery==dragRequest && !state.delivering){
             dragRequest=0;
             if(state.dragReady){
                 const auto result=controls::invokeExternalFileDrag(state.deliveryPath,state.dragReady,juce::ModifierKeys::getCurrentModifiersRealtime().isLeftButtonDown(),
                     [this](const auto& path){return juce::DragAndDropContainer::performExternalDragDropOfFiles({path},false,&tile);});
-                localMessage=result==controls::ExternalDragResult::started?(loopPresentation?placement.getText():juce::String("Place the WAV at song origin. Its managed file is retained.")):
+                localMessage=result==controls::ExternalDragResult::started?(loopPresentation?tile.placementText():juce::String("Place the WAV at song origin. Its managed file is retained.")):
                     result==controls::ExternalDragResult::released?"Drag released before verification. Use Save WAV, or drag again.":"External dragging is unavailable. Use Save WAV.";
             }else localMessage=state.deliveryMessage;
         }
@@ -251,10 +253,8 @@ private:
         auto controls=right.withTrimmedLeft(contentPadding);mixHeading=controls.removeFromTop(headingHeight);controls.removeFromTop(contentPadding);
         mix.setBounds(controls.removeFromTop(mix.preferredHeight()));
         controls.removeFromTop(groupGap);
-        const auto helpHeight=loopPresentation?2*learnTypography::secondaryLineHeight+contentPadding:0;
         const auto actionsHeight=loopPresentation?controlHeight+groupGap:2*controlHeight+2*groupGap;
-        const auto tileHeight=std::max(0,std::min(exportTileHeight,controls.getHeight()-actionsHeight-helpHeight));tile.setBounds(controls.removeFromTop(tileHeight));
-        if(loopPresentation){controls.removeFromTop(contentPadding);placement.setBounds(controls.removeFromTop(2*learnTypography::secondaryLineHeight));}
+        const auto tileHeight=std::max(0,std::min(exportTileHeight,controls.getHeight()-actionsHeight));tile.setBounds(controls.removeFromTop(tileHeight));
         controls.removeFromTop(groupGap);
         if(loopPresentation){auto actions=controls.removeFromTop(controlHeight);save.setBounds(actions.removeFromLeft(actions.getWidth()*2/5));actions.removeFromLeft(groupGap);back.setBounds(actions);}
         else {save.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);back.setBounds(controls.removeFromTop(controlHeight));}
@@ -324,7 +324,7 @@ private:
     controls::TimelineZoomControls zoom;controls::TimelineNavigation navigation;std::optional<ZoomScope> zoomInvocation;
     controls::ExportLevelsControl mix;controls::FileDragTile tile;
     controls::ExportLevelsControl::Pair requestedLevels;
-    LoopExportControls loopControls;juce::Label placement;
+    LoopExportControls loopControls;
     std::optional<LoopPresentation> loopPresentation;
     std::optional<std::pair<uint64_t,uint64_t>> loopInvocation;
     juce::Rectangle<int> left,right,heading,caption,mixHeading,ruler,chart,legend,timeArea,statusArea;

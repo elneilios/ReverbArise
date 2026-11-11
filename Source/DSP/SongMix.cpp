@@ -14,6 +14,8 @@ bool SongMix::prepare(std::shared_ptr<const SongExportPlan> input,uint64_t avail
     ready=false;layersReady=false;current.reset();readers.clear();occupied.clear();measured={};
     const auto reserve=fixedPages+maximumPeaks*2*sizeof(CapturePeak)+(input?input->members.size():0)*readerAllowance;
     if(!input || available<reserve){error="Export reader working budget exceeded";return false;}
+    if(!std::isfinite(input->loopWetGain) || input->loopWetGain<=0)
+    {error="Invalid Perform wet gain";return false;}
     if(!dry.prepare(input,available-reserve,error,cancel))return false;
     auto verified=std::make_shared<SongExportPlan>(*input);verified->warnings=dry.warnings();verified->identity=songExportIdentity(*verified);
     if(verified->identity.isEmpty()){error="Invalid verified Export composition";return false;}current=std::move(verified);
@@ -72,6 +74,8 @@ bool SongMix::branches(int64_t at,std::span<float> source,std::span<float> wet,j
         }else contribution(0);
         if(!success)return false;
     }
+    if(current->loop && current->loopWetGain!=1)
+        for(auto& sample:wet)sample*=current->loopWetGain;
     return true;
 }
 bool SongMix::scan(const std::function<bool(int64_t,int)>& visit,juce::String& error,const RenderCancellation& cancel)

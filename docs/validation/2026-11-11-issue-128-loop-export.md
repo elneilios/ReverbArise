@@ -91,8 +91,16 @@ Prepared copies under `out/issue-128/manual/`:
   initial lead-in, inter-pass spacing and final tail. Mute original dry when
   listening to a dry-inclusive imported file.
 
-Host installation and manual results are pending. Fixture preparation and
-asset checksum checks do not establish host acceptance. Physical monitor/DPI
+Release revision `5482f0b` is installed at
+`C:\Program Files\Common Files\VST3\ReverbArise.vst3`. Installed binary SHA256:
+`A27E3DED826B23158ABBD91AC658C92976B7B17304D5A662105CD94AF2B01519`.
+The normal installer build passed but the system install lock required Windows
+elevation. The elevated repository installer passed and retained the prior
+bundle at `out/vst3-install-backups/20261111-005430-44c5a8ec0c1f4734a6a00c17231df503/ReverbArise.vst3`.
+Its plugin-only build did not rerun CTest; see the full and focused runs above.
+
+Manual host results are pending. Fixture preparation, asset checksum checks
+and installation do not establish host acceptance. Physical monitor/DPI
 qualification remains #130; broader accepted-Loop recovery remains #129.
 
 ## Output limits
@@ -101,3 +109,69 @@ Export preserves transparent Float32 sums and reports measured peaks; it does
 not bake the live output guard into files. Dry at 100% is unity. The initial
 lead-in and final wet tail do not repeat dry, and a dry-only composition starts
 at Loop Bar 1. Monitoring ramps are separate from the delivered WAV samples.
+
+## Owner host feedback on Wet Layer
+
+The owner reported that the 100% wet file from the FL Studio kick Pattern
+sounded louder than Perform and distorted in the Playlist. The first analysis
+used the separate Rack fixture. Its two-pass WAV and captured dry also overload
+when layered at unity. The
+three-pass Wet Layer and Dry 100% / Wet 50% files independently confirmed
+the captured dry offset of 154,511 frames, with reconstruction error below
+`1e-6` per sample.
+
+| Aligned fixture signal | Sample peak |
+| --- | --- |
+| Captured dry | −6.696 dBFS |
+| Two-pass 100% wet file | −1.278 dBFS |
+| Two-pass 100% wet plus unity dry | +0.535 dBFS |
+| Two-pass 75% wet plus unity dry | −1.155 dBFS |
+
+Two channel samples in the unity sum exceed full scale. The largest uniform
+wet gain meeting the −1 dBFS ceiling for this mix is 77.10%. Perform applies
+wet overlap protection and a guard on the combined output. The current Export
+gain rule measures the wet file alone in Wet Layer mode. Host acceptance
+remains pending.
+
+The owner's FL Studio screenshot identifies the exact two-pass export ending
+`62bb168.wav` and displays its +3.99 dBFS warning. The matching 48 kHz capture
+manifest describes one bar at 120 BPM. Its kick audio checksum verifies.
+The three-bar export contains a one-bar lead-in and two scheduled passes.
+
+| FL Studio kick fixture signal | Sample peak |
+| --- | --- |
+| Captured kick | −4.611 dBFS |
+| Two-pass 100% wet file | +3.989 dBFS |
+| Two-pass 100% wet plus aligned kick | +3.989 dBFS |
+| Two-pass 75% wet plus aligned kick | +1.813 dBFS |
+| Two-pass 35% wet plus aligned kick | −1.158 dBFS |
+
+The wet file alone contains 3,880 channel samples above unity. The largest
+uniform wet gain meeting −1 dBFS with the aligned captured kick is 36.805%,
+including when the same kick Pattern repeats through the lead-in bar. This
+measurement uses decoded WAV samples at unity, independent of Playlist routing.
+
+The owner specified that 100% Wet should follow the wet level heard in
+Perform, with the original kick level controlled in the host. The revised Loop
+worker uses the same accepted wet shaping, Live Wet and overlap protection as
+Perform. The fader scales that reference. The live guard applied after summing
+dry and wet is outside the stem. The Loop composition identity includes the
+effective gain so existing unprotected files cannot be reused for this mix.
+
+Focused Release checks passed for the Loop playback compositor, the independent
+export sample tests, worker/WAV and Preview parity with a non-unity Live Wet
+setting, and native Loop Export UI and processor binding. The Windows logs are
+`out/issue-128/perform-wet-test.log` and
+`out/issue-128/perform-wet-and-tile-test.log`. The revised production build
+still needs the full Release run and FL Studio kick comparison.
+
+The native processor binding test also recorded an audible wet lead-in block
+from actual Loop Perform at Live Wet −6 dB, stopped the clock, and exported at
+the default Wet Layer settings. The corresponding decoded stereo WAV block
+matched within `1e-6` per sample. See `out/issue-128/live-to-wav-test.log`.
+
+The placement text now sits inside the existing drag tile below its title,
+followed by the file details. Wet Layer and Dry + Wet were rendered at 900x600
+and 1400x900. A single native review window was opened and the owner approved
+the tile arrangement.
+Screenshots are under `out/issue-128/preview-in-tile/`.

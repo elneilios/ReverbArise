@@ -140,14 +140,14 @@ inline void cases()
     binding.mixControl().beforeInvocation();++restored.songExport.pass;binding.display(restored);
     binding.mixControl().dry.setValue(50,juce::sendNotificationSync);REQUIRE(mixCommits==0 && binding.mixControl().dry.getValue()==0);
     binding.mixControl().beforeInvocation();binding.mixControl().dry.setValue(50,juce::sendNotificationSync);REQUIRE(mixCommits==1);
-    binding.setLoopPresentation({});REQUIRE(!binding.loopOptions().isVisible() && !binding.placementHelp().isVisible());
+    binding.setLoopPresentation({});REQUIRE(!binding.loopOptions().isVisible() && binding.placementText().isEmpty());
     auto& mix=panel.workspace.mixControl();
     REQUIRE(mix.isVisible() && mix.selector.getText()=="Wet Layer" && mix.dry.getValue()==0 && mix.wet.getValue()==100);
     mix.beforeInvocation();mix.selector.setSelectedId(5,juce::sendNotificationSync);
     REQUIRE(panel.levels==controls::ExportLevelsControl::Pair(1,1) && mix.selector.getText()=="Cinematic");
     mix.beforeInvocation();mix.dry.setValue(35,juce::sendNotificationSync);mix.wet.setValue(65,juce::sendNotificationSync);
     REQUIRE(panel.levels==controls::ExportLevelsControl::Pair(.35f,.65f) && mix.selector.getText()=="Custom");
-    REQUIRE(panel.workspace.placementHelp().getText().contains("Mute the original dry"));
+    REQUIRE(panel.workspace.placementText().contains("Mute the original dry"));
     REQUIRE(panel.display.songExport.prepared->plan->dry==.35f && panel.display.songExport.prepared->plan->wet==.65f);
     for(const auto size:std::array<juce::Point<int>,2>{{{900,600},{1400,900}}}){
         panel.setSize(size.x,size.y);panel.refresh();
@@ -169,7 +169,7 @@ inline void cases()
         REQUIRE(!w.waveformBounds().intersects(panel.workspace.loopOptions().getBounds()));
         REQUIRE(w.getLocalBounds().contains(mix.getBounds()));
         for(auto* child:mix.getChildren())REQUIRE(mix.getLocalBounds().contains(child->getBounds()));
-        REQUIRE(w.getLocalBounds().contains(panel.workspace.placementHelp().getBounds()));
+        REQUIRE(w.placementText().startsWith("Place WAV"));
         for(auto* child:panel.workspace.loopOptions().getChildren())
             REQUIRE(panel.workspace.loopOptions().getLocalBounds().contains(child->getBounds()));
         for(const auto* name:{"exportSave","exportReturn","exportDrag"}){

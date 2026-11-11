@@ -150,7 +150,9 @@ void SwellEngine::serviceExportPreview()
         discard();if(!pin->metrics.audibleStart || !pin->metrics.audibleEnd){exportVoice->stop();return;}
         auto layerPlan=std::make_shared<SongExportPlan>(*pin->plan);layerPlan->dry=layerPlan->wet=1;
         bool wetAvailable=!layerPlan->members.empty();
+        float liveWetDb=0;
         {const juce::ScopedLock guard(lock);
+            liveWetDb=model.liveWetDb;
             const bool solo=std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.solo;});
             for(const auto& w:model.swells)if(w.enabled && !w.muted && (!solo || w.solo)
                 && std::none_of(layerPlan->members.begin(),layerPlan->members.end(),[&](const auto& m){return m.accepted.id==w.id;}))wetAvailable=false;
@@ -162,8 +164,14 @@ void SwellEngine::serviceExportPreview()
             Session fixed;fixed.timing=pin->plan->timing;fixed.gainPolicy=pin->plan->gainPolicy;fixed.gainRevision=pin->plan->gainRevision;
             for(const auto& member:pin->plan->members)fixed.swells.push_back(member.accepted);
             std::shared_ptr<const SongExportPlan> expanded;
-            if(prepareLoopExportPlan(fixed,pin->plan->source,pin->plan->sourceReference,*pin->plan->loop,1,1,expanded,error))
+            if(prepareLoopExportPlan(fixed,pin->plan->source,pin->plan->sourceReference,*pin->plan->loop,1,1,expanded,error)){
                 layerPlan=std::make_shared<SongExportPlan>(*expanded);
+                if(pin->plan->wet>0)layerPlan->loopWetGain=pin->plan->loopWetGain;
+                else if(!prepareLoopExportWetGain(*layerPlan,liveWetDb,instanceRoot(layerPlan->source),error,cancelled)){
+                    if(cancelled()){fail();return;}
+                    error.clear();wetAvailable=false;layerPlan->wet=0;
+                }
+            }
             else if(pin->plan->wet>0){fail();return;}
             else {error.clear();wetAvailable=false;layerPlan->wet=0;}
         }
@@ -259,6 +267,11 @@ void SwellEngine::prepareExport(const PreviewContext& context)
         :prepareSongExportPlan(accepted,context.capture.manifest,context.capture.reference,context.time,levels.dry,levels.wet,plan,error);
     if(!planned){
         fail(error);return;
+    }
+    if(plan->loop && plan->wet>0){
+        auto matched=std::make_shared<SongExportPlan>(*plan);
+        if(!prepareLoopExportWetGain(*matched,accepted.liveWetDb,directory,error,cancelled)){fail(error);return;}
+        plan=std::move(matched);
     }
     // The same worker owns transport, render and composition preparation. Reserve
     // the remaining shared budget, including publication scratch, for this job.

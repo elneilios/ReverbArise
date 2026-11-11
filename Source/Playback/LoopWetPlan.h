@@ -16,6 +16,11 @@ struct LoopWetPlan
 
     bool prepare(int64_t phraseFrames, uint64_t budget, juce::String& error,
                  const RenderCancellation& cancelled = {});
+    float wetGain(float requested, float ceiling, bool fixedGrid) const noexcept
+    {
+        const auto peak = fixedGrid ? fixedGridPeak : peakBound;
+        return peak > 0 ? std::min(requested, ceiling / peak) : requested;
+    }
 
     template <typename PositionAt>
     LoopWetSample sample(int64_t near, int64_t first, int64_t last, PositionAt&& position) const noexcept
