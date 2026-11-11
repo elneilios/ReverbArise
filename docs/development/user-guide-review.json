@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the connected-tab pointer release fix against the current guide. Mouse activation now follows the documented tab behavior, with the same keyboard, accessibility and selection rules. No guide text changed.",
+  "summary": "Reviewed the completed waveform paint requirements against the existing Perform zoom, pan and inspection guide. This closeout records existing behavior. Reviewed the Diagnostics layout and build, validation and install workflow updates already on main. The guide instructions still match the shipped workflows.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
-      "bytes": 2403,
-      "sha256": "57a82fb7f4fca729f559671e2f85f8cb2ad6c0add327259e6f8521152a8383a8"
+      "bytes": 2415,
+      "sha256": "a7b034cdbacbb7ad8fa816a2ccfd23d173ea5dbc97972cb899fd852e740b54ab"
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 33415,
-      "sha256": "d343f5fc0bc59f5fea8ee4886cbea5b327c3707d43593e957a529ac3c9d66c6f"
+      "bytes": 37419,
+      "sha256": "95095f87479a711741d27d8e0fdec5023ab36ba8d501c58dc550f48e3648cdfa"
     },
     {
       "path": "CMakePresets.json",
@@ -505,8 +505,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 102700,
-      "sha256": "2fcbb72b6dd36aebc1b520ddc0fd8c1259ca914ba66029b213cbf92db82b20b9"
+      "bytes": 102675,
+      "sha256": "a6632dff975b02db7981ffdfeac4387aa5d448680044287917aaef754e7fecd0"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -1005,8 +1005,8 @@
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
-      "bytes": 3758,
-      "sha256": "f3a85ea4c0288514e6d8f11df7b155e5dfe6f6b4cd53e5b30cdb90fb0ed92c07"
+      "bytes": 3412,
+      "sha256": "9d91b2e8df71443886333e41a564f40cb330ead10c356f7f6396209d9a14b086"
     },
     {
       "path": "docs/development/product-version.md",
@@ -1110,8 +1110,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 117138,
-      "sha256": "43cd21afb25d0e85e7b8c46ccab5b11bffd56162a6cc6cbd9e021be9c3ba925d"
+      "bytes": 120217,
+      "sha256": "20c1f4c0c67c76113566eaf12ead47c802ecb91fe742442bfcbd948c1067bc0d"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -1135,13 +1135,13 @@
     },
     {
       "path": "scripts/build-support.ps1",
-      "bytes": 9699,
-      "sha256": "8d312cc80f0fdc230a02229298bd1faf7d2927a89e23975508df0a3b8b0810e9"
+      "bytes": 12093,
+      "sha256": "4eb8a41d03f1fd90a491d07f8697457049903a297a9c1ec69fdfc163d511432c"
     },
     {
       "path": "scripts/build.ps1",
-      "bytes": 454,
-      "sha256": "cb9d4059535e34c6a8bb3d527347fcd082adeda3cdece90d21da8006c3d74228"
+      "bytes": 620,
+      "sha256": "c14e8f7f99a66a90df70c0ef0fc1bac04a4db4de6b0c5ed8e5010a0d36fd8f71"
     },
     {
       "path": "scripts/check-user-guide.ps1",
