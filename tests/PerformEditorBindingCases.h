@@ -22,11 +22,64 @@ void Composition::verifyEditorBindings()
     for(const auto size:{juce::Point<int>{1100,850},{1199,900},{1200,900},{1400,900},{1400,1000},{1600,1000}})
     {panel->setSize(size.x,size.y);checkLayout();}
     panel->setSize(1100,850);panel->refresh();
-    zoom.beforeInvocation();zoom.onZoomFraction(.65);const auto userView=panel->timelineComponent().viewport();
+    zoom.beforeInvocation();zoom.onZoomFraction(.65);
+    auto& zoomTrack=zoom.zoomSlider();
+    const auto zoomPoint=zoomTrack.getLocalBounds().getCentre().toFloat();
+    auto stamp=juce::Time::currentTimeMillis();
+    const auto zoomWheel=[&](juce::ModifierKeys modifiers)
+    {
+        const juce::Time now(++stamp);
+        const juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),zoomPoint,modifiers,
+            0,0,0,0,0,&zoomTrack,&zoomTrack,now,zoomPoint,now,0,false);
+        juce::MouseWheelDetails amount{};amount.deltaY=.1f;
+        zoomTrack.mouseWheelMove(event,amount);
+    };
+    const auto beforeWheel=zoomTrack.getValue();
+    zoomWheel({});
+    REQUIRE(std::abs(zoomTrack.getValue()-beforeWheel-.05)<.001);
+    zoomWheel(juce::ModifierKeys::ctrlModifier);
+    REQUIRE(std::abs(zoomTrack.getValue()-beforeWheel-.055)<.001);
+    const auto userView=panel->timelineComponent().viewport();
     REQUIRE(engine.savedSession().performUi.hasView);
+    auto& enabled=require<controls::BooleanToggle>(*panel,"swellEnabled");
+    auto& solo=require<controls::BooleanToggle>(*panel,"swellSolo");
+    auto& freeze=require<controls::BooleanToggle>(*panel,"freezeRender");
+    const auto beforeFlags=engine.savedSession();
+    const auto beforeEnabled=enabled.getToggleState();
+    REQUIRE(enabled.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    REQUIRE(m3::find(engine.savedSession(),beforeFlags.primary)->enabled!=beforeEnabled);
+    REQUIRE(enabled.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    for(auto* flag:{&enabled,&solo,&freeze})flag->beforeInvocation();
     REQUIRE(engine.selectTargets({secondId},secondId));panel->refresh();
+    for(auto* flag:{&enabled,&solo,&freeze})
+    {
+        const auto accepted=flag->getToggleState();
+        flag->setToggleState(!accepted,juce::dontSendNotification);
+        flag->onClick();
+        REQUIRE(flag->getToggleState()==accepted);
+    }
+    const auto afterFlags=engine.savedSession();
+    for(const auto& before:beforeFlags.swells)
+    {
+        const auto* after=m3::find(afterFlags,before.id);REQUIRE(after);
+        REQUIRE(after->enabled==before.enabled && after->solo==before.solo && after->frozen==before.frozen);
+    }
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
+    auto* processing=panel->settingsPanel()->page(m3::ui::SettingsPage::processing);
+    auto& automatic=require<controls::Switch>(*processing,"automaticProcessing");
+    auto& autoRefresh=require<controls::Switch>(*processing,"autoRefreshAfterRecapture");
+    for(auto* setting:{&automatic,&autoRefresh})setting->beforeInvocation();
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));panel->refresh();
+    const auto beforeProcessing=engine.savedSession();
+    for(auto* setting:{&automatic,&autoRefresh})
+    {
+        const auto accepted=setting->getToggleState();
+        setting->setToggleState(!accepted,juce::dontSendNotification);
+        setting->onClick();
+        REQUIRE(setting->getToggleState()==accepted);
+    }
+    REQUIRE(engine.savedSession().automaticProcessing==beforeProcessing.automaticProcessing);
+    REQUIRE(engine.savedSession().autoRegenerate==beforeProcessing.autoRegenerate);
     REQUIRE(require<LearnWorkspace>(*panel,"learnWorkspace").isVisible() && !zoom.isVisible());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));panel->refresh();
     REQUIRE(panel->timelineComponent().viewport().first==userView.first && panel->timelineComponent().viewport().last==userView.last);
@@ -39,8 +92,10 @@ void Composition::verifyEditorBindings()
         const auto p=juce::Point<int>{x,list.getRowPosition(row,true).getCentreY()};
         auto* component=list.getComponentAt(p);REQUIRE(component);
         const auto local=component->getLocalPoint(&list,p).toFloat();const auto now=juce::Time::getCurrentTime();
-        juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),local,mods,0,0,0,0,0,component,component,now,local,now,1,false);
-        component->mouseDown(event);component->mouseUp(event);
+        const auto mouse=[&](juce::ModifierKeys keys)
+        {return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),local,keys,0,0,0,0,0,component,component,now,local,now,1,false);};
+        component->mouseDown(mouse(mods.withFlags(juce::ModifierKeys::leftButtonModifier)));
+        component->mouseUp(mouse(mods));
     };
     const auto reveals=[&](int64_t arrival)
     {
@@ -63,8 +118,27 @@ void Composition::verifyEditorBindings()
     clickRow(firstId,juce::ModifierKeys::ctrlModifier);reveals(48000);REQUIRE(engine.savedSession().selected.size()==2);
     clickRow(secondId,juce::ModifierKeys::shiftModifier);reveals(245760);REQUIRE(engine.savedSession().selected.size()==2);
     // Checkbox enablement remains a separate action and does not request reveal.
-    timeline.setViewport({100000,140000});clickRow(secondId,{},12);
-    REQUIRE(timeline.viewport().first==100000);clickRow(secondId,{},12);
+    timeline.setViewport({100000,140000});
+    const auto checkboxRow=list.rowFor(secondId);
+    list.scrollToEnsureRowIsOnscreen(checkboxRow);
+    auto* rowSurface=list.getComponentForRowNumber(checkboxRow);
+    REQUIRE(rowSurface);
+    auto* checkbox=dynamic_cast<controls::BooleanToggle*>(rowSurface->getChildComponent(0));
+    REQUIRE(checkbox);
+    const auto rowWasEnabled=m3::find(engine.savedSession(),secondId)->enabled;
+    const auto clickEnabled=[&]
+    {
+        const auto point=checkbox->indicatorBounds().getCentre().toFloat();
+        const auto now=juce::Time::getCurrentTime();
+        const auto mouse=[&](juce::ModifierKeys keys)
+        {return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,keys,0,0,0,0,0,checkbox,checkbox,now,point,now,1,false);};
+        checkbox->mouseDown(mouse(juce::ModifierKeys::leftButtonModifier));
+        checkbox->mouseUp(mouse({}));
+    };
+    clickEnabled();
+    REQUIRE(timeline.viewport().first==100000 && m3::find(engine.savedSession(),secondId)->enabled!=rowWasEnabled);
+    clickEnabled();
+    REQUIRE(m3::find(engine.savedSession(),secondId)->enabled==rowWasEnabled);
     REQUIRE(engine.edit(firstId,[](auto& swell,auto&){swell.name="Renamed navigation target";return true;}));panel->refresh();
     clickRow(firstId);reveals(48000);
     revealed=timeline.viewport();panel->refresh();panel->refresh();REQUIRE(timeline.viewport().first==revealed.first);

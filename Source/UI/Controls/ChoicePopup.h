@@ -119,8 +119,7 @@ public:
         auto* display=juce::Desktop::getInstance().getDisplays().getDisplayForRect(anchor);
         const auto work=display?display->userArea:anchor.expanded(SelectorPresentation::popupMaximumWidth);
         const auto width=juce::jmin(work.getWidth(),juce::jlimit(unit(SelectorPresentation::popupMinimumWidth),unit(SelectorPresentation::popupMaximumWidth),anchor.getWidth()));
-        int height=2*unit(SelectorPresentation::popupPadding);
-        for(auto& row:rows)height+=row->heightFor(width-2*unit(SelectorPresentation::popupPadding)-viewport.getScrollBarThickness());
+        const auto height=rowsHeight(width-2*frameInset)+2*unit(SelectorPresentation::popupPadding);
         setBounds(placedBounds(anchor,work,width,height));
         addToDesktop(juce::ComponentPeer::windowIsTemporary);setVisible(true);enterModalState(true);startTimerHz(20);
         if(keyboard && !rows.empty())
@@ -131,8 +130,11 @@ public:
     }
     void resized()override
     {
-        viewport.setBounds(getLocalBounds().reduced(unit(SelectorPresentation::popupPadding)));
-        const auto width=juce::jmax(1,viewport.getWidth()-viewport.getScrollBarThickness());int y=0;
+        viewport.setBounds(getLocalBounds().reduced(frameInset,unit(SelectorPresentation::popupPadding)));
+        const auto available=viewport.getWidth();
+        const auto gutter=rowsHeight(available)>viewport.getHeight()?viewport.getScrollBarThickness():0;
+        const auto width=juce::jmax(1,available-gutter);
+        int y=0;
         for(auto& row:rows){const auto height=row->heightFor(width);row->setBounds(0,y,width,height);y+=height;}
         content.setSize(width,y);
     }
@@ -156,6 +158,7 @@ public:
         const auto result=interaction.complete(index);if(result!=0)finish(result,PopupDismissal::commit);
     }
     void dismiss(PopupDismissal why=PopupDismissal::cancel){if(interaction.done())return;interaction.cancel();finish(0,why);}
+    bool showFocusOnReturn()const noexcept{return dismissalFocusVisible;}
     bool keyPressed(const juce::KeyPress& key)override
     {
         visibility->keyboardInput();const auto code=key.getKeyCode();
@@ -203,6 +206,15 @@ public:
     {const auto index=indexAt(event);const bool held=index>=0 && interaction.heldIndex()==index;interaction.pointerUp();repaintRows();if(held)activate(index);}
     void mouseDrag(const juce::MouseEvent& event)override{pointAt(event);}
 private:
+    static constexpr int frameInset=1;
+
+    int rowsHeight(int width)const
+    {
+        int height=0;
+        for(const auto& row:rows)height+=row->heightFor(juce::jmax(1,width));
+        return height;
+    }
+
     int unit(float value)const noexcept{return juce::jmax(1,juce::roundToInt(value*magnification));}
     int indexAt(const juce::MouseEvent& event)
     {
@@ -217,6 +229,7 @@ private:
     {if(origin==nullptr || !origin->isShowing() || !origin->isEnabled())dismiss(PopupDismissal::ownerGone);else if(!juce::Process::isForegroundProcess())dismiss(PopupDismissal::outside);}
     void finish(int id,PopupDismissal why)
     {
+        dismissalFocusVisible=visibility->isVisible();
         stopTimer();exitModalState();setVisible(false);
         if(origin!=nullptr)origin->repaint();
         auto callback=std::move(completion);
@@ -231,6 +244,7 @@ private:
     juce::Component content;
     std::vector<std::unique_ptr<Row>> rows;
     juce::SharedResourcePointer<FocusVisibility> visibility;
+    bool dismissalFocusVisible=false;
     float magnification=1.f;
 };
 }

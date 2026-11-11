@@ -29,10 +29,14 @@ public:
     int inspected()const noexcept{return pointer>=0?pointer:keyboard;}
     int keyboardIndex()const noexcept{return keyboard;}
     int heldIndex()const noexcept{return held;}
-    void pointerEnter(int index){pointer=!finished && valid(index)?index:-1;}
+    void pointerEnter(int index){pointer=canPointAt(index)?index:-1;}
     void pointerLeave(int index){if(pointer==index)pointer=-1;}
     void pointerExit(){pointer=-1;held=-1;}
-    void pointerDown(int index){keyboard=-1;held=!finished && valid(index)?index:-1;}
+    void pointerDown(int index)
+    {
+        held=canPointAt(index)?index:-1;
+        if(held>=0 || !valid(index))keyboard=-1;
+    }
     void pointerUp(){held=-1;}
     void keyboardInspect(int index){pointer=-1;held=-1;keyboard=!finished && valid(index)?index:-1;}
     void navigationLost(){keyboard=-1;}
@@ -45,6 +49,8 @@ public:
         cancel();return result;
     }
 private:
+    bool canPointAt(int index)const noexcept
+    {return !finished && valid(index) && choices[static_cast<size_t>(index)].eligible;}
     std::vector<PopupChoice> choices;
     int pointer=-1,keyboard=-1,held=-1;
     bool finished=false;

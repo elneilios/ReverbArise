@@ -202,7 +202,7 @@ static void loopUiCases(bool review)
     auto* arm=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"learnLoopArm"));
     auto* method=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopMethod"));
     auto* unit=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopUnit"));
-    auto* count=dynamic_cast<m3::ui::controls::NumericInputControl*>(named(editor,"learnLoopCount"));
+    auto* count=dynamic_cast<m3::ui::controls::FieldNumericInput*>(named(editor,"learnLoopCount"));
     auto* status=dynamic_cast<juce::Label*>(named(editor,"learnLoopStatus"));
     auto* automatic=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutomaticSwells"));
     auto* recapture=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"recaptureExisting"));
@@ -260,11 +260,11 @@ static void loopUiCases(bool review)
     REQUIRE(arm->isEnabled() && !visible(count));
     REQUIRE(!visible(status) && arm->getTooltip()=="Arm the next recording.");
     REQUIRE(method->getTooltip().contains("Stop MIDI note") && method->getTooltip().contains("next bar line"));
-    REQUIRE(controlBounds("learnRecaptureLabel").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
+    REQUIRE(controlBounds("recaptureExisting").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
     captureImage(editor,"issue126-learn-end-signal");
     activate(*arm);
     REQUIRE(arm->getToggleState() && processor.getWorkflowSnapshot().phase==workflow::Phase::armed);
-    REQUIRE(visible(status) && controlBounds("learnRecaptureLabel").getY()>controlBounds("learnLoopStatus").getBottom());
+    REQUIRE(visible(status) && controlBounds("recaptureExisting").getY()>controlBounds("learnLoopStatus").getBottom());
     activate(*arm); // The preview has no audio callbacks between these clicks.
     REQUIRE(!arm->getToggleState() && toggle->isEnabled());
     REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
@@ -327,6 +327,46 @@ static void loopUiCases(bool review)
     REQUIRE(status->getText().contains("Recapture audio"));
     REQUIRE(!onStop->isEnabled());
     REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(accepted.manifest.loop->endSample)));
+    // Shared P3 wrapping must allocate the full Loop status and move following
+    // controls inside the existing scroll region, including long explanations.
+    const auto longStatus=juce::String::repeatedString("Wait for the accepted Loop and its timing reference before recording again. ",12);
+    workspace->displayLoop(processor.getLoopCapturePreference(),false,false,false,false,false,longStatus);
+    workspace->resized();
+    const auto* wrappedStatus=dynamic_cast<m3::ui::controls::WrappedLabel*>(status);REQUIRE(wrappedStatus);
+    REQUIRE(status->getHeight()==wrappedStatus->preferredHeight(status->getWidth()));
+    REQUIRE(recapture->getY()>=status->getBottom() && policies->getViewedComponent()->getHeight()>=generate->getBottom());
+    REQUIRE(status->getTooltip()==longStatus);
+    editor.refresh();
+    // Main's waveform navigation must use the accepted phrase, even when the
+    // host has no Song position. Refresh retains inspection; a new source resets it.
+    const auto fullLoopView=workspace->dryViewport();
+    const auto point=workspace->timelineBounds().getCentre().toFloat();
+    const auto stamp=juce::Time::getCurrentTime();
+    const auto pointer=[&](juce::Point<float> at,juce::ModifierKeys keys){
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),at,keys,
+            0,0,0,0,0,workspace,workspace,stamp,point,stamp,1,at!=point);
+    };
+    juce::MouseWheelDetails wheel{};wheel.deltaY=.5f;
+    workspace->mouseWheelMove(pointer(point,{}),wheel);
+    const auto zoomed=workspace->dryViewport();
+    REQUIRE(zoomed.second-zoomed.first<fullLoopView.second-fullLoopView.first);
+    workspace->mouseDown(pointer(point,juce::ModifierKeys::leftButtonModifier));
+    workspace->mouseUp(pointer(point,{}));
+    const auto pin=workspace->inspectedSample();
+    REQUIRE(pin && workspace->hasPinnedInspection());
+    REQUIRE(workspace->inspectionText().contains("Bar ") && !workspace->inspectionText().contains("Timing unavailable"));
+    workspace->mouseDown(pointer(point,juce::ModifierKeys::middleButtonModifier));
+    workspace->mouseDrag(pointer(point.translated(40,0),juce::ModifierKeys::middleButtonModifier));
+    workspace->mouseUp(pointer(point.translated(40,0),{}));
+    const auto panned=workspace->dryViewport();
+    REQUIRE(panned!=zoomed && panned.first>=0 && panned.second<=fullLoopView.second);
+    editor.refresh();
+    REQUIRE(workspace->dryViewport()==panned && workspace->inspectedSample()==pin);
+    auto replacement=accepted;replacement.reference+="-replacement";++replacement.manifest.revision;
+    workspace->display(replacement,processor.swellEngine().snapshot(),processor.getSongTime(),processor.getWorkflowSnapshot(),false);
+    REQUIRE(workspace->dryViewport()==fullLoopView && !workspace->hasPinnedInspection());
+    editor.refresh();
+    REQUIRE(workspace->dryViewport()==fullLoopView && processor.getCaptureSnapshot().reference==accepted.reference);
     for (const auto scale : {100,125})
     {
         REQUIRE(editor.setPresentationScale(scale));
@@ -469,12 +509,12 @@ static void aboutBindings(bool review=false)
     if(!review)writer=[&](const juce::String& information){copiedInformation=information;};
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor,std::move(writer));editor->setVisible(true);editor->refresh();
     const auto showAbout=[&]{auto* action=dynamic_cast<juce::Button*>(named(*editor,"diagnostics"));REQUIRE(action);action->onClick();
-        auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);};
+        editor->settingsPanel()->selectPage(m3::ui::SettingsPage::about);};
     if(review)
     {
         juce::Timer::callAfterDelay(200,[safe=juce::Component::SafePointer<PreverbAudioProcessorEditor>(editor.get())]{if(!safe)return;
             auto* action=dynamic_cast<juce::Button*>(named(*safe,"diagnostics"));REQUIRE(action);action->onClick();
-            auto* tabs=dynamic_cast<juce::TabbedComponent*>(safe->settingsPanel());REQUIRE(tabs);const auto about=tabs->getTabNames().indexOf("About");REQUIRE(about>=0);tabs->setCurrentTabIndex(about);});
+            safe->settingsPanel()->selectPage(m3::ui::SettingsPage::about);});
         controlReview::run(std::move(editor));return;
     }
     juce::String before,after,error;REQUIRE(encode(engine.savedSession(),before,error));
@@ -601,14 +641,14 @@ int main(int argc,char** argv){return runTest([&]
         {
             candidateOverlay(*editor,fixture);
             auto* button=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"learnGenerateSwells"));REQUIRE(button && button->isEnabled());
-            auto* helper=dynamic_cast<juce::Label*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
+            auto* helper=dynamic_cast<m3::ui::controls::WrappedLabel*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
             REQUIRE(helper->getText().replace("\n"," ")=="Want to place swells yourself? Add manual swells in Perform.");
-            REQUIRE(helper->getText().containsChar('\n') && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
+            REQUIRE(helper->textLayout(helper->getWidth()).getNumLines()>1 && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
             REQUIRE(!helper->getText().contains("?\n") && helper->getText().contains("? Add"));
             for(auto size:{juce::Point{1100,850},juce::Point{1400,1000},juce::Point{1600,1100}})
             {
                 editor->setSize(size.x,size.y);editor->refresh();
-                REQUIRE(helper->getWidth()>0 && helper->getHeight()>=40);
+                REQUIRE(helper->getWidth()>0 && helper->getHeight()>=helper->preferredHeight(helper->getWidth()));
                 const auto* reason=named(*editor,"learnGenerateReason");REQUIRE(reason);
                 REQUIRE(reason->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
                 REQUIRE(helper->getY()-reason->getBottom()==m3::ui::spacing::labelHelp);

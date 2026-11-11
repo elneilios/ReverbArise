@@ -19,6 +19,46 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 25 adds measured `WrappedLabel` prose and shared
+full descriptions to `EllipsisLabel`. Use the wrapped label's preferred height
+when laying out following content, with existing focus-aware scrolling for long
+pages. Context help uses the semantic `contextHelpInk` role, reusing #00C2CC.
+See the [P3 consumer and validation record](../validation/2026-11-10-issue-107-text-help.md).
+
+Production standards revision 24 adopts the approved P8 waveform gestures.
+Reuse `WaveformGestures` for input classification, pointer-wheel zoom and
+focus rendering. Each main canvas keeps its own bounds and model binding.
+Left-click or drag positions the local marker or edits a Perform handle.
+Middle-drag pans and right input is idle. Perform's compact Overview uses
+left-drag alone to pan at the current zoom. See the
+[native and production evidence](../validation/2026-11-10-issue-107-waveform-gestures.md).
+
+Production standards revision 20 uses labeled switches in Learn and Settings
+and inline checkboxes for Enabled, Solo and Freeze. Use `Switch` and the
+checkbox form of `BooleanToggle` for their shared pointer, focus and activation
+policy. Give the indicator and label one clickable area and preserve the
+binding's accepted value and eligibility.
+
+Production standards revision 19 adopts the approved P5 dial and track states.
+Use the shared dial or track surface and the same corner-bracket geometry as
+command controls. Configure wheel steps in the control's own units. Ctrl+wheel
+uses the fine step, and neighboring numeric boxes retain the P4 stepper policy.
+The optional home detent applies to raw dial drag candidates. Level is the
+first consumer, with its home at 0 dB and a ±0.3 dB band. See the
+[C5 contract](ui-control-contracts.md#c5--knobs-and-sliders) and
+[P5 evidence](../validation/2026-11-09-issue-107-knobs-sliders.md).
+
+Production standards revision 18 adopts the owner-approved P4 field family.
+Use `FieldTextEditor` for editable and read-only text and `FieldNumericInput`
+for numeric value boxes. Keep each binding's commit, cancellation, range and
+precision rules. Route local help and validation through `FieldFeedbackLabel`,
+with error text and border independent of keyboard or accessibility focus.
+Captions belong above the editable field or group. When a value box has
+steppers, wheel input over the box or arrows makes one configured step. Use the
+[C4 contract](ui-control-contracts.md#c4--numeric-and-text-fields) and
+[P4 review evidence](../validation/2026-11-09-issue-107-numeric-text-fields.md)
+for the approved variants and subtype behavior.
+
 Issue #108, production standards revision 15. Level uses the standard `KnobValue`
 appearance and drag response with one -12 to +12 dB edit range. The normal
 field shows an older value below -12 dB. A primary press on the dial brings
@@ -56,8 +96,8 @@ feedback. Destructive hover/press stays red; neutral icons remain off-white.
 Primary/on-latch fills keep contrasting dark content. Disabled body state wins
 over mouse emphasis; focus remains independent. Reuse explicit variants and
 `CommandButton` invocation hooks, never names or labels to select appearance.
-The 20 scoped legacy commands now use ActionButton; generic Rename OK/Cancel
-keeps the neutral theme fallback. FileDragTile and knobs retain their painters.
+The 20 scoped legacy commands use ActionButton. Revision 18 also adopts neutral
+ActionButtons for Rename OK and Cancel. FileDragTile and knobs retain their painters.
 [Button evidence](../validation/2026-11-06-issue-107-buttons.md) records the family
 approval, 85/85 native checks and owner acceptance of the integrated IR alignment correction.
 
@@ -145,6 +185,14 @@ lists the integration baseline, component ownership and remaining legacy consume
   rebuilding the waveform editor as generic sliders.
 - Native OS file choosers and window chrome may remain native. Their invocation,
   ownership and safe completion paths must still be shared and tested.
+
+The Loop Learn policy viewport reuses the labeled `Switch` family and
+`FieldNumericInput` for duration count. Loop status and helper prose allocate
+`WrappedLabel` preferred heights within that viewport. Its Arm command retains the approved
+destructive latch. Shared waveform navigation stays bounded to the accepted
+phrase, and a replacement source clears its inspection/navigation context.
+See the [first main/Loop integration evidence](../validation/2026-11-10-loop-main-integration.md)
+for combined validation and remaining host/DPI coverage.
 
 ## Consistent interaction
 
@@ -445,21 +493,31 @@ smoke rather than repeating passing automated edge cases.
 The first families live under `Source/UI/Controls/`; they were approved in a
 native review fixture and are composed into the shared production WorkflowHeader:
 
-- `SegmentedSelector::display(choices, acceptedId)` silently supplies labels,
+- Production standards revision 21 uses `SegmentedSelector` for the workflow
+  header, Learn, the Swell Inspector and Settings. The control's
+  `display(choices, acceptedId)` silently supplies labels,
   help, availability and unavailable reasons. `onRequest(id)` emits an intent;
   the binding must revalidate it against the model and call `display` with the
   accepted state. Pointer/Enter/Space activation never toggles optimistically.
   Arrow/Home/End keys inspect choices without selecting them; Tab enters/leaves
   the group. The group exposes all reasons through accessibility descriptions,
-  including disabled choices. Wheel and repeated active selection are no-ops.
+  including unavailable choices. Wheel forwards to surrounding scrolling and
+  repeated active selection does not invoke the binding.
   Segments share square internal joins with one border; only the group's outer
-  left/right ends are rounded, following owner checkpoint-A feedback.
+  left/right ends are rounded. The body shows separate hover and held feedback.
+  The shared provenance policy shows outer brackets for keyboard and explicit
+  accessibility focus. A pointer click hides the brackets and retains focus.
   Navigation text uses the shared 18-pixel Semibold role. Issue #35 adds an optional
   semantic `ModeIcon` to each choice, defaulting to no icon. Canonical 16-pixel SVG
   icons precede labels by 8 pixels; the combined group stays centred inside the
-  existing segment geometry. `ModeIconCache` prepares immutable source and separate
+  existing segment geometry. Settings uses the comfortable body text role.
+  `ModeIconCache` prepares immutable source and separate
   foreground variants before paint. Borders still paint above all child fills,
   preserving the Issue #11 shared-edge and focus regressions.
+- `SettingsTabs` composes the shared strip with existing page components.
+  Register and select pages by `SettingsPage` identity. About is the terminal
+  entry, and Appearance is available before Storage when responsive presentation
+  is enabled. Only the active page participates in the window's focus traversal.
 - `HeaderInformation` owns the regular 14-pixel Inter mode description in
   `#C7CDD4`, centred in the 32-pixel information row. Its 2×16-pixel aqua accent
   has an 8-pixel gap to text and an 8-pixel trailing inset. The screen supplies
@@ -516,10 +574,13 @@ are follow-up consumers, not a precedent for new controls.
 invocation hooks, semantic play/stop/save/return glyphs and in-bounds focus ink.
 `Controls/FileDragTile.h` owns a once-per-pointer-gesture external-file intent
 and click/Enter/Space Save fallback, with no path storage or filesystem I/O.
-Bindings own current-file verification and session/revision authority. The tile
-never claims the host accepted a drop. Disabled actions do not invoke bindings;
-keyboard activation remains usable after dragging. Native cases exercise these
-contracts before wider rollout. Existing Settings/Diagnostics and Perform text
+Revision 22 uses `ExportFileInvocations` to pin the session, pass and prepared
+WAV at input. The engine validates that identity and resolves the ready path.
+`NativeWavDrag` offers that path to Windows as a copy and uses the negotiated drop
+effect for WAV or stop feedback. The background worker has already checked the
+file. Save keeps the native chooser, overwrite confirmation and guarded worker.
+The tile clears its solid pointer border after drop, cancellation or failure.
+Keyboard and accessibility activation remain available after dragging. Existing Settings/Diagnostics and Perform text
 buttons are untouched consumers, not claimed migrated. The owner approved these families in native component checkpoint A on
 2026-11-04; the existing numeric stepper approval is preserved. Integrated
 Export workspace acceptance remains a separate checkpoint.
@@ -531,6 +592,11 @@ shared Zoom − / slider / Zoom + / Fit family and musical ruler integration.
 Export retains its own complete-audible-composition Fit policy and does not adopt
 Perform's Snap/grid or editing handles. See the [Export handover](../design/export-workspace.md#deferred-integration-handover-to-issue-46--agent-2).
 ## Swells list family — issue #4
+
+Production standards revision 23 gives the primary row two Tab stops, Enabled
+and More actions, before the inspector. Use the shared checkbox and command
+focus treatment. Delete from a selected row with multiple swells selected
+requires confirmation for the captured IDs, with Cancel focused.
 
 `Controls/SwellList.h` is the processor-independent, virtualized Swells list
 family. It retains the existing Perform row appearance and `swellList` identity;

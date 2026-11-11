@@ -12,6 +12,9 @@ This directory covers product identity, the existing implementation, development
 
 ## Recent engineering references
 
+- [Shared text, help and notices — issue #107](validation/2026-11-10-issue-107-text-help.md) — approved aqua footer, measured text wrapping and complete consumer dispositions across modes, Settings, Diagnostics and Storage/Recovery.
+
+- [Connected tabs — issue #107](validation/2026-11-10-issue-107-connected-tabs.md) — native preview approval, editor and Settings adoption, and About last.
 - [Shared command buttons — issue #107](validation/2026-11-06-issue-107-buttons.md) — owner-approved native family revision 4, explicit command roles and independent aqua corner focus; production migration, automated checks and integrated acceptance are recorded separately. Knobs and independently owned #108/#8 implementation remain outside this migration.
 - [Shared selectors — issue #107](validation/2026-11-07-issue-107-selectors.md) — approved quiet inspection/explicit commit, independent aqua focus and small local help/red error feedback; named consumer adoption and native verification. Action menus remain a separate child.
 - [Shared field feedback — issue #107](validation/2026-11-07-issue-107-field-feedback.md) — native approval and the Settings Swell source-range adoption.
@@ -78,6 +81,8 @@ This directory covers product identity, the existing implementation, development
 - [Shared timeline controls](development/shared-timeline-controls.md) — composable Zoom/Fit intents, musical ruler and the #46 → #6 Export integration boundary.
 
 - [Issue #4 chronological Swells list](validation/2026-11-04-issue-4-swell-list.md) — list control, scoped native acceptance and automated capture/restore evidence; host/DPI results are recorded separately.
+
+- [First main → Loop integration](validation/2026-11-10-loop-main-integration.md) — merge decisions, combined native verification and explicit host/DPI limits.
 
 - [Production UI design system](design/ReverbArise_UI_Layout_and_Style_Guide.md) — validated Learn/header roles, comfortable density and review rules; [issue #37 evidence](validation/2026-11-04-issue-37-ui-standards.md) separates automated/native results from host/DPI coverage.
 

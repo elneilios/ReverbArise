@@ -76,6 +76,8 @@ void Composition::verifyKnobs()
     load(original);actual.mouseWheelMove(event(start,{}),wheel);REQUIRE(at(A::end)==72000);
     actual.mouseWheelMove(event(start,{}),wheel);REQUIRE(at(A::end)==78000);
     actual.mouseWheelMove(event(start,juce::ModifierKeys::ctrlModifier|juce::ModifierKeys::shiftModifier),wheel);REQUIRE(at(A::end)==78005);
+    actual.mouseWheelMove(event(start,juce::ModifierKeys::ctrlModifier),wheel);REQUIRE(at(A::end)==78053);
+    actual.mouseWheelMove(event(start,{}),wheel);REQUIRE(at(A::end)==84000);
     load(original);panel->timelineComponent().setSnap(false);const auto beforeLevel=current().shape.gainDb;
     auto& level=cell("swellLevel").valueKnob();REQUIRE(level.keyPressed(juce::KeyPress(juce::KeyPress::rightKey,{},0)));
     REQUIRE(std::abs(current().shape.gainDb-beforeLevel-1)<1.e-5 && cell("swellLevel").valueField().getText()==m3::ui::compactValue(current().shape.gainDb,1));
@@ -83,7 +85,8 @@ void Composition::verifyKnobs()
     const auto levelWheel=[&](juce::ModifierKeys mods){const juce::Time time(++stamp);juce::MouseEvent input(juce::Desktop::getInstance().getMainMouseSource(),lp,mods,0,0,0,0,0,&level,&level,time,lp,time,0,false);level.mouseWheelMove(input,wheel);};
     levelWheel({});REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2)<1.e-5);
     levelWheel(juce::ModifierKeys::shiftModifier);REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2.1)<1.e-5);
-    REQUIRE(level.keyPressed(juce::KeyPress(juce::KeyPress::leftKey,juce::ModifierKeys::shiftModifier,0)));REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2)<1.e-5);
+    levelWheel(juce::ModifierKeys::ctrlModifier);REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2.2)<1.e-5);
+    REQUIRE(level.keyPressed(juce::KeyPress(juce::KeyPress::leftKey,juce::ModifierKeys::shiftModifier,0)));REQUIRE(std::abs(current().shape.gainDb-beforeLevel-2.1)<1.e-5);
     auto& curve=cell("curveInTension").valueKnob();const auto beforeCurve=current().shape.inTension;
     REQUIRE(curve.keyPressed(juce::KeyPress(juce::KeyPress::rightKey,juce::ModifierKeys::shiftModifier,0)));REQUIRE(std::abs(current().shape.inTension-beforeCurve-.001)<1.e-8);
     REQUIRE(cell("preRoll").valueField().getText()==m3::ui::compactValue((current().arrival-at(A::start))/48000.,3));

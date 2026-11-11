@@ -37,6 +37,17 @@ inline void cases()
     REQUIRE(commits==0 && levels.dry.getValue()==0 && levels.wet.getValue()==100);
     levels.beforeInvocation();levels.dry.setValue(50,juce::sendNotificationSync);
     REQUIRE(commits==1 && accepted.dry==.5f && accepted.wet==1);
+    levels.setSize(304,240);
+    {
+        auto& dry=levels.dry;
+        const auto position=dry.getLookAndFeel().getSliderLayout(dry).sliderBounds.getCentre().toFloat();
+        const auto now=juce::Time::getCurrentTime();
+        const juce::MouseEvent fine(juce::Desktop::getInstance().getMainMouseSource(),position,
+            juce::ModifierKeys::ctrlModifier,0,0,0,0,0,&dry,&dry,now,position,now,0,false);
+        juce::MouseWheelDetails wheel{};wheel.deltaY=.1f;
+        dry.mouseWheelMove(fine,wheel);
+        REQUIRE(commits==2 && accepted.dry==.501f && accepted.wet==1 && levels.selector.getSelectedId()==1);
+    }
     levels.onChange=[&](auto pair){++edits;last=pair;};
     const auto id=levels.selector.getSelectedId();
     const auto p=levels.selector.getLocalBounds().getCentre().toFloat();const auto now=juce::Time::getCurrentTime();

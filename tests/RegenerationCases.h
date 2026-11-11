@@ -11,7 +11,7 @@ static void regenerationCases(bool review=false)
     const auto id=engine.savedSession().primary;
     PreverbAudioProcessorEditor editor(processor);editor.stopAutomaticRefreshForReview();editor.enableResponsiveReview();editor.setVisible(true);
     auto* gear=dynamic_cast<juce::Button*>(named(editor,"diagnostics"));REQUIRE(gear);gear->onClick();
-    auto* tabs=dynamic_cast<juce::TabbedComponent*>(editor.settingsPanel());REQUIRE(tabs);tabs->setCurrentTabIndex(4);
+    auto* tabs=editor.settingsPanel();tabs->selectPage(m3::ui::SettingsPage::recovery);
     auto* all=dynamic_cast<juce::Button*>(named(editor,"regenerateAll"));
     auto* feedback=dynamic_cast<juce::Label*>(named(editor,"regenerationFeedback"));REQUIRE(all && feedback);
     const auto invoke=[&]{

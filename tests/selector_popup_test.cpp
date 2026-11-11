@@ -2,13 +2,76 @@
 #include <UI/Controls/PopupInteraction.h>
 #include <UI/Controls/ChoicePopup.h>
 #include <UI/Controls/ChoiceSelector.h>
+#include <UI/Controls/DialTrackPresentation.h>
+#include <UI/KnobValue.h>
 #include "ActionMenuReview.h"
 #include "FieldFeedbackReview.h"
+#include "NumericTextFieldsReview.h"
 #include "SelectorReview.h"
 #if JUCE_WINDOWS
 #include <windows.h>
 #endif
 using namespace m3::ui::controls;
+
+static void dialPointerPaintCases()
+{
+    const auto render=[](CommandState state)
+    {
+        constexpr int size=48;
+        constexpr auto pi=juce::MathConstants<float>::pi;
+        juce::Image image(juce::Image::ARGB,size,size,true);
+        juce::Graphics graphics(image);
+        DialTrackPresentation::dial(graphics,{size,size},state,.75f,{1.5f*pi,2.5f*pi,true},.5f,{});
+        return image;
+    };
+    const auto idle=render({true,false,false,false});
+    const auto hovered=render({true,true,false,false});
+    const auto held=render({true,true,true,false});
+    const auto keyboard=render({true,false,false,true});
+    const auto unavailable=render({false,true,true,true});
+
+    REQUIRE(idle.getPixelAt(24,3).getAlpha()==0);
+    REQUIRE(hovered.getPixelAt(24,3).getAlpha()>0);
+    REQUIRE(held.getPixelAt(24,3).getAlpha()>hovered.getPixelAt(24,3).getAlpha());
+    for(const auto point:{juce::Point<int>{24,24},{24,42},{1,1}})
+    {
+        REQUIRE(hovered.getPixelAt(point.x,point.y).getAlpha()==0);
+        REQUIRE(held.getPixelAt(point.x,point.y).getAlpha()==0);
+    }
+    REQUIRE(keyboard.getPixelAt(1,1)==m3::ui::aqua);
+    REQUIRE(unavailable.getPixelAt(24,3).getAlpha()==0);
+}
+
+static void knobValueWidthCases()
+{
+    for(const bool compact:{false,true})
+    {
+        m3::ui::KnobValue cell;
+        cell.configure("Level","level","Enter an exact level");
+        cell.setCompactPresentation(compact);
+        cell.setValidation("Enter a level from -12 to +12 dB.");
+        const juce::Component* feedback=nullptr;
+        for(const auto* child:cell.getChildren())
+            if(child->getName()=="levelFeedback")feedback=child;
+        REQUIRE(feedback);
+
+        for(const int width:{180,340})
+        {
+            cell.setValueBounds({0,0,width,58});
+            const auto entry=cell.valueField().getBounds();
+            const auto body=commandBodyBounds(entry);
+            REQUIRE(entry.getWidth()==m3::ui::controlGeometry::valueWidth);
+            REQUIRE(feedback->getX()==body.getX() && feedback->getY()>=body.getBottom());
+            REQUIRE(feedback->getWidth()>body.getWidth());
+            REQUIRE(cell.getLocalBounds().contains(feedback->getBounds()));
+        }
+
+        cell.setValueBounds({0,0,70,58});
+        const auto entry=cell.valueField().getBounds();
+        REQUIRE(entry.getWidth()>0 && entry.getWidth()<m3::ui::controlGeometry::valueWidth);
+        REQUIRE(cell.getLocalBounds().contains(entry));
+    }
+}
 
 static std::vector<PopupChoice> choices()
 {return {{11,"Accepted",{},true,true},{42,"Other",{},true,false},{73,"Unavailable","Not currently eligible",false,false}};}
@@ -44,8 +107,30 @@ static juce::MouseEvent at(ChoicePopup& popup,int index,juce::ModifierKeys mods=
     const auto time=juce::Time::getCurrentTime();
     return {juce::Desktop::getInstance().getMainMouseSource(),p.toFloat(),mods,0,0,0,0,0,&popup,&popup,time,p.toFloat(),time,1,false};
 }
+static void popupWidthCases()
+{
+    juce::Component origin;
+    origin.setSize(240,40);
+    for (const auto scale : {1.f,1.25f})
+    {
+        origin.setTransform(juce::AffineTransform::scale(scale));
+        ChoicePopup shortMenu(origin,choices(),{});
+        shortMenu.setSize(240,400);
+        const auto& row=shortMenu.rowComponent(0);
+        const auto full=shortMenu.getLocalArea(&row,row.getLocalBounds());
+        REQUIRE(full.getX()==1 && full.getRight()==shortMenu.getWidth()-1);
+        shortMenu.mouseMove(at(shortMenu,0));
+        const auto pixels=shortMenu.createComponentSnapshot(shortMenu.getLocalBounds());
+        REQUIRE(pixels.getPixelAt(full.getRight()-1,full.getCentreY())==SelectorPresentation::raised());
+
+        ChoicePopup scrolling(origin,choices(),{});
+        scrolling.setSize(240,full.getHeight()+12);
+        REQUIRE(scrolling.rowComponent(0).getWidth()<full.getWidth());
+    }
+}
 static void popupCases()
 {
+    popupWidthCases();
     using m3::ui::WorkspaceTheme;
     const juce::Rectangle<int> work{100,100,800,600};
     for(const auto anchor:{juce::Rectangle<int>{100,100,250,34},{850,660,100,34},{0,0,20,20}})
@@ -59,6 +144,9 @@ static void popupCases()
         ChoicePopup popup(origin,choices(),completion);popup.show(origin.getScreenBounds(),false);
         REQUIRE(popup.state().inspected()==-1);
         popup.mouseMove(at(popup,1));REQUIRE(popup.state().inspected()==1);
+        popup.mouseMove(at(popup,2));REQUIRE(popup.state().inspected()==-1);
+        popup.mouseDown(at(popup,2,juce::ModifierKeys::leftButtonModifier));
+        popup.mouseUp(at(popup,2));REQUIRE(popup.state().heldIndex()==-1 && calls==0 && popup.state().items()[0].selected);
         popup.mouseMove(at(popup,-1));REQUIRE(popup.state().inspected()==-1);
         popup.inspect(0);popup.mouseMove(at(popup,1));REQUIRE(popup.state().inspected()==1);
         popup.mouseExit(at(popup,-1));REQUIRE(popup.state().inspected()==0);
@@ -153,6 +241,9 @@ static void actionMenuCases()
         auto* handler = unavailable.getAccessibilityHandler();
         REQUIRE(handler && !unavailable.isEnabled() && handler->getDescription() == reason);
         REQUIRE(unavailable.getHeight() > controlGeometry::height);
+        popup.mouseMove(at(popup, 1));
+        popup.mouseMove(at(popup, 2));
+        REQUIRE(popup.state().inspected() == 0 && fill(image(2)) == background);
         popup.mouseDown(at(popup, 2, juce::ModifierKeys::leftButtonModifier));
         popup.mouseUp(at(popup, 2));
         REQUIRE(handler->getActions().invoke(juce::AccessibilityActionType::focus));
@@ -489,6 +580,269 @@ static void wrappedFeedbackCases()
     panel.removeFromDesktop();
 }
 
+static void numericTextFieldCases()
+{
+    using namespace numericTextFieldsReview;
+    Panel panel;
+    panel.setBounds(60, 60, 900, 600);
+    panel.addToDesktop(0);
+    panel.setVisible(true);
+    panel.toFront(true);
+    auto& fixture = panel.fixture;
+    const auto key = [](juce::Component& control, int code)
+    {
+        REQUIRE(control.keyPressed(juce::KeyPress(code)));
+        pump();
+    };
+    const auto checkFeedback = [](const Field& field)
+    {
+        const auto body = commandBodyBounds(field.editor.getBounds());
+        REQUIRE(field.feedback.getX() == body.getX() && field.feedback.getWidth() == body.getWidth());
+        REQUIRE(field.feedback.getY() == body.getBottom() + FieldPresentation::helperGap);
+        REQUIRE(field.getLocalBounds().contains(field.feedback.getBounds()));
+    };
+    const auto checkLayout = [&](juce::Component& control)
+    {
+        REQUIRE(fixture.getLocalBounds().contains(control.getBounds()));
+    };
+
+    auto& timing = fixture.timing.editor;
+    auto& level = fixture.level.editor;
+    timing.grabKeyboardFocus();
+    pump();
+    REQUIRE(timing.isFocusVisible());
+    juce::SharedResourcePointer<FocusVisibility> visibility;
+    visibility->pointerInput();
+    timing.setHighlightedRegion({0, 3});
+    REQUIRE(timing.hasKeyboardFocus(false) && !timing.isFocusVisible());
+    REQUIRE(timing.getHighlightedRegion() == juce::Range<int>(0, 3));
+    auto* timingHandler = timing.getAccessibilityHandler();
+    REQUIRE(timingHandler && timingHandler->getTitle() == "Source start (bars)");
+    REQUIRE(timingHandler->getTextInterface() != nullptr);
+    level.grabKeyboardFocus();
+    visibility->pointerInput();
+    timingHandler->grabFocus();
+    pump();
+    REQUIRE(timing.isFocusVisible());
+    const auto normalTimingHeight = fixture.timing.feedback.getHeight();
+    timing.selectAll();
+    const auto selectedTiming = timing.getHighlightedRegion();
+    timing.insertTextAtCaret("abc");
+    REQUIRE(timing.getText() == "2.1.0" && timing.getHighlightedRegion() == selectedTiming);
+    timing.insertTextAtCaret("b2.b5");
+    REQUIRE(timing.getText() == "2.5");
+    timing.moveKeyboardFocusToSibling(true);
+    pump();
+    REQUIRE(!timing.hasKeyboardFocus(false));
+    REQUIRE(timing.isInvalid() && timing.getText() == "2.1.0");
+    REQUIRE(timingHandler->getDescription().contains("choose exact samples"));
+    REQUIRE(fixture.timing.feedback.getHeight() > normalTimingHeight);
+    checkFeedback(fixture.timing);
+    REQUIRE(fixture.level.getY() >= fixture.timing.getBottom());
+    timing.setText("2.1.125", false);
+    key(timing, juce::KeyPress::returnKey);
+    REQUIRE(!timing.isInvalid() && timing.getText() == "2.1.125");
+    timing.setText("8.2", false);
+    key(timing, juce::KeyPress::escapeKey);
+    REQUIRE(timing.getText() == "2.1.125");
+    level.grabKeyboardFocus();
+    level.setText("+13", false);
+    key(level, juce::KeyPress::returnKey);
+    REQUIRE(level.isInvalid() && level.getText() == "0.0");
+    REQUIRE(level.getDescription().contains("-12 and +12 dB"));
+    level.setText("+6.25", false);
+    key(level, juce::KeyPress::returnKey);
+    REQUIRE(!level.isInvalid() && level.getText() == "+6.25");
+
+    fixture.setScene(Scene::compact);
+    FieldNumericInput* compact = nullptr;
+    for (auto* child : fixture.sensitivity.getChildren())
+        if (auto* input = dynamic_cast<FieldNumericInput*>(child)) compact = input;
+    REQUIRE(compact && compact->isEditable());
+    auto* compactHandler = compact->getAccessibilityHandler();
+    REQUIRE(compactHandler && compactHandler->getTitle() == "Event sensitivity (percent)");
+    REQUIRE(compactHandler->getDescription() == fixture.sensitivityHelp);
+    REQUIRE(compactHandler->getValueInterface() != nullptr);
+    REQUIRE(compactHandler->getActions().invoke(juce::AccessibilityActionType::focus));
+    pump();
+    REQUIRE(compact->isFocusVisible());
+    key(*compact, juce::KeyPress::returnKey);
+    auto* editor = dynamic_cast<FieldTextEditor*>(compact->getCurrentTextEditor());
+    REQUIRE(editor && editor->isFocusVisible() && editor->getHighlightedRegion().getLength() > 0);
+    REQUIRE(editor->getRight() <= compact->incrementButton().getX());
+    REQUIRE(editor->getAccessibilityHandler()->getDescription() == fixture.sensitivityHelp);
+    editor->setText("50.5", false);
+    editor->insertTextAtCaret("abc");
+    REQUIRE(editor->getText() == "50.5");
+    key(*editor, juce::KeyPress::returnKey);
+    REQUIRE(compact->getCurrentTextEditor() == nullptr && fixture.sensitivity.getValue() == 50.5);
+    key(compact->incrementButton(), juce::KeyPress::spaceKey);
+    REQUIRE(std::abs(fixture.sensitivity.getValue() - 50.6) < 0.0001);
+    REQUIRE(compact->decrementButton().getAccessibilityHandler()->getActions().invoke(juce::AccessibilityActionType::press));
+    pump();
+    REQUIRE(std::abs(fixture.sensitivity.getValue() - 50.5) < 0.0001);
+    REQUIRE(compactHandler->getActions().invoke(juce::AccessibilityActionType::press));
+    editor = dynamic_cast<FieldTextEditor*>(compact->getCurrentTextEditor());
+    REQUIRE(editor && editor->isFocusVisible());
+    editor->setText("18.5", false);
+    key(*editor, juce::KeyPress::escapeKey);
+    REQUIRE(compact->getCurrentTextEditor() == nullptr && fixture.sensitivity.getValue() == 50.5);
+    compact->grabKeyboardFocus();
+    pump();
+    const auto pointer = juce::Point<float>{8, 10};
+    const auto now = juce::Time::getCurrentTime();
+    REQUIRE(compact->isEditableOnSingleClick());
+    REQUIRE(compact->getLocalBounds().contains(pointer.toInt()));
+    juce::MouseEvent click(juce::Desktop::getInstance().getMainMouseSource(), pointer, {},
+                           0, 0, 0, 0, 0, compact, compact, now, pointer, now, 1, false);
+    compact->mouseUp(click);
+    editor = dynamic_cast<FieldTextEditor*>(compact->getCurrentTextEditor());
+    REQUIRE(editor);
+    REQUIRE(editor->hasKeyboardFocus(false));
+    REQUIRE(!editor->isFocusVisible());
+    key(*editor, juce::KeyPress::escapeKey);
+
+    auto& standalone = fixture.standalone;
+    key(standalone.incrementButton(), juce::KeyPress::spaceKey);
+    REQUIRE(fixture.standaloneValue == 43 && fixture.sensitivity.getValue() == 50.5);
+    key(standalone, juce::KeyPress::returnKey);
+    editor = dynamic_cast<FieldTextEditor*>(standalone.getCurrentTextEditor());
+    REQUIRE(editor);
+    editor->setText("101", false);
+    // JUCE delivers an outside click to its temporary editor's modal owner.
+    static_cast<juce::Component&>(standalone).inputAttemptWhenModal();
+    pump();
+    REQUIRE(!standalone.isBeingEdited() && standalone.isInvalid() && standalone.getText() == "43");
+    REQUIRE(standalone.getDescription().contains("0 to 100") && fixture.standaloneFeedback.getHeight() > 0);
+    key(standalone, juce::KeyPress::returnKey);
+    editor = dynamic_cast<FieldTextEditor*>(standalone.getCurrentTextEditor());
+    REQUIRE(editor);
+    editor->selectAll();
+    editor->insertTextAtCaret("4a4");
+    REQUIRE(editor->getText() == "44");
+    key(*editor, juce::KeyPress::returnKey);
+    REQUIRE(!standalone.isInvalid() && fixture.standaloneValue == 44);
+
+    auto wheelOver = [stamp = now.toMilliseconds()](juce::Component& target, float delta, int modifiers = 0) mutable
+    {
+        const auto point = target.getLocalBounds().getCentre().toFloat();
+        const juce::Time time(++stamp);
+        const juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(), point,
+                                     juce::ModifierKeys(modifiers), 0, 0, 0, 0, 0, &target, &target,
+                                     time, point, time, 0, false);
+        juce::MouseWheelDetails wheel{};
+        wheel.deltaY = delta;
+        target.mouseWheelMove(event, wheel);
+    };
+    wheelOver(standalone.incrementButton(), .12f);
+    REQUIRE(fixture.standaloneValue == 45);
+    wheelOver(standalone.decrementButton(), -.12f);
+    REQUIRE(fixture.standaloneValue == 44);
+    wheelOver(*compact, .12f);
+    REQUIRE(std::abs(fixture.sensitivity.getValue() - 50.6) < 0.0001);
+    wheelOver(compact->decrementButton(), -.12f);
+    REQUIRE(std::abs(fixture.sensitivity.getValue() - 50.5) < 0.0001);
+
+    auto& slider = fixture.sensitivity;
+    slider.setValue(50, juce::dontSendNotification);
+    wheelOver(slider, .12f);
+    const auto normalWheel = slider.getValue() - 50.0;
+    slider.setValue(50, juce::dontSendNotification);
+    wheelOver(slider, .12f, juce::ModifierKeys::ctrlModifier);
+    const auto fineWheel = slider.getValue() - 50.0;
+    REQUIRE(fineWheel > 0 && fineWheel < normalWheel);
+    wheelOver(slider, -.12f, juce::ModifierKeys::ctrlModifier);
+    REQUIRE(std::abs(slider.getValue() - 50.0) < 0.0001);
+
+    const auto drag = [&](int modifiers)
+    {
+        slider.setValue(50, juce::dontSendNotification);
+        const auto source = juce::Desktop::getInstance().getMainMouseSource();
+        const juce::Point<float> start{90, 17}, end{120, 17};
+        const auto event = [&](juce::Point<float> at, int buttons, bool moved)
+        {
+            return juce::MouseEvent(source, at, juce::ModifierKeys(buttons), 0, 0, 0, 0, 0,
+                                    &slider, &slider, now, start, now, 1, moved);
+        };
+        slider.mouseDown(event(start, juce::ModifierKeys::leftButtonModifier | modifiers, false));
+        slider.mouseDrag(event(end, juce::ModifierKeys::leftButtonModifier | modifiers, true));
+        slider.mouseUp(event(end, modifiers, true));
+        return slider.getValue() - 50.0;
+    };
+    const auto normalDrag = drag(0);
+    const auto ctrlDrag = drag(juce::ModifierKeys::ctrlModifier);
+    REQUIRE(std::abs(ctrlDrag - normalDrag) < 0.0001);
+
+    fixture.setScene(Scene::diagnostics);
+    auto& exact = fixture.exact.editor;
+    REQUIRE(exact.isReadOnly() && fixture.unavailable.editor.getDescription().contains("Unfreeze"));
+    REQUIRE(!fixture.unavailable.editor.isEnabled() && !fixture.unavailable.editor.isInvalid());
+    exact.grabKeyboardFocus();
+    pump();
+    REQUIRE(exact.isFocusVisible());
+    exact.setHighlightedRegion({0, 5});
+    exact.keyPressed(juce::KeyPress('7', {}, '7'));
+    REQUIRE(exact.getText() == "96037");
+    REQUIRE(exact.getHighlightedRegion() == juce::Range<int>(0, 5));
+    checkFeedback(fixture.unavailable);
+
+    fixture.setScene(Scene::bars);
+    fixture.barEnd.editor.grabKeyboardFocus();
+    fixture.barEnd.editor.setText("4", false);
+    fixture.apply.grabKeyboardFocus();
+    pump();
+    REQUIRE(fixture.barEnd.editor.isInvalid() && !fixture.barStart.editor.isInvalid());
+    REQUIRE(fixture.submittedRanges == 0);
+    REQUIRE(fixture.barStart.editor.getDescription() == fixture.barEnd.editor.getDescription());
+    REQUIRE(fixture.barFeedback.getHeight() > FieldPresentation::helperLineHeight);
+    fixture.barEnd.editor.setText("8", false);
+    key(fixture.barEnd.editor, juce::KeyPress::returnKey);
+    REQUIRE(!fixture.barEnd.editor.isInvalid());
+    REQUIRE(fixture.submittedRanges == 1);
+
+    fixture.setScene(Scene::rename);
+    fixture.name.editor.grabKeyboardFocus();
+    fixture.name.editor.setText({}, false);
+    fixture.cancel.grabKeyboardFocus();
+    pump();
+    REQUIRE(fixture.name.editor.isInvalid() && !fixture.name.editor.hasKeyboardFocus(false));
+    fixture.name.editor.grabKeyboardFocus();
+    key(fixture.name.editor, juce::KeyPress::returnKey);
+    REQUIRE(fixture.name.isVisible() && fixture.name.editor.isInvalid() && fixture.acceptedName == "Room swell");
+    REQUIRE(fixture.name.editor.getDescription().contains("Enter a name"));
+    fixture.name.editor.setText("Hall swell", false);
+    key(fixture.name.editor, juce::KeyPress::returnKey);
+    REQUIRE(!fixture.name.isVisible() && fixture.acceptedName == "Hall swell");
+    fixture.reopen.onClick();
+    fixture.name.editor.setText("Uncommitted", false);
+    key(fixture.name.editor, juce::KeyPress::escapeKey);
+    REQUIRE(!fixture.name.isVisible() && fixture.acceptedName == "Hall swell");
+    fixture.reopen.onClick();
+
+    for (const auto size : {juce::Point<int>{900, 600}, {1100, 850}})
+        for (const int scale : {100, 125})
+        {
+            panel.setSize(size.x, size.y);
+            panel.setScale(scale);
+            fixture.setScene(Scene::inspector);
+            checkLayout(fixture.reset);
+            REQUIRE(fixture.reset.getY() >= fixture.level.getBottom());
+            fixture.setScene(Scene::compact);
+            checkLayout(fixture.sensitivity);
+            checkLayout(fixture.standaloneFeedback);
+            REQUIRE(compact->getLocalBounds().contains(compact->incrementButton().getBounds()));
+            fixture.setScene(Scene::bars);
+            checkLayout(fixture.apply);
+            REQUIRE(fixture.barFeedback.getBottom() < fixture.apply.getY());
+            fixture.setScene(Scene::diagnostics);
+            checkLayout(fixture.unavailable);
+            fixture.setScene(Scene::rename);
+            checkLayout(fixture.cancel);
+            REQUIRE(fixture.name.getBottom() < fixture.cancel.getY());
+        }
+    panel.removeFromDesktop();
+}
+
 int main(int argc,char** argv){return runTest([&]
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -496,6 +850,10 @@ int main(int argc,char** argv){return runTest([&]
     if(argc>1 && juce::String(argv[1])=="--review-action-menus"){actionMenuReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--review-field-feedback"){fieldFeedbackReview::run();return;}
     if(argc>1 && juce::String(argv[1])=="--test-field-feedback"){wrappedFeedbackCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--review-numeric-text-fields"){numericTextFieldsReview::run();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-numeric-text-fields"){numericTextFieldCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-dial-pointer-paint"){dialPointerPaintCases();return;}
+    if(argc>1 && juce::String(argv[1])=="--test-knob-value-width"){knobValueWidthCases();return;}
     if(argc==3 && juce::String(argv[1])=="--capture-selectors")
     {
         selectorReview::Panel panel;panel.setSize(900,600);panel.addToDesktop(0);panel.setVisible(true);panel.toFront(true);
@@ -513,5 +871,8 @@ int main(int argc,char** argv){return runTest([&]
     std::cerr<<"Presentation and geometry\n";presentationCases();
     std::cerr<<"Field feedback\n";fieldFeedbackCases();
     std::cerr<<"Wrapped field feedback\n";wrappedFeedbackCases();
+    std::cerr<<"Numeric and text field variants\n";numericTextFieldCases();
+    dialPointerPaintCases();
+    knobValueWidthCases();
     std::cout<<"Selector popup state, native input, accessibility, focus, geometry and lifetime cases passed.\n";
 });}

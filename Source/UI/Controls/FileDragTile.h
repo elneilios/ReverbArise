@@ -1,24 +1,55 @@
 #pragma once
-#include "ActionButton.h"
+#include "CapturedActionButton.h"
 namespace m3::ui::controls
 {
 // Generic native-file gesture surface. Bindings own file/revision/session safety;
 // this control never opens, writes or retains a filesystem path.
-class FileDragTile final:public ActionButton
+class FileDragTile final:public CapturedActionButton
 {
 public:
-    FileDragTile():ActionButton("Drag WAV to Playlist")
+    FileDragTile():CapturedActionButton("Drag WAV to Playlist")
     {
         setTooltip("Drag the ready WAV to your Playlist. Click or press Enter to Save WAV.");setHelpText(getTooltip());
         onClick=[this]{if(!dragged && onSave)onSave();};
     }
     void setStatusText(const juce::String& value){if(status!=value){status=value;setDescription(value);setTooltip(value+" | Drag when ready; click or press Enter to Save WAV.");setHelpText(getTooltip());repaint();}}
+    void setDragFeedbackActive(bool active)
+    {
+        if(dragFeedbackActive==active)return;
+        dragFeedbackActive=active;
+        repaint();
+    }
+    bool hasSolidBorder() const
+    {
+        return hasCapturedInvocation() ? dragFeedbackActive || isFocusVisible() : hasKeyboardFocus(true);
+    }
     std::function<void()> onDrag,onSave;
-    void mouseDown(const juce::MouseEvent& e)override{dragged=false;ActionButton::mouseDown(e);}
-    bool keyPressed(const juce::KeyPress& key)override{dragged=false;return ActionButton::keyPressed(key);}
+    std::function<void(PressId)> onGuardedDrag;
+    void mouseDown(const juce::MouseEvent& e)override
+    {
+        if(!hasCapturedInvocation())dragged=false;
+        CapturedActionButton::mouseDown(e);
+    }
+    bool keyPressed(const juce::KeyPress& key)override
+    {
+        if(!hasCapturedInvocation())dragged=false;
+        return CapturedActionButton::keyPressed(key);
+    }
     void mouseDrag(const juce::MouseEvent& e)override
     {
-        juce::Button::mouseDrag(e);
+        CapturedActionButton::mouseDrag(e);
+        if(hasCapturedInvocation())
+        {
+            const auto press=pointerPress();
+            if(isEnabled() && ownsPress(e) && e.mods.isLeftButtonDown() && press!=draggedPress
+               && e.getDistanceFromDragStart()>=4)
+            {
+                draggedPress=press;
+                suppressPointerInvocation();
+                if(onGuardedDrag)onGuardedDrag(press);
+            }
+            return;
+        }
         if(isEnabled() && e.mods.isLeftButtonDown() && !dragged && e.getDistanceFromDragStart()>=4){dragged=true;if(onDrag)onDrag();}
     }
     void paintButton(juce::Graphics& g,bool over,bool down)override
@@ -27,7 +58,7 @@ public:
         g.setColour(background);g.fillRoundedRectangle(box,radius);
         g.setColour((over || down?hover:aqua).withMultipliedAlpha(alpha));
         juce::Path border,dashes;border.addRoundedRectangle(box,radius);const float lengths[]{6,4};
-        if(hasKeyboardFocus(true))g.strokePath(border,juce::PathStrokeType(controlGeometry::focusStroke));
+        if(hasSolidBorder())g.strokePath(border,juce::PathStrokeType(controlGeometry::focusStroke));
         else {juce::PathStrokeType(1.5f).createDashedStroke(dashes,border,lengths,2);g.fillPath(dashes);}
         const auto c=box.getCentre();const auto top=box.getY()+std::max(14.f,(box.getHeight()-150)*.5f);
         g.setColour(m3::ui::text.withMultipliedAlpha(alpha));juce::Path file;file.startNewSubPath(c.x-25,top);file.lineTo(c.x+8,top);file.lineTo(c.x+25,top+17);
@@ -39,6 +70,8 @@ public:
         g.setColour(status.isEmpty()?secondary.withMultipliedAlpha(alpha):textStyle(TextRole::helper).ink);g.setFont(status.isEmpty()?interFont(bodySize,InterFace::italic):componentTextFont(*this,TextRole::helper));g.drawText(status.isEmpty()?juce::String("Song-aligned ")+juce::String::charToString(0x2022)+" preserves timing":status,juce::Rectangle<float>(8,top+120,getWidth()-16.f,24),juce::Justification::centred);
     }
 private:
+    PressId draggedPress=0;
+    bool dragFeedbackActive=false;
     bool dragged=false;juce::String status;
 };
 }
