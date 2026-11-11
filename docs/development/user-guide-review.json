@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the single-pass Diagnostics layout and existing Loop transport and peak readouts. The focused runner and shared JUCE test objects change build and test tooling only. The existing musician instructions remain accurate.",
+  "summary": "Reviewed Loop capture, Rack Note Gate routing, FL Studio Pattern repeats and stopped-clock WAV guidance against the integrated Release. Added the observed four-step Rack and two-pass Pattern examples.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 125928,
-      "sha256": "8715747b8c8bae420b3ac9298aeb277c8e5f357a4a4e2803868acf7c2c05f171"
+      "bytes": 126095,
+      "sha256": "3e9fc4e9d577fca270f70f5e2758f99a02777af6e1ac876857ecd8a47afae527"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
