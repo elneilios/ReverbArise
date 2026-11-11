@@ -6,6 +6,7 @@
 #include <UI/WorkspaceLayout.h>
 #include <UI/KnobValue.h>
 #include <UI/Controls/EllipsisLabel.h>
+#include <UI/Controls/WrappedLabel.h>
 #include <UI/Controls/TransportReadout.h>
 #include <UI/ConvolutionIrBinding.h>
 #include <UI/WorkflowHeader.h>
@@ -19,9 +20,11 @@
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
 #include <UI/Controls/ActionButton.h>
+#include <UI/Controls/CapturedActionButton.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
 #include <UI/PortableStoragePanel.h>
+#include <UI/SettingsTabs.h>
 #include <UI/Controls/FocusViewport.h>
 
 class PreverbAudioProcessorEditor final : public juce::AudioProcessorEditor,private juce::Timer
@@ -44,7 +47,7 @@ public:
     void stopAutomaticRefreshForReview() {stopTimer();}
     m3::SwellTimeline& timelineComponent() noexcept {return timeline;}
     juce::Component* diagnosticsPanel() noexcept {return &diagnosticsViewport;}
-    juce::Component* settingsPanel() noexcept {return &settingsTabs;}
+    m3::ui::SettingsTabs* settingsPanel() noexcept {return &settingsTabs;}
     juce::Rectangle<int> swellMenuAnchor(const juce::MouseEvent& event)const;
     // The host factory supplies user-local storage; fixtures inject isolated storage.
     void enableResponsivePresentation(std::shared_ptr<m3::ui::PresentationStorage>,std::optional<m3::ui::PresentationFitContext> display={});
@@ -65,7 +68,8 @@ private:
     std::optional<m3::ui::PresentationFitContext> appliedPresentationDisplay;
     juce::Point<int> appliedPresentationSize;
     m3::ui::controls::ChoiceSelector presentationSizeBox,presentationScaleBox;
-    juce::Label presentationSizeLabel,presentationScaleLabel,presentationHelp;
+    m3::ui::controls::EllipsisLabel presentationSizeLabel,presentationScaleLabel;
+    m3::ui::controls::WrappedLabel presentationHelp;
     void initialisePresentation();
     void applyPresentation();
     void resizePresentation();
@@ -92,8 +96,9 @@ private:
     m3::ui::controls::NoticeBar noticeBar;
     m3::ui::IRPreparationNotice irPreparationNotice;
     m3::ui::controls::TransportReadout hostInfo;
-    juce::Label inspectorHeading,listEmpty,inspectorEmpty,auditionHeading,editorReadout,listCount;
-    std::array<juce::Label,3> inspectorGroups;
+    m3::ui::controls::EllipsisLabel inspectorHeading,auditionHeading,editorReadout,listCount;
+    m3::ui::controls::WrappedLabel listEmpty,inspectorEmpty;
+    std::array<m3::ui::controls::EllipsisLabel,3> inspectorGroups;
     enum Field {name,arrival,sourceA,sourceB,audibleA,audibleB,fadeIn,fadeOut,fieldCount};
     void timerCallback() override {servicePresentation();modifierKeysChanged(hasKeyboardFocus(true)?juce::ModifierKeys::getCurrentModifiersRealtime():juce::ModifierKeys{});refresh();}
     void setDiagnosticsOpen(bool);
@@ -111,10 +116,13 @@ private:
     bool recoveryInspected=false,recoveryWarned=false,metadataRecoveryWarned=false;
     std::unique_ptr<juce::AlertWindow> recoveryWarning;
 
-    void showSwellMenu(const m3::ui::controls::SwellListRow&,const juce::MouseEvent&);
+    void showSwellMenu(m3::ui::controls::SwellList::MenuRequest);
+    void requestDeleteSwells(std::vector<juce::String>,uint64_t epoch,uint64_t pass,
+                             juce::String focusRow={},bool keyboard=false);
     void curveChanged(bool);
     void setPreferences();
     void applyBarRange();
+    void validateBarRangeDraft();
     void refreshSourceRangeFeedback(const m3::Swell*);
     void layoutSourceRange();
     void armSelected();
@@ -124,12 +132,17 @@ private:
     enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
     void beginValueEdit(int);
     void rebaseValueEdit(int);
-    void stepValueEdit(int,double);
+    void stepValueEdit(int,double,bool fineWheel);
     m3::ui::KnobValue::ResetAction prepareValueReset(int);
     struct InitialValuePositions {int64_t arrival=0,start=0,end=1;};
     void resetValueEdit(int,InitialValuePositions);
     bool valueIntentCurrent(int)const;
     bool commitValueEdit(int,const juce::String&,std::optional<double> delta={});
+    int layoutValueRow(juce::Rectangle<int>,int first,int second=-1,int gap=0);
+    void layoutResponsiveValues();
+    bool valueFeedbackChanged=false;
+    uint64_t valueFeedbackGeneration=0;
+    std::vector<juce::String> valueFeedbackSelection;
     void refreshValues(const m3::Swell*,const SongTime&);
     std::array<m3::ui::KnobValue,valueCount> valueControls;
     std::array<std::optional<m3::Swell>,valueCount> valueAnchors;
@@ -156,8 +169,12 @@ private:
     m3::SwellOverview songOverview{timeline};
     m3::ui::controls::SwellList list;
     std::unique_ptr<m3::ui::controls::ChoicePopup> swellMenu;
-    juce::Label status,detail,listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,recaptureStatus,toneStartLabel,toneEndLabel;
-    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},removeButton{"Delete"},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
+    juce::Component::SafePointer<juce::AlertWindow> renameDialog;
+    std::unique_ptr<juce::AlertWindow> deleteSwellConfirmation;
+    m3::ui::controls::WrappedLabel status,detail,recaptureStatus;
+    m3::ui::controls::EllipsisLabel listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,toneStartLabel,toneEndLabel;
+    m3::ui::controls::CapturedActionButton removeButton{"Delete"};
+    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
     m3::ui::controls::TimelineZoomControls performZoom;
     m3::ui::controls::LatchingActionButton snapButton{"Snap"};
@@ -171,24 +188,25 @@ private:
     m3::ui::controls::ActionButton recaptureButton{"Recapture & regenerate"},cancelButton{"Cancel recapture"},fullButton{"Full response"},resetButton{"Reset shape",m3::ui::controls::CommandIcon::none,m3::ui::controls::CommandVariant::destructive},setBarsButton{"Set source from bars"},clearButton{"Clear map"};
     m3::ui::controls::ActionButton assetInfoButton{"Copy asset info"};
     m3::ui::controls::ActionButton copyDiagnosticsButton{"Copy diagnostics"};
-    juce::ToggleButton enabledButton{"Enabled"},muteButton{"Mute"},soloButton{"Solo"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
-    m3::ui::controls::InvocationToggle autoButton{"Auto-refresh after recapture"};
-    juce::Slider auditionSlider,toneStartSlider,toneEndSlider;
-    m3::ui::controls::InvocationSlider separationSlider;
+    m3::ui::controls::BooleanToggle enabledButton{"Enabled",m3::ui::controls::ToggleForm::checkbox};
+    m3::ui::controls::BooleanToggle soloButton{"Solo",m3::ui::controls::ToggleForm::checkbox};
+    m3::ui::controls::Switch muteButton{"Mute"},mappingButton{"Map while playing"},toneButton{"440 Hz test tone"};
+    m3::ui::controls::Switch autoButton{"Auto-refresh after recapture"};
+    m3::ui::controls::SliderControl auditionSlider{{"Audition trim (dB)", "Adjust the wet audition level.", false}};
+    m3::ui::controls::SliderControl toneStartSlider{{"Test tone start bar", "First bar of the test tone.", false}};
+    m3::ui::controls::SliderControl toneEndSlider{{"Test tone end bar (exclusive)", "The tone ends before this bar.", false}};
+    m3::ui::controls::SliderControl separationSlider{{"Separation (ms)", "Minimum time between suggested events.", false}};
     std::optional<uint64_t> markerPass,separationPass,automaticPass,markingPass,refreshPass;
+    struct FlagScope { uint64_t epoch,pass;juce::String primary; };
+    std::optional<FlagScope> enabledScope,soloScope,freezeScope,muteScope;
     juce::ComboBox candidateBox;
     m3::ui::controls::ChoiceSelector inCurveBox,outCurveBox;
-    std::array<juce::Label,fieldCount> fieldLabels;
-    std::array<juce::TextEditor,fieldCount> fields;
+    std::array<m3::ui::controls::EllipsisLabel,fieldCount> fieldLabels;
+    std::array<m3::ui::controls::FieldTextEditor,fieldCount> fields;
     m3::ui::controls::FieldTextEditor barStartEditor{"Bar start"},barEndEditor{"End excl."};
     m3::ui::controls::FieldFeedbackLabel sourceRangeFeedback;
-    struct SourceRangeRejection
-    {
-        uint64_t epoch;
-        juce::String primary;
-        PreverbAudioProcessor::SourceBarSubmission result;
-    };
-    std::optional<SourceRangeRejection> sourceRangeRejection;
+    std::optional<PreverbAudioProcessor::SourceBarTarget> sourceRangeDraftTarget;
+    PreverbAudioProcessor::SourceBarSubmission sourceRangeResult;
     juce::String sourceRangeMessage;
     bool sourceRangeHasError=false;
     uint64_t presentationSession=0;
@@ -198,18 +216,18 @@ private:
     juce::Component inspectorContent;
     m3::ui::FlatSurface diagnosticsContent;
     void layoutLiveDiagnostics();
-    juce::Label captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
+    m3::ui::controls::WrappedLabel captureDiagnostic,playbackDiagnostic,policyDiagnostic,liveDiagnostic;
     std::array<juce::Component,7> settingsPages;
     std::unique_ptr<m3::ui::PortableStoragePanel> storageInventory;
     m3::ui::controls::FocusViewport storageViewport;
     juce::String storageIdentity;
-    juce::TabbedComponent settingsTabs{juce::TabbedButtonBar::TabsAtTop};
-    std::array<juce::Label,12> settingsLabels;
-    std::array<juce::Label,6> settingsHelp;
+    m3::ui::SettingsTabs settingsTabs;
+    std::array<m3::ui::controls::EllipsisLabel,12> settingsLabels;
+    std::array<m3::ui::controls::WrappedLabel,6> settingsHelp;
     m3::ui::controls::EllipsisLabel regenerationFeedback;
     uint64_t regenerationFeedbackSession=0;
-    juce::Label aboutHeading;
-    std::array<juce::Label,3> buildInformationLabels;
+    m3::ui::controls::EllipsisLabel aboutHeading;
+    std::array<m3::ui::controls::EllipsisLabel,3> buildInformationLabels;
     std::array<m3::ui::controls::EllipsisLabel,3> buildInformationValues;
     m3::ui::controls::ActionButton copyBuildInformation{"Copy build information",m3::ui::controls::CommandIcon::none,true};
     std::function<void(const juce::String&)> buildInformationWriter;
@@ -229,13 +247,16 @@ private:
     m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};
     std::optional<std::pair<uint64_t,uint64_t>> auditionInvocation;
     m3::ui::controls::ActionButton defaultIRButton{"Default IR for future..."},suppressionButton{"Reset deleted targets"};
-    m3::ui::controls::InvocationToggle automaticButton{"Automatic processing"};juce::ToggleButton sampleUnitsButton{"Exact sample positions"};
-    juce::Slider regenerationKnob;juce::Label regenerationLabel;juce::ToggleButton freezeButton{"Freeze render"};
-    m3::ui::controls::InvocationSlider markerKnob;m3::ui::controls::InvocationToggle markerButton{"Auto markers"};juce::ToggleButton isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
-    juce::Label markerLabel,markerState,placementLabel;juce::TextEditor placementEditor;
-    juce::ToggleButton liveButton{"Live playback"};m3::ui::controls::ChoiceSelector liveRoutingBox;juce::Slider liveLevel;
+    m3::ui::controls::Switch automaticButton{"Automatic processing"};juce::ToggleButton sampleUnitsButton{"Exact sample positions"};
+    juce::Slider regenerationKnob;juce::Label regenerationLabel;
+    m3::ui::controls::BooleanToggle freezeButton{"Freeze",m3::ui::controls::ToggleForm::checkbox};
+    m3::ui::controls::InvocationSlider markerKnob;m3::ui::controls::InvocationToggle markerButton{"Auto markers"};m3::ui::controls::Switch isolateButton{"Isolate selected"},isolateDryButton{"Isolate dry source"};
+    juce::Label markerLabel,markerState,placementLabel;
+    m3::ui::controls::FieldTextEditor placementEditor{"Move wet (ms)", m3::ui::controls::FieldTextEditor::Role::readOnly};
+    m3::ui::controls::Switch liveButton{"Live playback"};m3::ui::controls::ChoiceSelector liveRoutingBox;
+    m3::ui::controls::SliderControl liveLevel{{"Live level (dB)", "Adjust the live playback level.", false}};
     juce::Label liveLevelLabel,gainPolicyLabel;m3::ui::controls::ChoiceSelector gainPolicyBox;
-    juce::Slider tailSlider;
+    m3::ui::controls::SliderControl tailSlider{{"Audition tail (s)", "Captured Dry + Wet context after the later of the original arrival and wet endpoint.", false}};
     juce::Label tailLabel;
     bool diagnosticsOpen=false;
     double diagnosticsRefreshedAt=-1;

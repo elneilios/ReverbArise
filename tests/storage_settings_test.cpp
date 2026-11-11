@@ -6,6 +6,16 @@
 #include <UI/WorkflowHeader.h>
 static juce::Component* find(juce::Component& root,const juce::String& name)
 {if(root.getName()==name)return &root;for(auto* child:root.getChildren())if(auto* result=find(*child,name))return result;return nullptr;}
+static void checkTabOrder(m3::ui::SettingsTabs& tabs,const juce::StringArray& labels)
+{
+    auto& strip=tabs.selector();
+    REQUIRE(strip.getNumChildComponents()==labels.size());
+    for(int i=0;i<labels.size();++i)
+    {
+        auto* button=dynamic_cast<juce::Button*>(strip.getChildComponent(i));
+        REQUIRE(button && button->getButtonText()==labels[i]);
+    }
+}
 template<class F>static void wait(F predicate,const std::source_location where=std::source_location::current())
 {const auto end=juce::Time::getMillisecondCounterHiRes()+30000;while(!predicate()){
     if(juce::Time::getMillisecondCounterHiRes()>=end)throw std::runtime_error("Storage Settings wait at "+std::string(where.file_name())+":"+std::to_string(where.line()));
@@ -24,25 +34,34 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     REQUIRE(!processor.swellEngine().savedSession().defaultIR.present());
     REQUIRE(processor.swellEngine().assignDefaultBundledIR(m3::defaultImpulseId));
     wait([&]{return processor.swellEngine().savedSession().defaultIR.present() && !processor.swellEngine().snapshot().defaultIRPending;});
-    auto editorOwner=std::make_unique<PreverbAudioProcessorEditor>(processor);auto& editor=*editorOwner;auto& tabs=dynamic_cast<juce::TabbedComponent&>(*editor.settingsPanel());
-    REQUIRE(tabs.getNumTabs()==7 && tabs.getTabNames()[5]=="About" && tabs.getTabNames()[6]=="Storage");
-    auto* initialViewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.getTabContentComponent(6));REQUIRE(initialViewport);auto* storage=dynamic_cast<m3::ui::PortableStoragePanel*>(initialViewport->getViewedComponent());REQUIRE(storage && !storage->scanning() && !storage->displayedReport());
-    editor.enableResponsiveReview();REQUIRE(tabs.getNumTabs()==8 && tabs.getTabNames()[6]=="Appearance" && tabs.getTabNames()[7]=="Storage");
+    auto editorOwner=std::make_unique<PreverbAudioProcessorEditor>(processor);auto& editor=*editorOwner;using Page=m3::ui::SettingsPage;auto& tabs=*editor.settingsPanel();
+    checkTabOrder(tabs,{"Playback","Processing","Swell","Audition","Recovery","Storage","About"});
+    auto* initialViewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.page(Page::storage));REQUIRE(initialViewport);auto* storage=dynamic_cast<m3::ui::PortableStoragePanel*>(initialViewport->getViewedComponent());REQUIRE(storage && !storage->scanning() && !storage->displayedReport());
+    editor.enableResponsiveReview();checkTabOrder(tabs,{"Playback","Processing","Swell","Audition","Recovery","Appearance","Storage","About"});
     auto* header=dynamic_cast<m3::ui::WorkflowHeader*>(find(editor,"workflowHeader"));REQUIRE(header && header->onSettings);header->onSettings();
     auto* settings=dynamic_cast<juce::DocumentWindow*>(tabs.getTopLevelComponent());REQUIRE(settings && settings->isVisible());
-    REQUIRE(!storage->scanning());tabs.setCurrentTabIndex(7);wait([&]{return storage->displayedReport()!=nullptr;});
+    REQUIRE(!storage->scanning());
+    auto& strip=tabs.selector();strip.grabKeyboardFocus();
+    REQUIRE(strip.keyPressed(juce::KeyPress(juce::KeyPress::endKey)));
+    REQUIRE(strip.focusedId()==static_cast<int>(Page::about) && tabs.selectedPage()==Page::playback);
+    REQUIRE(strip.keyPressed(juce::KeyPress(juce::KeyPress::returnKey)));
+    REQUIRE(tabs.selectedPage()==Page::about && find(tabs,"copyBuildInformation"));
+    REQUIRE(tabs.page(Page::playback)->getParentComponent()==nullptr);
+    strip.moveKeyboardFocusToSibling(true);
+    REQUIRE(tabs.page(Page::about)->hasKeyboardFocus(true));
+    tabs.selectPage(Page::storage);wait([&]{return storage->displayedReport()!=nullptr;});
     const auto* report=storage->displayedReport();if(!report->inventoryComplete)for(const auto& issue:report->issues)std::cerr<<issue<<'\n';
     REQUIRE(report->inventoryComplete && report->dependencyVerificationComplete && report->referencedFiles>0 && report->missingReferences==0 && report->reclaimableBytes==0);
     const auto firstRoot=processor.swellEngine().assetDirectory();for(const auto& file:report->files)REQUIRE(file.root==firstRoot.getFullPathName());
     std::map<juce::String,juce::String> originalHashes;for(const auto& file:report->files)originalHashes[file.path]=file.sha256;
     juce::MemoryBlock before;processor.getStateInformation(before);const auto beforeCapture=processor.getCaptureSnapshot();const auto renders=processor.swellEngine().snapshot().renderCount;
-    tabs.setCurrentTabIndex(5);storage->poll();REQUIRE(!storage->scanning() && storage->displayedReport());const auto* retainedReport=storage->displayedReport();tabs.setCurrentTabIndex(7);REQUIRE(storage->displayedReport()==retainedReport);wait([&]{return storage->displayedReport()!=retainedReport;});
+    tabs.selectPage(Page::about);storage->poll();REQUIRE(!storage->scanning() && storage->displayedReport());const auto* retainedReport=storage->displayedReport();tabs.selectPage(Page::storage);REQUIRE(storage->displayedReport()==retainedReport);wait([&]{return storage->displayedReport()!=retainedReport;});
     juce::MemoryBlock after;processor.getStateInformation(after);REQUIRE(after==before && processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
     for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
     settings->setVisible(false);storage->poll();REQUIRE(!storage->scanning() && storage->displayedReport());header->onSettings();wait([&]{return !storage->scanning();});
     // Exercise the production Backup/Locate/Restore controls with real accepted state.
     const auto action=[&](const juce::String& name)->m3::ui::controls::ActionButton&{auto* c=dynamic_cast<m3::ui::controls::ActionButton*>(find(*storage,name));REQUIRE(c);return *c;};
-    auto* viewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.getTabContentComponent(7));REQUIRE(viewport && viewport->getViewedComponent()==storage);
+    auto* viewport=dynamic_cast<m3::ui::controls::FocusViewport*>(tabs.page(Page::storage));REQUIRE(viewport && viewport->getViewedComponent()==storage);
     REQUIRE(storage->getHeight()==viewport->getHeight());
     TestDirectory backup;REQUIRE(backup.file.createDirectory().wasOk());
     storage->folderPicker=[&](const auto&,const auto&,auto complete){complete(backup.file);};
@@ -86,16 +105,33 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     contentViewport->setViewPosition(0,10000);
     REQUIRE(action("chooseWorkingFolder").getBounds()==chooseBounds && chooseBounds.getY()>=contentViewport->getBottom()
         && chooseBounds.getBottom()<=action("backupAssets").getY());
-    REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});
+    REQUIRE(action("chooseWorkingFolder").isEnabled());action("chooseWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy() && working->ready();});
     if(!working->ready())throw std::runtime_error("Working-folder preparation: "+working->statusText().toStdString());
     REQUIRE(processor.swellEngine().assetDirectory()==firstRoot && action("useWorkingFolder").isEnabled());
-    action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy();});storage->poll();
     const auto associatedRoot=associated.file.getChildFile("working").getChildFile(beforeCapture.manifest.projectId).getChildFile(beforeCapture.manifest.instanceId);
+    action("useWorkingFolder").onClick();wait([&]{storage->poll();return !working->busy()
+        && processor.swellEngine().assetDirectory()==associatedRoot && working->statusText().contains("Save your DAW project");});
     REQUIRE(processor.swellEngine().assetDirectory()==associatedRoot && working->statusText().contains("Save your DAW project"));
     REQUIRE(processor.getCaptureSnapshot().reference==beforeCapture.reference && processor.swellEngine().snapshot().renderCount==renders);
     processor.getStateInformation(after);auto associatedState=juce::AudioProcessor::getXmlFromBinary(after.getData(),static_cast<int>(after.getSize()));
     REQUIRE(associatedState && associatedState->getStringAttribute("stateVersion")=="9");
-    editor.refresh();wait([&]{editor.refresh();const auto* current=storage->displayedReport();return current && !current->files.empty() && current->files.front().root==associatedRoot.getFullPathName();});
+    try
+    {
+        editor.refresh();wait([&]{editor.refresh();const auto* current=storage->displayedReport();return current && !current->files.empty() && current->files.front().root==associatedRoot.getFullPathName();});
+    }
+    catch(...)
+    {
+        m3::storage::portable::Input pinned;juce::String pinError;
+        const auto pinnedOk=processor.pinPortableAssets(pinned,pinError,true);
+        const auto* current=storage->displayedReport();
+        std::cerr<<"Storage report after association: showing="<<storage->isShowing()<<" scanning="<<storage->scanning()
+            <<" report="<<(current!=nullptr)<<" files="<<(current?current->files.size():0)
+            <<" expected="<<associatedRoot.getFullPathName()<<" pinned="<<pinnedOk<<" root="<<pinned.instanceRoot.getFullPathName()
+            <<" error="<<pinError<<"\n";
+        if(current){for(const auto& issue:current->issues)std::cerr<<"Inventory issue: "<<issue<<"\n";
+            if(!current->files.empty())std::cerr<<"Inventory root: "<<current->files.front().root<<"\n";}
+        throw;
+    }
     for(const auto& [path,hash]:originalHashes)REQUIRE(m3::fileHash(firstRoot.getChildFile(path))==hash);
     storage->folderPicker={};storage->receiptPicker={};viewport->setViewPosition(0,0);contentViewport->setViewPosition(0,0);
     REQUIRE(working->statusText().contains("Save your DAW project"));
@@ -106,5 +142,5 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;return runTes
     contentViewport->setViewPosition(0,10000);
     if(output.isNotEmpty())screenshot(juce::File(output).getSiblingFile(juce::File(output).getFileNameWithoutExtension()+"-controls.png"));
     if(argc>1 && juce::String(argv[1])=="--review")juce::MessageManager::getInstance()->runDispatchLoop();
-    std::cout<<"Storage Settings: production page/tab indexes, automatic scanning, current-session references, reopen, unchanged saved state/render counts/hashes and restore-scope fencing passed.\n";
+    std::cout<<"Storage Settings: page identities, tab order, automatic scanning, current-session references, reopen, unchanged saved state/render counts/hashes and restore-scope fencing passed.\n";
 });}

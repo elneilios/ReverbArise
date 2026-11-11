@@ -71,7 +71,7 @@ static void uiStandardsLayoutCases(PreverbAudioProcessorEditor& editor,const juc
         for(auto* child:learn->getChildren())if(child->isVisible())REQUIRE(learn->getLocalBounds().contains(child->getBounds()));
         REQUIRE(juce::GlyphArrangement::getStringWidth(heading->getFont(),heading->getText())<=heading->getWidth());
         REQUIRE(helper->getText().isEmpty()?helper->getHeight()==0:helper->getHeight()>=textStyle(TextRole::helper).lineHeight);
-        for(const auto* name:{"learnRecaptureLabel","learnAutomaticLabel","learnIRLabel","learnSensitivityLabel"})
+        for(const auto* name:{"learnIRLabel","learnSensitivityLabel"})
         {
             auto* label=dynamic_cast<juce::Label*>(named(editor,name));REQUIRE(label);
             if(label->isVisible())REQUIRE(juce::GlyphArrangement::getStringWidth(label->getFont(),label->getText())<=label->getWidth());
@@ -80,6 +80,8 @@ static void uiStandardsLayoutCases(PreverbAudioProcessorEditor& editor,const juc
         {
             auto* toggle=dynamic_cast<controls::Switch*>(named(*learn,name));REQUIRE(toggle);
             REQUIRE(toggle->getLocalBounds().toFloat().contains(toggle->focusInkBounds()));
+            REQUIRE(juce::GlyphArrangement::getStringWidth(componentTextFont(*toggle,TextRole::controlLabel),toggle->getButtonText())
+                    <= toggle->labelBounds().getWidth());
         }
         if(learn->showsEmptyPrompt())for(const auto& region:learn->emptyStateRegions())REQUIRE(chart.contains(region));
         for(float scale:{1.f,1.25f,1.5f,2.f})

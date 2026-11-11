@@ -64,16 +64,19 @@ clamped endpoint. Its fixed-work adjacent-index search accounts for the final
 integer-sample rounding, including sub-sample grid spacing. This domain foundation
 is tested independently and through actual handle/translation gestures.
 
-Perform timeline navigation now uses opt-in `constrain` / `zoomBounded` methods;
-Export's unbounded viewport arithmetic and its adapter-owned limits remain
-unchanged. Limits cover known capture, selected/source definitions, real render
+Perform and Export reuse bounded viewport math with their own accepted limits.
+Perform limits cover known capture, selected/source definitions, real render
 frames and requested shape extents plus existing 4% Fit margins. Minimum span is
 one sample per logical source-lane pixel (or the complete context when shorter),
 with an additional double-precision floor at extreme absolute coordinates.
 The horizontal fraction is logarithmic from complete context (0) to closest (1).
 Toolbar zoom anchors a visible selected target, then a visible host playhead,
-then center; Ctrl-wheel anchors at the pointer. Overview/pan stay inside the same
-limits without seeking the host. Navigation never edits source/model coordinates.
+then centre. Wheel zoom anchors at the pointer and middle-drag pans the detail
+waveform. Left-drag on the Overview moves the detail range with the pointer at
+the current zoom. A plain click, wheel and the other buttons are idle there.
+The detail playhead follows a left-click or drag on open waveform and stays at
+its absolute sample through navigation. It is independent of host and audition
+playback. Handle and wet-body edits retain priority on their hit areas.
 
 `UI/Controls/LatchingActionButton.h` extends the accepted ActionButton family
 without modifying it. The shared control owns accepted pressed-state presentation,
@@ -84,7 +87,7 @@ Off remains Off after Ctrl release. Ctrl bypasses horizontal Snap; Shift scales
 pointer deltas by 0.1; Ctrl+Shift combines both. Modifier transitions rebase from
 the last accepted position and pointer without publishing an edit. Focus loss
 cancels gestures and clears transient keys; active-editor refresh reconciles the
-actual modifiers. Ctrl-wheel still zooms horizontally at the pointer. Exact
+actual modifiers. Wheel zoom needs no modifier. Exact
 inspector entries remain unsnapped; left/right handle nudges use the adjacent grid
 point, or one sample with Ctrl. Vertical tension remains continuous.
 
@@ -103,7 +106,11 @@ notch (JUCE delta 0.1) and an arrow press use the steps below, independent of zo
 unsnapped fractional wheel deltas remain proportional. Shift divides a step by
 ten, rounded internally to at least one sample for timing. With effective Snap On,
 timing wheel/arrows move to the adjacent grid point; Shift retains that grid.
-Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
+Ctrl+wheel uses the unsnapped timing step for that event. Ctrl+Shift uses the
+finer unsnapped step. Curve and Level use Ctrl+wheel for fine adjustment.
+Level drag settles at the 0 dB tick within ±0.3 dB and continues past it as the
+pointer moves beyond the band. Exact entry, other input and Reset keep their
+separate paths.
 
 | Control | User-facing unit | Snap-Off wheel/arrow step | Display precision | Accepted storage |
 | --- | --- | --- | --- | --- |
@@ -111,7 +118,7 @@ Ctrl+Shift uses the unsnapped fine step. Curve/level never use the musical grid.
 | Pre-roll, End Offset | Seconds (s), signed | 0.001 s | 6 decimal places | Checked integer sample timing |
 | Move Wet | Milliseconds (ms), signed | 1 ms | 3 decimal places | Checked integer sample placement |
 | Fade In/Out | Milliseconds (ms), nonnegative | 1 ms | 3 decimal places | Checked integer sample duration |
-| Level | dB, -60 to +12 | 1 dB (Shift: 0.1 dB) | 2 decimal places | Existing finite float gain |
+| Level | dB, -12 to +12 for new edits | 1 dB (Ctrl+wheel or Shift: 0.1 dB) | Compact readout, exact edit value | Existing finite float gain and legacy value compatibility |
 | Curve In/Out | Unitless, -1 to +1 | 0.01 | 3 decimal places | Existing finite double tension |
 
 Formatting does not reduce accepted typed/saved precision. Decimal timing input

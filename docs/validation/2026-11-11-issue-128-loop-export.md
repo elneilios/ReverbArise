@@ -191,5 +191,15 @@ The plugin-only install did not rerun CTest. The owner confirmed that the
 fresh FL Studio kick Wet Layer export matches the wet level in Perform.
 Decoded one- through four-pass Wet Layer files from that project each peak
 at −1.00 dBFS, with zero samples above full scale. Each has the 96,000-frame
-lead-in and the requested number of 96,000-frame passes. Rack-to-FL Drag and
-Save placement and listening acceptance remain separate from these results.
+lead-in and the requested number of 96,000-frame passes. The owner separately
+confirmed the Clock-only Rack export and FL Studio import check passed with
+Drag and Save, including alignment, repeats, lead-in and tail for both mixes.
+This owner check predates integration of the shared guarded file gestures.
+
+The issue branch then integrated `feature/loop-mode` at `2aaa1cd`
+(PR #150). The Loop Export workspace uses the shared guarded Save and Drag
+binding and the shared waveform gestures. Its drag tile retains the approved
+placement instruction and uses that instruction after a successful Loop
+drop. The post-merge focused Release run passed all six Loop playback,
+Perform, Export UI/binding, composition and worker tests
+(`out/issue-128/integration-test.log`).

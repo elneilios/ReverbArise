@@ -104,11 +104,12 @@ void PreverbAudioProcessorEditor::rebaseValueEdit(int index)
     if(!valueIntentCurrent(index)){valueControls[index].cancel();return;}
     const auto current=processor.swellEngine().savedSession();valueAnchors[index]=*m3::find(current,current.primary);
 }
-void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps)
+void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps,bool fineWheel)
 {
     if(!valueIntentCurrent(index) || !std::isfinite(steps) || steps==0 || !valueAnchors[index])return;
     const auto& anchor=*valueAnchors[index];const auto& invocation=valueInvocations[index];
-    const bool fine=(juce::ModifierKeys::shiftModifier&valueModifierFlags)!=0;
+    const bool fine=(juce::ModifierKeys::shiftModifier&valueModifierFlags)!=0
+        || (fineWheel && (index==levelValue || index==inCurveValue || index==outCurveValue));
     const auto direction=steps>0?1:-1;
     double displacement=steps*(fine?.1:1.);
     if(index==levelValue)displacement=steps*(fine?m3::swellLevelFineStepDb:m3::swellLevelStepDb);
@@ -133,6 +134,16 @@ void PreverbAudioProcessorEditor::stepValueEdit(int index,double steps)
 bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& text,std::optional<double> delta)
 {
     if(updating || destroying || !valueAnchors[index])return false;
+    const auto reject=[&](const juce::String& reason)
+    {
+        processor.swellEngine().diagnostic(reason);
+        if(!delta)
+        {
+            valueControls[index].setValidation(reason);
+            refresh();
+        }
+        return false;
+    };
     if(!valueIntentCurrent(index)){processor.swellEngine().diagnostic("Edit superseded by changed session, selection, source or fixed host timing");valueControls[index].cancel();refresh();return false;}
     const auto anchor=*valueAnchors[index];const auto current=processor.swellEngine().savedSession();
     const auto latest=m3::find(current,anchor.id);
@@ -140,7 +151,7 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
     if(latest->inputGeneration!=valueTokens[index])
     {processor.swellEngine().diagnostic("Edit superseded by changed source or host timing; try again");return false;}
     const auto invocation=valueInvocations[index];const auto time=invocation.time;const auto rate=time.rate;int64_t value=0;double scalar=0;
-    if(!time.valid || !std::isfinite(rate) || rate<=0){processor.swellEngine().diagnostic("Compatible host timing is required");return false;}
+    if(!time.valid || !std::isfinite(rate) || rate<=0)return reject("Compatible host timing is required");
     if(delta)
     {
         if(*delta==0 && index!=levelValue)return true;
@@ -174,16 +185,18 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
     else if(index<=sourceEndValue || (index==placementValue && sampleUnitsButton.getToggleState()))
     {
         if(sampleUnitsButton.getToggleState())
-        {value=text.getLargeIntValue();if(juce::String(value)!=text){processor.swellEngine().diagnostic("Enter an exact integer sample value");return false;}}
-        else if(!m3::parseMusicalPosition(text,invocation.accepted.valid?invocation.accepted:time,value)){processor.swellEngine().diagnostic("Enter bar.beat.fraction or choose exact samples in Settings");return false;}
+        {value=text.getLargeIntValue();if(juce::String(value)!=text)return reject("Enter an exact integer sample value");}
+        else if(!m3::parseMusicalPosition(text,invocation.accepted.valid?invocation.accepted:time,value))
+            return reject("Enter bar.beat.fraction or choose exact samples in Settings");
     }
     else
     {
-        if(!decimal(text,scalar)){processor.swellEngine().diagnostic("Enter a finite numeric value");return false;}
+        if(!decimal(text,scalar))return reject("Enter a finite numeric value");
         if(index!=levelValue && index!=inCurveValue && index!=outCurveValue
             && !sampleCount(static_cast<long double>(scalar)*rate/(index==preRollValue || index==endOffsetValue?1:1000),value))
-        {processor.swellEngine().diagnostic("Timing value overflow");return false;}
+            return reject("Timing value overflow");
     }
+    juce::String rejection;
     const auto ok=processor.swellEngine().edit(anchor.id,[&](auto& w,auto& error)
     {
         const auto accepted=processor.swellEngine().savedSession();
@@ -216,16 +229,25 @@ bool PreverbAudioProcessorEditor::commitValueEdit(int index,const juce::String& 
         if(index==fadeInValue || index==fadeOutValue)
         {if(value<0){error="Fade length cannot be negative";return false;}(index==fadeInValue?shape.fadeIn:shape.fadeOut)=value;}
         return m3::setShape(w,shape,valueRawStarts[index],valueRawEnds[index],error);
-    },invocation.epoch,nullptr,invocation.loopRevision);
+    },invocation.epoch,&rejection,invocation.loopRevision);
     // Refresh is listener-suppressed. The cell keeps its typed text/gesture anchor
     // until completion, while the rest of the editor shows actual canonical state.
     if(ok){const auto saved=processor.swellEngine().savedSession();if(const auto w=m3::find(saved,anchor.id))valueTokens[index]=w->inputGeneration;}
+    if(ok || !delta)
+        valueControls[index].setValidation(ok || !valueIntentCurrent(index)?juce::String{}:rejection);
     refresh();return ok;
 }
 void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTime& time)
 {
     if(initialValueEpoch!=state.sessionEpoch){initialValuePositions.clear();initialValueEpoch=state.sessionEpoch;}
     if(w)initialValuePositions.try_emplace(w->id,InitialValuePositions{w->arrival,w->sourceStart,w->sourceEnd});
+    const auto generation=w?w->inputGeneration:0;
+    if(valueFeedbackGeneration!=generation || valueFeedbackSelection!=state.session.selected)
+    {
+        for(auto& cell:valueControls)cell.setValidation({});
+        valueFeedbackGeneration=generation;
+        valueFeedbackSelection=state.session.selected;
+    }
     const auto rate=time.rate;const auto valid=w && time.valid && std::isfinite(rate) && rate>0;
     const auto span=std::max(1.0,timeline.viewport().span());
     int64_t a=0,b=0;const auto shaped=valid && state.raw && m3::requestedShapeBounds(*w,state.raw->start,a,b);
@@ -234,6 +256,17 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
         if(index<=sourceEndValue)valueControls[index].setCaption(juce::String(index==targetValue?"Target":index==sourceStartValue?"Source start":"Source end")+(sampleUnitsButton.getToggleState()?" (samples)":" (bars)"),
             juce::String(index==targetValue?"Target":index==sourceStartValue?"Source Start":"Source End")+(sampleUnitsButton.getToggleState()?" (samples)":" (bar.beat.fraction)"));
         if(index==placementValue)valueControls[index].setCaption(sampleUnitsButton.getToggleState()?"Move Wet (samples)":"Move Wet (ms)");
+        if(index<=sourceEndValue || index==placementValue)
+            valueControls[index].valueField().setNumericCharacters(sampleUnitsButton.getToggleState()?"0123456789-":
+                index<=sourceEndValue?"0123456789.-":"0123456789+.-");
+        if(index==targetValue)
+        {
+            static const juce::String musicalHelp="Absolute musical position: bar.beat.fraction. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.";
+            static const juce::String sampleHelp="Enter a whole sample position. Typed entry is never snapped. Ctrl bypasses Snap; Shift gives fine adjustment.";
+            auto& cell=valueControls[index];
+            const auto& help=sampleUnitsButton.getToggleState()?sampleHelp:musicalHelp;
+            if(cell.valueField().getTooltip()!=help)cell.setValueHelp(help);
+        }
         if(index==inCurveValue || index==outCurveValue)valueControls[index].setCaption(index==inCurveValue?"Curve In":"Curve Out",index==inCurveValue?"Curve In (unitless, -1 to +1)":"Curve Out (unitless, -1 to +1)");
         const auto enabled=valid && (index<=sourceEndValue?(!w->frozen):shaped);
         const auto valueAvailable=valid && ((index!=preRollValue && index!=endOffsetValue) || shaped);
@@ -280,6 +313,7 @@ void PreverbAudioProcessorEditor::refreshValues(const m3::Swell* w,const SongTim
             cell.valueField().setTooltip(description);
             cell.valueKnob().setHelpText(description);
             cell.valueField().setHelpText(description);
+            cell.setInlineHelp("Range: -12 to +12 dB.");
         }
         if(!valueControls[index].editing())valueSpans[index]=domain;
         valueControls[index].display(w?juce::String(state.sessionEpoch)+"/"+w->id:juce::String{},text,fraction,enabled,exactText);

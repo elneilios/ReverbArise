@@ -30,7 +30,7 @@ public:
         selector.onChange=[this]{if(refreshing)return;const auto index=selector.getSelectedId()-2;
             if(index>=0 && index<static_cast<int>(candidates.size()))commit(candidates[static_cast<size_t>(index)].levels);};
         for(auto* slider:{&dry,&wet}){
-            slider->setRange(0,100,.1);slider->setNumDecimalPlacesToDisplay(1);slider->setTextValueSuffix(" %");
+            slider->setRange(0,100,.1);slider->setWheelSteps(1,.1);slider->setNumDecimalPlacesToDisplay(1);slider->setTextValueSuffix(" %");
             slider->beforeInvocation=[this]{if(beforeInvocation)beforeInvocation();};
         }
         dry.setName("exportDry");dry.setTitle("Dry output level");wet.setName("exportWet");wet.setTitle("Wet output level");
@@ -66,7 +66,9 @@ public:
     }
     std::function<void()> beforeInvocation;
     std::function<void(Pair)> onChange;
-    ChoiceSelector selector;SliderControl dry,wet;
+    ChoiceSelector selector;
+    SliderControl dry{{"Dry level (%)", "Captured source level in the export."}};
+    SliderControl wet{{"Wet level (%)", "Rendered swell level in the export."}};
 private:
     void commit(Pair pair){if(pair==accepted)return;display(pair);if(onChange)onChange(pair);}
     Pair accepted;bool refreshing=false,responsive=false;

@@ -140,6 +140,7 @@ public:
     bool confirmCandidateAt(int64_t sample,std::optional<TargetIdentity> expected={});
     void removeSelected();
     bool removeTarget(const juce::String&,uint64_t expectedSession);
+    bool removeTargets(const std::vector<juce::String>&,uint64_t expectedSession,uint64_t expectedPass=UINT64_MAX);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary);
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
@@ -181,7 +182,7 @@ public:
     bool setGainPolicy(GainPolicy);
     void setRegenerationSensitivity(float);
     float changeTolerance() const noexcept {return (1-regeneration.load())*.3f;}
-    bool setFrozen(const juce::String&,bool);
+    bool setFrozen(const juce::String&,bool,uint64_t expectedSession=0);
     void loadDefaultIR(const juce::File&);
     bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
@@ -210,6 +211,7 @@ public:
     bool seekExport(int64_t sample,uint64_t expectedSession,uint64_t expectedPass,const juce::String& composition);
     void requestExportDetail(int64_t first,int64_t end,size_t bins,uint64_t expectedSession,const juce::String& composition);
     uint64_t deliverExport(uint64_t expectedSession,const ExportFile&,const juce::File& destination={},bool overwrite=false,bool drag=false,uint64_t expectedPass=UINT64_MAX);
+    juce::File readyExportFile(uint64_t expectedSession,uint64_t expectedPass,const ExportFile&) const;
     void holdExportForTesting(bool hold) noexcept {exportHold.store(hold);notify();}
     bool exportWaitingForTesting()const noexcept{return exportWaiting.load();}
     bool audition(double deviceRate = 0);

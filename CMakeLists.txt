@@ -130,6 +130,7 @@ target_sources(preverb_plugin PRIVATE
     Source/Plugin/PluginPresentation.cpp
     Source/Plugin/PluginProcessor.cpp
     Source/UI/SwellTimeline.cpp
+    Source/UI/Controls/NativeWavDrag.cpp
 )
 
 target_compile_definitions(preverb_plugin PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
@@ -151,6 +152,9 @@ target_link_libraries(preverb_plugin PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )
+if(WIN32)
+    target_link_libraries(preverb_plugin PRIVATE ole32 shell32 uuid)
+endif()
 
 add_custom_command(TARGET preverb_plugin_VST3 POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:preverb_plugin_VST3>/../Resources"
@@ -168,6 +172,11 @@ add_executable(preverb_build_smoke tests/build_smoke.cpp)
 target_link_libraries(preverb_build_smoke PRIVATE juce::juce_core)
 
 if(BUILD_TESTING)
+    add_executable(preverb_boolean_toggle_test tests/boolean_toggle_test.cpp)
+    target_compile_definitions(preverb_boolean_toggle_test PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+    target_include_directories(preverb_boolean_toggle_test PRIVATE Source)
+    target_link_libraries(preverb_boolean_toggle_test PRIVATE preverb_ui_resources juce::juce_gui_basics)
+    add_test(NAME preverb_boolean_toggle_test COMMAND preverb_boolean_toggle_test)
     add_executable(preverb_presentation_policy_test tests/presentation_policy_test.cpp)
     target_include_directories(preverb_presentation_policy_test PRIVATE Source)
     target_link_libraries(preverb_presentation_policy_test PRIVATE juce::juce_core)

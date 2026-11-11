@@ -8,7 +8,8 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && 
     Fixture fixture;TestDirectory backup,restore;REQUIRE(backup.file.createDirectory().wasOk() && restore.file.createDirectory().wasOk());
     m3::storage::portable::Input input{fixture.root,fixture.xml,fixture.manifest};
     m3::ui::WorkspaceTheme theme;
-    m3::ui::PortableStoragePanel panel([&](auto& value,auto& error){value=input;error.clear();return true;},restore.file);
+    int providerReads=0;
+    m3::ui::PortableStoragePanel panel([&](auto& value,auto& error){++providerReads;value=input;error.clear();return true;},restore.file);
     panel.setLookAndFeel(&theme);
     struct Window:juce::DocumentWindow{Window():DocumentWindow("Storage backup and recovery - disposable fixture review",m3::ui::background,DocumentWindow::closeButton){}void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}} window;
     window.setUsingNativeTitleBar(true);window.setContentNonOwned(&panel,false);window.setSize(680,800);window.setVisible(true);
@@ -19,6 +20,12 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && 
     button(panel,"restoreAssets").onClick();wait();REQUIRE(panel.lastResult()->success && picks==3);
     const auto restored=restore.file.getChildFile(fixture.observed.project).getChildFile(fixture.observed.instance);for(const auto& dependency:fixture.observed.dependencies)REQUIRE(restored.getChildFile(dependency.path).existsAsFile());
     for(const auto& name:juce::StringArray{"backupAssets","restoreAssets","locateAssets"})REQUIRE(panel.getLocalBounds().contains(button(panel,name).getBounds()));
+    // A hidden idle page must not repeatedly pin/serialize the session; opening
+    // it again still refreshes the current scope.
+    window.setVisible(false);const auto idleReads=providerReads;
+    for(int i=0;i<3;++i)panel.poll();
+    REQUIRE(providerReads==idleReads);
+    window.setVisible(true);panel.poll();REQUIRE(providerReads>idleReads);
     // Cancelling a picker performs no operation and a changed session is rejected.
     const auto previous=panel.lastResult();panel.folderPicker=[](const auto&,const auto&,auto complete){complete({});};button(panel,"backupAssets").onClick();REQUIRE(!panel.busy() && panel.lastResult()==previous);
     const auto original=input.instanceRoot;panel.folderPicker=[&](const auto&,const auto&,auto complete){input.instanceRoot=fixture.directory.file;complete(backup.file);};button(panel,"backupAssets").onClick();REQUIRE(!panel.busy() && panel.statusText().contains("session changed"));input.instanceRoot=original;
@@ -36,9 +43,19 @@ int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;if(argc>1 && 
     button(panel,"restoreAssets").onClick();wait();REQUIRE(!panel.lastResult()->success && panel.lastResult()->error.contains("another project or instance"));
     panel.bind([&](auto& value,auto& error){value=input;error.clear();return true;});
     button(panel,"locateAssets").onClick();wait();REQUIRE(panel.lastResult()->success);
+    // A completed reload suppresses only the exact epoch/root refresh it
+    // already requested. A later folder move can preserve the session epoch.
+    panel.onRestored=[&](const auto&,auto& error){++input.controlEpoch;error.clear();return true;};
+    button(panel,"restoreAssets").onClick();wait();panel.poll();REQUIRE(!panel.reloadPending());
+    REQUIRE(!panel.consumeReloadScope(input.controlEpoch,restore.file));
+    REQUIRE(!panel.consumeReloadScope(input.controlEpoch,input.instanceRoot));
+    button(panel,"restoreAssets").onClick();wait();panel.poll();REQUIRE(!panel.reloadPending());
+    REQUIRE(panel.consumeReloadScope(input.controlEpoch,input.instanceRoot));
+    REQUIRE(!panel.consumeReloadScope(input.controlEpoch,input.instanceRoot));
+    panel.onRestored={};
     panel.folderPicker={};panel.receiptPicker={}; // Review uses native selectors.
     const auto output=juce::SystemStats::getEnvironmentVariable("PREVERB_PORTABLE_PREVIEW_OUTPUT",{});if(output.isNotEmpty()){auto stream=juce::File(output).createOutputStream();REQUIRE(stream && stream->setPosition(0) && stream->truncate().wasOk() && juce::PNGImageFormat().writeImageToStream(panel.createComponentSnapshot(panel.getLocalBounds()),*stream));}
     if(argc>1 && juce::String(argv[1])=="--review")juce::MessageManager::getInstance()->runDispatchLoop();
-    std::cout<<"Portable Storage preview: working backup, locate, restore bindings, picker cancellation, stale-session rejection and bounds passed.\n";
+    std::cout<<"Portable Storage preview: backup/locate/restore, hidden idle polling/reopen, picker cancellation, stale-session rejection and bounds passed.\n";
     window.setLookAndFeel(nullptr);panel.setLookAndFeel(nullptr);
 });}

@@ -109,7 +109,9 @@ void Composition::verifyKnobResets()
     REQUIRE(popup->state().done());
     popup->activate(0);
     pump();
-    REQUIRE(current().shape.gainDb == 0 && level.hasKeyboardFocus(false) && cornerInk(level) != aqua);
+    REQUIRE(current().shape.gainDb == 0);
+    REQUIRE(level.hasKeyboardFocus(false));
+    REQUIRE(cornerInk(level) != aqua);
 
     load(original);
     popup = openMenu("preRoll");

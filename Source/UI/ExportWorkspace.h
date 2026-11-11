@@ -3,10 +3,11 @@
 #include <Core/TransportTime.h>
 #include "Controls/ActionButton.h"
 #include "Controls/FileDragTile.h"
-#include "Controls/ExternalFileDrag.h"
+#include "ExportFileInvocations.h"
 #include "Controls/ExportLevelsControl.h"
 #include "Controls/NoticeBar.h"
 #include "Controls/TimelineNavigation.h"
+#include "Controls/WrappedLabel.h"
 #include "Controls/TimelineZoomControls.h"
 #include "Controls/MusicalTimelineRuler.h"
 #include "LoopExportControls.h"
@@ -19,7 +20,15 @@ namespace m3::ui
 class ExportWorkspace final:public juce::Component
 {
 public:
-    explicit ExportWorkspace(SwellEngine& owner):engine(owner)
+    explicit ExportWorkspace(SwellEngine& owner, ExportFileInvocations::ChooseSave chooser = {},
+                             ExportFileInvocations::StartExternalDrag nativeDrag = {})
+        :engine(owner),fileInvocations(save,tile,
+            [this](const auto& scope,const auto& destination){engine.deliverExport(scope.session,scope.file,destination,true,false,scope.pass);},
+            [this](const auto& scope){return engine.readyExportFile(scope.session,scope.pass,scope.file);},
+            nativeDrag ? std::move(nativeDrag) : ExportFileInvocations::StartExternalDrag{
+                [this](const auto& file,const auto& canStart,const auto& canContinue)
+                {return controls::dragReadyWav(file,tile,canStart,canContinue);}},
+            std::move(chooser))
     {
         setName("exportWorkspace");
         for(auto* c:std::initializer_list<juce::Component*>{&play,&stop,&mix,&tile,&save,&back,&zoom,&navigation})addAndMakeVisible(c);
@@ -30,6 +39,12 @@ public:
                 onLoopSettings(settings,state.session,state.pass);
             if(loopPresentation)loopControls.display(loopPresentation->settings);
         };
+        addAndMakeVisible(captionLabel);addAndMakeVisible(statusLabel);
+        for(auto* label:{&captionLabel,&statusLabel})
+        {
+            applyTextRole(*label,TextRole::helper,juce::Justification::topLeft);
+            label->setBorderSize({});label->setInterceptsMouseClicks(false,false);
+        }
         zoom.setName("exportZoom");zoom.fitButton().setName("exportFit");navigation.setName("exportNavigation");
         zoom.beforeInvocation=[this]{zoomInvocation.reset();if(displayed)zoomInvocation=ZoomScope{state.session,state.pass,displayed->plan->identity};};
         zoom.onZoomStep=[this](double factor){if(zoomIntentCurrent())navigation.zoom(factor);};
@@ -41,8 +56,6 @@ public:
         navigation.onChange=[this]{requestDetail();updateZoom();repaint();};
         navigation.onPosition=[this](int64_t sample){if(state.prepared && engine.seekExport(sample,state.session,state.pass,state.prepared->plan->identity)){
             state.previewPosition=std::clamp(sample,*state.prepared->metrics.audibleStart,*state.prepared->metrics.audibleEnd-1);state.cursor.reset();repaint();}};
-        navigation.setPanGesture(controls::TimelineNavigation::PanGesture::rightDrag);
-        navigation.setTooltip("Left-click or drag: position preview. Right-drag: pan. Wheel: zoom. Shift-wheel: pan. Home: Fit.");
         play.setName("exportPlay");stop.setName("exportStop");mix.setName("exportLevels");tile.setName("exportDrag");save.setName("exportSave");back.setName("exportReturn");
         setTitle("Song-aligned export preview");mix.setTitle("Export mix");play.setTitle("Play export preview");stop.setTitle("Stop export preview");
         play.setTooltip("Preview from the positioned playhead, or the first audible sample by default");stop.setTooltip("Stop internal preview; DAW transport is unchanged");
@@ -57,8 +70,8 @@ public:
             display(engine.snapshot());
         };
         play.onClick=[this]{engine.playExport(engine.assignmentEpoch(),loopPresentation?deviceRate:0);};stop.onClick=[this]{engine.stop();};
-        save.onClick=tile.onSave=[this]{chooseSave();};back.onClick=[this]{if(onReturn)onReturn();};
-        tile.onDrag=[this]{if(state.prepared)dragRequest=engine.deliverExport(engine.assignmentEpoch(),state.prepared->file,{},false,true);};
+        back.onClick=[this]{if(onReturn)onReturn();};
+        fileInvocations.onStatus=[this](const auto& message){localMessage=message;resized();repaint();};
     }
     std::function<void()> onReturn;
     struct LoopPresentation
@@ -101,6 +114,7 @@ public:
         const auto levels=editor.session.exportState.levels(loopPresentation.has_value());
         requestedLevels={levels.dry,levels.wet};mix.display(requestedLevels);
         const auto ready=state.phase==ExportPhase::ready && state.prepared!=nullptr;
+        fileInvocations.setCurrent(ready?std::optional{ExportFileInvocations::Scope{state.session,state.pass,state.prepared->file}}:std::nullopt);
         tile.setStatusText(ready && loopPresentation?loopMixLabel(*state.prepared->plan)+" | "+juce::String(loopPresentation->settings.repeats)+(loopPresentation->settings.repeats==1?" pass":" passes"):ready?"Ready: "+levelText(*state.prepared->plan)+" | "+
             (state.prepared->plan->dry>0?juce::String("Mute source | "):juce::String{})+"Song-aligned":state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Error: requested WAV not ready":"Preparing requested WAV");
         play.setEnabled(ready && state.prepared->metrics.audibleStart.has_value());stop.setEnabled(state.cursor.has_value() || state.previewRequested);
@@ -111,7 +125,8 @@ public:
             else if(deviceRate!=state.prepared->plan->timing.rate){play.setEnabled(false);previewHelp="Set the host audio rate to "+juce::String(state.prepared->plan->timing.rate/1000.,1)+" kHz to preview this Loop. The WAV stays at the captured rate.";}
         }
         play.setTooltip(previewHelp);play.setHelpText(previewHelp);
-        save.setEnabled(ready && !state.delivering && !choosing);tile.setEnabled(ready && !state.delivering && !choosing);
+        save.setEnabled(ready && !state.delivering && !fileInvocations.isChoosing());
+        tile.setEnabled(save.isEnabled());
         navigation.setEnabled(displayed!=nullptr);
         navigation.setPositioningEnabled(ready);
         if(displayed && (rangeIdentity!=displayed->plan->identity || (ready && identity!=displayed->plan->identity))){
@@ -129,16 +144,12 @@ public:
             tile.setPlacementText(instruction);
         }else tile.setPlacementText({});
         updateZoom();
-        if(dragRequest && state.delivery==dragRequest && !state.delivering){
-            dragRequest=0;
-            if(state.dragReady){
-                const auto result=controls::invokeExternalFileDrag(state.deliveryPath,state.dragReady,juce::ModifierKeys::getCurrentModifiersRealtime().isLeftButtonDown(),
-                    [this](const auto& path){return juce::DragAndDropContainer::performExternalDragDropOfFiles({path},false,&tile);});
-                localMessage=result==controls::ExternalDragResult::started?(loopPresentation?tile.placementText():juce::String("Place the WAV at song origin. Its managed file is retained.")):
-                    result==controls::ExternalDragResult::released?"Drag released before verification. Use Save WAV, or drag again.":"External dragging is unavailable. Use Save WAV.";
-            }else localMessage=state.deliveryMessage;
-        }
-        if(hadStatus!=statusText().isNotEmpty())resized();
+        const auto nextCaption=captionText();
+        const auto nextStatus=statusText();
+        const auto changed=captionLabel.getText()!=nextCaption || statusLabel.getText()!=nextStatus;
+        captionLabel.setText(nextCaption,juce::dontSendNotification);
+        statusLabel.setText(nextStatus,juce::dontSendNotification);
+        if(changed || hadStatus!=nextStatus.isNotEmpty())resized();
         repaint();
     }
     std::optional<controls::NoticeMessage> notice()const
@@ -164,7 +175,7 @@ public:
     void setResponsivePresentation(){responsive=true;mix.setResponsivePresentation();resized();}
     void resized()override
     {
-        if(responsive){layoutResponsive();return;}
+        if(responsive){layoutResponsive();layoutMessages();return;}
         auto body=getLocalBounds();right=body.removeFromRight((body.getWidth()-workspaceGeometry::columnGap)/3);
         body.removeFromRight(workspaceGeometry::columnGap);left=body;
         auto a=right;mixHeading=a.removeFromTop(controlGeometry::headingHeight);a.removeFromTop(spacing::related);
@@ -172,7 +183,7 @@ public:
         tile.setBounds(a.removeFromTop(std::min(a.getHeight()-2*controlGeometry::height-spacing::section-spacing::group,a.getWidth()*3/4)));a.removeFromTop(spacing::section);
         save.setBounds(a.removeFromTop(controlGeometry::height));a.removeFromTop(spacing::group);back.setBounds(a.removeFromTop(controlGeometry::height));
         a=left;heading=a.removeFromTop(controlGeometry::height);a.removeFromTop(spacing::labelHelp);
-        caption=a.removeFromTop(learnTypography::secondaryLineHeight);a.removeFromTop(spacing::related);
+        caption=a.removeFromTop(std::max(learnTypography::secondaryLineHeight,captionLabel.preferredHeight(a.getWidth())));a.removeFromTop(spacing::related);
         ruler=a.removeFromTop(controlGeometry::labelHeight);a.removeFromTop(learnGeometry::rulerViewportGap);
         a.removeFromBottom(spacing::related);
         auto buttons=a.removeFromBottom(controlGeometry::height);play.setBounds(buttons.removeFromLeft(controlGeometry::height));buttons.removeFromLeft(spacing::related);
@@ -180,13 +191,13 @@ public:
         a.removeFromBottom(spacing::related);
         statusArea={};
         if(statusText().isNotEmpty()){
-            statusArea=a.removeFromBottom(learnTypography::secondaryLineHeight);
+            statusArea=a.removeFromBottom(std::max(learnTypography::secondaryLineHeight,statusLabel.preferredHeight(a.getWidth())));
             a.removeFromBottom(spacing::labelHelp);
         }
         auto toolbar=a.removeFromBottom(controlGeometry::height);
         zoom.setBounds(toolbar.removeFromLeft(std::max(controls::TimelineZoomControls::minimumWidth(),toolbar.getWidth()/2)));
         toolbar.removeFromLeft(spacing::related);legend=toolbar.withSizeKeepingCentre(toolbar.getWidth(),controlGeometry::labelHeight);
-        a.removeFromBottom(spacing::related);chart=a;navigation.setBounds(chart);requestDetail();
+        a.removeFromBottom(spacing::related);chart=a;navigation.setBounds(chart);requestDetail();layoutMessages();
     }
     void paint(juce::Graphics& g)override
     {
@@ -194,10 +205,6 @@ public:
         applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Export Preview",heading,juce::Justification::left);g.drawText("Export Levels",mixHeading,juce::Justification::left);
         const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
         applyTextRole(g,*this,TextRole::helper);
-        const auto captionText=state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
-            :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
-            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Right-drag: pan. Wheel: zoom.");
-        g.drawFittedText(captionText,caption,juce::Justification::topLeft,2);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         if(!displayed){if(state.phase!=ExportPhase::error && juce::Time::getMillisecondCounterHiRes()-pendingSince<600)return;applyTextRole(g,*this,TextRole::emptyBody);g.drawFittedText(state.phase==ExportPhase::idle && state.message.startsWith("Silent:")?state.message:state.phase==ExportPhase::error?"Export unavailable. See the message above.":"Preparing your song-aligned mix",chart.reduced(spacing::section),juce::Justification::centred,2);return;}
         const auto& p=*displayed->plan;const auto& m=displayed->metrics;
@@ -235,9 +242,8 @@ public:
         applyTextRole(g,*this,TextRole::helper);
         const auto current=state.cursor.value_or(state.previewPosition.value_or(m.audibleStart.value_or(p.origin)));
         g.drawText((loopPresentation?loopMixLabel(p)+"  ":juce::String("Preview (song)  "))+seconds((current-p.origin)/p.timing.rate)+" / "+seconds((p.end-p.origin)/p.timing.rate)+(loopPresentation?juce::String{}:" | WAV "+seconds((p.end-p.origin)/p.timing.rate)),timeArea,juce::Justification::centredLeft);
-        g.drawFittedText(statusText(),statusArea,juce::Justification::topLeft,2);
     }
-    void resetView(){navigation.cancelGesture();zoomInvocation.reset();state={};displayed.reset();identity.clear();rangeIdentity.clear();updateZoom();}
+    void resetView(){fileInvocations.setCurrent({});navigation.cancelGesture();zoomInvocation.reset();state={};displayed.reset();identity.clear();rangeIdentity.clear();localMessage.clear();updateZoom();}
     const SwellViewport& viewport()const noexcept{return navigation.viewport();}
     juce::Rectangle<int> waveformBounds()const noexcept{return chart;}
     juce::Rectangle<int> rulerBounds()const noexcept{return ruler;}
@@ -258,12 +264,20 @@ private:
         controls.removeFromTop(groupGap);
         if(loopPresentation){auto actions=controls.removeFromTop(controlHeight);save.setBounds(actions.removeFromLeft(actions.getWidth()*2/5));actions.removeFromLeft(groupGap);back.setBounds(actions);}
         else {save.setBounds(controls.removeFromTop(controlHeight));controls.removeFromTop(groupGap);back.setBounds(controls.removeFromTop(controlHeight));}
-        auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(loopPresentation?captionHeight:40);
+        auto preview=left;heading=preview.removeFromTop(headingHeight);preview.removeFromTop(spacing::tight);caption=preview.removeFromTop(std::max(loopPresentation?captionHeight:40,captionLabel.preferredHeight(preview.getWidth())));
         if(loopPresentation){preview.removeFromTop(contentPadding);loopControls.setBounds(preview.removeFromTop(LoopExportControls::preferredHeight()));preview.removeFromTop(contentPadding);}
         ruler=preview.removeFromTop(loopPresentation?2*captionHeight:24);preview.removeFromBottom(contentPadding);
         auto transport=preview.removeFromBottom(controlHeight);play.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);stop.setBounds(transport.removeFromLeft(controlHeight));transport.removeFromLeft(contentPadding);timeArea=transport;
         preview.removeFromBottom(contentPadding);auto navigationRow=preview.removeFromBottom(controlHeight);zoom.setBounds(navigationRow.removeFromLeft(std::max(controls::TimelineZoomControls::minimumWidth(),navigationRow.getWidth()/2)));navigationRow.removeFromLeft(contentPadding);legend=navigationRow;
-        preview.removeFromBottom(contentPadding);statusArea=preview.removeFromBottom(statusText().isNotEmpty()?20:0);chart=preview;navigation.setBounds(chart);requestDetail();
+        preview.removeFromBottom(contentPadding);statusArea=preview.removeFromBottom(statusText().isNotEmpty()?std::max(20,statusLabel.preferredHeight(preview.getWidth())):0);chart=preview;navigation.setBounds(chart);requestDetail();
+    }
+    void layoutMessages(){captionLabel.setBounds(caption);statusLabel.setBounds(statusArea);}
+    juce::String captionText()const
+    {
+        const auto previous=displayed && (state.phase!=ExportPhase::ready || displayed!=state.prepared);
+        return state.cursor && state.previewLevels?juce::String(displayed && (displayed->plan->dry!=state.previewLevels->dry || displayed->plan->wet!=state.previewLevels->wet)?"Previous waveform | ":"")+"Preview Dry "+juce::String(state.previewLevels->dry*100,1)+"% / Wet "+juce::String(state.previewLevels->wet*100,1)+"% | "+(state.phase==ExportPhase::ready?"WAV ready":state.phase==ExportPhase::error?"WAV failed":"WAV preparing")
+            :previous?juce::String("Previous ")+levelText(*displayed->plan)+" | "+(state.phase==ExportPhase::error?"Preparation failed":"Updating preview...")
+            :state.detailMessage.isNotEmpty()?juce::String("Waveform detail unavailable; accepted WAV retained."):juce::String("Left-click/drag: preview position. Middle-drag: pan. Wheel: zoom.");
     }
     juce::String statusText()const
     {
@@ -308,25 +322,19 @@ private:
     static juce::String levelText(const SongExportPlan& plan){return "Dry "+juce::String(plan.dry*100,1)+"% / Wet "+juce::String(plan.wet*100,1)+"%";}
     static juce::String loopMixLabel(const SongExportPlan& plan){return plan.dry>0?(plan.wet>0?"Dry + wet WAV":"Dry-only WAV"):"Wet-only WAV";}
     static juce::String seconds(double value){return juce::String(value,3)+" s";}
-    void chooseSave()
-    {
-        if(choosing || !state.prepared || state.phase!=ExportPhase::ready)return;
-        choosing=true;const auto file=state.prepared->file;const auto session=state.session,pass=state.pass;
-        chooser=std::make_unique<juce::FileChooser>(loopPresentation?"Save Loop WAV":"Save song-aligned WAV",juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(file.path.fromLastOccurrenceOf("/",false,false)),"*.wav");
-        chooser->launchAsync(juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles|juce::FileBrowserComponent::warnAboutOverwriting,
-            [safe=juce::Component::SafePointer<ExportWorkspace>(this),session,pass,file](const auto& dialog){if(safe){safe->choosing=false;if(dialog.getResult()!=juce::File{})safe->engine.deliverExport(session,file,dialog.getResult(),true,false,pass);}});
-    }
     SwellEngine& engine;ExportSnapshot state;std::shared_ptr<const PreparedExport> displayed;juce::String identity,rangeIdentity,localMessage;
-    double pendingSince=0;bool refreshing=false,choosing=false;uint64_t dragRequest=0,lastDelivery=0;std::optional<uint64_t> mixSession,mixPass;
+    double pendingSince=0;bool refreshing=false;uint64_t lastDelivery=0;std::optional<uint64_t> mixSession,mixPass;
+    controls::ActionButton play{"",controls::CommandIcon::play,true},stop{"",controls::CommandIcon::stop},back{"Return to Perform",controls::CommandIcon::returnBack};
+    controls::CapturedActionButton save{"Save WAV...",controls::CommandIcon::save};
     double deviceRate=0;
-    std::unique_ptr<juce::FileChooser> chooser;
-    controls::ActionButton play{"",controls::CommandIcon::play,true},stop{"",controls::CommandIcon::stop},save{"Save WAV...",controls::CommandIcon::save},back{"Return to Perform",controls::CommandIcon::returnBack};
     controls::TimelineZoomControls zoom;controls::TimelineNavigation navigation;std::optional<ZoomScope> zoomInvocation;
+    controls::WrappedLabel captionLabel,statusLabel;
     controls::ExportLevelsControl mix;controls::FileDragTile tile;
     controls::ExportLevelsControl::Pair requestedLevels;
     LoopExportControls loopControls;
     std::optional<LoopPresentation> loopPresentation;
     std::optional<std::pair<uint64_t,uint64_t>> loopInvocation;
     juce::Rectangle<int> left,right,heading,caption,mixHeading,ruler,chart,legend,timeArea,statusArea;
+    ExportFileInvocations fileInvocations;
 };
 }

@@ -85,12 +85,23 @@ public:
     void setKnownBackup(Locator locator,juce::File folder){known=std::move(locator);selected=std::move(folder);Input input;juce::String error;if(provider(input,error)){knownRoot=input.instanceRoot;knownEpoch=input.controlEpoch;}refreshButtons();}
     bool busy()const{return worker.active.load();}
     bool reloadPending()const{return waitingReload;}
-    bool consumeReloadEpoch(uint64_t epoch){if(adoptedReloadEpoch!=epoch)return false;adoptedReloadEpoch=UINT64_MAX;return true;}
+    bool consumeReloadScope(uint64_t epoch,const juce::File& root)
+    {
+        const bool handled=adoptedReloadEpoch==epoch && adoptedReloadRoot==root;
+        adoptedReloadEpoch=UINT64_MAX;adoptedReloadRoot={};
+        return handled;
+    }
     const Result* lastResult()const{return shown.get();}
     juce::String statusText()const{return status.getText();}
     void visibilityChanged()override{if(!isShowing())worker.cancel=true;}
     void poll()
     {
+        // Hidden idle pages have no presentation to refresh. Keep servicing
+        // active operations and unconsumed results without repeatedly pinning
+        // and serializing a large session while another workspace is in use.
+        const auto pending=worker.answer.load();
+        if(!isShowing() && !busy() && !choosing && !waitingReload
+            && (!workingFolder || !workingFolder->occupied()) && (!pending || pending==shown))return;
         inventory.poll();
         if(onRestored){Input current;juce::String error;if(provider(current,error)){
             recoveryDestination.setText(current.folderUnavailable?"Restore: select a backup, then choose a new asset folder.":"Restore destination: current asset working folder.",juce::dontSendNotification);
@@ -106,7 +117,7 @@ public:
             else if((input.sourceUnavailable || (report && report->missingReferences>0)) && guidanceEpoch!=input.controlEpoch){guidanceEpoch=input.controlEpoch;setStatus(recoveryGuidance());}
         }
         if(waitingReload){Input current;juce::String error;if(provider(current,error)){
-            waitingReload=false;adoptedReloadEpoch=current.controlEpoch;if(current.instanceRoot!=operationRoot || !sameSource(current,operationInput)){setStatus("Session changed; previous recovery result was not adopted.");refreshButtons();return;}inventory.refresh();setStatus(current.sourceUnavailable?"Assets copied, but source reload failed. Originals and edits are retained.":"Assets copied and source reloaded. Current edits are retained.");refreshButtons();}}
+            waitingReload=false;if(current.instanceRoot!=operationRoot || !sameSource(current,operationInput)){setStatus("Session changed; previous recovery result was not adopted.");refreshButtons();return;}adoptedReloadEpoch=current.controlEpoch;adoptedReloadRoot=current.instanceRoot;inventory.refresh();setStatus(current.sourceUnavailable?"Assets copied, but source reload failed. Originals and edits are retained.":"Assets copied and source reloaded. Current edits are retained.");refreshButtons();}}
         if(busy())return;const auto reply=worker.answer.load();if(!reply || reply==shown)return;shown=reply;
         Input current;juce::String currentError;const bool sameScope=provider(current,currentError) && current.instanceRoot==operationRoot && current.controlEpoch==operationEpoch;
         if(!sameScope){known={};setStatus("The operation finished for an earlier session. The current session and its folder were not changed.");refreshButtons();return;}
@@ -130,8 +141,7 @@ public:
         const auto contentWidth=std::max(1,contentViewport.getWidth()-contentViewport.getScrollBarThickness());
         const auto folderHeight=workingFolder?workingFolder->preferredHeight(contentWidth):0;
         const auto inventoryHeight=inventory.preferredHeight(contentWidth);
-        juce::AttributedString statusText(status.getText());statusText.setFont(status.getFont());juce::TextLayout layout;layout.createLayout(statusText,static_cast<float>(std::max(1,contentWidth-2*spacing::section)));
-        const auto statusHeight=std::max(learnTypography::secondaryLineHeight,static_cast<int>(std::ceil(layout.getHeight())))+spacing::tight;
+        const auto statusHeight=std::max(learnTypography::secondaryLineHeight,status.preferredHeight(contentWidth-2*spacing::section))+spacing::tight;
         const auto destinationHeight=selected==juce::File{}?0:controlGeometry::labelHeight+spacing::tight;destination.setVisible(destinationHeight!=0);
         const auto contentHeight=folderHeight+inventoryHeight+spacing::related+controlGeometry::headingHeight+spacing::related
             +destinationHeight+controlGeometry::labelHeight+spacing::tight+statusHeight+spacing::related;
@@ -189,11 +199,12 @@ private:
     }
     void timerCallback()override{poll();}
     uint64_t guidanceEpoch=UINT64_MAX,adoptedReloadEpoch=UINT64_MAX;
+    juce::File adoptedReloadRoot;
     Provider provider;juce::File restoreRoot,selected,operationRoot,knownRoot;Locator known;uint64_t operationEpoch=0,knownEpoch=0;bool choosing=false,destroying=false,waitingReload=false;Input operationInput;
     Worker worker;std::shared_ptr<const Result> shown;std::unique_ptr<juce::FileChooser> chooser;
     FlatSurface content;controls::FocusViewport contentViewport;
     std::unique_ptr<WorkingFolderPanel> workingFolder;
-    StorageInventoryPanel inventory;juce::Label heading,status;controls::EllipsisLabel destination,recoveryDestination;
+    StorageInventoryPanel inventory;controls::EllipsisLabel heading;controls::WrappedLabel status;controls::EllipsisLabel destination,recoveryDestination;
     controls::ActionButton backupButton{"Back up assets..."},restoreButton{"Restore backup..."},locateButton{"Locate assets..."},cancelButton{"Stop operation"};
 };
 }

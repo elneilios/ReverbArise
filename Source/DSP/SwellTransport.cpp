@@ -201,10 +201,12 @@ void SwellEngine::setRegenerationSensitivity(float value)
     if(!std::isfinite(value) || value<0 || value>1)return;
     const juce::ScopedLock guard(lock);if(model.regenerationSensitivity!=value)persistentChangedLocked();model.regenerationSensitivity=value;regeneration=value;
 }
-bool SwellEngine::setFrozen(const juce::String& id,bool frozen)
+bool SwellEngine::setFrozen(const juce::String& id,bool frozen,uint64_t expectedSession)
 {
     if(!permitCreative())return false;
-    const juce::ScopedLock guard(lock);auto w=find(model,id);if(!w)return false;
+    const juce::ScopedLock guard(lock);
+    if(expectedSession!=0 && sessionGeneration.load()!=expectedSession)return false;
+    auto w=find(model,id);if(!w)return false;
     if(w->frozen==frozen)return true;
     if(frozen && (w->phase!=Phase::ready || !w->render.present())){message="Wait for a ready render before freezing";return false;}
     w->frozen=frozen;w->provenance=Provenance::manualEdited;persistentChangedLocked();
