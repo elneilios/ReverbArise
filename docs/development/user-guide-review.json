@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synchronized P8 dialog, chooser and auxiliary window requirements against the delivered guide. The guide already describes keyboard cancellation, focus return, native pickers and the existing operation guards.",
+  "summary": "Reviewed the synchronized C3 requirements against the existing Settings Swell source-range guidance and the delivered #122 behavior. The guide already covers wrapped help and validation, correction, and the accepted source range. This closeout changes no user behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1115,8 +1115,8 @@
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
-      "bytes": 61332,
-      "sha256": "bcd0dce0b199c3a1d8ddfc8c11fbd280ae025807628577b609da4b912ffa1ca6"
+      "bytes": 64308,
+      "sha256": "3d08b5a4c45938225f5e65013a600d49c5b9de4840f5ca7ab02ef2804fb84995"
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
