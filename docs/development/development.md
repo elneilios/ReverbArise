@@ -23,6 +23,7 @@ Use the local wrapper from the repository root in PowerShell:
 ./scripts/build.ps1 -Configuration Release
 ./scripts/build.ps1 -Configuration Release -Test
 ./scripts/build.ps1 -Configuration Release -PluginOnly
+./scripts/build.ps1 -Configuration Release -PrRegression
 ```
 
 Debug is the default. `-Test` builds first, then runs the full matching CTest
@@ -30,16 +31,39 @@ configuration; zero discovered tests is an error. Build-only success says testin
 was not requested. You can invoke the script by absolute path from any directory,
 including a checkout path containing spaces; the caller's location is restored.
 
-During implementation, use focused checks. With current test binaries in an idle
-build tree, run the relevant CTest cases using the matching preset with `-R`
-and `--no-tests=error`. Reserve the wrapper's full `-Test` runs for the
-[pre-PR gate](../../CONTRIBUTING.md#open-a-pull-request) and separately required
-release, host-test or acceptance gates.
+During implementation and draft review, build the binaries needed for owner
+previews and DAW checks. Start automated testing after the owner approves
+marking the draft ready. For targeted checks, run the relevant CTest cases
+against current binaries in an idle build tree using the matching preset with
+`-R` and `--no-tests=error`. Choose Debug, Release or both based on which
+configuration exercises the affected behaviour. For guidance-only diffs, use
+relevant document checks as the targeted checks. The full Release suite runs
+when the owner requests [release packaging](releases.md).
 
 `-PluginOnly` builds `preverb_plugin_VST3` and its dependencies instead of the full
 solution. It cannot be combined with `-Test`, since tests need their executables
-built. The test installer uses plugin-only by default; its `-Test` option retains
-the full build and CTest path.
+built. Use the test installer's default plugin-only build for owner DAW checks.
+
+### Standard PR regression set
+
+After owner approval to mark the draft ready, run
+`./scripts/build.ps1 -Configuration Release -PrRegression` alongside the
+targeted checks. The wrapper builds `preverb_pr_regression` and runs all 15
+cases labelled `pr-regression` under the same build-tree lock.
+`CMakeLists.txt` defines the membership and build dependencies.
+
+| Coverage | Existing cases |
+| --- | --- |
+| Build and plugin identity | `preverb_build_smoke`, `preverb_product_version_test`, `preverb_built_version_test` |
+| Workflow and state | `preverb_workflow_processor_test`, `preverb_workflow_state_test`, `preverb_swell_session_test` |
+| Capture and source | `preverb_capture_test`, `preverb_capture_transaction_test`, `preverb_persistent_capture_test`, `preverb_source_range_test` |
+| Transport and audio | `preverb_scheduled_tone_test`, `preverb_transport_playback_test`, `preverb_reverse_convolution_test` |
+| UI | `preverb_waveform_display_test`, `preverb_ui_standards_check` |
+
+Record the tested revision, configuration, selected cases and outcomes in the
+PR. Keep manual FL Studio acceptance separate in the record.
+
+### Build tools and troubleshooting
 
 The wrapper prefers a compatible CMake on PATH with adjacent CTest and otherwise
 discovers Visual Studio 2026's bundled tools. It requires Git and VS C++ tools;

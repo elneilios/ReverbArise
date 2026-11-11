@@ -30,7 +30,7 @@ Inspect the diff and enough surrounding code, callers, and focused tests to reco
 
 For each important concern, establish the requirement, concrete trigger, execution path, and observable consequence. Consider an alternative explanation that could disprove it, then find the smallest useful test, trace, or source evidence that distinguishes them.
 
-Run focused tests when they answer a real uncertainty. Report commands, revision, results, and limitations accurately; passing CI and author claims do not prove untested behavior. Keep repro artifacts outside tracked source unless changes were requested. Do not invent findings to fill a quota, request speculative redesigns, or elevate style preferences into defects.
+During draft review, use inspection and existing evidence. Record targeted tests that would resolve remaining uncertainties for the author to run after the owner approves marking the draft ready. Report the reviewed revision, any existing results used and evidence gaps. Keep repro artifacts outside tracked source unless changes were requested. Do not invent findings to fill a quota, request speculative redesigns, or elevate style preferences into defects.
 
 ## Rubber-duck the risky assumptions
 

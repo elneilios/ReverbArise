@@ -113,7 +113,23 @@ void automaticShortPhraseCases()
         REQUIRE(playback.status().phase == Phase::ready);
         REQUIRE(!through(16 + 2 * beats + 1,false));
         REQUIRE(playback.status().playback == Playing::standby);
-        playback.requestCue();
+        REQUIRE(playback.requestCue());
+        {
+            const auto handoff = playback.tryFenceCue();
+            REQUIRE(handoff.isLocked());
+            REQUIRE(!playback.requestCue());
+            std::array<float,128> left{},right{};
+            MidiObservations events;
+            events.samples[events.size++] = {37,cue};
+            { AudioAllocationGuard guard;
+                playback.process(left.data(),right.data(),static_cast<int>(left.size()),events,
+                                 48000,1,1,LoopPlayback::Access::perform,false,rack); }
+            REQUIRE(watchedAllocations == 0 && watchedDeallocations == 0);
+            cursor += left.size();
+            REQUIRE(playback.status().playback == Playing::standby);
+            REQUIRE(std::all_of(left.begin(),left.end(),[](float sample){return sample == 0;}));
+        }
+        REQUIRE(playback.requestCue());
         REQUIRE(through(16 + 3 * beats,true));
         REQUIRE(playback.status().playback == Playing::repeating);
         through(16 + 4 * beats + 1,false);

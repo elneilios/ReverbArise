@@ -10,16 +10,22 @@ Follow `CONTRIBUTING.md`, existing review conventions and all applicable upstrea
 - [ ] Any required new user request after OpenSpec Propose has been received.
 - [ ] Branch is issue-specific, based on the appropriate up-to-date work, without destructive rebases or unrelated modifications.
 
-## Before PR creation or update
+## Before opening a draft PR
 
-- [ ] Each completed task was implemented and checked against its acceptance criteria.
+- [ ] Implementation is finished and owner decisions and manual acceptance are recorded. Test-dependent tasks remain pending.
 - [ ] Vanilla Apply task-line validation and post-checkbox progress confirmation were honoured.
-- [ ] Focused and affected integration checks passed. When `CONTRIBUTING.md` requires full suites, passing results cover the PR revision's tested inputs.
-- [ ] Native MSVC/CTest results, fixtures and host/FL Studio checks are clearly distinguished.
+- [ ] PR records automated validation as pending and identifies any manual host checks performed.
 - [ ] Data safety, compatibility, threading and plugin-state risks were reviewed where applicable.
 - [ ] Living docs reflect implemented changes; dated evidence preserved; no unrelated generated output.
 - [ ] Outstanding risks, manual validation and unresolved work are explicitly stated.
 - [ ] Diff is issue-scoped and reviewable; commits have informative messages.
+
+## Before marking the draft ready
+
+- [ ] Review findings are addressed and the owner approves moving the draft to ready for review.
+- [ ] Targeted checks for the final diff and the standard PR regression set pass. Commands, configurations, tested revision and results are recorded.
+- [ ] Native MSVC/CTest results, fixtures and host/FL Studio checks are clearly distinguished.
+- [ ] Keep the PR in draft on failure and refresh validation if tested inputs change before merge.
 
 ## PR body
 
@@ -30,7 +36,7 @@ Include:
 4. **Verification:** exact relevant checks and outcomes; note tests not run.
 5. **Review notes:** remaining risks, screenshots for UI when useful, and any owner-only host checks.
 
-Open or update **one** PR targeting `main`, leave it open for owner review, and do not self-merge, independently close issues or archive OpenSpec changes.
+Open or update **one** PR targeting `main` and leave it open for owner merge. Apply the release packaging gate when requested by the owner.
 
 ## After completed delivery
 

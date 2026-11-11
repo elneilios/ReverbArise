@@ -79,6 +79,17 @@ bool CaptureSession::reload(const std::string& project,const std::string& instan
     CaptureSession candidate(root,location);
     if(!candidate.restore(project,instance,reference,revision,{},state.sourceKind()))
     {state.status="Recovery reload failed; previous accepted source retained: "+candidate.snapshot().status;return false;}
+    if (state.manifestKnown && state.sourceKind() == CaptureSourceKind::loop)
+    {
+        juce::String accepted, recovered, error;
+        if (!serializeCaptureManifest(state.manifest, accepted, error)
+            || !serializeCaptureManifest(candidate.state.manifest, recovered, error)
+            || accepted != recovered)
+        {
+            state.status = "Recovery reload failed; the recovered manifest differs from the accepted Loop";
+            return false;
+        }
+    }
     state=std::move(candidate.state);assets=std::move(candidate.assets);assetScope=std::move(candidate.assetScope);return true;
 }
 bool CaptureSession::makeRange(CaptureManifestRange& range, const float* samples, double rate)

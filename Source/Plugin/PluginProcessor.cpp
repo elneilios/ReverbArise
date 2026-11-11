@@ -927,8 +927,7 @@ bool PreverbAudioProcessor::requestLoopCue() noexcept
         || !swells->livePlaybackEnabled() || current.playback!=m3::LoopCueScheduler::State::standby
         || current.phase != m3::LoopLiveReference::State::ready
         || current.preparation != m3::LoopPlaybackPublication::Preparation::ready) return false;
-    swells->loopTransport().requestCue();
-    return true;
+    return swells->loopTransport().requestCue();
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {
@@ -1328,6 +1327,7 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     loopStop.store(0,std::memory_order_release);
     loopRecapture.store(false,std::memory_order_release);
     loopFinishPending.store(false,std::memory_order_release);
+    loopInterrupted.store(false,std::memory_order_relaxed);
     loopRouteHint.store(LoopRoute::waiting,std::memory_order_release);
     invalidateLoopClock();
     loopPreference.store(preference.packed(), std::memory_order_relaxed);
@@ -1404,10 +1404,25 @@ bool PreverbAudioProcessor::pinPortableAssets(m3::storage::portable::Input& outp
     }
     m3::storage::portable::Input accepted{root,stateXml,manifest};accepted.producer=juce::String(m3::build::report());accepted.sourceUnavailable=capture.unavailable;accepted.folderUnavailable=capture.location && !capture.location->writable;accepted.controlEpoch=epoch;output=std::move(accepted);error.clear();return true;
 }
+bool PreverbAudioProcessor::storagePlaybackActive() const noexcept
+{
+    if (!captureWorker.acceptedLoop())
+        return isPlaying.load(std::memory_order_relaxed);
+
+    const auto timing = getHostPositionDiagnostics();
+    if ((flStudioLoopHost || timing.songTime().valid) && timing.isPlaying)
+        return true;
+
+    // Rack Host-FX can report "playing" with no DAW timeline, even after the
+    // patch clock stops. Protect actual Loop playback and let idle storage work.
+    return loopPlaybackStatus().playback != m3::LoopCueScheduler::State::standby;
+}
+
 bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::Input& expected,juce::String& error)
 {
     const juce::ScopedLock guard(storageStateLock);m3::storage::portable::Input current;
-    if(workflowState.snapshot().locked() || isPlaying.load() || !pinPortableAssets(current,error,true))
+    const auto cueFence = swells->loopTransport().tryFenceCue();
+    if(!cueFence.isLocked() || workflowState.snapshot().locked() || storagePlaybackActive() || !pinPortableAssets(current,error,true))
     {if(error.isEmpty())error="Stop the DAW and wait for pending work before reloading recovered assets.";return false;}
     const auto a=juce::XmlDocument::parse(expected.processorXml),b=juce::XmlDocument::parse(current.processorXml);
     if(!a || !b || expected.instanceRoot!=current.instanceRoot || expected.controlEpoch!=current.controlEpoch
@@ -1429,7 +1444,14 @@ bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::I
     pendingHostCapture.manifest=std::move(capture.manifest);
     pendingHostCapture.reference=capture.reference;
     pendingHostCapture.manifestKnown=capture.manifestKnown;
+    pendingHostCapture.savedKind=capture.savedKind;
     pendingHostAssociation=capture.location?capture.location->association:m3::storage::Association{};
+    if (pendingHostCapture.sourceKind() == CaptureSourceKind::loop)
+    {
+        loopRecapture.store(false, std::memory_order_release);
+        invalidateLoopClock();
+        swells->loopTransport().invalidateReference();
+    }
     captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,
         pendingHostCapture.reference,revision,workflowState.snapshot().mode,true);
     error.clear();return true;
@@ -1467,7 +1489,7 @@ bool PreverbAudioProcessor::useWorkingFolder(const std::shared_ptr<m3::storage::
     return swells->withStorageJobsPaused([&]{
         if(cancelled()){error="Folder change stopped; current folder retained";return false;}
         Input current;
-        if(isPlaying.load() || workflowState.snapshot().locked() || !pinPortableAssets(current,error,true)){
+        if(storagePlaybackActive() || workflowState.snapshot().locked() || !pinPortableAssets(current,error,true)){
             if(error.isEmpty())error="Stop DAW playback before changing the working folder";return false;}
         const auto& info=workingFolderInfo(*folder);
         if(!(info.incompleteRecovery?revalidateRecoveryWorkspace(*folder,current,error,hooks):revalidateWorkingFolder(*folder,current,error,hooks)))return false;
@@ -1476,15 +1498,43 @@ bool PreverbAudioProcessor::useWorkingFolder(const std::shared_ptr<m3::storage::
         auto location=std::make_shared<const CaptureStorageLocation>(CaptureStorageLocation{info.projectsRoot,info.folder,folder,true,info.association});
         const auto capture=captureWorker.snapshot();const auto generation=captureWorker.captureGeneration();
         std::unique_ptr<CaptureSession> recovered;
-        if(info.incompleteRecovery || info.located){recovered=std::make_unique<CaptureSession>(info.projectsRoot,location);
-            recovered->restore(capture.manifest.projectId,capture.manifest.instanceId,capture.reference,capture.manifest.revision,info.restoreManifest);}
+        if (info.incompleteRecovery || info.located)
+        {
+            recovered = std::make_unique<CaptureSession>(info.projectsRoot, location);
+            const auto available = recovered->restore(capture.manifest.projectId, capture.manifest.instanceId,
+                capture.reference, capture.manifest.revision, info.restoreManifest, capture.sourceKind());
+            if (!available && !info.incompleteRecovery)
+            {
+                error = recovered->snapshot().status;
+                return false;
+            }
+        }
         juce::String workerError;
         const bool applied=captureWorker.relocateStorage(capture,generation,location,std::move(recovered),[&](const std::function<bool()>& adopt){
           const juce::ScopedLock stateGuard(storageStateLock);
           return swells->withStorageModelLocked([&]{
-            if(cancelled()){error="Folder change stopped; current folder retained";return false;}Input final;if(isPlaying.load() || workflowState.snapshot().locked() || !pinPortableAssets(final,error,true) || final.processorXml!=current.processorXml || final.manifestJson!=current.manifestJson
-                || final.controlEpoch!=current.controlEpoch || final.instanceRoot!=current.instanceRoot){error="The accepted session changed during verification";return false;}
+            const auto cueFence = swells->loopTransport().tryFenceCue();
+            if(cancelled()){error="Folder change stopped; current folder retained";return false;}
+            if (!cueFence.isLocked() || storagePlaybackActive())
+            {
+                error = "Stop playback before changing the working folder";
+                return false;
+            }
+            Input final;
+            if(workflowState.snapshot().locked() || !pinPortableAssets(final,error,true)
+                || final.processorXml!=current.processorXml || final.manifestJson!=current.manifestJson
+                || final.controlEpoch!=current.controlEpoch || final.instanceRoot!=current.instanceRoot)
+            {error="The accepted session changed during verification";return false;}
             if(!adopt())return false;
+            if (capture.sourceKind() == CaptureSourceKind::loop)
+            {
+                if (info.located || info.incompleteRecovery)
+                {
+                    loopRecapture.store(false, std::memory_order_release);
+                    invalidateLoopClock();
+                }
+                swells->loopTransport().invalidateReference();
+            }
             swells->acceptStorageLocation(location);persistentStateChanged();error.clear();return true;
           });
         },workerError);

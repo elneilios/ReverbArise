@@ -30,4 +30,9 @@ Inspect the baseline-to-target diff, merged PRs, relevant current specs and vali
 4. Verify the ZIP hash/manifest inventory and freshly extracted `Release-Notes.html`, `README.txt`, complete VST3 bundle and `User-Guide.html`. Open the HTML offline; confirm identity, source, baseline, new features/fixes, upgrade advice and limitations match the exact candidate. Never inject notes by reopening an already completed ZIP.
 5. Record the exact source/candidate and tests actually performed, plus any remaining exact-binary FL Studio acceptance. Keep owner host testing consolidated. Leave any requested PR open for review; packaging does not authorize merging, publishing, tags or sending binaries.
 
+If candidate validation fails, report the failing stage, tests and log paths
+to the owner. Record follow-up work items for the failures and route fixes
+through the five-stage workflow in `CONTRIBUTING.md`. Package after the fixed
+candidate passes the full Release gate.
+
 Notes are authored for the release being built, not a static generic changelog. The packager validates them before native build, renders the offline HTML with the actual source SHA, and includes it in the same checksummed inventory as the plugin and guide.
