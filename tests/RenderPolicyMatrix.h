@@ -8,7 +8,21 @@ static void renderPolicyMatrix()
         await([&]{return find(e.savedSession(),id)->phase==Phase::ready;});const auto previous=e.savedSession();const auto count=e.snapshot().renderCount;
         REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));e.setLearningAutomatic(detect);e.setAutoMarkers(detect);REQUIRE(e.setAutoGenerateOnStop(stop));REQUIRE(p.setRecaptureExisting(replace));
         const auto analysis=e.snapshot().analysisCount;f.tick(0,false);for(int i=0;i<8;++i){f.tick(i*4096,true,.4f);juce::Thread::sleep(1);}f.tick(32768,false);REQUIRE(p.flushCaptureForTesting());
-        await([&]{const auto s=e.savedSession();const auto w=find(s,id);return w && w->phase==Phase::ready && e.snapshot().renderCount==count+(replace?1:0);});
+        const bool expectAutomaticBatch=replace && detect && stop;
+        try{await([&]{
+            const auto snapshot=e.snapshot();
+            const auto* retained=find(snapshot.session,id);
+            const auto automaticCount=std::count_if(snapshot.session.swells.begin(),snapshot.session.swells.end(),[](const auto& swell){
+                return swell.provenance==Provenance::automatic && swell.phase==Phase::ready && swell.render.present();
+            });
+            return retained && retained->phase==Phase::ready
+                && (automaticCount>0)==expectAutomaticBatch
+                && snapshot.session.swells.size()==1+static_cast<size_t>(automaticCount)
+                && snapshot.renderCount==count+(replace?1:0)+automaticCount;
+        });}
+        catch(...){const auto s=e.snapshot();const auto w=find(s.session,id);
+            std::cerr<<"Recapture="<<replace<<" Detect="<<detect<<" Generate on Stop="<<stop
+                <<" | "<<(w?w->status:juce::String("Missing swell"))<<" | renders "<<count<<" -> "<<s.renderCount<<" | "<<s.message<<"\n";throw;}
         const auto s=e.savedSession();const auto w=find(s,id);REQUIRE(w->shape==find(previous,id)->shape && w->name==find(previous,id)->name && w->ir==find(previous,id)->ir);
         REQUIRE(s.automaticProcessing==detect && s.autoMarkersEnabled==detect && s.autoGenerateOnStop==stop);
         REQUIRE(replace?w->render!=find(previous,id)->render:w->render==find(previous,id)->render);

@@ -1,7 +1,9 @@
 #pragma once
 static void recoveryDependencyCases()
 {
-    Fixture fixture;auto first=fixture.session.swells[0];first.shape.endOffset=2;first.shape.fadeIn=first.shape.fadeOut=0;fixture.session.swells[0]=first;
+    Fixture fixture;auto first=fixture.session.swells[0];first.shape.endOffset=2;first.shape.fadeIn=first.shape.fadeOut=0;
+    first.generatedGain=1.0f; // The disabled frozen renders already have accepted starting gains.
+    fixture.session.swells[0]=first;
     fixture.session.automaticProcessing=false;fixture.session.autoMarkersEnabled=false;fixture.session.autoGenerateOnStop=false;
     auto survivor=first;survivor.id=juce::Uuid().toDashedString();survivor.name="Surviving frozen sound";survivor.ir=fixture.irs[2];
     SwellAssetStore original(fixture.root);WetRender wet;wet.rate=48000;wet.start=-1;wet.sourceStart=0;wet.sourceEnd=2;wet.samples={0,0,.2f,-.1f,.4f,-.3f};juce::String error;
@@ -18,7 +20,9 @@ static void recoveryDependencyCases()
     REQUIRE(p.setRecaptureExisting(true));juce::AudioBuffer<float> partial(2,1);partial.clear();partial.setSample(0,0,.5f);
     host.position.setIsPlaying(true);p.processBlock(partial,midi);host.position.setIsPlaying(false);p.processBlock(partial,midi);REQUIRE(p.flushCaptureForTesting());
     REQUIRE(p.getCaptureSnapshot().unavailable && p.getCaptureSnapshot().reference==prior.reference);p.cancelCapturePass();
-    REQUIRE(p.setRecaptureExisting(true));audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);p.processBlock(audio,midi);host.position.setIsPlaying(false);p.processBlock(audio,midi);REQUIRE(p.flushCaptureForTesting());
+    if(!p.setRecaptureExisting(true))
+        throw std::runtime_error("Re-arm after rejected partial recovery: "+p.swellEngine().snapshot().message.toStdString());
+    audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);p.processBlock(audio,midi);host.position.setIsPlaying(false);p.processBlock(audio,midi);REQUIRE(p.flushCaptureForTesting());
     REQUIRE(!p.getCaptureSnapshot().unavailable && p.getCaptureSnapshot().reference!=prior.reference);
     try{waitFor([&]{return find(p.swellEngine().savedSession(),survivor.id)->phase==Phase::ready;});}
     catch(...){const auto s=p.swellEngine().savedSession();std::cerr<<"Frozen survivor: "<<find(s,survivor.id)->status<<" | root="<<p.swellEngine().assetDirectory().getFullPathName()<<" | source="<<p.getCaptureSnapshot().status<<"\n";throw;}

@@ -32,7 +32,7 @@ The owner reported that the listening checks sounded good and identified no issu
 
 ## Readiness
 
-Integrated acceptance is in progress. Strict OpenSpec validation, UI standards and offline guide currency passed. The full native Release run has reproducible failures and the remaining technical host cases are still open. Host UI observations and WAV measurements are recorded separately from listening.
+Integrated acceptance is in progress. Strict OpenSpec validation, UI standards and offline guide currency passed. The seven cases that failed in the first full Release run passed targeted reruns after the fixture fixes below. The full suite for the exact release candidate and the remaining technical host cases are still open. Host UI observations and WAV measurements are recorded separately from listening.
 
 ## Same-build MIDI, transport and asset recovery follow-up
 
@@ -74,3 +74,18 @@ The installed module still matched the original `866c84e` VST3 SHA-256. The upst
 - Native desktop focus was unavailable in `preverb_perform_knob_reset_test` and `preverb_perform_readability_test`.
 - `preverb_learn_generation_test` failed its retained manual render readiness assertion. `preverb_swell_engine_test` failed its Audition sample expectation. `preverb_processor_test` timed out in live resource preparation. `preverb_portable_recovery_test` rejected a prepared folder after a session change. `preverb_shared_swell_engine_test` timed out in the render policy matrix.
 - The full log is `out/build-logs/Release/20261111-161514-7ef7eed5/test.log`. All five non-focus failures reproduced on the existing binaries in 88.21 s. The targeted rerun output is at `out/issue-130/release-qualification-rerun.log`.
+
+### Targeted Release follow-up
+
+All seven cases that failed in the full run passed on the #130 branch after fixture corrections. The changes affect test sources only. The other 99 tests, including all 15 standard PR regression cases, retain their results from the full run on the same product source. The full suite on the exact release candidate remains the release packaging gate.
+
+| Test | Correction or rerun condition | Passing log |
+| --- | --- | --- |
+| `preverb_learn_generation_test` | Check preservation of the manual render when Generate commits. Release the deliberately held batch before expecting the same render to finish headroom preparation. | `20261111-163842-2f1f38ae/test.log` |
+| `preverb_swell_engine_test` | The sample after shape reset uses the original saved starting gain. The measured sample was 0.448831 with gain 0.897663, consistent with the original untrimmed sample of 0.5. The assertion also checks the zero neighbors and unchanged saved gain. | `20261111-164349-635042df/test.log` |
+| `preverb_processor_test` | The 128-swell resource fixture now models the saved starting gain of 64 overlapping copies. This keeps the retained wet within the ceiling when the selected swell is regenerated. The memory, real-time allocation and 65th-contribution checks still run. | `20261111-164427-d431d359/test.log` |
+| `preverb_portable_recovery_test` | Take the working-folder snapshot after starting-gain publication and supply accepted gains for disabled frozen assets in the re-learning fixture. Locate and Restore still enforce their original stale-state fences and verify the saved gain. | `20261111-164516-5abbe187/test.log` |
+| `preverb_shared_swell_engine_test` | The all-enabled matrix row rendered the retained manual swell and nine automatic swells. The test now verifies one render per expected ready swell, including the automatic batch, while retaining the existing creative-state assertions. | `20261111-164329-48a9f748/test.log` |
+| `preverb_perform_knob_reset_test` and `preverb_perform_readability_test` | Ran both with real Windows foreground focus. Activated the knob test's native window and let both tests run their original assertions. | `out/issue-130/release-windows-focus.log` |
+
+Dated logs in the table are under `out/build-logs/Release/`. The five rebuilds used `scripts/build.ps1 -Configuration Release -TestTarget`, with a matching `-TestFilter` for the shared-engine case. The two existing focus executables were selected with `ctest --preset windows-msvc-release --no-tests=error -R '^preverb_perform_(knob_reset|readability)_test$' -V`. UI standards, strict OpenSpec validation and guide currency passed.
