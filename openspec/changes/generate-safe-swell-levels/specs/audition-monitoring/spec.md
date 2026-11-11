@@ -11,7 +11,8 @@ Wet Only SHALL apply accepted starting gains, Level and Live Wet to the position
 
 #### Scenario: Existing low trim
 - **WHEN** older pre-release state contains a legacy audition trim
-- **THEN** the legacy value does not alter the new audition gain policy
+- **THEN** the first audition after reopening uses Live Wet and unity captured dry in Dry + Wet
+- **AND** the stored legacy trim and blend do not affect playback
 
 #### Scenario: Level rises below protection onset
 - **WHEN** a user raises a swell by 6 dB in Wet Only

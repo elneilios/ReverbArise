@@ -29,6 +29,25 @@ inline void levelAudioPathsCases()
     const auto capture=p->getCaptureSnapshot();const auto renders=engine.snapshot().renderCount;
     REQUIRE(original.calibration.state==CalibrationState::matched && original.calibration.baselineDb!=0);
     const auto tick=[&]{position(0,false);block.setSize(2,1);block.clear();p->processBlock(block,midi);};
+    // Reopening an old blend/trim setting must sound like the current
+    // Dry + Wet route on its first audition, without toggling the mode.
+    auto currentAudition=engine.savedSession();
+    currentAudition.auditionMode=AuditionMode::dryWet;
+    currentAudition.postRollSeconds=0;
+    currentAudition.liveWetDb=-6;
+    engine.restore(currentAudition);tick();
+    waitM3([&]{return engine.snapshot().auditionReady;});
+    const auto expectedAuditionPeak=engine.snapshot().monitorPeak;
+    auto oldAudition=currentAudition;
+    oldAudition.auditionFollowsLive=false;
+    oldAudition.wetBlend=0.35f;
+    oldAudition.auditionDb=-24;
+    engine.restore(oldAudition);tick();
+    waitM3([&]{return engine.snapshot().auditionReady;});
+    REQUIRE(engine.savedSession().auditionFollowsLive && engine.snapshot().monitorPeak==expectedAuditionPeak);
+    REQUIRE(engine.savedSession().auditionMode==AuditionMode::dryWet && !engine.snapshot().playing);
+    engine.setLivePlayback(true,LiveRouting::wetOnly,0);
+    REQUIRE(engine.setAuditionWetOnly(true,engine.assignmentEpoch()));
     SongMixMetrics deliveredMetrics;
     const auto readWav=[&]
     {
@@ -90,6 +109,20 @@ inline void levelAudioPathsCases()
     first.generatedGain.reset();first.shape.gainDb=0;
     const auto member=first;
     for(int n=1;n<56;++n){auto copy=member;copy.id=juce::Uuid().toDashedString();hot.swells.push_back(copy);}
+    for (int filter=0;filter<3;++filter)
+    {
+        auto filtered=hot;
+        filtered.swells.front().solo=filter==2;
+        for (size_t i=1;i<filtered.swells.size();++i)
+        {
+            filtered.swells[i].enabled=filter!=0;
+            filtered.swells[i].muted=filter==1;
+        }
+        engine.restore(filtered);tick();
+        waitM3([&]{const auto state=engine.savedSession();return std::all_of(state.swells.begin(),state.swells.end(),
+            [](const auto& swell){return swell.phase==Phase::ready;});});
+        REQUIRE(find(engine.savedSession(),id)->generatedGain==1.0f);
+    }
     engine.restore(hot);tick();waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().liveReady;});
     auto accepted=engine.savedSession();
     const auto generatedGain=accepted.swells.front().generatedGain;

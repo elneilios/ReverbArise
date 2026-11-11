@@ -6,6 +6,17 @@ namespace m3
 {
 namespace
 {
+bool isAudible(const Swell& swell, bool anySolo) noexcept
+{
+    return swell.enabled && !swell.muted && (!anySolo || swell.solo);
+}
+
+bool usesRetainedRender(const Swell& swell, const Swell& accepted, bool loop)
+{
+    return swell.phase != Phase::ready
+        || (swell.render == accepted.render && (loop || swell.ir.content != accepted.ir.content));
+}
+
 juce::String offlineTimingEvidence(const SongTime& prepared,const SongTime& reference,const SongTime& host)
 {
     const auto describe=[](const SongTime& t){return "sample="+juce::String(t.sample)+" PPQ="+juce::String(t.ppq,15)
@@ -137,24 +148,44 @@ bool measureSongHeadroom(const std::vector<HeadroomMember>& members, const Swell
 void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
 {
     std::vector<HeadroomMember> members;
-    std::vector<juce::String> pending;
+    std::vector<std::pair<juce::String,bool>> pending;
     uint64_t revision, session;
+    bool hasAudiblePending = false;
     juce::String error;
     {
         const juce::ScopedLock guard(lock);
+        const auto anySolo = std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.solo;});
         for (const auto& swell : model.swells)
         {
-            if (swell.phase == Phase::headroom) pending.push_back(swell.id);
+            if (swell.phase == Phase::headroom)
+            {
+                const auto audible = isAudible(swell,anySolo);
+                pending.emplace_back(swell.id,audible);
+                hasAudiblePending |= audible;
+            }
             else if (swell.phase == Phase::queued || swell.phase == Phase::rendering
                      || swell.phase == Phase::checking || swell.phase == Phase::restoring) return;
         }
         if (pending.empty()) return;
         revision = liveRevision;
         session = sessionGeneration.load();
+        const bool loop = context.capture.manifest.loop.has_value();
+        const auto clock = loop ? std::nullopt : liveClock.snapshot(session);
+        const auto* liveContext = clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted
+            ? &*clock : nullptr;
         for (auto swell : model.swells)
         {
+            if (!hasAudiblePending || !isAudible(swell,anySolo)) continue;
             const auto isPending = swell.phase == Phase::headroom;
-            if (!isPending && swell.phase != Phase::ready) continue;
+            if (!isPending)
+            {
+                const auto kept = retainedIR.find(swell.id);
+                if (kept != retainedIR.end() && usesRetainedRender(swell,kept->second.accepted,loop)
+                    && retainedCompatible(kept->second,swell,context,liveContext))
+                    swell = kept->second.accepted;
+                else if (swell.phase != Phase::ready) continue;
+            }
+            if (model.gainPolicy == GainPolicy::legacy) swell.calibration = {};
             swell.shape.gainDb = defaultSwellLevelDb;
             if (isPending) swell.generatedGain.reset();
             int64_t start, end;
@@ -170,7 +201,7 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
     const auto ceiling = juce::Decibels::decibelsToGain(static_cast<double>(candidateWetCeilingDb));
     double gain = 1;
     const auto started = juce::Time::getMillisecondCounterHiRes();
-    if (error.isEmpty())
+    if (error.isEmpty() && hasAudiblePending)
     {
         if (available() < 512ULL*1024) error = "Working budget unavailable for generated headroom";
         else if (const auto& loop = context.capture.manifest.loop)
@@ -201,7 +232,8 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
             double peak = 0;
             if (error.isEmpty() && measure(1,peak) && peak > ceiling)
             {
-                if (pending.size() == members.size()) gain = ceiling/peak;
+                if (std::all_of(members.begin(),members.end(),[](const auto& member){return member.pending;}))
+                    gain = ceiling/peak;
                 else if (measure(0,peak))
                 {
                     if (peak > ceiling) error = "Retained swells exceed the generated wet ceiling";
@@ -239,14 +271,14 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
         if (!swell.frozen && sourceDependency(latest.capture.manifest,swell.sourceStart,renderInputEnd(swell))
             != sourceDependency(context.capture.manifest,swell.sourceStart,renderInputEnd(swell))) return;
     }
-    for (const auto& id : pending)
+    for (const auto& [id,audible] : pending)
     {
         auto& swell = *find(model,id);
-        if (error.isEmpty())
+        if (!audible || error.isEmpty())
         {
-            swell.generatedGain = acceptedGain;
+            swell.generatedGain = audible ? acceptedGain : 1.0f;
             swell.phase = Phase::ready;
-            swell.status = "Ready | Generated wet trim " + juce::String(20*std::log10(acceptedGain),1) + " dB";
+            swell.status = "Ready | Generated wet trim " + juce::String(20*std::log10(*swell.generatedGain),1) + " dB";
         }
         else
         {
@@ -254,13 +286,14 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
             swell.status = error;
         }
     }
-    if (error.isEmpty())
+    if (error.isEmpty() && hasAudiblePending)
     {
         gainPlanPreparationMs = juce::Time::getMillisecondCounterHiRes()-started;
         ++gainPlanBuilds;
-        persistentChangedLocked(false);
     }
-    else message = error;
+    if (error.isNotEmpty()) message = error;
+    if (error.isEmpty() || std::any_of(pending.begin(),pending.end(),[](const auto& item){return !item.second;}))
+        persistentChangedLocked(false);
     ++liveRevision;
     ++monitoringGeneration;
 }
@@ -508,7 +541,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         observation.result="Preparation cancelled or dependencies changed";observation.loopStart=loopFrom;observation.loopEnd=loopTo;
         for(auto& w:session.swells)if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end()){
             if(!retainedCompatible(kept->second,w,context,&*clock)){invalidateLiveLocked(w.id);observation.result="Retained dependencies incompatible";return;}
-            if(w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content)){
+            if(usesRetainedRender(w,kept->second.accepted,false)){
                 const auto enabled=w.enabled,muted=w.muted,solo=w.solo;w=kept->second.accepted;w.phase=Phase::ready;
                 w.enabled=enabled;w.muted=muted;w.solo=solo;held.insert(w.id);
             }else replacements.insert(w.id);}
@@ -531,7 +564,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     const auto anySolo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     SwellAssetStore store(instanceRoot(context.capture.manifest));juce::String error;uint64_t reserved=8ULL*1024*1024;size_t unavailable=0;
     for(const auto& w:session.swells){if(cancel())return;
-        if(!w.enabled || w.muted || (anySolo && !w.solo) || !w.render.present())continue;
+        if(!isAudible(w,anySolo) || !w.render.present())continue;
         LiveCache cached;size_t slot;uint64_t memberGeneration;bool recovered=false;
         {const juce::ScopedLock guard(lock);slot=liveSlots.at(w.id);memberGeneration=liveGenerations[slot];cached=liveCache[w.id];recovered=runtime[w.id].cachedWetOnly;}
         const auto key=memberKey(w);
@@ -647,7 +680,7 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
                 invalidateLiveLocked(w.id);
                 return;
             }
-            if (w.phase != Phase::ready || w.render == kept->second.accepted.render)
+            if (usesRetainedRender(w,kept->second.accepted,true))
             {
                 const auto enabled = w.enabled, muted = w.muted, solo = w.solo;
                 w = kept->second.accepted;
@@ -674,7 +707,7 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
     for (auto& w : snapshot.swells)
     {
         if (cancel()) return;
-        if (!w.enabled || w.muted || (anySolo && !w.solo)) continue;
+        if (!isAudible(w,anySolo)) continue;
         hasAudibleMember = true;
         if (w.phase != Phase::ready || !w.render.present())
         {

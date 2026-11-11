@@ -40,6 +40,14 @@ At unity wet and 0 dB Level the generated wet composition SHALL peak at or below
 - **THEN** the headroom check applies to the new material and leaves retained starting gains and Level edits intact
 - **AND** if the new material cannot be admitted within the default ceiling, the last coherent accepted wet revision remains available and the failure is reported
 
+#### Scenario: Measure the audible membership
+- **WHEN** the generated mix contains disabled, muted or solo-excluded swells
+- **THEN** their samples do not affect the starting gains of the swells that will play
+
+#### Scenario: A failed replacement still plays its accepted render
+- **WHEN** a new swell is admitted alongside a failed IR replacement whose accepted audio is still compatible
+- **THEN** the headroom check includes the fallback audio at its accepted starting gain
+
 #### Scenario: Verify before making wet audible
 - **WHEN** the render or headroom measurement is pending, fails or is superseded
 - **THEN** the unchecked generated wet does not become audible

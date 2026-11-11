@@ -158,13 +158,15 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
     imports.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
-    model=std::move(session);publishGenerationLocked(model,UINT64_MAX,true);regeneration=model.regenerationSensitivity; for(auto& w:model.swells) { w.phase=Phase::restoring; w.status="Restoring dependencies"; }
+    model=std::move(session);
+    model.auditionFollowsLive=true;
+    publishGenerationLocked(model,UINT64_MAX,true);regeneration=model.regenerationSensitivity; for(auto& w:model.swells) { w.phase=Phase::restoring; w.status="Restoring dependencies"; }
     invalidateLiveLocked();live.reset();liveCache.clear();hostObserved=false;loopPlayback.invalidateReference();
     completedPasses.clear();automaticBoundsDirty=true;performWindowsRequested=false;
     recoverPassBounds=true;
     liveEnabled=model.liveEnabled;live.configure(model.liveEnabled,model.liveRouting,model.liveWetDb);
     storageRestoreReference=expectedCaptureReference;awaitingCaptureReference=std::move(expectedCaptureReference);
-    captureReference.clear(); captureScope.clear(); voice.setLevel(juce::Decibels::decibelsToGain(model.auditionFollowsLive?0.0f:model.auditionDb));
+    captureReference.clear(); captureScope.clear(); voice.setLevel(1);
     message="Restoring saved swell session; audition stopped";
 }
 void SwellEngine::clear()

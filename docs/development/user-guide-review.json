@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed generated wet headroom, independent swell Level, overload reporting and Loop export against the implemented Song, Loop and Audition paths.",
+  "summary": "Reviewed the audible headroom membership and compatible IR fallbacks, and verified restored Audition uses Live wet immediately.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -445,8 +445,8 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 92297,
-      "sha256": "61574d94b66be777eb4e9ef9724f0b452fa2851e044871012392b53d8db342a4"
+      "bytes": 92260,
+      "sha256": "d6d883c6109f6d6fed05e2a9846600f447357f16b3af97ff26f63c4f57a3b63e"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 50302,
-      "sha256": "675a87f051d4fd62dfa98ecf25c8caa96cf3ecd821c6d6600b96e921dd44aa26"
+      "bytes": 51960,
+      "sha256": "154b3710cde806b7bad6acf7bcf9a4108ce4eb4a73102b8f6b1d7a81c95f9f58"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 125245,
-      "sha256": "7d933ef7c22c4c7f0e1a27e9b6afa59e657d64b493d542cd21bc5a9df405cc88"
+      "bytes": 125321,
+      "sha256": "7752ba038b51bc086916af3338fb781989133b0dcb61333753a2efaa80d893df"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

@@ -21,3 +21,9 @@
 - The native Release VST3 built, was installed to the system VST3 folder and matched the built bundle. Full Release CTest was outside the focused test run.
 - The owner confirmed in FL Studio that Swell 1 became louder at +12 dB and the other swells stayed at their previous levels. This was a listening check of the reported Loop regression. Default peak and deliberate overload were covered by native tests. No host peak measurement was reported.
 - The standard regression set remains pending the PR readiness review.
+
+### PR #168 review follow-up
+
+- Five focused native Debug CTest cases passed on the revised code. They cover Level audio paths, IR handover, Loop and Song playback, and the Perform Audition control.
+- The follow-up fixtures cover disabled, muted and solo-excluded swells, an overlapping swell generated after a failed IR replacement, and the first Dry + Wet audition after restoring a saved legacy blend and trim.
+- The FL Studio listening result above applies to the initial candidate.
