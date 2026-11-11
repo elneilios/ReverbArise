@@ -174,6 +174,11 @@ background mono/stereo lossless PCM/float IR decoding, including WavPack content
 named `.wav`. Its BSD notice is copied into the VST3 bundle's `Contents/Resources`.
 Build output is placed under `out/build`, which is ignored by Git.
 
+The headless preview tests listed in `CMakeLists.txt` share compiled JUCE
+objects. Compare the generated module sources and compiler settings in Debug
+and Release before adding a target to the group. If a test needs different
+JUCE definitions or flags, build its modules separately.
+
 Wrapper checks use native-command doubles, not MSVC or the plugin test suite:
 
 ```powershell

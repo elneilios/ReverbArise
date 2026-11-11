@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the merged Diagnostics refresh against the existing Diagnostics guidance. Layout runs once after the readouts update, with Loop timing and gain observations preserved. The focused build runner and test changes do not change musician instructions.",
+  "summary": "Reviewed the single-pass Diagnostics layout and existing Loop transport and peak readouts. The focused runner and shared JUCE test objects change build and test tooling only. The existing musician instructions remain accurate.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -10,8 +10,8 @@
     },
     {
       "path": "CMakeLists.txt",
-      "bytes": 36542,
-      "sha256": "db5856f5807ad6c834caaabded96b8d3b8a10f24791a2f41777a98122702383c"
+      "bytes": 38806,
+      "sha256": "0c04681d1037c15e6d1545709dc04e2cb315046e034ad8258245e4db32e80cdb"
     },
     {
       "path": "CMakePresets.json",
