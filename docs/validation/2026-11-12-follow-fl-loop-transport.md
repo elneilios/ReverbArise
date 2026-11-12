@@ -28,7 +28,7 @@ FL Studio verification covered the Pattern and placement workflows reported abov
 
 On `7aa11d9` with the added test fixtures, the Windows MSVC Release wrapper passed the Loop playback and recorded Rack replay checks (3/3), the Loop Perform UI check (1/1), and the standard PR regression set (15/15). The fixtures also cover omitted repeat bounds, a missing playhead position preserving the saved start, placement migration and source replacement, the final tail after Stop, restart, timing-loss fade, and the unsupported-host footer.
 
-The remaining desktop check is to confirm that a matching Playlist repeat auto-plays across the wrap with the saved start cleared, then seek into a placed Loop and confirm the wet resumes at the destination phase. The existing FL Studio owner acceptance remains recorded above.
+At this stage the remaining desktop check was the matching Playlist repeat. The processor and playback fixtures verified that wet resumes at the destination phase after seeking into a placed Loop.
 
 ## PR review fixes
 
@@ -41,3 +41,5 @@ The owner reproduced the End on repeat cancellation in FL Studio PAT mode at 82 
 The two in-block downbeats were 140,488 frames apart. The processor regression uses the measured timing and asserts a four-beat take of that exact length. Existing processor fixtures still cover a changed repeat range and an early seek.
 
 On `7776f4c` with the pre-roll fix applied, the normal Windows MSVC Release build passed the standard PR regression set (15/15) and the Loop playback and Rack replay checks (3/3).
+
+The owner confirmed on installed Release `3f1533b` that PAT mode accepts the one-bar take after the first wrap in the same 82 BPM project. With the saved start cleared and a matching one-bar Playlist selection in Song mode, the swells started without Cue and stayed aligned across the wrap. These desktop checks and the automated seek assertions complete task 4.2.
