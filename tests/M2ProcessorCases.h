@@ -29,14 +29,17 @@ inline void m2ProcessorCases()
     }
     finishCaptureFixture(*processor,head.position); REQUIRE(processor->flushCaptureForTesting());
     writeTestWav(root.file.getChildFile("ir.wav"), 1, 1000, {1,0.5f,0.25f});
-    const auto wait = [&](PreviewPhase expected)
+    const auto ir=root.file.getChildFile("ir.wav");
+    processor->loadPreviewIR(ir);
+    const auto deadline=juce::Time::getMillisecondCounter()+5000;
+    for (;;)
     {
-        const auto deadline = juce::Time::getMillisecondCounter() + 5000;
-        while (processor->getPreviewSnapshot().phase != expected)
-        { REQUIRE(juce::Time::getMillisecondCounter() < deadline); juce::Thread::sleep(1); }
-    };
-    processor->loadPreviewIR(root.file.getChildFile("ir.wav")); wait(PreviewPhase::canGenerate);
-    processor->generatePreview(); wait(PreviewPhase::ready);
+        const auto preview=processor->getPreviewSnapshot();
+        if(preview.irName==ir.getFileName() && preview.phase==PreviewPhase::ready)break;
+        if(juce::Time::getMillisecondCounter()>=deadline)
+            throw std::runtime_error("Imported IR did not become audition-ready: "+preview.status.toStdString());
+        juce::Thread::sleep(1);
+    }
     REQUIRE(processor->getPreviewSnapshot().waveform->start == -2);
     {
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor->createEditor());
@@ -102,8 +105,17 @@ inline void m2ProcessorCases()
     REQUIRE(!processor->swellEngine().snapshot().playing && !processor->isMappingEnabled());
     {
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor->createEditor());
-        for (auto* child : editor->getChildren())
-            if (child->getName() == "stopAudition") REQUIRE(!processor->swellEngine().snapshot().playing);
+        const auto find=[](const auto& self,juce::Component& component,const juce::String& name) -> juce::Component*
+        {
+            if(component.getName()==name)return &component;
+            for(auto* child:component.getChildren())
+                if(auto* match=self(self,*child,name))return match;
+            return nullptr;
+        };
+        auto* pair=find(find,*editor,"auditionPair");
+        REQUIRE(pair);
+        const auto* action=find(find,*pair,"audition");
+        REQUIRE(action && action->getTitle()=="Play audition");
     }
     buffer.clear();
     { AudioAllocationGuard guard; processor->processBlock(buffer, midi); }

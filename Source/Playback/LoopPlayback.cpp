@@ -185,12 +185,14 @@ LoopPlayback::Status LoopPlayback::status() const noexcept
             static_cast<LoopCueScheduler::State>((word >> 3) & 7),
             static_cast<LoopPlaybackPublication::Preparation>((word >> 6) & 3),
             position == 0 ? std::nullopt : std::optional{position - playheadBias},
-            decodeLeadIn(word)};
+            decodeLeadIn(word),statusRoute.load(std::memory_order_acquire),
+            statusPlacementAvailable.load(std::memory_order_acquire)};
 }
 
 void LoopPlayback::process(float* left, float* right, int frames, const loop_capture::MidiObservations& observations,
                            double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
-                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist) noexcept
+                           const LoopReferenceSetup& observedReference, std::optional<SongTime> playlist,
+                           HostSchedule schedule, bool hostPlaying) noexcept
 {
     using namespace loop_capture;
     using Preparation = LoopPlaybackPublication::Preparation;
@@ -206,6 +208,18 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const auto compatible = [&](const LoopPlaybackPublication* p){
         return sameSource(p) && p->rate == rate;
     };
+    const auto compatibleGrid = currentMatches && playlist && playlist->valid && compatible(current)
+        && playlist->bpm == current->timing.tempoBpm && playlist->numerator == current->timing.meterNumerator
+        && playlist->denominator == current->timing.meterDenominator;
+    if (schedule.route == Route::hostRepeat && (!compatibleGrid
+        || std::abs(schedule.period-current->timing.endSample) > 1))
+        schedule = {};
+    if (schedule.route == Route::placement && compatibleGrid && schedule.period == 0)
+        schedule.period = current->timing.endSample;
+    if (!discontinuity && schedule.route == Route::placement && previousSchedule.route == Route::placement
+        && schedule.period == previousSchedule.period
+        && std::abs(static_cast<long double>(schedule.start)-previousSchedule.start) <= 1)
+        schedule.start = previousSchedule.start;
 
     const auto before = configSequence.load(std::memory_order_acquire);
     LoopReferenceSetup setup{{referenceRate.load(std::memory_order_relaxed),referenceTempo.load(std::memory_order_relaxed)},
@@ -252,20 +266,42 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const bool midiCue = canPlay && externalAllowed
         && std::any_of(observations.samples.begin(), observations.samples.begin() + observations.size,
                        [](const auto& event){return (event.roles & loop_capture::cue) != 0;});
-    std::optional<juce::SpinLock::ScopedTryLockType> fence;
-    if (canPlay && (midiCue || (local & loop_capture::cue)))
-        fence.emplace(cueFence);
     const auto reset = resetEpoch.load(std::memory_order_acquire);
-    // Hold through status publication so Storage sees any Cue admitted by this block.
-    const bool canCue = fence && fence->isLocked() && commandEpoch == reset;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
     const bool timingInterrupted = discontinuity || (wasObserving && !canObserve) || reset != seenReset;
-    const bool interrupted = timingInterrupted || sourceChanged;
+    const bool routeChanged = schedule != previousSchedule;
+    const bool interrupted = timingInterrupted || sourceChanged || routeChanged;
     seenReset = reset;
     seenGeneration = generation;
     seenRevision = revision;
     wasObserving = canObserve;
     if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
+    if (!hostPlaying) timelineSuppressed = false;
+    if (interrupted || !canPlay) timeline.reset();
+    constexpr auto stopRoles = finish | stop | LoopCueScheduler::finishCommand;
+    if (hostPlaying && (schedule.route != Route::manual || previousSchedule.route != Route::manual)
+        && (local & stopRoles))
+        timelineSuppressed = true;
+    previousSchedule = schedule;
+    statusRoute.store(schedule.route,std::memory_order_release);
+    statusPlacementAvailable.store(schedule.route == Route::placement && compatibleGrid && schedule.period > 0,
+                                   std::memory_order_release);
+    if (canPlay && !timeline && playlist && schedule.route != Route::manual && schedule.period > 0)
+    {
+        // Give a newly joined repeating range enough preceding passes for every
+        // tail the bounded wet plan can mix. A placed passage starts at pass zero.
+        const auto history = schedule.route == Route::hostRepeat ? LoopCueScheduler::anchorCapacity : 0;
+        const auto origin = static_cast<long double>(cursor) + schedule.start
+            - playlist->sample - static_cast<long double>(history) * schedule.period;
+        if (std::abs(origin) < INT64_MAX / 4 && cursor < INT64_MAX / 4)
+            timeline = LoopCueScheduler::Timeline{static_cast<int64_t>(origin),schedule.period};
+    }
+    std::optional<juce::SpinLock::ScopedTryLockType> fence;
+    if (canPlay && (midiCue || (local & cue) || (timeline && !timelineSuppressed && !scheduler.active())))
+        fence.emplace(cueFence);
+    // Hold through status publication so Storage sees any Cue admitted by this block.
+    const bool canCue = fence && fence->isLocked() && commandEpoch == reset
+        && resetEpoch.load(std::memory_order_acquire) == reset;
     if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
     if (!validFrames) { cursor = 0; signalPeaks.publish(0,0,frames,rate); return; }
     const auto observePlaylistPhrase = [&](uint16_t roles, int offset)
@@ -340,10 +376,14 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if (canObserve && event < observations.size && observations.samples[event].sampleOffset == offset)
             roles = observations.samples[event++].roles;
         if (!canPlay || !externalAllowed) roles &= ~(cue | finish | stop);
+        if (hostPlaying && schedule.route != Route::manual && (roles & stopRoles))
+            timelineSuppressed = true;
         if (offset == 0 && !interrupted && canPlay) roles |= local;
         if (!canCue) roles &= ~cue;
         if (offset == 0 && interrupted && (!playlist || discontinuity))
             roles = autoClock && (roles & captureClock) ? roles & (captureClock | rackBeatMask | bar | phrase) : 0;
+        if (schedule.route != Route::manual)
+            roles &= ~cue;
         if (roles & phrase) observePlaylistPhrase(roles,offset);
         const auto plan = held >= 0 ? slots[held].data.get() : current;
         const auto playingBefore = scheduler.active() && scheduler.state() != State::queued;
@@ -353,7 +393,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         const auto lead = ready ? -plan->plan.audio.start : 0;
         const auto downbeat = ready && playlist && playlist->valid && (roles & cue)
             ? playlistDownbeat(*playlist,cursor,offset,lead,playlistPhrasePpq.value_or(0)) : std::nullopt;
-        scheduler.processSample(sample,roles,ready,lead,downbeat);
+        scheduler.processSample(sample,roles,ready,lead,downbeat,timeline ? &*timeline : nullptr,
+                                ready ? plan->plan.audio.end : 0,canCue && !timelineSuppressed);
         if (scheduler.active() && held < 0) held = latest;
         const auto state = scheduler.state();
         const auto playing = state == LoopCueScheduler::State::leadIn || state == LoopCueScheduler::State::repeating

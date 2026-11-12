@@ -15,11 +15,17 @@ public:
     static constexpr int anchorCapacity = 64;
     static constexpr uint16_t finishCommand = 1 << 11; // Local Stop button only.
 
+    struct Timeline
+    {
+        int64_t origin, period;
+    };
+
     void configure(const LoopReferenceSetup& setup, double sourceRate,
                    const std::optional<LoopPhraseTiming>& source, bool usePlaylist = false,
                    bool observeClock = false) noexcept
     {
         const auto period = (usePlaylist || observeClock) && source && sourceRate == processingRate ? source->endSample : 0;
+        phraseBeats = source ? source->beats : 0;
         const auto referenceChanged = reference.configure(setup,sourceRate,source);
         if (!referenceChanged && period == gridLength && usePlaylist == playlistGrid && observeClock == clockGrid) return;
         gridLength = period;
@@ -45,12 +51,22 @@ public:
     }
 
     void processSample(int64_t sample, uint16_t roles, bool prepared, int64_t lead,
-                       std::optional<int64_t> playlistDownbeat = {}) noexcept
+                       std::optional<int64_t> playlistDownbeat = {}, const Timeline* timeline = nullptr,
+                       int64_t wetEnd = 0, bool allowTimelineEntry = false) noexcept
     {
         if (clockGrid)
         {
             const auto hadClock = rackClock.hasClock();
             if (rackClock.observe(sample,roles,processingRate,!active()) || hadClock != rackClock.hasClock()) stop();
+        }
+        if (timeline && allowTimelineEntry && prepared && playback == State::standby
+            && !(roles & (finishCommand | loop_capture::finish | loop_capture::stop)))
+        {
+            gridOrigin = timeline->origin;
+            scheduledPeriod = timeline->period;
+            first = 0;
+            leadStart = gridOrigin - lead;
+            playback = State::queued;
         }
         if ((roles & (finishCommand | loop_capture::finish)) && !(roles & loop_capture::stop))
         {
@@ -68,18 +84,28 @@ public:
             if (!prepared || (roles & loop_capture::stop)) stop();
             else if ((roles & loop_capture::cue) && playback == State::standby && gridLength > 0)
             {
-                const auto downbeat = playlistGrid ? playlistDownbeat : rackClock.nextDownbeat(sample,lead);
+                const auto downbeat = playlistGrid ? playlistDownbeat : rackClock.nextDownbeat(sample,lead,phraseBeats);
                 if (downbeat)
                 {
                     first = 0;
                     gridOrigin = *downbeat;
+                    scheduledPeriod = gridLength;
                     leadStart = gridOrigin - lead;
                     playback = State::queued;
                 }
             }
             if (playback == State::queued && sample >= leadStart) playback = State::leadIn;
             if (playback == State::leadIn && sample >= gridOrigin) playback = State::repeating;
-            if (playback == State::finishing && nearCycle(sample) > finishCycle) stop();
+            if (timeline && playback == State::finishing)
+            {
+                if (const auto end = loopCycleAnchor(gridOrigin,finishCycle,scheduledPeriod);
+                    end && sample - *end >= std::max(wetEnd,scheduledPeriod))
+                {
+                    playback = State::standby;
+                    first = -1;
+                }
+            }
+            else if (playback == State::finishing && nearCycle(sample) > finishCycle) stop();
             return;
         }
         const auto observed = roles ? reference.observe(sample,roles) : LoopLiveReference::Observation{false,reference.advance(sample)};
@@ -153,7 +179,7 @@ public:
     std::optional<int64_t> nextLeadInStart(int64_t wetStart) const noexcept
     {
         if (playback != State::repeating || wetStart >= 0) return {};
-        if (usesGrid()) return std::max(int64_t{0},gridLength + wetStart);
+        if (usesGrid()) return std::max(int64_t{0},scheduledPeriod + wetStart);
         const auto cycle = reference.ordinal();
         const auto next = reference.window(cycle + 1);
         const auto& anchor = anchors[static_cast<size_t>(cycle % anchorCapacity)];
@@ -163,7 +189,7 @@ public:
 
     int64_t nearCycle(int64_t sample) const noexcept
     {
-        if (usesGrid()) return std::max(int64_t{0},sample - gridOrigin) / gridLength;
+        if (usesGrid()) return scheduledPeriod > 0 ? std::max(int64_t{0},sample - gridOrigin) / scheduledPeriod : 0;
         const auto origin = reference.window(0);
         return origin && sample >= origin->earliest ? static_cast<int64_t>((sample - origin->earliest) / reference.period()) : 0;
     }
@@ -173,7 +199,7 @@ public:
         if (first < 0 || cycle < first) return {};
         if (usesGrid())
         {
-            const auto anchor=loopCycleAnchor(gridOrigin,cycle,gridLength);
+            const auto anchor=loopCycleAnchor(gridOrigin,cycle,scheduledPeriod);
             if(!anchor)return {};
             return sample-*anchor;
         }
@@ -211,7 +237,8 @@ private:
     std::array<Anchor,anchorCapacity> anchors{};
     LoopLiveReference::Window firstWindow{};
     int64_t first = -1, leadStart = 0;
-    int64_t gridLength = 0, gridOrigin = 0;
+    int64_t gridLength = 0, gridOrigin = 0, scheduledPeriod = 0;
+    int phraseBeats = 0;
     bool playlistGrid = false, clockGrid = false;
     int64_t finishCycle = 0;
     int fadeLength = 1, fadeTotal = 1, fadeRemaining = 0;

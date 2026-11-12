@@ -123,6 +123,9 @@ bool readLegacySnapshot(const juce::String& xml,const juce::String& manifestJson
     LoopCapturePreference preference;
     if (!readLoopState(*envelope, kind, preference) || kind != next.capture.kind())
         return fail(error, "Saved source kind or next-capture preference does not match the capture metadata");
+    std::optional<LoopPlacement> placement;
+    if (!readLoopPlacement(*envelope,placement))
+        return fail(error,"Invalid saved Loop placement");
     if(version>=3){const auto* session=envelope->getChildByName("SwellSession");if(!session || !decode(session->getAllSubText(),next.session,error))return fail(error,"Invalid or unsupported creative state: "+error);}
     else next.session.autoGenerateOnStop=true;
     if(version==3){next.session.mappingEnabled=false;next.session.automaticProcessing=false;for(auto& swell:next.session.swells)swell.provenance=Provenance::manualEdited;}

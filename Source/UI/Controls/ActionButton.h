@@ -98,6 +98,13 @@ public:
     ActionButton(const juce::String& label,CommandIcon role,CommandVariant presentation)
         :CommandButton(label,role==CommandIcon::play || role==CommandIcon::stop || role==CommandIcon::add),icon(role),variant(presentation){}
     void setVariant(CommandVariant next){if(variant!=next){variant=next;repaint();}}
+    CommandVariant getVariant() const noexcept {return variant;}
+    void setPlaybackIcon(bool playing)
+    {
+        jassert(icon==CommandIcon::play || icon==CommandIcon::stop);
+        const auto next=playing?CommandIcon::stop:CommandIcon::play;
+        if(icon!=next){icon=next;repaint();}
+    }
     juce::Rectangle<float> focusInkBounds()const noexcept{return controlGeometry::insideStroke(getLocalBounds(),controlGeometry::focusStroke);}
     // Shared surface for text and glyph-only command buttons. Content colour
     // and focus are resolved independently from hover and held-press feedback.
@@ -110,11 +117,12 @@ public:
     void paintButton(juce::Graphics& g,bool over,bool down)override
     {
         const CommandState state{isEnabled(),over,down,isFocusVisible(),effectiveLatchState()};
-        paintCommandSurface(g,getLocalBounds(),variant,state);
-        g.setColour(commandInk(variant,state).content);
+        paintActionSurface(g,variant,state);
+        const auto ink=commandInk(variant,state);
+        g.setColour(ink.content);
         auto area=getLocalBounds().toFloat().reduced(12,4);
         const bool iconOnly=icon==CommandIcon::play || icon==CommandIcon::stop || icon==CommandIcon::add;
-        if(icon!=CommandIcon::none){g.setColour(commandInk(variant,state).glyph);const auto centre=iconOnly?getLocalBounds().toFloat().getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);g.setColour(commandInk(variant,state).content);}
+        if(icon!=CommandIcon::none){g.setColour(ink.glyph);const auto centre=iconOnly?getLocalBounds().toFloat().getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);g.setColour(ink.content);}
         if(!iconOnly){g.setFont(componentTextFont(*this,TextRole::controlLabel));g.drawText(getButtonText(),area,juce::Justification::centred);}
     }
     static void drawIcon(juce::Graphics& g,CommandIcon icon,juce::Point<float> c)
@@ -129,6 +137,8 @@ public:
             p.startNewSubPath(c.x-2,c.y-7);p.lineTo(c.x-8,c.y-1);p.lineTo(c.x-2,c.y+5);g.strokePath(p,juce::PathStrokeType(1.5f));}
     }
 protected:
+    virtual void paintActionSurface(juce::Graphics& g,CommandVariant presentation,CommandState state)
+    {paintCommandSurface(g,getLocalBounds(),presentation,state);}
     virtual bool effectiveLatchState()const noexcept{return false;}
 private:
     CommandIcon icon;CommandVariant variant;

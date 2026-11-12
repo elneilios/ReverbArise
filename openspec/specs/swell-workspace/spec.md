@@ -1236,13 +1236,13 @@ Perform SHALL offer the shared multi-swell editing and Audition tools for an acc
 
 ### Requirement: Loop playback controls report actual readiness
 
-An accepted Loop SHALL show one playback command and separate status beside Audition in Perform. Cue Loop SHALL require valid live timing and coherent prepared wet. Cancel Loop SHALL cancel a queued start. Stop Loop SHALL finish the current pass and suppress the next lead-in. Stop Now SHALL fade wet immediately while dry continues. These commands SHALL act independently of Audition. Song SHALL retain its existing composition.
+An accepted Loop SHALL show one playback command joined to its status beside Audition in Perform. Cue Loop SHALL require valid live timing and coherent prepared wet. Cancel Loop SHALL cancel a queued start. Stop Loop SHALL finish the current pass and suppress the next lead-in. Stop Now SHALL fade wet immediately while dry continues. These commands SHALL act independently of Audition. Song and Loop SHALL use the same Audition command, state field and mix control. Song SHALL display only the Audition group.
 
 #### Scenario: Phase, preparation and playback change
 
 - **WHEN** a Loop enters Perform with unavailable live timing, unavailable preparation or disabled live output
 - **THEN** Cue is disabled with the specific actionable reason and dry remains available
-- **AND** valid live timing and prepared wet enable Cue Loop automatically with Ready status
+- **AND** valid live timing and prepared wet enable Cue Loop with Ready status when manual Cue is the selected route
 - **AND** the command becomes Cancel Loop with Waiting for bar status when queued, then Stop Loop with Playing lead-in or Playing loop status when wet starts
 - **AND** Stop Loop becomes Stop Now with Finishing loop status until completion or an immediate stop
 - **AND** the command is disabled while Fading out and offers Cue Loop again when ready

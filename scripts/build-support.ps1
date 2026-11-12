@@ -112,7 +112,8 @@ function Invoke-ReverbBuild {
         [string] $Candidate = '',
         [switch] $PrRegression,
         [string] $TestTarget = '',
-        [string] $TestFilter = ''
+        [string] $TestFilter = '',
+        [string] $PreviewTarget = ''
     )
     $ErrorActionPreference = 'Stop'
     $Configuration = if ($Configuration -ieq 'Release') { 'Release' } else { 'Debug' }
@@ -126,6 +127,10 @@ function Invoke-ReverbBuild {
         if ($PluginOnly -and $Test) { throw '-PluginOnly cannot be combined with -Test; tests require the full build.' }
         if ($PrRegression -and ($PluginOnly -or $Test)) { throw '-PrRegression cannot be combined with -PluginOnly or -Test.' }
         if ($TestFilter -and -not $TestTarget) { throw '-TestFilter requires -TestTarget.' }
+        if ($PreviewTarget) {
+            if ($runTests -or $PluginOnly) { throw '-PreviewTarget selects a build without tests.' }
+            if ($PreviewTarget -cnotmatch '^preverb_[A-Za-z0-9_]+_preview$') { throw '-PreviewTarget requires a preverb native preview target name.' }
+        }
         if ($TestTarget) {
             if ($Test -or $PluginOnly -or $PrRegression) { throw '-TestTarget selects its own build and test mode.' }
             if ($TestTarget -cnotmatch '^preverb_[A-Za-z0-9_]+$') { throw '-TestTarget requires a preverb test executable target name.' }
@@ -147,6 +152,7 @@ function Invoke-ReverbBuild {
         if ($PluginOnly) { Write-Host 'Build target: preverb_plugin_VST3 (plugin only; CTest not requested)' }
         if ($PrRegression) { Write-Host 'Build target: preverb_pr_regression (CTest label: pr-regression)' }
         if ($TestTarget) { Write-Host "Build target: $TestTarget (CTest filter: $TestFilter)" }
+        if ($PreviewTarget) { Write-Host "Build target: $PreviewTarget (native preview; CTest not requested)" }
         foreach ($stage in @('Configure', 'Build', 'Test')) {
             if ($stage -eq 'Test' -and -not $runTests) { continue }
             $executable = $tools.CMake
@@ -158,6 +164,7 @@ function Invoke-ReverbBuild {
             if ($stage -eq 'Build' -and $PluginOnly) { $arguments += @('--target', 'preverb_plugin_VST3') }
             if ($stage -eq 'Build' -and $PrRegression) { $arguments += @('--target', 'preverb_pr_regression') }
             if ($stage -eq 'Build' -and $TestTarget) { $arguments += @('--target', $TestTarget) }
+            if ($stage -eq 'Build' -and $PreviewTarget) { $arguments += @('--target', $PreviewTarget) }
             if ($stage -eq 'Test') {
                 $executable = $tools.CTest
                 if ($PrRegression) { $arguments += @('-L', '^pr-regression$') }

@@ -767,7 +767,7 @@ Save the DAW project and its external audio separately, and back up every plugin
 <h5>Song playback</h5>
 <p>The Clock and Phrase cables cannot supply the song positions required for Song playback in this Rack setup. Use a captured Loop with the steps below for live wet swells.</p>
 <h5>Audition a swell</h5>
-<p>With a Loop accepted, open <strong>Perform</strong>, select a ready swell and use the <strong>Audition</strong> play button. Use <strong>Dry + wet</strong> to hear its captured context or <strong>Wet only</strong> to isolate the swell mix. Stop any active Loop playback before auditioning.</p>
+<p>With a Loop accepted, open <strong>Perform</strong>, select a ready swell and use the <strong>Audition</strong> play button. The same button turns red and shows Stop while auditioning. Use <strong>Dry + wet</strong> to hear its captured context or <strong>Wet only</strong> to isolate the swell mix. Stop any active Loop playback before auditioning.</p>
 <h5>Cue and stop a Loop by hand</h5>
 <ol>
 <li>Keep Clock connected and running. After generating swells, open <strong>Perform</strong> and enable <strong>Live playback</strong> in Settings. Match Rack's sample rate to the captured Loop.</li>
@@ -822,13 +822,13 @@ Save the DAW project and its external audio separately, and back up every plugin
 <li>Swells play at their saved Playlist positions. To include them in a normal FL Studio bounce, leave ReverbArise in <strong>Perform</strong> and render from FL Studio. Keep the song timing compatible with the capture.</li>
 </ol>
 <h5>Audition a Song or Loop swell</h5>
-<p>Stop FL Studio transport and stop any active Loop playback. Select a ready swell in <strong>Perform</strong>, choose <strong>Dry + wet</strong> or <strong>Wet only</strong>, and press the <strong>Audition</strong> play button. Use the adjacent Stop button to end the preview.</p>
+<p>Stop FL Studio transport and stop any active Loop playback. Select a ready swell in <strong>Perform</strong>, choose <strong>Dry + wet</strong> or <strong>Wet only</strong>, and press the <strong>Audition</strong> play button. The same button turns red and shows Stop during playback in both Song and Loop Perform.</p>
+<h5>Follow a Pattern or Playlist repeat</h5>
+<p>Open <strong>Perform</strong> with an accepted Loop and prepared swells, enable <strong>Live playback</strong>, then press Play in FL Studio. Swells follow the repeat automatically when FL Studio reports a range matching the accepted Loop and no Playlist start is set. Use <strong>Stop Loop</strong> to finish the current pass or <strong>Stop Now</strong> for a short fade. Stop and restart the host transport to resume automatic playback.</p>
+<h5>Set a Playlist start</h5>
+<p>Park the Playlist playhead and click <strong>Set Loop Start</strong>. The saved bar and beat appear to the right of the button. Right-click the pair or press Shift+F10 on the button to enter a bar and beat manually or clear the start. Start FL Studio before the first swell to hear the full lead-in. The Loop repeats from the saved position until transport stops or you schedule a Stop. Use <strong>Stop Loop</strong> or the Stop MIDI note to finish the current pass, including its tail.</p>
 <h5>Cue and stop a Loop by hand</h5>
-<ol>
-<li>Open <strong>Perform</strong> with an accepted Loop and prepared swells. Choose <strong>Pattern</strong> playback for the selected pattern or <strong>Song</strong> playback for the Playlist.</li>
-<li>Enable <strong>Live playback</strong> and start transport. When <strong>Cue Loop</strong> shows <strong>Ready</strong>, click it. The Loop begins on the first bar line with room for the full lead-in. A verified repeat keeps the Loop queued or playing as the transport wraps. Click <strong>Cancel Loop</strong> to cancel a waiting launch.</li>
-<li>Click <strong>Stop Loop</strong> to finish the current pass. Click <strong>Stop Now</strong> while it is finishing for a short immediate fade. After stopping transport or seeking, start playback and Cue again.</li>
-</ol>
+<p>With no saved start or matching repeat, start transport and click <strong>Cue Loop</strong> when it is available. The Loop begins on the first eligible downbeat with room for the full lead-in. Click <strong>Cancel Loop</strong> while it is queued. After stopping transport or seeking, Cue again.</p>
 <h5>Sequence Cue and Stop from the Playlist</h5>
 <ol>
 <li>Place Cue <strong>E1 (16)</strong> on the MIDI Out pattern before your target bar. For a two-bar Loop with at most two beats of lead-in, put Cue at bar 7 beat 3 to launch at bar 8 beat 1.</li>
