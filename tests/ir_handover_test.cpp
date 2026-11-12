@@ -2,6 +2,7 @@
 #include "AllocationGuard.h"
 #include <DSP/SwellEngine.h>
 #include <DSP/DefaultImpulse.h>
+#include <DSP/SongMix.h>
 #include <Core/MonitoringSafety.h>
 #include <source_location>
 using namespace m3;
@@ -132,6 +133,33 @@ int main(){return runTest([]
         engine.restore(reopened);
         waitFor([&]{return engine.snapshot().auditionReady;});
         REQUIRE(sameSavedSwell(*find(engine.savedSession(),a),*find(fittedSession,a)));
+
+        // Compare interior wet samples after reopening a fitted replacement.
+        // Export has independent mix controls, so compare both at unity wet.
+        {
+            REQUIRE(reopened.liveWetDb==0);
+            time=position(950,false);
+            engine.processTransportAudio(l,r,16,time);
+            waitFor([&]{return engine.snapshot().liveReady;});
+            const auto source=capture.snapshot();
+            std::shared_ptr<const SongExportPlan> plan;
+            REQUIRE(prepareSongExportPlan(engine.savedSession(),source.manifest,source.reference,time.song,0,1,plan,error));
+            SongMix mix(engine.assetDirectory());
+            REQUIRE(mix.prepare(plan,previewMemoryBudget,error) && mix.measure(error));
+            std::array<float,64> exported{};
+            REQUIRE(mix.read(955,exported,error));
+            REQUIRE(std::any_of(exported.begin(),exported.end(),[](float value){return std::abs(value)>1e-4f;}));
+            std::fill_n(l,80,0.f);std::fill_n(r,80,0.f);
+            time=position(950,true);
+            engine.processTransportAudio(l,r,37,time);
+            for(int i=0;i<32;++i)
+            {
+                REQUIRE(std::abs(l[i+5]-exported[2*i])<1e-6f);
+                REQUIRE(std::abs(r[i+5]-exported[2*i+1])<1e-6f);
+            }
+            time=position(950,false);
+            engine.processTransportAudio(l,r,16,time);
+        }
 
         engine.setMonitoring(AuditionMode::dryWet,.5f);
         waitFor([&]{const auto state=engine.snapshot();return state.auditionReady && state.dryAvailable;});

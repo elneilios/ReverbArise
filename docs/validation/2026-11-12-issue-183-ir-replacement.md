@@ -6,7 +6,7 @@ On 12 November 2026, the owner reported the installed Release build at `219bde2`
 
 A read-only inspection of `PreverbTesting_3.flp` showed the bar 3.1 swell ready with `06_Airy_Vowel.wav` selected and “Wet timing adjusted to fit this IR” in the Sound inspector. The target remained `3.1.000011111`. The editor displayed 2.61 s pre-roll and 2.98 s length. The prior inspection of the reported failure showed the same target with 3.48 s pre-roll and 3.84 s length.
 
-The owner confirmed trying multiple IRs across multiple swells, swapping during manual Audition, and DAW playback. This completes the host playback smoke check for PR review. The exact three-file sequence, host save/reopen and host export remain unconfirmed. Native checks cover fitted-session reopen and export. The saved project has a hash-verified working copy alongside it. The agent left the original project open during validation and made no edits in FL Studio.
+The owner confirmed trying multiple IRs across multiple swells, swapping during manual Audition, and DAW playback. The saved project has a hash-verified working copy alongside it. The agent left the original project open during validation and made no edits in FL Studio. The owner later confirmed the exact bar 3.1 sequence, save/reopen and host export in the retest below.
 
 ## Native verification
 
@@ -39,3 +39,9 @@ The fixes in `c5e5133` preserve fade intent through repeated endpoint drags, mea
 - `./scripts/build.ps1 -Configuration Release -PrRegression` passed all 15 cases on `c5e5133`. The offline user-guide currency check and `git diff --check` passed.
 
 The follow-up was verified in native tests. The FL Studio smoke results above apply to the earlier installed build.
+
+## Owner host retest
+
+The owner confirmed that the exact bar 3.1 IR retest and FL Studio save/reopen passed. FL Studio’s bounce matched live Perform playback with Live Wet at 0 dB. ReverbArise’s Export workspace completed, and the owner reported hearing louder swells there. The Export Dry/Wet settings, monitoring conditions and whether the difference was also present in the saved WAV were unconfirmed.
+
+`./scripts/build.ps1 -Configuration Debug -TestTarget preverb_ir_handover_test` passed with the added comparison on `c1460d3` plus the test change. The native fixture reopens a fitted custom-IR replacement and compares interior stereo samples from live Perform at 0 dB Live Wet against the Song Export mix at 0% Dry and 100% Wet. The samples matched within `1e-6`. This verifies the fitted wet signal in the native fixture. The perceived difference in the host project remains unexplained.
