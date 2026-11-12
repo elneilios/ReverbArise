@@ -84,10 +84,13 @@ inline void m3ProcessorCases()
     waitM3([&]{return engine.snapshot().auditionReady;});REQUIRE(engine.snapshot().renderCount==count);
     armCaptureFixture(*processor);head.position.setIsPlaying(true);position(0);buffer.clear();buffer.setSample(0,0,0.75f);buffer.setSample(1,0,-0.5f);
     processor->processBlock(buffer,midi);finishCaptureFixture(*processor,head.position);
-    // Learn Automatic Swells off now deliberately overrides legacy forced refresh.
-    waitM3([&]{return m3::find(engine.savedSession(),first)->phase==m3::Phase::stale;});
-    REQUIRE(engine.snapshot().renderCount==count);REQUIRE(engine.selectTargets({first},first));engine.generate(false);
-    waitM3([&]{return engine.snapshot().auditionReady && engine.snapshot().renderCount>count;});
+    // Detection is off, but accepted source changes still refresh existing renders.
+    waitM3([&]{
+        const auto snapshot=engine.snapshot();
+        const auto* changed=m3::find(snapshot.session,first);
+        return snapshot.auditionReady && snapshot.renderCount>count && changed
+            && changed->phase==m3::Phase::ready && changed->render.dependency!=savedModel.swells[0].render.dependency;
+    });
     REQUIRE(engine.savedSession().swells[1].render.path==savedModel.swells[1].render.path && processor->getDroppedCaptureBlockCount()==0);
     REQUIRE(original.moveFileTo(root.file.getChildFile("original-moved.wav")));
     auto restored=std::make_unique<PreverbAudioProcessor>(root.file);restored->prepareToPlay(1000,250);restored->setPlayHead(&head);

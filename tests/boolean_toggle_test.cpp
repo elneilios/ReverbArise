@@ -190,11 +190,18 @@ static void joinedActionCases()
     for(const auto scale:{1.f,1.25f,1.5f})
     {
         const auto rendered=pair.createComponentSnapshot(pair.getLocalBounds(),true,scale);
-        for(const auto y:{body.getY(),body.getBottom()-1})
+        // Sample the outer edges of the rails. At fractional scales, pixels
+        // on the inner edges also contain coverage from the different fills.
+        const std::array rows{static_cast<int>(std::floor(body.getY()*scale)),
+                              static_cast<int>(std::ceil((body.getBottom()-1)*scale))};
+        for(const auto y:rows)
         {
-            const auto top=static_cast<int>(y*scale);
-            REQUIRE(rendered.getPixelAt(static_cast<int>((seam-15)*scale),top)
-                 == rendered.getPixelAt(static_cast<int>((seam+15)*scale),top));
+            const auto actionRail=rendered.getPixelAt(static_cast<int>((seam-15)*scale),y);
+            const auto fieldRail=rendered.getPixelAt(static_cast<int>((seam+15)*scale),y);
+            if(actionRail!=fieldRail)
+                std::cerr<<"Joined outline at scale "<<scale<<" row "<<y
+                         <<" action="<<actionRail.toString()<<" field="<<fieldRail.toString()<<'\n';
+            REQUIRE(actionRail==fieldRail);
         }
     }
     window.removeFromDesktop();

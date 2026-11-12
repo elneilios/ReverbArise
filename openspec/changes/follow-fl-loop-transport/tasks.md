@@ -22,5 +22,5 @@ The owner approved the shared control and its three-pair layout on 12 November 2
 
 ## 4. Integrated verification
 
-- [ ] 4.1 Follow the contribution test cadence. After approval to mark the draft ready, run the targeted processor and component checks and the standard PR regression set with the supported build wrapper. Record results and uncovered configurations.
+- [x] 4.1 Follow the contribution test cadence. After approval to mark the draft ready, run the targeted processor and component checks and the standard PR regression set with the supported build wrapper. Record results and uncovered configurations.
 - [ ] 4.2 Run a consolidated FL Studio desktop smoke test for a matching Pattern, a declared Playlist repeat, a placed Loop with lead-in and a seek. Record the transport and audible results and the scope of Rack verification.
