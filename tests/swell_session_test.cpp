@@ -172,12 +172,56 @@ int main() { return runTest([]
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
-    reject(json.replace("\"version\": 11", "\"version\": 12"));
+    reject(json.replace("\"version\":12", "\"version\":13"));
+    for(const auto& fields:{
+        juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevelDb\":0,"),
+        juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevel\\u0044b\":0,"),
+        juce::String("\"version\":13,\"version\":11,")})
+    {
+        reject("{" + fields + json.substring(1));
+        REQUIRE(error.contains("Duplicate"));
+    }
+    reject(json.replace("\"soundPreset\":", "\"soundPreset\":null,\"soundPreset\":"));
+    REQUIRE(error.contains("Duplicate"));
+    for(const auto& invalid:{juce::var("0"),juce::var(13)})
+    {
+        const auto metadata=juce::JSON::parse(json);
+        metadata.getDynamicObject()->setProperty("defaultLevelDb",invalid);
+        reject(juce::JSON::toString(metadata));
+    }
+    reject(json.replace("\"defaultSoundPreset\":[\"\",1]", "\"defaultSoundPreset\":[\"preverb-hall\",1]"));
     reject(json.replace(second,first));
-    reject(json.replace("\"gain\": -3", "\"gain\": \"nan\""));
-    reject(json.replace("\"sourceEnd\": \"40\"", "\"sourceEnd\": \"3\""));
-    reject(json.replace("\"path\": \"\"", "\"path\": \"../outside.wav\""));
+    reject(json.replace("\"gain\":-3", "\"gain\":\"nan\""));
+    reject(json.replace("\"sourceEnd\":\"40\"", "\"sourceEnd\":\"3\""));
+    reject(json.replace("\"path\":\"\"", "\"path\":\"../outside.wav\""));
     reject(juce::String::repeatedString("x",static_cast<int>(maximumStateBytes+1)));
+    {
+        auto accepted=s;
+        auto& hall=accepted.defaultIR;
+        hall.path="irs/ab-cd.wav";hall.checksum=juce::String::repeatedString("a",64);
+        hall.content=defaultImpulseContent;hall.rate=48000;hall.channels=2;hall.frames=86400;
+        accepted.defaultIRName="Historical label";accepted.defaultLevelDb=4.5f;
+        accepted.swells.front().ir=hall;
+        accepted.swells.front().soundPreset={customImpulseId,1}; // Import matching the factory PCM.
+        juce::String bytes;Session reopened;
+        REQUIRE(encode(accepted,bytes,error) && decode(bytes,reopened,error));
+        REQUIRE(reopened.defaultSoundPreset.id==defaultImpulseId && reopened.defaultIRName==accepted.defaultIRName);
+        REQUIRE(reopened.defaultLevelDb==4.5f && reopened.swells.front().soundPreset.id==customImpulseId);
+        REQUIRE(reopened.defaultIR==hall && reopened.swells.front().ir==hall);
+        const auto invalid=juce::JSON::parse(bytes);
+        invalid.getDynamicObject()->setProperty("defaultSoundPreset",juce::Array<juce::var>{"whisper",1});
+        REQUIRE(!decode(juce::JSON::toString(invalid),reopened,error));
+        REQUIRE(reopened.defaultIR==hall && reopened.defaultSoundPreset.id==defaultImpulseId);
+        const auto v11=juce::JSON::parse(bytes);
+        v11.getDynamicObject()->setProperty("version",11);
+        v11.getDynamicObject()->removeProperty("defaultSoundPreset");
+        v11.getDynamicObject()->removeProperty("defaultLevelDb");
+        v11["swells"][0].getDynamicObject()->removeProperty("soundPreset");
+        REQUIRE(decode(juce::JSON::toString(v11),reopened,error));
+        REQUIRE(reopened.defaultLevelDb==0 && reopened.defaultSoundPreset.id==defaultImpulseId);
+        REQUIRE(reopened.swells.front().soundPreset.id==defaultImpulseId && reopened.swells.front().ir==hall);
+        REQUIRE(reopened.swells.front().shape.gainDb==accepted.swells.front().shape.gainDb);
+    }
     REQUIRE(erase(s,first) && ! find(s,first) && s.primary==second && s.selected.size()==1);
     REQUIRE(! erase(s,first));
     Session full; full.swells.resize(maximumSwells); REQUIRE(! add(full,0,map,time,{},error));
@@ -315,7 +359,7 @@ int main() { return runTest([]
     calibrated.calibration.renderIdentity="render";calibrated.calibration.revision=candidateGainRevision;
     calibrated.generatedGain=0.375f;
     REQUIRE(musical.gainPolicy==GainPolicy::musical && encode(musical,json,error));
-    REQUIRE(json.contains("\"version\": 11") && decode(json,restored,error));
+    REQUIRE(json.contains("\"version\":12") && decode(json,restored,error));
     REQUIRE(restored.gainPolicy==GainPolicy::musical && restored.gainRevision==candidateGainRevision && restored.liveWetDb==4);
     REQUIRE(restored.swells[0].calibration==calibrated.calibration);
     REQUIRE(restored.swells[0].generatedGain==calibrated.generatedGain);

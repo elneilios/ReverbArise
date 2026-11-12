@@ -21,7 +21,7 @@ juce::String songExportIdentity(const SongExportPlan& plan)
     juce::String encoded,error,source;
     if(!encode(definition,encoded,error) || !serializeCaptureManifest(plan.source,source,error))return {};
     auto values=juce::JSON::parse(encoded)["swells"];
-    for(auto& v:*values.getArray())for(const char* key:{"name","irName","provenance","detectorAnchor","generationSource"})v.getDynamicObject()->removeProperty(key);
+    for(auto& v:*values.getArray())for(const char* key:{"name","irName","provenance","detectorAnchor","generationSource","soundPreset"})v.getDynamicObject()->removeProperty(key);
     auto metadata=object();put(metadata,"revision",plan.loop?loopExportRevision:songExportRevision);put(metadata,"members",values);
     if(plan.loop){
         put(metadata,"loopRepeats",plan.loop->repeats);put(metadata,"leadGridBeats",plan.loop->gridBeats);

@@ -154,8 +154,8 @@ realtime/offline and old/new mode restore. Full UI/host acceptance remains open.
 
 ## State and recovery
 
-The workflow uses processor XML envelope version 8; the existing swell JSON
-remains version 8 with its original gain-policy revision semantics. Supported
+The workflow uses processor XML envelope version 8. Creative swell JSON now
+writes version 12 and preserves its original gain-policy revision semantics. Supported
 processor envelopes 1-7 without workflow metadata always enter Learn (durable Capture),
 Recapture off, even when they contain useful source or enabled old mapping/live
 flags. No source, IR, raw render, creative edit or gain policy is reassigned.
@@ -191,6 +191,14 @@ remain unchanged. An installed older Preverb Spike bundle is not removed by
 building; host rescan/reload behavior requires explicit FL Studio verification.
 
 ## Learn generation settings
+
+The accepted default Sound and future Level are part of the guarded generation
+configuration. A default edit marks host state dirty and invalidates obsolete
+Generate/Stop work without changing existing swells or rerunning detection.
+Genuinely new manual and automatic swells use the accepted Level, which starts
+at 0 dB. When Generate matches an existing eligible ID, the existing response
+replacement policy applies and the matched swell keeps its Level. Reset All
+still restores its existing gain default.
 
 Learn's effective Automatic Swells policy is the conjunction of the saved
 processing and marker switches. Explicit On enables both; Off disables

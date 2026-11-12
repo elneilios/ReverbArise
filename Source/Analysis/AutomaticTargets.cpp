@@ -106,10 +106,12 @@ bool reconcileTargets(Session& session,const std::vector<Candidate>& candidates,
         Swell w;w.arrival=w.sourceStart=w.detectorAnchor=found[i].sample;
         if(!checkedAdd(w.arrival,1,w.sourceEnd)){error="Target overflow";return false;}
         w.shape=initialShape(time.rate);w.provenance=Provenance::automatic;w.ir=s.defaultIR;w.irName=s.defaultIRName;
+        w.shape.gainDb=s.defaultLevelDb;w.soundPreset=resolvedSoundPreset(s.defaultSoundPreset,s.defaultIR);
         if(sourceContexts && sourceContexts->schemaVersion>=2)
         {
             const auto* owner=captureContextAt(*sourceContexts,w.arrival);
             w.ir=owner?owner->ir:Asset{};w.irName=owner?owner->irName:juce::String{};
+            w.soundPreset=inferSoundPreset(w.ir);
             if(!w.ir.present())missingContextIR.insert(w.id);
         }
         w.name=defaultSwellName(w.arrival,time,&s);w.phase=Phase::stale;w.status="Waiting for source";

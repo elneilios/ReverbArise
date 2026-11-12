@@ -110,6 +110,12 @@ struct IRChoice
     juce::String id,name,description,presetId,content;
     Asset managed;
 };
+inline juce::String irChoiceId(const SoundPresetIdentity& identity,const Asset& asset)
+{
+    if(!asset.present() || asset.content.isEmpty())return {};
+    const auto preset=resolvedSoundPreset(identity,asset);
+    return preset.id==customImpulseId ? "managed:"+asset.content : "bundled:"+preset.id;
+}
 struct RegenerationResult
 {
     bool accepted=false;
@@ -192,6 +198,7 @@ public:
     bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultManagedIR(const Asset&,const juce::String& name,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    bool setDefaultLevel(float db,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     void holdDefaultImportsForTesting(bool hold) noexcept {defaultImportHold.store(hold);notify();}
     bool defaultImportWaitingForTesting() const noexcept {return defaultImportWaiting.load();}
     void resetSuppression();

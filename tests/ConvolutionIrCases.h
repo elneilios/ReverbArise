@@ -1,4 +1,5 @@
 #pragma once
+#include <DSP/DefaultImpulse.h>
 #include <UI/ConvolutionIrBinding.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/Controls/SegmentedSelector.h>
@@ -363,5 +364,57 @@ inline void hostOwnershipCases()
             REQUIRE(dynamic_cast<ConvolutionIrEditor*>(parent)==nullptr);
     }
 }
-inline void cases(){buttonSurfaceCases();componentCases();bindingCases();hostOwnershipCases();}
+inline void matchingBundledPcmCases()
+{
+    Fixture fixture;
+    auto& engine=*fixture.engine;
+    ConvolutionIrEditor defaults,selected;
+    ConvolutionIrBinding defaultBinding(defaults,engine),selectedBinding(selected,engine);
+    const auto refresh=[&]{
+        const auto snapshot=engine.snapshot();
+        defaultBinding.displayDefault(snapshot);
+        selectedBinding.displaySelected(snapshot);
+    };
+    const auto& hall=bundledImpulses().front();
+    const auto file=fixture.root.file.getChildFile("My exact Hall.wav");
+    REQUIRE(file.replaceWithData(hall.bytes,hall.size));
+    REQUIRE(engine.assignDefaultIR(file));
+    settle([&]{return !engine.snapshot().defaultIRPending;});
+    const auto custom=engine.savedSession().defaultIR;
+    REQUIRE(custom.content==hall.decodedHash && engine.savedSession().defaultSoundPreset.id==customImpulseId);
+    const auto choices=engine.irChoices();
+    int customRow=0,bundledRow=0;
+    for(size_t i=0;i<choices.size();++i)
+    {
+        if(choices[i].id=="managed:"+custom.content)customRow=static_cast<int>(i+1);
+        if(choices[i].id=="bundled:"+juce::String(hall.id))bundledRow=static_cast<int>(i+1);
+    }
+    REQUIRE(customRow>0 && bundledRow>0 && customRow!=bundledRow);
+    refresh();
+    REQUIRE(defaults.selector.getSelectedId()==customRow);
+    choose(defaults,bundledRow);
+    settle([&]{return !engine.snapshot().defaultIRPending;});
+    REQUIRE(engine.savedSession().defaultSoundPreset.id==hall.id);
+    REQUIRE(file.deleteFile());
+    juce::String saved,error;
+    Session reopened;
+    REQUIRE(encode(engine.savedSession(),saved,error) && decode(saved,reopened,error));
+    engine.restore(std::move(reopened));
+    fixture.ready();
+    fixture.select(fixture.a);
+    refresh();
+    REQUIRE(defaults.selector.getSelectedId()==bundledRow);
+    choose(defaults,customRow);
+    settle([&]{return !engine.snapshot().defaultIRPending;});
+    REQUIRE(engine.savedSession().defaultIR==custom && engine.savedSession().defaultSoundPreset.id==customImpulseId);
+    choose(selected,customRow);
+    settle([&]{const auto state=engine.savedSession();return find(state,fixture.a)->ir==custom;});
+    refresh();
+    REQUIRE(selected.selector.getSelectedId()==customRow && defaults.selector.getSelectedId()==customRow);
+    choose(selected,bundledRow);
+    settle([&]{const auto state=engine.savedSession();return find(state,fixture.a)->soundPreset.id==hall.id;});
+    refresh();
+    REQUIRE(selected.selector.getSelectedId()==bundledRow && defaults.selector.getSelectedId()==customRow);
+}
+inline void cases(){buttonSurfaceCases();componentCases();bindingCases();matchingBundledPcmCases();hostOwnershipCases();}
 }

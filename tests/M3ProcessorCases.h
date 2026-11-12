@@ -63,7 +63,7 @@ inline void m3ProcessorCases()
     auto bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("stateVersion",9);rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);bad->setAttribute("manifestReference","../outside.json");rejected(*bad);
     bad=std::make_unique<juce::XmlElement>(*xml);auto child=bad->getChildByName("SwellSession");auto json=child->getAllSubText();
-    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\": 11","\"version\": 12"));rejected(*bad);
+    child->deleteAllChildElements();child->addTextElement(json.replace("\"version\":12","\"version\":13"));rejected(*bad);
     // Entering Capture stops preview; capture still reads only original dry.
     REQUIRE(engine.audition());armCaptureFixture(*processor);buffer.setSize(2,500);buffer.clear();head.position.setIsPlaying(true);position(2900);
     {AudioAllocationGuard guard;processor->processBlock(buffer,midi);}

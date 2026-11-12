@@ -19,14 +19,19 @@ int main(){return runTest([]
     REQUIRE(flow.stop(compatibilityPass) && flow.validating(compatibilityPass) && flow.complete(compatibilityPass,true,false,false));
     REQUIRE(engine.setGainPolicy(GainPolicy::musical));
     auto oldToken=flow.snapshot().pass;engine.setPreferences(0,.25f,.2,false,oldToken);
+    REQUIRE(engine.savedSession().defaultLevelDb==0);
+    REQUIRE(engine.setDefaultLevel(-4.f,engine.assignmentEpoch(),oldToken));
+    REQUIRE(!engine.setDefaultLevel(-4.f) && !engine.setDefaultLevel(12.1f));
     const auto accepted=engine.savedSession();const auto before=changes.load();uint64_t pass;
     {AudioAllocationGuard guard;pass=flow.begin(true);}
     REQUIRE(pass && watchedAllocations==0 && watchedDeallocations==0);
     auto pinned=engine.passConfiguration(pass);REQUIRE(pinned && pinned->automatic && pinned->sensitivity==.25f && pinned->separationSeconds==.2 && pinned->ir==accepted.defaultIR);
+    REQUIRE(pinned->levelDb==-4.f && pinned->soundPreset.id==defaultImpulseId);
     for(int phase=0;phase<3;++phase)
     {
         engine.setPreferences(0,.8f,.3,false);engine.setAutomaticProcessing(false);engine.setAutoMarkers(false);engine.setLearningAutomatic(false);
         REQUIRE(!engine.assignDefaultBundledIR("monumental"));
+        REQUIRE(!engine.setDefaultLevel(2.f) && engine.savedSession().defaultLevelDb==-4.f);
         REQUIRE(engine.savedSession().sensitivity==accepted.sensitivity && engine.savedSession().automaticProcessing && engine.savedSession().autoMarkersEnabled);
         REQUIRE(engine.passConfiguration(pass)->revision==pinned->revision && changes.load()==before);
         if(phase==0)REQUIRE(flow.stop(pass));if(phase==1)REQUIRE(flow.validating(pass));
@@ -35,6 +40,7 @@ int main(){return runTest([]
     // Typed/knob/chooser completions retain their start token, even after unlock.
     engine.setPreferences(0,.8f,.3,false,oldToken);engine.setAutoMarkers(false,oldToken);engine.setAutomaticProcessing(false,oldToken);
     REQUIRE(!engine.assignDefaultBundledIR("monumental",engine.assignmentEpoch(),oldToken));
+    REQUIRE(!engine.setDefaultLevel(2.f,engine.assignmentEpoch(),oldToken));
     REQUIRE(engine.savedSession().sensitivity==.25f && changes.load()==before);
     engine.setPreferences(0,.6f,.15,false,flow.snapshot().pass);REQUIRE(engine.savedSession().sensitivity==.6f && changes.load()==before+1);
     // In-flight import intent cannot become the accepted pass configuration.

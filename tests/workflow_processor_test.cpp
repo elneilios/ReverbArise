@@ -1630,6 +1630,19 @@ int main(int argc,char* argv[]){return runTest([&]{
     invalid->setAttribute("workflowMode","Unknown");juce::MemoryBlock invalidBytes;juce::AudioProcessor::copyXmlToBinary(*invalid,invalidBytes);
     restored->setStateInformation(invalidBytes.getData(),static_cast<int>(invalidBytes.getSize()));
     REQUIRE(restored->getWorkflowSnapshot().mode==workflow::Mode::capture && restored->getCaptureSnapshot().manifest.ranges.empty());
+    // A later valid copy of a field must not hide a malformed duplicate.
+    auto duplicate=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
+    auto* creative=duplicate->getChildByName("SwellSession");
+    REQUIRE(creative);
+    auto json=creative->getAllSubText();
+    REQUIRE(json.contains("\"defaultLevelDb\":0"));
+    json=json.replace("\"defaultLevelDb\":0","\"defaultLevelDb\":\"invalid\",\"defaultLevelDb\":5");
+    creative->deleteAllChildElements();creative->addTextElement(json);
+    const auto acceptedEpoch=restored->swellEngine().assignmentEpoch();
+    juce::MemoryBlock duplicateBytes;juce::AudioProcessor::copyXmlToBinary(*duplicate,duplicateBytes);
+    restored->setStateInformation(duplicateBytes.getData(),static_cast<int>(duplicateBytes.getSize()));
+    REQUIRE(restored->swellEngine().assignmentEpoch()==acceptedEpoch);
+    REQUIRE(restored->swellEngine().savedSession().defaultLevelDb==0 && restored->getCaptureSnapshot().manifest.ranges.empty());
     p->setNonRealtime(false);process(64,false,0);REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
     p->holdCaptureValidationForTesting(true);process(200,true,.25f);process(264,false,0);
     const auto deadline=juce::Time::getMillisecondCounter()+2000;

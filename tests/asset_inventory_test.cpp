@@ -51,7 +51,7 @@ int main(){return runTest([]{
     Fixture f;const auto contains=[&](const juce::String& path){return std::any_of(f.observed.dependencies.begin(),f.observed.dependencies.end(),[&](const auto& d){return d.path==path;});};
     for(const auto& a:f.irs)REQUIRE(contains(a.path));REQUIRE(contains(f.session.swells[0].render.path) && contains("exports/Swells-old.wav"));
     REQUIRE(f.observed.capture.schemaVersion==2 && f.observed.capture.contextSpans.size()==2 && f.observed.session.swells[0].frozen && !f.observed.session.swells[0].enabled);
-    auto noSwells=f.observed;noSwells.session.swells.clear();noSwells.session.defaultIR={};REQUIRE(visitDependencies(noSwells,f.error));REQUIRE(noSwells.emptyIRReferences==1);
+    auto noSwells=f.observed;noSwells.session.swells.clear();noSwells.session.defaultIR={};noSwells.session.defaultSoundPreset={};REQUIRE(visitDependencies(noSwells,f.error));REQUIRE(noSwells.emptyIRReferences==1);
     REQUIRE(std::any_of(noSwells.dependencies.begin(),noSwells.dependencies.end(),[&](const auto& d){return d.path==f.irs[0].path;}));
     auto defaultOnly=f.observed;defaultOnly.session.swells.clear();REQUIRE(visitDependencies(defaultOnly,f.error));REQUIRE(std::any_of(defaultOnly.dependencies.begin(),defaultOnly.dependencies.end(),[&](const auto& d){return d.path==f.irs[1].path;}));
     REQUIRE(!readLegacySnapshot(f.xml,juce::String::repeatedString(" ",static_cast<int>(maximumMetadataBytes+1)),f.observed,f.error));

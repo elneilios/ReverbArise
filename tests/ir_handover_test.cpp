@@ -21,6 +21,7 @@ int main(){return runTest([]
     SwellEngine engine(root.file,[&]{const juce::ScopedLock guard(mutex);return context;});engine.setAutomaticProcessing(false);
     waitFor([&]{return engine.savedSession().defaultIR.present();});
     REQUIRE(engine.addTarget(1000));const auto a=engine.savedSession().primary;REQUIRE(engine.addTarget(1100));const auto b=engine.savedSession().primary;
+    REQUIRE(find(engine.savedSession(),a)->soundPreset.id==defaultImpulseId);
     REQUIRE(engine.selectTargets({a,b},a));const auto oldFile=root.file.getChildFile("accepted.wav");writeTestWav(oldFile,1,1000,std::vector<float>(201,.001f));
     engine.loadIR(oldFile);waitFor([&]{return find(engine.savedSession(),a)->irName=="accepted.wav" && find(engine.savedSession(),b)->irName=="accepted.wav";});
     engine.generate(true);waitFor([&]{const auto s=engine.savedSession();return find(s,a)->phase==Phase::ready && find(s,b)->phase==Phase::ready;});
@@ -32,6 +33,7 @@ int main(){return runTest([]
         return request!=state.irRequests.end() && request->second.error.isNotEmpty();
     };
     const auto original=engine.savedSession();SwellAssetStore assets(engine.assetDirectory());WetRender rawA,rawB;juce::String error;
+    REQUIRE(find(original,a)->soundPreset.id==customImpulseId && find(original,b)->soundPreset.id==customImpulseId);
     REQUIRE(assets.readRender(find(original,a)->render,previewMemoryBudget,rawA,error));REQUIRE(assets.readRender(find(original,b)->render,previewMemoryBudget,rawB,error));
     const auto position=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=(p-(playing?16:0))/250.;return TransportTime{context.time,playing};};
     float l[80]{},r[80]{};auto time=position(950,false);engine.processTransportAudio(l,r,16,time);waitFor([&]{return engine.snapshot().liveReady;});
@@ -83,6 +85,7 @@ int main(){return runTest([]
             REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,entry.id));
             waitFor([&]{return find(engine.savedSession(),a)->irName==entry.name;});const auto assigned=*find(engine.savedSession(),a);
             REQUIRE(assigned.ir.content==entry.decodedHash && assigned.shape==find(saved,a)->shape && assigned.arrival==find(saved,a)->arrival);
+            REQUIRE(assigned.soundPreset.id==entry.id && assigned.soundPreset.version==static_cast<int>(entry.revision));
             REQUIRE(find(engine.savedSession(),b)->ir==neighbour.ir && find(engine.savedSession(),b)->render==neighbour.render && engine.savedSession().defaultIR==saved.defaultIR);}
         const auto assigned=engine.savedSession();engine.restore(assigned);REQUIRE(find(engine.savedSession(),a)->ir==find(assigned,a)->ir);
         engine.restore(saved);waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
@@ -106,11 +109,13 @@ int main(){return runTest([]
         waitFor([&]{return engine.renderPublicationWaitingForTesting();});
         const auto pending=engine.savedSession();
         REQUIRE(sameSavedSwell(*find(crop,a),*find(pending,a)) && engine.snapshot().irReplacementPending);
+        REQUIRE(find(pending,a)->soundPreset.id=="monumental");
         engine.processAudio(l,r,16,time.song);
         REQUIRE(engine.snapshot().playing);
         engine.holdRenderPublicationForTesting(false);
         waitFor([&]{return find(engine.savedSession(),a)->irName=="Whisper";});
         const auto shorter=engine.savedSession();
+        REQUIRE(find(shorter,a)->soundPreset.id=="whisper" && find(shorter,a)->render.irContent==find(shorter,a)->ir.content);
         REQUIRE(find(shorter,a)->render.start==501 && find(shorter,a)->shape.startOffset==-499);
         REQUIRE(find(shorter,a)->arrival==find(crop,a)->arrival && sameSavedSwell(*find(shorter,b),*find(crop,b)));
         REQUIRE(find(shorter,a)->wetTimingIntent && find(shorter,a)->wetTimingIntent->startOffset==-2000);
@@ -245,6 +250,7 @@ int main(){return runTest([]
     full.liveEnabled=false;
     full.defaultIR=neighbour.ir;
     full.defaultIRName=neighbour.irName;
+    full.defaultSoundPreset=neighbour.soundPreset;
     while(full.importedIRs.size()<maximumImportedIRs)
     {
         auto entry=full.importedIRs.front();
@@ -278,4 +284,10 @@ int main(){return runTest([]
         combinedPeak=std::max(combinedPeak,std::abs(contribution(a,rawA)+contribution(b,rawB)+contribution(added,rawC)));
     }
     REQUIRE(combinedPeak>.85f && combinedPeak<=juce::Decibels::decibelsToGain(candidateWetCeilingDb));
+    REQUIRE(engine.setDefaultLevel(-4.f));
+    REQUIRE(engine.addTarget(1200));
+    const auto newDefaults=engine.savedSession();
+    const auto* fresh=find(newDefaults,newDefaults.primary);
+    REQUIRE(fresh && fresh->shape.gainDb==-4.f && fresh->soundPreset==full.defaultSoundPreset && fresh->ir==full.defaultIR);
+    REQUIRE(sameSavedSwell(*find(newDefaults,a),*find(accepted,a)));
 });}

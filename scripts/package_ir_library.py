@@ -24,9 +24,9 @@ def package(source,check):
         files[ROOT/'resources/irs'/f'{stem}.wav']=data
         entry=dict(entry,prototype=False,file=f'{stem}.wav',description=description)
         entries.append(entry)
-        inc.extend([f',{{"{ident}",1,"{entry["parameters"]["name"]}","{description}","CC0-1.0","{manifest["generator"]}",',
+        inc.extend([f'BUNDLED_IMPULSE("{ident}",1,"{entry["parameters"]["name"]}","{description}","CC0-1.0","{manifest["generator"]}",',
                     f' 48000,2,24,{entry["frames"]},PreverbResources::{stem}_wav,static_cast<size_t>(PreverbResources::{stem}_wavSize),',
-                    f' "{expected}","{entry["canonical_sample_sha256"]}"}}'])
+                    f' "{expected}","{entry["canonical_sample_sha256"]}")'])
     assert {e['parameters']['id'] for e in entries}==set(APPROVED)
     manifest=dict(manifest,entries=entries,prototypes_pending_listening=False,listening_approved='2026-11-02',release_revision=1)
     files[ROOT/'resources/irs/manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode()

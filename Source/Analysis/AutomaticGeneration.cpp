@@ -21,7 +21,8 @@ bool sameDefinition(const Swell& a,const Swell& b)
 {
     return a.id==b.id && a.name==b.name && a.arrival==b.arrival && a.detectorAnchor==b.detectorAnchor
         && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.supportOffset==b.supportOffset
-        && a.ir==b.ir && a.irName==b.irName && a.shape==b.shape && a.placement==b.placement
+        && a.ir==b.ir && a.irName==b.irName && resolvedSoundPreset(a.soundPreset,a.ir)==resolvedSoundPreset(b.soundPreset,b.ir)
+        && a.shape==b.shape && a.placement==b.placement
         && a.enabled==b.enabled && a.muted==b.muted && a.solo==b.solo && a.provenance==b.provenance;
 }
 }
@@ -112,9 +113,10 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         if(working.swells.size()>=maximumSwells)return fail("Session capacity: 4096 swells");
         Swell w;
         if(matches[i].isNotEmpty())w=*find(accepted,matches[i]);
-        else {w.shape=initialShape(time.rate);w.name=defaultSwellName(found[i],time,&working);}
+        else {w.shape=initialShape(time.rate);w.shape.gainDb=accepted.defaultLevelDb;w.name=defaultSwellName(found[i],time,&working);}
         w.arrival=w.detectorAnchor=w.sourceStart=found[i];w.sourceEnd=found[i]+1;w.supportOffset=0;
         w.provenance=Provenance::automatic;w.ir=accepted.defaultIR;w.irName=accepted.defaultIRName;
+        w.soundPreset=resolvedSoundPreset(accepted.defaultSoundPreset,accepted.defaultIR);
         planned.push_back(w.id);working.swells.push_back(std::move(w));
     }
     // Prune incomplete windows from right to left: removing a late target can

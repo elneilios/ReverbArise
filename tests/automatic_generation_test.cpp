@@ -13,7 +13,7 @@ int main(){return runTest([]
 {
     SongTime timing{true,0,0,1000,120,4,4};CaptureManifest source;source.sampleRate=1000;
     source.ranges={{0,1000,CaptureCoverageKind::audio}};CompletedPasses complete{{0,1000}};
-    Session accepted;accepted.defaultIR=asset('a');accepted.defaultIRName="A";
+    Session accepted;accepted.defaultIR=asset('a');accepted.defaultIRName="A";accepted.defaultLevelDb=-4.f;
     const auto fingerprint=[](int64_t,int64_t,juce::String& result,juce::String&)
         {result=juce::String::repeatedString("a",64);return true;};
     const auto plan=[&](const Session& session,const std::vector<Candidate>& candidates)
@@ -22,6 +22,8 @@ int main(){return runTest([]
     auto first=plan(accepted,candidates);
     REQUIRE(first.outcome==GenerationOutcome::generated && first.changed.size()==2 && accepted.swells.empty());
     auto saved=first.replacement;REQUIRE(saved.swells.size()==2);
+    for(const auto& swell:saved.swells)
+        REQUIRE(swell.shape.gainDb==-4.f && swell.soundPreset.id==customImpulseId);
     REQUIRE(saved.swells[0].sourceStart==100 && saved.swells[0].sourceEnd==600);
     REQUIRE(saved.swells[1].sourceStart==600 && saved.swells[1].sourceEnd==1000);
     const auto a=saved.swells[0].id,b=saved.swells[1].id;
@@ -48,12 +50,13 @@ int main(){return runTest([]
     REQUIRE(saved.swells.size()==2);
     REQUIRE(plan(saved,{}).outcome==GenerationOutcome::empty && saved.swells.size()==2);
     REQUIRE(select(saved,{a,b},a));saved.swells[0].enabled=false;saved.swells[1].muted=true;
-    saved.defaultIR=asset('b');saved.defaultIRName="B";
+    saved.defaultIR=asset('b');saved.defaultIRName="B";saved.defaultLevelDb=5.f;
     auto replaced=plan(saved,candidates);
     REQUIRE(replaced.outcome==GenerationOutcome::generated && replaced.changed.size()==2);
     REQUIRE(find(replaced.replacement,a) && find(replaced.replacement,b));
     REQUIRE(!find(replaced.replacement,a)->enabled && find(replaced.replacement,b)->muted);
     REQUIRE(find(replaced.replacement,a)->ir==saved.defaultIR && replaced.replacement.selected==saved.selected);
+    REQUIRE(find(replaced.replacement,a)->shape.gainDb==-4.f && find(replaced.replacement,b)->shape.gainDb==-4.f);
     REQUIRE(replaced.replacement.primary==a && saved.swells[0].ir==accepted.defaultIR);
     auto protectedSession=saved;protectedSession.swells[0].provenance=Provenance::manualEdited;
     protectedSession.swells[0].name="Manual edit";protectedSession.swells[0].placement=-30;

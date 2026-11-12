@@ -7,6 +7,35 @@
 
 namespace m3
 {
+SoundPresetIdentity inferSoundPreset(const Asset& asset)
+{
+    struct BundledIdentity
+    {
+        const char* id;
+        int version;
+        int rate, channels;
+        int64_t frames;
+        const char* content;
+    };
+    static constexpr BundledIdentity identities[]{
+        {defaultImpulseId,1,48000,2,86400,defaultImpulseContent},
+        #define BUNDLED_IMPULSE(id,revision,name,description,license,generator,rate,channels,bits,frames,bytes,size,wav,decoded) {id,revision,rate,channels,frames,decoded},
+        #include <DSP/BundledImpulseEntries.inc>
+        #undef BUNDLED_IMPULSE
+    };
+    if(!asset.present())return {};
+    for(const auto& entry:identities)
+        if(asset.content==entry.content && asset.rate==entry.rate && asset.channels==entry.channels && asset.frames==entry.frames)
+            return {entry.id,entry.version};
+    return {customImpulseId,1};
+}
+bool validSoundPreset(const SoundPresetIdentity& preset,const Asset& asset)
+{
+    if(preset.id.isEmpty())return preset.version==1;
+    if(!asset.present())return false;
+    if(preset.id==customImpulseId)return preset.version==1;
+    return preset==inferSoundPreset(asset);
+}
 float calibrationDb(const Session& s,const Swell& w) noexcept
 {
     if(s.gainPolicy!=GainPolicy::musical)return 0;
@@ -124,7 +153,7 @@ bool resetSwellDefaults(const Session& session,const juce::String& id,const Capt
     if(!add(trial,old->arrival,map,time,{},error))return false;
     auto candidate=trial.swells.back();candidate.id=old->id;candidate.name=old->name;
     candidate.detectorAnchor=old->detectorAnchor;candidate.provenance=Provenance::manualEdited;
-    candidate.ir=session.defaultIR;candidate.irName=session.defaultIRName;candidate.render=old->render;
+    candidate.ir=session.defaultIR;candidate.irName=session.defaultIRName;candidate.soundPreset=session.defaultSoundPreset;candidate.render=old->render;
     candidate.phase=old->phase;candidate.status=old->status;
     output=std::move(candidate);error.clear();return true;
 }
@@ -315,7 +344,8 @@ bool validate(const Session& s, juce::String& error)
         || !std::isfinite(s.postRollSeconds) || s.postRollSeconds<0 || s.postRollSeconds>5
         || ! std::isfinite(s.wetBlend) || s.wetBlend < 0 || s.wetBlend > 1
         || static_cast<int>(s.auditionMode)<0 || static_cast<int>(s.auditionMode)>1
-        || s.suppressed.size()>maximumSwells || !validAsset(s.defaultIR)
+        || !std::isfinite(s.defaultLevelDb) || s.defaultLevelDb<minimumDefaultLevelDb || s.defaultLevelDb>maximumDefaultLevelDb
+        || s.suppressed.size()>maximumSwells || !validAsset(s.defaultIR) || !validSoundPreset(s.defaultSoundPreset,s.defaultIR)
         || (s.defaultIR.present() && !s.defaultIR.path.startsWith("irs/")) || s.defaultIRName.length()>512)
     { error = "Invalid session preferences/capacity"; return false; }
     if(s.importedIRs.size()>maximumImportedIRs){error="Imported IR collection capacity exceeded";return false;}
@@ -341,7 +371,7 @@ bool validate(const Session& s, juce::String& error)
             || (w.wetTimingIntent && !validWetTimingIntent(w, *w.wetTimingIntent))
             || static_cast<int>(w.provenance)<0 || static_cast<int>(w.provenance)>2
             || (w.generationSource.isNotEmpty() && (w.generationSource.length()!=64 || !w.generationSource.containsOnly("0123456789abcdef")))
-            || ! validAsset(w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
+            || ! validAsset(w.ir) || !validSoundPreset(w.soundPreset,w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
             || (w.ir.present() && !w.ir.path.startsWith("irs/")) || (w.render.present() && !w.render.path.startsWith("renders/"))
             || static_cast<int>(w.calibration.state)<0 || static_cast<int>(w.calibration.state)>3
             || !std::isfinite(w.calibration.baselineDb) || w.calibration.baselineDb < -60 || w.calibration.baselineDb > candidateMaximumBoostDb
@@ -372,6 +402,11 @@ bool validate(const Session& s, juce::String& error)
 static juce::var object() { return juce::var(new juce::DynamicObject); }
 static void put(juce::var& v, const char* name, const juce::var& value) { v.getDynamicObject()->setProperty(name, value); }
 static juce::var integer(int64_t v) { return juce::var(juce::String(v)); }
+static juce::var soundPresetMetadata(const SoundPresetIdentity& identity,const Asset& asset)
+{
+    const auto preset=resolvedSoundPreset(identity,asset);
+    return juce::Array<juce::var>{preset.id,preset.version};
+}
 juce::var assetMetadata(const Asset& a)
 {
     auto v = object();
@@ -385,13 +420,15 @@ juce::var assetMetadata(const Asset& a)
 bool encode(const Session& s, juce::String& json, juce::String& error)
 {
     if (! validate(s, error)) return false;
-    auto v = object(); put(v,"version",11); put(v,"autoGenerateOnStop",s.autoGenerateOnStop); put(v,"export",exportStateMetadata(s.exportState)); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    auto v = object(); put(v,"version",12); put(v,"autoGenerateOnStop",s.autoGenerateOnStop); put(v,"export",exportStateMetadata(s.exportState)); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
     put(v,"performUi",performNavigationMetadata(s.performUi));
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
     put(v,"auditionMode",static_cast<int>(s.auditionMode)); put(v,"wetBlend",s.wetBlend);
     put(v,"auditionFollowsLive",s.auditionFollowsLive);
     put(v,"defaultIR",assetMetadata(s.defaultIR)); put(v,"defaultIRName",s.defaultIRName);
+    put(v,"defaultSoundPreset",soundPresetMetadata(s.defaultSoundPreset,s.defaultIR));
+    put(v,"defaultLevelDb",s.defaultLevelDb);
     juce::Array<juce::var> imported;
     for(const auto& entry:s.importedIRs){auto item=object();put(item,"asset",assetMetadata(entry.asset));put(item,"name",entry.name);imported.add(item);}
     put(v,"importedIRs",imported);
@@ -420,6 +457,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(g,"renderIdentity",w.calibration.renderIdentity);put(g,"revision",w.calibration.revision);put(a,"calibration",g);
         put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));put(a,"generationSource",w.generationSource);
         put(a,"ir",assetMetadata(w.ir)); put(a,"render",assetMetadata(w.render));
+        put(a,"soundPreset",soundPresetMetadata(w.soundPreset,w.ir));
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
         put(h,"end",integer(w.shape.endOffset)); put(h,"fadeIn",integer(w.shape.fadeIn)); put(h,"fadeOut",integer(w.shape.fadeOut));
         put(h,"inTension",w.shape.inTension); put(h,"outTension",w.shape.outTension); put(h,"inCurve",static_cast<int>(w.shape.inCurve)); put(h,"outCurve",static_cast<int>(w.shape.outCurve)); put(h,"gain",w.shape.gainDb);
@@ -438,7 +476,9 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         swells.add(a);
     }
     put(v,"swells",swells);
-    auto result = juce::JSON::toString(v, true);
+    // Omit v11's optional whitespace to keep room for versioned assignments
+    // inside the same state limit, including for large migrated sessions.
+    auto result = juce::JSON::toString(v,juce::JSON::FormatOptions{}.withSpacing(juce::JSON::Spacing::none));
     if (result.getNumBytesAsUTF8() > maximumStateBytes) { error = "Session state exceeds 8 MiB"; return false; }
     json = result; return true;
 }
@@ -458,6 +498,14 @@ struct Parser
     { const auto n = number(v,key); if (n < -1000000 || n > 1000000 || std::floor(n) != n) { ok = false; return 0; } return static_cast<int>(n); }
     int64_t big(const juce::var& v, const char* key)
     { auto x = string(v,key); auto n = x.getLargeIntValue(); if (juce::String(n) != x) ok = false; return n; }
+    SoundPresetIdentity soundPreset(const juce::var& value,const Asset& asset)
+    {
+        if(!value.isArray() || value.size()!=2 || !value[0].isString() || !value[1].isInt())
+        {ok=false;return {};}
+        const SoundPresetIdentity preset{value[0].toString(),static_cast<int>(value[1])};
+        if(preset.id.isEmpty()==asset.present() || !validSoundPreset(preset,asset))ok=false;
+        return preset;
+    }
     Asset asset(const juce::var& v)
     {
         Asset a; a.path=string(v,"path"); a.checksum=string(v,"checksum"); a.content=string(v,"content");
@@ -472,14 +520,59 @@ bool parseAssetMetadata(const juce::var& v, Asset& output, juce::String& error)
     if (!p.ok || !validAsset(a)) { error="Invalid managed asset metadata"; return false; }
     output=std::move(a); error.clear(); return true;
 }
+static bool checkJsonFields(const juce::String& json,juce::String& error)
+{
+    // JUCE's object parser replaces earlier keys. Check the original tokens
+    // first, decoding escaped keys with the same string parser as JUCE.
+    using ObjectKeys=std::set<juce::String>;
+    std::vector<std::optional<ObjectKeys>> scopes;
+    auto cursor=json.getCharPointer();
+    while(!cursor.isEmpty())
+    {
+        const auto start=cursor;
+        const auto token=cursor.getAndAdvance();
+        if(token=='{' || token=='[')
+        {
+            if(scopes.size()==32){error="Swell metadata nesting exceeds limit";return false;}
+            scopes.emplace_back();
+            if(token=='{')scopes.back().emplace();
+        }
+        else if(token=='}' || token==']')
+        {
+            if(scopes.empty() || scopes.back().has_value()!=(token=='}'))
+            {error="Malformed swell metadata";return false;}
+            scopes.pop_back();
+        }
+        else if(token=='"' || token=='\'')
+        {
+            for(auto ch=cursor.getAndAdvance();ch!=token;ch=cursor.getAndAdvance())
+            {
+                if(ch==0 || (ch=='\\' && cursor.getAndAdvance()==0))
+                {error="Malformed swell metadata string";return false;}
+            }
+            cursor=cursor.findEndOfWhitespace();
+            if(*cursor==':' && !scopes.empty() && scopes.back())
+            {
+                auto keyStart=start;
+                juce::var key;
+                if(auto result=juce::JSON::parseQuotedString(keyStart,key);result.failed())
+                {error=result.getErrorMessage();return false;}
+                if(!scopes.back()->insert(key.toString()).second)
+                {error="Duplicate swell metadata field";return false;}
+            }
+        }
+    }
+    return true;
+}
 bool decode(const juce::String& json, Session& output, juce::String& error)
 {
     if (json.getNumBytesAsUTF8() > maximumStateBytes) { error = "Session state exceeds 8 MiB"; return false; }
+    if(!checkJsonFields(json,error))return false;
     juce::var v;
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;
     const auto version=p.small(v,"version");
-    if (version < 1 || version > 11) { error = "Unsupported swell state version"; return false; }
+    if (version < 1 || version > 12) { error = "Unsupported swell state version"; return false; }
     s.autoGenerateOnStop=version>=11?p.boolean(v,"autoGenerateOnStop"):true;
     if(version>=10 && !parseExportState(p.field(v,"export"),s.exportState,error))return false;
     s.performUi=parsePerformNavigation(v["performUi"]);
@@ -506,6 +599,13 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         { const auto text=value.toString();const auto anchor=text.getLargeIntValue();if(!value.isString() || juce::String(anchor)!=text)p.ok=false;s.suppressed.push_back(anchor); }
     }
     else {s.mappingEnabled=false;s.automaticProcessing=false;}
+    s.defaultSoundPreset=version>=12?p.soundPreset(p.field(v,"defaultSoundPreset"),s.defaultIR):inferSoundPreset(s.defaultIR);
+    if(version>=12)
+    {
+        const auto level=p.number(v,"defaultLevelDb");
+        if(level<minimumDefaultLevelDb || level>maximumDefaultLevelDb)p.ok=false;
+        s.defaultLevelDb=static_cast<float>(level);
+    }
     if(v.hasProperty("auditionFollowsLive"))s.auditionFollowsLive=p.boolean(v,"auditionFollowsLive");
     if(version>=3)s.postRollSeconds=p.number(v,"postRollSeconds");
     s.auditionDb=static_cast<float>(p.number(v,"auditionDb")); s.sensitivity=static_cast<float>(p.number(v,"sensitivity"));
@@ -536,6 +636,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         else {w.provenance=Provenance::manualEdited;w.detectorAnchor=w.arrival;}
         if(version>=11)w.generationSource=p.string(a,"generationSource");
         w.ir=p.asset(p.field(a,"ir")); w.render=p.asset(p.field(a,"render"));
+        w.soundPreset=version>=12?p.soundPreset(p.field(a,"soundPreset"),w.ir):inferSoundPreset(w.ir);
         const auto h=p.field(a,"shape"); w.shape.automaticStart=p.boolean(h,"automaticStart");
         w.shape.startOffset=p.big(h,"start"); w.shape.endOffset=p.big(h,"end"); w.shape.fadeIn=p.big(h,"fadeIn"); w.shape.fadeOut=p.big(h,"fadeOut");
         if(version>=3){w.shape.inTension=p.number(h,"inTension");w.shape.outTension=p.number(h,"outTension");}
