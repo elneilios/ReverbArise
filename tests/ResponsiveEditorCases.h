@@ -125,18 +125,12 @@ void Composition::verifyResponsive(const juce::File& output)
             checkVisible("resetWetShape");
             if(section==3)
             {
-                auto& ir=require<controls::ConvolutionIrEditor>(*panel,"selectedIrEditor");
+                auto& ir=require<controls::SoundPresetEditor>(*panel,"selectedIrEditor");
                 auto& level=require<KnobValue>(*panel,"swellLevelCell");
-                REQUIRE(ir.getHeight()==ir.preferredHeight());
-                REQUIRE(level.getY()==ir.getBottom()+responsiveGeometry::contentPadding);
-                if(ir.status.getText().isEmpty())
-                {
-                    REQUIRE(ir.getHeight()==ir.fileButton.getBottom());
-                    REQUIRE(ir.getHeight()==ir.selector.getBottom());
-                    const auto selectorBody=controls::commandBodyBounds(ir.selector.getBounds());
-                    const auto importBody=controls::commandBodyBounds(ir.fileButton.getBounds());
-                    REQUIRE(selectorBody.getY()==importBody.getY() && selectorBody.getBottom()==importBody.getBottom());
-                }
+                REQUIRE(ir.getBounds()==layout.fields && ir.isParentOf(&level));
+                REQUIRE(!ir.isParentOf(&require<juce::Component>(*panel,"resetWetShape")));
+                REQUIRE(ir.getLocalArea(&level,level.getLocalBounds()).getY()>=
+                        ir.getLocalArea(&ir.presetPicker(),ir.presetPicker().getLocalBounds()).getBottom());
             }
             for(const auto& cellName:std::vector<juce::String>{"arrivalSampleCell","sourceSampleStartCell","sourceSampleEndCell","preRollCell","endOffsetCell","fadeInMsCell","fadeOutMsCell","swellLevelCell","curveInTensionCell","curveOutTensionCell","wetPlacementCell"})
             {
@@ -172,15 +166,11 @@ void Composition::verifyResponsive(const juce::File& output)
             REQUIRE(sourceHeading.getBorderSize().getLeft()==0);
             const auto& recapture=require<controls::Switch>(learn,"recaptureExisting");
             REQUIRE(sourceHeading.getX()==learn.getLocalArea(&recapture,recapture.labelBounds()).getX());
-            auto& scope=require<juce::Label>(learn,"learnSoundScope");
-            auto& ir=require<controls::ConvolutionIrEditor>(learn,"learnIrEditor");
-            REQUIRE(scope.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);
-            REQUIRE(ir.getY()==scope.getBottom()+responsiveGeometry::contentPadding);
-            REQUIRE(scope.getX()==ir.getX() && scope.getBorderSize().getLeft()==0);
-            REQUIRE(scope.getParentComponent()!=&ir);
+            auto& ir=require<controls::SoundPresetEditor>(learn,"learnIrEditor");
+            REQUIRE(ir.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);
             auto manualView=enabledView;manualView.session.automaticProcessing=false;manualView.session.autoMarkersEnabled=false;
             learn.display(processor->getCaptureSnapshot(),manualView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
-            for(const auto* name:{"learnIRLabel","learnDefaultIR","learnImportIR"})
+            for(const auto* name:{"learnIRLabel","learnDefaultIR","levelCell"})
             {
                 auto& control=require<juce::Component>(learn,name);
                 bool shown=true;for(auto* ancestor=&control;ancestor && ancestor!=&learn;ancestor=ancestor->getParentComponent())shown=shown && ancestor->isVisible();
@@ -191,12 +181,12 @@ void Composition::verifyResponsive(const juce::File& output)
             learn.display(processor->getCaptureSnapshot(),enabledView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
             for(const auto* name:{"learnGenerateSwells","learnGenerateReason","learnManualSwellsHelp"})checkVisible(name);
             if(section==1){checkVisible("learnAutoGenerateOnStop");checkVisible("learnMarkerSensitivity");}
-            else{checkVisible("learnDefaultIR");checkVisible("learnImportIR");}
+            else{checkVisible("learnDefaultIR");checkVisible("levelCell");}
             const auto& generate=require<juce::Component>(learn,"learnGenerateSwells");
             const auto& reason=require<juce::Component>(learn,"learnGenerateReason");
             const auto& manual=require<juce::Component>(learn,"learnManualSwellsHelp");
             REQUIRE(generate.getBottom()<=reason.getY() && reason.getBottom()<=manual.getY());
-            for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","learnImportIR"})
+            for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","levelCell"})
             {
                 auto& control=require<juce::Component>(learn,name);
                 if(control.isVisible()){const auto bounds=learn.getLocalArea(&control,control.getLocalBounds());REQUIRE(bounds.getBottom()+responsiveGeometry::contentPadding<=generate.getY());}

@@ -27,14 +27,18 @@ static void sharedSoundBindings()
     REQUIRE(engine.assignDefaultIR(fileB));await([&]{return !engine.snapshot().defaultIRPending;});const auto irB=engine.savedSession().defaultIR;
     fixture.record();fixture.ready();
     PreverbAudioProcessorEditor editor(*fixture.processor);editor.setSize(900,600);editor.refresh();
-    auto* defaults=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"learnIrEditor"));
-    auto* selected=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"selectedIrEditor"));
+    auto* defaults=dynamic_cast<m3::ui::controls::SoundPresetEditor*>(named(editor,"learnIrEditor"));
+    auto* selected=dynamic_cast<m3::ui::controls::SoundPresetEditor*>(named(editor,"selectedIrEditor"));
     REQUIRE(defaults && selected && defaults!=selected);
     const auto choose=[&](auto& field,const Asset& ir)
     {
-        editor.refresh();int id=0;const auto choices=engine.irChoices();
-        for(size_t i=0;i<choices.size();++i)if(choices[i].content==ir.content)id=static_cast<int>(i+1);
-        REQUIRE(id>0);field.selector.beforeInvocation();field.selector.setSelectedId(id,juce::sendNotificationSync);
+        editor.refresh();
+        auto& files=field.filePicker();
+        const auto choices=engine.irChoices();
+        int id=0, row=0;
+        for(const auto& choice:choices)
+            if(choice.presetId.isEmpty()){++row;if(choice.managed==ir)id=row;}
+        REQUIRE(id>0 && files.isVisible());files.beforeInvocation();files.setSelectedId(id,juce::sendNotificationSync);
     };
     choose(*defaults,irA);await([&]{return !engine.snapshot().defaultIRPending;});
     REQUIRE(engine.savedSession().defaultIR==irA && engine.savedSession().swells.empty());

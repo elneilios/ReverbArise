@@ -180,6 +180,13 @@ public:
         if(validation.isEmpty())entry.setFieldDescription(tooltip);
         knob.setTooltip(onResetInvocation?tooltip+"\nDouble-click to reset. Right-click for reset options.":tooltip);
     }
+    void setValueDescription(const juce::String& description){knob.setDescription(description);}
+    void setSteppedReadout(bool readout)
+    {
+        entry.setReadOnly(readout);
+        entry.setWantsKeyboardFocus(!readout);
+        entry.setInterceptsMouseClicks(!readout,!readout);
+    }
     void display(const juce::String& owner,const juce::String& valueText,double fraction,bool enabled,const juce::String& exactText={})
     {
         if(owner!=identity){++resetTicket;cancel();identity=owner;setValidation({});}

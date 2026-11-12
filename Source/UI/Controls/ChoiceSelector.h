@@ -15,6 +15,16 @@ public:
     // A binding may snapshot a read-only context predicate during beforeInvocation.
     // Only human popup completion uses it; accepted display remains notification-free.
     std::function<bool()> canCommit;
+    std::function<void()> onReselect;
+    ChoiceDecoration closedDecoration, rowDecoration;
+    void setClosedText(juce::String text)
+    {
+        if(closedText==text)return;
+        closedText=std::move(text);repaint();
+        if(isShowing())if(auto* handler=getAccessibilityHandler())handler->notifyAccessibilityEvent(juce::AccessibilityEvent::valueChanged);
+    }
+    juce::String displayedText()const
+    {return closedText.isNotEmpty()?closedText:getText().isNotEmpty()?getText():getTextWhenNothingSelected();}
     void setRowBounds(juce::Rectangle<int> bodyRow){setBounds(bodyRow.expanded(0,SelectorPresentation::focusMargin));}
     void setValidationMessage(juce::String value)
     {
@@ -65,8 +75,12 @@ public:
             {safe->visibility->keyboardInput();safe->grabKeyboardFocus();if(safe)safe->moveKeyboardFocusToSibling(why==PopupDismissal::tabForward);}
             else if(why!=PopupDismissal::outside && why!=PopupDismissal::ownerGone && safe->isShowing() && safe->isEnabled())safe->grabKeyboardFocus();
             if(id!=0 && eligible && safe!=nullptr && safe->getSelectedId()==accepted && safe->isEnabled() && safe->isShowing() && safe->isItemEnabled(id)
-                && (!permitted || permitted()) && safe!=nullptr) safe->setSelectedId(id,juce::sendNotificationSync);
-        });
+                && (!permitted || permitted()) && safe!=nullptr)
+            {
+                if(id==accepted && safe->onReselect){const auto reselect=safe->onReselect;reselect();}
+                else safe->setSelectedId(id,juce::sendNotificationSync);
+            }
+        },rowDecoration);
         popup->show(localAreaToGlobal(commandBodyBounds(getLocalBounds())),visibility->isVisible());repaint();
     }
     void paint(juce::Graphics& g)override
@@ -74,10 +88,11 @@ public:
         SelectorPresentation::surface(g,getLocalBounds(),{isEnabled(),over,held && over,isFocusVisible(),false},validationMessage.isNotEmpty());
         const auto alpha=isEnabled()?1.f:.35f;auto area=commandBodyBounds(getLocalBounds()).reduced(spacing::labelHelp,0);
         const auto arrow=area.removeFromRight(controlGeometry::numericStepWidth).toFloat().getCentre();
+        if(closedDecoration)closedDecoration(g,area,getSelectedId());
         juce::Path chevron;chevron.startNewSubPath(arrow.x-5,arrow.y-2);chevron.lineTo(arrow.x,arrow.y+2);chevron.lineTo(arrow.x+5,arrow.y-2);
         g.setColour(text.withMultipliedAlpha(alpha));g.strokePath(chevron,juce::PathStrokeType(rule*2));
         area.removeFromRight(spacing::tight);g.setFont(SelectorPresentation::valueFont(*this));
-        g.drawText(getText().isNotEmpty()?getText():getTextWhenNothingSelected(),area,juce::Justification::centredLeft,true);
+        g.drawText(displayedText(),area,juce::Justification::centredLeft,true);
     }
     void resized()override{juce::ComboBox::resized();hideNativeLabel();}
     void lookAndFeelChanged()override{juce::ComboBox::lookAndFeelChanged();hideNativeLabel();}
@@ -109,7 +124,7 @@ public:
         {
         public:explicit Value(ChoiceSelector& selector):owner(selector){}
             bool isReadOnly()const override{return true;}
-            juce::String getCurrentValueAsString()const override{return owner.getText();}
+            juce::String getCurrentValueAsString()const override{return owner.displayedText();}
             void setValueAsString(const juce::String&)override{}
         private:ChoiceSelector& owner;
         };
@@ -133,7 +148,7 @@ public:
 private:
     void hideNativeLabel(){for(auto* child:getChildren())if(dynamic_cast<juce::Label*>(child))child->setVisible(false);}
     std::map<int,juce::String> reasons;
-    juce::String validationMessage;
+    juce::String validationMessage,closedText;
     std::unique_ptr<ChoicePopup> popup;
     juce::SharedResourcePointer<FocusVisibility> visibility;
     uint64_t generation=0;

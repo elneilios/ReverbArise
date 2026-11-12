@@ -9,7 +9,7 @@
 #include <UI/Controls/EllipsisLabel.h>
 #include <UI/Controls/WrappedLabel.h>
 #include <UI/Controls/TransportReadout.h>
-#include <UI/ConvolutionIrBinding.h>
+#include <UI/SoundPresetBinding.h>
 #include <UI/WorkflowHeader.h>
 #include <UI/WorkspaceNotice.h>
 #include <UI/Controls/InvocationSlider.h>
@@ -95,7 +95,6 @@ private:
     void refreshHoverHelp();
     m3::ui::WorkflowHeader workflowHeader;
     m3::ui::controls::NoticeBar noticeBar;
-    m3::ui::IRPreparationNotice irPreparationNotice;
     m3::ui::controls::TransportReadout hostInfo;
     m3::ui::controls::EllipsisLabel inspectorHeading,auditionHeading,editorReadout,listCount;
     m3::ui::controls::WrappedLabel listEmpty,inspectorEmpty;
@@ -156,8 +155,8 @@ private:
     int valueModifierFlags=0;
     std::map<juce::String,InitialValuePositions> initialValuePositions;
     uint64_t initialValueEpoch=0,valueResetRevision=0;
-    m3::ui::controls::ConvolutionIrEditor irEditor;
-    m3::ui::ConvolutionIrBinding irBinding;
+    m3::ui::controls::SoundPresetEditor irEditor;
+    m3::ui::SoundPresetBinding irBinding;
     m3::ui::controls::ActionButton resetMenu{"v",m3::ui::controls::CommandIcon::none,m3::ui::controls::CommandVariant::destructive};
     PreverbAudioProcessor& processor;
     m3::ui::LearnWorkspace learnWorkspace;
@@ -243,7 +242,7 @@ private:
     bool loopButtonStops=false;
     std::optional<std::pair<uint64_t,bool>> loopButtonInvocation;
     std::optional<std::pair<int64_t,m3::SwellEngine::TargetIdentity>> addTargetInvocation;
-    m3::ui::controls::EllipsisLabel selectedStatus,performSoundScope;
+    m3::ui::controls::EllipsisLabel selectedStatus;
     juce::ToggleButton recaptureExisting{"Recapture existing audio"};
     m3::ui::controls::LatchingActionButton auditionWetOnly{"Wet only"};
     std::optional<std::pair<uint64_t,uint64_t>> auditionInvocation;

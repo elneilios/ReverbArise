@@ -83,6 +83,7 @@ struct EditorSnapshot
     juce::String dryStatus;
     juce::String defaultIRError;
     bool defaultIRPending=false;
+    uint64_t defaultIRRequest=0;
     juce::String requestedDefaultIRName,defaultIRStatus;
     juce::String retainedIRName,requestedIRName;
     juce::String irReplacementError;

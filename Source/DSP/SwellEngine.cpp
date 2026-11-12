@@ -111,7 +111,7 @@ EditorSnapshot SwellEngine::snapshot() const
     s.learnGeneration=learnViewLocked();s.initialPerformHandoff=initialPerformOffer;
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=audioAllowed.load()?voice.position():std::nullopt;s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
-    s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
+    s.defaultIRPending=defaultPending;s.defaultIRRequest=defaultRequest;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
     s.livePreparation=livePreparation;
     s.liveObservation=live.observation();s.liveLastRejection=live.lastRejection();
     s.liveCausal=live.causalObservation();

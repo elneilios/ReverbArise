@@ -65,20 +65,22 @@ Legacy sessions seed known choices from accepted default/swell references;
 formerly unused imports cannot be recovered by scanning storage. Keep a
 pre-upgrade project copy when rollback to an older binary is required.
 
-Use the existing Selected Swell dropdown for any of the six bundled sounds, or
-the adjacent folder button for a WAV/WavPack. This changes only that swell. Its
-source, arrival, placement, level, curves and activity preferences stay intact.
-Freeze must be turned off before changing an IR. Descriptions identify the sound.
-Monumental deliberately has greater intensity than the subtle responses.
+Use Sound Preset in Learn Settings or Selected Swell. Previous and Next wrap
+through the six bundled sounds and Custom IR. Choose Custom IR to reveal the IR
+File selector and WAV/WavPack import action. In Learn this sets the future
+default. In Perform it changes the selected swell while preserving its source,
+arrival, placement, Level, curves and activity. Unfreeze to change the response.
+Descriptions below the controls identify the sound.
 
 An IR-only change on a verified ready swell keeps its accepted sound available while
-the requested one prepares. Status names both responses. Hover for full names and
-recovery details. The complete replacement joins the current Song position with
+the requested one prepares. After two seconds the Sound panel shows a waveform
+and names the request. The picker and menu use decorative peaks of the available
+responses. The complete replacement joins the current Song position with
 the existing transition of at most 5 ms. An active manual Audition crossfades to
 the new mix at the current listening position, wrapping into the new window if
 needed. Neighbours keep their positions and voices.
 
-On failure, status identifies the requested IR, the cause and what to try next.
+On failure, the affected picker or IR File row shows the reason and allows retry.
 The previous sound remains available where its dependencies still verify. Source,
 explicit envelope, placement and timing edits keep their normal invalidation
 rules. Activity and routing still govern what plays. Old and new pages and

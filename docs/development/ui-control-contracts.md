@@ -124,6 +124,13 @@ Use ControlLibrary/ExportControl/AuditionStrip cases plus real owner bindings.
 
 ## C2 — Dropdown selectors and menus
 
+The #191 Sound Preset picker uses the approved Previous and Next command glyphs
+and the existing C2 selection and focus rules. Its closed control and menu rows
+may paint decorative response peaks below the text in reverse time, matching
+the direction of the audible swell. Custom IR can show a
+file-choice prompt in the closed control while the checkmark and waveform
+identify the accepted response. The picker keeps its existing dimensions.
+
 Observed owners: [DeliberateSelector](../../Source/UI/Controls/DeliberateSelector.h),
 [IrSelector](../../Source/UI/Controls/IrSelector.h), InvocationComboBox, plus plain
 Settings ComboBoxes and dynamically created menus. The shared selector disables
@@ -436,6 +443,11 @@ rename and bar-range bindings. Child changes must add missing subtype lifecycle
 coverage rather than infer it from the parent LookAndFeel.
 
 ## C5 — Knobs and sliders
+
+The #191 Sound editor uses the compact paired knob geometry. A stepped readout
+can show musical subdivisions for a supported definition. The dial exposes the
+named subdivision through accessibility and accepts only declared steps. Level
+keeps exact numeric entry and its existing Perform reset contract.
 
 Owners include [KnobValue](../../Source/UI/KnobValue.h),
 [TrackSlider](../../Source/UI/Controls/TrackSlider.h), and the companion

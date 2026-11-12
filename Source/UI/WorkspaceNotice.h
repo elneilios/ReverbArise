@@ -30,7 +30,7 @@ private:
 inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot flow,
     const CaptureSessionSnapshot& capture,const EditorSnapshot& editor,
     std::optional<controls::NoticeMessage> irPreparation={}, const juce::String& loopStatus={},
-    std::optional<controls::NoticeMessage> songTimingIssue={})
+    std::optional<controls::NoticeMessage> songTimingIssue={}, bool defaultErrorShownInSound=false)
 {
     using controls::NoticeMessage;using controls::NoticeTone;
     if(flow.mode==workflow::Mode::capture && flow.admissionFailed)
@@ -41,8 +41,8 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
     if(capture.unavailable)
         return NoticeMessage{"Captured source is unavailable",capture.status,NoticeTone::error};
     if(editor.actionError.isNotEmpty())return NoticeMessage{editor.actionError,{},NoticeTone::error};
-    if(editor.defaultIRError.isNotEmpty())return NoticeMessage{"IR could not be loaded - choose another or retry",
-        editor.defaultIRError+"\nUse the IR dropdown or folder button to retry. Your previous IR is retained.",NoticeTone::error};
+    if(!defaultErrorShownInSound && editor.defaultIRError.isNotEmpty())return NoticeMessage{"IR could not be loaded - choose another or retry",
+        editor.defaultIRError+"\nOpen Learn Sound to retry. Your previous response is retained.",NoticeTone::error};
     if(flow.mode==workflow::Mode::capture && editor.learnGeneration.notice.isNotEmpty())
         return NoticeMessage{editor.learnGeneration.notice,{},editor.learnGeneration.failed?NoticeTone::error:NoticeTone::warning};
     if(const auto* swell=find(editor.session,editor.session.primary);swell && swell->phase==Phase::error)
