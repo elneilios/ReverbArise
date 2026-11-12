@@ -29,26 +29,31 @@ try {
         }
     }
     $nonCodePattern = '(?s)"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*''|//[^\r\n]*|/\*.*?\*/'
+    # Match raw strings by their closing delimiter. Consume preprocessing numbers
+    # whole so a digit separator never starts a character literal.
+    $rawStringPattern = '\b(?:u8|[uUL])?R"(?<delimiter>[^\s()\\]{0,16})\([\s\S]*?\)\k<delimiter>"'
+    $numberPattern = '(?<!\w)(?:[0-9]|\.[0-9])(?:[eEpP][+-]|''\w|[\w.])*'
+    $popupMaskPattern = "$rawStringPattern|$nonCodePattern|$numberPattern"
     $findings = @(
         foreach ($file in ($paths | Sort-Object FullName)) {
             $relative = $file.FullName.Substring($Root.Length).TrimStart('\','/').Replace('\','/')
             $source = [IO.File]::ReadAllText($file.FullName)
-            # Match quoted strings first, so a URL or // inside text is not a comment.
-            # Preserve newlines/offsets for useful diagnostics, including block comments.
-            $source = [regex]::Replace($source, $nonCodePattern, {
-                param($m)
-                if ($m.Value.StartsWith('//') -or $m.Value.StartsWith('/*')) { return [regex]::Replace($m.Value,'[^\r\n]',' ') }
-                return $m.Value
-            })
             $rules = @($popupHostRule)
             if (!$relative.StartsWith('tests/') -and $file.Extension -in @('.h','.cpp')) {
+                # Keep string contents available to the production styling rules.
+                $productionSource = [regex]::Replace($source, $nonCodePattern, {
+                    param($m)
+                    if ($m.Value.StartsWith('//') -or $m.Value.StartsWith('/*')) { return [regex]::Replace($m.Value,'[^\r\n]',' ') }
+                    return $m.Value
+                })
                 $rules += $productionRules
             }
             foreach ($rule in $rules) {
                 if ($rule.path -and $relative -notmatch $rule.path) { continue }
-                $ruleSource = $source
-                if ($rule.codeOnly) {
-                    $ruleSource = [regex]::Replace($source, $nonCodePattern, { param($m) [regex]::Replace($m.Value,'[^\r\n]',' ') })
+                $ruleSource = if ($rule.codeOnly) {
+                    [regex]::Replace($source, $popupMaskPattern, { param($m) [regex]::Replace($m.Value,'[^\r\n]',' ') })
+                } else {
+                    $productionSource
                 }
                 foreach ($match in [regex]::Matches($ruleSource,$rule.pattern)) {
                     [pscustomobject]@{

@@ -66,5 +66,8 @@ Check $footerMetadata 0 'UI standards passed'
 $null = New-Item -ItemType Directory -Path (Join-Path $fixture 'tests/ui') -Force
 $sourcePath = Join-Path $fixture 'tests/ui/audition_loop_component_test.cpp'
 Check 'void runInteractiveReview() { using namespace juce; TooltipWindow popupHost; }' 1 'tests/ui/audition_loop_component_test.cpp:1: popup-tooltip-host'
+Check "auto first = 1'000;`njuce::TooltipWindow popupHost;`nauto second = 1'200;" 1 'tests/ui/audition_loop_component_test.cpp:2: popup-tooltip-host'
+Check 'auto json = R"({"type":"TooltipWindow"})";' 0 'UI standards passed'
+Check 'auto json = u8R"json({"type":")TooltipWindow"})json";' 0 'UI standards passed'
 Check "$footerMetadata auto testInk = 0xff123456;" 0 'UI standards passed'
 Write-Output "UI lint command fixtures passed: $script:assertions assertions (PowerShell $($PSVersionTable.PSVersion))."
