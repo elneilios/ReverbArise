@@ -365,6 +365,9 @@ void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
         lastBlockStart=block.startSample;lastBlockFrames=static_cast<int>(block.frameCount);
         passStartFailure.clear();
         progress={};progress.pass=activePass;progress.epoch=activeEpoch;progressDirty=true;
+        progress.kind=activeLoop?CaptureSourceKind::loop:CaptureSourceKind::song;
+        progress.freshDomain=activeLoop || acceptedLoop();
+        progress.sampleRate=block.sampleRate;
         std::function<std::optional<CaptureGenerationContext>(uint64_t)> provider;
         {const juce::ScopedLock guard(commandLock);provider=passContextProvider;}
         // Engine locks and metadata copies stay outside the command fence and
@@ -385,9 +388,12 @@ void CaptureWorker::handleWorkflowBlock(const AudioCaptureBlock& block)
     {recordWorkerFailure(CaptureFailureReason::sampleRate,"Capture sample rate is incompatible",block.startSample,static_cast<int>(block.frameCount));return;}
     if(!block.frameCount || block.frameCount>maxCaptureBlockFrames || block.startSample>INT64_MAX-block.frameCount)
     {recordWorkerFailure(CaptureFailureReason::range,"Invalid capture block range",block.startSample,static_cast<int>(block.frameCount));return;}
-    if(!activeLoop && !acceptedLoop() && block.frameCount && block.frameCount<=maxCaptureBlockFrames && block.startSample<=INT64_MAX-block.frameCount)
-    {progress.add(block.startSample,block.frameCount,block.interleavedSamples.data(),state.recapture,session.snapshot().manifest);progressDirty=true;}
     handleBlock(block); // Reuse bounded five-second/silence/discontinuity batching.
+    if(passFailed(activePass))return;
+    static const CaptureManifest emptyProgressBaseline;
+    const auto& committed=progress.freshDomain?emptyProgressBaseline:session.snapshot().manifest;
+    progress.add(block.startSample,block.frameCount,block.interleavedSamples.data(),state.recapture && !progress.freshDomain,committed);
+    progressDirty=true;
 }
 
 void CaptureWorker::settleWorkflowPass()

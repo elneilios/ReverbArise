@@ -16,6 +16,7 @@
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
 #include <Capture/LoopCapturePreference.h>
+#include <span>
 
 namespace m3::ui
 {
@@ -120,16 +121,19 @@ public:
                  workflow::Snapshot flow,bool position,const CaptureProgress& pending={},bool songTimingBlocked=false)
     {
         const bool loopSource=source.sourceKind()==CaptureSourceKind::loop;
-        const bool coordinateChange=source.sourceKind()!=capture.sourceKind() || (loopSource && source.reference!=capture.reference);
-        refreshing=true;capture=source;clock=time;playhead=position && source.sourceKind()==CaptureSourceKind::song;
+        const bool wasFreshDomain=progress.freshDomain;
+        progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
+        const bool coordinateChange=wasFreshDomain!=progress.freshDomain
+            || source.sourceKind()!=capture.sourceKind() || (loopSource && source.reference!=capture.reference);
+        refreshing=true;capture=source;clock=time;playhead=position && !phraseTimeline();
         hostSongTimingBlocked=songTimingBlocked;
-        if (loopSource) clock.valid=false;
+        if (phraseTimeline()) clock.valid=false;
         automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;
         generationView=editor.learnGeneration;displaySession=editor.sessionEpoch;displayPass=flow.pass;
         if(generationView.displayed)
         {
             const auto& identity=generationView.displayed->identity;
-            if((loopSource && (identity.loop!=source.manifest.loop || identity.sourceRevision!=source.manifest.revision
+            if(progress.freshDomain || (loopSource && (identity.loop!=source.manifest.loop || identity.sourceRevision!=source.manifest.revision
                 || identity.sourceReference!=source.reference || source.unavailable))
                 || (!loopSource && identity.loop))
                 generationView.displayed.reset();
@@ -147,7 +151,7 @@ public:
         generate.setDescription(generationView.reason);generate.setHelpText(generationView.reason);
         generate.setTooltip("Create or replace automatically detected swells using the markers shown. Manual and frozen swells are preserved.\n"+generationView.reason);
         generateReason.setTooltip(generationView.reason);
-        phase=flow.phase;progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
+        phase=flow.phase;
         const bool recaptureOn=loopSettings.enabled?loopRecaptureOn:flow.recapture;
         recapture.setToggleState(recaptureOn,juce::dontSendNotification);automatic.setToggleState(automaticOn,juce::dontSendNotification);
         recapture.setEnabled(!flow.locked());automatic.setEnabled(!flow.locked());sensitivity.setEnabled(!flow.locked());
@@ -166,9 +170,9 @@ public:
         inspectionWorkflow=flow.pass;
         if(scope!=viewScope || session!=inspectionSession || modeReset || coordinateChange){
             resetNavigation();clearInspection();viewScope=scope;inspectionSession=session;}
-        view.update(capture,progress,clock);
+        view.update(timelineSource(),progress,clock);
         if(manualView)viewport.constrain(fullExtent(),minimumSpan());else viewport=fullExtent();
-        const auto rate=loopSource || clock.rate<=0?capture.manifest.sampleRate:clock.rate;
+        const auto rate=progress.sampleRate>0?progress.sampleRate:loopSource || clock.rate<=0?capture.manifest.sampleRate:clock.rate;
         const auto duration=[&](long double frames){return rate>0?juce::String(static_cast<double>(frames/rate),1)+" s":juce::String(static_cast<double>(frames),0)+" samples";};
         totalsText="Mapped "+duration(learnMappedFrames(capture.manifest))+" | Recording "+duration(learnProvisionalFrames(progress))+" | Extent "+duration(learnExtentFrames(capture,progress,clock));
         if (source.sourceKind()==CaptureSourceKind::loop || loopSettings.enabled)
@@ -192,10 +196,10 @@ public:
     }
     void visibilityChanged()override{mouseUpGesture();if(isVisible()){resetNavigation();clearInspection();}}
     void openDefaultIrFile(juce::Component* opener=nullptr){irBinding.displayDefault(engine.snapshot());irBinding.openFile(opener);}
-    void fitDrySource(){resetNavigation();view.update(capture,progress,clock);viewport=fullExtent();repaint();}
+    void fitDrySource(){resetNavigation();view.update(timelineSource(),progress,clock);viewport=fullExtent();repaint();}
     std::pair<double,double> dryViewport()const noexcept{return {viewport.first,viewport.last};}
     const juce::String& coverageTotalsText()const noexcept{return totalsText;}
-    LearnCoverageInfo coverageAt(int64_t sample)const{return learnCoverageAt(capture,progress,sample,sampleBound(view.first),sampleBound(view.last));}
+    LearnCoverageInfo coverageAt(int64_t sample)const{return learnCoverageAt(timelineSource(),progress,sample,sampleBound(view.first),sampleBound(view.last));}
     void mouseMove(const juce::MouseEvent& e)override
     {
         const auto next=chart.contains(e.position.toInt())?nearestEvent(pointerSample(e.position)):std::optional<int64_t>{};
@@ -342,9 +346,10 @@ public:
         if(responsive){g.drawVerticalLine(left.getRight(),static_cast<float>(responsiveGeometry::dividerClearance),static_cast<float>(getHeight()-responsiveGeometry::dividerClearance));if(selectedSection==1 && !usesLoopPolicies())g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()-responsiveGeometry::dividerClearance));}
         else{g.drawVerticalLine(left.getRight()+workspaceGeometry::columnGap/2,static_cast<float>(spacing::related),static_cast<float>(getHeight()-spacing::related));if(!usesLoopPolicies())g.drawHorizontalLine(divider,0.f,static_cast<float>(left.getRight()));}
         applyTextRole(g,*this,TextRole::sectionHeading);g.drawText("Audio",timelineHeading,juce::Justification::left);
-        const bool loopSource=capture.sourceKind()==CaptureSourceKind::loop;
+        const bool showAcceptedSummary=(loopSettings.enabled || phraseTimeline())
+            && phase!=workflow::Phase::recording && phase!=workflow::Phase::draining && phase!=workflow::Phase::validating;
         applyTextRole(g,*this,TextRole::helper);
-        g.drawText(loopSettings.enabled || loopSource?totalsText:statusText,timelineCaption,juce::Justification::left);
+        g.drawText(showAcceptedSummary?totalsText:statusText,timelineCaption,juce::Justification::left);
         g.setColour(outline);g.drawRoundedRectangle(controlGeometry::insideStroke(chart,rule),radius,rule);
         const auto [first,last]=viewport;
         const auto x=[&](double sample){return chart.getX()+static_cast<float>((sample-first)/(last-first)*chart.getWidth());};
@@ -355,7 +360,7 @@ public:
         if(readable)for(const auto& tick:ticks)
         {const auto width=std::min(static_cast<float>(controlGeometry::rulerLabelWidth),static_cast<float>(chart.getWidth())),at=std::clamp(x(tick.samplePosition)-width*.5f,static_cast<float>(chart.getX()),static_cast<float>(chart.getRight())-width);
             g.drawText(juce::String(tick.bar)+".1",juce::Rectangle<float>(at,static_cast<float>(timelineRuler.getY()),width,static_cast<float>(timelineRuler.getHeight())),juce::Justification::centred);}
-        else if(loopSource)g.drawText("Phrase-local audio",timelineRuler,juce::Justification::left);
+        else if(phraseTimeline())g.drawText("Phrase-local audio",timelineRuler,juce::Justification::left);
         else if(!hostSongTimingBlocked && (!loopSettings.enabled || hasSource()))g.drawText("Time unavailable",timelineRuler,juce::Justification::left);
         const auto mid=static_cast<float>(chart.getCentreY()),height=chart.getHeight()*.4f;
         const auto drawSource=[&](const auto& regions,bool provisional)
@@ -381,7 +386,10 @@ public:
         };
         // The dark background is genuine uncaptured space; never infer silence
         // from a small peak or extend a neighbouring region across a seek.
-        drawSource(capture.overview,false);drawSource(progress.ranges,true);
+        drawSource(timelineSource().overview,false);
+        if(progress.limited && progress.recordedLoopEnd()>0)
+            drawSource(std::span<const CaptureOverviewRange>{&progress.loopWaveform,1},true);
+        else drawSource(progress.ranges,true);
         if(automaticOn && generationView.displayed)
         {
             juce::Graphics::ScopedSaveState scope(g);g.reduceClipRegion(chart.reduced(juce::roundToInt(rule)));
@@ -439,11 +447,21 @@ public:
         controls::paintWaveformFocus(g,*this,chart.expanded(controlGeometry::focusPadding),*focus);
     }
 private:
+    const CaptureSessionSnapshot& timelineSource()const
+    {
+        static const CaptureSessionSnapshot empty;
+        return progress.freshDomain?empty:capture;
+    }
+    bool phraseTimeline()const noexcept
+    {
+        return (progress.freshDomain?progress.kind:capture.sourceKind())==CaptureSourceKind::loop;
+    }
     LearnInspectionReadout inspectionReadout()const
     {
-        const auto rate=capture.manifest.sampleRate;
+        const auto& manifest=timelineSource().manifest;
+        const auto rate=progress.sampleRate>0?progress.sampleRate:manifest.sampleRate;
         auto time=clock;
-        if(const auto& phrase=capture.manifest.loop)
+        if(const auto& phrase=manifest.loop)
             time={true,0,0,rate,phrase->tempoBpm,phrase->meterNumerator,phrase->meterDenominator};
         return learnInspectionReadout(*inspection,coverageAt(*inspection),time,rate);
     }
@@ -695,7 +713,12 @@ private:
     LearnGenerationView generationView;uint64_t displaySession=0,displayPass=0;
     std::optional<GenerationIntent> autoStopIntent,generateIntent;
     std::optional<uint64_t> recapturePass,automaticPass,sensitivityPass;
-    bool hasSource()const noexcept{return !capture.manifest.ranges.empty() || !capture.overview.empty() || !progress.ranges.empty();}
+    bool hasSource()const noexcept
+    {
+        const auto& source=timelineSource();
+        return !source.manifest.ranges.empty() || !source.overview.empty()
+            || !progress.ranges.empty() || progress.recordedLoopEnd()>0;
+    }
     juce::String statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
     juce::Rectangle<int> left,right,chart,timelineHeading,timelineCaption,timelineRuler,timelineStatus;int divider=0;bool automaticOn=true,refreshing=false,playhead=false;
     juce::SharedResourcePointer<controls::FocusVisibility> focus;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the PR fixes for preserving fade intent, isolating speculative headroom, and handling page budget results. Existing timing-fit and failure guidance covers the corrected behavior.",
+  "summary": "Reviewed the canonical Loop capture waveform and marker requirements synced from specify-loop-capture-waveform. The existing guide covers live Loop waveform growth and restoration of the previous waveform, and the Learn workspace design documents reduced coverage detail at the preview limit. FL Studio verified live growth on the earlier build, and Release fixtures verified the coverage limit fallback.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -120,8 +120,8 @@
     },
     {
       "path": "Source/Capture/CaptureProgress.h",
-      "bytes": 4445,
-      "sha256": "9cd967a7b18b1e9fe4f9b26dfecaca1418120abb3e93aa80bc9b79647e31f2f3"
+      "bytes": 8101,
+      "sha256": "3ca223e5ef41c8755af05007e77940429e18acc979d8be7157d093cbb6305cbb"
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
@@ -135,8 +135,8 @@
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 32327,
-      "sha256": "d9326dc1591608b4a012b300cdcbfb91695f4ac037966e6633f0f701616ac294"
+      "bytes": 32565,
+      "sha256": "b7d14e40fa0f01b5e4448e72f29a95e8d999998f24a2cce9fafa651cc085c766"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 116329,
-      "sha256": "ac5690ba6b8cf86514e92395b3b3f2702b1b866d67f957658f0cdeb72a0313cf"
+      "bytes": 116333,
+      "sha256": "93d1157054ce9d3fd4623ac814f3590755c05ca93328a69721ceb91724693e5f"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -920,13 +920,13 @@
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
-      "bytes": 6999,
-      "sha256": "05530ad2534219b55f9abf2189092b0e5ef446e63d650a3f72e236b6c8fea879"
+      "bytes": 7497,
+      "sha256": "67cd1268f548fd0e44fca0374f8c8e3246dc56f2bb18b7aadcb3356d093ab013"
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 54137,
-      "sha256": "23049f2fe1549eb0cc4994920916b1d3817a3e7bdc4b12216d1fff075a77b607"
+      "bytes": 55149,
+      "sha256": "0ee009aceb8af2129beb97d13e62f582da0cbe845af346b5d947eeb65fd31683"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126503,
-      "sha256": "d9e7e67f70d690c479c009c68ed5f785a7eb60ac46c0beef0e0130427b67c1ec"
+      "bytes": 126762,
+      "sha256": "e80c426a2ea413affb3a51cad262e7fd8f1c77332143c600c1e32f4c81760429"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1160,8 +1160,8 @@
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 12075,
-      "sha256": "6d5d83b20cc0d63b6d73b2c4e0bacb6b753f947e22f3a8b4aa6d75503085877b"
+      "bytes": 13815,
+      "sha256": "0c3d27817ff2c3af48a2d2a864593418291b3821c3d338fff5d75288d1005272"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
@@ -1175,8 +1175,8 @@
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 20278,
-      "sha256": "b6cbcb7b513156710d07728fae553b0be7cc5e79c1a721b0aa66dc7af3392760"
+      "bytes": 20619,
+      "sha256": "f66b8b06975a6921b5fe36404488cd606bdf65c4f85e9a6c350953172e42dea5"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
@@ -1190,8 +1190,8 @@
     },
     {
       "path": "openspec/specs/swell-editing/spec.md",
-      "bytes": 10362,
-      "sha256": "de386d2d3d174c21c6ff2aa9811ef7dd2b287a30a64b6db6a6f5c89c8aebfe55"
+      "bytes": 12541,
+      "sha256": "9b2956d708e2332337f29d88f8b01b0aff64372481067737c5ba01740de1ab9d"
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
@@ -1205,18 +1205,18 @@
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
-      "bytes": 19727,
-      "sha256": "afe7f8697982c762ce979983dbe32359ec00ec605bc6134347e1b94daa390097"
+      "bytes": 20666,
+      "sha256": "392bda1065511289e468f616d35b1fd23b250963e5e86d49dc87fa9ea6b4b728"
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 124476,
-      "sha256": "e46996a7eea31cc5af3013a0373737d575f02f4b4269fff8de266629ea522417"
+      "bytes": 126500,
+      "sha256": "270d81453ba114be0072d9241c689334faf1646f1f06adfb386471999976f2bf"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 50593,
-      "sha256": "804f23d5c7dc82095db4abb308bd653149f43f0f129e86af4868d13c9c065964"
+      "bytes": 51129,
+      "sha256": "57eadda80d3d8f4d884365302219a35618ad4252bf7c3ff752fadad78b15cdfa"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
@@ -1300,8 +1300,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 51575,
-      "sha256": "d28e3941bbe01fadcbc6ebaa1f412d2a268289da9741891320163b1c53cc4d1b"
+      "bytes": 54697,
+      "sha256": "5eade426903e11a73a74a5ad34afe683fcb30f9e608bb27822ecbb8d619b3349"
     }
   ]
 }

@@ -1379,7 +1379,7 @@ void PreverbAudioProcessorEditor::refresh()
         learnWorkspace.displayLoop(loopSettings,processor.canArmLoopCapture(),
             processor.loopCaptureArmed(),flow.locked(),processor.loopFinishing(),
             processor.loopRecaptureEnabled(),loopStatus);
-        learnWorkspace.display(capture,state,time,flow,songPlayheadAvailable,processor.getCaptureProgress(),songTimingIssue.has_value());
+        learnWorkspace.display(capture,state,hostTime,flow,songPlayheadAvailable,processor.getCaptureProgress(),songTimingIssue.has_value());
     }
     if(exportLayout){
         if(loopSource && capture.manifest.loop){

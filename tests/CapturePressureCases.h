@@ -5,20 +5,24 @@
 
 // Uses the production queue, worker and asset store. Accelerated song duration
 // is explicitly separate from wall-clock pacing; no substitute capture engine.
-inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bool fault,bool patterns=false,bool probe=false)
+inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bool fault,bool patterns=false,bool probe=false,int repeatAt=0)
 {
     TestDirectory root;auto queue=std::make_unique<PluginCaptureQueue>();workflow::State flow;
     CaptureWorker worker(*queue,root.file);worker.useWorkflow(flow);worker.setHostRate(rate);worker.startThread();
     std::vector<float> left(static_cast<size_t>(frames),.125f),right(static_cast<size_t>(frames),-.25f);
+    if(repeatAt)REQUIRE(flow.arm(true));
     const auto pass=flow.begin(true);uint64_t queued=0,dropped=0;bool injected=false;uint32_t high=0;
     const auto began=std::chrono::steady_clock::now();
     for(int64_t at=0;at<int64_t(seconds)*rate;at+=frames)
     {
         const auto count=static_cast<int>(std::min<int64_t>(frames,int64_t(seconds)*rate-at));
+        const bool repeating=repeatAt>0 && at>=int64_t(repeatAt)*rate;
         const auto songAt=at+(patterns && at>=int64_t(30)*rate?int64_t(2)*rate:0)
-            -(patterns && at>=int64_t(90)*rate && at<int64_t(100)*rate?int64_t(10)*rate:0);
+            -(patterns && at>=int64_t(90)*rate && at<int64_t(100)*rate?int64_t(10)*rate:0)
+            -(repeating?int64_t(repeatAt)*rate:0);
         const auto silent=patterns && (at/rate)%45==17;
-        std::fill(left.begin(),left.end(),silent?0.f:.125f);std::fill(right.begin(),right.end(),silent?0.f:-.25f);
+        std::fill(left.begin(),left.end(),silent?0.f:.125f);
+        std::fill(right.begin(),right.end(),silent?0.f:repeating?-.5f:-.25f);
         if(realtime)std::this_thread::sleep_until(began+std::chrono::nanoseconds(at*1000000000LL/rate));
         // Isolated correctness runs pace against actual consumption rather than
         // pretending an arbitrarily fast producer is normal DAW delivery.
@@ -52,7 +56,25 @@ inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bo
         if(realtime && !fault && at>rate && at%(rate*5)<frames)worker.delayNextStageForTesting(5);
     }
     REQUIRE(worker.flush(60000));const auto previewLimited=worker.progressSnapshot().limited;
-    if(frames==64 && !fault && !probe)REQUIRE(previewLimited);
+    if(frames==64 && !fault && !probe)
+    {
+        REQUIRE(!previewLimited);
+        awaitCapture([&]{
+            const auto preview=worker.progressSnapshot();
+            if(preview.ranges.empty())return false;
+            const auto& last=preview.ranges.back();
+            const auto end=int64_t(seconds-repeatAt)*rate;
+            return last.range.startSample+static_cast<int64_t>(last.range.frameCount)==end
+                && (repeatAt==0 || (!last.peaks.empty() && last.peaks.back().minimum==-.5f
+                    && last.peaks.back().startSample+last.peaks.back().frameCount==end));
+        });
+        if(repeatAt)
+        {
+            const auto preview=worker.progressSnapshot();
+            REQUIRE(preview.ranges.size()==1);
+            REQUIRE(preview.ranges.front().peaks.size()==static_cast<size_t>(repeatAt)*rate/CaptureProgress::binFrames);
+        }
+    }
     REQUIRE(flow.stop(pass));REQUIRE(worker.flush(60000));
     const auto elapsed=std::chrono::duration<double>(std::chrono::steady_clock::now()-began).count();
     const auto snapshot=worker.snapshot();const auto metrics=worker.metrics();
@@ -75,8 +97,8 @@ inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bo
         REQUIRE(!dropped && flow.snapshot().result==workflow::Result::accepted && !snapshot.manifest.ranges.empty());
         for(const auto& range:snapshot.manifest.ranges)REQUIRE(range.frameCount<=uint64_t(rate)*5 && range.frameCount<=1920000);
         CaptureSession restored(root.file);REQUIRE(restored.restore(snapshot.manifest.projectId,snapshot.manifest.instanceId,snapshot.reference,snapshot.manifest.revision));
-        float l=0,r=0;REQUIRE(restored.readSample(0,l,r) && l==.125f && r==-.25f);
-        REQUIRE(restored.readSample(int64_t(seconds)*rate+(patterns?2*rate:0)-1,l,r));
+        float l=0,r=0;REQUIRE(restored.readSample(0,l,r) && l==.125f && r==(repeatAt?-.5f:-.25f));
+        REQUIRE(restored.readSample(int64_t(seconds-repeatAt)*rate+(patterns?2*rate:0)-1,l,r));
         if(patterns){REQUIRE(!restored.readSample(int64_t(31)*rate,l,r));REQUIRE(restored.readSample(int64_t(17)*rate+rate/2,l,r) && l==0 && r==0);}
     }
     worker.stopThread(-1);
@@ -86,4 +108,5 @@ inline void capturePressureMatrix()
     for(int rate:{44100,48000})for(int frames:{64,512,8192})
     {capturePressureCase(180,rate,frames,false,false);capturePressureCase(300,rate,frames,false,false);capturePressureCase(180,rate,frames,false,true);}
     capturePressureCase(180,48000,512,false,false,true);
+    capturePressureCase(200,48000,64,false,false,false,false,100);
 }

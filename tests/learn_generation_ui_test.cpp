@@ -301,6 +301,60 @@ static void loopUiCases(bool review)
     fixture.through(fixture.marker(16));
     editor.refresh();
     REQUIRE(arm->getToggleState() && status->getText().contains("Recording Loop"));
+    fixture.through(fixture.marker(17),true);
+    const auto liveFrames=fixture.cursor-fixture.marker(16);
+    await([&]{return m3::ui::learnProvisionalFrames(processor.getCaptureProgress())==liveFrames;});
+    editor.refresh();
+    REQUIRE(processor.getCaptureSnapshot().reference.isEmpty());
+    REQUIRE(workspace->timelineStatusText().startsWith("Recording |"));
+    REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(liveFrames)));
+    const auto live=processor.getCaptureProgress();
+    const auto audible=std::find_if(live.ranges.begin(),live.ranges.end(),[](const auto& region){return !region.peaks.empty();});
+    REQUIRE(audible!=live.ranges.end());
+    const auto coverage=workspace->coverageAt(audible->range.startSample);
+    REQUIRE(coverage.provisional && coverage.kind=="Audio");
+    fixture.through(fixture.marker(18),true);
+    await([&]{return m3::ui::learnProvisionalFrames(processor.getCaptureProgress())>liveFrames;});
+    editor.refresh();
+    REQUIRE(workspace->dryViewport().second>liveFrames);
+    if(!review)
+    {
+        CaptureProgress fragmented;
+        const auto flow=processor.getWorkflowSnapshot();
+        fragmented.pass=flow.pass;
+        fragmented.kind=CaptureSourceKind::loop;
+        fragmented.freshDomain=true;
+        fragmented.sampleRate=fixture.rate;
+        constexpr uint32_t frames=64;
+        const std::array<float,frames*2> silence{};
+        std::array<float,frames*2> audio;
+        audio.fill(.5f);
+        audio.front()=-.25f;
+        const CaptureManifest empty;
+        for(size_t block=0;block<CaptureProgress::maxRanges;++block)
+            fragmented.add(static_cast<int64_t>(block)*frames,frames,
+                block%2?silence.data():audio.data(),false,empty);
+        const auto fullEnd=fragmented.recordedLoopEnd();
+        REQUIRE(!fragmented.limited && fragmented.ranges.size()==CaptureProgress::maxRanges);
+        const auto showPreview=[&]{
+            workspace->display(processor.getCaptureSnapshot(),processor.swellEngine().snapshot(),
+                processor.getSongTime(),flow,false,fragmented);
+        };
+        showPreview();
+        REQUIRE(workspace->dryViewport().second==fullEnd);
+        fragmented.add(fullEnd,frames,audio.data(),false,empty);
+        fragmented.add(fullEnd+frames,frames,silence.data(),false,empty);
+        showPreview();
+        REQUIRE(fragmented.limited && fragmented.ranges.empty());
+        REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(fullEnd+2*frames)));
+        REQUIRE(workspace->timelineStatusText().contains("Preview limited"));
+        const auto detail=workspace->coverageAt(fullEnd+frames);
+        REQUIRE(detail.provisional && detail.kind=="Coverage detail unavailable");
+        const auto& peaks=fragmented.loopWaveform.peaks;
+        REQUIRE(peaks.size()<=CaptureProgress::maxLoopPeaks && peaks.front().startSample==0);
+        REQUIRE(peaks.back().startSample+peaks.back().frameCount==fullEnd+2*frames);
+        REQUIRE(peaks.back().minimum==-.25f && peaks.back().maximum==.5f);
+    }
     fixture.through(fixture.marker(20)-fixture.frames,true);
     processor.holdCaptureValidationForTesting(true);
     fixture.through(fixture.marker(20));
@@ -311,6 +365,7 @@ static void loopUiCases(bool review)
     REQUIRE(processor.flushCaptureForTesting());
     const auto accepted=processor.getCaptureSnapshot();
     REQUIRE(accepted.sourceKind()==CaptureSourceKind::loop);
+    REQUIRE(processor.getCaptureProgress().ranges.empty());
     const auto markers=[&]{return processor.swellEngine().snapshot().learnGeneration;};
     await([&]{
         const auto view=markers();
