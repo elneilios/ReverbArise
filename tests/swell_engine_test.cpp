@@ -54,7 +54,12 @@ int main() { return runTest([]
             REQUIRE(saved.swells.front().provenance==(change==8?Provenance::automatic:Provenance::manualEdited));
         }
         editor.restore(base);REQUIRE(editor.assignBundledIR(id,0,"monumental",editor.assignmentEpoch()));
-        REQUIRE(editor.snapshot().irReplacementPending);
+        waitFor([&]{
+            const auto state=editor.snapshot();
+            const auto request=state.irRequests.find(id);
+            return request!=state.irRequests.end() && request->second.error.contains("Required source audio is missing");
+        });
+        REQUIRE(sameSavedSwell(editor.savedSession().swells.front(),automatic));
     }
     runLiveClockEngineCases();
     runStorageLocationEngineCases();
@@ -71,7 +76,7 @@ int main() { return runTest([]
     writeTestWav(root.file.getChildFile("ir.wav"),1,1000,{1,0.5f,0.25f});
     engine.loadIR(root.file.getChildFile("ir.wav"));
     waitFor([&]{auto s=engine.savedSession();return s.swells[0].irName=="ir.wav" && s.swells[1].irName=="ir.wav";});
-    engine.generate(true); waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
+    waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
     const auto initial=engine.snapshot(); REQUIRE(initial.renderCount==2 && initial.raw && initial.shaped);
     // Preparation telemetry is worker-owned and does not imply playing admission.
     {float l[16]{},r[16]{};TransportTime at{context.time,false};

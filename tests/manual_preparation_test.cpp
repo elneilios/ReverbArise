@@ -149,7 +149,7 @@ static void manualFailures()
     REQUIRE(engine.snapshot().auditionReady);
     REQUIRE(find(engine.savedSession(),id)->ir==accepted.ir && find(engine.savedSession(),id)->render.present());
     REQUIRE(engine.assignManagedIR(id,find(engine.savedSession(),id)->inputGeneration,accepted.ir,accepted.irName));
-    await([&]{return engine.snapshot().auditionReady;});
+    await([&]{const auto state=engine.snapshot();return state.auditionReady && !state.irRequests.contains(id);});
     // Session replacement rejects a render completion held at publication.
     engine.holdRenderPublicationForTesting(true);
     REQUIRE(engine.generate(true).queued==1);

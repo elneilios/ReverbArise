@@ -41,7 +41,8 @@ static void commonEngineCases()
     REQUIRE(renderWorkCounts().convolutions==shapeWork.convolutions && renderWorkCounts().resamplings==shapeWork.resamplings);
     const auto replacement=f.root.file.getChildFile("replacement.wav");writeTestWav(replacement,1,48000,{.5f,.1f});
     auto before=e.savedSession();REQUIRE(e.assignIR(first,find(before,first)->inputGeneration,replacement,false,e.assignmentEpoch()));
-    await([&]{const auto s=e.savedSession();return find(s,first)->phase==Phase::ready && e.snapshot().renderCount==count+2;});
+    await([&]{const auto s=e.savedSession();return find(s,first)->phase==Phase::ready
+        && find(s,first)->irName=="replacement.wav" && e.snapshot().renderCount==count+2;});
     REQUIRE(find(e.savedSession(),second)->render==oldSecond);
     const auto future=f.root.file.getChildFile("future.wav");writeTestWav(future,1,48000,{.25f,.05f});
     const auto material=find(e.savedSession(),first)->render;e.assignDefaultIR(future);

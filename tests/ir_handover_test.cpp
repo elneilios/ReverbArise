@@ -125,9 +125,34 @@ int main(){return runTest([]
         REQUIRE(engine.assignIR(b,find(engine.savedSession(),b)->inputGeneration,custom));
         waitFor([&]{return find(engine.savedSession(),b)->irName==custom.getFileName();});
         REQUIRE(find(engine.savedSession(),b)->shape.automaticStart);
+        const auto fittedSession=engine.savedSession();
+        juce::String encoded;
+        Session reopened;
+        REQUIRE(encode(fittedSession,encoded,error) && decode(encoded,reopened,error));
+        engine.restore(reopened);
+        waitFor([&]{return engine.snapshot().auditionReady;});
+        REQUIRE(sameSavedSwell(*find(engine.savedSession(),a),*find(fittedSession,a)));
+
+        engine.setMonitoring(AuditionMode::dryWet,.5f);
+        waitFor([&]{const auto state=engine.snapshot();return state.auditionReady && state.dryAvailable;});
+        REQUIRE(engine.audition());
+        engine.processAudio(l,r,16,time.song);
+        REQUIRE(engine.snapshot().playing);
+        REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,invalid));
+        waitFor(failed);
+        engine.processAudio(l,r,16,time.song);
+        REQUIRE(engine.snapshot().playing && find(engine.savedSession(),a)->irName==custom.getFileName());
         REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,"monumental"));
         waitFor([&]{return find(engine.savedSession(),a)->irName=="Monumental";});
         REQUIRE(find(engine.savedSession(),a)->shape==find(crop,a)->shape);
+        {AudioAllocationGuard guard;engine.processAudio(l,r,16,time.song);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && engine.snapshot().playing);
+        waitFor([&]{const auto state=engine.snapshot();return state.auditionReady && state.dryAvailable;});
+        const auto mixed=engine.snapshot();
+        REQUIRE(mixed.playing);
+        REQUIRE(std::find(mixed.auditionMembers.begin(),mixed.auditionMembers.end(),b)!=mixed.auditionMembers.end());
+        engine.stop();
+        engine.processAudio(l,r,16,time.song);
         REQUIRE(engine.edit(a,[](auto& w,auto&){w.sourceEnd=6000;return true;}));
         REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,custom));
         waitFor(failed);

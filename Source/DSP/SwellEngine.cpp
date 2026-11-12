@@ -488,10 +488,14 @@ bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const ju
 }
 void SwellEngine::beginIRReplacementLocked(Swell& swell,const juce::String& name)
 {
+    const auto prior=irReplacements.find(swell.id);
+    const auto acceptedInput=prior!=irReplacements.end() && prior->second.input==swell.inputGeneration
+        ?prior->second.acceptedInput:swell.inputGeneration;
     cancelIRReplacementLocked(swell.id);
     runtime.try_emplace(swell.id);
     auto& replacement=irReplacements[swell.id];
     replacement.input=++swell.inputGeneration;
+    replacement.acceptedInput=acceptedInput;
     replacement.shape=swell.shapeGeneration;
     replacement.name=name;
     ++modelRevision;

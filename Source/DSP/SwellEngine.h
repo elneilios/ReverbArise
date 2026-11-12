@@ -311,7 +311,7 @@ private:
     std::map<juce::String,RetainedIR> retainedIR;
     struct IRReplacement
     {
-        uint64_t input=0, shape=0;
+        uint64_t input=0, shape=0, acceptedInput=0;
         juce::String name, error, sourceRevision;
         bool bundled=false, fitted=false;
         std::optional<Swell> candidate;

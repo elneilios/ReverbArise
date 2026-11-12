@@ -1421,12 +1421,16 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
         auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="musical-ir.wav");
         const auto before=engine.savedSession();const auto wasPlaying=engine.snapshot().playing;
+        engine.holdRenderPublicationForTesting(true);
         irChoice->setSelectedId(6,juce::sendNotificationSync);
-        waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
-        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="musical-ir.wav");
+        waitUI([&]{return engine.renderPublicationWaitingForTesting();});editor.refresh();
+        REQUIRE(irChoice->getText()=="musical-ir.wav");
         const auto assignment=dynamic_cast<juce::Label*>(named(editor,"irAssignmentStatus"));
         REQUIRE(assignment && assignment->getText().contains("Whisper") && assignment->getText().contains("musical-ir.wav"));
         snapshotEditor(editor,"ir-replacement-pending");
+        engine.holdRenderPublicationForTesting(false);
+        waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
+        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="musical-ir.wav");
         REQUIRE(m3::find(engine.savedSession(),second)->ir==m3::find(before,second)->ir && engine.savedSession().defaultIR==before.defaultIR);
         engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");

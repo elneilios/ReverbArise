@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Removed the per-swell IR undo and redo instructions after deferring edit history. Reviewed the remaining timing fit, accepted audio handover and failure guidance against the Perform bindings.",
+  "summary": "Reviewed the failed-request playback fix. The accepted voice keeps its playback identity and continues at the same position. The existing IR browsing guidance already describes that behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -445,13 +445,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 101655,
-      "sha256": "1240bcda3069b7f31c446542eae7a3e35a5f9f9a02efbb91273b4476002ea93b"
+      "bytes": 101915,
+      "sha256": "36c0955f3da627b674a6ad6853f6b971e5debcbdb22598861d9221a151aed3ab"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 27237,
-      "sha256": "535cf469e4406c80aa672b6640224301bad7eb5393715d5992bb1035e5064cb4"
+      "bytes": 27254,
+      "sha256": "c3d83d90e91ebfeb2bb81c24d92a4464d0fe9052532d7a857640545302595407"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 58877,
-      "sha256": "bcec86daa5497f453ee4e91b43076bfabc288b6883f6cb0dd30babf2dec98ae6"
+      "bytes": 59062,
+      "sha256": "7600624567fbc44ebdc85c26de316e8096e61e8bf86cd2f19b56ea5cc746dc28"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",

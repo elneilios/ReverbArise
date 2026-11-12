@@ -654,11 +654,15 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
             }else replacements.insert(w.id);}
         if(clock->playing && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live))
             staged=overlayReadyIRReplacementsLocked(session,context);
-        for(const auto& swell:session.swells)
+        for(auto& swell:session.swells)
             if(const auto request=irReplacements.find(swell.id);swell.phase==Phase::ready
                 && request!=irReplacements.end() && request->second.input==swell.inputGeneration
                 && std::find(staged.begin(),staged.end(),swell.id)==staged.end())
+            {
+                // Advancing the request token must not retrigger the audible accepted voice.
+                swell.inputGeneration=request->second.acceptedInput;
                 held.insert(swell.id);
+            }
         revision=liveRevision;
         for(auto it=liveSlots.begin();it!=liveSlots.end();){if(!find(model,it->first)){live.invalidate(it->second,++liveGenerations[it->second]);liveCache.erase(it->first);it=liveSlots.erase(it);}else ++it;}
         std::array<bool,maximumSwells> used{};for(const auto& [id,slot]:liveSlots)used[slot]=true;
