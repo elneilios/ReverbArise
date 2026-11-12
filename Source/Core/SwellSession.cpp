@@ -109,6 +109,7 @@ bool resetWetDefaults(Swell& w,double rate,juce::String& error)
 {
     if(!std::isfinite(rate) || rate<=0 || rate>=1e9){error="Compatible sample rate is required for Reset";return false;}
     auto candidate=w;candidate.shape=initialShape(rate);candidate.placement=0;
+    candidate.wetTimingIntent.reset();
     int64_t a,b,length;if(!requestedShapeBounds(candidate,w.render.present()?w.render.start:w.sourceStart,a,b) || !checkedSubtract(b,a,length))
     {error="Reset wet bounds are unavailable";return false;}
     if(w.render.present())candidate.shape.fadeOut=std::min(candidate.shape.fadeOut,length-1);
@@ -160,6 +161,13 @@ static bool validShape(const Shape& v)
         && static_cast<int>(v.outCurve) >= 0 && static_cast<int>(v.outCurve) <= 2
         && (v.automaticStart || v.startOffset < v.endOffset);
 }
+static bool validWetTimingIntent(const Swell& swell, const WetTiming& timing)
+{
+    int64_t start, end;
+    return timing.fadeIn >= 0 && timing.fadeOut >= 0
+        && (timing.automaticStart || checkedAdd(swell.arrival, timing.startOffset, start))
+        && checkedAdd(swell.arrival, timing.endOffset, end);
+}
 bool requestedShapeBounds(const Swell& w,int64_t rawStart,int64_t& a,int64_t& b) noexcept
 {
     a=rawStart; int64_t length;
@@ -190,7 +198,52 @@ bool shapeBounds(const Swell& w, int64_t rawStart, int64_t rawEnd, int64_t& a, i
     {error="Audible bounds exceed full render; adjust shape or Reset";return false;}
     error.clear(); return true;
 }
-bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::String& error)
+bool fitWetShapeToResponse(Swell& w, int64_t rawStart, int64_t rawEnd, juce::String& error)
+{
+    const auto intent = w.wetTimingIntent.value_or(wetTiming(w.shape));
+    auto start = rawStart;
+    int64_t end, length;
+    if (rawStart >= rawEnd || !validWetTimingIntent(w, intent)
+        || (!intent.automaticStart && !checkedAdd(w.arrival, intent.startOffset, start))
+        || !checkedAdd(w.arrival, intent.endOffset, end))
+    {
+        error = "Invalid wet timing or response bounds";
+        return false;
+    }
+
+    start = std::max(start, rawStart);
+    end = std::min(end, rawEnd);
+    if (start >= end)
+    {
+        start = rawStart;
+        end = rawEnd;
+    }
+
+    auto candidate = w;
+    auto& shape = candidate.shape;
+    shape.automaticStart = intent.automaticStart;
+    shape.startOffset = intent.startOffset;
+    if ((!shape.automaticStart && !checkedSubtract(start, w.arrival, shape.startOffset))
+        || !checkedSubtract(end, w.arrival, shape.endOffset)
+        || !checkedSubtract(end, start, length))
+    {
+        error = "Wet response bounds exceed the timeline range";
+        return false;
+    }
+    shape.fadeIn = std::min(intent.fadeIn, length - 1);
+    shape.fadeOut = std::min(intent.fadeOut, length - 1);
+    int64_t positionedStart, positionedEnd;
+    if (!shapeBounds(candidate, rawStart, rawEnd, positionedStart, positionedEnd, error))
+        return false;
+
+    if (shape != w.shape)
+        ++w.shapeGeneration;
+    w.shape = shape;
+    w.wetTimingIntent = intent == wetTiming(shape) ? std::nullopt : std::optional{intent};
+    return true;
+}
+
+bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::String& error,WetTimingEdit edit)
 {
     auto candidate = w; candidate.shape = shape;
     int64_t a, b,positionedStart;
@@ -203,8 +256,23 @@ bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::Str
     // Retain only successfully prepared support. The requested endpoint itself
     // carries pending intent, so dragging back can cancel an unavailable extension.
     int64_t effective;if(!effectiveSourceEnd(candidate,effective)){error="Wet support overflow";return false;}
-    w.supportOffset=candidate.supportOffset;
+    const auto previous = wetTiming(w.shape);
+    const auto edited = wetTiming(shape);
+    auto intent = w.wetTimingIntent.value_or(previous);
+    const auto changed=[edit](WetTimingEdit control,bool differs)
+    {return edit==control || (edit==WetTimingEdit::infer && differs);};
+    if (changed(WetTimingEdit::start,edited.automaticStart != previous.automaticStart || edited.startOffset != previous.startOffset))
+    {
+        intent.automaticStart = edited.automaticStart;
+        intent.startOffset = edited.startOffset;
+    }
+    if (changed(WetTimingEdit::end,edited.endOffset != previous.endOffset)) intent.endOffset = edited.endOffset;
+    if (changed(WetTimingEdit::fadeIn,edited.fadeIn != previous.fadeIn)) intent.fadeIn = edited.fadeIn;
+    if (changed(WetTimingEdit::fadeOut,edited.fadeOut != previous.fadeOut)) intent.fadeOut = edited.fadeOut;
+
     shape.fadeIn = std::min(shape.fadeIn, b - a - 1); shape.fadeOut = std::min(shape.fadeOut, b - a - 1);
+    if (w.wetTimingIntent)
+        w.wetTimingIntent = intent == wetTiming(shape) ? std::nullopt : std::optional{intent};
     w.shape = shape; ++w.shapeGeneration; error.clear(); return true;
 }
 bool fullShape(Swell& w, int64_t rawStart, int64_t rawEnd, juce::String& error)
@@ -213,9 +281,12 @@ bool fullShape(Swell& w, int64_t rawStart, int64_t rawEnd, juce::String& error)
     shape.automaticStart = false;
     if (! checkedSubtract(rawStart, w.arrival, shape.startOffset) || ! checkedSubtract(rawEnd, w.arrival, shape.endOffset))
     { error = "Shape position overflow"; return false; }
-    return setShape(w, shape, rawStart, rawEnd, error);
+    if (!setShape(w, shape, rawStart, rawEnd, error))
+        return false;
+    w.wetTimingIntent.reset();
+    return true;
 }
-void resetShape(Swell& w) { w.shape = {}; ++w.shapeGeneration; }
+void resetShape(Swell& w) { w.shape = {}; w.wetTimingIntent.reset(); ++w.shapeGeneration; }
 
 static bool validId(const juce::String& id)
 {
@@ -267,6 +338,7 @@ bool validate(const Session& s, juce::String& error)
             || (w.render.present() && (!checkedAdd(w.render.start,w.placement,explicitStart) || !checkedAdd(w.render.sourceEnd,w.placement,explicitStart))) || ! validId(w.id) || ! ids.insert(w.id).second || w.name.length() > 256 || w.irName.length()>512 || w.name.containsChar('\0')
             || w.sourceStart > w.arrival || w.sourceEnd <= w.arrival
             || ! checkedSubtract(w.sourceEnd, w.sourceStart, length) || length <= 0 || ! validShape(w.shape)
+            || (w.wetTimingIntent && !validWetTimingIntent(w, *w.wetTimingIntent))
             || static_cast<int>(w.provenance)<0 || static_cast<int>(w.provenance)>2
             || (w.generationSource.isNotEmpty() && (w.generationSource.length()!=64 || !w.generationSource.containsOnly("0123456789abcdef")))
             || ! validAsset(w.ir) || ! validAsset(w.render) || (w.frozen && !w.render.present())
@@ -351,7 +423,19 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
         put(h,"end",integer(w.shape.endOffset)); put(h,"fadeIn",integer(w.shape.fadeIn)); put(h,"fadeOut",integer(w.shape.fadeOut));
         put(h,"inTension",w.shape.inTension); put(h,"outTension",w.shape.outTension); put(h,"inCurve",static_cast<int>(w.shape.inCurve)); put(h,"outCurve",static_cast<int>(w.shape.outCurve)); put(h,"gain",w.shape.gainDb);
-        put(a,"shape",h); swells.add(a);
+        put(a,"shape",h);
+        if (w.wetTimingIntent)
+        {
+            const auto& intent = *w.wetTimingIntent;
+            auto savedIntent = object();
+            put(savedIntent,"automaticStart",intent.automaticStart);
+            put(savedIntent,"start",integer(intent.startOffset));
+            put(savedIntent,"end",integer(intent.endOffset));
+            put(savedIntent,"fadeIn",integer(intent.fadeIn));
+            put(savedIntent,"fadeOut",integer(intent.fadeOut));
+            put(a,"wetTimingIntent",savedIntent);
+        }
+        swells.add(a);
     }
     put(v,"swells",swells);
     auto result = juce::JSON::toString(v, true);
@@ -456,6 +540,15 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         w.shape.startOffset=p.big(h,"start"); w.shape.endOffset=p.big(h,"end"); w.shape.fadeIn=p.big(h,"fadeIn"); w.shape.fadeOut=p.big(h,"fadeOut");
         if(version>=3){w.shape.inTension=p.number(h,"inTension");w.shape.outTension=p.number(h,"outTension");}
         w.shape.inCurve=static_cast<Curve>(p.small(h,"inCurve")); w.shape.outCurve=static_cast<Curve>(p.small(h,"outCurve")); w.shape.gainDb=static_cast<float>(p.number(h,"gain"));
+        if (a.hasProperty("wetTimingIntent"))
+        {
+            const auto savedIntent = a["wetTimingIntent"];
+            Parser optional;
+            const WetTiming intent {optional.boolean(savedIntent,"automaticStart"), optional.big(savedIntent,"start"),
+                optional.big(savedIntent,"end"), optional.big(savedIntent,"fadeIn"), optional.big(savedIntent,"fadeOut")};
+            if (optional.ok && validWetTimingIntent(w,intent) && intent != wetTiming(w.shape))
+                w.wetTimingIntent = intent;
+        }
         w.phase=Phase::restoring; w.status="Restoring dependencies"; s.swells.push_back(std::move(w));
     }
     if(version<9)

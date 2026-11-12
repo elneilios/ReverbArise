@@ -118,11 +118,19 @@ private:
             if(swell)
             {
                 view.accepted=swell->ir.content;
-                view.error=swell->phase==Phase::error;
-                view.status=state.retainedIRName.isNotEmpty()?"Audible: "+state.retainedIRName+" | Requested: "+state.requestedIRName
-                    :swell->phase==Phase::ready?juce::String{}:swell->status;
+                const auto request=state.irRequests.find(swell->id);
+                view.error=swell->phase==Phase::error || (request!=state.irRequests.end() && request->second.error.isNotEmpty());
+                view.status=swell->phase==Phase::ready
+                    ?(swell->wetTimingIntent?"Wet timing adjusted to fit this IR":juce::String{}):swell->status;
+                if(request!=state.irRequests.end())
+                {
+                    const auto& [name,error]=request->second;
+                    const juce::String available=swell->phase==Phase::ready?" | Available: "+swell->irName:juce::String(" | No ready wet render");
+                    view.status=error.isEmpty()?"Preparing "+name+available:name+": "+error+available;
+                    view.reason+=(view.reason.isEmpty()?"":"\n")+view.status;
+                }
                 if(swell->frozen)view.status="Unfreeze to change this IR";
-                if(view.error)
+                if(view.error && request==state.irRequests.end())
                 {
                     view.reason+=(view.reason.isEmpty()?"":"\n")+swell->status;
                     view.status=state.retainedIRName.isEmpty()?"IR preparation failed. Choose another or retry."

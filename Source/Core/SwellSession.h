@@ -46,6 +46,16 @@ struct Shape
     float gainDb = defaultSwellLevelDb;
     double inTension = 0, outTension = 0;
 };
+struct WetTiming
+{
+    bool operator==(const WetTiming&) const = default;
+    bool automaticStart;
+    int64_t startOffset, endOffset, fadeIn, fadeOut;
+};
+inline WetTiming wetTiming(const Shape& shape) noexcept
+{
+    return {shape.automaticStart, shape.startOffset, shape.endOffset, shape.fadeIn, shape.fadeOut};
+}
 struct GainCalibration
 {
     bool operator==(const GainCalibration&) const = default;
@@ -61,6 +71,7 @@ struct Swell
     juce::String id = juce::Uuid().toDashedString(), name, irName;
     int64_t arrival = 0, sourceStart = 0, sourceEnd = 1;
     Shape shape;
+    std::optional<WetTiming> wetTimingIntent;
     GainCalibration calibration;
     std::optional<float> generatedGain;
     int64_t placement = 0;
@@ -140,7 +151,7 @@ inline bool hasCompatibleReadyRender(const Swell& w,const SongTime& time) noexce
 inline bool sameSavedSwell(const Swell& a,const Swell& b)
 {
     return a.id==b.id && a.name==b.name && a.irName==b.irName && a.arrival==b.arrival
-        && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape
+        && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape && a.wetTimingIntent==b.wetTimingIntent
         && a.calibration==b.calibration && a.generatedGain==b.generatedGain && a.placement==b.placement && a.supportOffset==b.supportOffset
         && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
         && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor
@@ -172,7 +183,10 @@ inline bool auditionDryEnd(const Swell& w,double rate,double seconds,bool isolat
 
 bool requestedShapeBounds(const Swell&, int64_t rawStart, int64_t& a, int64_t& b) noexcept;
 bool shapeBounds(const Swell&, int64_t rawStart, int64_t rawEnd, int64_t& a, int64_t& b, juce::String& error);
-bool setShape(Swell&, Shape, int64_t rawStart, int64_t rawEnd, juce::String& error);
+bool fitWetShapeToResponse(Swell&, int64_t rawStart, int64_t rawEnd, juce::String& error);
+enum class WetTimingEdit { infer, start, end, fadeIn, fadeOut };
+bool setShape(Swell&, Shape, int64_t rawStart, int64_t rawEnd, juce::String& error,
+              WetTimingEdit edit=WetTimingEdit::infer);
 bool fullShape(Swell&, int64_t rawStart, int64_t rawEnd, juce::String& error);
 void resetShape(Swell&);
 bool validate(const Session&, juce::String& error);

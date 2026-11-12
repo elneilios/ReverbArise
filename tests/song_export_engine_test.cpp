@@ -157,11 +157,11 @@ int main(){return runTest([]{
     // A failed requested IR retains the independently verified accepted wet.
     const auto invalid=root.file.getChildFile("invalid.wav");REQUIRE(invalid.replaceWithText("not audio"));
     REQUIRE(engine.assignIR(id,find(engine.savedSession(),id)->inputGeneration,invalid));
-    waitFor([&]{return find(engine.savedSession(),id)->phase==Phase::error;});
+    waitFor([&]{return engine.snapshot().irReplacementError.isNotEmpty();});
     REQUIRE(engine.hasExportableWet(context.time));auto wrong=context.time;wrong.bpm+=1;REQUIRE(!engine.hasExportableWet(wrong));
     REQUIRE(flow.requestMode(workflow::Mode::finalise,{true,true,true}));
     waitFor([&]{return engine.snapshot().songExport.phase==ExportPhase::ready;});
-    REQUIRE(engine.snapshot().songExport.prepared->acceptedNotice.contains("replacement pending"));
+    REQUIRE(engine.snapshot().songExport.prepared->acceptedNotice.contains("replacement failed"));
     REQUIRE(engine.snapshot().songExport.prepared->file==ready->file);
     // Missing completed bytes rebuild to a different immutable path, retaining history.
     REQUIRE(engine.assetDirectory().getChildFile(ready->file.path).deleteFile());engine.restore(saved);

@@ -47,6 +47,9 @@ inline bool applyTimingCandidate(Swell& w,const Swell& anchor,TimingAnchor kind,
                 || (std::abs(static_cast<long double>(*zero)-requested)==std::abs(static_cast<long double>(*at)-requested) && std::abs(*zero-origin)>std::abs(*at-origin))))at=zero;}
         if(!at){error="No valid fade-out grid point";return false;}shape.fadeOut=*at>=b-1?0:b-1-*at;
     }
-    return setShape(w,shape,rawStart,rawEnd,error);
+    const auto edit=kind==TimingAnchor::start?WetTimingEdit::start
+        :kind==TimingAnchor::end?WetTimingEdit::end
+        :kind==TimingAnchor::fadeIn?WetTimingEdit::fadeIn:WetTimingEdit::fadeOut;
+    return setShape(w,shape,rawStart,rawEnd,error,edit);
 }
 }

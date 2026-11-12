@@ -1421,12 +1421,16 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
         auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="musical-ir.wav");
         const auto before=engine.savedSession();const auto wasPlaying=engine.snapshot().playing;
+        engine.holdRenderPublicationForTesting(true);
         irChoice->setSelectedId(6,juce::sendNotificationSync);
-        waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
-        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="musical-ir.wav");
+        waitUI([&]{return engine.renderPublicationWaitingForTesting();});editor.refresh();
+        REQUIRE(irChoice->getText()=="musical-ir.wav");
         const auto assignment=dynamic_cast<juce::Label*>(named(editor,"irAssignmentStatus"));
         REQUIRE(assignment && assignment->getText().contains("Whisper") && assignment->getText().contains("musical-ir.wav"));
         snapshotEditor(editor,"ir-replacement-pending");
+        engine.holdRenderPublicationForTesting(false);
+        waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
+        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="musical-ir.wav");
         REQUIRE(m3::find(engine.savedSession(),second)->ir==m3::find(before,second)->ir && engine.savedSession().defaultIR==before.defaultIR);
         engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");
@@ -1944,7 +1948,7 @@ int main(int argc,char* argv[]){return runTest([&]
         {return owner->useWorkingFolder(folder,input,error,hooks);});
     auto advanced=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
     REQUIRE(visibleOffscreen(named(editor,"sourceSampleStart")));snapshotEditor(editor,"precise-timing");
-    const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});editor.refresh();snapshotEditor(editor,"error");
+    const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.snapshot().irReplacementError.isNotEmpty();});editor.refresh();snapshotEditor(editor,"error");
     REQUIRE(engine.assetDirectory().getChildFile(engine.savedSession().swells[0].ir.path).deleteFile());
     engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);processor->setNonRealtime(true);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
     auto exportStatus=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(exportStatus && exportStatus->getText().startsWith("Export warning"));

@@ -54,7 +54,12 @@ int main() { return runTest([]
             REQUIRE(saved.swells.front().provenance==(change==8?Provenance::automatic:Provenance::manualEdited));
         }
         editor.restore(base);REQUIRE(editor.assignBundledIR(id,0,"monumental",editor.assignmentEpoch()));
-        REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
+        waitFor([&]{
+            const auto state=editor.snapshot();
+            const auto request=state.irRequests.find(id);
+            return request!=state.irRequests.end() && request->second.error.contains("Required source audio is missing");
+        });
+        REQUIRE(sameSavedSwell(editor.savedSession().swells.front(),automatic));
     }
     runLiveClockEngineCases();
     runStorageLocationEngineCases();
@@ -71,7 +76,7 @@ int main() { return runTest([]
     writeTestWav(root.file.getChildFile("ir.wav"),1,1000,{1,0.5f,0.25f});
     engine.loadIR(root.file.getChildFile("ir.wav"));
     waitFor([&]{auto s=engine.savedSession();return s.swells[0].irName=="ir.wav" && s.swells[1].irName=="ir.wav";});
-    engine.generate(true); waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
+    waitFor([&]{auto s=engine.snapshot();return s.auditionReady && s.session.swells[1].phase==Phase::ready;});
     const auto initial=engine.snapshot(); REQUIRE(initial.renderCount==2 && initial.raw && initial.shaped);
     // Preparation telemetry is worker-owned and does not imply playing admission.
     {float l[16]{},r[16]{};TransportTime at{context.time,false};
@@ -277,7 +282,10 @@ int main() { return runTest([]
         REQUIRE(edits.assignIR(a,imported.inputGeneration,packed));waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wv";});
         REQUIRE(find(edits.savedSession(),a)->ir.channels==2 && edits.savedSession().defaultIR==future && find(edits.savedSession(),b)->irName=="Preverb Hall");
         const auto bad=editsRoot.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid IR fixture"));imported=*find(edits.savedSession(),a);
-        REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::error;});
+        REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{
+            const auto status=edits.snapshot().irRequests;
+            return status.contains(a) && status.at(a).error.isNotEmpty();
+        });
         REQUIRE(find(edits.savedSession(),a)->ir==imported.ir && edits.savedSession().defaultIR==future);
         const auto oldEpoch=edits.assignmentEpoch();const auto restored=edits.savedSession();edits.restore(restored);
         REQUIRE(edits.snapshot().sessionEpoch!=oldEpoch);
