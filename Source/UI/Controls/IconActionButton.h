@@ -3,14 +3,16 @@
 
 namespace m3::ui::controls
 {
-enum class ActionIcon { settings, openFile };
+enum class ActionIcon { settings, openFile, previous, next };
 
 class IconActionButton final:public CommandButton
 {
 public:
-    explicit IconActionButton(ActionIcon role):CommandButton(role==ActionIcon::settings?"Settings":"Open IR file",true),icon(role)
+    explicit IconActionButton(ActionIcon role):CommandButton(label(role),true),icon(role)
     {
-        setTitle(getButtonText());setTooltip(role==ActionIcon::settings?"Open Settings":"Import WAV or WavPack IR");setHelpText(getTooltip());
+        setTitle(getButtonText());
+        setTooltip(role==ActionIcon::settings?"Open Settings":role==ActionIcon::openFile?"Import WAV or WavPack IR":getButtonText());
+        setHelpText(getTooltip());
         setWantsKeyboardFocus(true);setMouseClickGrabsKeyboardFocus(true);
     }
     juce::Rectangle<float> outlineBounds(bool focused)const noexcept
@@ -22,6 +24,16 @@ public:
         g.setColour(commandInk(CommandVariant::neutral,{isEnabled(),over,down,isFocusVisible(),false}).glyph);
         switch(icon)
         {
+            case ActionIcon::previous:
+            case ActionIcon::next:
+            {
+                const auto direction=icon==ActionIcon::previous?-1.f:1.f;
+                juce::Path arrow;
+                arrow.startNewSubPath(c.x-direction*3,c.y-5);
+                arrow.lineTo(c.x+direction*2,c.y);
+                arrow.lineTo(c.x-direction*3,c.y+5);
+                g.strokePath(arrow,juce::PathStrokeType(rule*2));break;
+            }
             case ActionIcon::openFile:
             {
                 juce::Path folder;folder.startNewSubPath(c.x-9,c.y+7);folder.lineTo(c.x-9,c.y-6);
@@ -37,6 +49,17 @@ public:
         }
     }
 private:
+    static juce::String label(ActionIcon role)
+    {
+        switch(role)
+        {
+            case ActionIcon::settings:return "Settings";
+            case ActionIcon::openFile:return "Open IR file";
+            case ActionIcon::previous:return "Previous preset";
+            case ActionIcon::next:return "Next preset";
+        }
+        return {};
+    }
     ActionIcon icon;
 };
 }

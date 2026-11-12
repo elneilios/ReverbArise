@@ -2,15 +2,15 @@
 
 The responsive editor opens fresh profiles at 900x600/100%. Learn separates
 Capture & Generate from Sound without changing workflow admission; existing
-Default IR is available with detection off. Perform separates Timing, Envelope
+Sound Preset and Level are available with detection off. Perform separates Timing, Envelope
 and Sound while keeping Reset actions visible. Export retains its independent
 mix and delivery guards. Settings Appearance controls workspace size and optional
 100%/125% user magnification; these are local presentation preferences, not
 musical session settings. See [editor presentation](editor-presentation.md).
 
-Learn Sound and Perform Sound share one context-agnostic IR field and command
-binding. Their hosting sections own scope explanations; only the binding knows
-future-default versus selected-swell targets. Accepted defaults enter explicit
+Learn Sound and Perform Sound share the preset picker, contextual Custom IR
+file controls and a scoped binding. Learn Level sets the future default, and
+Perform Level edits the selected swell through the existing gain path. Accepted defaults enter explicit
 Generate, eligible Generate on Stop and manual creation through the existing
 snapshot transactions. Default edits never live-update existing swells. Explicit
 per-swell IR changes retain existing manual-edited provenance; manual/frozen

@@ -335,13 +335,12 @@ public:
         auto& status=require<juce::Label>(*content,"selectedStatus");status.setBounds(area.removeFromTop(24));applyTextRole(status,TextRole::helper);
         auto flags=area.removeFromTop(36);for(auto* c:content->getChildren())if(auto* b=dynamic_cast<juce::ToggleButton*>(c))
             if(b->getButtonText()=="Enabled" || b->getButtonText()=="Solo" || b->getButtonText()=="Freeze")b->setBounds(flags.removeFromLeft((width-20)/3));
-        require<juce::Label>(*content,"performSoundScope").setBounds(area.removeFromTop(controlGeometry::feedbackHeight));
-        auto& ir=require<controls::ConvolutionIrEditor>(*content,"selectedIrEditor");ir.setBounds(area.removeFromTop(ir.preferredHeight(area.getWidth())));area.removeFromTop(spacing::related);
-        const char* names[]={"arrivalSample","wetPlacement","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","curveInTension","curveOutTension","swellLevel"};
-        for(int i=0;i<11;i+=2)
+        auto& ir=require<controls::SoundPresetEditor>(*content,"selectedIrEditor");ir.setBounds(area.removeFromTop(ir.preferredHeight(area.getWidth())));area.removeFromTop(spacing::related);
+        const char* names[]={"arrivalSample","wetPlacement","sourceSampleStart","sourceSampleEnd","preRoll","endOffset","fadeInMs","fadeOutMs","curveInTension","curveOutTension"};
+        for(int i=0;i<10;i+=2)
         {
             auto row=area.removeFromTop(64);auto first=row.removeFromLeft((row.getWidth()-8)/2);row.removeFromLeft(8);
-            for(int n=i;n<std::min(i+2,11);++n)
+            for(int n=i;n<i+2;++n)
             {
                 auto& cell=require<KnobValue>(*content,juce::String(names[n])+"Cell");cell.setBounds(n==i?first:row);
                 // Test-only production-role composition; no shared KnobValue mutation.
@@ -499,6 +498,7 @@ private:
 }
 
 #include "LoopPerformReview.h"
+#include "SoundPresetReview.h"
 
 int main(int argc,char** argv)
 {
@@ -510,6 +510,66 @@ int main(int argc,char** argv)
         {loopPerformReview(command=="--review-loop-perform",argc>2?juce::File(argv[2]):juce::File{});return;}
         if(command=="--test-loop-export-bindings"){loopExportBindingCases();return;}
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
+        if(command=="--review-sound-presets"){reviewSoundPresets(std::move(content));return;}
+        if(command=="--capture-sound-presets")
+        {
+            REQUIRE(argc==3);
+            SoundPresetReview review(std::move(content));
+            review.capture(juce::File(argv[2]));
+            return;
+        }
+        if(command=="--capture-bound-sound")
+        {
+            REQUIRE(argc==3);
+            auto editor=content->composition.productionEditor();
+            editor->enableResponsiveReview(std::make_shared<TransientPresentationStorage>());
+            editor->setVisible(true);
+            require<controls::SegmentedSelector>(*editor,"inspectorSections").onRequest(3);
+            require<controls::SegmentedSelector>(*editor,"learnSections").onRequest(2);
+            const juce::File directory(argv[2]);
+            REQUIRE(directory.createDirectory().wasOk());
+            const auto capture=[&](const juce::String& name)
+            {
+                const auto image=editor->createComponentSnapshot(editor->getLocalBounds());
+                juce::MemoryOutputStream bytes;
+                REQUIRE(juce::PNGImageFormat().writeImageToStream(image,bytes));
+                REQUIRE(directory.getChildFile(name+".png").replaceWithData(bytes.getData(),bytes.getDataSize()));
+            };
+            auto& selected=require<controls::SoundPresetEditor>(*editor,"selectedIrEditor");
+            auto& engine=static_cast<PreverbAudioProcessor&>(*editor->getAudioProcessor()).swellEngine();
+            const auto before=engine.savedSession();
+            require<controls::SegmentedSelector>(*editor,"workflowMode").onRequest(2);
+            editor->refresh();
+            REQUIRE(selected.isVisible() && selected.presetPicker().getText()=="Custom IR");
+            wait([&]{editor->refresh();return selected.filePicker().getSelectedId()>0 && selected.hasResponsePreview();});
+            capture("perform-custom-900");
+            auto& picker=selected.presetPicker();
+            picker.beforeInvocation();
+            picker.setSelectedId(2,juce::sendNotificationSync);
+            wait([&]{editor->refresh();const auto state=engine.savedSession();const auto* swell=m3::find(state,state.primary);
+                return picker.getText()=="Monumental" && selected.hasResponsePreview() && swell && swell->phase==m3::Phase::ready;});
+            REQUIRE(engine.savedSession().defaultIR==before.defaultIR);
+            const auto beforeLevel=engine.savedSession();
+            capture("perform-bundled-900");
+            require<controls::SegmentedSelector>(*editor,"workflowMode").onRequest(1);
+            editor->refresh();
+            auto& defaults=require<controls::SoundPresetEditor>(*editor,"learnIrEditor");
+            REQUIRE(defaults.isVisible() && defaults.presetPicker().getText()=="Preverb Hall");
+            auto& level=require<KnobValue>(defaults,"levelCell");
+            level.valueField().setText("2.75",false);
+            level.valueField().onReturnKey();
+            editor->refresh();
+            REQUIRE(level.valueField().getText()=="2.75" && engine.savedSession().defaultLevelDb==2.75f);
+            const auto after=engine.savedSession();
+            for(const auto& swell:beforeLevel.swells)
+            {
+                const auto* saved=m3::find(after,swell.id);
+                REQUIRE(saved && saved->ir==swell.ir && saved->shape.gainDb==swell.shape.gainDb);
+            }
+            wait([&]{editor->refresh();return defaults.hasResponsePreview();});
+            capture("learn-defaults-900");
+            return;
+        }
         if(command=="--test-responsive"){content->composition.verifyResponsive(argc>2?juce::File(argv[2]):juce::File{});std::cout<<"Compact editor actual control bounds, divider clearance, mode routes and source/render identity checks passed.\n";return;}
         if(command=="--test-responsive-scale"){content->composition.verifyResponsiveScale();std::cout<<"Actual editor scale/input/preferences/recovery/upstream integration checks passed.\n";return;}
         if(command=="--capture-integrated" || command=="--capture-audition-strip"){REQUIRE(argc==3);IntegratedReview review(std::move(content),command=="--capture-audition-strip");review.capture(juce::File(argv[2]));return;}

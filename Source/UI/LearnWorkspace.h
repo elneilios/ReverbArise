@@ -5,7 +5,7 @@
 #include "Controls/Switch.h"
 #include "Controls/SliderControl.h"
 #include "Controls/FieldNumericInput.h"
-#include "ConvolutionIrBinding.h"
+#include "SoundPresetBinding.h"
 #include "Controls/ActionButton.h"
 #include "Controls/LatchingActionButton.h"
 #include "Controls/SegmentedSelector.h"
@@ -42,7 +42,8 @@ public:
         manualHelp.setText("Want to place swells yourself? Add manual swells in Perform.",juce::dontSendNotification);
         manualHelp.setTooltip(manualHelp.getText().replace("\n"," "));
         captureTitle.setName("learnCaptureHeading");automaticLabel.setName("learnAutomaticHeading");
-        irEditor.setName("learnIrEditor");irEditor.label.setName("learnIRLabel");irEditor.selector.setName("learnDefaultIR");irEditor.fileButton.setName("learnImportIR");irEditor.status.setName("learnIRStatus");
+        irEditor.setName("learnIrEditor");irEditor.presetPicker().setName("learnDefaultIR");
+        irEditor.importAction().setName("learnImportIR");irEditor.pickerLabel().setName("learnIRLabel");
         sensitivityLabel.setName("learnSensitivityLabel");recaptureHelp.setName("learnRecaptureHelp");automaticHelp.setName("learnAutomaticHelp");
         recapture.setName("recaptureExisting");automatic.setName("learnAutomaticSwells");sensitivity.setName("learnMarkerSensitivity");
         autoStop.setName("learnAutoGenerateOnStop");autoStopHelp.setName("learnAutoGenerateHelp");
@@ -159,7 +160,7 @@ public:
         recaptureHelp.setText(loopSettings.enabled
             ? (recaptureOn?"Allow replacing the accepted Loop.":"Keep the accepted Loop.")
             : (recaptureOn?"Replace audio next pass.":"Keep captured audio."),juce::dontSendNotification);
-        irBinding.displayDefault(editor);
+        irBinding.displayDefault(editor,flow.mode==workflow::Mode::capture && (!responsive || selectedSection==2));
         if(!responsive)irEditor.setVisible(automaticOn);
         for(auto* c:std::array<juce::Component*,6>{&sensitivityLabel,&sensitivity,&autoStop,&autoStopHelp,&generate,&generateReason})c->setVisible(automaticOn);
         const auto scope=juce::String(source.manifest.projectId)+"/"+source.manifest.instanceId;
@@ -195,7 +196,14 @@ public:
         refreshing=false;resized();repaint();
     }
     void visibilityChanged()override{mouseUpGesture();if(isVisible()){resetNavigation();clearInspection();}}
-    void openDefaultIrFile(juce::Component* opener=nullptr){irBinding.displayDefault(engine.snapshot());irBinding.openFile(opener);}
+    void openDefaultIrFile(juce::Component* opener=nullptr)
+    {
+        if(responsive){selectedSection=2;updateSections();resized();}
+        irBinding.displayDefault(engine.snapshot(),soundShowing());
+        irBinding.openFile(opener);
+    }
+    bool soundShowing()const noexcept{return isVisible() && (!responsive || selectedSection==2);}
+    void suspendSound(){irBinding.setActive(false);}
     void fitDrySource(){resetNavigation();view.update(timelineSource(),progress,clock);viewport=fullExtent();repaint();}
     std::pair<double,double> dryViewport()const noexcept{return {viewport.first,viewport.last};}
     const juce::String& coverageTotalsText()const noexcept{return totalsText;}
@@ -286,11 +294,10 @@ public:
         {
             responsive=true;captureTitle.setText("Learn Settings",juce::dontSendNotification);
             addAndMakeVisible(sections);sections.setName("learnSections");sections.setTitle("Learn settings section");
-            sections.onRequest=[this](int id){selectedSection=id;updateSections();resized();};
+            sections.onRequest=[this](int id){selectedSection=id;updateSections();resized();if(onRefresh)onRefresh();};
             addAndMakeVisible(captureGroup);captureGroup.setText("Source Capture",juce::dontSendNotification);applyTextRole(captureGroup,TextRole::sectionHeading);
-            addAndMakeVisible(soundScope);soundScope.setText("Defaults for new swells. Existing swells stay unchanged.",juce::dontSendNotification);applyTextRole(soundScope,TextRole::helper);
-            captureGroup.setName("learnSourceCaptureHeading");soundScope.setName("learnSoundScope");
-            captureGroup.setBorderSize({});soundScope.setBorderSize({});
+            captureGroup.setName("learnSourceCaptureHeading");
+            captureGroup.setBorderSize({});
         }
         sections.setTextHeight(type.body);updateSections();resized();
     }
@@ -621,7 +628,7 @@ private:
     }
     bool responsive=false;int selectedSection=1;
     controls::SegmentedSelector sections;
-    controls::EllipsisLabel captureGroup;controls::WrappedLabel soundScope;
+    controls::EllipsisLabel captureGroup;
     void updateSections()
     {sections.display({{1,"Capture & Generate","Capture and generation policies"},{2,"Sound","Default sound for new swells"}},selectedSection);}
     void layoutResponsive()
@@ -657,8 +664,10 @@ private:
         manualHelp.setVisible(true);
         }
         auto sound=policyContentBounds(left.withTrimmedRight(groupGap)).withTrimmedTop(sections.getBottom()+contentPadding);
-        soundScope.setBounds(sound.removeFromTop(soundScope.preferredHeight(sound.getWidth())));soundScope.setVisible(soundVisible);sound.removeFromTop(contentPadding);
-        irEditor.setBounds(sound.removeFromTop(irEditor.preferredHeight(sound.getWidth())));irEditor.setVisible(soundVisible);
+        const auto actionsTop=generate.isVisible() && generate.getParentComponent()==this?generate.getY()
+            :manualHelp.isVisible()?manualHelp.getY():sound.getBottom();
+        sound.setHeight(std::max(0,std::min(sound.getBottom(),actionsTop-contentPadding)-sound.getY()));
+        irEditor.setBounds(sound);irEditor.setVisible(soundVisible);
         auto canvas=right;timelineHeading=canvas.removeFromTop(headingHeight);canvas.removeFromTop(spacing::tight);timelineCaption=canvas.removeFromTop(20);canvas.removeFromTop(contentPadding);
         timelineRuler=canvas.removeFromTop(20);canvas.removeFromTop(spacing::tight);chart=canvas.removeFromTop(std::max(0,std::min(canvas.getHeight()-32,canvas.getWidth()/2)));
         canvas.removeFromTop(contentPadding);timelineStatus=canvas.removeFromTop(20);
@@ -705,7 +714,7 @@ private:
     controls::Switch recapture{"Recapture audio",controls::ToggleLabelSide::beforeIndicator};
     controls::Switch automatic{"Detect events",controls::ToggleLabelSide::beforeIndicator};
     controls::Switch autoStop{"Generate on Stop",controls::ToggleLabelSide::beforeIndicator};controls::ActionButton generate{"Generate Swells",controls::CommandIcon::none,true};
-    controls::ConvolutionIrEditor irEditor;ConvolutionIrBinding irBinding;
+    controls::SoundPresetEditor irEditor;SoundPresetBinding irBinding;
     controls::SliderControl sensitivity{{"Event sensitivity (%)", "Adjust how many events are detected in captured audio."}};
     controls::EllipsisLabel captureTitle,automaticLabel,sensitivityLabel;
     controls::WrappedLabel recaptureHelp,automaticHelp;
