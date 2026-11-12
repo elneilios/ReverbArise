@@ -33,4 +33,6 @@ The focused Debug Sound UI test passed in 3.83 s with an asymmetric response fix
 
 ## PR #200 review follow-up
 
-The focused Debug Sound UI and IR binding tests passed in 8.26 s. The chooser fixture exercises a successful Perform import that advances the input generation and checks focus return when the native fixture owns foreground focus. The cache fixture verifies a missing managed WAV is retried after the cooldown and produces peaks when the same file is restored in place. The Release regression and FL Studio results above apply to the earlier revision.
+The focused Debug Sound UI and IR binding tests passed in 8.26 s. The chooser fixture exercises a successful Perform import that advances the input generation and checks focus return when the native fixture owns foreground focus. The cache fixture verifies a missing managed WAV is retried after the cooldown and produces peaks when the same file is restored in place.
+
+The Release PR regression rerun (`./scripts/build.ps1 -Configuration Release -PrRegression`) passed all 15 checks in 10.99 s on `eb8f181` with documentation-only working-tree changes. The earlier FL Studio smoke remains the host evidence. OpenSpec validated the change in strict mode and all 24 canonical specs in standard mode. Strict canonical validation still flags pre-existing requirement-length warnings.
