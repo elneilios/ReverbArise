@@ -14,6 +14,15 @@ struct LearnDryView
     void reset()noexcept{initialized=false;}
     void update(const CaptureSessionSnapshot& source,const CaptureProgress& progress,const SongTime& time)
     {
+        if(progress.freshDomain && progress.kind==CaptureSourceKind::loop)
+        {
+            first=0;
+            last=1;
+            for(const auto& region:progress.ranges)
+                last=std::max(last,static_cast<double>(region.range.startSample)+region.range.frameCount);
+            initialized=false;
+            return;
+        }
         if(source.manifest.loop)
         {
             first=0;

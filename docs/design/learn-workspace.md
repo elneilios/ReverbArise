@@ -182,8 +182,13 @@ state changes. Its absolute sample survives host seeks and extent growth. Mode
 re-entry, project/instance replacement or session restore clears the pinned flag
 and coordinate together; a new editor starts unpinned. Yellow provisional ranges
 remain distinct from accepted source and disappear on failure/cancel/restore.
+In Song, live peaks cover newly mapped audio and ranges admitted for Recapture.
+In Loop, the live waveform grows from the start of the phrase. When a take
+replaces the whole source, the canvas shows its provisional waveform during
+recording and validation. A cancelled or failed take returns the canvas to the
+previous accepted source.
 
-The viewport fits only committed/admitted dry bounds, anchored to song origin
+The Song viewport fits only committed/admitted dry bounds, anchored to song origin
 with quantized bar headroom (seconds fallback). It expands at extent thresholds
 and never shrinks for loops, backwards seeks, cancellation or shorter recapture
 while open. Re-entry recomputes the fit; Perform navigation, selected wet bounds

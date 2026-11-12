@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the integrated Loop guide examples for a four-step Rack take and two FL Studio Pattern passes alongside the waveform paint closeout. The current Perform navigation and waveform inspection guidance covers the canonical display behavior. No additional guide prose was required.",
+  "summary": "Reviewed live waveform capture in Learn. Documented provisional Song and Loop display, protected Song ranges, and restoration of the accepted Loop view after a failed or cancelled take. Existing controls and screenshots remain current. FL Studio display timing has not been verified.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -120,8 +120,8 @@
     },
     {
       "path": "Source/Capture/CaptureProgress.h",
-      "bytes": 4445,
-      "sha256": "9cd967a7b18b1e9fe4f9b26dfecaca1418120abb3e93aa80bc9b79647e31f2f3"
+      "bytes": 6435,
+      "sha256": "ea6a7733bb60dea598cc3b0ea2934d90d09db08f2b478094ce932dbab8d39cc8"
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
@@ -135,8 +135,8 @@
     },
     {
       "path": "Source/Capture/CaptureWorker.cpp",
-      "bytes": 32327,
-      "sha256": "d9326dc1591608b4a012b300cdcbfb91695f4ac037966e6633f0f701616ac294"
+      "bytes": 32565,
+      "sha256": "b7d14e40fa0f01b5e4448e72f29a95e8d999998f24a2cce9fafa651cc085c766"
     },
     {
       "path": "Source/Capture/CaptureWorker.h",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 115739,
-      "sha256": "0d72d0a232830212eef0931143eb4a1db521a30f910de10a9f7c68bdfeb3ec35"
+      "bytes": 115743,
+      "sha256": "c35c3f6923eb1643e665f880231774812109e93251b0fcb194388604d3dc2771"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -920,13 +920,13 @@
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
-      "bytes": 6999,
-      "sha256": "05530ad2534219b55f9abf2189092b0e5ef446e63d650a3f72e236b6c8fea879"
+      "bytes": 7345,
+      "sha256": "9bd1ebc2a2a98fac76e3218e2c32631c61422277440d1c6cfb0902f23b1fdc35"
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 54137,
-      "sha256": "23049f2fe1549eb0cc4994920916b1d3817a3e7bdc4b12216d1fff075a77b607"
+      "bytes": 54920,
+      "sha256": "f1016974032f244b872af415c9c83178401e104f963e5c61fd6cfa866646de54"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126095,
-      "sha256": "3e9fc4e9d577fca270f70f5e2758f99a02777af6e1ac876857ecd8a47afae527"
+      "bytes": 126354,
+      "sha256": "b7dd8f9a5bf19e80bbebc23561f78a28c7e328ed83f478e63dca0b4209784015"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1300,8 +1300,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 51575,
-      "sha256": "d28e3941bbe01fadcbc6ebaa1f412d2a268289da9741891320163b1c53cc4d1b"
+      "bytes": 52675,
+      "sha256": "c9972646ebf58813398833ee91190af60ec62741868a4594f6f39573d36e2b73"
     }
   ]
 }

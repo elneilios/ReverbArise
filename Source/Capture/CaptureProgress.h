@@ -10,6 +10,9 @@ struct CaptureProgress
 {
     static constexpr size_t maxRanges=4096,maxPeaks=65536;
     uint64_t pass=0,epoch=0;
+    CaptureSourceKind kind=CaptureSourceKind::song;
+    double sampleRate=0;
+    bool freshDomain=false;
     bool limited=false;
     std::vector<CaptureOverviewRange> ranges;
     size_t bytes() const noexcept
@@ -18,6 +21,7 @@ struct CaptureProgress
     {
         if(limited || !count || start>INT64_MAX-count || !std::all_of(pcm,pcm+size_t(count)*2,[](float x){return std::isfinite(x);}))return;
         const auto end=start+count;
+        const bool appendOnly=ranges.empty() || start>=ranges.back().range.startSample+static_cast<int64_t>(ranges.back().range.frameCount);
         std::vector<std::pair<int64_t,int64_t>> admitted{{start,end}};
         const auto subtract=[&](int64_t a,int64_t b)
         {
@@ -28,13 +32,61 @@ struct CaptureProgress
         if(!replace)
         {
             // The exact same first-received/protected-source rule as stagePass.
-            for(const auto& r:committed.ranges)subtract(r.startSample,r.startSample+static_cast<int64_t>(r.frameCount));
-            for(const auto& r:ranges)subtract(r.range.startSample,r.range.startSample+static_cast<int64_t>(r.range.frameCount));
+            for(const auto& r:committed.ranges)
+            {
+                if(r.startSample>=end || admitted.empty())break;
+                const auto last=r.startSample+static_cast<int64_t>(r.frameCount);
+                if(last>start)subtract(r.startSample,last);
+            }
+            if(!appendOnly)for(const auto& r:ranges)subtract(r.range.startSample,r.range.startSample+static_cast<int64_t>(r.range.frameCount));
         }
-        auto next=ranges;
+        if(admitted.empty())return;
+        const auto append=[&](auto& destination,int64_t a,int64_t b)
+        {
+            const auto* input=pcm+static_cast<size_t>(a-start)*2;
+            const auto coverage=std::all_of(input,input+static_cast<size_t>(b-a)*2,[](float x){return x==0;})
+                ? CaptureCoverageKind::silence : CaptureCoverageKind::audio;
+            if(!appendOnly || destination.empty() || destination.back().range.kind!=coverage
+                || destination.back().range.startSample+static_cast<int64_t>(destination.back().range.frameCount)!=a)
+            {
+                CaptureOverviewRange region;
+                region.range={a,0,coverage};
+                destination.push_back(std::move(region));
+            }
+            auto& region=destination.back();
+            region.range.frameCount+=static_cast<uint64_t>(b-a);
+            if(coverage==CaptureCoverageKind::silence)return;
+            for(auto x=a;x<b;)
+            {
+                constexpr uint32_t binFrames=512;
+                const bool extend=!region.peaks.empty() && region.peaks.back().frameCount<binFrames
+                    && region.peaks.back().startSample+region.peaks.back().frameCount==x;
+                const auto capacity=extend?binFrames-region.peaks.back().frameCount:binFrames;
+                const auto frames=static_cast<uint32_t>(std::min<int64_t>(capacity,b-x));
+                const auto* at=pcm+static_cast<size_t>(x-start)*2;
+                const auto [low,high]=std::minmax_element(at,at+size_t(frames)*2);
+                if(extend)
+                {
+                    auto& peak=region.peaks.back();
+                    peak.frameCount+=frames;
+                    peak.minimum=std::min(peak.minimum,*low);
+                    peak.maximum=std::max(peak.maximum,*high);
+                }
+                else region.peaks.push_back({x,frames,*low,*high});
+                x+=frames;
+            }
+        };
+        if(appendOnly)
+        {
+            // Most blocks extend the take. Keep the existing bins in place and
+            // fill the last bin across callback boundaries.
+            for(auto [a,b]:admitted)append(ranges,a,b);
+            enforceLimit();
+            return;
+        }
+        std::vector<CaptureOverviewRange> next;
         if(replace)
         {
-            next.clear();
             for(const auto& old:ranges)
             {
                 const auto a=old.range.startSample,b=a+static_cast<int64_t>(old.range.frameCount);
@@ -50,18 +102,8 @@ struct CaptureProgress
                 if(a<start)retain(a,start);if(b>end)retain(end,b);
             }
         }
-        for(auto [a,b]:admitted)
-        {
-            CaptureOverviewRange r;r.range.startSample=a;r.range.frameCount=static_cast<uint64_t>(b-a);
-            const auto* input=pcm+static_cast<size_t>(a-start)*2;
-            r.range.kind=std::all_of(input,input+static_cast<size_t>(b-a)*2,[](float x){return x==0;})?CaptureCoverageKind::silence:CaptureCoverageKind::audio;
-            if(r.range.kind==CaptureCoverageKind::audio)for(auto x=a;x<b;x+=512)
-            {
-                const auto frames=static_cast<uint32_t>(std::min<int64_t>(512,b-x));const auto* at=pcm+static_cast<size_t>(x-start)*2;
-                const auto bounds=std::minmax_element(at,at+size_t(frames)*2);r.peaks.push_back({x,frames,*bounds.first,*bounds.second});
-            }
-            next.push_back(std::move(r));
-        }
+        else next=ranges;
+        for(auto [a,b]:admitted)append(next,a,b);
         std::sort(next.begin(),next.end(),[](const auto& a,const auto& b){return a.range.startSample<b.range.startSample;});
         std::vector<CaptureOverviewRange> merged;
         for(auto& r:next)
@@ -70,9 +112,14 @@ struct CaptureProgress
             {auto& back=merged.back();back.range.frameCount+=r.range.frameCount;back.peaks.insert(back.peaks.end(),r.peaks.begin(),r.peaks.end());}
             else merged.push_back(std::move(r));
         }
-        size_t peaks=0;for(const auto& r:merged)peaks+=r.peaks.size();
-        if(merged.size()>maxRanges || peaks>maxPeaks){limited=true;ranges.clear();return;}
         ranges=std::move(merged);
+        enforceLimit();
+    }
+private:
+    void enforceLimit()
+    {
+        size_t peaks=0;for(const auto& r:ranges)peaks+=r.peaks.size();
+        if(ranges.size()>maxRanges || peaks>maxPeaks){limited=true;ranges.clear();}
     }
 };
 static_assert(sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<4*1024*1024);

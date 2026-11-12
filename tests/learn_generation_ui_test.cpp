@@ -301,6 +301,22 @@ static void loopUiCases(bool review)
     fixture.through(fixture.marker(16));
     editor.refresh();
     REQUIRE(arm->getToggleState() && status->getText().contains("Recording Loop"));
+    fixture.through(fixture.marker(17),true);
+    const auto liveFrames=fixture.cursor-fixture.marker(16);
+    await([&]{return m3::ui::learnProvisionalFrames(processor.getCaptureProgress())==liveFrames;});
+    editor.refresh();
+    REQUIRE(processor.getCaptureSnapshot().reference.isEmpty());
+    REQUIRE(workspace->timelineStatusText().startsWith("Recording |"));
+    REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(liveFrames)));
+    const auto live=processor.getCaptureProgress();
+    const auto audible=std::find_if(live.ranges.begin(),live.ranges.end(),[](const auto& region){return !region.peaks.empty();});
+    REQUIRE(audible!=live.ranges.end());
+    const auto coverage=workspace->coverageAt(audible->range.startSample);
+    REQUIRE(coverage.provisional && coverage.kind=="Audio");
+    fixture.through(fixture.marker(18),true);
+    await([&]{return m3::ui::learnProvisionalFrames(processor.getCaptureProgress())>liveFrames;});
+    editor.refresh();
+    REQUIRE(workspace->dryViewport().second>liveFrames);
     fixture.through(fixture.marker(20)-fixture.frames,true);
     processor.holdCaptureValidationForTesting(true);
     fixture.through(fixture.marker(20));
@@ -311,6 +327,7 @@ static void loopUiCases(bool review)
     REQUIRE(processor.flushCaptureForTesting());
     const auto accepted=processor.getCaptureSnapshot();
     REQUIRE(accepted.sourceKind()==CaptureSourceKind::loop);
+    REQUIRE(processor.getCaptureProgress().ranges.empty());
     const auto markers=[&]{return processor.swellEngine().snapshot().learnGeneration;};
     await([&]{
         const auto view=markers();

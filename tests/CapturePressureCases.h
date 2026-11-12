@@ -52,7 +52,16 @@ inline void capturePressureCase(int seconds,int rate,int frames,bool realtime,bo
         if(realtime && !fault && at>rate && at%(rate*5)<frames)worker.delayNextStageForTesting(5);
     }
     REQUIRE(worker.flush(60000));const auto previewLimited=worker.progressSnapshot().limited;
-    if(frames==64 && !fault && !probe)REQUIRE(previewLimited);
+    if(frames==64 && !fault && !probe)
+    {
+        REQUIRE(!previewLimited);
+        awaitCapture([&]{
+            const auto preview=worker.progressSnapshot();
+            if(preview.ranges.empty())return false;
+            const auto& last=preview.ranges.back().range;
+            return last.startSample+static_cast<int64_t>(last.frameCount)==int64_t(seconds)*rate;
+        });
+    }
     REQUIRE(flow.stop(pass));REQUIRE(worker.flush(60000));
     const auto elapsed=std::chrono::duration<double>(std::chrono::steady_clock::now()-began).count();
     const auto snapshot=worker.snapshot();const auto metrics=worker.metrics();
