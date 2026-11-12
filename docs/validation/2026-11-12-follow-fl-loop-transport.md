@@ -43,3 +43,7 @@ The two in-block downbeats were 140,488 frames apart. The processor regression u
 On `7776f4c` with the pre-roll fix applied, the normal Windows MSVC Release build passed the standard PR regression set (15/15) and the Loop playback and Rack replay checks (3/3).
 
 The owner confirmed on installed Release `3f1533b` that PAT mode accepts the one-bar take after the first wrap in the same 82 BPM project. With the saved start cleared and a matching one-bar Playlist selection in Song mode, the swells started without Cue and stayed aligned across the wrap. These desktop checks and the automated seek assertions complete task 4.2.
+
+## Merge verification
+
+After integrating `main` at `46068f8`, Windows MSVC Release checks passed on `923e393` with the OpenSpec archive edits in progress. The standard PR regression set passed 15/15, the Loop playback and Rack replay checks passed 3/3, and the Perform UI checks passed 3/3. OpenSpec validated all 24 canonical specs after the sync.

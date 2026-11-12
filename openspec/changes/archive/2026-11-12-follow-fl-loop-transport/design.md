@@ -2,7 +2,7 @@
 
 ## Context
 
-The processor already receives FL Studio sample position, PPQ, tempo, meter and declared repeat bounds. It checks exact wraps for continuity before handing timing to Loop playback. The FL Studio host probe established that the effect cannot reliably distinguish Song and Pattern modes. Rack's verified inputs are Clock and Phrase, which supply relative phase. See [FL Studio probe](../../../docs/validation/2026-11-05-issue-1-spike-outcome.md) and [Loop host timing](../../../docs/development/loop-host-admission.md).
+The processor already receives FL Studio sample position, PPQ, tempo, meter and declared repeat bounds. It checks exact wraps for continuity before handing timing to Loop playback. The FL Studio host probe established that the effect cannot reliably distinguish Song and Pattern modes. Rack's verified inputs are Clock and Phrase, which supply relative phase. See [FL Studio probe](../../../../docs/validation/2026-11-05-issue-1-spike-outcome.md) and [Loop host timing](../../../../docs/development/loop-host-admission.md).
 
 ## Goals / Non-Goals
 
