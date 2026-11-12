@@ -33,3 +33,11 @@ The remaining desktop check is to confirm that a matching Playlist repeat auto-p
 ## PR review fixes
 
 On `739bf2e` with the review fixes applied, the Windows MSVC Release wrapper passed Loop playback and Rack replay (3/3), the standard PR regression set (15/15) and the three Perform UI checks (3/3). The new assertions cover a queued placement joining on the first wet sample after a seek, a local or sample-zero MIDI Stop suppressing entry across that seek, and a stale stopped playhead preserving the previous saved start.
+
+## Pattern capture with pre-roll
+
+The owner reproduced the End on repeat cancellation in FL Studio PAT mode at 82 BPM and 48 kHz. The traced build of `7776f4c` recorded zero dropped rows. The first playing callback started at sample 0 with the declared downbeat at sample 96. At the wrap, the previous callback ended at sample 140,488 against a declared end of 140,584. The next callback began at sample −96 against a declared start of 0. Both callbacks were 96 samples ahead of the same musical boundary after accounting for the host's changed sample origin.
+
+The two in-block downbeats were 140,488 frames apart. The processor regression uses the measured timing and asserts a four-beat take of that exact length. Existing processor fixtures still cover a changed repeat range and an early seek.
+
+On `7776f4c` with the pre-roll fix applied, the normal Windows MSVC Release build passed the standard PR regression set (15/15) and the Loop playback and Rack replay checks (3/3).

@@ -66,6 +66,12 @@ The system SHALL use a verified capture grid for FL Studio Learn. When manual Cu
 - **THEN** Learn counts the wrapped beat on its continuous capture timeline and settles Duration or End Signal when that beat completes the take
 - **AND** an early jump or a change to the declared repeat bounds cannot qualify as a seamless repeat
 
+#### Scenario: FL Studio reports the repeat downbeat inside a pre-roll callback
+
+- **WHEN** the declared repeat downbeat is inside the callback and consecutive passes report the same musical range, phase and length after accounting for a shifted sample origin
+- **THEN** Learn uses that downbeat to start or close the take and captures exactly the audio between the two downbeats
+- **AND** a seek with a mismatched endpoint phase still interrupts the take
+
 #### Scenario: MIDI drives an End Signal take
 
 - **WHEN** Learn receives the configured Start/Arm note in End Signal mode

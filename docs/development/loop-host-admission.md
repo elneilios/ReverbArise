@@ -221,10 +221,13 @@ and reports overload if the resulting float sum exceeds full scale.
 FL Studio can declare a repeating range for Pattern playback. Learn treats
 the transition as continuous only when the host stays playing, the timing
 map and repeat bounds match, and consecutive callbacks meet the declared end
-and start exactly. Duration and End Signal count beats on the capture
-timeline, so a take can finish at the wrap without appending audio from the
-next pass. Early seeks and interrupted takes still cancel. Perform checks
-the same boundary against its independent live observations. A verified wrap
+and start at the same repeat phase. When FL Studio supplies a short pre-roll
+before beat one, Learn verifies the declared musical range and the matching
+callback offsets from its endpoints, then cuts the take at the in-block
+downbeat. Duration and End Signal count beats on the capture timeline, so a
+take can finish at the wrap without appending audio from the next pass.
+Early seeks and interrupted takes still cancel. Perform checks the exact
+declared sample boundary against its independent live observations. A verified wrap
 keeps Cue and playback scheduled on the running audio cursor. An early jump
 to the repeat start still cancels Cue and fades active wet.
 

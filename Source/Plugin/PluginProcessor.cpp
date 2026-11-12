@@ -531,7 +531,8 @@ void PreverbAudioProcessor::processLoopCapture(const juce::AudioBuffer<float>& b
         {
             loopTakeRoute = flStudioLoopHost ? LoopRoute::host : LoopRoute::clock;
             const bool repeatStart = flStudioLoopHost
-                ? loopHostBlock.repeatStart && offset == 0 : (roles & phrase) != 0;
+                ? loopHostBlock.repeatStart && loopHostBlock.beat && offset == loopHostBlock.beat->offset
+                : (roles & phrase) != 0;
             if (loopTake.start() < 0)
             {
                 if (loopTake.endOnRepeat() && !repeatStart) continue;
