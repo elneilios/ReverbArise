@@ -29,3 +29,7 @@ FL Studio verification covered the Pattern and placement workflows reported abov
 On `7aa11d9` with the added test fixtures, the Windows MSVC Release wrapper passed the Loop playback and recorded Rack replay checks (3/3), the Loop Perform UI check (1/1), and the standard PR regression set (15/15). The fixtures also cover omitted repeat bounds, a missing playhead position preserving the saved start, placement migration and source replacement, the final tail after Stop, restart, timing-loss fade, and the unsupported-host footer.
 
 The remaining desktop check is to confirm that a matching Playlist repeat auto-plays across the wrap with the saved start cleared, then seek into a placed Loop and confirm the wet resumes at the destination phase. The existing FL Studio owner acceptance remains recorded above.
+
+## PR review fixes
+
+On `739bf2e` with the review fixes applied, the Windows MSVC Release wrapper passed Loop playback and Rack replay (3/3), the standard PR regression set (15/15) and the three Perform UI checks (3/3). The new assertions cover a queued placement joining on the first wet sample after a seek, a local or sample-zero MIDI Stop suppressing entry across that seek, and a stale stopped playhead preserving the previous saved start.

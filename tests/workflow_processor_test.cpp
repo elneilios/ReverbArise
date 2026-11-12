@@ -1052,6 +1052,9 @@ static void flStudioLoopProcessorCases()
     tick();
     REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
     REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    juce::Thread::sleep(260);
+    REQUIRE(!plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
     reportsPpq=false;
     tick();
     REQUIRE(!plugin.setLoopPlacementFromPlayhead(target));

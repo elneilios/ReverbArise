@@ -266,13 +266,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     const bool midiCue = canPlay && externalAllowed
         && std::any_of(observations.samples.begin(), observations.samples.begin() + observations.size,
                        [](const auto& event){return (event.roles & loop_capture::cue) != 0;});
-    std::optional<juce::SpinLock::ScopedTryLockType> fence;
-    if (canPlay && (midiCue || (local & loop_capture::cue)
-        || (schedule.route != Route::manual && !timelineSuppressed && !scheduler.active())))
-        fence.emplace(cueFence);
     const auto reset = resetEpoch.load(std::memory_order_acquire);
-    // Hold through status publication so Storage sees any Cue admitted by this block.
-    const bool canCue = fence && fence->isLocked() && commandEpoch == reset;
     const bool sourceChanged = seenRevision != 0 && (seenGeneration != generation || seenRevision != revision);
     const bool timingInterrupted = discontinuity || (wasObserving && !canObserve) || reset != seenReset;
     const bool routeChanged = schedule != previousSchedule;
@@ -284,6 +278,10 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
     if (!hostPlaying) timelineSuppressed = false;
     if (interrupted || !canPlay) timeline.reset();
+    constexpr auto stopRoles = finish | stop | LoopCueScheduler::finishCommand;
+    if (hostPlaying && (schedule.route != Route::manual || previousSchedule.route != Route::manual)
+        && (local & stopRoles))
+        timelineSuppressed = true;
     previousSchedule = schedule;
     statusRoute.store(schedule.route,std::memory_order_release);
     statusPlacementAvailable.store(schedule.route == Route::placement && compatibleGrid && schedule.period > 0,
@@ -298,6 +296,12 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if (std::abs(origin) < INT64_MAX / 4 && cursor < INT64_MAX / 4)
             timeline = LoopCueScheduler::Timeline{static_cast<int64_t>(origin),schedule.period};
     }
+    std::optional<juce::SpinLock::ScopedTryLockType> fence;
+    if (canPlay && (midiCue || (local & cue) || (timeline && !timelineSuppressed && !scheduler.active())))
+        fence.emplace(cueFence);
+    // Hold through status publication so Storage sees any Cue admitted by this block.
+    const bool canCue = fence && fence->isLocked() && commandEpoch == reset
+        && resetEpoch.load(std::memory_order_acquire) == reset;
     if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
     if (!validFrames) { cursor = 0; signalPeaks.publish(0,0,frames,rate); return; }
     const auto observePlaylistPhrase = [&](uint16_t roles, int offset)
@@ -372,15 +376,14 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if (canObserve && event < observations.size && observations.samples[event].sampleOffset == offset)
             roles = observations.samples[event++].roles;
         if (!canPlay || !externalAllowed) roles &= ~(cue | finish | stop);
+        if (hostPlaying && schedule.route != Route::manual && (roles & stopRoles))
+            timelineSuppressed = true;
         if (offset == 0 && !interrupted && canPlay) roles |= local;
         if (!canCue) roles &= ~cue;
         if (offset == 0 && interrupted && (!playlist || discontinuity))
             roles = autoClock && (roles & captureClock) ? roles & (captureClock | rackBeatMask | bar | phrase) : 0;
         if (schedule.route != Route::manual)
-        {
-            if (roles & (finish | stop | LoopCueScheduler::finishCommand)) timelineSuppressed = true;
             roles &= ~cue;
-        }
         if (roles & phrase) observePlaylistPhrase(roles,offset);
         const auto plan = held >= 0 ? slots[held].data.get() : current;
         const auto playingBefore = scheduler.active() && scheduler.state() != State::queued;

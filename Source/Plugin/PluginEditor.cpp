@@ -1134,7 +1134,7 @@ void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnab
     else loopStart.setState("No start set");
     loopStart.action().setEnabled(playlist);
     loopStart.setActionHelp(!playlist?"Requires a host song position"
-        :loop_capture::HostGrid::supports(diagnostics.songTime())
+        :diagnostics.hasCurrentLoopPlacementPosition()
             ?"Set Loop beat one to the Playlist playhead. Right-click or press Shift+F10 to enter or clear the start."
             :"Playlist position unavailable. Right-click or press Shift+F10 to enter a position.");
     const auto transportPlaying=!playlist || diagnostics.isPlaying;

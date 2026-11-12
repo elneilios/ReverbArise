@@ -765,13 +765,17 @@ void flStudioScheduleCases()
         return position >= entry.start && position < entry.end
             ? entry.audio->samples[static_cast<size_t>(position-entry.start)*2] : 0.f;
     };
+    using PlaybackState=LoopCueScheduler::State;
     const auto block=[&](LoopPlayback& playback,int64_t hostSample,int frames,LoopPlayback::HostSchedule schedule,
-                          const auto& oracle,bool hostPlaying=true,bool validTiming=true){
+                          const auto& oracle,bool hostPlaying=true,bool validTiming=true,
+                          bool discontinuity=false,uint16_t firstRoles=0){
         std::array<float,256> left{},right{};
         const SongTime time{validTiming,hostSample,static_cast<double>(hostSample)/24000.0,48000,120,4,4};
+        MidiObservations events;
+        if(firstRoles)events.samples[events.size++]={0,firstRoles};
         {AudioAllocationGuard guard;
-            playback.process(left.data(),right.data(),frames,{},48000,1,1,LoopPlayback::Access::perform,
-                             false,{},time,schedule,hostPlaying);}
+            playback.process(left.data(),right.data(),frames,events,48000,1,1,LoopPlayback::Access::perform,
+                             discontinuity,{},time,schedule,hostPlaying);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
         for(int i=0;i<frames;++i)
         {
@@ -798,10 +802,24 @@ void flStudioScheduleCases()
         pos+=frames;
     }
     REQUIRE(placed->status().playback==LoopCueScheduler::State::repeating);
+    const auto silent=[](int64_t){return 0.f;};
     auto seeked=create();
-    block(*seeked,placement-2,2,placementSchedule,placedWet);
-    REQUIRE(seeked->status().playback==LoopCueScheduler::State::leadIn);
+    block(*seeked,0,2,placementSchedule,silent);
+    REQUIRE(seeked->status().playback==PlaybackState::queued);
+    block(*seeked,placement-4,4,placementSchedule,placedWet,true,true,true);
+    REQUIRE(seeked->status().playback==PlaybackState::leadIn);
     block(*seeked,placement,8,placementSchedule,placedWet);
+
+    for(const auto stopRole:{uint16_t{},uint16_t{finish},uint16_t{stop}})
+    {
+        auto stopped=create();
+        block(*stopped,0,2,placementSchedule,silent);
+        REQUIRE(stopped->status().playback==PlaybackState::queued);
+        if(!stopRole)stopped->requestFinish();
+        block(*stopped,placement-4,4,placementSchedule,silent,true,true,true,stopRole);
+        block(*stopped,placement,32,placementSchedule,silent);
+        REQUIRE(stopped->status().playback==PlaybackState::standby);
+    }
 
     auto finishing=create();
     block(*finishing,placement+period-16,4,placementSchedule,placedWet);
@@ -809,7 +827,6 @@ void flStudioScheduleCases()
     const auto onlyFirstPass=[&](int64_t sample){return expected(sample-placement);};
     block(*finishing,placement+period-12,32,placementSchedule,onlyFirstPass);
     REQUIRE(finishing->status().playback==LoopCueScheduler::State::standby);
-    const auto silent=[](int64_t){return 0.f;};
     block(*finishing,placement+period+20,32,placementSchedule,silent);
     block(*finishing,0,32,{},silent,false);
     block(*finishing,placement,32,placementSchedule,placedWet);

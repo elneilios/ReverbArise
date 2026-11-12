@@ -112,8 +112,9 @@ report these bounds for a Pattern or a Playlist repeat. A saved Playlist start
 takes priority. Manual Cue remains available when there is no placement and
 the repeat is absent or ineligible.
 
-Set Loop Start uses the reported Playlist playhead while stopped or playing.
-Its context menu offers explicit bar-and-beat entry and clearing. A
+Set Loop Start uses a current reported Playlist playhead while stopped or
+playing. If the host stops sending position updates, the saved start is
+preserved. The context menu offers explicit bar-and-beat entry and clearing. A
 Clock/Phrase-only Rack host leaves Set Loop Start disabled.
 
 | MIDI number | FL Studio note | Rack note | Role |

@@ -47,6 +47,12 @@ struct HostPositionDiagnostics
         return {positionAvailable && samplePositionAvailable && ppqPositionAvailable && tempoAvailable && meterAvailable,
                 samplePosition, ppqPosition, sampleRate, bpm, numerator, denominator};
     }
+
+    bool hasCurrentLoopPlacementPosition() const noexcept
+    {
+        return loop_capture::HostGrid::supports(songTime())
+            && std::chrono::steady_clock::now() - observedAt < std::chrono::milliseconds(250);
+    }
 };
 
 class PreverbAudioProcessor final : public juce::AudioProcessor, private juce::AsyncUpdater

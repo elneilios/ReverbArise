@@ -997,8 +997,7 @@ bool PreverbAudioProcessor::setLoopPlacement(LoopPlacementTarget target, std::op
 bool PreverbAudioProcessor::setLoopPlacementFromPlayhead(LoopPlacementTarget target)
 {
     const auto position=getHostPositionDiagnostics();
-    if (!loop_capture::HostGrid::supports(position.songTime())
-        || (position.isPlaying && std::chrono::steady_clock::now()-position.observedAt >= std::chrono::milliseconds(250)))
+    if (!position.hasCurrentLoopPlacementPosition())
         return false;
     return setLoopPlacement(target,m3::LoopPlacement{position.ppqPosition});
 }
