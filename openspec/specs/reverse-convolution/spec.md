@@ -184,7 +184,8 @@ Audition SHALL use the accepted generated starting gains and explicit monitoring
 - **THEN** the new monitoring gain is determined by the accepted starting gains, Level and Live Wet
 
 ### Requirement: Preview validity follows its inputs
-The system SHALL identify each result by source content dependencies, sample interval, prepared IR, and render rate. Selection/IR changes, overlapping recapture that changes source content, capture Clear, or host sample-rate/tempo/meter changes SHALL invalidate affected work and stop audition. Unrelated or sample-identical recapture SHALL preserve validity. Restored results SHALL be validated against saved dependencies before becoming current.
+
+The system SHALL identify each result by source content dependencies, sample interval, prepared IR, and render rate. Selection changes, overlapping recapture that changes source content, capture Clear, or host sample-rate/tempo/meter changes SHALL invalidate affected work and stop audition. Unrelated or sample-identical recapture SHALL preserve validity. Restored results SHALL be validated against saved dependencies before becoming current. Compatible IR replacements SHALL follow the accepted audition handover in swell-editing.
 
 #### Scenario: Overlapping recapture invalidates a preview
 - **GIVEN** a ready result depends on a captured source interval
@@ -202,6 +203,10 @@ The system SHALL identify each result by source content dependencies, sample int
 #### Scenario: Unchanged recapture
 - **WHEN** recapture changes storage revisions but the selected source samples are identical
 - **THEN** a result with otherwise unchanged dependencies stays current
+
+#### Scenario: Pending replacement has no accepted preview
+- **WHEN** an IR selection is pending and there is no compatible accepted preview
+- **THEN** the candidate remains unavailable to Audition until its complete render and monitoring mix are ready
 
 ### Requirement: Requested overlap has genuine rendered wet support
 The system SHALL prepare sufficient real wet support for an editable endpoint beyond dry arrival. Where current support is insufficient, it SHALL disclose and verify effective captured render-source extension while preserving the base selection and dry timing. It SHALL not claim padding or stretched old audio as newly rendered wet. Missing coverage or resource limits SHALL retain the request with an explanation.
