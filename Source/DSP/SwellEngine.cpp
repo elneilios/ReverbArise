@@ -1149,10 +1149,11 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         const auto now=juce::Time::getMillisecondCounterHiRes();
         if(!offlineActive.load() && now-lastPageService>=40){lastPageService=now;
             {const juce::ScopedLock guard(lock);activeJobBytes=reservation;}
-            try{prepareTransport(contextProvider());}
+            bool budgetFailure=false;
+            try{prepareTransport(contextProvider(),&budgetFailure);}
             catch(...){const juce::ScopedLock guard(lock);activeJobBytes=0;throw;}
             {const juce::ScopedLock guard(lock);activeJobBytes=0;
-                if((replacingIR || retainedIR.contains(requested.id)) && liveStatus.containsIgnoreCase("budget")){
+                if((replacingIR || retainedIR.contains(requested.id)) && budgetFailure){
                     pagePressure=true;failure("IR replacement budget unavailable. Retry while stopped or choose a shorter response.");}}}
         return superseded() || pagePressure || requestEnded();};
     if(requested.frozen){

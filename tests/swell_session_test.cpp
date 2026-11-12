@@ -38,6 +38,26 @@ int main() { return runTest([]
         REQUIRE(swell.shape == beforeOverflow && !swell.wetTimingIntent);
     }
     {
+        Swell swell;
+        swell.shape.automaticStart=false;
+        swell.shape.startOffset=-150;
+        swell.shape.endOffset=0;
+        swell.shape.fadeOut=120;
+        REQUIRE(fitWetShapeToResponse(swell,-100,1,error));
+        const auto gesture=swell.shape;
+        REQUIRE(gesture.fadeOut==99);
+        auto first=gesture;
+        first.endOffset=-20;
+        REQUIRE(setShape(swell,first,-100,1,error,WetTimingEdit::end));
+        REQUIRE(swell.shape.fadeOut==79);
+        auto second=gesture;
+        second.endOffset=-10;
+        REQUIRE(setShape(swell,second,-100,1,error,WetTimingEdit::end));
+        REQUIRE(swell.shape.fadeOut==89 && swell.wetTimingIntent && swell.wetTimingIntent->fadeOut==120);
+        REQUIRE(fitWetShapeToResponse(swell,-150,1,error));
+        REQUIRE(swell.shape.endOffset==-10 && swell.shape.fadeOut==120);
+    }
+    {
         Session fresh,decoded;juce::String encoded;
         REQUIRE(!fresh.autoGenerateOnStop);
         for(bool automatic:{false,true})for(bool stop:{false,true})

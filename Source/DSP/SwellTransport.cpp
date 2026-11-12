@@ -156,14 +156,25 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
     {
         const juce::ScopedLock guard(lock);
         auto swells=model.swells;
-        for(auto& swell:swells)
+        const auto acceptingRenders=std::any_of(swells.begin(),swells.end(),
+            [](const auto& swell){return swell.phase==Phase::headroom;});
+        if(acceptingRenders)
         {
-            const auto replacement=irReplacements.find(swell.id);
-            if(replacement!=irReplacements.end() && replacement->second.candidate
-                && irReplacementCurrentLocked(*replacement->second.candidate))
+            // Ordinary renders publish immediately. Measure them with the
+            // accepted mix, then measure staged swaps against those gains.
+            resetStagedIRHeadroomLocked();
+        }
+        else
+        {
+            for(auto& swell:swells)
             {
-                swell=*replacement->second.candidate;
-                staged.insert(swell.id);
+                const auto replacement=irReplacements.find(swell.id);
+                if(replacement!=irReplacements.end() && replacement->second.candidate
+                    && irReplacementCurrentLocked(*replacement->second.candidate))
+                {
+                    swell=*replacement->second.candidate;
+                    staged.insert(swell.id);
+                }
             }
         }
         if(!staged.empty() && std::any_of(swells.begin(),swells.end(),[](const auto& swell){return swell.phase==Phase::headroom;}))
@@ -583,8 +594,9 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
         {const juce::ScopedLock guard(lock);liveStatus=offlineWarning.isNotEmpty()?offlineWarning:juce::String("Offline export: all available wet rendered");offlineStatus=liveStatus;}
     }catch(const std::exception& e){fail(e.what());}
 }
-void SwellEngine::prepareTransport(const PreviewContext& context)
+void SwellEngine::prepareTransport(const PreviewContext& context,bool* budgetFailure)
 {
+    if(budgetFailure)*budgetFailure=false;
     if (context.capture.sourceKind() == CaptureSourceKind::loop)
     {
         prepareLoopTransport(context);
@@ -690,6 +702,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(!checkedSubtract(loopFrom,behind,pub->loopStart) || !checkedAdd(loopFrom,frames,pub->loopEnd)){observation.result="Loop range overflow";return;}}
     const auto anySolo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     SwellAssetStore store(instanceRoot(context.capture.manifest));juce::String error;uint64_t reserved=8ULL*1024*1024;size_t unavailable=0;
+    bool pageBudgetLimited=false;
     for(const auto& w:session.swells){if(cancel())return;
         if(!isAudible(w,anySolo) || !w.render.present())continue;
         LiveCache cached;size_t slot;uint64_t memberGeneration;bool recovered=false;
@@ -705,7 +718,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(held.contains(w.id) && (!store.verify(w.ir,error) || !store.verify(w.render,error))){
             const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}observation.result=error;return;}
         if(cached.key!=key){
-            if(available(reserved)<512ULL*1024){error="256 MiB budget unavailable for bounded live verification scratch";break;}
+            if(available(reserved)<512ULL*1024){pageBudgetLimited=true;error="256 MiB budget unavailable for bounded live verification scratch";break;}
             if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)){
                 if(!cancel()){
                     if(held.contains(w.id)){const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}}
@@ -718,7 +731,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         entry.version=w.inputGeneration;
         const auto first=std::max(a,pub->start),last=std::min(b,pub->end);
         if(first<last){const auto bytes=static_cast<uint64_t>(last-first)*2*sizeof(float);
-            if(bytes>available(reserved+65536)){error="256 MiB budget unavailable for live pages";break;}
+            if(bytes>available(reserved+65536)){pageBudgetLimited=true;error="256 MiB budget unavailable for live pages";break;}
             entry.audio=cached.main.lock();
             if(!entry.audio || entry.audio->start!=first || entry.audio->frames()!=static_cast<size_t>(last-first)){
                 auto audio=std::make_shared<WetRender>();float ignored=0;
@@ -727,7 +740,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         }
         const auto loopFirst=std::max(a,pub->loopStart),loopLast=std::min(b,pub->loopEnd);
         if(pub->loopEnd>pub->loopStart && loopFirst<loopLast){const auto bytes=static_cast<uint64_t>(loopLast-loopFirst)*2*sizeof(float);
-            if(bytes>available(reserved+65536)){error="256 MiB budget unavailable for loop destination pages";break;}
+            if(bytes>available(reserved+65536)){pageBudgetLimited=true;error="256 MiB budget unavailable for loop destination pages";break;}
             entry.loopAudio=cached.loop.lock();
             if(!entry.loopAudio || entry.loopAudio->start!=loopFirst || entry.loopAudio->frames()!=static_cast<size_t>(loopLast-loopFirst)){
                 auto audio=std::make_shared<WetRender>();float ignored=0;
@@ -754,9 +767,10 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         || (latest.time.sample>=pub->loopStart && latest.time.sample<pub->loopEnd))){
         observation.result="Live position left candidate coverage; retry";return;}
     const juce::ScopedLock guard(lock);if(cancel())return;
-    if(error.isNotEmpty()){for(const auto& id:staged)failIRReplacementLocked(id,error);liveStatus=error;observation.result=error;return;}
+    if(error.isNotEmpty()){if(budgetFailure)*budgetFailure=pageBudgetLimited;
+        for(const auto& id:staged)failIRReplacementLocked(id,error);liveStatus=error;observation.result=error;return;}
     const auto start=pub->start,end=pub->end;
-    if(pub->bytes()>available()){liveStatus="256 MiB live publication budget exceeded";
+    if(pub->bytes()>available()){if(budgetFailure)*budgetFailure=true;liveStatus="256 MiB live publication budget exceeded";
         for(const auto& id:staged)failIRReplacementLocked(id,liveStatus);observation.result=liveStatus;return;}
     if(livePublicationFail.exchange(false)){++livePublicationFailures;observation.result="Injected transient live publication miss";return;}
     if(live.publish(std::move(pub))){commitIRReplacementsLocked(staged,std::move(session.importedIRs));for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;observation.preparedRevision=revision;observation.result="Published complete window";liveWindowStart=start;liveWindowEnd=end;

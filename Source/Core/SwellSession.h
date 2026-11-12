@@ -184,7 +184,9 @@ inline bool auditionDryEnd(const Swell& w,double rate,double seconds,bool isolat
 bool requestedShapeBounds(const Swell&, int64_t rawStart, int64_t& a, int64_t& b) noexcept;
 bool shapeBounds(const Swell&, int64_t rawStart, int64_t rawEnd, int64_t& a, int64_t& b, juce::String& error);
 bool fitWetShapeToResponse(Swell&, int64_t rawStart, int64_t rawEnd, juce::String& error);
-bool setShape(Swell&, Shape, int64_t rawStart, int64_t rawEnd, juce::String& error);
+enum class WetTimingEdit { infer, start, end, fadeIn, fadeOut };
+bool setShape(Swell&, Shape, int64_t rawStart, int64_t rawEnd, juce::String& error,
+              WetTimingEdit edit=WetTimingEdit::infer);
 bool fullShape(Swell&, int64_t rawStart, int64_t rawEnd, juce::String& error);
 void resetShape(Swell&);
 bool validate(const Session&, juce::String& error);

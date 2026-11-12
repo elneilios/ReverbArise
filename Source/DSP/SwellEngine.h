@@ -204,6 +204,8 @@ public:
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
     bool livePublicationWaitingForTesting() const noexcept {return livePublicationWaiting.load();}
     void failNextLivePublicationForTesting() noexcept {livePublicationFail.store(true);notify();}
+    void setLiveStatusForTesting(const juce::String& status)
+    {const juce::ScopedLock guard(lock);liveStatus=status;}
     uint64_t livePublicationFailuresForTesting() const noexcept {return livePublicationFailures.load();}
     uint64_t liveClockRejectionsForTesting() const noexcept {return liveClockRejections.load();}
     bool hasExportableWet(const SongTime&)const;
@@ -355,7 +357,7 @@ private:
     void monitorJob(Swell,uint64_t session,uint64_t settings);
     bool prepareAuditionMonitor(const Session&,const Swell&,const PreviewContext&,
                                 const std::function<bool()>& cancel,Runtime&,juce::String& error);
-    void prepareTransport(const PreviewContext&);
+    void prepareTransport(const PreviewContext&,bool* budgetFailure=nullptr);
     void prepareGeneratedHeadroom(const PreviewContext&);
     void prepareLoopTransport(const PreviewContext&);
     void invalidateLiveLocked(const juce::String& id={});

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the failed-request playback fix. The accepted voice keeps its playback identity and continues at the same position. The existing IR browsing guidance already describes that behavior.",
+  "summary": "Reviewed the PR fixes for preserving fade intent, isolating speculative headroom, and handling page budget results. Existing timing-fit and failure guidance covers the corrected behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -295,13 +295,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 37328,
-      "sha256": "c50d3c95e7c49998e9f6f91766350ebb3a4cf57c67f046503ebedb0c5e0f4404"
+      "bytes": 37606,
+      "sha256": "dfe7ea48242f9e9a62816cb247d0fa2dd645811e8befcde640345ae54a94937c"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 10190,
-      "sha256": "e194649cb65203e219859af5ad07bc03a16e4fb1b26c7d69930a34ee61ea833d"
+      "bytes": 10310,
+      "sha256": "835ede832d7d3c02ba9d40662e5600a963f4eaed4290b6b1c58a33c9b49926c7"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -445,13 +445,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 101915,
-      "sha256": "36c0955f3da627b674a6ad6853f6b971e5debcbdb22598861d9221a151aed3ab"
+      "bytes": 101942,
+      "sha256": "2b8e07e3bbf61ed83849b15e3924850dcca219112f226641927c10df4b7c3e0a"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 27254,
-      "sha256": "c3d83d90e91ebfeb2bb81c24d92a4464d0fe9052532d7a857640545302595407"
+      "bytes": 27403,
+      "sha256": "1bc5f701651930b0606c3d83e774c81d7ec1e8e63f6f135264d800f1340f1d70"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 59062,
-      "sha256": "7600624567fbc44ebdc85c26de316e8096e61e8bf86cd2f19b56ea5cc746dc28"
+      "bytes": 59791,
+      "sha256": "2236d4aa338fe972a36b893980c3cf726c80a92a1100fdba67653e9be40385ab"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -1010,8 +1010,8 @@
     },
     {
       "path": "Source/UI/TimingEdit.h",
-      "bytes": 3925,
-      "sha256": "e117de1766f33b23fc7a15875f49aa0570c8dc65d6809ee8c3c5b59c74e32101"
+      "bytes": 4131,
+      "sha256": "d942285e2d2ce650a6b1a6d6f62f938d329565cfa1a1bcddd5a38fff4733c954"
     },
     {
       "path": "Source/UI/TransportPresentation.h",

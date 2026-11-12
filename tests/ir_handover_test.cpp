@@ -200,4 +200,54 @@ int main(){return runTest([]
     engine.restore(original);waitFor([&]{return find(engine.savedSession(),b)->phase==Phase::ready;});REQUIRE(engine.snapshot().retainedIRName.isEmpty());
     REQUIRE(engine.selectTargets({b},b));REQUIRE(engine.setFrozen(b,true));REQUIRE(!engine.assignIR(b,find(engine.savedSession(),b)->inputGeneration,next));
     REQUIRE(engine.snapshot().retainedIRName.isEmpty() && engine.residentBytes()<previewMemoryBudget);
+
+    const auto quiet=root.file.getChildFile("quiet.wav");
+    writeTestWav(quiet,1,1000,{.00001f,.00001f});
+    REQUIRE(engine.selectTargets({a},a));
+    waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::ready;});
+    engine.setLivePlayback(false,LiveRouting::dryWet,0);
+    engine.setLiveStatusForTesting("256 MiB live publication budget exceeded");
+    REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,quiet));
+    waitFor([&]{return find(engine.savedSession(),a)->irName==quiet.getFileName() || failed();});
+    REQUIRE(find(engine.savedSession(),a)->irName==quiet.getFileName());
+
+    // A quieter candidate can reach headroom in the same batch as a new
+    // neighbour, then fail at publication because the IR collection is full.
+    auto full=original;
+    full.liveEnabled=false;
+    full.defaultIR=neighbour.ir;
+    full.defaultIRName=neighbour.irName;
+    while(full.importedIRs.size()<maximumImportedIRs)
+    {
+        auto entry=full.importedIRs.front();
+        entry.asset.content=juce::String::toHexString(static_cast<int>(full.importedIRs.size())).paddedLeft('0',64);
+        full.importedIRs.push_back(std::move(entry));
+    }
+    engine.restore(full);
+    waitFor([&]{const auto state=engine.savedSession();return find(state,a)->phase==Phase::ready && find(state,b)->phase==Phase::ready;});
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(engine.assignIR(a,find(engine.savedSession(),a)->inputGeneration,quiet));
+    waitFor([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(engine.addTarget(1000));
+    const auto added=engine.savedSession().primary;
+    REQUIRE(engine.generate().queued==1);
+    engine.holdRenderPublicationForTesting(false);
+    waitFor([&]{return failed() && find(engine.savedSession(),added)->phase==Phase::ready;});
+    const auto accepted=engine.savedSession();
+    REQUIRE(find(accepted,a)->ir==find(original,a)->ir);
+    REQUIRE(engine.snapshot().irRequests.at(a).error.contains("collection is full"));
+    REQUIRE(assets.readRender(find(accepted,a)->render,previewMemoryBudget,rawA,error));
+    REQUIRE(assets.readRender(find(accepted,b)->render,previewMemoryBudget,rawB,error));
+    REQUIRE(assets.readRender(find(accepted,added)->render,previewMemoryBudget,rawC,error));
+    combinedPeak=0;
+    for(int64_t at=800;at<1150;++at)
+    {
+        const auto contribution=[&](const juce::String& id,const WetRender& raw)
+        {
+            const auto& swell=*find(accepted,id);
+            return sample(swell,raw,at)*swell.generatedGain.value_or(1.0f);
+        };
+        combinedPeak=std::max(combinedPeak,std::abs(contribution(a,rawA)+contribution(b,rawB)+contribution(added,rawC)));
+    }
+    REQUIRE(combinedPeak>.85f && combinedPeak<=juce::Decibels::decibelsToGain(candidateWetCeilingDb));
 });}

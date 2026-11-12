@@ -243,7 +243,7 @@ bool fitWetShapeToResponse(Swell& w, int64_t rawStart, int64_t rawEnd, juce::Str
     return true;
 }
 
-bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::String& error)
+bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::String& error,WetTimingEdit edit)
 {
     auto candidate = w; candidate.shape = shape;
     int64_t a, b,positionedStart;
@@ -259,14 +259,16 @@ bool setShape(Swell& w, Shape shape, int64_t rawStart, int64_t rawEnd, juce::Str
     const auto previous = wetTiming(w.shape);
     const auto edited = wetTiming(shape);
     auto intent = w.wetTimingIntent.value_or(previous);
-    if (edited.automaticStart != previous.automaticStart || edited.startOffset != previous.startOffset)
+    const auto changed=[edit](WetTimingEdit control,bool differs)
+    {return edit==control || (edit==WetTimingEdit::infer && differs);};
+    if (changed(WetTimingEdit::start,edited.automaticStart != previous.automaticStart || edited.startOffset != previous.startOffset))
     {
         intent.automaticStart = edited.automaticStart;
         intent.startOffset = edited.startOffset;
     }
-    if (edited.endOffset != previous.endOffset) intent.endOffset = edited.endOffset;
-    if (edited.fadeIn != previous.fadeIn) intent.fadeIn = edited.fadeIn;
-    if (edited.fadeOut != previous.fadeOut) intent.fadeOut = edited.fadeOut;
+    if (changed(WetTimingEdit::end,edited.endOffset != previous.endOffset)) intent.endOffset = edited.endOffset;
+    if (changed(WetTimingEdit::fadeIn,edited.fadeIn != previous.fadeIn)) intent.fadeIn = edited.fadeIn;
+    if (changed(WetTimingEdit::fadeOut,edited.fadeOut != previous.fadeOut)) intent.fadeOut = edited.fadeOut;
 
     shape.fadeIn = std::min(shape.fadeIn, b - a - 1); shape.fadeOut = std::min(shape.fadeOut, b - a - 1);
     if (w.wetTimingIntent)
