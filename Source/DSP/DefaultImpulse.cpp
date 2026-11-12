@@ -12,8 +12,10 @@ std::span<const BundledImpulse> bundledImpulses()
         {defaultImpulseId,1,"Preverb Hall","Original compact diffuse stereo hall.","CC0-1.0","generate_default_ir.py/v1",
          48000,2,16,86400,PreverbResources::PreverbHall_wav,static_cast<size_t>(PreverbResources::PreverbHall_wavSize),
          "b7275a27fc7629a9a1a7191abda4fbb3c8a46372dc9071e36dc1112e4839b458",
-         "e07178229546d127295fee703375c233090f02faa312f9ce9a639beee2bfaacf"}
+         defaultImpulseContent},
+        #define BUNDLED_IMPULSE(...) {__VA_ARGS__},
         #include "BundledImpulseEntries.inc"
+        #undef BUNDLED_IMPULSE
     };
     return catalogue;
 }

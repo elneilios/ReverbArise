@@ -1,5 +1,6 @@
 #pragma once
 #include "SwellAssetStore.h"
+#include <Core/SoundPreset.h>
 #include <span>
 
 namespace m3
@@ -20,7 +21,6 @@ struct BundledImpulse
     const char* wavHash;
     const char* decodedHash; // Canonical sampleHash, including rate/channels/frames.
 };
-inline constexpr const char* defaultImpulseId="preverb-hall";
 std::span<const BundledImpulse> bundledImpulses();
 const BundledImpulse* findBundledImpulse(const juce::String& id);
 bool decodeBundledImpulse(const BundledImpulse&,uint64_t budget,ImpulseResponse&,juce::String& error);

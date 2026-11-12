@@ -54,6 +54,22 @@ bool SwellEngine::assignDefaultBundledIR(const juce::String& presetId,uint64_t e
 }
 bool SwellEngine::assignDefaultManagedIR(const Asset& asset,const juce::String& name,uint64_t expectedSession,uint64_t expectedWorkflowPass)
 {if(!asset.present())return false;return queueDefaultIR({},{},asset,name,expectedSession,expectedWorkflowPass);}
+bool SwellEngine::setDefaultLevel(float db,uint64_t expectedSession,uint64_t expectedWorkflowPass)
+{
+    const juce::ScopedLock guard(lock);
+    if((expectedSession && expectedSession!=sessionGeneration.load())
+        || !std::isfinite(db) || db<minimumDefaultLevelDb || db>maximumDefaultLevelDb
+        || db==model.defaultLevelDb)
+        return false;
+    auto next=model;
+    next.defaultLevelDb=db;
+    if(!publishGenerationLocked(next,expectedWorkflowPass))return false;
+    if(!workflowState)cancelLearnGenerationLocked();
+    model.defaultLevelDb=db;
+    persistentChangedLocked();
+    notify();
+    return true;
+}
 bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& presetId,const Asset& asset,const juce::String& label,uint64_t expectedSession,uint64_t expectedWorkflowPass)
 {
     const juce::ScopedLock guard(lock);const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
@@ -172,11 +188,11 @@ void SwellEngine::prepareDefault(const PreviewContext& context)
     const auto ok=installBundledImpulse(store,defaultImpulseId,available(),asset,error);
     const juce::ScopedLock guard(lock);if(generation!=sessionGeneration.load())return;
     if(!ok){defaultError="Missing default IR: "+error;message=defaultError;return;}
-    auto next=model;next.defaultIR=asset;next.defaultIRName="Preverb Hall";
+    auto next=model;next.defaultIR=asset;next.defaultIRName="Preverb Hall";next.defaultSoundPreset=inferSoundPreset(asset);
     if(!publishGenerationLocked(next)){defaultAttemptScope.clear();return;}
-    if(model.defaultIR!=asset || model.defaultIRName!="Preverb Hall")persistentChangedLocked();model.defaultIR=asset;model.defaultIRName="Preverb Hall";
+    if(model.defaultIR!=asset || model.defaultIRName!="Preverb Hall")persistentChangedLocked();model.defaultIR=asset;model.defaultIRName="Preverb Hall";model.defaultSoundPreset=next.defaultSoundPreset;
     if(!workflowState)for(auto& w:model.swells)if(!w.ir.present() && w.status=="Waiting for default IR")
-    {w.ir=asset;w.irName=model.defaultIRName;w.phase=Phase::stale;w.status="Waiting for source";}
+    {w.ir=asset;w.irName=model.defaultIRName;w.soundPreset=model.defaultSoundPreset;w.phase=Phase::stale;w.status="Waiting for source";}
 }
 void SwellEngine::requestManualPreparationLocked(const Swell& w,const PreviewContext& context)
 {

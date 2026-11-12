@@ -13,5 +13,7 @@ struct GenerationConfiguration
     Asset ir;
     juce::String irName;
     uint64_t revision=0,session=0;
+    SoundPresetIdentity soundPreset;
+    float levelDb=defaultSwellLevelDb;
 };
 }

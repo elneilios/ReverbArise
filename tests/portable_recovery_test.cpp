@@ -21,7 +21,8 @@ int main(int argc,char** argv){if(argc==4 && juce::String(argv[1])=="--fresh-pro
     const auto packed=m3::storage::portable::backup(pin,backup.file);REQUIRE(packed.success);pin.reset();
     std::shared_ptr<Verified> verified;REQUIRE(locateReceipt(backup.file.getChildFile("receipts/"+packed.receipt.locator.snapshot+".json"),verified,error));
     // Preserve a newer creative edit instead of adopting older backup metadata.
-    fixture.session.swells[0].name="Edited after backup";fixture.session.swells[0].shape.gainDb=-7;fixture.session.autoGenerateOnStop=true;fixture.refresh();
+    fixture.session.swells[0].name="Edited after backup";fixture.session.swells[0].shape.gainDb=-7;fixture.session.autoGenerateOnStop=true;
+    fixture.session.defaultLevelDb=-4.f;fixture.refresh();
     auto owner=std::make_unique<PreverbAudioProcessor>(destination.file);auto& processor=*owner;load(processor,fixture.xml);
     REQUIRE(processor.getCaptureSnapshot().unavailable);Input target;
     REQUIRE(!processor.pinPortableAssets(target,error));
@@ -38,6 +39,8 @@ int main(int argc,char** argv){if(argc==4 && juce::String(argv[1])=="--fresh-pro
     REQUIRE(after.swells[0].name==before.swells[0].name && after.swells[0].shape==before.swells[0].shape && after.swells[0].frozen);
     REQUIRE(after.swells[0].id==before.swells[0].id && after.swells[0].generationSource==before.swells[0].generationSource);
     REQUIRE(after.defaultIR==before.defaultIR && after.autoGenerateOnStop==before.autoGenerateOnStop && after.exportState.history.size()==before.exportState.history.size());
+    REQUIRE(after.defaultLevelDb==-4.f && after.defaultSoundPreset==before.defaultSoundPreset);
+    REQUIRE(after.swells[0].soundPreset==before.swells[0].soundPreset && after.swells[0].soundPreset.id==customImpulseId);
     REQUIRE(processor.getCaptureSnapshot().reference==source.reference && processor.getCaptureSnapshot().manifest.contextSpans==fixture.observed.capture.contextSpans);
     REQUIRE(processor.swellEngine().snapshot().renderCount==renders);
     const auto restored=processor.swellEngine().assetDirectory();for(const auto& e:snapshot(*verified).files)REQUIRE(fileHash(restored.getChildFile(e.path))==e.sha256);
