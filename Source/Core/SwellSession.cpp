@@ -520,9 +520,54 @@ bool parseAssetMetadata(const juce::var& v, Asset& output, juce::String& error)
     if (!p.ok || !validAsset(a)) { error="Invalid managed asset metadata"; return false; }
     output=std::move(a); error.clear(); return true;
 }
+static bool checkJsonFields(const juce::String& json,juce::String& error)
+{
+    // JUCE's object parser replaces earlier keys. Check the original tokens
+    // first, decoding escaped keys with the same string parser as JUCE.
+    using ObjectKeys=std::set<juce::String>;
+    std::vector<std::optional<ObjectKeys>> scopes;
+    auto cursor=json.getCharPointer();
+    while(!cursor.isEmpty())
+    {
+        const auto start=cursor;
+        const auto token=cursor.getAndAdvance();
+        if(token=='{' || token=='[')
+        {
+            if(scopes.size()==32){error="Swell metadata nesting exceeds limit";return false;}
+            scopes.emplace_back();
+            if(token=='{')scopes.back().emplace();
+        }
+        else if(token=='}' || token==']')
+        {
+            if(scopes.empty() || scopes.back().has_value()!=(token=='}'))
+            {error="Malformed swell metadata";return false;}
+            scopes.pop_back();
+        }
+        else if(token=='"' || token=='\'')
+        {
+            for(auto ch=cursor.getAndAdvance();ch!=token;ch=cursor.getAndAdvance())
+            {
+                if(ch==0 || (ch=='\\' && cursor.getAndAdvance()==0))
+                {error="Malformed swell metadata string";return false;}
+            }
+            cursor=cursor.findEndOfWhitespace();
+            if(*cursor==':' && !scopes.empty() && scopes.back())
+            {
+                auto keyStart=start;
+                juce::var key;
+                if(auto result=juce::JSON::parseQuotedString(keyStart,key);result.failed())
+                {error=result.getErrorMessage();return false;}
+                if(!scopes.back()->insert(key.toString()).second)
+                {error="Duplicate swell metadata field";return false;}
+            }
+        }
+    }
+    return true;
+}
 bool decode(const juce::String& json, Session& output, juce::String& error)
 {
     if (json.getNumBytesAsUTF8() > maximumStateBytes) { error = "Session state exceeds 8 MiB"; return false; }
+    if(!checkJsonFields(json,error))return false;
     juce::var v;
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;

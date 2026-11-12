@@ -103,7 +103,9 @@ assets without resuming playback.
 The Sound foundation records the accepted preset ID and definition version
 alongside the exact managed response. A bundled selection keeps its catalogue
 ID. An explicit custom import keeps the Custom IR identity even if its samples
-match a bundled response. Older assignments infer a bundled identity only
+match a bundled response. The chooser retains separate bundled and custom
+entries for that PCM, so a managed import can be selected again after the
+original file is removed. Older assignments infer a bundled identity only
 from matching content and format. The replacement worker commits the Sound
 identity with the IR, fitted shape and matching render at the existing
 handover. Save, Export and offline playback continue to read accepted state.

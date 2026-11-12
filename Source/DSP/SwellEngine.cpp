@@ -466,14 +466,17 @@ std::vector<IRChoice> SwellEngine::irChoices() const
 {
     const juce::ScopedLock guard(lock);std::vector<IRChoice> choices;
     for(const auto& entry:bundledImpulses())choices.push_back({"bundled:"+juce::String(entry.id),entry.name,entry.description,entry.id,entry.decodedHash,{}});
-    const auto append=[&](const Asset& asset,const juce::String& name)
+    std::set<juce::String> managedChoices;
+    const auto append=[&](const Asset& asset,const juce::String& name,const SoundPresetIdentity& identity)
     {
-        if(!asset.present() || asset.content.isEmpty() || std::any_of(choices.begin(),choices.end(),[&](const auto& item){return item.content==asset.content;}))return;
-        choices.push_back({"managed:"+asset.content,name,"Imported into this instance",{},asset.content,asset});
+        const auto id=irChoiceId(identity,asset);
+        if(!id.startsWith("managed:") || !managedChoices.insert(id).second)return;
+        choices.push_back({id,name,"Imported into this instance",{},asset.content,asset});
     };
-    for(const auto& entry:model.importedIRs)append(entry.asset,entry.name);
-    append(model.defaultIR,model.defaultIRName);for(const auto& w:model.swells)append(w.ir,w.irName);
-    for(const auto& [id,retained]:retainedIR)if(find(model,id))append(retained.accepted.ir,retained.accepted.irName);
+    for(const auto& entry:model.importedIRs)append(entry.asset,entry.name,{customImpulseId,1});
+    append(model.defaultIR,model.defaultIRName,model.defaultSoundPreset);
+    for(const auto& w:model.swells)append(w.ir,w.irName,w.soundPreset);
+    for(const auto& [id,retained]:retainedIR)if(find(model,id))append(retained.accepted.ir,retained.accepted.irName,retained.accepted.soundPreset);
     return choices;
 }
 bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,const juce::String& presetId,uint64_t expectedSession,const Asset& managed,const juce::String& label)

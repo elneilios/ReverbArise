@@ -173,6 +173,16 @@ int main() { return runTest([]
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
     reject(json.replace("\"version\":12", "\"version\":13"));
+    for(const auto& fields:{
+        juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevelDb\":0,"),
+        juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevel\\u0044b\":0,"),
+        juce::String("\"version\":13,\"version\":11,")})
+    {
+        reject("{" + fields + json.substring(1));
+        REQUIRE(error.contains("Duplicate"));
+    }
+    reject(json.replace("\"soundPreset\":", "\"soundPreset\":null,\"soundPreset\":"));
+    REQUIRE(error.contains("Duplicate"));
     for(const auto& invalid:{juce::var("0"),juce::var(13)})
     {
         const auto metadata=juce::JSON::parse(json);

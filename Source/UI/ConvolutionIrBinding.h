@@ -19,11 +19,11 @@ public:
     {
         lifetime->owner=this;
         editor.beforeInvocation=[this]{invocation=Request{target,choices};};
-        editor.onChoice=[this](const auto& content)
+        editor.onChoice=[this](const auto& id)
         {
             ++fileSerial;
             const auto request=std::exchange(invocation,std::nullopt).value_or(Request{target,choices});
-            for(const auto& entry:request.choices)if(entry.content==content){submit(request.target,entry,{});break;}
+            for(const auto& entry:request.choices)if(entry.id==id){submit(request.target,entry,{});break;}
             if(onRefresh)onRefresh();
         };
         editor.onImport=[this]{openFile();};
@@ -96,10 +96,10 @@ private:
     {
         target=std::move(destination);choices=engine.irChoices();
         controls::ConvolutionIrEditor::View view;
-        for(const auto& entry:choices)view.choices.push_back({entry.content,entry.name,entry.description});
+        for(const auto& entry:choices)view.choices.push_back({entry.id,entry.name,entry.description});
         if(std::holds_alternative<FutureDefault>(target))
         {
-            view.label="Default IR";view.accepted=state.session.defaultIR.content;
+            view.label="Default IR";view.accepted=irChoiceId(state.session.defaultSoundPreset,state.session.defaultIR);
             view.editable=!state.workflowState.locked() && state.workflowState.mode!=workflow::Mode::finalise;
             view.reason=view.editable?juce::String{}:"Defaults are locked during capture, settlement or Export.";
             const auto acceptedName=state.session.defaultIR.present()?state.session.defaultIRName:juce::String("None");
@@ -117,7 +117,7 @@ private:
             view.reason=!swell?"Select a swell to edit its IR.":swell->frozen?"Unfreeze this swell before changing its IR.":!view.editable?"IR editing is available in Perform.":juce::String{};
             if(swell)
             {
-                view.accepted=swell->ir.content;
+                view.accepted=irChoiceId(swell->soundPreset,swell->ir);
                 const auto request=state.irRequests.find(swell->id);
                 view.error=swell->phase==Phase::error || (request!=state.irRequests.end() && request->second.error.isNotEmpty());
                 view.status=swell->phase==Phase::ready

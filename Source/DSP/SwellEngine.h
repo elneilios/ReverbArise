@@ -110,6 +110,12 @@ struct IRChoice
     juce::String id,name,description,presetId,content;
     Asset managed;
 };
+inline juce::String irChoiceId(const SoundPresetIdentity& identity,const Asset& asset)
+{
+    if(!asset.present() || asset.content.isEmpty())return {};
+    const auto preset=resolvedSoundPreset(identity,asset);
+    return preset.id==customImpulseId ? "managed:"+asset.content : "bundled:"+preset.id;
+}
 struct RegenerationResult
 {
     bool accepted=false;

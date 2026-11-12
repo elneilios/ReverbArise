@@ -34,3 +34,15 @@ The repository installer built and installed the Release VST3 at the system path
 - Compared 215 swells by persistent ID. Exact IR and full-render references, arrival, gain and other shape values, wet timing intent and activity matched the v11 project. Capture references and default IRs matched, and each new future Level default was 0 dB.
 - Manual Audition showed the running cursor and mixer output. Song playback advanced the DAW and plug-in cursors with mixer output. Stop restored Ready. A fresh FL Studio process reopened the v12 copy with the Piano instance in Perform, the custom response `06_Airy_Vowel.wav` ready and its arrival still at bar 3.1.
 - The host smoke covered migration, playback and reopen. The automation lost focus when targeting the native IR popup, so the host swap attempt was inconclusive. The focused native handover test verified live/Audition swaps, the shorter-IR fit, failure retention and the offline snapshot.
+
+## PR #198 review follow-up
+
+The review fixes were tested on Windows MSVC in the working diff based on `45c8729`.
+
+| Outcome checked | Wrapper arguments | Result |
+| --- | --- | --- |
+| Duplicate Sound fields, including escaped names, are rejected and the accepted session is preserved. | `-Configuration Debug -TestTarget preverb_swell_session_test` | Pass, 0.40 s |
+| Identical bundled and Custom IRs remain separately selectable in Learn and Perform after reopening and deleting the original import file. | `-Configuration Debug -TestTarget preverb_swell_ui_test -TestFilter '^preverb_ir_editor_binding_test$'` | Pass, 4.65 s |
+| Standard PR regression, including processor restore with duplicate Sound metadata. | `-Configuration Release -PrRegression` | 15 of 15 passed, 11.48 s CTest elapsed |
+
+The additional Debug `preverb_processor_test` timed out waiting for the legacy preview fixture to become ready. The FL Studio smoke above applies to the earlier build.
