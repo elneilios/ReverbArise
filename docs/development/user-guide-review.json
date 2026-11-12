@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Learn waveform updates and the follow-up fixes for backward Song Recapture and fragmented Loop coverage. The recording instructions still apply when Loop coverage detail reaches its limit. The earlier installed build was verified in FL Studio in Song and Loop modes.",
+  "summary": "Reviewed the canonical Loop capture waveform and marker requirements synced from specify-loop-capture-waveform. The existing guide covers live Loop waveform growth and restoration of the previous waveform, and the Learn workspace design documents reduced coverage detail at the preview limit. FL Studio verified live growth on the earlier build, and Release fixtures verified the coverage limit fallback.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1160,8 +1160,8 @@
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 12075,
-      "sha256": "6d5d83b20cc0d63b6d73b2c4e0bacb6b753f947e22f3a8b4aa6d75503085877b"
+      "bytes": 13815,
+      "sha256": "0c3d27817ff2c3af48a2d2a864593418291b3821c3d338fff5d75288d1005272"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",

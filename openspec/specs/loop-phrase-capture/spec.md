@@ -21,7 +21,7 @@ Learn Source Capture SHALL expose a Loop Mode toggle for the next capture. The a
 #### Scenario: Detect events in an accepted Loop
 - **WHEN** Detect events is enabled and Learn has an accepted Loop
 - **THEN** Learn shows the automatic marker controls and detects markers in the accepted phrase at the selected sensitivity
-- **AND** a pending replacement keeps the accepted phrase's markers visible
+- **AND** Learn keeps the accepted phrase's markers visible while the replacement waits to record and hides them while the provisional waveform is displayed
 - **AND** Generate Swells can use the accepted Loop's current eligible markers when generation prerequisites hold, while Generate on Stop retains its Song behavior
 
 #### Scenario: Generate while a Loop clock continues
@@ -118,6 +118,29 @@ Settlement SHALL publish only complete, verified and useful phrase audio. The ki
 #### Scenario: Settlement races a restore or newer arm
 - **WHEN** an old worker completion arrives after its session or attempt was invalidated
 - **THEN** it cannot publish audio, update the accepted revision or change the accepted source kind
+
+### Requirement: Learn shows provisional Loop waveform progress
+Learn SHALL show the current Loop take's recorded waveform and growing extent from the verified phrase start before acceptance. The waveform SHALL remain provisional until the take settles. Preview data SHALL be display-only and SHALL NOT grant access to the take for generation, playback, export or project save.
+
+#### Scenario: Show audio before a Loop ends
+- **WHEN** the active Loop take starts recording and receives audio
+- **THEN** Learn shows the take's waveform in phrase-local coordinates starting at sample zero
+- **AND** the displayed extent grows with the recorded audio while the take is still in progress
+- **AND** any previous source retains its accepted identity until the new take settles successfully
+
+#### Scenario: Detailed coverage reaches its preview limit
+- **WHEN** detailed coverage reaches its display limit during an otherwise valid Loop take
+- **THEN** Learn continues to show the growing recorded extent and a bounded waveform summary derived from the recorded audio
+- **AND** inspection reports that coverage detail is unavailable
+- **AND** capture and settlement continue under the existing acceptance rules
+
+#### Scenario: Replace the provisional waveform after settlement
+- **WHEN** the Loop take is accepted
+- **THEN** Learn replaces the provisional display with the accepted waveform at its verified phrase extent
+
+#### Scenario: Abandon a provisional waveform
+- **WHEN** the current Loop take is cancelled, rejected or invalidated by restore
+- **THEN** Learn removes its provisional waveform and shows the applicable accepted source waveform when available
 
 ### Requirement: Project state preserves accepted and requested capture separately
 Saved projects SHALL retain verified accepted-source metadata and the next-capture preference separately, using managed audio references. Older Song projects SHALL restore as Song with existing identities. Restore SHALL invalidate pending attempts and require a new explicit arm for Loop.
