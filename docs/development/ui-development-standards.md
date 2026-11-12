@@ -12,6 +12,12 @@ Interactive title/name is only a fallback. Full text is also the footer's
 accessible description. Hover must not publish state, rebuild layouts or start
 jobs. The owner approved the actual native presentation on 4 November 2026.
 
+Standalone native previews, including interactive review modes in test
+executables, also display hover help in a fixed bottom footer. Use
+`TooltipClient`, `SettableTooltipClient`, `setTooltip()` or `contextHelp` to
+supply footer text. The UI standards checker flags `TooltipWindow` popup hosts
+in `Source/UI`, `Source/Plugin` and C++ files under `tests/`.
+
 Use these standards when implementing or refactoring ReverbArise UI. Consolidate
 controls as the planned work touches them; a separate whole-plugin migration is
 not required before the Learn / Perform / Export work can proceed. Existing UI
