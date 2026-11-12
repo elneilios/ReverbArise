@@ -102,8 +102,16 @@ inline void m2ProcessorCases()
     REQUIRE(!processor->swellEngine().snapshot().playing && !processor->isMappingEnabled());
     {
         std::unique_ptr<juce::AudioProcessorEditor> editor(processor->createEditor());
+        auto foundAudition=false;
         for (auto* child : editor->getChildren())
-            if (child->getName() == "stopAudition") REQUIRE(!processor->swellEngine().snapshot().playing);
+            if (child->getName() == "auditionPair")
+                for (auto* segment : child->getChildren())
+                    if (segment->getName() == "audition")
+                    {
+                        REQUIRE(segment->getTitle()=="Play audition");
+                        foundAudition=true;
+                    }
+        REQUIRE(foundAudition);
     }
     buffer.clear();
     { AudioAllocationGuard guard; processor->processBlock(buffer, midi); }

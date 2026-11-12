@@ -11,12 +11,13 @@ void Composition::verifyAuditionStrip()
         for(const auto size:std::array<juce::Point<int>,6>{{{1100,850},{1199,850},{1200,850},{1400,900},{1400,1000},{1600,1000}}})
         {
             panel->setSize(size.x,size.y);const PerformLayout bounds(panel->getLocalBounds(),performGeometry::toolbarControlHeight+2*performGeometry::bandInset);
-            auto& play=require<juce::Button>(*panel,"audition");auto& stop=require<juce::Button>(*panel,"stopAudition");auto& wet=require<controls::LatchingActionButton>(*panel,"auditionWetOnly");
+            auto& pair=require<controls::ActionButtonStateField>(*panel,"auditionPair");
+            auto& play=require<juce::Button>(pair,"audition");auto& wet=require<controls::LatchingActionButton>(*panel,"auditionWetOnly");
             auto& status=require<controls::EllipsisLabel>(*panel,"auditionStatus");
-            REQUIRE(bounds.audition.getHeight()==52 && bounds.audition.contains(play.getBounds()) && bounds.audition.contains(status.getBounds()));
-            REQUIRE(stop.getX()-play.getRight()==wet.getX()-stop.getRight() && wet.getX()-stop.getRight()==8);
-            REQUIRE(status.getX()>wet.getRight() && status.getY()==play.getY() && status.getHeight()==play.getHeight());
-            REQUIRE(status.getWidth()>=600 && status.getFont().getHeight()==textStyle(TextRole::helper).height);
+            REQUIRE(bounds.audition.getHeight()==52 && bounds.audition.contains(pair.getBounds()));
+            REQUIRE(wet.getX()-pair.getRight()==spacing::tight && find(*panel,"stopAudition")==nullptr);
+            REQUIRE(status.getParentComponent()==&pair && play.getParentComponent()==&pair);
+            REQUIRE(status.getFont().getHeight()==textStyle(TextRole::controlValue).height);
             REQUIRE(panel->timelineComponent().getBounds()==bounds.detail.withTrimmedTop(performGeometry::columnInset));
             for(const auto scale:{1.f,1.25f,1.5f,2.f})
             {

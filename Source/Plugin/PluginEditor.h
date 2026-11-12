@@ -86,8 +86,9 @@ private:
     int inspectorSection=1;
     m3::ui::controls::SegmentedSelector inspectorSections;
     void layoutResponsive();
-    void layoutLoopPlayback(juce::Rectangle<int>, bool compact);
+    void layoutPerformPlayback(juce::Rectangle<int>);
     void openLoopPlacementEditor(PreverbAudioProcessor::LoopPlacementTarget);
+    void openLoopPlacementMenu(bool keyboard);
     void refreshLoopPlayback(bool visible,bool liveEnabled,double capturedRate,const HostPositionDiagnostics&);
     void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
@@ -177,7 +178,7 @@ private:
     m3::ui::controls::WrappedLabel status,detail,recaptureStatus;
     m3::ui::controls::EllipsisLabel listLabel,auditionLabel,separationLabel,spanLabel,barStartLabel,barEndLabel,toneStartLabel,toneEndLabel;
     m3::ui::controls::CapturedActionButton removeButton{"Delete"};
-    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},generateButton{"Regenerate selected"},allButton{"Regenerate all"},auditionButton{"Audition wet",m3::ui::controls::CommandIcon::play,true},stopButton{"Stop",m3::ui::controls::CommandIcon::stop};
+    m3::ui::controls::ActionButton addButton{"Add at playhead",m3::ui::controls::CommandIcon::add},generateButton{"Regenerate selected"},allButton{"Regenerate all"};
     m3::ui::controls::ActionButton analyzeButton{"Suggest onsets"},confirmButton{"Confirm"};
     m3::ui::controls::TimelineZoomControls performZoom;
     m3::ui::controls::LatchingActionButton snapButton{"Snap"};
@@ -238,9 +239,8 @@ private:
     std::unique_ptr<juce::DocumentWindow> settingsWindow;
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,helper;
-    m3::ui::controls::EllipsisLabel monitorStatus;
     m3::ui::controls::EllipsisLabel loopHeading;
-    m3::ui::controls::ActionButtonStateField loopAudition{"Audition",m3::ui::controls::CommandIcon::play,
+    m3::ui::controls::ActionButtonStateField audition{"Audition",m3::ui::controls::CommandIcon::play,
         m3::ui::controls::CommandVariant::primary,"Audition status",40,120};
     m3::ui::controls::ActionButtonStateField loopStart{"Set Loop Start",m3::ui::controls::CommandIcon::none,
         m3::ui::controls::CommandVariant::primary,"Loop start",130};
@@ -248,9 +248,10 @@ private:
         m3::ui::controls::CommandVariant::neutral,"Loop status",112};
     int loopDividerX = 0;
     juce::Component::SafePointer<juce::AlertWindow> loopPlacementDialog;
+    std::unique_ptr<m3::ui::controls::ChoicePopup> loopPlacementMenu;
     std::optional<PreverbAudioProcessor::LoopPlacementTarget> loopPlacementInvocation;
-    struct LoopAuditionInvocation {uint64_t session,pass;bool stopping;};
-    std::optional<LoopAuditionInvocation> loopAuditionInvocation;
+    struct AuditionCommand {uint64_t session,pass;bool stopping;};
+    std::optional<AuditionCommand> auditionCommand;
     bool loopPerformLayout=false;
     bool loopButtonStops=false;
     std::optional<std::pair<uint64_t,bool>> loopButtonInvocation;

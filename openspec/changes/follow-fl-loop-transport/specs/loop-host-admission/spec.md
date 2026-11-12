@@ -21,7 +21,7 @@ FL Studio automatic repeat SHALL use compatible running transport with a host-de
 
 - **WHEN** a current absolute position cannot be established for the Set Loop Start action
 - **THEN** Perform does not save a stale position and explains the limitation
-- **AND** the user can enter an explicit bar and beat when the project timing map supports that entry
+- **AND** the user can enter an explicit bar and beat through the Set Loop Start context menu
 
 #### Scenario: The host cannot supply an absolute song position
 

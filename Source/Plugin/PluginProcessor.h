@@ -122,6 +122,7 @@ public:
     LoopPlacementTarget loopPlacementTarget() const noexcept;
     std::optional<m3::LoopPlacement> getLoopPlacement() const noexcept;
     bool setLoopPlacement(LoopPlacementTarget, std::optional<m3::LoopPlacement>);
+    bool setLoopPlacementFromPlayhead(LoopPlacementTarget);
     void requestLoopPlaybackStop() noexcept { swells->loopTransport().requestFinish(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
@@ -188,7 +189,6 @@ private:
     std::atomic<uint32_t> loopPreference{LoopCapturePreference{}.packed()};
     std::atomic<uint64_t> placementSequence{0}, placementGeneration{0}, placementRevision{0};
     std::atomic<double> placementPpq{0};
-    std::atomic<int> placementRepeats{0};
     void publishLoopPlacement(LoopPlacementTarget, std::optional<m3::LoopPlacement>) noexcept;
     std::optional<m3::LoopPlacement> readLoopPlacementFor(uint64_t generation, uint64_t revision) const noexcept;
     void writeLoopPlacement(juce::XmlElement&, const CaptureSessionSnapshot&) const;

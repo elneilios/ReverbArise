@@ -217,7 +217,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     if (schedule.route == Route::placement && compatibleGrid && schedule.period == 0)
         schedule.period = current->timing.endSample;
     if (!discontinuity && schedule.route == Route::placement && previousSchedule.route == Route::placement
-        && schedule.period == previousSchedule.period && schedule.repeats == previousSchedule.repeats
+        && schedule.period == previousSchedule.period
         && std::abs(static_cast<long double>(schedule.start)-previousSchedule.start) <= 1)
         schedule.start = previousSchedule.start;
 
@@ -296,8 +296,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         const auto origin = static_cast<long double>(cursor) + schedule.start
             - playlist->sample - static_cast<long double>(history) * schedule.period;
         if (std::abs(origin) < INT64_MAX / 4 && cursor < INT64_MAX / 4)
-            timeline = LoopCueScheduler::Timeline{static_cast<int64_t>(origin),schedule.period,
-                history ? INT64_MAX : schedule.repeats - 1};
+            timeline = LoopCueScheduler::Timeline{static_cast<int64_t>(origin),schedule.period};
     }
     if (!canObserve || timingInterrupted || !playlist || !playlist->valid) playlistPhrasePpq.reset();
     if (!validFrames) { cursor = 0; signalPeaks.publish(0,0,frames,rate); return; }

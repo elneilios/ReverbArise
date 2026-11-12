@@ -33,7 +33,6 @@ public:
     {
         Route route = Route::manual;
         int64_t start = 0, period = 0;
-        int repeats = 0;
         bool operator==(const HostSchedule&) const = default;
     };
     struct Status
@@ -76,7 +75,7 @@ public:
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
                  double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
                  const LoopReferenceSetup& observedReference = {},
-                 std::optional<SongTime> playlist = {}, HostSchedule schedule = {Route::manual,0,0,0},
+                 std::optional<SongTime> playlist = {}, HostSchedule schedule = {Route::manual,0,0},
                  bool hostPlaying = false) noexcept;
 
 private:

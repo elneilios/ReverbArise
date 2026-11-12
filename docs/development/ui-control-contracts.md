@@ -133,8 +133,9 @@ and scrolls once on hover. The fixed hover-help footer and accessible
 description expose the complete value.
 
 The owner approved the three-pair native preview for integration on
-12 November 2026. Perform uses the pair for Audition Play/Stop, Set Loop Start
-and Loop playback status. Audition and Loop retain the shared section-heading
+12 November 2026. Song and Loop Perform use the same Audition Play/Stop pair.
+Loop Perform also uses the pair for Set Loop Start and Loop playback status.
+Audition and Loop retain the shared section-heading
 role in standard and compact layouts. See the focused component and Perform binding
 fixtures for geometry and input coverage.
 

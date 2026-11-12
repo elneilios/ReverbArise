@@ -779,11 +779,11 @@ void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer
         {
             int64_t start = 0;
             const auto resolved=resolvePpqSample(*playlist,placement->ppq,start);
-            schedule = {Playback::Route::placement,start,resolved ? 0 : -1,placement->repeats};
+            schedule = {Playback::Route::placement,start,resolved ? 0 : -1};
         }
         else if (hostTime.looping && hostTime.loopStart >= 0 && hostTime.loopEnd > hostTime.loopStart
                  && timing.samplePosition >= hostTime.loopStart && timing.samplePosition < hostTime.loopEnd)
-            schedule = {Playback::Route::hostRepeat,hostTime.loopStart,hostTime.loopEnd-hostTime.loopStart,0};
+            schedule = {Playback::Route::hostRepeat,hostTime.loopStart,hostTime.loopEnd-hostTime.loopStart};
     }
     swells->loopTransport().process(buffer.getWritePointer(0),buffer.getWritePointer(1),frames,observations,
         timing.sampleRate,generation,revision,access,gap || seek || stopped || gridChanged
@@ -960,7 +960,7 @@ std::optional<m3::LoopPlacement> PreverbAudioProcessor::readLoopPlacementFor(uin
     if ((sequence & 1) || revision == 0) return {};
     const auto source=placementRevision.load(std::memory_order_relaxed);
     const auto epoch=placementGeneration.load(std::memory_order_relaxed);
-    const m3::LoopPlacement placement{placementPpq.load(std::memory_order_relaxed),placementRepeats.load(std::memory_order_relaxed)};
+    const m3::LoopPlacement placement{placementPpq.load(std::memory_order_relaxed)};
     std::atomic_thread_fence(std::memory_order_acquire);
     if (placementSequence.load(std::memory_order_relaxed) != sequence || epoch != generation || source != revision || !placement.valid()) return {};
     return placement;
@@ -976,9 +976,8 @@ void PreverbAudioProcessor::publishLoopPlacement(LoopPlacementTarget target, std
 {
     placementSequence.fetch_add(1,std::memory_order_acq_rel);
     placementGeneration.store(target.generation,std::memory_order_relaxed);
-    placementRevision.store(target.revision,std::memory_order_relaxed);
+    placementRevision.store(placement ? target.revision : 0,std::memory_order_relaxed);
     placementPpq.store(placement ? placement->ppq : 0,std::memory_order_relaxed);
-    placementRepeats.store(placement ? placement->repeats : 0,std::memory_order_relaxed);
     placementSequence.fetch_add(1,std::memory_order_release);
 }
 
@@ -995,17 +994,25 @@ bool PreverbAudioProcessor::setLoopPlacement(LoopPlacementTarget target, std::op
     return true;
 }
 
+bool PreverbAudioProcessor::setLoopPlacementFromPlayhead(LoopPlacementTarget target)
+{
+    const auto position=getHostPositionDiagnostics();
+    if (!loop_capture::HostGrid::supports(position.songTime())
+        || (position.isPlaying && std::chrono::steady_clock::now()-position.observedAt >= std::chrono::milliseconds(250)))
+        return false;
+    return setLoopPlacement(target,m3::LoopPlacement{position.ppqPosition});
+}
+
 void PreverbAudioProcessor::writeLoopPlacement(juce::XmlElement& state,const CaptureSessionSnapshot& capture) const
 {
     if (capture.sourceKind()!=CaptureSourceKind::loop) return;
     const auto placement=readLoopPlacementFor(captureWorker.captureGeneration(),capture.manifest.revision);
     if (!placement) return;
     auto* element=state.createNewChildElement("LoopPlacement");
-    element->setAttribute("version",1);
+    element->setAttribute("version",2);
     char position[64]{};
     const auto encoded=std::to_chars(position,position+sizeof(position),placement->ppq);
     element->setAttribute("ppq",juce::String::fromUTF8(position,static_cast<int>(encoded.ptr-position)));
-    element->setAttribute("repeats",placement->repeats);
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {

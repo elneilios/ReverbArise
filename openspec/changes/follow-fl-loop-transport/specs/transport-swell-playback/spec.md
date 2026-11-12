@@ -6,6 +6,12 @@
 
 Perform in Loop Mode SHALL show one row with Audition and Loop section headings and a divider. Audition SHALL contain one Play/Stop action joined to Audition status, then the mix control. Loop SHALL contain Set Loop Start joined to its position, then Cue/Cancel/Stop joined to Loop playback status.
 
+#### Scenario: Song and Loop use the shared Audition strip
+
+- **WHEN** Perform displays a Song or a Loop source
+- **THEN** the same Audition action, state field and mix control serve both source types
+- **AND** only a Loop displays the Loop group
+
 #### Scenario: Playback status changes
 
 - **WHEN** Audition or Loop playback changes availability or phase
@@ -46,7 +52,12 @@ With Live playback enabled and a prepared Loop in Perform, a compatible declared
 
 ### Requirement: FL Studio Loop placement follows the Playlist timeline
 
-Perform SHALL let the user save one active Playlist placement per instance for the accepted Loop, with an exact musical start and a finite repeat count. The placement SHALL be editable and removable. With Live playback enabled, a placement SHALL schedule wet against absolute song position and take precedence over automatic repeat and manual Cue.
+Perform SHALL let the user save one active Playlist placement per instance for the accepted Loop. Set Loop Start SHALL use the current valid Playlist playhead while stopped or playing. Its context menu SHALL offer manual bar-and-beat entry and clearing. With Live playback enabled, placement SHALL schedule repeating wet against absolute song position and take precedence over automatic repeat and manual Cue.
+
+#### Scenario: The musician moves the stopped playhead
+
+- **WHEN** FL Studio reports a new valid Playlist position while stopped and the musician activates Set Loop Start
+- **THEN** the saved position becomes the reported position and the button opens no dialog
 
 #### Scenario: First swell has a negative placement
 
@@ -65,10 +76,10 @@ Perform SHALL let the user save one active Playlist placement per instance for t
 - **WHEN** FL Studio reports an eligible repeat with an active saved placement
 - **THEN** only the placed schedule supplies wet and the user can remove the placement to return to automatic repeat
 
-#### Scenario: A placed passage ends
+#### Scenario: A Stop is scheduled during a placed pass
 
-- **WHEN** the final placed pass reaches its end
-- **THEN** the remaining tails are audible and no additional pass begins
+- **WHEN** a placed Loop plays through multiple passes and receives a Stop command
+- **THEN** it finishes its current pass and plays its remaining tails without starting another pass
 
 #### Scenario: A different Loop is accepted
 

@@ -1035,8 +1035,18 @@ static void flStudioLoopProcessorCases()
     REQUIRE(plugin.loopPlaybackStatus().route == Route::manual && plugin.loopPlaybackStatus().playback == Playing::standby);
 
     const auto target=plugin.loopPlacementTarget();
-    REQUIRE(plugin.setLoopPlacement(target,m3::LoopPlacement{12.0,2}));
+    host.position.setIsPlaying(false);
+    cursor=2*bar;
+    tick();
+    REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{8.0}));
+    cursor=3*bar;
+    tick();
+    REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
     host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    host.position.setIsPlaying(true);
+    cursor=0;
     tick();
     REQUIRE(plugin.loopPlaybackStatus().route == Route::placement && !plugin.requestLoopCue());
     REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
@@ -1056,6 +1066,11 @@ static void flStudioLoopProcessorCases()
     through(cursor+1000);
     REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
     through(6*bar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    plugin.requestLoopPlaybackStop();
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::finishing);
+    through(8*bar);
     REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
 
     juce::MemoryBlock state;
@@ -1064,7 +1079,7 @@ static void flStudioLoopProcessorCases()
     REQUIRE(!restored->getLoopPlacement());
     restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));
     REQUIRE(restored->flushCaptureForTesting());
-    REQUIRE((restored->getLoopPlacement() == m3::LoopPlacement{12.0,2}));
+    REQUIRE((restored->getLoopPlacement() == m3::LoopPlacement{12.0}));
     REQUIRE(plugin.setLoopPlacement(target,{}));
     REQUIRE(!plugin.getLoopPlacement() && restored->getLoopPlacement());
 }

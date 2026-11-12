@@ -92,8 +92,8 @@ static void loopPerformReview(bool review,const juce::File& output)
     editor.refresh();
     auto& cue=require<controls::ActionButton>(editor,"loopCue");
     auto& status=require<juce::Label>(editor,"loopPlaybackStatus");
-    auto& audition=require<controls::ActionButton>(editor,"loopAudition");
-    auto& auditionStatus=require<juce::Label>(editor,"loopAuditionStatus");
+    auto& audition=require<controls::ActionButton>(editor,"audition");
+    auto& auditionStatus=require<juce::Label>(editor,"auditionStatus");
     auto& start=require<controls::ActionButton>(editor,"setLoopStart");
     auto& startPosition=require<juce::Label>(editor,"loopStartPosition");
     const auto checkHeadings=[&]{
@@ -109,7 +109,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     REQUIRE(editor.setPresentationSize(1100,850));
     checkHeadings();
     REQUIRE(editor.setPresentationSize(900,600));
-    REQUIRE(!require<controls::ActionButton>(editor,"stopAudition").isVisible());
+    REQUIRE(find(editor,"stopAudition")==nullptr);
     REQUIRE(start.isVisible() && !start.isEnabled() && start.getTooltip()=="Requires a host song position");
     REQUIRE(startPosition.getText()=="No start set");
     auto& readout=require<controls::TransportReadout>(editor,"hostInfo");

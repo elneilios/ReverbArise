@@ -115,6 +115,27 @@ class ActionButtonStateField final : public juce::Component, public juce::Settab
     {
     public:
         using ActionButton::ActionButton;
+        std::function<void(bool)> onContextMenu;
+
+        void mouseDown(const juce::MouseEvent& event) override
+        {
+            if(event.mods.isPopupMenu() && onContextMenu)
+            {
+                if(isEnabled())onContextMenu(false);
+                return;
+            }
+            ActionButton::mouseDown(event);
+        }
+
+        bool keyPressed(const juce::KeyPress& key) override
+        {
+            if(key.isKeyCode(juce::KeyPress::F10Key) && key.getModifiers().isShiftDown() && isEnabled() && onContextMenu)
+            {
+                onContextMenu(true);
+                return true;
+            }
+            return ActionButton::keyPressed(key);
+        }
 
         bool hitTest(int x, int y) override
         {
@@ -166,6 +187,7 @@ public:
     }
 
     ActionButton& action() noexcept { return button; }
+    void setContextMenu(std::function<void(bool)> showMenu) { button.onContextMenu = std::move(showMenu); }
     void setActionVariant(CommandVariant variant)
     {
         if (button.getVariant() == variant)
@@ -210,6 +232,11 @@ public:
     void mouseEnter(const juce::MouseEvent& event) override { mouseMove(event); }
     void mouseMove(const juce::MouseEvent& event) override { field.setHovered(fieldBody.contains(event.getPosition())); }
     void mouseExit(const juce::MouseEvent&) override { field.setHovered(false); }
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        if(event.mods.isPopupMenu() && fieldBody.contains(event.getPosition()) && button.isEnabled() && button.onContextMenu)
+            button.onContextMenu(false);
+    }
 
     void resized() override
     {

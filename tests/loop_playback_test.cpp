@@ -777,18 +777,21 @@ void flStudioScheduleCases()
     };
 
     auto placed=create();
-    for(int64_t pos=0;pos<2*period+32;)
+    for(int64_t pos=0;pos<3*period+32;)
     {
-        const auto frames=static_cast<int>(std::min<int64_t>(256,2*period+32-pos));
-        block(*placed,pos,frames,{Route::placement,placement,0,2},[&](int64_t sample){
-            return expected(sample-placement)+expected(sample-placement-period);
+        const auto frames=static_cast<int>(std::min<int64_t>(256,3*period+32-pos));
+        block(*placed,pos,frames,{Route::placement,placement,0},[&](int64_t sample){
+            const auto local=sample-placement;
+            const auto cycle=std::max<int64_t>(0,local/period);
+            const auto phase=local-cycle*period;
+            return (cycle>0?expected(phase+period):0.f)+expected(phase)+expected(phase-period);
         });
         pos+=frames;
     }
-    REQUIRE(placed->status().playback==LoopCueScheduler::State::standby);
+    REQUIRE(placed->status().playback==LoopCueScheduler::State::repeating);
 
     auto repeating=create();
-    const LoopPlayback::HostSchedule repeat{Route::hostRepeat,0,period,0};
+    const LoopPlayback::HostSchedule repeat{Route::hostRepeat,0,period};
     const auto cyclic=[&](int64_t sample){
         return expected(sample+period)+expected(sample)+expected(sample-period);
     };

@@ -171,10 +171,9 @@ public:
         using namespace m3::ui;
         const auto position=current.value_or(m3::LoopPlacement{});
         const auto bar=std::floor(position.ppq/4.0);
-        const std::array<juce::String,3> values{juce::String(static_cast<juce::int64>(bar)+1),
-            juce::String(position.ppq-bar*4.0+1,9).trimCharactersAtEnd("0").trimCharactersAtEnd("."),
-            juce::String(position.repeats)};
-        const std::array<juce::String,3> names{"Bar","Beat","Repeats"};
+        const std::array<juce::String,2> values{juce::String(static_cast<juce::int64>(bar)+1),
+            juce::String(position.ppq-bar*4.0+1,9).trimCharactersAtEnd("0").trimCharactersAtEnd(".")};
+        const std::array<juce::String,2> names{"Bar","Beat"};
         auto area=juce::Rectangle<int>(3*controlGeometry::valueWidth+2*spacing::related,0);
         const auto columnWidth=controlGeometry::valueWidth;
         for(size_t i=0;i<fields.size();++i)
@@ -200,15 +199,13 @@ public:
         feedback.setBounds(0,feedbackY,area.getWidth(),controlGeometry::labelHeight);
         form.addAndMakeVisible(feedback);
         const auto actionsY=feedback.getBottom()+spacing::tight;
-        std::array<juce::Component*,3> actions{&save,&clear,&cancel};
+        std::array<juce::Component*,2> actions{&save,&cancel};
         for(size_t i=0;i<actions.size();++i)
         {
             actions[i]->setBounds(static_cast<int>(i)*(columnWidth+spacing::related),actionsY,columnWidth,controlGeometry::height);
             form.addAndMakeVisible(*actions[i]);
         }
         save.onClick=[this]{accept();};
-        clear.setEnabled(current.has_value());
-        clear.onClick=[this]{submitValue({});};
         cancel.onClick=[this]{finish(0);};
         form.setSize(area.getWidth(),cancel.getBottom());
         addCustomComponent(&form);
@@ -235,17 +232,16 @@ private:
 
     void accept()
     {
-        int bar=0,repeats=0;
+        int bar=0;
         double beat=0;
-        if(!parse(barField.getText(),bar) || bar<1 || !parse(beatField.getText(),beat) || beat<1 || beat>=5
-           || !parse(repeatField.getText(),repeats))
+        if(!parse(barField.getText(),bar) || bar<1 || !parse(beatField.getText(),beat) || beat<1 || beat>=5)
         {
-            feedback.setText("Enter a valid bar, beat and repeat count.",juce::dontSendNotification);
+            feedback.setText("Enter a valid bar and beat.",juce::dontSendNotification);
             return;
         }
-        const m3::LoopPlacement placement{(static_cast<double>(bar)-1)*4+beat-1,repeats};
+        const m3::LoopPlacement placement{(static_cast<double>(bar)-1)*4+beat-1};
         if(placement.valid())submitValue(placement);
-        else feedback.setText("Position or repeat count is out of range.",juce::dontSendNotification);
+        else feedback.setText("Position is out of range.",juce::dontSendNotification);
     }
 
     void submitValue(std::optional<m3::LoopPlacement> placement)
@@ -256,11 +252,11 @@ private:
 
     Submit commit;
     juce::Component form;
-    std::array<juce::Label,3> captions;
-    m3::ui::controls::FieldTextEditor barField{"Bar"},beatField{"Beat"},repeatField{"Repeats"};
-    std::array<m3::ui::controls::FieldTextEditor*,3> fields{&barField,&beatField,&repeatField};
+    std::array<juce::Label,2> captions;
+    m3::ui::controls::FieldTextEditor barField{"Bar"},beatField{"Beat"};
+    std::array<m3::ui::controls::FieldTextEditor*,2> fields{&barField,&beatField};
     m3::ui::controls::EllipsisLabel feedback;
-    m3::ui::controls::ActionButton save{"Save"},clear{"Clear"},cancel{"Cancel"};
+    m3::ui::controls::ActionButton save{"Save"},cancel{"Cancel"};
 };
 }
 PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& p,std::function<void(const juce::String&)> writer)
@@ -296,7 +292,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     barStartLabel.setText("Bar start",juce::dontSendNotification);barEndLabel.setText("End excl.",juce::dontSendNotification);
     toneStartLabel.setText("Tone start bar",juce::dontSendNotification);toneEndLabel.setText("End exclusive",juce::dontSendNotification);
     addAndMakeVisible(removeButton);
-    for(auto* button:{&addButton,&generateButton,&allButton,&auditionButton,&stopButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
+    for(auto* button:{&addButton,&generateButton,&allButton,&analyzeButton,&confirmButton,&recaptureButton,&cancelButton,&fullButton,&resetButton,&setBarsButton,&clearButton})addAndMakeVisible(button);
     addAndMakeVisible(assetInfoButton);assetInfoButton.setTooltip("Copy the selected swell's managed asset paths for backup or validation.");
     assetInfoButton.onClick=[this]
     {
@@ -312,7 +308,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     addAndMakeVisible(performZoom);addAndMakeVisible(snapButton);addAndMakeVisible(gridBox);addAndMakeVisible(listCount);
     performZoom.setName("performZoom");snapButton.setName("performSnap");gridBox.setName("performGrid");
     m3::ui::applyTextRole(listCount,m3::ui::TextRole::helper,juce::Justification::centredRight);
-    generateButton.setName("generate");auditionButton.setName("audition");stopButton.setName("stopAudition");detail.setName("previewStatus");
+    generateButton.setName("generate");detail.setName("previewStatus");
     list.getProperties().set("contextHelp","Select a swell to edit. Use its checkbox to enable or disable it. Right-click the row or use its three dots for more actions.");
     list.onSelection=[this](auto ids,auto primary)
     {if(updating || destroying)return;processor.swellEngine().selectTargets(ids,primary,state.sessionEpoch);refresh();};
@@ -383,23 +379,19 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         };
     });
     generateButton.onClick=[this]{processor.swellEngine().generate();refresh();};allButton.onClick=[this]{showRegenerationResult(processor.swellEngine().generate(true));refresh();};
-    auditionButton.onClick=[this]{
-        if(!processor.auditionPreview())auditionRetryAfter=juce::Time::getMillisecondCounterHiRes()+2000;
-        refresh();
+    audition.action().beforeInvocation=[this]{
+        auditionCommand=AuditionCommand{state.sessionEpoch,state.workflowState.pass,state.playing};
     };
-    loopAudition.action().beforeInvocation=[this]{
-        loopAuditionInvocation=LoopAuditionInvocation{state.sessionEpoch,state.workflowState.pass,state.playing};
-    };
-    loopAudition.action().onClick=[this]{
-        const auto invocation=std::exchange(loopAuditionInvocation,std::nullopt);
-        if(!invocation || updating || destroying || !loopPerformLayout)return;
+    audition.action().onClick=[this]{
+        const auto invocation=std::exchange(auditionCommand,std::nullopt);
+        if(!invocation || updating || destroying)return;
         const auto current=processor.swellEngine().snapshot();
         if(current.sessionEpoch!=invocation->session || current.workflowState.pass!=invocation->pass
             || current.workflowState.mode!=workflow::Mode::live || current.playing!=invocation->stopping)return;
-        if(invocation->stopping){processor.swellEngine().stop();refresh();}
-        else auditionButton.onClick();
+        if(invocation->stopping)processor.swellEngine().stop();
+        else if(!processor.auditionPreview())auditionRetryAfter=juce::Time::getMillisecondCounterHiRes()+2000;
+        refresh();
     };
-    stopButton.onClick=[this]{processor.swellEngine().stop();};
     auditionSlider.onValueChange=[this]{if(!updating)setPreferences();};
     separationSlider.beforeInvocation=[this]{separationPass=processor.getWorkflowSnapshot().pass;};
     separationSlider.onValueChange=[this]{if(!updating){const auto s=processor.swellEngine().savedSession();processor.swellEngine().setPreferences(s.auditionDb,s.sensitivity,separationSlider.getValue()/1000,s.autoRegenerate,separationPass.value_or(processor.getWorkflowSnapshot().pass));}};
@@ -499,7 +491,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     toneButton.onClick=[this]{processor.setTestToneEnabled(toneButton.getToggleState());};
     toneStartSlider.onValueChange=[this]{if(!updating)processor.setToneStartBar(static_cast<int>(toneStartSlider.getValue()));};
     toneEndSlider.onValueChange=[this]{if(!updating)processor.setToneEndBar(static_cast<int>(toneEndSlider.getValue()));};
-    for(auto* label:std::initializer_list<juce::Label*>{&headerStatus,&selectedStatus,&monitorStatus,&helper})
+    for(auto* label:std::initializer_list<juce::Label*>{&headerStatus,&selectedStatus,&helper})
     {addAndMakeVisible(label);label->setColour(juce::Label::textColourId,m3::ui::secondary);}
     headerStatus.setName("processingStatus");selectedStatus.setName("selectedStatus");
     headerStatus.setBorderSize(juce::BorderSize<int>(0,24,0,8));
@@ -521,10 +513,12 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     liveButton.onClick=updateLive;liveRoutingBox.onChange=updateLive;liveLevel.onValueChange=updateLive;
     helper.setFont(juce::FontOptions(m3::ui::smallSize));
     for(auto* button:{&defaultIRButton,&suppressionButton})addAndMakeVisible(button);
-    addAndMakeVisible(auditionWetOnly);auditionWetOnly.setName("auditionWetOnly");monitorStatus.setName("auditionStatus");
-    for(auto* child:std::array<juce::Component*,4>{&loopAudition,&loopStart,&loopCue,&loopHeading})addChildComponent(*child);
-    loopAudition.action().setName("loopAudition");
-    loopAudition.setStateFieldName("loopAuditionStatus");
+    addAndMakeVisible(auditionWetOnly);auditionWetOnly.setName("auditionWetOnly");
+    addAndMakeVisible(audition);
+    audition.setName("auditionPair");
+    for(auto* child:std::array<juce::Component*,3>{&loopStart,&loopCue,&loopHeading})addChildComponent(*child);
+    audition.action().setName("audition");
+    audition.setStateFieldName("auditionStatus");
     loopStart.action().setName("setLoopStart");
     loopStart.setStateFieldName("loopStartPosition");
     loopCue.action().setName("loopCue");
@@ -536,18 +530,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     loopStart.action().onClick=[this]{
         const auto target=std::exchange(loopPlacementInvocation,std::nullopt);
         if(!target || updating || destroying || !loopPerformLayout)return;
-        const auto diagnostics=processor.getHostPositionDiagnostics();
-        auto placement=processor.getLoopPlacement().value_or(m3::LoopPlacement{});
-        if(diagnostics.isPlaying && loop_capture::HostGrid::supports(diagnostics.songTime())
-            && std::chrono::steady_clock::now()-diagnostics.observedAt<std::chrono::milliseconds(250)
-            && !juce::ModifierKeys::getCurrentModifiersRealtime().isShiftDown())
-        {
-            placement.ppq=diagnostics.ppqPosition;
-            processor.setLoopPlacement(*target,placement);
-            refresh();
-        }
-        else openLoopPlacementEditor(*target);
+        processor.setLoopPlacementFromPlayhead(*target);
+        refresh();
     };
+    loopStart.setContextMenu([this](bool keyboard){openLoopPlacementMenu(keyboard);});
     loopCue.action().beforeInvocation=[this]{loopButtonInvocation=std::pair{processor.getWorkflowSnapshot().pass,loopButtonStops};};
     loopCue.action().onClick=[this]{
         const auto invocation=std::exchange(loopButtonInvocation,std::nullopt);
@@ -570,7 +556,7 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
     auditionWetOnly.onClick=[this]{if(!updating && auditionInvocation && auditionWetOnly.isEnabled())processor.swellEngine().setAuditionWetOnly(auditionWetOnly.getToggleState(),auditionInvocation->first,auditionInvocation->second);auditionInvocation.reset();refresh();};
     auditionWetOnly.setTooltip("Off: captured dry plus wet at Live Wet gain. On: wet only at that gain. Loops until Stop.");
     enabledButton.setTooltip("Include this swell in wet playback and audition.");soloButton.setTooltip("Solo this swell: exclude other non-solo swells from wet playback and audition.");
-    stopButton.setTooltip("Stop audition preview; does not stop the DAW");auditionButton.setButtonText("Audition");auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
+    auditionLabel.setText("Trim (dB)",juce::dontSendNotification);auditionSlider.setDoubleClickReturnValue(true,0);
     inspectorViewport.setViewedComponent(&inspectorContent,false);diagnosticsViewport.setViewedComponent(&diagnosticsContent,false);
     inspectorViewport.setName("inspectorViewport");diagnosticsViewport.setName("diagnosticsViewport");
     inspectorViewport.setScrollBarsShown(true,false);diagnosticsViewport.setScrollBarsShown(true,false);
@@ -694,13 +680,13 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         m3::ui::applyTextRole(*label,m3::ui::TextRole::controlLabel);
     initialiseSettings();
     for(auto* heading:{&listLabel,&inspectorHeading,&auditionHeading})m3::ui::applyTextRole(*heading,m3::ui::TextRole::sectionHeading);
-    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&monitorStatus,&editorReadout})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
+    for(auto* label:std::initializer_list<juce::Label*>{&selectedStatus,&editorReadout})m3::ui::applyTextRole(*label,m3::ui::TextRole::helper);
     for(auto* label:{&listEmpty,&inspectorEmpty})m3::ui::applyTextRole(*label,m3::ui::TextRole::emptyBody,juce::Justification::centred);
     // setResizeLimits may already have brought the editor to the minimum.
     // Lay out once after every child is attached even if setSize is a no-op.
     setSize(1100,850);resized();refresh();startTimerHz(10);
 }
-PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();deleteSwellConfirmation.reset();if(renameDialog)renameDialog->exitModalState(0);if(loopPlacementDialog)loopPlacementDialog->exitModalState(0);recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
+PreverbAudioProcessorEditor::~PreverbAudioProcessorEditor(){publishPerformNavigation();destroying=true;swellMenu.reset();loopPlacementMenu.reset();deleteSwellConfirmation.reset();if(renameDialog)renameDialog->exitModalState(0);if(loopPlacementDialog)loopPlacementDialog->exitModalState(0);recoveryWarning.reset();recoveryInspection.cancel();removeMouseListener(this);stopTimer();if(presentation)presentation->persistIfDue(juce::Time::getMillisecondCounterHiRes(),true);diagnosticsWindow.reset();settingsWindow.reset();list.setModel(nullptr);setLookAndFeel(nullptr);}
 void PreverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     if(responsivePresentation){g.fillAll(m3::ui::background);return;}
@@ -898,8 +884,8 @@ void PreverbAudioProcessorEditor::resized()
     snapButton.setBounds(navigation.removeFromRight(performGeometry::snapWidth));navigation.removeFromRight(performGeometry::toolbarGap);performZoom.setBounds(navigation);
     editorReadout.setBounds(perform.readout);editorReadout.setName("editorReadout");
     timeline.setBounds(perform.detail.withTrimmedTop(performGeometry::columnInset));
-    auto audition=perform.audition.reduced(0,performGeometry::bandInset);auto auditionRow=audition.removeFromTop(36);
-    layoutLoopPlayback(auditionRow,false);
+    auto playbackRow=perform.audition.reduced(0,performGeometry::bandInset);
+    layoutPerformPlayback(playbackRow.removeFromTop(36));
     songOverview.setBounds(perform.overview.reduced(0,performGeometry::bandInset));hostInfo.setBounds(perform.info.withBottom(std::min(perform.info.getBottom(),hoverHelp.getY())));
     const auto width=inspectorWidth-16;
     auto inspector=juce::Rectangle<int>(width,std::numeric_limits<int>::max()).reduced(2,4);
@@ -1010,7 +996,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     layoutResponsiveValues();
     timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
     performZoom.setBounds(layout.zoom.reduced(0,3));snapButton.setBounds(layout.snap.reduced(0,3));gridBox.setRowBounds(layout.grid.reduced(0,3));
-    layoutLoopPlayback(layout.audition.reduced(0,contentPadding),true);
+    layoutPerformPlayback(layout.audition.reduced(0,contentPadding));
     songOverview.setBounds(layout.overview.reduced(0,contentPadding));hostInfo.setBounds(layout.position);
     for(int field=arrival;field<fieldCount;++field){diagnosticsContent.addAndMakeVisible(fieldLabels[field]);diagnosticsContent.addAndMakeVisible(fields[field]);}
     layoutSettings();layoutPresentationSettings();layoutLiveDiagnostics();refreshResponsiveSections();
@@ -1062,29 +1048,18 @@ void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
     liveDiagnostic.setBounds(status.getX(),placementEditor.getBottom()+inset,status.getWidth(),height);
     diagnosticsContent.setSize(panelBounds.getWidth(),liveDiagnostic.getBottom()+inset);
 }
-void PreverbAudioProcessorEditor::layoutLoopPlayback(juce::Rectangle<int> row,bool compact)
+void PreverbAudioProcessorEditor::layoutPerformPlayback(juce::Rectangle<int> row)
 {
     using namespace m3::ui;
-    if(!loopPerformLayout)
-    {
-        auditionHeading.setBounds(row.removeFromLeft(compact?88:112));
-        auditionButton.setBounds(row.removeFromLeft(compact?40:50));
-        row.removeFromLeft(8);
-        stopButton.setBounds(row.removeFromLeft(compact?40:50));
-        row.removeFromLeft(compact?8:performGeometry::toolbarGap);
-        auditionWetOnly.setBounds(row.removeFromLeft(compact?96:controlGeometry::valueWidth+2*spacing::related));
-        row.removeFromLeft(compact?8:spacing::related);
-        monitorStatus.setBounds(row);
-        return;
-    }
     const auto headingWidth=[&](const juce::Label& heading){
         return static_cast<int>(std::ceil(juce::GlyphArrangement::getStringWidth(textFont(TextRole::sectionHeading),heading.getText())))
             +spacing::related;
     };
     auditionHeading.setBounds(row.removeFromLeft(headingWidth(auditionHeading)));
-    loopAudition.setBounds(row.removeFromLeft(loopAudition.preferredWidth()));
+    audition.setBounds(row.removeFromLeft(audition.preferredWidth()));
     row.removeFromLeft(spacing::tight);
     auditionWetOnly.setBounds(row.removeFromLeft(controlGeometry::valueWidth+spacing::group));
+    if(!loopPerformLayout)return;
     row.removeFromLeft(spacing::related);
     const auto loopHeadingWidth=headingWidth(loopHeading);
     const auto preferred=loopHeadingWidth+loopStart.preferredWidth()+loopCue.preferredWidth()+spacing::tight+spacing::related;
@@ -1112,17 +1087,37 @@ void PreverbAudioProcessorEditor::openLoopPlacementEditor(PreverbAudioProcessor:
     dialog->show([safe,focus](int){if(safe)focus.post();});
 }
 
+void PreverbAudioProcessorEditor::openLoopPlacementMenu(bool keyboard)
+{
+    using namespace m3::ui::controls;
+    if(destroying || !loopPerformLayout || !loopStart.action().isEnabled() || loopPlacementMenu || loopPlacementDialog)return;
+    const auto target=processor.loopPlacementTarget();
+    const auto focus=SurfaceFocusReturn::capture(loopStart.action(),this);
+    const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
+    std::vector<PopupChoice> choices{
+        {1,"Enter bar and beat",{},true,false,PopupRowRole::action},
+        {2,"Clear Loop start",{},processor.getLoopPlacement().has_value(),false,PopupRowRole::action}};
+    loopPlacementMenu=std::make_unique<ChoicePopup>(loopStart.action(),std::move(choices),
+        [safe,target,focus](int result,PopupDismissal dismissal){
+            if(!safe || safe->destroying)return;
+            safe->loopPlacementMenu.reset();
+            if(result==1 && safe->loopPerformLayout){safe->openLoopPlacementEditor(target);return;}
+            if(result==2 && safe->processor.setLoopPlacement(target,{}))safe->refresh();
+            if(dismissal!=PopupDismissal::outside && dismissal!=PopupDismissal::ownerGone)focus.post();
+        });
+    loopPlacementMenu->setTitle("Loop start actions");
+    loopPlacementMenu->show(loopStart.getScreenBounds(),keyboard);
+}
+
 void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnabled,double capturedRate,
                                                      const HostPositionDiagnostics& diagnostics)
 {
     using Phase=m3::LoopLiveReference::State;
     using Prep=m3::LoopPlaybackPublication::Preparation;
     using Playing=m3::LoopCueScheduler::State;
-    for(auto* child:std::array<juce::Component*,4>{&loopAudition,&loopStart,&loopCue,&loopHeading})child->setVisible(visible);
-    auditionButton.setVisible(!visible && !learningLayout && !exportLayout);
-    stopButton.setVisible(!visible && !learningLayout && !exportLayout);
-    monitorStatus.setVisible(!visible && !learningLayout && !exportLayout);
-    if(!visible){timeline.setLoopPlayhead({});loopButtonInvocation.reset();loopAuditionInvocation.reset();return;}
+    for(auto* child:std::array<juce::Component*,3>{&loopStart,&loopCue,&loopHeading})child->setVisible(visible);
+    audition.setVisible(!learningLayout && !exportLayout);
+    if(!visible){timeline.setLoopPlayhead({});loopButtonInvocation.reset();loopPlacementMenu.reset();return;}
     const auto playback=processor.loopPlaybackStatus();
     timeline.setLoopPlayhead(playback.playhead);
     const auto active=playback.playback!=Playing::standby && playback.playback!=Playing::stopping;
@@ -1138,8 +1133,10 @@ void PreverbAudioProcessorEditor::refreshLoopPlayback(bool visible,bool liveEnab
     }
     else loopStart.setState("No start set");
     loopStart.action().setEnabled(playlist);
-    loopStart.setActionHelp(playlist?"Set Loop beat one to the Playlist playhead. Stop playback or hold Shift to edit or clear the start and set repeats."
-                                    :"Requires a host song position");
+    loopStart.setActionHelp(!playlist?"Requires a host song position"
+        :loop_capture::HostGrid::supports(diagnostics.songTime())
+            ?"Set Loop beat one to the Playlist playhead. Right-click or press Shift+F10 to enter or clear the start."
+            :"Playlist position unavailable. Right-click or press Shift+F10 to enter a position.");
     const auto transportPlaying=!playlist || diagnostics.isPlaying;
     const auto rateMismatch=capturedRate>0 && diagnostics.sampleRate>0 && capturedRate!=diagnostics.sampleRate;
     const auto ready=liveEnabled && transportPlaying && !rateMismatch
@@ -1557,27 +1554,21 @@ void PreverbAudioProcessorEditor::refresh()
         else unavailable="Preparing audition";
     }
     else if(juce::Time::getMillisecondCounterHiRes()<auditionRetryAfter)unavailable="Audition couldn't start. Try again shortly.";
-    auditionButton.setEnabled(unavailable.isEmpty());
     if(auditionHelp.isEmpty())auditionHelp=unavailable.isEmpty()?"Loop the selected audition window until Stop.":unavailable;
-    auditionButton.setTooltip(auditionHelp);auditionButton.setHelpText(auditionHelp);
     const auto auditionAction=state.playing?juce::String("Stop audition"):juce::String("Play audition");
-    loopAudition.action().setPlaybackIcon(state.playing);
-    if(loopAudition.action().getTitle()!=auditionAction)loopAudition.action().setTitle(auditionAction);
-    loopAudition.setActionVariant(state.playing?m3::ui::controls::CommandVariant::destructive:m3::ui::controls::CommandVariant::primary);
-    loopAudition.action().setEnabled(state.playing?caps.preview:unavailable.isEmpty());
-    loopAudition.setActionHelp(state.playing?"Stop audition preview. FL Studio or Rack transport continues.":auditionHelp);
-    stopButton.setEnabled(caps.preview && (state.playing || state.auditionReady));
+    audition.action().setPlaybackIcon(state.playing);
+    if(audition.action().getTitle()!=auditionAction)audition.action().setTitle(auditionAction);
+    audition.setActionVariant(state.playing?m3::ui::controls::CommandVariant::destructive:m3::ui::controls::CommandVariant::primary);
+    audition.action().setEnabled(state.playing?caps.preview:unavailable.isEmpty());
+    audition.setActionHelp(state.playing?"Stop audition preview. Host transport continues.":auditionHelp);
     juce::String monitoring=unavailable.isNotEmpty()?unavailable:(state.playing?"Looping":"Ready");
     if(w && unavailable.isEmpty()){
         if(state.auditionReady)monitoring<<" | "<<juce::String(static_cast<int>(state.auditionMembers.size()))<<" swell"<<(state.auditionMembers.size()==1?"":"s")<<(state.session.isolateSelected?" (isolated)":"");
         if(state.cachedWetOnly && state.auditionReady)monitoring<<" | cached wet";
         if(!state.session.auditionFollowsLive)monitoring<<" | saved balance";
         if(state.auditionReady && state.monitorPeak>1)monitoring<<" | Audition overload";}
-    monitorStatus.setText(monitoring,juce::dontSendNotification);
-    monitorStatus.setTooltip(monitoring+"\nSelected mode: "+(wetOnly?"Wet only":"Dry + wet")+"\nManual audition loops captured audio until Stop.\nLive Wet "+juce::String(state.session.liveWetDb,1)+" dB. Audition peak "+peakText(state.monitorPeak)+".\n"+state.dryStatus);
-    loopAudition.setState(state.playing && unavailable.isNotEmpty()?"Looping":monitoring,monitorStatus.getTooltip());
-    if(flow.mode==workflow::Mode::capture)monitorStatus.setText("Learn | dry passthrough | editing and audition available in Perform",juce::dontSendNotification);
-    if(flow.mode==workflow::Mode::finalise)monitorStatus.setText("Export | DAW wet bypassed | explicit preview only | editing locked",juce::dontSendNotification);
+    if(state.playing && unavailable.isNotEmpty())monitoring="Looping";
+    audition.setState(monitoring,monitoring+"\nSelected mode: "+(wetOnly?"Wet only":"Dry + wet")+"\nManual audition loops captured audio until Stop.\nLive Wet "+juce::String(state.session.liveWetDb,1)+" dB. Audition peak "+peakText(state.monitorPeak)+".\n"+state.dryStatus);
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
     automaticButton.setUnavailableReason(flow.locked()?"Wait for the current capture pass to finish.":"Available in Learn or Perform.");
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);

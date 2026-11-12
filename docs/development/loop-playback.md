@@ -4,9 +4,10 @@ FL Studio Perform chooses a saved Playlist placement first, a compatible host
 repeat second, and manual Cue when neither applies. Host repeat playback uses
 the reported repeat origin and period. The scheduler can join an active
 repeat at its current phase and carries eligible wet overlaps across a
-verified wrap. A Playlist placement saves beat one in PPQ and a finite repeat
-count for the accepted capture revision. It mixes the first negative lead-in,
-the intersecting passes after a seek and the final tail. Stop suppresses
+verified wrap. A Playlist placement saves beat one in PPQ for the accepted
+capture revision. It mixes the first negative lead-in and repeats from the
+saved origin, including after a seek. Scheduled Stop finishes the current
+pass and its tail and suppresses
 automatic re-entry until the transport starts a new run. See
 [Loop host admission](loop-host-admission.md) for timing requirements.
 

@@ -18,9 +18,9 @@ On FL Studio, an active placement selects the absolute timeline route. Otherwise
 
 ### Save a musical position and schedule by intersection
 
-Save the placement as host PPQ with a positive finite repeat count, initially one, and a binding to the accepted Loop identity. Display the resolved bar and beat. Confirm the stopped-playhead observation before using it and make the position editable for hosts or states where that observation is stale. Reuse the current supported tempo, meter and rate checks and derive the sample origin for the current run. A command queued in the UI must validate the workflow and source identity before it writes placement state.
+Save the placement as host PPQ bound to the accepted Loop identity. Set Loop Start reads the reported position while stopped or playing. The owner confirmed that FL Studio supplies different positions when the parked playhead moves. The right-click or Shift+F10 menu offers manual entry and clearing. Reuse the current supported tempo, meter and rate checks and derive the sample origin for the current run. A command queued in the UI must validate the workflow and source identity before it writes placement state.
 
-The first placed pass begins at its earliest prepared wet interval. For each block, intersect the current host position with the positioned contributions, including cross-pass leads and the last tail. Seeking reevaluates this intersection, while silence before the first interval and after the last tail follows from the finite schedule. Reuse Loop wet preparation and bounded overlap accounting. A one-shot MIDI launch or a stored sample timestamp would respectively depend on a past event or bind the placement to one host sample mapping.
+The first placed pass begins at its earliest prepared wet interval. For each block, intersect the current host position with the positioned contributions, including cross-pass leads. Repeat from the saved position until a stop command or transport interruption. A scheduled Stop lets the current pass and tail finish and suppresses later entries for that run. Seeking reevaluates the intersection. Reuse Loop wet preparation and bounded overlap accounting.
 
 ### Add a reusable Action Button + State Field
 
@@ -30,7 +30,7 @@ Use the host row's existing command allocation and body inset, including the 36-
 
 ### Compose the Perform row
 
-Use one aligned row. Both **Audition** and **Loop** use the standard section-heading text role at each width. After **Audition**, show one action joined to Audition status and followed by Dry + wet / Wet only. The primary Play glyph becomes a destructive Stop glyph while Audition is playing. After the divider and **Loop**, show primary **Set Loop Start** joined to the accepted bar and beat, then **Cue Loop / Cancel Loop / Stop Loop / Stop Now** joined to live status. Use the existing explicit neutral and destructive variants for the Loop playback command. The play/stop readiness and saved position are independent. Use existing menu or field controls to edit or clear the position and set repeat count.
+Use one aligned row. Both **Audition** and **Loop** use the standard section-heading text role at each width. Song and Loop share one Audition action, status field, mix control and command binding. The primary Play glyph becomes a destructive Stop glyph while Audition is playing. In Loop, show the divider and the **Loop** heading, then primary **Set Loop Start** joined to the accepted bar and beat and **Cue Loop / Cancel Loop / Stop Loop / Stop Now** joined to live status. Use the existing explicit neutral and destructive variants for the Loop playback command. The play/stop readiness and saved position are independent.
 
 Use the existing fixed hover-help footer for “Set Loop beat one to the Playlist playhead.” For hosts without supported Playlist placement, keep **Set Loop Start** visible and disabled, and show “Requires a host song position” in the footer on hover and in the accessible description. Bind footer help at the composite boundary if the disabled button does not receive mouse events. Keep any accepted position legible and use explicit empty-state text when no position exists.
 
@@ -39,7 +39,7 @@ Launch a native preview of the reusable component and the three-pair row before 
 ## Risks / Trade-offs
 
 - FL Studio does not supply a reliable mode flag. A matching Playlist repeat can autoplay just like a Pattern. A saved placement takes precedence and the status shows the selected route.
-- FL Studio may expose a stale stopped playhead. Check parked positions in the host before relying on them. Keep an editable bar-and-beat entry and report unavailable position explicitly.
+- FL Studio may omit the playhead in some configurations. Preserve the accepted position when the host position is unavailable and offer bar-and-beat entry through the context menu.
 - Starting inside a lead-in can only play samples from the current transport position forward. Verify complete entry from before the first wet interval, then verify joins and wrap overlap at sample level.
 - Stopping a transport-driven Loop suppresses its automatic re-entry for the current run. Clear the suppression on the next observed transport run and preserve any saved placement.
 

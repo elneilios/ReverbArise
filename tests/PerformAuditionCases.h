@@ -15,10 +15,11 @@ void Composition::verifyAudition()
     juce::MessageManager::getInstance()->runDispatchLoopUntil(35);float left[4096]{},right[4096]{};
     for(int n=0;n<80;++n){std::fill_n(left,4096,0);std::fill_n(right,4096,0);engine.processAudio(left,right,4096,processor->getSongTime());}
     panel->refresh();REQUIRE(engine.snapshot().playing && status.getText().startsWith("Looping") && toggle.getButtonText()=="Wet only");
-    auto& stop=require<controls::ActionButton>(*panel,"stopAudition");
-    REQUIRE(stop.isEnabled() && stop.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
+    REQUIRE(!find(*panel,"stopAudition"));
+    REQUIRE(play.getTitle()=="Stop audition" && play.getVariant()==controls::CommandVariant::destructive);
+    REQUIRE(play.isEnabled() && play.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey)));
     juce::MessageManager::getInstance()->runDispatchLoopUntil(35);
-    engine.processAudio(left,right,4096,processor->getSongTime());panel->refresh();REQUIRE(!engine.snapshot().playing && status.getText().startsWith("Ready"));
+    engine.processAudio(left,right,4096,processor->getSongTime());panel->refresh();REQUIRE(!engine.snapshot().playing && status.getText().startsWith("Ready") && play.getTitle()=="Play audition");
     auto legacy=saved;legacy.auditionFollowsLive=false;legacy.wetBlend=.65f;legacy.auditionDb=-24;engine.restore(legacy);
     wait([&]{return engine.snapshot().auditionReady;});panel->refresh();
     REQUIRE(engine.savedSession().auditionFollowsLive && status.getTooltip().contains("Live Wet") && !toggle.getToggleState());
