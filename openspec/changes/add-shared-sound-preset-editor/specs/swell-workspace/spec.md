@@ -104,6 +104,7 @@ The closed picker SHALL show the accepted response waveform and menu options SHA
 #### Scenario: Open a menu or prepare a replacement
 - **WHEN** the user inspects bundled, Custom IR or a supported generated option, or requests a response change
 - **THEN** available rows show their corresponding previews, including the accepted custom file or cached default response for a generated option
+- **AND** the closed picker and menu draw responses in the reverse time direction heard in the swell
 - **AND** the closed waveform remains the accepted one through pending or failed changes and is absent when no accepted preview exists
 
 ### Requirement: Slow Sound preparation has panel-local feedback

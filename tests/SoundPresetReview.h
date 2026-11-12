@@ -157,7 +157,7 @@ private:
                 const auto time = i / 103.;
                 const auto pulse = std::pow(std::abs(std::sin(time * (12. + seed * 2.) + channel * 1.6)), 7.);
                 const auto texture = .35 + .65 * std::abs(std::sin(i * (2.1 + .075 * seed) + channel));
-                const auto envelope = seed == 0 ? .12 + time * .85 : std::exp(-time * (1. + seed * .22));
+                const auto envelope = seed == 0 ? .12 + (1. - time) * .85 : std::exp(-time * (1. + seed * .22));
                 bins.push_back(static_cast<float>((.12 + .88 * pulse) * texture * envelope));
             }
         }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the Sound editor and #190 persistence with integrated native and FL Studio smoke. The guide covers Learn defaults, selected-swell edits, contextual Custom IR, and panel feedback. Added focused test registration without changing the guide workflow.",
+  "summary": "Reviewed the reverse-time Sound picker waveform decoration. The cosmetic change leaves the existing musician instructions for presets, Custom IR and Level applicable.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -835,8 +835,8 @@
     },
     {
       "path": "Source/UI/Controls/SoundPresetEditor.h",
-      "bytes": 25231,
-      "sha256": "897872174c6e2c58aa339add14b0dfbe88035437a37fed54ac68f4c86c6ea8fe"
+      "bytes": 25338,
+      "sha256": "518b08d082d8da5c6014f9dd8749feda7f66cd6823184a2e7a9c29aa45bd9dc9"
     },
     {
       "path": "Source/UI/Controls/SurfaceLifecycle.h",

@@ -84,6 +84,8 @@ inline void componentCases()
     SoundPresetEditor::View view;
     const juce::String longName("Stereo Ping Pong Crescendo with an intentionally long accessible name");
     view.presets = {{"ping", longName, {}}, {"metal", "Metal Bloom", {}}, {"custom-ir", "Custom IR", {}}};
+    view.acceptedPeaks = std::make_shared<SoundPresetEditor::Peaks>(SoundPresetEditor::Peaks{{1.f, 0.f}});
+    view.presets.front().peaks = view.acceptedPeaks;
     view.accepted = "ping";
     view.editable = true;
     view.tempoSync = true;
@@ -94,6 +96,16 @@ inline void componentCases()
     panel.onPreset = [&](const auto& value) { requested = value; ++commits; };
     panel.display(view);
     auto& picker = panel.presetPicker();
+    for (const auto* paint : {&picker.closedDecoration, &picker.rowDecoration})
+    {
+        juce::Image waveform(juce::Image::ARGB, 80, 32, true, juce::SoftwareImageType{});
+        {
+            juce::Graphics graphics(waveform);
+            (*paint)(graphics, waveform.getBounds(), 1);
+        }
+        REQUIRE(waveform.getPixelAt(20, 16).isTransparent());
+        REQUIRE(!waveform.getPixelAt(60, 16).isTransparent());
+    }
     REQUIRE(picker.displayedText() == longName && !panel.importAction().isVisible());
     REQUIRE(picker.getAccessibilityHandler()->getValueInterface()->getCurrentValueAsString() == longName);
     auto& previous = control<CommandButton>(panel, "soundPrevious");

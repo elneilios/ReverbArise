@@ -126,7 +126,8 @@ Use ControlLibrary/ExportControl/AuditionStrip cases plus real owner bindings.
 
 The #191 Sound Preset picker uses the approved Previous and Next command glyphs
 and the existing C2 selection and focus rules. Its closed control and menu rows
-may paint decorative response peaks below the text. Custom IR can show a
+may paint decorative response peaks below the text in reverse time, matching
+the direction of the audible swell. Custom IR can show a
 file-choice prompt in the closed control while the checkmark and waveform
 identify the accepted response. The picker keeps its existing dimensions.
 

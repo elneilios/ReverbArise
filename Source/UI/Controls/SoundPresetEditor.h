@@ -361,7 +361,8 @@ private:
             const float width = static_cast<float>(area.getWidth()) / static_cast<float>(peaks.size());
             for (size_t i = 0; i < peaks.size(); ++i)
             {
-                const float peak = std::clamp(peaks[i] / peakScale, 0.f, 1.f);
+                // Display the response in the time direction heard in a reverse swell.
+                const float peak = std::clamp(peaks[peaks.size() - 1 - i] / peakScale, 0.f, 1.f);
                 const float amplitude = (emphasise ? std::sqrt(peak) * .48f : peak * .34f) * band;
                 g.fillRect(area.getX() + static_cast<float>(i) * width, middle - amplitude, width, 2 * amplitude);
             }

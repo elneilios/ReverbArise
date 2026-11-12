@@ -26,3 +26,7 @@ FL Studio 26.1.7.5654 used the Release VST3 installed at `C:\Program Files\Commo
 - In Perform, Previous selected Preverb Hall and wrapped to the contextual Custom IR picker. Import accepted the local WAV, preserved the 2.1 arrival and 2.4 dB Level, and fitted the wet lead-in to 0.20 s.
 - After saving and reopening in a fresh FL Studio process, the selected swell showed the same Custom IR filename and 2.4 dB. Learn still showed Monumental at 2.4 dB. The saved state confirmed creative v12 and distinct bundled and Custom preset IDs.
 - The FL Studio run used the compact editor at 100%. Expanded 100% and 125% coverage comes from the native review. Host 125% was outside this smoke.
+
+## Reverse waveform display follow-up
+
+The focused Debug Sound UI test passed in 3.83 s with an asymmetric response fixture that checks time direction in the closed picker and menu. The native fixture and bound Learn/Perform captures rendered successfully. The change is limited to painting the preview, so the earlier FL Studio smoke covers the unchanged audio path.
