@@ -12,6 +12,7 @@ class SoundResponsePeaks
 {
     using Peaks = controls::SoundPresetEditor::Peaks;
 public:
+    static constexpr double managedRetryMs = 2000.;
     ~SoundResponsePeaks() { worker.removeAllJobs(true, -1); }
     uint64_t revision() const noexcept { return published.load(); }
 
@@ -33,35 +34,45 @@ public:
         {
             juce::String error;
             return SwellAssetStore(root).readIR(asset, decodeBudget, response, error);
-        });
+        }, true);
     }
 
 private:
     friend struct SoundResponsePeaksFixture;
     static constexpr size_t cacheLimit = 48, pendingLimit = 12, binLimit = 128;
     static constexpr uint64_t decodeBudget = 32ULL * 1024 * 1024;
-    struct Entry { std::shared_ptr<const Peaks> peaks; uint64_t touch = 0; bool pending = true; };
+    struct Entry
+    {
+        std::shared_ptr<const Peaks> peaks;
+        uint64_t touch = 0;
+        bool pending = true;
+        double retryAt = 0.;
+    };
 
     template<class Load>
-    std::shared_ptr<const Peaks> get(const juce::String& key, Load load)
+    std::shared_ptr<const Peaks> get(const juce::String& key, Load load, bool retryFailure = false)
     {
         const juce::ScopedLock guard(lock);
-        if (auto entry = cache.find(key); entry != cache.end())
+        auto entry = cache.find(key);
+        if (entry != cache.end())
         {
             entry->second.touch = ++sequence;
-            return entry->second.peaks;
+            if (entry->second.pending || entry->second.peaks || !retryFailure
+                || juce::Time::getMillisecondCounterHiRes() < entry->second.retryAt)
+                return entry->second.peaks;
         }
         if (pending >= pendingLimit) return {};
-        if (cache.size() == cacheLimit)
+        if (entry == cache.end() && cache.size() == cacheLimit)
         {
             auto oldest = cache.end();
-            for (auto entry = cache.begin(); entry != cache.end(); ++entry)
-                if (!entry->second.pending && (oldest == cache.end() || entry->second.touch < oldest->second.touch))
-                    oldest = entry;
+            for (auto candidate = cache.begin(); candidate != cache.end(); ++candidate)
+                if (!candidate->second.pending && (oldest == cache.end() || candidate->second.touch < oldest->second.touch))
+                    oldest = candidate;
             if (oldest == cache.end()) return {};
             cache.erase(oldest);
         }
-        cache.emplace(key, Entry{{}, ++sequence, true});
+        if (entry == cache.end()) cache.emplace(key, Entry{{}, ++sequence, true});
+        else entry->second.pending = true;
         ++pending;
         worker.addJob(std::function<void()>([this, key, load = std::move(load)]
         {
@@ -87,9 +98,10 @@ private:
             }
             catch (const std::bad_alloc&) {}
             const juce::ScopedLock completed(lock);
-            auto& entry = cache.at(key);
-            entry.peaks = std::move(peaks);
-            entry.pending = false;
+            auto& result = cache.at(key);
+            result.peaks = std::move(peaks);
+            result.pending = false;
+            result.retryAt = result.peaks ? 0. : juce::Time::getMillisecondCounterHiRes() + managedRetryMs;
             --pending;
             ++published;
         }));

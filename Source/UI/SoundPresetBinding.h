@@ -22,6 +22,8 @@ class SoundPresetBinding final : private juce::Timer
         juce::String swell;
         bool defaults = true;
         bool operator==(const Target&) const = default;
+        bool sameOwner(const Target& other) const
+        { return session == other.session && pass == other.pass && swell == other.swell && defaults == other.defaults; }
     };
     struct Pending
     {
@@ -104,9 +106,11 @@ public:
         const std::weak_ptr<int> weak = lifetime;
         FileResult complete = [this, weak, owner, token, ticket = *ticket](const juce::File& file)
         {
-            const auto current = [this, weak, owner, token]
-            { return !weak.expired() && token == fileSerial && owner == target; };
-            if (weak.expired() || !ticket.complete(current) || !current()) return;
+            if (weak.expired()) return;
+            const auto focusOwner = [this, weak, owner, token]
+            { return !weak.expired() && token == fileSerial && owner.sameOwner(target); };
+            const bool maySubmit = token == fileSerial && owner == target;
+            if (!ticket.complete(focusOwner) || !maySubmit) return;
             if (file != juce::File{}) submit(owner, {}, file);
             refresh();
         };
@@ -137,6 +141,7 @@ private:
     {
         invocation.reset();
         pending.reset();
+        managedRetryAt.reset();
         customIntent = false;
         ++fileSerial;
         surface.invalidate();
@@ -180,8 +185,7 @@ private:
 
     void display(const EditorSnapshot& state, const Swell* swell, Target next, bool visible)
     {
-        if (target.session != next.session || target.pass != next.pass || target.swell != next.swell
-            || target.defaults != next.defaults || lastMode != state.workflowState.mode) resetContext();
+        if (!target.sameOwner(next) || lastMode != state.workflowState.mode) resetContext();
         target = std::move(next);
         lastMode = state.workflowState.mode;
         setActive(visible);
@@ -212,7 +216,12 @@ private:
         choices = active ? engine.irChoices() : std::vector<IRChoice>{};
         const auto root = active ? engine.assetDirectory() : juce::File{};
         peakRevision = peaks->revision();
-        if (active && asset && asset->present()) view.acceptedPeaks = peaks->managed(root, *asset);
+        if (active && asset && asset->present())
+        {
+            view.acceptedPeaks = peaks->managed(root, *asset);
+            if (!view.acceptedPeaks && !managedRetryAt) managedRetryAt = now() + SoundResponsePeaks::managedRetryMs;
+        }
+        if (!active || !asset || !asset->present() || view.acceptedPeaks) managedRetryAt.reset();
         for (const auto& choice : choices)
         {
             if (choice.presetId.isNotEmpty())
@@ -262,7 +271,9 @@ private:
     void timerCallback() override
     {
         if (!active) return;
-        if (peakRevision != peaks->revision()) refresh();
+        const auto retryDue = managedRetryAt && now() >= *managedRetryAt;
+        if (retryDue) managedRetryAt.reset();
+        if (retryDue || peakRevision != peaks->revision()) refresh();
         updateBusy();
     }
 
@@ -271,6 +282,7 @@ private:
     std::function<double()> now;
     juce::SharedResourcePointer<SoundResponsePeaks> peaks;
     uint64_t peakRevision = 0;
+    std::optional<double> managedRetryAt;
     Target target, levelTarget;
     std::optional<Target> invocation;
     workflow::Mode lastMode = workflow::Mode::capture;

@@ -6,6 +6,36 @@ namespace m3::ui
 {
 struct SoundResponsePeaksFixture
 {
+    static void recovery()
+    {
+        TestDirectory directory;
+        SoundResponsePeaks cache;
+        ImpulseResponse response;
+        response.rate = 48000;
+        response.channels = 1;
+        response.samples = {.75f, .25f};
+        Asset asset;
+        juce::String error;
+        REQUIRE(SwellAssetStore(directory.file).writeIR(response, asset, error));
+        const auto wav = directory.file.getChildFile(asset.path);
+        const auto backup = directory.file.getChildFile("recover.wav");
+        REQUIRE(wav.moveFileTo(backup));
+        REQUIRE(!cache.managed(directory.file, asset));
+        convolutionIrCases::settle([&] { return cache.revision() == 1; });
+        REQUIRE(backup.moveFileTo(wav));
+        REQUIRE(!cache.managed(directory.file, asset));
+        {
+            const juce::ScopedLock guard(cache.lock);
+            REQUIRE(cache.pending == 0 && cache.cache.size() == 1);
+            REQUIRE(cache.cache.begin()->second.retryAt > juce::Time::getMillisecondCounterHiRes());
+            cache.cache.begin()->second.retryAt = 0.;
+        }
+        REQUIRE(!cache.managed(directory.file, asset));
+        convolutionIrCases::settle([&] { return cache.revision() == 2; });
+        const auto peaks = cache.managed(directory.file, asset);
+        REQUIRE(peaks && peaks->at(0)[0] == .75f);
+    }
+
     static void run()
     {
         juce::WaitableEvent gate(true);
@@ -258,6 +288,25 @@ inline void bindingCases()
 
     fixture.select(fixture.a);
     refresh();
+    auto& opener = selected.importAction();
+    auto& otherField = selected.filePicker();
+    host.toFront(true);
+    opener.grabKeyboardFocus();
+    const auto inputBeforeImport = find(engine.savedSession(), fixture.a)->inputGeneration;
+    start(selected);
+    otherField.grabKeyboardFocus();
+    const bool canCheckFocus = juce::Process::isForegroundProcess() && otherField.hasKeyboardFocus(false);
+    finish(fixture.second);
+    REQUIRE(find(engine.savedSession(), fixture.a)->inputGeneration != inputBeforeImport);
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
+    if (canCheckFocus) REQUIRE(opener.hasKeyboardFocus(false));
+    settle([&]
+    {
+        const auto session = engine.savedSession();
+        const auto* swell = find(session, fixture.a);
+        return swell && swell->phase == Phase::ready && swell->irName == fixture.second.getFileName();
+    });
+    refresh();
     auto& selectedFiles = selected.filePicker();
     for (int index = 0; index < selectedFiles.getNumItems(); ++index)
         if (selectedFiles.getItemText(index) == same.getFileName()) { select(selectedFiles, index + 1); break; }
@@ -336,5 +385,6 @@ inline void run()
     componentCases();
     bindingCases();
     SoundResponsePeaksFixture::run();
+    SoundResponsePeaksFixture::recovery();
 }
 }

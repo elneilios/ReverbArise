@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the reverse-time Sound picker waveform decoration. The cosmetic change leaves the existing musician instructions for presets, Custom IR and Level applicable.",
+  "summary": "Reviewed the PR #200 focus return and missing waveform recovery fixes. The existing Sound instructions remain applicable.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1000,13 +1000,13 @@
     },
     {
       "path": "Source/UI/SoundPresetBinding.h",
-      "bytes": 11536,
-      "sha256": "64c57ad20652b7e88dfd09841c4df25adb9f87e6ba8a091ad8580c20e2e831fc"
+      "bytes": 12158,
+      "sha256": "7a2fd0cf660cfeb3c68a5e47e026f9bd6f699fd02c2af0060b0c39c640fbf5d0"
     },
     {
       "path": "Source/UI/SoundResponsePeaks.h",
-      "bytes": 4266,
-      "sha256": "aa7ff3fa19807017437eeb49a3c574450075251ccb5ff7a37fe8e28122288f17"
+      "bytes": 4815,
+      "sha256": "586ad6b2e967e9cd19e9fb47f457943e3b2f6008f3e6457fc4deb90fb5c65474"
     },
     {
       "path": "Source/UI/StorageInventoryPanel.h",

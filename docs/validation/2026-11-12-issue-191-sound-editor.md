@@ -30,3 +30,7 @@ FL Studio 26.1.7.5654 used the Release VST3 installed at `C:\Program Files\Commo
 ## Reverse waveform display follow-up
 
 The focused Debug Sound UI test passed in 3.83 s with an asymmetric response fixture that checks time direction in the closed picker and menu. The native fixture and bound Learn/Perform captures rendered successfully. The change is limited to painting the preview, so the earlier FL Studio smoke covers the unchanged audio path.
+
+## PR #200 review follow-up
+
+The focused Debug Sound UI and IR binding tests passed in 8.26 s. The chooser fixture exercises a successful Perform import that advances the input generation and checks focus return when the native fixture owns foreground focus. The cache fixture verifies a missing managed WAV is retried after the cooldown and produces peaks when the same file is restored in place. The Release regression and FL Studio results above apply to the earlier revision.
