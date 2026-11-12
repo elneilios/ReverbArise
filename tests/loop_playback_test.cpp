@@ -741,12 +741,122 @@ void measuredReplay(const char* path, double bpm)
     }
     std::cout << bpm << " BPM, " << launches << " launches, " << downbeats << " aligned downbeats, peak error " << maximumError << '\n';
 }
+
+void flStudioScheduleCases()
+{
+    using Route=LoopPlayback::Route;
+    constexpr int64_t period=96000;
+    constexpr int64_t placement=10;
+    const auto entry=testEntry(0,-4,period+8,.002f);
+    const auto create=[&]{
+        auto playback=std::make_unique<LoopPlayback>();
+        auto publication=std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration=publication->sourceRevision=1;
+        publication->rate=48000;
+        publication->timing={120,4,4,4,0,period};
+        publication->preparation=LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries={entry};
+        juce::String error;
+        REQUIRE(publication->plan.prepare(period,8*1024*1024,error));
+        REQUIRE(playback->publish(std::move(publication)));
+        return playback;
+    };
+    const auto expected=[&](int64_t position){
+        return position >= entry.start && position < entry.end
+            ? entry.audio->samples[static_cast<size_t>(position-entry.start)*2] : 0.f;
+    };
+    using PlaybackState=LoopCueScheduler::State;
+    const auto block=[&](LoopPlayback& playback,int64_t hostSample,int frames,LoopPlayback::HostSchedule schedule,
+                          const auto& oracle,bool hostPlaying=true,bool validTiming=true,
+                          bool discontinuity=false,uint16_t firstRoles=0){
+        std::array<float,256> left{},right{};
+        const SongTime time{validTiming,hostSample,static_cast<double>(hostSample)/24000.0,48000,120,4,4};
+        MidiObservations events;
+        if(firstRoles)events.samples[events.size++]={0,firstRoles};
+        {AudioAllocationGuard guard;
+            playback.process(left.data(),right.data(),frames,events,48000,1,1,LoopPlayback::Access::perform,
+                             discontinuity,{},time,schedule,hostPlaying);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        for(int i=0;i<frames;++i)
+        {
+            const auto expectedWet=oracle(hostSample+i);
+            if(std::abs(left[i]-expectedWet)>=1e-6f)
+                throw std::runtime_error("FL schedule mismatch at sample "+std::to_string(hostSample+i)
+                    +" (block "+std::to_string(hostSample)+"): expected "+std::to_string(expectedWet)
+                    +", got "+std::to_string(left[i]));
+        }
+    };
+
+    const LoopPlayback::HostSchedule placementSchedule{Route::placement,placement,0};
+    const auto placedWet=[&](int64_t sample){
+        const auto local=sample-placement;
+        const auto cycle=std::max<int64_t>(0,local/period);
+        const auto phase=local-cycle*period;
+        return (cycle>0?expected(phase+period):0.f)+expected(phase)+expected(phase-period);
+    };
+    auto placed=create();
+    for(int64_t pos=0;pos<3*period+32;)
+    {
+        const auto frames=static_cast<int>(std::min<int64_t>(256,3*period+32-pos));
+        block(*placed,pos,frames,placementSchedule,placedWet);
+        pos+=frames;
+    }
+    REQUIRE(placed->status().playback==LoopCueScheduler::State::repeating);
+    const auto silent=[](int64_t){return 0.f;};
+    auto seeked=create();
+    block(*seeked,0,2,placementSchedule,silent);
+    REQUIRE(seeked->status().playback==PlaybackState::queued);
+    block(*seeked,placement-4,4,placementSchedule,placedWet,true,true,true);
+    REQUIRE(seeked->status().playback==PlaybackState::leadIn);
+    block(*seeked,placement,8,placementSchedule,placedWet);
+
+    for(const auto stopRole:{uint16_t{},uint16_t{finish},uint16_t{stop}})
+    {
+        auto stopped=create();
+        block(*stopped,0,2,placementSchedule,silent);
+        REQUIRE(stopped->status().playback==PlaybackState::queued);
+        if(!stopRole)stopped->requestFinish();
+        block(*stopped,placement-4,4,placementSchedule,silent,true,true,true,stopRole);
+        block(*stopped,placement,32,placementSchedule,silent);
+        REQUIRE(stopped->status().playback==PlaybackState::standby);
+    }
+
+    auto finishing=create();
+    block(*finishing,placement+period-16,4,placementSchedule,placedWet);
+    finishing->requestFinish();
+    const auto onlyFirstPass=[&](int64_t sample){return expected(sample-placement);};
+    block(*finishing,placement+period-12,32,placementSchedule,onlyFirstPass);
+    REQUIRE(finishing->status().playback==LoopCueScheduler::State::standby);
+    block(*finishing,placement+period+20,32,placementSchedule,silent);
+    block(*finishing,0,32,{},silent,false);
+    block(*finishing,placement,32,placementSchedule,placedWet);
+
+    auto repeating=create();
+    const LoopPlayback::HostSchedule repeat{Route::hostRepeat,0,period};
+    const auto cyclic=[&](int64_t sample){
+        return expected(sample+period)+expected(sample)+expected(sample-period);
+    };
+    block(*repeating,period-12,12,repeat,cyclic);
+    block(*repeating,0,32,repeat,cyclic);
+    REQUIRE(repeating->status().route==Route::hostRepeat && repeating->status().playhead==31);
+    auto atBoundary=create();
+    block(*atBoundary,0,32,repeat,cyclic);
+    REQUIRE(atBoundary->status().playback==LoopCueScheduler::State::repeating);
+    constexpr int fadeFrames=240; // Five milliseconds at the fixture rate.
+    const auto timingLoss=[&](int64_t sample){
+        const auto remaining=std::max<int64_t>(0,31+fadeFrames-sample);
+        return cyclic(31)*static_cast<float>(remaining)/fadeFrames;
+    };
+    block(*atBoundary,32,256,repeat,timingLoss,true,false);
+    REQUIRE(atBoundary->status().route==Route::manual
+        && atBoundary->status().playback==LoopCueScheduler::State::standby);
+}
 }
 
 int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); offlineFadeCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); offlineFadeCases(); rateChangeFadeCases(); flStudioScheduleCases();}
     });
 }

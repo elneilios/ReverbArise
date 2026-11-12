@@ -92,7 +92,7 @@ public:
         // Borrow the actual production components and their domain bindings.
         // The hidden owning editor stays alive; only this fixture reparents them.
         for(const auto* name:{"workflowHeader","workspaceNotice","swellList","swellTimeline","songOverview",
-                "inspectorViewport","audition","stopAudition","auditionWetOnly","hostInfo",
+                "inspectorViewport","auditionPair","auditionWetOnly","hostInfo",
                 "editorReadout"})
         {
             auto* component=find(*editor,name);REQUIRE(component);
@@ -105,13 +105,12 @@ public:
         list.onToggleEnabled=[this,toggle](auto id){if(toggle)toggle(std::move(id));refresh();};
         const auto envelope=timeline().onEnvelopeEdited;
         timeline().onEnvelopeEdited=[this,envelope]{if(envelope)envelope();refresh();};
-        for(auto* label:{&swellsHeading,&countLabel,&inspectorHeading,&auditionHeading,&emptyList,&emptyInspector,&emptyTimeline,&monitor})
+        for(auto* label:{&swellsHeading,&countLabel,&inspectorHeading,&auditionHeading,&emptyList,&emptyInspector,&emptyTimeline})
         {addAndMakeVisible(label);label->setInterceptsMouseClicks(false,false);}
         applyTextRole(swellsHeading,TextRole::sectionHeading);applyTextRole(inspectorHeading,TextRole::sectionHeading);
         swellsHeading.setText("Swells",juce::dontSendNotification);applyTextRole(countLabel,TextRole::helper,juce::Justification::centredRight);
         applyTextRole(auditionHeading,TextRole::sectionHeading);
         inspectorHeading.setText("Selected Swell",juce::dontSendNotification);auditionHeading.setText("Audition",juce::dontSendNotification);
-        applyTextRole(monitor,TextRole::helper);
         for(auto* label:{&emptyList,&emptyInspector,&emptyTimeline})
             applyTextRole(*label,TextRole::helper,juce::Justification::centred);
         emptyList.setText("No swells yet\n\nAdd a swell with +",juce::dontSendNotification);
@@ -281,7 +280,6 @@ public:
         {choice.available=false;choice.reason="Isolated Perform composition review";}
         require<WorkflowHeader>(*this,"workflowHeader").display(presentation);
         countLabel.setText("("+juce::String(state.session.swells.size())+")",juce::dontSendNotification);
-        monitor.setText(state.dryStatus.isNotEmpty()?state.dryStatus:"Preview only | captured dry and prepared wet | host routing unchanged",juce::dontSendNotification);
         emptyList.setVisible(scene==1);emptyInspector.setVisible(scene==1);
         parts.at("inspectorViewport")->setVisible(scene!=1);
         const bool noAudio=scene==1;emptyTimeline.setVisible(noAudio);timeline().setVisible(!noAudio);
@@ -322,10 +320,10 @@ public:
         auto row=l.toolbar.reduced(performGeometry::toolbarInset);grid.setBounds(row.removeFromRight(performGeometry::gridWidth));row.removeFromRight(performGeometry::toolbarGap);
         snap.setBounds(row.removeFromRight(performGeometry::snapWidth));row.removeFromRight(performGeometry::toolbarGap);zoom.setBounds(row);
         auto audition=l.audition.reduced(0,8);auto line=audition.removeFromTop(36);
-        auditionHeading.setBounds(line.removeFromLeft(112));parts.at("audition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(8);
-        parts.at("stopAudition")->setBounds(line.removeFromLeft(50));line.removeFromLeft(24);
+        auditionHeading.setBounds(line.removeFromLeft(112));
+        auto& pair=require<controls::ActionButtonStateField>(*this,"auditionPair");
+        pair.setBounds(line.removeFromLeft(pair.preferredWidth()));line.removeFromLeft(spacing::tight);
         parts.at("auditionWetOnly")->setBounds(line.removeFromLeft(controlGeometry::valueWidth+2*spacing::related));
-        monitor.setBounds(audition.withTrimmedLeft(112));
         parts.at("songOverview")->setBounds(l.overview.reduced(0,8));parts.at("hostInfo")->setBounds(l.info);
     }
     void layoutInspector(int width)
@@ -388,7 +386,7 @@ public:
         REQUIRE(parts.at("inspectorViewport")->getBottom()<=l.work.getBottom()-spacing::related);
         REQUIRE(!find(*this,"autoMarkers") && !find(*this,"markerSensitivity"));
         REQUIRE(parts.at("songOverview")->getBottom()<=l.overview.getBottom()-8);
-        REQUIRE(parts.at("audition")->getY()>=l.audition.getY()+8);
+        REQUIRE(parts.at("auditionPair")->getY()>=l.audition.getY()+8);
         REQUIRE(!snap.isEnabled() && !grid.isEnabled()); // Layout specimens cannot imply implemented edits.
         auto& header=require<WorkflowHeader>(*this,"workflowHeader");
         for(auto* c:header.getChildren())REQUIRE(header.getLocalBounds().contains(c->getBounds()));
@@ -407,7 +405,7 @@ private:
     std::unique_ptr<PreverbAudioProcessor> processor;std::unique_ptr<PreverbAudioProcessorEditor> editor;
     std::map<juce::String,juce::Component*> parts;std::vector<std::pair<juce::Component*,juce::Component*>> borrowed;
     m3::Session baseline;juce::String firstId,secondId;int scene=0;int layoutPasses=0;
-    juce::Label swellsHeading,countLabel,inspectorHeading,auditionHeading,emptyList,emptyInspector,emptyTimeline,monitor;
+    juce::Label swellsHeading,countLabel,inspectorHeading,auditionHeading,emptyList,emptyInspector,emptyTimeline;
     juce::TextButton snap{"Snap"},add{"+"};
     controls::TimelineZoomControls zoom;InvocationComboBox grid;
 };

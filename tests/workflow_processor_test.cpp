@@ -720,6 +720,19 @@ static void rackLoopWithPartialHostTransport()
 
 static void flStudioLoopProcessorCases()
 {
+    {
+        constexpr int64_t beat=24000;
+        m3::LoopClockGrid rack;
+        rack.reset(48000);
+        for (int i=0;i<=6;++i)
+            rack.observe(i*beat,loop_capture::captureClock | (i==0 ? loop_capture::phrase : 0),48000,true);
+        REQUIRE(rack.ready());
+        REQUIRE(rack.nextDownbeat(6*beat,beat,16)==16*beat);
+        REQUIRE(rack.nextDownbeat(6*beat,11*beat,16)==32*beat);
+        rack.reset(48000);
+        for (int i=0;i<=6;++i) rack.observe(i*beat,loop_capture::captureClock,48000,true);
+        REQUIRE(rack.nextDownbeat(6*beat,beat,16)==8*beat);
+    }
     using Phase = m3::LoopLiveReference::State;
     TestDirectory root;
     LoopCaptureFixture::TimingHost host;
@@ -743,6 +756,7 @@ static void flStudioLoopProcessorCases()
     juce::MidiBuffer midi;
     midi.ensureSize(128);
     unsigned blocks = 0;
+    bool reportsPpq = true;
     const auto tick = [&](int64_t noteAt = -1, int note = 0)
     {
         constexpr int sizes[]{250, 104, 146};
@@ -751,7 +765,10 @@ static void flStudioLoopProcessorCases()
         for (int channel = 0; channel < 2; ++channel)
             std::fill_n(audio.getWritePointer(channel), frames, .25f);
         host.position.setTimeInSamples(cursor);
-        host.position.setPpqPosition(static_cast<double>(cursor) / quarter);
+        if (reportsPpq)
+            host.position.setPpqPosition(static_cast<double>(cursor) / quarter);
+        else
+            host.position.setPpqPosition(std::nullopt);
         midi.clear();
         if (noteAt >= cursor && noteAt < cursor + frames)
         {
@@ -990,9 +1007,9 @@ static void flStudioLoopProcessorCases()
     host.position.setIsPlaying(true);
     cursor = 0;
     through(quarter);
-    REQUIRE(plugin.requestLoopCue());
-    tick();
-    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    using Route=m3::LoopPlayback::Route;
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::hostRepeat && !plugin.requestLoopCue());
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
     wrapPattern();
     REQUIRE(plugin.loopPlaybackStatus().playback != Playing::standby);
     wrapPattern();
@@ -1004,7 +1021,165 @@ static void flStudioLoopProcessorCases()
     through(quarter);
     cursor = 0; // Same destination as a repeat, but the previous block did not reach the endpoint.
     through(1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.loopPlaybackStatus().playhead && *plugin.loopPlaybackStatus().playhead < 1300);
+    const auto stopRepeat=cursor+10;
+    through(stopRepeat,stopRepeat,18);
+    through(stopRepeat+1000);
     REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+    wrapPattern();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    host.position.setIsPlaying(false);
+    tick();
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});
+    host.position.setIsPlaying(true);
+    cursor=0;
+    through(quarter);
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::manual && plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    host.position.setLoopPoints(std::nullopt);
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::manual);
+
+    const auto target=plugin.loopPlacementTarget();
+    host.position.setIsPlaying(false);
+    cursor=2*bar;
+    tick();
+    REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{8.0}));
+    cursor=3*bar;
+    tick();
+    REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    juce::Thread::sleep(260);
+    REQUIRE(!plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    reportsPpq=false;
+    tick();
+    REQUIRE(!plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    reportsPpq=true;
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    host.position.setIsPlaying(true);
+    cursor=0;
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::placement && !plugin.requestLoopCue());
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    plugin.requestLoopPlaybackStop();
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    host.position.setIsPlaying(false);
+    tick();
+    host.position.setIsLooping(false);
+    host.position.setIsPlaying(true);
+    cursor=3*bar-quarter;
+    through(3*bar+1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.loopPlaybackStatus().playhead && *plugin.loopPlaybackStatus().playhead < 1300);
+    cursor=4*bar+quarter;
+    through(cursor+1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    through(6*bar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    plugin.requestLoopPlaybackStop();
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::finishing);
+    through(8*bar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    juce::MemoryBlock state;
+    plugin.getStateInformation(state);
+    auto restored=std::make_unique<PreverbAudioProcessor>(root.file,true);
+    REQUIRE(!restored->getLoopPlacement());
+    restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(restored->flushCaptureForTesting());
+    REQUIRE((restored->getLoopPlacement() == m3::LoopPlacement{12.0}));
+    REQUIRE(plugin.setLoopPlacement(target,{}));
+    REQUIRE(!plugin.getLoopPlacement() && restored->getLoopPlacement());
+
+    auto legacy=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(legacy);
+    auto* savedPlacement=legacy->getChildByName("LoopPlacement");
+    REQUIRE(savedPlacement);
+    legacy->removeChildElement(savedPlacement,true);
+    juce::MemoryBlock legacyState;
+    juce::AudioProcessor::copyXmlToBinary(*legacy,legacyState);
+    auto withoutPlacement=std::make_unique<PreverbAudioProcessor>(root.file,true);
+    withoutPlacement->setStateInformation(legacyState.getData(),static_cast<int>(legacyState.getSize()));
+    REQUIRE(withoutPlacement->flushCaptureForTesting());
+    REQUIRE(withoutPlacement->getCaptureSnapshot().manifest.loop && !withoutPlacement->getLoopPlacement());
+
+    REQUIRE(plugin.setLoopPlacement(target,m3::LoopPlacement{16.0}));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{16.0}));
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(plugin.armLoopCapture());
+    cursor=0;
+    host.position.setIsPlaying(true);
+    through(0,0,24);
+    through(2*quarter,2*quarter,25);
+    through(bar);
+    REQUIRE(plugin.getCaptureSnapshot().manifest.loop);
+    const auto replacement=plugin.loopPlacementTarget();
+    REQUIRE(replacement.generation!=target.generation || replacement.revision!=target.revision);
+    REQUIRE(!plugin.getLoopPlacement());
+    REQUIRE(!plugin.setLoopPlacement(target,m3::LoopPlacement{24.0}));
+    REQUIRE((restored->getLoopPlacement()==m3::LoopPlacement{12.0}));
+}
+
+static void flStudioPrerollRepeatCases()
+{
+    TestDirectory root;
+    LoopCaptureFixture::TimingHost host;
+    auto processor=std::make_unique<PreverbAudioProcessor>(root.file,true);
+    auto& plugin=*processor;
+    plugin.prepareToPlay(48000,512);
+    plugin.setPlayHead(&host);
+    auto settings=plugin.getLoopCapturePreference();
+    settings.enabled=true;
+    settings.method=LoopCapturePreference::Method::endOnRepeat;
+    REQUIRE(plugin.setLoopCapturePreference(settings));
+    REQUIRE(plugin.armLoopCapture());
+    host.position.setBpm(82);
+    host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    host.position.setIsPlaying(true);
+    host.position.setIsLooping(true);
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    juce::AudioBuffer<float> audio(2,512);
+    juce::MidiBuffer midi;
+    int blocks=0;
+    const auto tick=[&](int64_t sample,int frames,double ppq,float dry)
+    {
+        host.position.setTimeInSamples(sample);
+        host.position.setPpqPosition(ppq);
+        audio.setSize(2,frames,false,false,true);
+        for(int channel=0;channel<2;++channel)
+            std::fill_n(audio.getWritePointer(channel),frames,dry);
+        { AudioAllocationGuard guard; plugin.processBlock(audio,midi); }
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        if(++blocks%16==0)REQUIRE(plugin.flushCaptureForTesting());
+    };
+
+    // Measured in FL Studio at 82 BPM/48 kHz with a 96-sample pre-roll.
+    // Beat one is inside both the starting and wrapped callbacks. The wrap
+    // shifts the reported sample origin while preserving the PPQ cycle.
+    constexpr int64_t repeatFrames=140488;
+    tick(0,512,-0.002733333333,.25f);
+    REQUIRE(plugin.getWorkflowSnapshot().phase==workflow::Phase::recording);
+    for(int64_t sample=512;sample<repeatFrames;)
+    {
+        const auto frames=static_cast<int>(std::min<int64_t>(512,repeatFrames-sample));
+        tick(sample,frames,static_cast<double>(sample-96)*82/2880000,.25f);
+        sample+=frames;
+    }
+    tick(-96,312,-0.002727777778,.75f);
+    REQUIRE(plugin.flushCaptureForTesting());
+    const auto accepted=plugin.getCaptureSnapshot();
+    REQUIRE(accepted.manifest.loop && accepted.manifest.loop->originSample==96
+        && accepted.manifest.loop->endSample==repeatFrames && accepted.manifest.loop->beats==4);
 }
 
 static void loopPlaybackProcessorCases()
@@ -1228,7 +1403,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         dense.add(40000000,1,input.data(),false,{});REQUIRE(dense.limited && dense.ranges.empty());
         std::cerr<<"Progress metadata ceiling: "<<sizeof(CaptureProgress)+CaptureProgress::maxRanges*sizeof(CaptureOverviewRange)+CaptureProgress::maxPeaks*sizeof(CapturePeak)<<" bytes (no retained PCM)\n";
     }
-    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();rackDurationAlignmentCases();rackRepeatCaptureCases();rackLoopWithPartialHostTransport();flStudioLoopProcessorCases();loopPlaybackProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
+    juce::ScopedJuceInitialiser_GUI gui;loopMidiCases();loopPhraseClockCases();loopBeatClockCases();loopTakeCases();loopStateCases();loopProcessorCases();simpleLoopProcessorCases();rackDurationAlignmentCases();rackRepeatCaptureCases();rackLoopWithPartialHostTransport();flStudioLoopProcessorCases();flStudioPrerollRepeatCases();loopPlaybackProcessorCases();processorReactivationCases();processorCaptureFailureCases();TestDirectory root;SavedStateListener listener;
     auto p=std::make_unique<PreverbAudioProcessor>(root.file);
     {
         REQUIRE(!p->swellEngine().savedSession().autoGenerateOnStop);
