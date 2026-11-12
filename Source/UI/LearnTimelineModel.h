@@ -17,9 +17,7 @@ struct LearnDryView
         if(progress.freshDomain && progress.kind==CaptureSourceKind::loop)
         {
             first=0;
-            last=1;
-            for(const auto& region:progress.ranges)
-                last=std::max(last,static_cast<double>(region.range.startSample)+region.range.frameCount);
+            last=static_cast<double>(std::max<int64_t>(1,progress.recordedLoopEnd()));
             initialized=false;
             return;
         }
@@ -66,6 +64,8 @@ inline LearnCoverageInfo learnCoverageAt(const CaptureSessionSnapshot& source,co
             if(sample>=r.range.startSample && sample<end)return LearnCoverageInfo{!r.available?"Unavailable":r.range.kind==CaptureCoverageKind::silence?"Silence":"Audio",r.range.startSample,end,pending};}
         return {};};
     if(const auto p=lookup(progress.ranges,true))return *p;
+    if(progress.limited && sample>=0 && sample<progress.recordedLoopEnd())
+        return {"Coverage detail unavailable",0,progress.recordedLoopEnd(),true};
     if(const auto r=lookup(source.overview,false))return *r;
     // Missing overview telemetry is not proof of silence or an uncaptured gap.
     for(const auto& r:source.manifest.ranges){int64_t end;if(r.frameCount>INT64_MAX || !checkedAdd(r.startSample,static_cast<int64_t>(r.frameCount),end))continue;
@@ -117,5 +117,8 @@ inline long double learnExtentFrames(const CaptureSessionSnapshot& source,const 
 inline long double learnMappedFrames(const CaptureManifest& source)
 {long double frames=0;for(const auto& r:source.ranges)frames+=r.frameCount;return frames;}
 inline long double learnProvisionalFrames(const CaptureProgress& progress)
-{long double frames=0;for(const auto& r:progress.ranges)frames+=r.range.frameCount;return frames;}
+{
+    if(progress.kind==CaptureSourceKind::loop)return progress.recordedLoopEnd();
+    long double frames=0;for(const auto& r:progress.ranges)frames+=r.range.frameCount;return frames;
+}
 }

@@ -187,6 +187,9 @@ In Loop, the live waveform grows from the start of the phrase. When a take
 replaces the whole source, the canvas shows its provisional waveform during
 recording and validation. A cancelled or failed take returns the canvas to the
 previous accepted source.
+If a Loop reaches the detailed coverage limit, Learn keeps displaying its
+growing waveform and recorded extent. Inspection reports that coverage detail
+is unavailable.
 
 The Song viewport fits only committed/admitted dry bounds, anchored to song origin
 with quantized bar headroom (seconds fallback). It expands at extent thresholds

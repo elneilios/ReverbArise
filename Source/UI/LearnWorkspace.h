@@ -16,6 +16,7 @@
 #include <DSP/SwellEngine.h>
 #include <Capture/CaptureProgress.h>
 #include <Capture/LoopCapturePreference.h>
+#include <span>
 
 namespace m3::ui
 {
@@ -385,7 +386,10 @@ public:
         };
         // The dark background is genuine uncaptured space; never infer silence
         // from a small peak or extend a neighbouring region across a seek.
-        drawSource(timelineSource().overview,false);drawSource(progress.ranges,true);
+        drawSource(timelineSource().overview,false);
+        if(progress.limited && progress.recordedLoopEnd()>0)
+            drawSource(std::span<const CaptureOverviewRange>{&progress.loopWaveform,1},true);
+        else drawSource(progress.ranges,true);
         if(automaticOn && generationView.displayed)
         {
             juce::Graphics::ScopedSaveState scope(g);g.reduceClipRegion(chart.reduced(juce::roundToInt(rule)));
@@ -712,7 +716,8 @@ private:
     bool hasSource()const noexcept
     {
         const auto& source=timelineSource();
-        return !source.manifest.ranges.empty() || !source.overview.empty() || !progress.ranges.empty();
+        return !source.manifest.ranges.empty() || !source.overview.empty()
+            || !progress.ranges.empty() || progress.recordedLoopEnd()>0;
     }
     juce::String statusText;CaptureSessionSnapshot capture;CaptureProgress progress;SongTime clock;workflow::Phase phase=workflow::Phase::idle;
     juce::Rectangle<int> left,right,chart,timelineHeading,timelineCaption,timelineRuler,timelineStatus;int divider=0;bool automaticOn=true,refreshing=false,playhead=false;

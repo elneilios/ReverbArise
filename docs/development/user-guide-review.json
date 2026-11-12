@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Learn waveform updates during Song and Loop capture. The owner confirmed live updates in both modes in FL Studio on the installed waveform fix before integration with main. Reviewed the archived IR replacement requirements against the existing timing-fit and failure guidance.",
+  "summary": "Reviewed Learn waveform updates and the follow-up fixes for backward Song Recapture and fragmented Loop coverage. The recording instructions still apply when Loop coverage detail reaches its limit. The earlier installed build was verified in FL Studio in Song and Loop modes.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -120,8 +120,8 @@
     },
     {
       "path": "Source/Capture/CaptureProgress.h",
-      "bytes": 6435,
-      "sha256": "ea6a7733bb60dea598cc3b0ea2934d90d09db08f2b478094ce932dbab8d39cc8"
+      "bytes": 8101,
+      "sha256": "3ca223e5ef41c8755af05007e77940429e18acc979d8be7157d093cbb6305cbb"
     },
     {
       "path": "Source/Capture/CaptureSession.cpp",
@@ -920,13 +920,13 @@
     },
     {
       "path": "Source/UI/LearnTimelineModel.h",
-      "bytes": 7345,
-      "sha256": "9bd1ebc2a2a98fac76e3218e2c32631c61422277440d1c6cfb0902f23b1fdc35"
+      "bytes": 7497,
+      "sha256": "67cd1268f548fd0e44fca0374f8c8e3246dc56f2bb18b7aadcb3356d093ab013"
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 54920,
-      "sha256": "f1016974032f244b872af415c9c83178401e104f963e5c61fd6cfa866646de54"
+      "bytes": 55149,
+      "sha256": "0ee009aceb8af2129beb97d13e62f582da0cbe845af346b5d947eeb65fd31683"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -1300,8 +1300,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 52675,
-      "sha256": "c9972646ebf58813398833ee91190af60ec62741868a4594f6f39573d36e2b73"
+      "bytes": 54697,
+      "sha256": "5eade426903e11a73a74a5ad34afe683fcb30f9e608bb27822ecbb8d619b3349"
     }
   ]
 }
