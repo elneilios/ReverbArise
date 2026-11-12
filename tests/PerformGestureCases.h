@@ -31,6 +31,21 @@ void Composition::verifyGestures()
             && after.placement==before.placement && after.inputGeneration==before.inputGeneration);
         REQUIRE(engine.snapshot().renderCount==renders);
     }
+    {
+        auto fitted=original;
+        fitted.shape.fadeOut=35999;
+        fitted.wetTimingIntent=m3::wetTiming(fitted.shape);
+        fitted.wetTimingIntent->fadeOut=40000;
+        load(fitted);
+        timeline().setGestureModifiers(false,true);
+        const auto endHandle=grab(P::end);
+        REQUIRE(timeline().beginDrag(endHandle.point));
+        timeline().dragTo(move(endHandle.point,-4000));
+        REQUIRE(swell().shape.fadeOut==31999);
+        timeline().dragTo(move(endHandle.point,-2000));
+        const auto edited=swell();
+        REQUIRE(edited.shape.fadeOut==33999 && edited.wetTimingIntent && edited.wetTimingIntent->fadeOut==40000);
+    }
     load(original);auto before=swell();auto lane=timeline().wetLane();
     auto body=juce::Point<float>{static_cast<float>(timeline().viewport().pixel(42300,lane.getX(),lane.getWidth())),lane.getBottom()-30};
     REQUIRE(timeline().beginDrag(body));timeline().dragTo(move(body,4200));auto after=swell();

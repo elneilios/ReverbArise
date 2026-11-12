@@ -31,11 +31,11 @@ int main(int argc,char** argv){return runTest([&]
     const auto time=[&](int64_t p,bool playing){const juce::ScopedLock guard(mutex);context.time.sample=p;context.time.ppq=p/48000.;return TransportTime{context.time,playing};};
     auto host=time(target-5*96000,false);engine.processTransportAudio(left,right,512,host);waitFor([&]{return engine.snapshot().liveReady;});
     const auto start=juce::Time::getMillisecondCounterHiRes();double nextBlock=start;int64_t p=host.song.sample;uint64_t peakAccounted=0;int blocks=0;
+    engine.holdRenderPublicationForTesting(true);
     REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,"monumental"));
-    waitFor([&]{return find(engine.savedSession(),a)->irName=="Monumental";});engine.generate();
     while(true){
-        const auto state=engine.snapshot();REQUIRE(find(state.session,a)->phase!=Phase::error);
-        if(find(state.session,a)->phase==Phase::ready && state.retainedIRName.isEmpty() && state.liveReady)break;
+        const auto state=engine.snapshot();REQUIRE(state.irReplacementError.isEmpty());
+        if(find(state.session,a)->irName=="Monumental" && state.liveReady)break;
         REQUIRE(juce::Time::getMillisecondCounterHiRes()-start<30000);
         while(juce::Time::getMillisecondCounterHiRes()<nextBlock)juce::Thread::sleep(1);
         host=time(p,true);std::fill_n(left,512,0.f);std::fill_n(right,512,0.f);
@@ -43,6 +43,7 @@ int main(int argc,char** argv){return runTest([&]
         // Both old and new intervals cover this test window; page starvation is a failure.
         if(engine.snapshot().liveMissing){const auto failure=engine.snapshot();std::cerr<<"Missing at "<<p<<" after "<<(juce::Time::getMillisecondCounterHiRes()-start)<<" ms | "<<failure.liveStatus<<" | "<<find(failure.session,a)->status<<"\n";}
         REQUIRE(!engine.snapshot().liveMissing);p+=512;nextBlock+=512000./rate;++blocks;
+        if(blocks==11)engine.holdRenderPublicationForTesting(false);
         peakAccounted=std::max(peakAccounted,engine.residentBytes());REQUIRE(peakAccounted<previewMemoryBudget);
     }
     const auto firstMs=juce::Time::getMillisecondCounterHiRes()-start;REQUIRE(blocks>10 && find(engine.savedSession(),b)->render==find(baseline,b)->render);
@@ -54,8 +55,8 @@ int main(int argc,char** argv){return runTest([&]
     // A cold bounce starts during actual long work, then must keep the entry snapshot.
     engine.restore(baseline);waitFor([&]{const auto s=engine.savedSession();return find(s,a)->phase==Phase::ready && find(s,b)->phase==Phase::ready;});
     host=time(target-2*96000,false);engine.processTransportAudio(left,right,512,host);waitFor([&]{return engine.snapshot().liveReady;});
-    REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,"monumental"));waitFor([&]{return find(engine.savedSession(),a)->irName=="Monumental";});engine.generate();
-    waitFor([&]{return find(engine.savedSession(),a)->phase==Phase::rendering;});
+    REQUIRE(engine.assignBundledIR(a,find(engine.savedSession(),a)->inputGeneration,"monumental"));
+    REQUIRE(engine.snapshot().irReplacementPending);
     std::fill_n(left,512,0.f);std::fill_n(right,512,0.f); // Export receives zero dry, not the previous live output.
     engine.processOfflineAudio(left,right,512,host);
     SwellAssetStore assets(engine.assetDirectory());WetRender oldA,oldB;juce::String error;

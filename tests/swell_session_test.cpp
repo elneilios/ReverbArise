@@ -7,6 +7,57 @@ int main() { return runTest([]
 {
     Session s; CaptureManifest map; juce::String error;
     {
+        Swell swell;
+        swell.arrival = 100;
+        swell.placement = 17;
+        swell.shape = {false, -50, 20, 60, 55, Curve::smooth, Curve::exponential, -7, .2, -.3};
+        const auto original = swell.shape;
+        REQUIRE(fitWetShapeToResponse(swell, 90, 130, error));
+        REQUIRE(swell.shape.startOffset == -10 && swell.shape.endOffset == 20);
+        REQUIRE(swell.shape.fadeIn == 29 && swell.shape.fadeOut == 29);
+        REQUIRE(swell.shape.gainDb == -7 && swell.shape.inCurve == Curve::smooth);
+        REQUIRE(swell.shape.outCurve == Curve::exponential && swell.shape.outTension == -.3);
+        int64_t start, end;
+        REQUIRE(shapeBounds(swell, 90, 130, start, end, error) && start == 107 && end == 137);
+        REQUIRE(fitWetShapeToResponse(swell, 121, 122, error));
+        REQUIRE(swell.shape.startOffset == 21 && swell.shape.endOffset == 22);
+        REQUIRE(swell.shape.fadeIn == 0 && swell.shape.fadeOut == 0);
+        REQUIRE(fitWetShapeToResponse(swell, 30, 160, error));
+        REQUIRE(swell.shape == original && !swell.wetTimingIntent);
+        REQUIRE(swell.arrival == 100 && swell.placement == 17);
+
+        swell.shape.automaticStart = true;
+        swell.shape.fadeIn = 0;
+        REQUIRE(fitWetShapeToResponse(swell, 100, 110, error));
+        REQUIRE(swell.shape.automaticStart && swell.shape.endOffset == 10);
+        REQUIRE(swell.shape.fadeIn == 0 && swell.shape.fadeOut == 9);
+        REQUIRE(fitWetShapeToResponse(swell, 30, 160, error));
+        REQUIRE(swell.shape.automaticStart && swell.shape.endOffset == 20 && swell.shape.fadeOut == 55);
+        const auto beforeOverflow = swell.shape;
+        REQUIRE(!fitWetShapeToResponse(swell, 100, std::numeric_limits<int64_t>::max(), error));
+        REQUIRE(swell.shape == beforeOverflow && !swell.wetTimingIntent);
+    }
+    {
+        Swell swell;
+        swell.shape.automaticStart=false;
+        swell.shape.startOffset=-150;
+        swell.shape.endOffset=0;
+        swell.shape.fadeOut=120;
+        REQUIRE(fitWetShapeToResponse(swell,-100,1,error));
+        const auto gesture=swell.shape;
+        REQUIRE(gesture.fadeOut==99);
+        auto first=gesture;
+        first.endOffset=-20;
+        REQUIRE(setShape(swell,first,-100,1,error,WetTimingEdit::end));
+        REQUIRE(swell.shape.fadeOut==79);
+        auto second=gesture;
+        second.endOffset=-10;
+        REQUIRE(setShape(swell,second,-100,1,error,WetTimingEdit::end));
+        REQUIRE(swell.shape.fadeOut==89 && swell.wetTimingIntent && swell.wetTimingIntent->fadeOut==120);
+        REQUIRE(fitWetShapeToResponse(swell,-150,1,error));
+        REQUIRE(swell.shape.endOffset==-10 && swell.shape.fadeOut==120);
+    }
+    {
         Session fresh,decoded;juce::String encoded;
         REQUIRE(!fresh.autoGenerateOnStop);
         for(bool automatic:{false,true})for(bool stop:{false,true})
@@ -204,6 +255,34 @@ int main() { return runTest([]
     placementState.autoMarkersEnabled=false;placementState.isolateSelected=true;
     REQUIRE(encode(placementState,json,error) && decode(json,restored,error));
     REQUIRE(!restored.autoMarkersEnabled && restored.isolateSelected && restored.swells[0].placement==-1000);
+    {
+        auto fitted = placementState;
+        auto& swell = fitted.swells.front();
+        const auto oldShape = swell.shape;
+        REQUIRE(fitWetShapeToResponse(swell, 95, 105, error));
+        auto edited = swell.shape;
+        edited.fadeIn = 2;
+        REQUIRE(setShape(swell, edited, 95, 105, error));
+        REQUIRE(swell.wetTimingIntent && swell.wetTimingIntent->fadeIn == 2);
+        REQUIRE(swell.wetTimingIntent->startOffset == oldShape.startOffset);
+        REQUIRE(swell.wetTimingIntent->fadeOut == oldShape.fadeOut);
+        Session reopened;
+        juce::String fittedJson;
+        REQUIRE(encode(fitted,fittedJson,error) && decode(fittedJson,reopened,error));
+        REQUIRE(sameSavedSwell(swell,reopened.swells.front()));
+        auto& recovered = reopened.swells.front();
+        REQUIRE(fitWetShapeToResponse(recovered, 20, 150, error));
+        REQUIRE(recovered.shape.startOffset == oldShape.startOffset && recovered.shape.endOffset == oldShape.endOffset);
+        REQUIRE(recovered.shape.fadeIn == 2 && recovered.shape.fadeOut == oldShape.fadeOut);
+        REQUIRE(!recovered.wetTimingIntent && recovered.ir == swell.ir && recovered.render == swell.render);
+
+        auto badIntent = juce::JSON::parse(fittedJson);
+        badIntent["swells"][0]["wetTimingIntent"].getDynamicObject()->setProperty("end", "9223372036854775807");
+        REQUIRE(decode(juce::JSON::toString(badIntent),reopened,error));
+        REQUIRE(reopened.swells.front().shape == swell.shape && !reopened.swells.front().wetTimingIntent);
+        REQUIRE(decode(json,reopened,error));
+        REQUIRE(reopened.swells.front().shape == placed.shape && !reopened.swells.front().wetTimingIntent);
+    }
     auto oldVersion=juce::JSON::parse(json);oldVersion.getDynamicObject()->setProperty("version",3);
     REQUIRE(decode(juce::JSON::toString(oldVersion),restored,error));REQUIRE(restored.autoMarkersEnabled && !restored.isolateSelected && restored.swells[0].placement==0);
     auto badToggle=juce::JSON::parse(json);badToggle.getDynamicObject()->setProperty("autoMarkersEnabled",1);REQUIRE(!decode(juce::JSON::toString(badToggle),restored,error));

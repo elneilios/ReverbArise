@@ -14,7 +14,8 @@ class AuditionVoice
 {
 public:
     bool start(std::shared_ptr<const WetRender> buffer, float attenuation = 1.0f, bool loop = false);
-    bool replace(std::shared_ptr<const WetRender> buffer);
+    bool replace(std::shared_ptr<const WetRender> buffer, bool waitForTransition = false);
+    bool canReplaceNow() const noexcept;
     void setLevel(float gain) noexcept { level.store(std::isfinite(gain) ? std::clamp(gain, 0.0f, 1.0f) : 0.0f); }
     void stop(bool immediately = false) noexcept;
     void collect();
@@ -47,6 +48,7 @@ private:
     const WetRender* previous=nullptr;
     uint64_t previousId=0;
     size_t previousCursor=0;
+    bool previousLooping=false;
     int transitionRemaining=0,transitionLength=1;
     float previousAttenuation=1;
     size_t cursor = 0;

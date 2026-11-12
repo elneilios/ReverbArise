@@ -1118,8 +1118,16 @@ void PreverbAudioProcessorEditor::refresh()
     {
         std::vector<m3::ui::controls::SwellListRow> rows;rows.reserve(state.session.swells.size());
         for(const auto& swell:state.session.swells)
-            rows.push_back({swell.id,swell.name,swell.irName,swell.phase==m3::Phase::ready?phaseName(swell.phase):swell.status,
-                swell.arrival,swell.enabled,swell.muted,swell.solo,swell.frozen,swell.phase==m3::Phase::error});
+        {
+            const auto request=state.irRequests.find(swell.id);
+            const bool failed=request!=state.irRequests.end() && request->second.error.isNotEmpty();
+            auto status=swell.phase==m3::Phase::ready
+                ?(swell.wetTimingIntent?"Wet timing adjusted":phaseName(swell.phase)):swell.status;
+            if(request!=state.irRequests.end())
+                status=failed?request->second.name+": "+request->second.error:"Preparing "+request->second.name;
+            rows.push_back({swell.id,swell.name,swell.irName,status,
+                swell.arrival,swell.enabled,swell.muted,swell.solo,swell.frozen,failed || swell.phase==m3::Phase::error});
+        }
         list.display(std::move(rows),state.session.selected,state.session.primary,state.sessionEpoch);
     }
     enabledButton.setToggleState(w && w->enabled,juce::dontSendNotification);muteButton.setToggleState(w && w->muted,juce::dontSendNotification);
@@ -1189,7 +1197,11 @@ void PreverbAudioProcessorEditor::refresh()
     for(const auto& swell:state.session.swells)
     {
         if(std::find(state.session.selected.begin(),state.session.selected.end(),swell.id)!=state.session.selected.end())
-        {selectedIR=selectedIR || swell.ir.present();selectedImport=selectedImport || swell.status=="Importing IR";}
+        {
+            selectedIR=selectedIR || swell.ir.present();
+            const auto request=state.irRequests.find(swell.id);
+            selectedImport=selectedImport || (request!=state.irRequests.end() && request->second.error.isEmpty());
+        }
     }
     removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
     fullButton.setEnabled(w && state.raw);

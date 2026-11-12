@@ -149,13 +149,39 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
 {
     std::vector<HeadroomMember> members;
     std::vector<std::pair<juce::String,bool>> pending;
+    std::set<juce::String> staged;
     uint64_t revision, session;
     bool hasAudiblePending = false;
     juce::String error;
     {
         const juce::ScopedLock guard(lock);
-        const auto anySolo = std::any_of(model.swells.begin(),model.swells.end(),[](const auto& w){return w.solo;});
-        for (const auto& swell : model.swells)
+        auto swells=model.swells;
+        const auto acceptingRenders=std::any_of(swells.begin(),swells.end(),
+            [](const auto& swell){return swell.phase==Phase::headroom;});
+        if(acceptingRenders)
+        {
+            // Ordinary renders publish immediately. Measure them with the
+            // accepted mix, then measure staged swaps against those gains.
+            resetStagedIRHeadroomLocked();
+        }
+        else
+        {
+            for(auto& swell:swells)
+            {
+                const auto replacement=irReplacements.find(swell.id);
+                if(replacement!=irReplacements.end() && replacement->second.candidate
+                    && irReplacementCurrentLocked(*replacement->second.candidate))
+                {
+                    swell=*replacement->second.candidate;
+                    staged.insert(swell.id);
+                }
+            }
+        }
+        if(!staged.empty() && std::any_of(swells.begin(),swells.end(),[](const auto& swell){return swell.phase==Phase::headroom;}))
+            for(auto& swell:swells)
+                if(staged.contains(swell.id))swell.phase=Phase::headroom;
+        const auto anySolo = std::any_of(swells.begin(),swells.end(),[](const auto& w){return w.solo;});
+        for (const auto& swell : swells)
         {
             if (swell.phase == Phase::headroom)
             {
@@ -173,7 +199,7 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
         const auto clock = loop ? std::nullopt : liveClock.snapshot(session);
         const auto* liveContext = clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted
             ? &*clock : nullptr;
-        for (auto swell : model.swells)
+        for (auto swell : swells)
         {
             if (!hasAudiblePending || !isAudible(swell,anySolo)) continue;
             const auto isPending = swell.phase == Phase::headroom;
@@ -273,17 +299,26 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
     }
     for (const auto& [id,audible] : pending)
     {
-        auto& swell = *find(model,id);
+        auto& swell = staged.contains(id)?*irReplacements.at(id).candidate:*find(model,id);
         if (!audible || error.isEmpty())
         {
             swell.generatedGain = audible ? acceptedGain : 1.0f;
             swell.phase = Phase::ready;
             swell.status = "Ready | Generated wet trim " + juce::String(20*std::log10(*swell.generatedGain),1) + " dB";
+            if(staged.contains(id))
+            {
+                swell.progress=1;
+                if(irReplacements.at(id).fitted)swell.status="Ready | Wet timing adjusted to fit this IR";
+            }
         }
         else
         {
-            swell.phase = Phase::error;
-            swell.status = error;
+            if(staged.contains(id))failIRReplacementLocked(id,error);
+            else
+            {
+                swell.phase = Phase::error;
+                swell.status = error;
+            }
         }
     }
     if (error.isEmpty() && hasAudiblePending)
@@ -292,7 +327,8 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
         ++gainPlanBuilds;
     }
     if (error.isNotEmpty()) message = error;
-    if (error.isEmpty() || std::any_of(pending.begin(),pending.end(),[](const auto& item){return !item.second;}))
+    if (std::any_of(pending.begin(),pending.end(),[&](const auto& item)
+        {return !staged.contains(item.first) && (error.isEmpty() || !item.second);}))
         persistentChangedLocked(false);
     ++liveRevision;
     ++monitoringGeneration;
@@ -306,6 +342,77 @@ void SwellEngine::invalidateLiveLocked(const juce::String& id)
     if(id.isEmpty()){for(const auto& [key,slot]:liveSlots)live.invalidate(slot,++liveGenerations[slot]);}
     else if(const auto at=liveSlots.find(id);at!=liveSlots.end())live.invalidate(at->second,++liveGenerations[at->second]);
     notify();
+}
+void SwellEngine::acceptIdleIRReplacements(const PreviewContext& context)
+{
+    const auto scheduledPlayback=[&]
+    {
+        const auto inLive=!workflowState || workflowState->snapshot().mode==workflow::Mode::live;
+        const auto loop=context.capture.sourceKind()==CaptureSourceKind::loop;
+        const auto clock=liveClock.snapshot(sessionGeneration.load());
+        return inLive && liveEnabled.load() && (loop
+            ? loopPlayback.status().playback!=LoopCueScheduler::State::standby
+            : clock && clock->playing && clock->accepts(model.timing,context.time)==LiveGate::admitted);
+    };
+    Session candidate;
+    std::vector<juce::String> replacements;
+    uint64_t session, revision, monitorRevision, musicalRevision;
+    bool auditioning;
+    {
+        const juce::ScopedLock guard(lock);
+        if(offlineActive.load() || irReplacements.empty() || scheduledPlayback())return;
+        candidate=model;
+        replacements=overlayReadyIRReplacementsLocked(candidate,context);
+        if(replacements.empty())return;
+        session=sessionGeneration.load();
+        revision=liveRevision;
+        monitorRevision=monitoringGeneration;
+        musicalRevision=modelRevision;
+        auditioning=audioAllowed.load() && voice.isActiveOrPending();
+        if(auditioning && !voice.canReplaceNow())return;
+    }
+    const auto cancel=[&]
+    {
+        const juce::ScopedLock guard(lock);
+        return threadShouldExit() || offlineActive.load() || session!=sessionGeneration.load()
+            || revision!=liveRevision || musicalRevision!=modelRevision || monitorRevision!=monitoringGeneration
+            || scheduledPlayback();
+    };
+    Runtime monitor;
+    juce::String error;
+    const auto* anchor=find(candidate,candidate.primary);
+    const auto ready=!auditioning || (anchor && prepareAuditionMonitor(candidate,*anchor,context,cancel,monitor,error));
+    const auto latest=contextProvider();
+    const juce::ScopedLock guard(lock);
+    if(cancel())return;
+    if(!sameMusicalMapping(context.time,latest.time) || latest.captureGeneration!=context.captureGeneration)return;
+    for(const auto& id:replacements)
+    {
+        const auto& swell=*find(candidate,id);
+        if(!irReplacementCurrentLocked(swell) || irReplacements.at(id).sourceRevision
+            !=juce::String(sourceDependency(latest.capture.manifest,swell.sourceStart,renderInputEnd(swell))))return;
+    }
+    const auto stillAuditioning=audioAllowed.load() && voice.isActiveOrPending();
+    if(stillAuditioning && !auditioning)return; // A new Play won the race. Prepare against its mix.
+    if(stillAuditioning && !ready)
+    {
+        for(const auto& id:replacements)
+            failIRReplacementLocked(id,"Could not prepare the new Audition mix. "+error+" Try again or choose another response.");
+        return;
+    }
+    if(stillAuditioning && !voice.replace(monitor.monitor,true))return;
+    commitIRReplacementsLocked(replacements,std::move(candidate.importedIRs));
+    if(stillAuditioning)
+    {
+        auto& state=runtime[candidate.primary];
+        state.monitor=std::move(monitor.monitor);
+        state.monitorRevision=std::move(monitor.monitorRevision);
+        state.dryStatus=std::move(monitor.dryStatus);
+        state.dryAvailable=monitor.dryAvailable;
+        state.members=std::move(monitor.members);
+        state.preparedMonitor=monitoringGeneration;
+    }
+    ++liveRevision;
 }
 void SwellEngine::setLivePlayback(bool enabled,LiveRouting routing,float db)
 {
@@ -360,6 +467,7 @@ bool SwellEngine::setFrozen(const juce::String& id,bool frozen,uint64_t expected
     auto w=find(model,id);if(!w)return false;
     if(w->frozen==frozen)return true;
     if(frozen && (w->phase!=Phase::ready || !w->render.present())){message="Wait for a ready render before freezing";return false;}
+    cancelIRReplacementLocked(id);
     w->frozen=frozen;w->provenance=Provenance::manualEdited;persistentChangedLocked();
     if(frozen){w->status="Frozen render";forceRefresh.erase(id);}
     else {++w->inputGeneration;w->phase=Phase::checking;w->status="Checking unfrozen source";forceRefresh.insert(id);invalidateLiveLocked(id);}
@@ -381,9 +489,18 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
     if(starting){const auto context=contextProvider();const juce::ScopedLock guard(lock);
         for(const auto& [id,kept]:retainedIR)if(const auto* current=find(model,id);current && retainedCompatible(kept,*current,context,&entryClock)){
             auto audible=kept.accepted;audible.phase=Phase::ready;audible.enabled=current->enabled;audible.muted=current->muted;audible.solo=current->solo;
-            acceptedAtEntry.emplace(id,std::move(audible));pendingAtEntry.add(current->name+": "+kept.accepted.irName+" (requested "+kept.requestedName+")");}}
+            acceptedAtEntry.emplace(id,std::move(audible));pendingAtEntry.add(current->name+": "+kept.accepted.irName+" (requested "+kept.requestedName+")");}
+        for(const auto& [id,request]:irReplacements)
+            if(const auto* current=find(model,id);current && current->phase==Phase::ready
+                && current->inputGeneration==request.input)
+            {
+                acceptedAtEntry.emplace(id,*current);
+                pendingAtEntry.add(current->name+": "+current->irName+" (requested "+request.name
+                    +(request.error.isEmpty()?" is preparing)":" failed)"));
+            }
+    }
     const juce::ScopedLock work(workLock);
-    if(starting){offlineAccepted=std::move(acceptedAtEntry);offlineIRNotice=pendingAtEntry.isEmpty()?juce::String{}:"Export uses accepted IRs; replacements pending | "+pendingAtEntry.joinIntoString("; ");}
+    if(starting){offlineAccepted=std::move(acceptedAtEntry);offlineIRNotice=pendingAtEntry.isEmpty()?juce::String{}:"Export uses accepted IRs | "+pendingAtEntry.joinIntoString("; ");}
     const auto fail=[&](const juce::String& error){const juce::ScopedLock guard(lock);
         offlineError="Export incomplete: "+error;message=offlineError;offlineStatus=offlineError;
         if(offlineSession.liveEnabled && offlineSession.liveRouting==LiveRouting::wetOnly){std::fill_n(left,frames,0.0f);std::fill_n(right,frames,0.0f);}};
@@ -477,8 +594,9 @@ void SwellEngine::processOfflineAudio(float* left,float* right,int frames,const 
         {const juce::ScopedLock guard(lock);liveStatus=offlineWarning.isNotEmpty()?offlineWarning:juce::String("Offline export: all available wet rendered");offlineStatus=liveStatus;}
     }catch(const std::exception& e){fail(e.what());}
 }
-void SwellEngine::prepareTransport(const PreviewContext& context)
+void SwellEngine::prepareTransport(const PreviewContext& context,bool* budgetFailure)
 {
+    if(budgetFailure)*budgetFailure=false;
     if (context.capture.sourceKind() == CaptureSourceKind::loop)
     {
         prepareLoopTransport(context);
@@ -507,6 +625,7 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
     const auto clock=liveClock.snapshot(sessionGeneration.load());observation.clock=clock;
     if(!clock){observation.result="Awaiting coherent live clock";return;}
     Session session;uint64_t revision,generation;std::set<juce::String> held,replacements;
+    std::vector<juce::String> staged;
     int64_t loopFrom=0,loopTo=0;
     for(int attempt=0;attempt<8;++attempt){const auto sequence=loopSequence.load(std::memory_order_acquire);if(sequence&1)continue;
         const auto on=loopHint.load();const auto a=loopHintStart.load(),b=loopHintEnd.load();
@@ -545,13 +664,33 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
                 const auto enabled=w.enabled,muted=w.muted,solo=w.solo;w=kept->second.accepted;w.phase=Phase::ready;
                 w.enabled=enabled;w.muted=muted;w.solo=solo;held.insert(w.id);
             }else replacements.insert(w.id);}
+        if(clock->playing && (!workflowState || workflowState->snapshot().mode==workflow::Mode::live))
+            staged=overlayReadyIRReplacementsLocked(session,context);
+        for(auto& swell:session.swells)
+            if(const auto request=irReplacements.find(swell.id);swell.phase==Phase::ready
+                && request!=irReplacements.end() && request->second.input==swell.inputGeneration
+                && std::find(staged.begin(),staged.end(),swell.id)==staged.end())
+            {
+                // Advancing the request token must not retrigger the audible accepted voice.
+                swell.inputGeneration=request->second.acceptedInput;
+                held.insert(swell.id);
+            }
+        revision=liveRevision;
         for(auto it=liveSlots.begin();it!=liveSlots.end();){if(!find(model,it->first)){live.invalidate(it->second,++liveGenerations[it->second]);liveCache.erase(it->first);it=liveSlots.erase(it);}else ++it;}
         std::array<bool,maximumSwells> used{};for(const auto& [id,slot]:liveSlots)used[slot]=true;
         for(const auto& w:session.swells)if(!liveSlots.contains(w.id)){size_t slot=0;while(slot<used.size() && used[slot])++slot;
             if(slot==used.size()){liveStatus="Live identity capacity unavailable";observation.result=liveStatus;return;}used[slot]=true;liveSlots[w.id]=slot;live.invalidate(slot,++liveGenerations[slot]);}
     }
     if(session.gainPolicy==GainPolicy::legacy)for(auto& w:session.swells)w.calibration={};
-    const auto cancel=[&]{const juce::ScopedLock guard(lock);return threadShouldExit() || generation!=sessionGeneration.load() || revision!=liveRevision;};
+    const auto cancel=[&]{const juce::ScopedLock guard(lock);return threadShouldExit() || offlineActive.load() || generation!=sessionGeneration.load() || revision!=liveRevision;};
+    const auto candidateFailure=[&](const Swell& swell,const juce::String& reason)
+    {
+        const juce::ScopedLock guard(lock);
+        if(cancel())return;
+        if(std::find(staged.begin(),staged.end(),swell.id)!=staged.end())
+            failIRReplacementLocked(swell.id,reason);
+        else report(swell,generation,Phase::error,reason);
+    };
     auto pub=std::make_unique<LivePublication>();pub->mapping=session.timing;pub->revision=revision;
     // At most 2.25 seconds at 48 kHz; higher rates shorten time coverage to
     // keep one fully overlapping 64-voice window near 53 MiB of PCM.
@@ -563,10 +702,12 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(!checkedSubtract(loopFrom,behind,pub->loopStart) || !checkedAdd(loopFrom,frames,pub->loopEnd)){observation.result="Loop range overflow";return;}}
     const auto anySolo=std::any_of(session.swells.begin(),session.swells.end(),[](const auto& w){return w.solo;});
     SwellAssetStore store(instanceRoot(context.capture.manifest));juce::String error;uint64_t reserved=8ULL*1024*1024;size_t unavailable=0;
+    bool pageBudgetLimited=false;
     for(const auto& w:session.swells){if(cancel())return;
         if(!isAudible(w,anySolo) || !w.render.present())continue;
         LiveCache cached;size_t slot;uint64_t memberGeneration;bool recovered=false;
-        {const juce::ScopedLock guard(lock);slot=liveSlots.at(w.id);memberGeneration=liveGenerations[slot];cached=liveCache[w.id];recovered=runtime[w.id].cachedWetOnly;}
+        {const juce::ScopedLock guard(lock);slot=liveSlots.at(w.id);memberGeneration=liveGenerations[slot];cached=liveCache[w.id];
+            recovered=runtime[w.id].cachedWetOnly && std::find(staged.begin(),staged.end(),w.id)==staged.end();}
         const auto key=memberKey(w);
         const auto checking=w.phase==Phase::checking && cached.key==key;
         int64_t a,b;if(!shapeBounds(w,w.render.start,w.render.sourceEnd,a,b,error)){
@@ -577,11 +718,11 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         if(held.contains(w.id) && (!store.verify(w.ir,error) || !store.verify(w.render,error))){
             const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}observation.result=error;return;}
         if(cached.key!=key){
-            if(available(reserved)<512ULL*1024){error="256 MiB budget unavailable for bounded live verification scratch";break;}
+            if(available(reserved)<512ULL*1024){pageBudgetLimited=true;error="256 MiB budget unavailable for bounded live verification scratch";break;}
             if((!w.frozen && !store.verify(w.ir,error)) || !store.verify(w.render,error)){
                 if(!cancel()){
                     if(held.contains(w.id)){const juce::ScopedLock guard(lock);invalidateLiveLocked(w.id);if(auto current=find(model,w.id)){current->phase=Phase::error;current->status="Retained audio unavailable: "+error;}}
-                    else report(w,generation,Phase::error,error);
+                    else candidateFailure(w,error);
                     if(error.isNotEmpty())observation.result=error;}
                 return;}
             cached={key,0};const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;
@@ -590,20 +731,20 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         entry.version=w.inputGeneration;
         const auto first=std::max(a,pub->start),last=std::min(b,pub->end);
         if(first<last){const auto bytes=static_cast<uint64_t>(last-first)*2*sizeof(float);
-            if(bytes>available(reserved+65536)){error="256 MiB budget unavailable for live pages";break;}
+            if(bytes>available(reserved+65536)){pageBudgetLimited=true;error="256 MiB budget unavailable for live pages";break;}
             entry.audio=cached.main.lock();
             if(!entry.audio || entry.audio->start!=first || entry.audio->frames()!=static_cast<size_t>(last-first)){
                 auto audio=std::make_shared<WetRender>();float ignored=0;
-                if(!readShaped(w,store,first,last,audio.get(),ignored,error,cancel)){if(!cancel())report(w,generation,Phase::error,error);if(error.isNotEmpty())observation.result=error;return;}entry.audio=std::move(audio);}
+                if(!readShaped(w,store,first,last,audio.get(),ignored,error,cancel)){candidateFailure(w,error);if(error.isNotEmpty())observation.result=error;return;}entry.audio=std::move(audio);}
             reserved+=entry.audio->samples.capacity()*sizeof(float);cached.main=entry.audio;
         }
         const auto loopFirst=std::max(a,pub->loopStart),loopLast=std::min(b,pub->loopEnd);
         if(pub->loopEnd>pub->loopStart && loopFirst<loopLast){const auto bytes=static_cast<uint64_t>(loopLast-loopFirst)*2*sizeof(float);
-            if(bytes>available(reserved+65536)){error="256 MiB budget unavailable for loop destination pages";break;}
+            if(bytes>available(reserved+65536)){pageBudgetLimited=true;error="256 MiB budget unavailable for loop destination pages";break;}
             entry.loopAudio=cached.loop.lock();
             if(!entry.loopAudio || entry.loopAudio->start!=loopFirst || entry.loopAudio->frames()!=static_cast<size_t>(loopLast-loopFirst)){
                 auto audio=std::make_shared<WetRender>();float ignored=0;
-                if(!readShaped(w,store,loopFirst,loopLast,audio.get(),ignored,error,cancel)){if(!cancel())report(w,generation,Phase::error,error);if(error.isNotEmpty())observation.result=error;return;}entry.loopAudio=std::move(audio);}
+                if(!readShaped(w,store,loopFirst,loopLast,audio.get(),ignored,error,cancel)){candidateFailure(w,error);if(error.isNotEmpty())observation.result=error;return;}entry.loopAudio=std::move(audio);}
             reserved+=entry.loopAudio->samples.capacity()*sizeof(float);cached.loop=entry.loopAudio;}
         {const juce::ScopedLock guard(lock);if(cancel())return;liveCache[w.id]=cached;}
         pub->entries.push_back(std::move(entry));
@@ -626,11 +767,13 @@ void SwellEngine::prepareTransport(const PreviewContext& context)
         || (latest.time.sample>=pub->loopStart && latest.time.sample<pub->loopEnd))){
         observation.result="Live position left candidate coverage; retry";return;}
     const juce::ScopedLock guard(lock);if(cancel())return;
-    if(error.isNotEmpty()){liveStatus=error;observation.result=error;return;}
+    if(error.isNotEmpty()){if(budgetFailure)*budgetFailure=pageBudgetLimited;
+        for(const auto& id:staged)failIRReplacementLocked(id,error);liveStatus=error;observation.result=error;return;}
     const auto start=pub->start,end=pub->end;
-    if(pub->bytes()>available()){liveStatus="256 MiB live publication budget exceeded";observation.result=liveStatus;return;}
+    if(pub->bytes()>available()){if(budgetFailure)*budgetFailure=true;liveStatus="256 MiB live publication budget exceeded";
+        for(const auto& id:staged)failIRReplacementLocked(id,liveStatus);observation.result=liveStatus;return;}
     if(livePublicationFail.exchange(false)){++livePublicationFailures;observation.result="Injected transient live publication miss";return;}
-    if(live.publish(std::move(pub))){for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;observation.preparedRevision=revision;observation.result="Published complete window";liveWindowStart=start;liveWindowEnd=end;
+    if(live.publish(std::move(pub))){commitIRReplacementsLocked(staged,std::move(session.importedIRs));for(const auto& id:replacements)retainedIR.erase(id);preparedLiveRevision=revision;observation.preparedRevision=revision;observation.result="Published complete window";liveWindowStart=start;liveWindowEnd=end;
         preparedLoopStart=loopFrom;preparedLoopEnd=loopTo;
         liveStatus=unavailable?"Live window | "+juce::String(static_cast<int>(unavailable))+" swells unavailable":"Prepared live window";}
     else {liveStatus="Live publication queue busy";observation.result=liveStatus;}
@@ -650,6 +793,7 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
     uint64_t revision, session;
     Session snapshot;
     std::vector<juce::String> replacements;
+    std::vector<juce::String> staged;
     std::set<juce::String> retained;
     {
         const juce::ScopedLock guard(lock);
@@ -690,12 +834,15 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
             }
             else replacements.push_back(w.id);
         }
+        if(loopPlayback.status().playback!=LoopCueScheduler::State::standby)
+            staged=overlayReadyIRReplacementsLocked(snapshot,context);
+        revision=liveRevision;
     }
 
     using Preparation = LoopPlaybackPublication::Preparation;
     const auto cancel = [&]{
         const juce::ScopedLock guard(lock);
-        return threadShouldExit() || liveRevision != revision || sessionGeneration.load() != session
+        return threadShouldExit() || offlineActive.load() || liveRevision != revision || sessionGeneration.load() != session
             || publication->dependencies != loopPlayback.dependencies();
     };
     const auto anySolo = std::any_of(snapshot.swells.begin(),snapshot.swells.end(),[](const auto& w){return w.solo;});
@@ -728,7 +875,8 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
         {
             const juce::ScopedLock guard(lock);
             const auto resolved = runtime.find(w.id);
-            if (!retained.contains(w.id) && (resolved == runtime.end() || resolved->second.cachedWetOnly
+            if (!retained.contains(w.id) && std::find(staged.begin(),staged.end(),w.id)==staged.end()
+                && (resolved == runtime.end() || resolved->second.cachedWetOnly
                 || resolved->second.verifiedRender != w.render
                 || (!w.frozen && resolved->second.revision != juce::String(sourceDependency(manifest,w.sourceStart,renderInputEnd(w))))))
                 continue;
@@ -782,12 +930,19 @@ void SwellEngine::prepareLoopTransport(const PreviewContext& context)
     if (latest.captureGeneration != context.captureGeneration || latest.capture.reference != context.capture.reference) return;
     const juce::ScopedLock guard(lock);
     if (cancel() || (workflowState && workflowState->snapshot().mode != workflow::Mode::live)) return;
+    if (!staged.empty() && result != Preparation::ready && (result != Preparation::noWet || hasAudibleMember))
+    {
+        if(result!=Preparation::waiting)
+            for(const auto& id:staged)failIRReplacementLocked(id,error.isNotEmpty()?error:"Replacement could not fit the Loop playback budget. Try a shorter response.");
+        return;
+    }
     if (result == Preparation::ready && !replacements.empty())
     {
         loopPlayback.invalidatePrepared();
         publication->dependencies = loopPlayback.dependencies();
     }
     if (!loopPlayback.publish(std::move(publication))) return;
+    commitIRReplacementsLocked(staged,std::move(snapshot.importedIRs));
     if (result == Preparation::ready) for (const auto& id : replacements) retainedIR.erase(id);
     preparedLoopRender = revision;
 }

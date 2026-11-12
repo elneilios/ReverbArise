@@ -21,9 +21,17 @@ void AuditionVoice::stop(bool immediately) noexcept
     if (immediately) immediateEpoch.store(next);
     stopEpoch.store(next, std::memory_order_release);
 }
-bool AuditionVoice::replace(std::shared_ptr<const WetRender> buffer)
+bool AuditionVoice::canReplaceNow() const noexcept
+{
+    const auto sequence=ownershipSequence.load(std::memory_order_acquire);
+    return !(sequence&1) && read.load(std::memory_order_acquire)==write.load(std::memory_order_relaxed)
+        && !transitionSerial.load(std::memory_order_acquire)
+        && sequence==ownershipSequence.load(std::memory_order_acquire);
+}
+bool AuditionVoice::replace(std::shared_ptr<const WetRender> buffer, bool waitForTransition)
 {
     collect();if(!buffer || buffer->samples.empty())return false;
+    if(waitForTransition && !canReplaceNow())return false;
     const auto w=write.load(std::memory_order_relaxed);if(w-read.load(std::memory_order_acquire)>=commands.size())return false;
     pins.push_back({++serial,buffer});commands[w%commands.size()]={buffer.get(),serial,stopEpoch.load(),1,true};
     write.store(w+1,std::memory_order_release);return true;
@@ -69,22 +77,45 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
     const auto w = write.load(std::memory_order_acquire);
     while (r != w)
     {
-        const auto command = commands[r % commands.size()];
+        auto command = commands[r % commands.size()];
+        if (command.replace && command.epoch == epoch && rampRemaining == 0 && active)
+        {
+            // Complete the audible transition before replacing its destination.
+            if (transitionRemaining > 0)
+                break;
+            while (r + 1 != w)
+            {
+                const auto next = commands[(r + 1) % commands.size()];
+                if (!next.replace || next.epoch != epoch)
+                    break;
+                command = next;
+                ++r;
+            }
+        }
         consumed = command.serial;
         if (command.epoch == epoch)
         {
             if(command.replace)
             {
-                if(active && active->rate==command.buffer->rate)
+                if(active && rampRemaining==0 && active->rate==command.buffer->rate
+                    && cursor<=static_cast<size_t>(INT64_MAX)
+                    && active->start<=INT64_MAX-static_cast<int64_t>(cursor))
                 {
-                    const auto offset=static_cast<long double>(active->start)+cursor-command.buffer->start;
-                    const auto outside=offset<0 || offset>=command.buffer->frames();
-                    if(outside && (!looping || rampRemaining>0))
+                    const auto position=active->start+static_cast<int64_t>(cursor);
+                    const auto start=command.buffer->start;
+                    const auto span=command.buffer->frames();
+                    const auto before=position<start;
+                    const auto distance=before?static_cast<uint64_t>(start)-static_cast<uint64_t>(position)
+                        :static_cast<uint64_t>(position)-static_cast<uint64_t>(start);
+                    const auto outside=before || distance>=span;
+                    if(outside && !looping)
                     {active=previous=nullptr;activeId=previousId=0;transitionRemaining=0;}
                     else
                     {
                         previous=active;previousId=activeId;previousCursor=cursor;previousAttenuation=activeAttenuation;
-                        active=command.buffer;activeId=command.serial;cursor=outside?0:static_cast<size_t>(offset);activeAttenuation=1;
+                        previousLooping=looping;
+                        const auto wrapped=distance%span;
+                        active=command.buffer;activeId=command.serial;cursor=before?(span-wrapped)%span:wrapped;activeAttenuation=1;
                         transitionLength=std::max(1,static_cast<int>(rate*.005));transitionRemaining=transitionLength;
                     }
                 }
@@ -121,7 +152,7 @@ void AuditionVoice::process(float* left, float* right, int frames, double rate, 
             if(previous && previousCursor<previous->frames())sample+=previous->samples[previousCursor*2+channel]*previousAttenuation*oldWeight*m3::monitorEdgeGain(previousCursor,previous->frames(),rate,.005);
             (channel==0?left:right)[frame]+=sample*smoothedLevel*stopGain;
         }
-        if(previous)++previousCursor;
+        if(previous && ++previousCursor==previous->frames() && previousLooping)previousCursor=0;
         if(transitionRemaining>0 && --transitionRemaining==0){previous=nullptr;previousId=0;}
         ++cursor;
         const auto rampEnded = rampRemaining > 0 && --rampRemaining == 0;

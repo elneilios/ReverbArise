@@ -165,6 +165,25 @@ inline void bindingCases()
     auto unavailable=engine.snapshot();unavailable.session.defaultIR={};defaultBinding.displayDefault(unavailable);
     REQUIRE(defaults.selector.getSelectedId()==0 && defaults.status.getText()=="Default IR unavailable");refresh();
     const auto saved=engine.savedSession();const auto jobs=engine.snapshot().renderCount;
+    {
+        auto shown=engine.snapshot();
+        const auto* swell=find(shown.session,shown.session.primary);
+        REQUIRE(swell && swell->phase==Phase::ready);
+        const auto selection=selected.selector.getSelectedId();
+        shown.irRequests.emplace(swell->id,EditorSnapshot::IRRequestStatus{"Short response",{}});
+        selectedBinding.displaySelected(shown);
+        REQUIRE(selected.selector.getSelectedId()==selection && selected.status.getText().contains("Preparing Short response"));
+        shown.irRequests.at(swell->id).error="Memory limit. Try a shorter response.";
+        selectedBinding.displaySelected(shown);
+        REQUIRE(selected.selector.getSelectedId()==selection && selected.status.getText().contains("Try a shorter response"));
+        REQUIRE(selected.status.getText().contains(swell->irName));
+        shown.irRequests.clear();
+        auto* fitted=find(shown.session,shown.session.primary);
+        fitted->wetTimingIntent=wetTiming(fitted->shape);
+        selectedBinding.displaySelected(shown);
+        REQUIRE(selected.status.getText()=="Wet timing adjusted to fit this IR");
+        refresh();
+    }
     for(int i=0;i<4;++i)refresh();REQUIRE(engine.snapshot().renderCount==jobs && sameSavedSwell(saved.swells.front(),engine.savedSession().swells.front()));
     auto completion=defaultBinding.beginFileImport();completion(fixture.second);
     settle([&]{return !engine.snapshot().defaultIRPending;});

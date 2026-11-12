@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed live waveform capture in Learn. Documented provisional Song and Loop display, protected Song ranges, and restoration of the accepted Loop view after a failed or cancelled take. Existing controls and screenshots remain current. FL Studio display timing has not been verified.",
+  "summary": "Reviewed Learn waveform updates during Song and Loop capture. The owner confirmed live updates in both modes in FL Studio on the installed waveform fix before integration with main. Reviewed the archived IR replacement requirements against the existing timing-fit and failure guidance.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -295,13 +295,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 33478,
-      "sha256": "3719c3f65b98e5fe76b66fff329a0fb65d6349b5b119675b9acb644402d00d9e"
+      "bytes": 37606,
+      "sha256": "dfe7ea48242f9e9a62816cb247d0fa2dd645811e8befcde640345ae54a94937c"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 9698,
-      "sha256": "130adb2a3314a81962ead2303f5ac569e7d90e495eb78c3940e32192c93aba5b"
+      "bytes": 10310,
+      "sha256": "835ede832d7d3c02ba9d40662e5600a963f4eaed4290b6b1c58a33c9b49926c7"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -445,23 +445,23 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 92260,
-      "sha256": "d6d883c6109f6d6fed05e2a9846600f447357f16b3af97ff26f63c4f57a3b63e"
+      "bytes": 101942,
+      "sha256": "2b8e07e3bbf61ed83849b15e3924850dcca219112f226641927c10df4b7c3e0a"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25868,
-      "sha256": "0de3763e8f6204cdb3ade8dac08c443ee868f1dccce2f45112100674cdbebd39"
+      "bytes": 27403,
+      "sha256": "1bc5f701651930b0606c3d83e774c81d7ec1e8e63f6f135264d800f1340f1d70"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 28725,
-      "sha256": "c9e0ac82aab7463e48be6b50d4b963447b6f2e4f3ce23ca9b05b3f7782b08f55"
+      "bytes": 29036,
+      "sha256": "ecb31cd214b3e455e6d3e0fb47f45cb9d2034b542c13f58b47e932e1a9a1e435"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
-      "bytes": 9442,
-      "sha256": "c65bda2e4e110969cc2f70d6cec13c2cbc6bb5f6594940173a42e120cf150968"
+      "bytes": 10379,
+      "sha256": "07a4a36cb6bf617578c9a8fb771c4a526de66fc029203ddfa41e8bf3eccb7cb1"
     },
     {
       "path": "Source/DSP/SwellShape.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 51960,
-      "sha256": "154b3710cde806b7bad6acf7bcf9a4108ce4eb4a73102b8f6b1d7a81c95f9f58"
+      "bytes": 59791,
+      "sha256": "2236d4aa338fe972a36b893980c3cf726c80a92a1100fdba67653e9be40385ab"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -490,13 +490,13 @@
     },
     {
       "path": "Source/Playback/AuditionVoice.cpp",
-      "bytes": 7099,
-      "sha256": "71b4716916da0424a6d60a44facd675a30c623bea96b4d2db8def1de98c4d476"
+      "bytes": 8691,
+      "sha256": "9aa574868be4fdbeef30ce44a713a322ecadee692bda679f9aa9b3fdbd102682"
     },
     {
       "path": "Source/Playback/AuditionVoice.h",
-      "bytes": 2758,
-      "sha256": "8bcdae1f6d166d934c3f9446d9b4b33f49cd68f3343679b6f3c3ba1df6a020b0"
+      "bytes": 2863,
+      "sha256": "2c6d16158ce1298c25f7f959c27d374f9f29d03f90e14fd1deac8e1bf14593f0"
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 115743,
-      "sha256": "c35c3f6923eb1643e665f880231774812109e93251b0fcb194388604d3dc2771"
+      "bytes": 116333,
+      "sha256": "93d1157054ce9d3fd4623ac814f3590755c05ca93328a69721ceb91724693e5f"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -885,8 +885,8 @@
     },
     {
       "path": "Source/UI/ConvolutionIrBinding.h",
-      "bytes": 7938,
-      "sha256": "9c37d8923e14449286b03f1374b2d47aa71d97d3c9b4a047b46cc5f2f308715b"
+      "bytes": 8551,
+      "sha256": "e212f6f45a305d24152c8c68fcccb2a6db301ef3207c3b3f611960aa56adccb6"
     },
     {
       "path": "Source/UI/EditorPresentationState.h",
@@ -1010,8 +1010,8 @@
     },
     {
       "path": "Source/UI/TimingEdit.h",
-      "bytes": 3925,
-      "sha256": "e117de1766f33b23fc7a15875f49aa0570c8dc65d6809ee8c3c5b59c74e32101"
+      "bytes": 4131,
+      "sha256": "d942285e2d2ce650a6b1a6d6f62f938d329565cfa1a1bcddd5a38fff4733c954"
     },
     {
       "path": "Source/UI/TransportPresentation.h",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126354,
-      "sha256": "b7dd8f9a5bf19e80bbebc23561f78a28c7e328ed83f478e63dca0b4209784015"
+      "bytes": 126762,
+      "sha256": "e80c426a2ea413affb3a51cad262e7fd8f1c77332143c600c1e32f4c81760429"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1175,8 +1175,8 @@
     },
     {
       "path": "openspec/specs/reverse-convolution/spec.md",
-      "bytes": 20278,
-      "sha256": "b6cbcb7b513156710d07728fae553b0be7cc5e79c1a721b0aa66dc7af3392760"
+      "bytes": 20619,
+      "sha256": "f66b8b06975a6921b5fe36404488cd606bdf65c4f85e9a6c350953172e42dea5"
     },
     {
       "path": "openspec/specs/song-export/spec.md",
@@ -1190,8 +1190,8 @@
     },
     {
       "path": "openspec/specs/swell-editing/spec.md",
-      "bytes": 10362,
-      "sha256": "de386d2d3d174c21c6ff2aa9811ef7dd2b287a30a64b6db6a6f5c89c8aebfe55"
+      "bytes": 12541,
+      "sha256": "9b2956d708e2332337f29d88f8b01b0aff64372481067737c5ba01740de1ab9d"
     },
     {
       "path": "openspec/specs/swell-gain-staging/spec.md",
@@ -1205,18 +1205,18 @@
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
-      "bytes": 19727,
-      "sha256": "afe7f8697982c762ce979983dbe32359ec00ec605bc6134347e1b94daa390097"
+      "bytes": 20666,
+      "sha256": "392bda1065511289e468f616d35b1fd23b250963e5e86d49dc87fa9ea6b4b728"
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 124476,
-      "sha256": "e46996a7eea31cc5af3013a0373737d575f02f4b4269fff8de266629ea522417"
+      "bytes": 126500,
+      "sha256": "270d81453ba114be0072d9241c689334faf1646f1f06adfb386471999976f2bf"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
-      "bytes": 50593,
-      "sha256": "804f23d5c7dc82095db4abb308bd653149f43f0f129e86af4868d13c9c065964"
+      "bytes": 51129,
+      "sha256": "57eadda80d3d8f4d884365302219a35618ad4252bf7c3ff752fadad78b15cdfa"
     },
     {
       "path": "openspec/specs/ui-design-system/spec.md",
