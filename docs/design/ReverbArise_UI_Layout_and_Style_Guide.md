@@ -496,6 +496,10 @@ Prefer clear type size/weight contrast over decorative typography and align capt
 | Selection | Thin aqua outline / restrained fill | Current swell in left list, selected viewport |
 | Handle | Small outlined circular point on bright aqua line | Edit swell beginning/curve/peak/end directly in the editor |
 
+In Loop Perform, **Audition** and **Loop** use the standard section-heading
+role at both row widths. Audition uses one joined command and status field.
+The primary Play glyph becomes a red Stop glyph during playback.
+
 Avoid duplicate ways of displaying the *same graph*: envelope handles belong in the main editor; knobs and precise numeric entry belong in Selected Swell. The same data is always synchronized in both directions.
 
 ### 9. Iconography

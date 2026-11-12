@@ -92,8 +92,26 @@ static void loopPerformReview(bool review,const juce::File& output)
     editor.refresh();
     auto& cue=require<controls::ActionButton>(editor,"loopCue");
     auto& status=require<juce::Label>(editor,"loopPlaybackStatus");
-    auto& audition=require<controls::ActionButton>(editor,"audition");
-    auto& auditionStatus=require<juce::Label>(editor,"auditionStatus");
+    auto& audition=require<controls::ActionButton>(editor,"loopAudition");
+    auto& auditionStatus=require<juce::Label>(editor,"loopAuditionStatus");
+    auto& start=require<controls::ActionButton>(editor,"setLoopStart");
+    auto& startPosition=require<juce::Label>(editor,"loopStartPosition");
+    const auto checkHeadings=[&]{
+        const auto section=m3::ui::textStyle(m3::ui::TextRole::sectionHeading);
+        for(const auto* name:{"auditionHeading","loopHeading"})
+        {
+            auto& heading=require<juce::Label>(editor,name);
+            const auto font=heading.getFont();
+            REQUIRE(font.getHeight()==section.height && font.getTypefacePtr()==m3::ui::interTypeface(section.face));
+        }
+    };
+    checkHeadings();
+    REQUIRE(editor.setPresentationSize(1100,850));
+    checkHeadings();
+    REQUIRE(editor.setPresentationSize(900,600));
+    REQUIRE(!require<controls::ActionButton>(editor,"stopAudition").isVisible());
+    REQUIRE(start.isVisible() && !start.isEnabled() && start.getTooltip()=="Requires a host song position");
+    REQUIRE(startPosition.getText()=="No start set");
     auto& readout=require<controls::TransportReadout>(editor,"hostInfo");
     const auto& values=readout.presentation().values;
     const auto positionUnavailable=[&]{return values[0]=="unavailable" && values[1]=="unavailable";};
@@ -101,7 +119,7 @@ static void loopPerformReview(bool review,const juce::File& output)
     REQUIRE(values[2]=="137" && values[3]=="4 / 4");
     REQUIRE(cue.isVisible() && status.isVisible() && find(editor,"loopStop")==nullptr);
     REQUIRE(!cue.isEnabled() && cue.getButtonText()=="Cue Loop" && status.getText().isNotEmpty());
-    REQUIRE(audition.isEnabled());
+    until([&]{editor.refresh();return audition.isEnabled();});
     REQUIRE(editor.timelineComponent().gridAvailable());
     auto& placement=require<KnobValue>(editor,"wetPlacementCell");
     placement.valueField().setText("-25",false);placement.valueField().onReturnKey();
@@ -139,11 +157,17 @@ static void loopPerformReview(bool review,const juce::File& output)
             && processor.loopPlaybackStatus().preparation==Prep::ready;
     });
     editor.refresh();timeline.fitSelection();
-    REQUIRE(engine.audition());
+    audition.invokeCommand();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     fixture.tick(true);
     REQUIRE(engine.snapshot().playing);
-    engine.stop();
+    editor.refresh();
+    REQUIRE(audition.getTitle()=="Stop audition" && audition.getVariant()==controls::CommandVariant::destructive);
+    audition.invokeCommand();
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
     for(int block=0;block<3;++block)fixture.tick();
+    editor.refresh();
+    REQUIRE(audition.getTitle()=="Play audition" && audition.getVariant()==controls::CommandVariant::primary);
     if(output!=juce::File{})
     {
         withAudioCallbacks([&]

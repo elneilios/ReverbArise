@@ -105,6 +105,19 @@ The Phrase note does not change capture timing or a launch already queued.
 Button and MIDI Cue use the same boundary rule. The plug-in preserves the
 offset of a positive channel 1 note-on and combines same-sample duplicates.
 
+With Live playback enabled, Perform follows an eligible FL Studio repeat
+automatically. Admission uses the reported bounds, compatible capture timing
+and a sample extent within one sample of the accepted Loop. FL Studio can
+report these bounds for a Pattern or a Playlist repeat. A saved Playlist start
+takes priority. Manual Cue remains available when there is no placement and
+the repeat is absent or ineligible.
+
+Set Loop Start uses the running playhead when compatible host timing is
+available. The placement editor accepts explicit bar and beat while stopped or
+when the playhead cannot be established. A stopped FL Studio playhead is
+treated conservatively until its updates have been verified in the desktop
+host. A Clock/Phrase-only Rack host leaves Set Loop Start disabled.
+
 | MIDI number | FL Studio note | Rack note | Role |
 | ---: | --- | --- | --- |
 | 12 | C1 | C0 | Phrase |
@@ -129,6 +142,8 @@ its trigger-driven start. Perform verifies beat intervals independently of
 the captured take. A Phrase or Bar pulse coincident with a Clock beat
 can set the downbeat while the wet scheduler is idle. Cue forecasts the first
 bar with room for the lead-in and repeats at the accepted sample length.
+An aligned Phrase pulse sets the phrase origin. Cue then counts the accepted
+phrase length from that origin and skips intervening bar lines.
 The Rack route follows its Clock pulses and ignores the host transport
 position for seek detection. Playlist playback uses its host transport.
 Clock loss revokes the current run and the first returning pulse starts a

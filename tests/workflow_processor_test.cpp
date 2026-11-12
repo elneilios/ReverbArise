@@ -720,6 +720,19 @@ static void rackLoopWithPartialHostTransport()
 
 static void flStudioLoopProcessorCases()
 {
+    {
+        constexpr int64_t beat=24000;
+        m3::LoopClockGrid rack;
+        rack.reset(48000);
+        for (int i=0;i<=6;++i)
+            rack.observe(i*beat,loop_capture::captureClock | (i==0 ? loop_capture::phrase : 0),48000,true);
+        REQUIRE(rack.ready());
+        REQUIRE(rack.nextDownbeat(6*beat,beat,16)==16*beat);
+        REQUIRE(rack.nextDownbeat(6*beat,11*beat,16)==32*beat);
+        rack.reset(48000);
+        for (int i=0;i<=6;++i) rack.observe(i*beat,loop_capture::captureClock,48000,true);
+        REQUIRE(rack.nextDownbeat(6*beat,beat,16)==8*beat);
+    }
     using Phase = m3::LoopLiveReference::State;
     TestDirectory root;
     LoopCaptureFixture::TimingHost host;
@@ -990,9 +1003,9 @@ static void flStudioLoopProcessorCases()
     host.position.setIsPlaying(true);
     cursor = 0;
     through(quarter);
-    REQUIRE(plugin.requestLoopCue());
-    tick();
-    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    using Route=m3::LoopPlayback::Route;
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::hostRepeat && !plugin.requestLoopCue());
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
     wrapPattern();
     REQUIRE(plugin.loopPlaybackStatus().playback != Playing::standby);
     wrapPattern();
@@ -1004,7 +1017,56 @@ static void flStudioLoopProcessorCases()
     through(quarter);
     cursor = 0; // Same destination as a repeat, but the previous block did not reach the endpoint.
     through(1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.loopPlaybackStatus().playhead && *plugin.loopPlaybackStatus().playhead < 1300);
+    const auto stopRepeat=cursor+10;
+    through(stopRepeat,stopRepeat,18);
+    through(stopRepeat+1000);
     REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+    wrapPattern();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    host.position.setIsPlaying(false);
+    tick();
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,8});
+    host.position.setIsPlaying(true);
+    cursor=0;
+    through(quarter);
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::manual && plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    const auto target=plugin.loopPlacementTarget();
+    REQUIRE(plugin.setLoopPlacement(target,m3::LoopPlacement{12.0,2}));
+    host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::placement && !plugin.requestLoopCue());
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::queued);
+    plugin.requestLoopPlaybackStop();
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    host.position.setIsPlaying(false);
+    tick();
+    host.position.setIsLooping(false);
+    host.position.setIsPlaying(true);
+    cursor=3*bar-quarter;
+    through(3*bar+1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    REQUIRE(plugin.loopPlaybackStatus().playhead && *plugin.loopPlaybackStatus().playhead < 1300);
+    cursor=4*bar+quarter;
+    through(cursor+1000);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::repeating);
+    through(6*bar);
+    REQUIRE(plugin.loopPlaybackStatus().playback == Playing::standby);
+
+    juce::MemoryBlock state;
+    plugin.getStateInformation(state);
+    auto restored=std::make_unique<PreverbAudioProcessor>(root.file,true);
+    REQUIRE(!restored->getLoopPlacement());
+    restored->setStateInformation(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(restored->flushCaptureForTesting());
+    REQUIRE((restored->getLoopPlacement() == m3::LoopPlacement{12.0,2}));
+    REQUIRE(plugin.setLoopPlacement(target,{}));
+    REQUIRE(!plugin.getLoopPlacement() && restored->getLoopPlacement());
 }
 
 static void loopPlaybackProcessorCases()

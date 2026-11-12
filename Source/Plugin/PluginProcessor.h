@@ -15,6 +15,7 @@
 #include <Capture/SparseSongMap.h>
 #include <DSP/PreviewEngine.h>
 #include <DSP/SwellEngine.h>
+#include <Playback/LoopPlacement.h>
 #include <Storage/WorkingFolder.h>
 
 #if PREVERB_FL_STUDIO_TRACE
@@ -39,6 +40,7 @@ struct HostPositionDiagnostics
     int64_t loopStart=0,loopEnd=0;
     int blockSize = 0;
     double sampleRate = 0.0;
+    std::chrono::steady_clock::time_point observedAt;
 
     SongTime songTime() const noexcept
     {
@@ -116,6 +118,10 @@ public:
     void setLoopPlaybackReference(const m3::LoopReferenceSetup&, bool externalCommands);
     m3::LoopPlayback::Status loopPlaybackStatus() const noexcept;
     bool requestLoopCue() noexcept;
+    struct LoopPlacementTarget { uint64_t generation, revision, pass; };
+    LoopPlacementTarget loopPlacementTarget() const noexcept;
+    std::optional<m3::LoopPlacement> getLoopPlacement() const noexcept;
+    bool setLoopPlacement(LoopPlacementTarget, std::optional<m3::LoopPlacement>);
     void requestLoopPlaybackStop() noexcept { swells->loopTransport().requestFinish(); }
     bool setRecaptureExisting(bool enabled);
     void cancelCapturePass();
@@ -180,6 +186,12 @@ private:
     std::atomic<bool> stateDecodeRejected{false};
     std::atomic<bool> hostNotificationsEnabled{false};
     std::atomic<uint32_t> loopPreference{LoopCapturePreference{}.packed()};
+    std::atomic<uint64_t> placementSequence{0}, placementGeneration{0}, placementRevision{0};
+    std::atomic<double> placementPpq{0};
+    std::atomic<int> placementRepeats{0};
+    void publishLoopPlacement(LoopPlacementTarget, std::optional<m3::LoopPlacement>) noexcept;
+    std::optional<m3::LoopPlacement> readLoopPlacementFor(uint64_t generation, uint64_t revision) const noexcept;
+    void writeLoopPlacement(juce::XmlElement&, const CaptureSessionSnapshot&) const;
     enum class LoopRoute { waiting, marker, clock, host };
     const bool flStudioLoopHost;
     loop_capture::HostGrid loopHostGrid;
@@ -223,6 +235,7 @@ private:
     CaptureHostTiming capturePassDiagnosticBaseline;
     uint64_t passQueuedBlocks=0,passDroppedBlocks=0;
     std::atomic<uint64_t> diagnosticsSequence{0};
+    std::atomic<std::chrono::steady_clock::duration::rep> diagnosticsTime{0};
 
     std::atomic<bool> positionAvailable{false};
     std::atomic<bool> samplePositionAvailable{false};

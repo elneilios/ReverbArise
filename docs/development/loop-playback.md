@@ -1,5 +1,15 @@
 # Loop playback scheduler
 
+FL Studio Perform chooses a saved Playlist placement first, a compatible host
+repeat second, and manual Cue when neither applies. Host repeat playback uses
+the reported repeat origin and period. The scheduler can join an active
+repeat at its current phase and carries eligible wet overlaps across a
+verified wrap. A Playlist placement saves beat one in PPQ and a finite repeat
+count for the accepted capture revision. It mixes the first negative lead-in,
+the intersecting passes after a seek and the final tail. Stop suppresses
+automatic re-entry until the transport starts a new run. See
+[Loop host admission](loop-host-admission.md) for timing requirements.
+
 The Loop route uses the last accepted source identity and exact recorded extent. The next-capture preference controls Learn. The captured grid describes the source, while a verified live phrase marker defines the wet origin and recurring phase. The producer controls the relationship to incoming dry audio through the host's routing. See [Loop host admission](loop-host-admission.md) for the timing and command contracts.
 
 The live adapter checks phase in dry Standby. Cue pins one complete prepared revision and chooses the first future window that can fit the full wet lead-in. The launch forecast intersects the fixed epoch window with the possible intervals from the last observed marker. The forecast stays fixed through the launch, and the wet downbeat follows the observed marker. Perform Stop clears queued work or starts an immediate wet fade of at most 5 ms. If the callback rate changes, the scheduler converts any remaining fade time to the new rate. Loss of sync clears pending work, fades active wet, and requires fresh phase and Cue. Capture commands retain their own roles.

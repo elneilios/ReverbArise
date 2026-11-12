@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include "BooleanToggleReview.h"
+#include <UI/Controls/ActionButtonStateField.h>
 
 using namespace m3::ui;
 using namespace m3::ui::controls;
@@ -111,6 +112,86 @@ static void inputCases(ToggleForm form)
     REQUIRE(commits == 5 && !accessibility->getCurrentState().isChecked());
 }
 
+static void joinedActionCases()
+{
+    WorkspaceTheme theme;
+    juce::Component window;
+    ActionButton before("Before"),after("After");
+    ActionButtonStateField pair("Cue Loop",CommandIcon::none,CommandVariant::neutral,"Loop status",112,124);
+    pair.setLookAndFeel(&theme);
+    window.setSize(pair.preferredWidth()+100,48);
+    window.addAndMakeVisible(before);
+    window.addAndMakeVisible(pair);
+    window.addAndMakeVisible(after);
+    before.setBounds(0,0,50,36);
+    pair.setBounds(50,0,pair.preferredWidth(),36);
+    after.setBounds(pair.getRight(),0,50,36);
+    pair.setStateFieldName("testState");
+    pair.setState("Ready");
+    auto& action=pair.action();
+    juce::Label* field=nullptr;
+    for (auto* child : pair.getChildren())
+        if (child->getName()=="testState") field=dynamic_cast<juce::Label*>(child);
+    REQUIRE(field);
+    const auto fieldBounds=field->getBounds();
+    const auto seam=commandBodyBounds(action.getBounds()).getRight();
+    REQUIRE(pair.getComponentAt(seam-1,18)==&action);
+    REQUIRE(pair.getComponentAt(seam,18)==&pair);
+    REQUIRE(action.getWantsKeyboardFocus() && !field->getWantsKeyboardFocus());
+    pair.setState("A much longer playback status that needs the entire field");
+    REQUIRE(field->getBounds()==fieldBounds);
+    const auto* state=field->getAccessibilityHandler();
+    REQUIRE(state && state->getDescription().contains("A much longer playback status"));
+
+    int prepared=0,committed=0;
+    bool requestCurrent=true;
+    action.beforeInvocation=[&]{++prepared;};
+    action.onClick=[&]{if(requestCurrent)++committed;};
+    const auto pump=[] {juce::MessageManager::getInstance()->runDispatchLoopUntil(30);};
+    window.addToDesktop(0);
+    window.setVisible(true);
+    window.toFront(true);
+    before.grabKeyboardFocus();
+    before.moveKeyboardFocusToSibling(true);
+    pump();
+    REQUIRE(action.hasKeyboardFocus(false) && action.isFocusVisible());
+    action.moveKeyboardFocusToSibling(true);
+    pump();
+    REQUIRE(after.hasKeyboardFocus(false));
+    after.moveKeyboardFocusToSibling(false);
+    pump();
+    REQUIRE(action.hasKeyboardFocus(false));
+    juce::SharedResourcePointer<FocusVisibility> focus;
+    focus->pointerInput();
+    REQUIRE(action.hasKeyboardFocus(false) && !action.isFocusVisible());
+    for (const auto key : {juce::KeyPress::spaceKey,juce::KeyPress::returnKey})
+    {
+        REQUIRE(action.keyPressed(juce::KeyPress(key)));
+        pump();
+    }
+    const auto access=action.createAccessibilityHandler();
+    REQUIRE(access->getActions().invoke(juce::AccessibilityActionType::focus) && action.isFocusVisible());
+    REQUIRE(access->getActions().invoke(juce::AccessibilityActionType::press));
+    pump();
+    REQUIRE(prepared==3 && committed==3);
+    requestCurrent=false;
+    action.invokeCommand();
+    REQUIRE(field->getText().startsWith("A much longer"));
+    pump();
+    REQUIRE(prepared==4 && committed==3);
+    REQUIRE(field->getText().startsWith("A much longer"));
+    action.setEnabled(false);
+    REQUIRE(access->getActions().invoke(juce::AccessibilityActionType::press));
+    pump();
+    REQUIRE(prepared==4 && committed==3 && field->isEnabled() && field->getText().startsWith("A much longer"));
+    const auto rendered=pair.createComponentSnapshot(pair.getLocalBounds(),true);
+    const auto body=commandBodyBounds(pair.getLocalBounds());
+    for(const auto y:{body.getY(),body.getBottom()-1})
+        REQUIRE(rendered.getPixelAt(seam-15,y)==rendered.getPixelAt(seam+15,y));
+    window.removeFromDesktop();
+    pair.setLookAndFeel(nullptr);
+}
+
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -128,6 +209,7 @@ int main(int argc, char** argv)
         }
         toggleReview::Panel preview;
         preview.checkLayout();
+        joinedActionCases();
         std::cout << "Switch and checkbox paint, activation, accessibility and preview layout passed.\n";
     });
 }

@@ -761,17 +761,34 @@ void PreverbAudioProcessor::processLoopPlayback(juce::AudioBuffer<float>& buffer
     const auto hasPosition = playlist && observe && timing.isPlaying && timing.samplePositionAvailable;
     const auto hostTime = TransportTime{playlist.value_or(SongTime{}), timing.isPlaying,
         timing.isLooping, timing.loopStart, timing.loopEnd};
-    const auto seek = hasPosition && loopPlaybackHostEnd && *loopPlaybackHostEnd != timing.samplePosition
-        && !isDeclaredRepeatWrap(loopPlaybackHostTime, *loopPlaybackHostEnd, hostTime);
+    const auto wrapped = hasPosition && loopPlaybackHostEnd
+        && isDeclaredRepeatWrap(loopPlaybackHostTime,*loopPlaybackHostEnd,hostTime);
+    const auto seek = hasPosition && loopPlaybackHostEnd && *loopPlaybackHostEnd != timing.samplePosition && !wrapped;
     const auto stopped = observe && loopPlaybackHostEnd && timing.positionAvailable && !timing.isPlaying;
     const auto gridChanged = playlist && hasPosition && loopPlaybackHostEnd
         && !transportMappingMatches(loopPlaybackHostTime.song,*playlist);
     if (playlist) loopPlaybackHostTime = hostTime;
     loopPlaybackHostEnd.reset();
     if (hasPosition && timing.samplePosition <= INT64_MAX - frames) loopPlaybackHostEnd = timing.samplePosition + frames;
+    using Playback=m3::LoopPlayback;
+    Playback::HostSchedule schedule;
+    const auto revision = captureWorker.acceptedLoopRevision();
+    if (playlist && playlist->valid)
+    {
+        if (const auto placement = readLoopPlacementFor(generation,revision))
+        {
+            int64_t start = 0;
+            const auto resolved=resolvePpqSample(*playlist,placement->ppq,start);
+            schedule = {Playback::Route::placement,start,resolved ? 0 : -1,placement->repeats};
+        }
+        else if (hostTime.looping && hostTime.loopStart >= 0 && hostTime.loopEnd > hostTime.loopStart
+                 && timing.samplePosition >= hostTime.loopStart && timing.samplePosition < hostTime.loopEnd)
+            schedule = {Playback::Route::hostRepeat,hostTime.loopStart,hostTime.loopEnd-hostTime.loopStart,0};
+    }
     swells->loopTransport().process(buffer.getWritePointer(0),buffer.getWritePointer(1),frames,observations,
-        timing.sampleRate,generation,captureWorker.acceptedLoopRevision(),access,gap || seek || stopped || gridChanged,
-        observedLoopReference,playlist);
+        timing.sampleRate,generation,revision,access,gap || seek || stopped || gridChanged
+            || (wrapped && schedule.route==Playback::Route::placement),
+        observedLoopReference,playlist,schedule,timing.isPlaying);
 }
 
 HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() const noexcept
@@ -798,6 +815,8 @@ HostPositionDiagnostics PreverbAudioProcessor::getHostPositionDiagnostics() cons
     diagnostics.isLooping=isLooping.load(std::memory_order_relaxed);diagnostics.loopStart=loopStart.load(std::memory_order_relaxed);diagnostics.loopEnd=loopEnd.load(std::memory_order_relaxed);
     diagnostics.blockSize = blockSize.load(std::memory_order_relaxed);
     diagnostics.sampleRate = sampleRate.load(std::memory_order_relaxed);
+    diagnostics.observedAt=std::chrono::steady_clock::time_point(
+        std::chrono::steady_clock::duration(diagnosticsTime.load(std::memory_order_relaxed)));
     std::atomic_thread_fence(std::memory_order_acquire);
     if (diagnosticsSequence.load(std::memory_order_relaxed) == sequence) return diagnostics;
     }
@@ -925,9 +944,68 @@ bool PreverbAudioProcessor::requestLoopCue() noexcept
     if (flStudioLoopHost && (!getHostPositionDiagnostics().isPlaying || isNonRealtime())) return false;
     if (workflowState.snapshot().mode != workflow::Mode::live || !captureWorker.acceptedLoop() || captureWorker.isLoading()
         || !swells->livePlaybackEnabled() || current.playback!=m3::LoopCueScheduler::State::standby
-        || current.phase != m3::LoopLiveReference::State::ready
+        || current.phase != m3::LoopLiveReference::State::ready || current.route != m3::LoopPlayback::Route::manual
         || current.preparation != m3::LoopPlaybackPublication::Preparation::ready) return false;
     return swells->loopTransport().requestCue();
+}
+
+PreverbAudioProcessor::LoopPlacementTarget PreverbAudioProcessor::loopPlacementTarget() const noexcept
+{
+    return {captureWorker.captureGeneration(),captureWorker.acceptedLoopRevision(),workflowState.snapshot().pass};
+}
+
+std::optional<m3::LoopPlacement> PreverbAudioProcessor::readLoopPlacementFor(uint64_t generation, uint64_t revision) const noexcept
+{
+    const auto sequence=placementSequence.load(std::memory_order_acquire);
+    if ((sequence & 1) || revision == 0) return {};
+    const auto source=placementRevision.load(std::memory_order_relaxed);
+    const auto epoch=placementGeneration.load(std::memory_order_relaxed);
+    const m3::LoopPlacement placement{placementPpq.load(std::memory_order_relaxed),placementRepeats.load(std::memory_order_relaxed)};
+    std::atomic_thread_fence(std::memory_order_acquire);
+    if (placementSequence.load(std::memory_order_relaxed) != sequence || epoch != generation || source != revision || !placement.valid()) return {};
+    return placement;
+}
+
+std::optional<m3::LoopPlacement> PreverbAudioProcessor::getLoopPlacement() const noexcept
+{
+    const auto target=loopPlacementTarget();
+    return readLoopPlacementFor(target.generation,target.revision);
+}
+
+void PreverbAudioProcessor::publishLoopPlacement(LoopPlacementTarget target, std::optional<m3::LoopPlacement> placement) noexcept
+{
+    placementSequence.fetch_add(1,std::memory_order_acq_rel);
+    placementGeneration.store(target.generation,std::memory_order_relaxed);
+    placementRevision.store(target.revision,std::memory_order_relaxed);
+    placementPpq.store(placement ? placement->ppq : 0,std::memory_order_relaxed);
+    placementRepeats.store(placement ? placement->repeats : 0,std::memory_order_relaxed);
+    placementSequence.fetch_add(1,std::memory_order_release);
+}
+
+bool PreverbAudioProcessor::setLoopPlacement(LoopPlacementTarget target, std::optional<m3::LoopPlacement> placement)
+{
+    const juce::ScopedLock lock(storageStateLock);
+    const auto current=loopPlacementTarget();
+    if (!flStudioLoopHost || captureWorker.isLoading() || !target.revision || target.generation != current.generation
+        || target.revision != current.revision || target.pass != current.pass || workflowState.snapshot().mode != workflow::Mode::live
+        || (placement && !placement->valid()))
+        return false;
+    publishLoopPlacement(target,placement);
+    if (hostNotificationsEnabled.load(std::memory_order_acquire)) triggerAsyncUpdate();
+    return true;
+}
+
+void PreverbAudioProcessor::writeLoopPlacement(juce::XmlElement& state,const CaptureSessionSnapshot& capture) const
+{
+    if (capture.sourceKind()!=CaptureSourceKind::loop) return;
+    const auto placement=readLoopPlacementFor(captureWorker.captureGeneration(),capture.manifest.revision);
+    if (!placement) return;
+    auto* element=state.createNewChildElement("LoopPlacement");
+    element->setAttribute("version",1);
+    char position[64]{};
+    const auto encoded=std::to_chars(position,position+sizeof(position),placement->ppq);
+    element->setAttribute("ppq",juce::String::fromUTF8(position,static_cast<int>(encoded.ptr-position)));
+    element->setAttribute("repeats",placement->repeats);
 }
 void PreverbAudioProcessor::loadPreviewIR(const juce::File& file)
 {
@@ -1106,6 +1184,7 @@ void PreverbAudioProcessor::updateHostPositionDiagnostics(int currentBlockSize) 
     // readable until the tiny atomic publication below, rather than making
     // worker/UI readers report unavailable timing throughout getPosition().
     UpdateGuard update(diagnosticsSequence);
+    diagnosticsTime.store(std::chrono::steady_clock::now().time_since_epoch().count(),std::memory_order_relaxed);
     blockSize.store(currentBlockSize, std::memory_order_relaxed);
     positionAvailable.store(position.hasValue(), std::memory_order_relaxed);
 
@@ -1236,6 +1315,7 @@ void PreverbAudioProcessor::getStateInformation(juce::MemoryBlock& destinationDa
     state.setAttribute("manifestReference", capture.reference);
     state.setAttribute("manifestRevision", juce::String(static_cast<juce::int64>(capture.manifest.revision)));
     writeLoopState(state, capture, getLoopCapturePreference());
+    writeLoopPlacement(state,capture);
     juce::String json,error;
     if(!m3::encode(session,json,error)) {swells->diagnostic("Save failed: "+error);return;}
     state.createNewChildElement("SwellSession")->addTextElement(json);
@@ -1310,6 +1390,9 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
     LoopCapturePreference preference;
     if (!readLoopState(*state, acceptedKind, preference))
     {swells->diagnostic("State rejected: invalid Loop source or next-capture preference");return;}
+    std::optional<m3::LoopPlacement> placement;
+    if (!m3::readLoopPlacement(*state,placement))
+    {swells->diagnostic("State rejected: invalid Loop placement");return;}
 
     CaptureSessionSnapshot hostCapture;hostCapture.manifestKnown=false;
     hostCapture.manifest.projectId=state->getStringAttribute("projectId").toStdString();
@@ -1368,6 +1451,7 @@ void PreverbAudioProcessor::setStateInformation(const void* data, int sizeInByte
         pendingHostCapture.manifest.projectId=juce::Uuid().toDashedString().toStdString();pendingHostCapture.manifest.instanceId=juce::Uuid().toDashedString().toStdString();
         captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,{},0,savedMode,false,std::move(storage));
     }
+    publishLoopPlacement({captureWorker.captureGeneration(),hostCapture.manifest.revision,0},placement);
     swells->restore(std::move(session),version>=2?state->getStringAttribute("manifestReference"):juce::String{});
     stateDecodeRejected=false;
     cancelPendingUpdate(); // Loading acknowledged state is not a new user edit.
@@ -1396,6 +1480,7 @@ bool PreverbAudioProcessor::pinPortableAssets(m3::storage::portable::Input& outp
     state.setAttribute("projectId",juce::String(capture.manifest.projectId));state.setAttribute("instanceId",juce::String(capture.manifest.instanceId));
     state.setAttribute("manifestReference",capture.reference);state.setAttribute("manifestRevision",juce::String(static_cast<juce::int64>(capture.manifest.revision)));
     writeLoopState(state, capture, getLoopCapturePreference());
+    writeLoopPlacement(state,capture);
     state.createNewChildElement("SwellSession")->addTextElement(creative);
     juce::String stateXml=state.toString();
     if(capture.location && capture.location->association.present()){
@@ -1452,8 +1537,10 @@ bool PreverbAudioProcessor::reloadRecoveredAssets(const m3::storage::portable::I
         invalidateLoopClock();
         swells->loopTransport().invalidateReference();
     }
+    const auto placement=getLoopPlacement();
     captureWorker.requestRestore(pendingHostCapture.manifest.projectId,pendingHostCapture.manifest.instanceId,
         pendingHostCapture.reference,revision,workflowState.snapshot().mode,true);
+    publishLoopPlacement({captureWorker.captureGeneration(),revision,0},placement);
     error.clear();return true;
 }
 

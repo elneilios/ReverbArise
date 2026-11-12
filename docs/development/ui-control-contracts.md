@@ -122,6 +122,22 @@ invariance, pointer/Return/Space/accessibility requests, disabled and queued
 lifetime cases, invocation guards, silent latch refresh and representative bounds.
 Use ControlLibrary/ExportControl/AuditionStrip cases plus real owner bindings.
 
+**Action Button + State Field.** The [shared pair](../../Source/UI/Controls/ActionButtonStateField.h)
+joins one guarded action to a static state field. The command owns the single
+seam and the action's focus brackets. The accepted value stays legible when
+the action is disabled and contributes no Tab stop. The field outline matches
+the action outline when disabled. The field has a 124-unit
+default width with a per-consumer override and 12-unit horizontal padding.
+Width is independent of the current value. Overflow fades at the glyph edges
+and scrolls once on hover. The fixed hover-help footer and accessible
+description expose the complete value.
+
+The owner approved the three-pair native preview for integration on
+12 November 2026. Perform uses the pair for Audition Play/Stop, Set Loop Start
+and Loop playback status. Audition and Loop retain the shared section-heading
+role in standard and compact layouts. See the focused component and Perform binding
+fixtures for geometry and input coverage.
+
 ## C2 — Dropdown selectors and menus
 
 Observed owners: [DeliberateSelector](../../Source/UI/Controls/DeliberateSelector.h),

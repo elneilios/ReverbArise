@@ -741,12 +741,67 @@ void measuredReplay(const char* path, double bpm)
     }
     std::cout << bpm << " BPM, " << launches << " launches, " << downbeats << " aligned downbeats, peak error " << maximumError << '\n';
 }
+
+void flStudioScheduleCases()
+{
+    using Route=LoopPlayback::Route;
+    constexpr int64_t period=96000;
+    constexpr int64_t placement=10;
+    const auto entry=testEntry(0,-4,period+8,.002f);
+    const auto create=[&]{
+        auto playback=std::make_unique<LoopPlayback>();
+        auto publication=std::make_unique<LoopPlaybackPublication>();
+        publication->captureGeneration=publication->sourceRevision=1;
+        publication->rate=48000;
+        publication->timing={120,4,4,4,0,period};
+        publication->preparation=LoopPlaybackPublication::Preparation::ready;
+        publication->plan.audio.entries={entry};
+        juce::String error;
+        REQUIRE(publication->plan.prepare(period,8*1024*1024,error));
+        REQUIRE(playback->publish(std::move(publication)));
+        return playback;
+    };
+    const auto expected=[&](int64_t position){
+        return position >= entry.start && position < entry.end
+            ? entry.audio->samples[static_cast<size_t>(position-entry.start)*2] : 0.f;
+    };
+    const auto block=[&](LoopPlayback& playback,int64_t hostSample,int frames,LoopPlayback::HostSchedule schedule,
+                          const auto& oracle){
+        std::array<float,256> left{},right{};
+        const SongTime time{true,hostSample,static_cast<double>(hostSample)/24000.0,48000,120,4,4};
+        {AudioAllocationGuard guard;
+            playback.process(left.data(),right.data(),frames,{},48000,1,1,LoopPlayback::Access::perform,
+                             false,{},time,schedule,true);}
+        REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
+        for(int i=0;i<frames;++i) REQUIRE(std::abs(left[i]-oracle(hostSample+i))<1e-6f);
+    };
+
+    auto placed=create();
+    for(int64_t pos=0;pos<2*period+32;)
+    {
+        const auto frames=static_cast<int>(std::min<int64_t>(256,2*period+32-pos));
+        block(*placed,pos,frames,{Route::placement,placement,0,2},[&](int64_t sample){
+            return expected(sample-placement)+expected(sample-placement-period);
+        });
+        pos+=frames;
+    }
+    REQUIRE(placed->status().playback==LoopCueScheduler::State::standby);
+
+    auto repeating=create();
+    const LoopPlayback::HostSchedule repeat{Route::hostRepeat,0,period,0};
+    const auto cyclic=[&](int64_t sample){
+        return expected(sample+period)+expected(sample)+expected(sample-period);
+    };
+    block(*repeating,period-12,12,repeat,cyclic);
+    block(*repeating,0,32,repeat,cyclic);
+    REQUIRE(repeating->status().route==Route::hostRepeat && repeating->status().playhead==31);
+}
 }
 
 int main(int argc,char** argv)
 {
     return runTest([&]{
         if (argc == 3) measuredReplay(argv[1],std::stod(argv[2]));
-        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); offlineFadeCases(); rateChangeFadeCases();}
+        else {liveReferenceCases(); automaticShortPhraseCases(); schedulerCases(); earliestCueCase(); compositorCases(); fixedGridPeakCases(); publicationCases(); gridCueCases(); offlineFadeCases(); rateChangeFadeCases(); flStudioScheduleCases();}
     });
 }

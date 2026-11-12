@@ -1,6 +1,7 @@
 #pragma once
 #include <Core/ContentHash.h>
 #include <Capture/LoopCaptureState.h>
+#include <Playback/LoopPlacement.h>
 
 namespace m3::storage
 {
@@ -81,12 +82,13 @@ inline bool associatedStateChildrenValid(const juce::XmlElement& base)
             if(sawSession)return false;
             sawSession=true;
         }
-        else if(!child->hasTagName("NextCapture") && !child->hasTagName("AcceptedLoopSource"))
+        else if(!child->hasTagName("NextCapture") && !child->hasTagName("AcceptedLoopSource") && !child->hasTagName("LoopPlacement"))
             return false;
     }
     auto kind=CaptureSourceKind::song;
     LoopCapturePreference preference;
-    return sawSession && readLoopState(base,kind,preference);
+    std::optional<m3::LoopPlacement> placement;
+    return sawSession && readLoopState(base,kind,preference) && m3::readLoopPlacement(base,placement);
 }
 inline bool encodeAssociatedState(const juce::String& legacy,const juce::String& manifest,Association& association,juce::String& output,juce::String& error)
 {

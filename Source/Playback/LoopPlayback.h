@@ -28,6 +28,14 @@ class LoopPlayback
 {
 public:
     enum class Access { disabled, observe, perform };
+    enum class Route { manual, hostRepeat, placement };
+    struct HostSchedule
+    {
+        Route route = Route::manual;
+        int64_t start = 0, period = 0;
+        int repeats = 0;
+        bool operator==(const HostSchedule&) const = default;
+    };
     struct Status
     {
         LoopLiveReference::State phase;
@@ -35,6 +43,8 @@ public:
         LoopPlaybackPublication::Preparation preparation;
         std::optional<int64_t> playhead;
         std::optional<int64_t> nextLeadInStart;
+        Route route;
+        bool placementAvailable;
     };
     struct LeadInDisplay
     {
@@ -66,7 +76,8 @@ public:
     void process(float* left, float* right, int frames, const loop_capture::MidiObservations&,
                  double rate, uint64_t generation, uint64_t revision, Access access, bool discontinuity,
                  const LoopReferenceSetup& observedReference = {},
-                 std::optional<SongTime> playlist = {}) noexcept;
+                 std::optional<SongTime> playlist = {}, HostSchedule schedule = {Route::manual,0,0,0},
+                 bool hostPlaying = false) noexcept;
 
 private:
     enum SlotState { free, published, retained, retired };
@@ -102,9 +113,14 @@ private:
     uint64_t currentStatusWord() const noexcept;
     std::atomic<uint64_t> statusWord{0};
     std::atomic<uint64_t> statusResetEpoch{0};
+    std::atomic<Route> statusRoute{Route::manual};
+    std::atomic<bool> statusPlacementAvailable{false};
 
     LoopCueScheduler scheduler;
     std::optional<double> playlistPhrasePpq;
+    HostSchedule previousSchedule;
+    std::optional<LoopCueScheduler::Timeline> timeline;
+    bool timelineSuppressed = false;
     int64_t cursor = 0;
     LoopWetSample lastWet;
     PlaybackPeaks signalPeaks;

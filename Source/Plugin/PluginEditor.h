@@ -21,6 +21,7 @@
 #include <UI/Controls/TimelineZoomControls.h>
 #include <UI/Controls/LatchingActionButton.h>
 #include <UI/Controls/ActionButton.h>
+#include <UI/Controls/ActionButtonStateField.h>
 #include <UI/Controls/CapturedActionButton.h>
 #include <UI/Controls/PresentationSurface.h>
 #include <UI/EditorPresentationState.h>
@@ -85,7 +86,8 @@ private:
     int inspectorSection=1;
     m3::ui::controls::SegmentedSelector inspectorSections;
     void layoutResponsive();
-    void layoutLoopPlayback(juce::Rectangle<int>);
+    void layoutLoopPlayback(juce::Rectangle<int>, bool compact);
+    void openLoopPlacementEditor(PreverbAudioProcessor::LoopPlacementTarget);
     void refreshLoopPlayback(bool visible,bool liveEnabled,double capturedRate,const HostPositionDiagnostics&);
     void refreshResponsiveSections();
     m3::ui::WorkspaceTheme workspaceTheme;
@@ -237,8 +239,18 @@ private:
     std::unique_ptr<juce::DocumentWindow> diagnosticsWindow;
     juce::Label headerStatus,helper;
     m3::ui::controls::EllipsisLabel monitorStatus;
-    m3::ui::controls::ActionButton loopCue{"Cue Loop"};
-    m3::ui::controls::EllipsisLabel loopPlaybackStatus;
+    m3::ui::controls::EllipsisLabel loopHeading;
+    m3::ui::controls::ActionButtonStateField loopAudition{"Audition",m3::ui::controls::CommandIcon::play,
+        m3::ui::controls::CommandVariant::primary,"Audition status",40,120};
+    m3::ui::controls::ActionButtonStateField loopStart{"Set Loop Start",m3::ui::controls::CommandIcon::none,
+        m3::ui::controls::CommandVariant::primary,"Loop start",130};
+    m3::ui::controls::ActionButtonStateField loopCue{"Cue Loop",m3::ui::controls::CommandIcon::none,
+        m3::ui::controls::CommandVariant::neutral,"Loop status",112};
+    int loopDividerX = 0;
+    juce::Component::SafePointer<juce::AlertWindow> loopPlacementDialog;
+    std::optional<PreverbAudioProcessor::LoopPlacementTarget> loopPlacementInvocation;
+    struct LoopAuditionInvocation {uint64_t session,pass;bool stopping;};
+    std::optional<LoopAuditionInvocation> loopAuditionInvocation;
     bool loopPerformLayout=false;
     bool loopButtonStops=false;
     std::optional<std::pair<uint64_t,bool>> loopButtonInvocation;
