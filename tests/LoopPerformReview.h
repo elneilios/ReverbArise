@@ -364,6 +364,8 @@ static void loopPerformReview(bool review,const juce::File& output)
         REQUIRE(help.getText()=="Set the host sample rate to 48 kHz to audition this Loop.");
         hover(cue);
         REQUIRE(help.getText()=="Set the host sample rate to 48 kHz to play this Loop.");
+        hover(start);
+        REQUIRE(help.getText()=="Requires a host song position");
         processor.prepareToPlay(48000,fixture.frames);
         fixture.tick();
         editor.refresh();

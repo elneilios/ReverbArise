@@ -756,6 +756,7 @@ static void flStudioLoopProcessorCases()
     juce::MidiBuffer midi;
     midi.ensureSize(128);
     unsigned blocks = 0;
+    bool reportsPpq = true;
     const auto tick = [&](int64_t noteAt = -1, int note = 0)
     {
         constexpr int sizes[]{250, 104, 146};
@@ -764,7 +765,10 @@ static void flStudioLoopProcessorCases()
         for (int channel = 0; channel < 2; ++channel)
             std::fill_n(audio.getWritePointer(channel), frames, .25f);
         host.position.setTimeInSamples(cursor);
-        host.position.setPpqPosition(static_cast<double>(cursor) / quarter);
+        if (reportsPpq)
+            host.position.setPpqPosition(static_cast<double>(cursor) / quarter);
+        else
+            host.position.setPpqPosition(std::nullopt);
         midi.clear();
         if (noteAt >= cursor && noteAt < cursor + frames)
         {
@@ -1034,6 +1038,10 @@ static void flStudioLoopProcessorCases()
     through(quarter);
     REQUIRE(plugin.loopPlaybackStatus().route == Route::manual && plugin.loopPlaybackStatus().playback == Playing::standby);
 
+    host.position.setLoopPoints(std::nullopt);
+    tick();
+    REQUIRE(plugin.loopPlaybackStatus().route == Route::manual);
+
     const auto target=plugin.loopPlacementTarget();
     host.position.setIsPlaying(false);
     cursor=2*bar;
@@ -1044,6 +1052,11 @@ static void flStudioLoopProcessorCases()
     tick();
     REQUIRE(plugin.setLoopPlacementFromPlayhead(target));
     REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    reportsPpq=false;
+    tick();
+    REQUIRE(!plugin.setLoopPlacementFromPlayhead(target));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{12.0}));
+    reportsPpq=true;
     host.position.setLoopPoints(juce::AudioPlayHead::LoopPoints{0,4});
     host.position.setIsPlaying(true);
     cursor=0;
@@ -1082,6 +1095,36 @@ static void flStudioLoopProcessorCases()
     REQUIRE((restored->getLoopPlacement() == m3::LoopPlacement{12.0}));
     REQUIRE(plugin.setLoopPlacement(target,{}));
     REQUIRE(!plugin.getLoopPlacement() && restored->getLoopPlacement());
+
+    auto legacy=juce::AudioProcessor::getXmlFromBinary(state.getData(),static_cast<int>(state.getSize()));
+    REQUIRE(legacy);
+    auto* savedPlacement=legacy->getChildByName("LoopPlacement");
+    REQUIRE(savedPlacement);
+    legacy->removeChildElement(savedPlacement,true);
+    juce::MemoryBlock legacyState;
+    juce::AudioProcessor::copyXmlToBinary(*legacy,legacyState);
+    auto withoutPlacement=std::make_unique<PreverbAudioProcessor>(root.file,true);
+    withoutPlacement->setStateInformation(legacyState.getData(),static_cast<int>(legacyState.getSize()));
+    REQUIRE(withoutPlacement->flushCaptureForTesting());
+    REQUIRE(withoutPlacement->getCaptureSnapshot().manifest.loop && !withoutPlacement->getLoopPlacement());
+
+    REQUIRE(plugin.setLoopPlacement(target,m3::LoopPlacement{16.0}));
+    REQUIRE((plugin.getLoopPlacement()==m3::LoopPlacement{16.0}));
+    host.position.setIsPlaying(false);
+    tick();
+    REQUIRE(plugin.requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(plugin.armLoopCapture());
+    cursor=0;
+    host.position.setIsPlaying(true);
+    through(0,0,24);
+    through(2*quarter,2*quarter,25);
+    through(bar);
+    REQUIRE(plugin.getCaptureSnapshot().manifest.loop);
+    const auto replacement=plugin.loopPlacementTarget();
+    REQUIRE(replacement.generation!=target.generation || replacement.revision!=target.revision);
+    REQUIRE(!plugin.getLoopPlacement());
+    REQUIRE(!plugin.setLoopPlacement(target,m3::LoopPlacement{24.0}));
+    REQUIRE((restored->getLoopPlacement()==m3::LoopPlacement{12.0}));
 }
 
 static void loopPlaybackProcessorCases()

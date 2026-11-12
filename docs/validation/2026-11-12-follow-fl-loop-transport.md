@@ -23,3 +23,9 @@ Commands use `scripts/build.ps1 -Configuration Release`.
 The component fixture attaches to a native peer before querying accessibility and samples the outer outline at fractional scales. The processor fixtures wait for the accepted IR to become audition-ready and verify automatic maintenance of existing renders after recapture with detection off.
 
 FL Studio verification covered the Pattern and placement workflows reported above. Declared Playlist repeats and seeks were exercised in processor fixtures. Native fractional-display DPI and a live Rack host session were outside this review.
+
+## OpenSpec checklist verification
+
+On `7aa11d9` with the added test fixtures, the Windows MSVC Release wrapper passed the Loop playback and recorded Rack replay checks (3/3), the Loop Perform UI check (1/1), and the standard PR regression set (15/15). The fixtures also cover omitted repeat bounds, a missing playhead position preserving the saved start, placement migration and source replacement, the final tail after Stop, restart, timing-loss fade, and the unsupported-host footer.
+
+The remaining desktop check is to confirm that a matching Playlist repeat auto-plays across the wrap with the saved start cleared, then seek into a placed Loop and confirm the wet resumes at the destination phase. The existing FL Studio owner acceptance remains recorded above.
