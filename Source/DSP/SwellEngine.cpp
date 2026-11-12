@@ -172,7 +172,7 @@ void SwellEngine::restore(Session session,juce::String expectedCaptureReference)
     initialPerformOffer=0;performPositionEstablished=find(session,session.primary)!=nullptr;
     protectedGenerationCalibration.clear();for(const auto& w:session.swells)if(w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
     exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();exportRetryFile.reset();
-    imports.clear(); irReplacements.clear(); irHistory.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
+    imports.clear(); irReplacements.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; runtime.clear(); forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();defaultAttemptScope.clear();defaultError.clear();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
     model=std::move(session);
@@ -194,7 +194,7 @@ void SwellEngine::clear()
     invalidateLearnLocked();learnCandidates.reset();settledLearnCandidates.reset();learnUsable=false;initialPerformOffer=0;
     publishGenerationLocked(model,UINT64_MAX,true);
     exportRequest.fetch_add(1);++exportDeliverySerial;exportDelivery.reset();detailSerial.fetch_add(1);detailWork.reset();exportState={};exportAttempt.clear();exportRetryFile.reset();
-    imports.clear(); irReplacements.clear(); irHistory.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
+    imports.clear(); irReplacements.clear(); resets.clear(); actionError.clear();analysis.reset(); candidates.clear(); analyzing=false; forceRefresh.clear();
     dirty.clear();passDirty.clear();acceptedSource.reset();passRenderRequests.clear();analyzedContent.clear();trailing.reset();
     ++defaultRequest;defaultPending=false;requestedDefaultName.clear();defaultStatus.clear();
     for(auto& w:model.swells) { ++w.inputGeneration; w.phase=w.frozen?Phase::restoring:Phase::stale; w.status=w.frozen?"Restoring frozen render":"Capture cleared; recapture source"; }
@@ -259,7 +259,7 @@ void SwellEngine::removeSelected()
     if(!permitCreative())return;
     const juce::ScopedLock guard(lock); stopLocked();
     ++monitoringGeneration;const auto selected=model.selected;
-    for(const auto& id:selected) if(suppressAndErase(model,id,message)) {protectedGenerationCalibration.clear();cancelIRReplacementLocked(id);irHistory.erase(id);invalidateLiveLocked(id);runtime.erase(id); forceRefresh.erase(id);persistentChangedLocked(); }
+    for(const auto& id:selected) if(suppressAndErase(model,id,message)) {protectedGenerationCalibration.clear();cancelIRReplacementLocked(id);invalidateLiveLocked(id);runtime.erase(id); forceRefresh.erase(id);persistentChangedLocked(); }
 }
 bool SwellEngine::removeTarget(const juce::String& id,uint64_t expectedSession)
 {
@@ -294,7 +294,6 @@ bool SwellEngine::removeTargets(const std::vector<juce::String>& ids,uint64_t ex
     for(const auto& id:ids)
     {
         cancelIRReplacementLocked(id);
-        irHistory.erase(id);
         invalidateLiveLocked(id);
         runtime.erase(id);
         forceRefresh.erase(id);
@@ -399,7 +398,6 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
         resetStagedIRHeadroomLocked();
         stopLocked();
     }
-    if(input || timingEdit)irHistory.erase(id);
     if(input || shape)invalidateLiveLocked(id);
     if(activity){const auto soloFilterChanged=candidate.solo!=w->solo || (w->solo && (candidate.enabled!=w->enabled || candidate.muted!=w->muted));
         if(soloFilterChanged)invalidateLiveLocked();else invalidateLiveLocked(id);}
@@ -491,9 +489,6 @@ bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const ju
 void SwellEngine::beginIRReplacementLocked(Swell& swell,const juce::String& name)
 {
     cancelIRReplacementLocked(swell.id);
-    auto& history=irHistory[swell.id];
-    history.undo.reserve(maximumIRHistory);
-    history.redo.reserve(maximumIRHistory);
     runtime.try_emplace(swell.id);
     auto& replacement=irReplacements[swell.id];
     replacement.input=++swell.inputGeneration;
@@ -505,37 +500,6 @@ void SwellEngine::beginIRReplacementLocked(Swell& swell,const juce::String& name
         swell.phase=Phase::checking;
         swell.status="Checking accepted render";
     }
-}
-bool SwellEngine::canRestoreIR(const juce::String& id,bool redo) const
-{
-    const juce::ScopedLock guard(lock);
-    const auto* swell=find(model,id);
-    if(!swell || swell->frozen)return false;
-    const auto at=irHistory.find(id);
-    if(at!=irHistory.end() && !(redo?at->second.redo:at->second.undo).empty())return true;
-    const auto request=irReplacements.find(id);
-    return !redo && request!=irReplacements.end() && request->second.error.isEmpty();
-}
-bool SwellEngine::restoreIR(const juce::String& id,bool redo,uint64_t expectedInput,uint64_t expectedSession)
-{
-    if(!permitCreative())return false;
-    const juce::ScopedLock guard(lock);
-    auto* swell=find(model,id);
-    if(!swell || expectedSession!=sessionGeneration.load() || swell->inputGeneration!=expectedInput)return false;
-    if(swell->frozen){message="Unfreeze this swell before changing its IR";return false;}
-    if(!canRestoreIR(id,redo))return false;
-    auto& history=irHistory[id];
-    const auto& from=redo?history.redo:history.undo;
-    if(from.empty())
-    {
-        cancelIRReplacementLocked(id);
-        message.clear();
-        return true;
-    }
-    const auto& assignment=from.back();
-    if(!queueIR(id,expectedInput,{}, {},expectedSession,assignment.ir,assignment.name))return false;
-    irReplacements.at(id).historyStep=redo?1:-1;
-    return true;
 }
 void SwellEngine::failIRReplacementLocked(const juce::String& id,const juce::String& error)
 {
@@ -618,21 +582,6 @@ void SwellEngine::commitIRReplacementsLocked(const std::vector<juce::String>& id
         auto& replacement=irReplacements.at(id);
         auto& swell=*find(model,id);
         auto& candidate=*replacement.candidate;
-        auto& history=irHistory.at(id);
-        IRAssignment previous{swell.ir,swell.render,swell.irName,wetTiming(swell.shape),swell.wetTimingIntent,swell.supportOffset};
-        if(replacement.historyStep!=0)
-        {
-            auto& from=replacement.historyStep>0?history.redo:history.undo;
-            auto& to=replacement.historyStep>0?history.undo:history.redo;
-            from.pop_back();
-            to.push_back(std::move(previous));
-        }
-        else if(swell.ir.present() && (swell.ir!=candidate.ir || wetTiming(swell.shape)!=wetTiming(candidate.shape)))
-        {
-            if(history.undo.size()>=maximumIRHistory)history.undo.erase(history.undo.begin());
-            history.undo.push_back(std::move(previous));
-            history.redo.clear();
-        }
         candidate.name=swell.name;
         swell=std::move(candidate);
         auto& state=runtime.at(id);
@@ -1095,21 +1044,6 @@ void SwellEngine::importJob(const Import& job)
             auto& replacement=irReplacements.at(id);
             replacement.bundled=bundled || std::any_of(bundledImpulses().begin(),bundledImpulses().end(),
                 [&](const auto& preset){return juce::String(preset.decodedHash)==asset.content;});
-            if(replacement.historyStep!=0)
-            {
-                const auto& history=irHistory.at(id);
-                const auto& assignment=(replacement.historyStep>0?history.redo:history.undo).back();
-                const auto& timing=assignment.timing;
-                candidate->shape.automaticStart=timing.automaticStart;
-                candidate->shape.startOffset=timing.startOffset;
-                candidate->shape.endOffset=timing.endOffset;
-                candidate->shape.fadeIn=timing.fadeIn;
-                candidate->shape.fadeOut=timing.fadeOut;
-                candidate->wetTimingIntent=assignment.intent;
-                candidate->supportOffset=assignment.supportOffset;
-                candidate->render=assignment.render;
-                ++candidate->shapeGeneration;
-            }
         }
         renderJob(std::move(*candidate),contextProvider(),job.session,true,true);
     }
@@ -1500,7 +1434,6 @@ void SwellEngine::run()
                         || swell->shapeGeneration!=item.second.shape;
                 });
                 if(removed){resetStagedIRHeadroomLocked();++liveRevision;}
-                std::erase_if(irHistory,[&](const auto& item){return !find(model,item.first);});
             }
             prepareGeneratedHeadroom(context);acceptIdleIRReplacements(context);prepareTransport(context);serviceExportPreview();
             long double origin;const auto validTime=songOrigin(context.time,origin);

@@ -16,7 +16,7 @@
 
 **Non-Goals**
 
-- General-purpose swell edit history, per-IR preset banks, new IR formats, host automation changes and a new error or control family.
+- Undo and redo history, per-IR preset banks, new IR formats, host automation changes and a new error or control family.
 
 ## Decisions
 
@@ -30,7 +30,7 @@ Derive each swap from the remembered intent to avoid cumulative loss across rapi
 
 ### Stage replacement until the audio is ready
 
-Keep the requested IR, candidate shape, render asset and gain preparation in request-owned worker state. Use the same route for bundled, managed and new file selections, including targets with no previously retained live voice. Guard commits with swell identity, current request and edit generations, session, freeze, capture and timing checks. Check supersession before registering a new choice or updating UI status. A request that fails after decode leaves the accepted IR, shape, render and history in place.
+Keep the requested IR, candidate shape, render asset and gain preparation in request-owned worker state. Use the same route for bundled, managed and new file selections, including targets with no previously retained live voice. Guard commits with swell identity, current request and edit generations, session, freeze, capture and timing checks. Check supersession before registering a new choice or updating UI status. A request that fails after decode leaves the accepted IR, shape and render in place.
 
 Evaluate `retainedCompatible` against the accepted definition during preparation. Pass the candidate effective shape through waveform preparation, calibration, headroom and live-window preparation. Stage any headroom changes required by existing mix policy with the replacement. At handover, publish a coherent revision with the existing bounded transition at the current Song position. If there is no active live window, complete acceptance when the candidate is verified and ready for the next applicable consumer. Reuse current Loop eligibility and freeze rules. Keep preparation, validation, caching and retirement off the audio callback. Preserve the existing memory ceiling.
 
@@ -38,15 +38,9 @@ While manual Audition is active, prepare a complete replacement monitor mix off 
 
 A bounce already underway keeps its entry snapshot. Internal Export uses an accepted composition and discloses a pending newer request if it offers the previous composition.
 
-### Record scoped undo and redo at acceptance
-
-Store bounded per-swell history for successful replacements. Each record carries the two IR identities, intended and effective timing, and the matching immutable render references. Restore through the same preparation and validation path. Advance history only after successful publication. Apply the IR and timing fields to the current swell so unrelated gain, placement and activity edits survive. An explicit later timing edit invalidates conflicting swap history for that swell. A new successful replacement clears its redo branch. An undo request during preparation supersedes the pending choice before traversing any available accepted history. Frozen swells reject swap history actions with the existing unfreeze guidance.
-
-Keep history for the current editing session and protect its referenced managed assets for its lifetime. Save the accepted definition and recoverable intent so longer responses can restore timing after reopen. This gives the required single-step undo without introducing a plugin-wide history contract or putting render audio in undo records.
-
 ### Bind feedback to the same request and accepted revision
 
-Reuse Perform's shared IR selector, local help and NoticeBar roles, list status, waveform and inspector bindings. Use an existing action-menu row or shared command button for scoped undo and redo, with keyboard and accessible invocation. Review placement, labels and interaction with the owner using a native preview. No new visual token or control variant is planned.
+Reuse Perform's shared IR selector, local help and NoticeBar roles, list status, waveform and inspector bindings. Review feedback in the native preview. No new visual token or control variant is planned.
 
 Use a concise informational message such as “Wet timing adjusted to fit this IR” for a successful fit. For failures, report the request, specific cause and supported next action. For example, “This IR exceeds the render memory limit. Try a shorter response. Previous IR still available.” Show the final sentence only when true. Keep detailed diagnostics accessible when the primary copy must be short. Use existing feedback severity and precedence. Distinguish a decode error, unavailable source and exhausted render resources. Suppress obsolete results and clear resolved feedback.
 
@@ -54,7 +48,6 @@ Use a concise informational message such as “Wet timing adjusted to fit this I
 
 - Prematurely replacing shape can revoke retained audio or serialize a mixed revision. Keep the candidate private until all relevant acceptance checks pass.
 - Preserving both shapes adds session fields and requires validation of arithmetic and malformed state. Store only the needed timing intent and use the existing parser's compatibility checks.
-- Restoring history can fail if assets or source are missing or the swell is frozen. Leave the accepted result and history position in place and give the appropriate recovery.
 - A 46-swell host project may expose real preparation limits beyond native fixtures. Keep the reported project intact and test using a working copy with access to its capture and IR dependencies.
 
 ## Migration Plan

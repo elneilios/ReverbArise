@@ -115,13 +115,6 @@ int main(){return runTest([]
         REQUIRE(find(shorter,a)->wetTimingIntent && find(shorter,a)->wetTimingIntent->startOffset==-2000);
         {AudioAllocationGuard guard;engine.processAudio(l,r,16,time.song);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0 && engine.snapshot().playing);
-        REQUIRE(engine.restoreIR(a,false,find(shorter,a)->inputGeneration,engine.assignmentEpoch()));
-        waitFor([&]{return find(engine.savedSession(),a)->irName=="Monumental";});
-        REQUIRE(find(engine.savedSession(),a)->shape==find(crop,a)->shape && engine.canRestoreIR(a,true));
-        engine.processAudio(l,r,16,time.song);
-        REQUIRE(engine.restoreIR(a,true,find(engine.savedSession(),a)->inputGeneration,engine.assignmentEpoch()));
-        waitFor([&]{return find(engine.savedSession(),a)->irName=="Whisper";});
-        REQUIRE(find(engine.savedSession(),a)->shape==find(shorter,a)->shape);
         engine.stop();
         engine.processAudio(l,r,16,time.song);
         const auto custom=root.file.getChildFile("short-custom.wav");

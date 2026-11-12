@@ -88,9 +88,7 @@ processing stages. If pages cannot fit, choose a shorter IR or retry while stopp
 A shorter response fits wet bounds and fades to the available interval. The
 waveform and inspector show the resulting shape and indicate when timing was
 adjusted. The original timing remains available when a longer IR supports it.
-An explicit timing edit updates the corresponding intent. In the swell action
-menu, Undo IR change and Redo IR change restore the response and its timing as
-one edit. History lasts for the current editing session.
+An explicit timing edit updates the corresponding intent.
 
 Host offline bounce snapshots the accepted IR at entry if a replacement is still
 pending, and reports that choice. A background completion cannot switch the WAV

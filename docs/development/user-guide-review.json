@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Perform timing fit, seamless Song and Audition handover, scoped undo and redo, and failure recovery. The final headroom invalidation change leaves the documented controls and workflow intact. FL Studio regression is pending.",
+  "summary": "Removed the per-swell IR undo and redo instructions after deferring edit history. Reviewed the remaining timing fit, accepted audio handover and failure guidance against the Perform bindings.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -445,13 +445,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 104957,
-      "sha256": "aedd391e52f495259360ba9c92b28d43461e1699828f023293c41904c8075540"
+      "bytes": 101655,
+      "sha256": "1240bcda3069b7f31c446542eae7a3e35a5f9f9a02efbb91273b4476002ea93b"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 27777,
-      "sha256": "173f1c04768028a066d8825923b3717a9f7f02a71965e571b24b00f7144aa1fb"
+      "bytes": 27237,
+      "sha256": "535cf469e4406c80aa672b6640224301bad7eb5393715d5992bb1035e5064cb4"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 116851,
-      "sha256": "3dc21799ed9692a869ecc935f33f5bb130746f566e7ab1e8696beb4eab812de4"
+      "bytes": 116329,
+      "sha256": "ac5690ba6b8cf86514e92395b3b3f2702b1b866d67f957658f0cdeb72a0313cf"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126617,
-      "sha256": "3c6773729b02172bb3574384336f8427b2941c453622089ab01bf5c7ee387a45"
+      "bytes": 126503,
+      "sha256": "d9e7e67f70d690c479c009c68ed5f785a7eb60ac46c0beef0e0130427b67c1ec"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

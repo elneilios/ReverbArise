@@ -635,16 +635,11 @@ void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::Men
     auto targets=std::find(selection.begin(),selection.end(),request.id)!=selection.end()
         ? selection : std::vector<juce::String>{request.id};
     const auto deleteLabel=targets.size()>1?"Delete "+juce::String(static_cast<int>(targets.size()))+" swells":juce::String("Delete");
-    std::vector<PopupChoice> actions{{1,"Rename...",{},selection.size()<=1,false,PopupRowRole::action}};
-    const auto& engine=processor.swellEngine();
-    if(engine.canRestoreIR(request.id,false))
-        actions.push_back({3,"Undo IR change",{},true,false,PopupRowRole::action});
-    if(engine.canRestoreIR(request.id,true))
-        actions.push_back({4,"Redo IR change",{},true,false,PopupRowRole::action});
-    actions.push_back({2,deleteLabel,{},true,false,PopupRowRole::destructiveAction});
+    std::vector<PopupChoice> actions{{1,"Rename...",{},selection.size()<=1,false,PopupRowRole::action},
+                                     {2,deleteLabel,{},true,false,PopupRowRole::destructiveAction}};
     const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
     swellMenu=std::make_unique<ChoicePopup>(list,std::move(actions),
-        [safe,request,name=swell->name,input=swell->inputGeneration,pass=flow.pass,targets=std::move(targets)](int result,PopupDismissal why)
+        [safe,request,name=swell->name,pass=flow.pass,targets=std::move(targets)](int result,PopupDismissal why)
         {
             if(!safe || safe->destroying)return;
             const auto keyboard=safe->swellMenu && safe->swellMenu->showFocusOnReturn();
@@ -669,12 +664,6 @@ void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::Men
             if(result==2)
             {
                 safe->requestDeleteSwells(targets,request.epoch,pass,request.id,keyboard);
-                return;
-            }
-            if(result==3 || result==4)
-            {
-                engine.restoreIR(request.id,result==4,input,request.epoch);
-                safe->refresh();
                 return;
             }
 

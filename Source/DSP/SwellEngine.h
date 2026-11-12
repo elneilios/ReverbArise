@@ -156,8 +156,6 @@ public:
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
     bool assignBundledIR(const juce::String& id,uint64_t expectedInput,const juce::String& presetId,uint64_t expectedSession=0);
     bool assignManagedIR(const juce::String& id,uint64_t expectedInput,const Asset&,const juce::String& name,uint64_t expectedSession=0);
-    bool canRestoreIR(const juce::String& id,bool redo) const;
-    bool restoreIR(const juce::String& id,bool redo,uint64_t expectedInput,uint64_t expectedSession);
     std::vector<IRChoice> irChoices() const;
     bool resetSwell(const juce::String& id,bool allSettings);
     RegenerationResult generate(bool all=false);
@@ -316,21 +314,9 @@ private:
         uint64_t input=0, shape=0;
         juce::String name, error, sourceRevision;
         bool bundled=false, fitted=false;
-        int historyStep=0;
         std::optional<Swell> candidate;
         std::shared_ptr<Waveform> rawWave, sourceWave;
     };
-    struct IRAssignment
-    {
-        Asset ir, render;
-        juce::String name;
-        WetTiming timing;
-        std::optional<WetTiming> intent;
-        int64_t supportOffset;
-    };
-    static constexpr size_t maximumIRHistory=16;
-    struct IRHistory { std::vector<IRAssignment> undo,redo; };
-    std::map<juce::String,IRHistory> irHistory;
     std::map<juce::String,IRReplacement> irReplacements;
     void beginIRReplacementLocked(Swell&,const juce::String&);
     void failIRReplacementLocked(const juce::String&,const juce::String&);

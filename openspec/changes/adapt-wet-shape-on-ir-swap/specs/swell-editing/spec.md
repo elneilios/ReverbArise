@@ -19,17 +19,8 @@ Replacing the IR of an editable swell SHALL derive a valid effective shape from 
 - **WHEN** the user changes a fitted timing control
 - **THEN** the explicit edit becomes the new intent for that control, and unrelated timing intent remains available for future swaps
 
-### Requirement: One edit undoes or redoes an accepted IR replacement
-
-The plugin SHALL expose a single undo and redo action for an accepted per-swell IR replacement. Each action SHALL restore the corresponding IR, shape intent and effective shape together. Failed or superseded requests SHALL leave history unchanged.
-
-#### Scenario: Undo and redo a fitted swap
-- **WHEN** the user undoes and then redoes a completed long-to-short swap
-- **THEN** undo restores the long IR and its prior shape, and redo restores the short IR and its fitted shape
-- **AND** neither action changes a neighbouring swell or overwrites unrelated edits
-
 #### Scenario: Freeze while browsing
-- **WHEN** the user tries to replace the IR or undo or redo an IR swap on a frozen swell
+- **WHEN** the user tries to replace the IR on a frozen swell
 - **THEN** the frozen render is preserved and the user is told to unfreeze before changing the response
 - **AND** after unfreezing the edit is eligible under current source and timing checks
 
