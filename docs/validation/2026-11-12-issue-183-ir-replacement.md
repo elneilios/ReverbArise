@@ -6,7 +6,7 @@ On 12 November 2026, the owner reported the installed Release build at `219bde2`
 
 A read-only inspection of `PreverbTesting_3.flp` showed the bar 3.1 swell ready with `06_Airy_Vowel.wav` selected and “Wet timing adjusted to fit this IR” in the Sound inspector. The target remained `3.1.000011111`. The editor displayed 2.61 s pre-roll and 2.98 s length. The prior inspection of the reported failure showed the same target with 3.48 s pre-roll and 3.84 s length.
 
-The saved project has a hash-verified working copy alongside it. The observations establish a successful fitted swap on the reported swell. The owner did not enumerate the exact three-file sequence, the second swell, manual Audition and Song handover, save/reopen or export. The agent left the original project open during validation and made no edits in FL Studio.
+The owner confirmed trying multiple IRs across multiple swells, swapping during manual Audition, and DAW playback. This completes the host playback smoke check for PR review. The exact three-file sequence, host save/reopen and host export remain unconfirmed. Native checks cover fitted-session reopen and export. The saved project has a hash-verified working copy alongside it. The agent left the original project open during validation and made no edits in FL Studio.
 
 ## Native verification
 
