@@ -30,3 +30,12 @@ perform_audition,automatic_coordinator}_test
 The installed host smoke build predates the accepted-voice version fix. The native tests exercise that fix on `701670f`.
 
 The Release gate `./scripts/build.ps1 -Configuration Release -PrRegression` passed all 15 cases on `a43df75`. The first run exposed a Loop test fixture that forced a second render immediately after the IR had already been accepted. The fixture now waits for the accepted replacement and the playback publication. The Release rerun covered Rack and FL Studio processor fixtures, active Loop IR replacement, state, capture, transport, convolution, plugin identity and the UI standards check.
+
+## PR review follow-up
+
+The fixes in `c5e5133` preserve fade intent through repeated endpoint drags, measure newly generated swells against accepted audio while a swap is pending, and use the current transport preparation result for page-budget failures. The handover test exercises a replacement that fails collection admission and a replacement after Live is disabled with an earlier budget error still displayed.
+
+- Debug passed five focused cases. Run `./scripts/build.ps1 -Configuration Debug -TestTarget <target>` for `preverb_swell_session_test`, `preverb_ir_handover_test` and `preverb_ir_streaming_test`. For the gesture and Audition cases, use `-TestTarget preverb_perform_composition_preview -TestFilter '^(preverb_perform_gesture_test|preverb_perform_audition_test)$'`.
+- `./scripts/build.ps1 -Configuration Release -PrRegression` passed all 15 cases on `c5e5133`. The offline user-guide currency check and `git diff --check` passed.
+
+The follow-up was verified in native tests. The FL Studio smoke results above apply to the earlier installed build.
