@@ -100,6 +100,14 @@ intent. A pending or failed request leaves that saved sound in place. Existing
 projects use their saved shape as initial intent. Reopen verifies committed
 assets without resuming playback.
 
+The Sound foundation records the accepted preset ID and definition version
+alongside the exact managed response. A bundled selection keeps its catalogue
+ID. An explicit custom import keeps the Custom IR identity even if its samples
+match a bundled response. Older assignments infer a bundled identity only
+from matching content and format. The replacement worker commits the Sound
+identity with the IR, fitted shape and matching render at the existing
+handover. Save, Export and offline playback continue to read accepted state.
+
 ## Reproduce and review assets
 
 Python 3.10.6 standard library is the recorded generation environment; NumPy and

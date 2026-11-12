@@ -37,7 +37,7 @@ void Composition::verifyKnobResets()
     REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::moveArrival(w,w.arrival+6000,error);}));panel->refresh();reset("arrivalSample");REQUIRE(current().arrival==original.arrival);
     load(original);REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::moveArrival(w,w.arrival-24000,error);}));panel->refresh();
     const auto constrained=current();reset("sourceSampleStart");REQUIRE(current().arrival==constrained.arrival && current().sourceStart==constrained.sourceStart && current().sourceEnd==constrained.sourceEnd);
-    auto replacement=original;replacement.sourceEnd+=480;replacement.render={};replacement.ir={};
+    auto replacement=original;replacement.sourceEnd+=480;replacement.render={};replacement.ir={};replacement.soundPreset={};
     auto sourceOnly=baseline;*m3::find(sourceOnly,firstId)=replacement;engine.restore(sourceOnly);panel->refresh(); // Source-only epoch oracle; no wet readiness is implied.
     REQUIRE(engine.edit(firstId,[](auto& w,auto& error){return m3::setSource(w,w.sourceStart,w.sourceEnd+2400,error);}));panel->refresh();reset("sourceSampleEnd");REQUIRE(current().sourceEnd==replacement.sourceEnd);
     // The real asynchronous popup action, including focus loss to the menu.

@@ -81,7 +81,8 @@ bool SwellEngine::publishGenerationLocked(const Session& next,uint64_t expectedP
     {message="Generation settings are locked or the edit was superseded";return false;}
     const auto slot=static_cast<uint8_t>(1-flow.configurationSlot);
     generationConfigurations[slot]={next.automaticProcessing && next.autoMarkersEnabled,next.sensitivity,next.separationSeconds,
-        next.defaultIR,next.defaultIRName,++configurationRevision,configurationSession.value_or(sessionGeneration.load())};
+        next.defaultIR,next.defaultIRName,++configurationRevision,configurationSession.value_or(sessionGeneration.load()),
+        resolvedSoundPreset(next.defaultSoundPreset,next.defaultIR),next.defaultLevelDb};
     if(!workflowState->publishConfiguration(slot,flow.pass))
     {message="Generation setting lost admission to playback; previous setting retained";return false;}
     cancelLearnGenerationLocked();
@@ -234,6 +235,7 @@ bool SwellEngine::addTarget(int64_t arrival,juce::String* rejection,std::optiona
     if(workflowState){performPositionEstablished=true;initialPerformOffer=0;}
     protectedGenerationCalibration.clear();
     ++monitoringGeneration;auto& w=model.swells.back();w.detectorAnchor=arrival;w.ir=model.defaultIR;w.irName=model.defaultIRName;
+    w.soundPreset=resolvedSoundPreset(model.defaultSoundPreset,model.defaultIR);w.shape.gainDb=model.defaultLevelDb;
     w.phase=Phase::stale;w.status=w.ir.present()?"Target added":"Waiting for default IR";
     requestManualPreparationLocked(w,context);
     nextAutomaticEdit=juce::Time::getMillisecondCounterHiRes()+150;
@@ -366,6 +368,8 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     if(!w) return reject("The selected swell is unavailable");
     actionError.clear();auto candidate=*w; if(!operation(candidate,message)) return reject(message);
     if(candidate.id!=id) { message="Swell identity cannot be edited"; return reject(message); }
+    if(candidate.ir!=w->ir && candidate.soundPreset==w->soundPreset && !validSoundPreset(candidate.soundPreset,candidate.ir))
+        candidate.soundPreset=inferSoundPreset(candidate.ir);
     if(candidate.arrival==w->arrival && (candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd))candidate.supportOffset=0;
     const auto support=candidate.arrival==w->arrival && candidate.sourceStart==w->sourceStart && candidate.sourceEnd==w->sourceEnd
         && renderInputEnd(candidate)!=renderInputEnd(*w);
@@ -568,6 +572,25 @@ std::vector<juce::String> SwellEngine::overlayReadyIRReplacementsLocked(Session&
         }
         replacements.push_back(swell.id);
     }
+    if(replacements.empty())return replacements;
+    // Check the exact saved result, rather than the monitor snapshot (which can
+    // also contain older retained voices). Never publish an unsavable batch.
+    auto accepted=model;
+    accepted.importedIRs=target.importedIRs;
+    for(const auto& id:replacements)
+    {
+        auto& swell=*find(accepted,id);
+        auto name=swell.name;
+        swell=*irReplacements.at(id).candidate;
+        swell.name=std::move(name);
+    }
+    juce::String encoded,error;
+    if(!encode(accepted,encoded,error))
+    {
+        failIRReplacementLocked(replacements.back(),error);
+        target.importedIRs.resize(initialCollectionSize);
+        return {};
+    }
     for(const auto& id:replacements)
     {
         auto& swell=*find(target,id);
@@ -641,7 +664,8 @@ void SwellEngine::resetJob(const Reset& job)
     if(current->shapeGeneration!=old.shapeGeneration || current->shape!=old.shape || current->placement!=old.placement
         || current->name!=old.name || current->frozen!=old.frozen || current->enabled!=old.enabled || current->muted!=old.muted
         || current->solo!=old.solo || current->ir!=old.ir || current->arrival!=old.arrival || current->sourceStart!=old.sourceStart
-        || current->sourceEnd!=old.sourceEnd || model.defaultIR!=job.candidate.ir)
+        || current->sourceEnd!=old.sourceEnd || model.defaultIR!=job.candidate.ir
+        || resolvedSoundPreset(model.defaultSoundPreset,model.defaultIR)!=resolvedSoundPreset(job.candidate.soundPreset,job.candidate.ir))
     {actionError=message="Reset all superseded by a newer edit";return;}
     valid=valid && instanceRoot(latest.capture.manifest).getFullPathName()==job.captureScope
         && sameMusicalMapping(latest.time,job.time)
@@ -983,10 +1007,7 @@ bool SwellEngine::rememberIR(Session& target,const Asset& asset,const juce::Stri
         [&](const auto& entry){return entry.asset.content==asset.content;}))return true;
     if(target.importedIRs.size()>=maximumImportedIRs){error="Imported IR collection is full. Select a saved or bundled response.";return false;}
     target.importedIRs.push_back({asset,label});
-    juce::String encoded;
-    if(encode(target,encoded,error))return true;
-    target.importedIRs.pop_back();
-    return false;
+    return true;
 }
 void SwellEngine::importJob(const Import& job)
 {
@@ -1006,6 +1027,8 @@ void SwellEngine::importJob(const Import& job)
     if(ok && job.managed.present())asset=job.managed;
     const auto* descriptor=bundled?findBundledImpulse(job.presetId):nullptr;
     const auto label=descriptor?juce::String(descriptor->name):job.managed.present()?job.label:job.file.getFileName();
+    const auto preset=descriptor?SoundPresetIdentity{descriptor->id,static_cast<int>(descriptor->revision)}
+        :SoundPresetIdentity{customImpulseId,1};
     managedIR={};
     if(job.futureDefault)
     {
@@ -1014,11 +1037,13 @@ void SwellEngine::importJob(const Import& job)
         if(job.defaultRequest!=defaultRequest)return;defaultPending=false;
         if(workflowState){const auto flow=workflowState->snapshot();if(flow.locked() || flow.mode==workflow::Mode::finalise || flow.pass!=job.workflowPass)
             {defaultStatus="Default IR request superseded by workflow; previous default retained";message=defaultStatus;return;}}
-        auto next=model;next.defaultIR=asset;next.defaultIRName=label;
+        auto next=model;next.defaultIR=asset;next.defaultIRName=label;next.defaultSoundPreset=preset;
         if(ok)ok=rememberIR(next,asset,label,bundled,error);
+        if(ok){juce::String encoded;ok=encode(next,encoded,error);}
         if(ok && !publishGenerationLocked(next,job.workflowPass))
         {defaultStatus="Default IR request superseded by playback; previous default retained";message=defaultStatus;return;}
-        if(ok){if(model.defaultIR!=asset || model.defaultIRName!=label || model.importedIRs.size()!=next.importedIRs.size())persistentChangedLocked();
+        if(ok){if(model.defaultIR!=asset || model.defaultIRName!=label || resolvedSoundPreset(model.defaultSoundPreset,model.defaultIR)!=preset
+            || model.importedIRs.size()!=next.importedIRs.size())persistentChangedLocked();
             model=std::move(next);defaultError.clear();defaultStatus="Default IR for the next Generate updated";}
         else{defaultError=error;defaultStatus="Unable to change Default IR; previous default retained";}
         message=ok?defaultStatus:defaultStatus+": "+error;return;
@@ -1044,10 +1069,9 @@ void SwellEngine::importJob(const Import& job)
             candidate=accepted;
             candidate->ir=asset;
             candidate->irName=label;
+            candidate->soundPreset=preset;
             candidate->provenance=Provenance::manualEdited;
-            auto& replacement=irReplacements.at(id);
-            replacement.bundled=bundled || std::any_of(bundledImpulses().begin(),bundledImpulses().end(),
-                [&](const auto& preset){return juce::String(preset.decodedHash)==asset.content;});
+            irReplacements.at(id).bundled=bundled;
         }
         renderJob(std::move(*candidate),contextProvider(),job.session,true,true);
     }

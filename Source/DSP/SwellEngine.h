@@ -192,6 +192,7 @@ public:
     bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultManagedIR(const Asset&,const juce::String& name,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    bool setDefaultLevel(float db,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     void holdDefaultImportsForTesting(bool hold) noexcept {defaultImportHold.store(hold);notify();}
     bool defaultImportWaitingForTesting() const noexcept {return defaultImportWaiting.load();}
     void resetSuppression();

@@ -92,6 +92,19 @@ int main(int argc,char** argv){return runTest([&]{
     REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,.65f,other,error) && other->identity==first->identity);
     session.swells[0].name="Renamed";
     REQUIRE(prepareSongExportPlan(session,source,"source-v1",session.timing,.65f,other,error) && other->identity==first->identity);
+    {
+        auto withPreset=session;
+        auto& swell=withPreset.swells.front();
+        swell.ir.path="irs/aa.wav";swell.ir.checksum=juce::String::repeatedString("b",64);
+        swell.ir.content=defaultImpulseContent;swell.ir.rate=48000;swell.ir.channels=2;swell.ir.frames=86400;
+        swell.soundPreset={defaultImpulseId,1};
+        std::shared_ptr<const SongExportPlan> bundled,custom;
+        REQUIRE(prepareSongExportPlan(withPreset,source,"source-v1",session.timing,.65f,bundled,error));
+        swell.soundPreset={customImpulseId,1};
+        withPreset.defaultLevelDb=-5.f;
+        REQUIRE(prepareSongExportPlan(withPreset,source,"source-v1",session.timing,.65f,custom,error));
+        REQUIRE(bundled->identity==custom->identity);
+    }
     for(int change=0;change<6;++change){auto changed=session;
         if(change==0)changed.swells[0].placement=5;if(change==1)changed.swells[0].shape.gainDb=3;
         if(change==2)changed.swells[0].shape.inTension=.3;if(change==3)changed.swells[0].render.checksum=juce::String::repeatedString("c",64);

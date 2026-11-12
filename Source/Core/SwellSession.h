@@ -2,6 +2,7 @@
 #include <Capture/CaptureManifest.h>
 #include <Core/SongTime.h>
 #include <Core/ManagedAsset.h>
+#include <Core/SoundPreset.h>
 #include <Core/PerformNavigationState.h>
 #include <Core/ExportState.h>
 #include <juce_core/juce_core.h>
@@ -77,6 +78,7 @@ struct Swell
     int64_t placement = 0;
     int64_t supportOffset = 0; // Retain genuine extended input when shortening the wet shape.
     Asset ir, render;
+    SoundPresetIdentity soundPreset;
     bool enabled = true, muted = false, solo = false;
     bool frozen=false;
     Phase phase = Phase::empty;
@@ -115,6 +117,8 @@ struct Session
     ExportState exportState;
     Asset defaultIR;
     juce::String defaultIRName = "Preverb Hall";
+    SoundPresetIdentity defaultSoundPreset;
+    float defaultLevelDb = defaultSwellLevelDb;
     std::vector<ImportedIR> importedIRs;
     std::vector<int64_t> suppressed;
 };
@@ -153,7 +157,8 @@ inline bool sameSavedSwell(const Swell& a,const Swell& b)
     return a.id==b.id && a.name==b.name && a.irName==b.irName && a.arrival==b.arrival
         && a.sourceStart==b.sourceStart && a.sourceEnd==b.sourceEnd && a.shape==b.shape && a.wetTimingIntent==b.wetTimingIntent
         && a.calibration==b.calibration && a.generatedGain==b.generatedGain && a.placement==b.placement && a.supportOffset==b.supportOffset
-        && a.ir==b.ir && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
+        && a.ir==b.ir && resolvedSoundPreset(a.soundPreset,a.ir)==resolvedSoundPreset(b.soundPreset,b.ir)
+        && a.render==b.render && a.enabled==b.enabled && a.muted==b.muted
         && a.solo==b.solo && a.frozen==b.frozen && a.provenance==b.provenance && a.detectorAnchor==b.detectorAnchor
         && a.generationSource==b.generationSource;
 }
