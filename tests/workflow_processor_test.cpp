@@ -710,7 +710,6 @@ static void rackLoopWithPartialHostTransport()
         REQUIRE(predicate());
     };
     waitFor([&]{return engine.savedSession().swells.front().irName == ir.getFileName();});
-    REQUIRE(engine.generate(true).accepted);
     waitFor([&]{return plugin.loopPlaybackStatus().preparation == Prep::ready;});
     REQUIRE(plugin.loopPlaybackStatus().phase == Phase::ready);
     REQUIRE(plugin.requestLoopCue());
@@ -938,7 +937,6 @@ static void flStudioLoopProcessorCases()
         REQUIRE(predicate());
     };
     waitFor([&]{return engine.savedSession().swells.front().irName == ir.getFileName();});
-    REQUIRE(engine.generate(true).accepted);
     waitFor([&]{return plugin.loopPlaybackStatus().preparation == m3::LoopPlaybackPublication::Preparation::ready;});
     using Playing = m3::LoopCueScheduler::State;
     REQUIRE(plugin.loopPlaybackStatus().phase == Phase::ready);
@@ -1050,7 +1048,6 @@ static void loopPlaybackProcessorCases()
     writeTestWav(ir,1,48000,{.5f,0,0,0,.25f});
     engine.loadIR(ir);
     until("Loop IR import",[&]{return engine.savedSession().swells.front().irName == "loop-fixture.wav";});
-    engine.generate(true);
     until("Loop wet preparation",[&]{return p.loopPlaybackStatus().preparation == Prep::ready;});
     REQUIRE(p.loopPlaybackStatus().phase != Phase::ready && !p.requestLoopCue());
     REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));
@@ -1118,7 +1115,7 @@ static void loopPlaybackProcessorCases()
     waitOnClock([&]{return engine.renderPublicationWaitingForTesting();});
     REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating);
     engine.holdRenderPublicationForTesting(false);
-    waitOnClock([&]{return engine.savedSession().swells.front().phase == m3::Phase::ready
+    waitOnClock([&]{return engine.savedSession().swells.front().irName == replacement.getFileName()
         && p.loopPlaybackStatus().preparation == Prep::ready;});
     REQUIRE(p.loopPlaybackStatus().playback == Playing::repeating && p.loopPlaybackStatus().playhead);
     REQUIRE(engine.edit(swell,[](auto& w,auto&){w.placement += 128;return true;}));
