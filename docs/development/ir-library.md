@@ -66,41 +66,41 @@ formerly unused imports cannot be recovered by scanning storage. Keep a
 pre-upgrade project copy when rollback to an older binary is required.
 
 Use the existing Selected Swell dropdown for any of the six bundled sounds, or
-the adjacent folder button for a WAV/WavPack. This changes only that swell; its
-source, arrival, envelope, placement and activity preferences remain intact.
-Freeze must be turned off before changing an IR. Descriptions identify the sound;
+the adjacent folder button for a WAV/WavPack. This changes only that swell. Its
+source, arrival, placement, level, curves and activity preferences stay intact.
+Freeze must be turned off before changing an IR. Descriptions identify the sound.
 Monumental deliberately has greater intensity than the subtle responses.
 
-An IR-only change on a verified ready swell retains its accepted live sound while
-the requested one prepares. Status identifies the retained/playing response and
-the request; hover for the full names/error. The complete replacement joins the
-current Song position with the existing <=5 ms boundary transition. Neighbours
-keep their positions and voices. Preview stops on the edit and never auto-restarts.
+An IR-only change on a verified ready swell keeps its accepted sound available while
+the requested one prepares. Status names both responses. Hover for full names and
+recovery details. The complete replacement joins the current Song position with
+the existing transition of at most 5 ms. An active manual Audition crossfades to
+the new mix at the current listening position, wrapping into the new window if
+needed. Neighbours keep their positions and voices.
 
-Failure or resource pressure retains eligible accepted output and explains the
-request. Source, envelope, placement or timing changes revoke this exception;
-disabled/muted/solo and live routing still apply. This never revives arbitrary
-stale or missing-source wet. At most one accepted definition is retained, and
-old/new pages plus the in-flight workspace share the 256 MiB budget. Long jobs
-service live pages between bounded processing stages, with earlier page headroom.
-If pages cannot fit, the replacement fails explicitly rather than spending the
-old contribution's memory; retry while stopped or reduce overlapping work.
+On failure, status identifies the requested IR, the cause and what to try next.
+The previous sound remains available where its dependencies still verify. Source,
+explicit envelope, placement and timing edits keep their normal invalidation
+rules. Activity and routing still govern what plays. Old and new pages and
+preparation share the 256 MiB budget. Long jobs service live pages between bounded
+processing stages. If pages cannot fit, choose a shorter IR or retry while stopped.
 
-A shorter IR may not support an explicit saved pre-roll/crop. The edit is not
-silently shortened. Accepted audio stays eligible with an explanation until you
-explicitly use Reset wet shape, Full response, or another supported edit. Reset
-restores the gentle creation release; Full response uses the requested response's
-actual rate-converted extent. Neither operation moves dry or affects neighbours.
+A shorter response fits wet bounds and fades to the available interval. The
+waveform and inspector show the resulting shape and indicate when timing was
+adjusted. The original timing remains available when a longer IR supports it.
+An explicit timing edit updates the corresponding intent. In the swell action
+menu, Undo IR change and Redo IR change restore the response and its timing as
+one edit. History lasts for the current editing session.
 
 Host offline bounce snapshots the accepted IR at entry if a replacement is still
 pending, and reports that choice. A background completion cannot switch the WAV
-mid-bounce. The next bounce can use the completed replacement. This is distinct
-from the proposed future Finalise/export workflow.
+mid-bounce. The next bounce can use the completed replacement. Internal Export
+also prepares from an accepted composition and reports an outstanding request.
 
-Managed IR/render references persist as before. In-flight retention is transient:
-reopen verifies committed assets and prepares the requested definition under the
-saved automatic/manual policy, without resuming playback or persisting a hidden
-frozen fallback. No plugin parameter, identity or state-schema migration is added.
+Save and reopen use the accepted IR, effective timing and remembered timing
+intent. A pending or failed request leaves that saved sound in place. Existing
+projects use their saved shape as initial intent. Reopen verifies committed
+assets without resuming playback.
 
 ## Reproduce and review assets
 

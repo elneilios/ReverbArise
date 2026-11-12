@@ -1944,7 +1944,7 @@ int main(int argc,char* argv[]){return runTest([&]
         {return owner->useWorkingFolder(folder,input,error,hooks);});
     auto advanced=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"advancedTiming"));REQUIRE(advanced);advanced->onClick();
     REQUIRE(visibleOffscreen(named(editor,"sourceSampleStart")));snapshotEditor(editor,"precise-timing");
-    const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.savedSession().swells[0].phase==m3::Phase::error;});editor.refresh();snapshotEditor(editor,"error");
+    const auto bad=root.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid fixture"));engine.loadIR(bad);waitUI([&]{return engine.snapshot().irReplacementError.isNotEmpty();});editor.refresh();snapshotEditor(editor,"error");
     REQUIRE(engine.assetDirectory().getChildFile(engine.savedSession().swells[0].ir.path).deleteFile());
     engine.setLivePlayback(true,m3::LiveRouting::dryWet,0);processor->setNonRealtime(true);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
     auto exportStatus=dynamic_cast<juce::Label*>(named(editor,"processingStatus"));REQUIRE(exportStatus && exportStatus->getText().startsWith("Export warning"));

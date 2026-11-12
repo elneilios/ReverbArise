@@ -61,6 +61,7 @@ struct LivePreparationObservation
 };
 struct EditorSnapshot
 {
+    struct IRRequestStatus { juce::String name,error; };
     workflow::Snapshot workflowState; // Captured under the same model publication lock.
     LearnGenerationView learnGeneration;
     uint64_t initialPerformHandoff=0;
@@ -84,6 +85,9 @@ struct EditorSnapshot
     bool defaultIRPending=false;
     juce::String requestedDefaultIRName,defaultIRStatus;
     juce::String retainedIRName,requestedIRName;
+    juce::String irReplacementError;
+    bool irReplacementPending=false;
+    std::map<juce::String,IRRequestStatus> irRequests;
     uint64_t renderCount=0;
     uint64_t analysisCount=0;
     size_t pendingIntervals=0;
@@ -152,6 +156,8 @@ public:
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
     bool assignBundledIR(const juce::String& id,uint64_t expectedInput,const juce::String& presetId,uint64_t expectedSession=0);
     bool assignManagedIR(const juce::String& id,uint64_t expectedInput,const Asset&,const juce::String& name,uint64_t expectedSession=0);
+    bool canRestoreIR(const juce::String& id,bool redo) const;
+    bool restoreIR(const juce::String& id,bool redo,uint64_t expectedInput,uint64_t expectedSession);
     std::vector<IRChoice> irChoices() const;
     bool resetSwell(const juce::String& id,bool allSettings);
     RegenerationResult generate(bool all=false);
@@ -235,7 +241,7 @@ public:
     bool withStorageModelLocked(const std::function<bool()>& operation)
     {const juce::ScopedLock guard(lock);return operation();}
     void acceptStorageLocation(std::shared_ptr<const CaptureStorageLocation> location)
-    {const juce::ScopedLock guard(lock);storageLocation.store(std::move(location));invalidateLiveLocked();liveCache.clear();stopLocked();notify();}
+    {const juce::ScopedLock guard(lock);storageLocation.store(std::move(location));irReplacements.clear();invalidateLiveLocked();liveCache.clear();stopLocked();notify();}
     juce::File assetDirectory() const {return instanceRoot(contextProvider().capture.manifest);}
 private:
     std::function<void()> persistentChange;
@@ -305,6 +311,36 @@ private:
     bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&,const LiveClockSnapshot* liveContext=nullptr) const;
     bool retainIRLocked(const Swell&,const PreviewContext&,const juce::String& requestedName);
     std::map<juce::String,RetainedIR> retainedIR;
+    struct IRReplacement
+    {
+        uint64_t input=0, shape=0;
+        juce::String name, error, sourceRevision;
+        bool bundled=false, fitted=false;
+        int historyStep=0;
+        std::optional<Swell> candidate;
+        std::shared_ptr<Waveform> rawWave, sourceWave;
+    };
+    struct IRAssignment
+    {
+        Asset ir, render;
+        juce::String name;
+        WetTiming timing;
+        std::optional<WetTiming> intent;
+        int64_t supportOffset;
+    };
+    static constexpr size_t maximumIRHistory=16;
+    struct IRHistory { std::vector<IRAssignment> undo,redo; };
+    std::map<juce::String,IRHistory> irHistory;
+    std::map<juce::String,IRReplacement> irReplacements;
+    void beginIRReplacementLocked(Swell&,const juce::String&);
+    void failIRReplacementLocked(const juce::String&,const juce::String&);
+    void cancelIRReplacementLocked(const juce::String&);
+    void resetStagedIRHeadroomLocked();
+    bool irReplacementCurrentLocked(const Swell&) const;
+    bool rememberIR(Session&,const Asset&,const juce::String&,bool bundled,juce::String& error);
+    std::vector<juce::String> overlayReadyIRReplacementsLocked(Session&,const PreviewContext&);
+    void commitIRReplacementsLocked(const std::vector<juce::String>&,std::vector<ImportedIR>);
+    void acceptIdleIRReplacements(const PreviewContext&);
     struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId;
         Asset managed;juce::String label;uint64_t defaultRequest=0,workflowPass=0; };
     struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
@@ -328,9 +364,11 @@ private:
     bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,
                      uint64_t expectedSession=0,juce::String* rejection=nullptr,uint64_t expectedLoop=0);
     void analysisJob(const Analysis&);
-    void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck);
+    void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck,bool replacingIR=false);
     void shapeJob(Swell,uint64_t session);
     void monitorJob(Swell,uint64_t session,uint64_t settings);
+    bool prepareAuditionMonitor(const Session&,const Swell&,const PreviewContext&,
+                                const std::function<bool()>& cancel,Runtime&,juce::String& error);
     void prepareTransport(const PreviewContext&);
     void prepareGeneratedHeadroom(const PreviewContext&);
     void prepareLoopTransport(const PreviewContext&);

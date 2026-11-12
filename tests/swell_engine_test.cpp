@@ -54,7 +54,7 @@ int main() { return runTest([]
             REQUIRE(saved.swells.front().provenance==(change==8?Provenance::automatic:Provenance::manualEdited));
         }
         editor.restore(base);REQUIRE(editor.assignBundledIR(id,0,"monumental",editor.assignmentEpoch()));
-        REQUIRE(editor.savedSession().swells.front().provenance==Provenance::manualEdited);
+        REQUIRE(editor.snapshot().irReplacementPending);
     }
     runLiveClockEngineCases();
     runStorageLocationEngineCases();
@@ -277,7 +277,10 @@ int main() { return runTest([]
         REQUIRE(edits.assignIR(a,imported.inputGeneration,packed));waitFor([&]{return find(edits.savedSession(),a)->irName=="own.wv";});
         REQUIRE(find(edits.savedSession(),a)->ir.channels==2 && edits.savedSession().defaultIR==future && find(edits.savedSession(),b)->irName=="Preverb Hall");
         const auto bad=editsRoot.file.getChildFile("invalid.wav");REQUIRE(bad.replaceWithText("invalid IR fixture"));imported=*find(edits.savedSession(),a);
-        REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{return find(edits.savedSession(),a)->phase==Phase::error;});
+        REQUIRE(edits.assignIR(a,imported.inputGeneration,bad));waitFor([&]{
+            const auto status=edits.snapshot().irRequests;
+            return status.contains(a) && status.at(a).error.isNotEmpty();
+        });
         REQUIRE(find(edits.savedSession(),a)->ir==imported.ir && edits.savedSession().defaultIR==future);
         const auto oldEpoch=edits.assignmentEpoch();const auto restored=edits.savedSession();edits.restore(restored);
         REQUIRE(edits.snapshot().sessionEpoch!=oldEpoch);

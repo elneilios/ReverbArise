@@ -54,17 +54,41 @@ bool memberBounds(const Swell& w,double rate,int64_t& a,int64_t& b)
 }
 void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
 {
-    Session saved;std::shared_ptr<WetRender> anchor;
-    {const juce::ScopedLock guard(lock);saved=model;anchor=runtime[requested.id].shaped;runtime[requested.id].monitor.reset();}
-    if(!anchor)return;
-    const auto mode=saved.auditionMode;const auto context=contextProvider();
+    Session saved;
+    {const juce::ScopedLock guard(lock);saved=model;runtime[requested.id].monitor.reset();}
     const auto cancel=[&]{const juce::ScopedLock guard(lock);return threadShouldExit() || session!=sessionGeneration.load()
         || model.primary!=requested.id || settings!=monitoringGeneration;};
-    int64_t wetEnd,dryEnd=requested.sourceEnd,contextEnd=requested.sourceEnd,windowStart=anchor->start,windowEnd;
-    juce::String error,dryError;bool dryReady=false;
-    if(!checkedAdd(anchor->start,static_cast<int64_t>(anchor->frames()),wetEnd))return;
-    windowEnd=wetEnd;
-    const auto validContext=auditionContextEnd(requested,anchor->rate,saved.postRollSeconds,contextEnd);
+    Runtime prepared;
+    juce::String error;
+    const auto ready=prepareAuditionMonitor(saved,requested,contextProvider(),cancel,prepared,error);
+    const juce::ScopedLock guard(lock);if(cancel())return;
+    auto& state=runtime[requested.id];
+    state.monitorRevision=std::move(prepared.monitorRevision);
+    state.dryAvailable=prepared.dryAvailable;
+    state.dryStatus=ready?std::move(prepared.dryStatus):error;
+    state.members=std::move(prepared.members);
+    state.preparedMonitor=settings;
+    if(ready)
+    {
+        state.monitor=std::move(prepared.monitor);
+        if(voice.isActiveOrPending() && !voice.replace(state.monitor))message="Audition update queue full; retry";
+    }
+    else
+    {
+        message=error;
+        stopLocked();
+    }
+}
+bool SwellEngine::prepareAuditionMonitor(const Session& saved,const Swell& requested,const PreviewContext& context,
+                                        const std::function<bool()>& cancel,Runtime& result,juce::String& error)
+{
+    const auto mode=saved.auditionMode;
+    const auto rate=requested.render.rate;
+    int64_t dryEnd=requested.sourceEnd,contextEnd=requested.sourceEnd,windowStart,windowEnd;
+    juce::String dryError;
+    bool dryReady=false;
+    if(!shapeBounds(requested,requested.render.start,requested.render.sourceEnd,windowStart,windowEnd,error))return false;
+    const auto validContext=auditionContextEnd(requested,rate,saved.postRollSeconds,contextEnd);
     if (context.capture.manifest.loop) contextEnd=std::min(contextEnd,context.capture.manifest.loop->endSample);
     if(!saved.isolateDry)dryEnd=contextEnd;
     const auto needed=validContext?"Dry source not captured for this span; need samples ["+juce::String(requested.sourceStart)+", "+juce::String(dryEnd)+")":juce::String("Audition context overflow: reduce endpoint or listening tail");
@@ -75,23 +99,33 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     for(const auto& w:saved.swells)
     {
         if(!w.enabled || w.muted || (solo && !w.solo) || (saved.isolateSelected && w.id!=requested.id))continue;
-        int64_t a,b;if(!memberBounds(w,anchor->rate,a,b)){error="Cannot establish wet bounds: "+w.name;break;}
+        int64_t a,b;if(!memberBounds(w,rate,a,b)){error="Cannot establish wet bounds: "+w.name;break;}
         if(a>=windowEnd || b<=windowStart)continue;members.push_back(w);ids.push_back(w.id);
     }
     if(mode==AuditionMode::wetOnly && members.empty() && error.isEmpty())error="No audible swells in this window";
     int64_t frames;WetRender aggregate;
-    aggregate.start=windowStart;aggregate.rate=anchor->rate;aggregate.sourceStart=requested.sourceStart;aggregate.sourceEnd=dryEnd;
+    aggregate.start=windowStart;aggregate.rate=rate;aggregate.sourceStart=requested.sourceStart;aggregate.sourceEnd=dryEnd;
     if(error.isEmpty() && (!checkedSubtract(windowEnd,windowStart,frames) || frames<=0 || static_cast<uint64_t>(frames)>available(64ULL*1024*1024)/8))error="256 MiB budget: audition window too large";
     if(error.isEmpty())aggregate.samples.resize(static_cast<size_t>(frames)*2);
     for(const auto& w:members)
     {
-        if(cancel())return;if(error.isNotEmpty())break;
-        bool recovered=false;{const juce::ScopedLock guard(lock);recovered=runtime[w.id].cachedWetOnly;}
+        if(cancel())return false;if(error.isNotEmpty())break;
+        bool recovered=false;
+        std::shared_ptr<WetRender> resident;
+        {
+            const juce::ScopedLock guard(lock);
+            const auto* accepted=find(model,w.id);
+            if(accepted && accepted->render==w.render)
+            {
+                const auto& state=runtime[w.id];
+                recovered=state.cachedWetOnly;
+                resident=state.raw;
+            }
+        }
         if(w.phase!=Phase::ready && !(mode==AuditionMode::wetOnly && recovered)){error="Unavailable swell: "+w.name+" - "+w.status;break;}
-        if(w.render.rate!=anchor->rate || (!w.frozen && (w.render.irContent!=w.ir.content || !assets.verify(w.ir,dryError))))
+        if(w.render.rate!=rate || (!w.frozen && (w.render.irContent!=w.ir.content || !assets.verify(w.ir,dryError))))
         {error="Unavailable IR/rate: "+w.name+" - "+dryError;break;}
-        WetRender raw,shaped;std::shared_ptr<WetRender> resident;
-        {const juce::ScopedLock guard(lock);resident=runtime[w.id].raw;}
+        WetRender raw,shaped;
         const auto overhead=aggregate.samples.capacity()*sizeof(float);
         if(!resident && !assets.readRender(w.render,available(overhead),raw,dryError)){error="Unavailable render: "+w.name+" - "+dryError;break;}
         const auto& input=resident?*resident:raw;
@@ -102,7 +136,7 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
         const auto a=std::max(windowStart,shaped.start),b=std::min(windowEnd,end);
         for(auto at=a;at<b;++at)
         {
-            if((at-a)%4096==0 && cancel())return;
+            if((at-a)%4096==0 && cancel())return false;
             const auto gain=monitorEdgeGain(static_cast<size_t>(at-shaped.start),shaped.frames(),shaped.rate,.002);
             for(int c=0;c<2;++c)aggregate.samples[static_cast<size_t>(at-windowStart)*2+c]+=shaped.samples[static_cast<size_t>(at-shaped.start)*2+c]*gain;
         }
@@ -119,15 +153,18 @@ void SwellEngine::monitorJob(Swell requested,uint64_t session,uint64_t settings)
     auto prepared=std::make_shared<WetRender>();
     if(error.isEmpty() && !prepareAuditionMix(aggregate,dryReady?&dry:nullptr,mode,saved.wetBlend,
         available((aggregate.samples.capacity()+dry.samples.capacity())*sizeof(float)),*prepared,error,false,saved.auditionFollowsLive?std::optional<float>{saved.liveWetDb}:std::nullopt)){}
-    const auto latest=contextProvider();const juce::ScopedLock guard(lock);if(cancel())return;
+    const auto latest=contextProvider();if(cancel())return false;
     bool changed=context.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(context.time,latest.time);
     if(context.capture.manifest.loop)changed=changed || latest.capture.reference!=context.capture.reference;
     if(mode==AuditionMode::dryWet)changed=changed || sourceDependency(context.capture.manifest,requested.sourceStart,dryEnd)!=sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd);
     for(const auto& member:members)if(!member.frozen)changed=changed || sourceDependency(context.capture.manifest,member.sourceStart,renderInputEnd(member))!=sourceDependency(latest.capture.manifest,member.sourceStart,renderInputEnd(member));
-    if(changed){stopLocked();return;}
-    auto& r=runtime[requested.id];r.monitorRevision=juce::String(sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd));
-    r.dryAvailable=dryReady;r.dryStatus=error.isNotEmpty()?error:anyRecovered?juce::String("Last-committed Wet Only recovery: source unavailable"):juce::String{};r.members=ids;r.preparedMonitor=settings;
-    if(error.isEmpty()){r.monitor=std::move(prepared);if(voice.isActiveOrPending() && !voice.replace(r.monitor))message="Audition update queue full; retry";}
-    else {r.monitor.reset();message=error;stopLocked();}
+    if(changed){error="Audition source or timing changed during preparation";return false;}
+    result.monitorRevision=juce::String(sourceDependency(latest.capture.manifest,requested.sourceStart,dryEnd));
+    result.dryAvailable=dryReady;
+    result.dryStatus=anyRecovered?juce::String("Last-committed Wet Only recovery: source unavailable"):juce::String{};
+    result.members=std::move(ids);
+    if(error.isNotEmpty())return false;
+    result.monitor=std::move(prepared);
+    return true;
 }
 }

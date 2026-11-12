@@ -272,6 +272,9 @@ void SwellEngine::prepareExport(const PreviewContext& context)
                 w.enabled=false;w.solo=false;
             }
             if(levels.wet==0 || !w.enabled || w.muted || (solo && !w.solo))continue;
+            if(const auto request=irReplacements.find(w.id);w.phase==Phase::ready
+                && request!=irReplacements.end() && request->second.input==w.inputGeneration)
+                retained.add(w.name+": "+w.irName+(request->second.error.isEmpty()?" (replacement pending)":" (replacement failed)"));
             if(const auto kept=retainedIR.find(w.id);kept!=retainedIR.end() && retainedCompatible(kept->second,w,context)
                 && (w.phase!=Phase::ready || (w.render==kept->second.accepted.render && w.ir.content!=kept->second.accepted.ir.content))){
                 const auto enabled=w.enabled,muted=w.muted,isSolo=w.solo;w=kept->second.accepted;

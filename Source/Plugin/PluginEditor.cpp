@@ -635,11 +635,16 @@ void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::Men
     auto targets=std::find(selection.begin(),selection.end(),request.id)!=selection.end()
         ? selection : std::vector<juce::String>{request.id};
     const auto deleteLabel=targets.size()>1?"Delete "+juce::String(static_cast<int>(targets.size()))+" swells":juce::String("Delete");
-    std::vector<PopupChoice> actions{{1,"Rename...",{},selection.size()<=1,false,PopupRowRole::action},
-                                     {2,deleteLabel,{},true,false,PopupRowRole::destructiveAction}};
+    std::vector<PopupChoice> actions{{1,"Rename...",{},selection.size()<=1,false,PopupRowRole::action}};
+    const auto& engine=processor.swellEngine();
+    if(engine.canRestoreIR(request.id,false))
+        actions.push_back({3,"Undo IR change",{},true,false,PopupRowRole::action});
+    if(engine.canRestoreIR(request.id,true))
+        actions.push_back({4,"Redo IR change",{},true,false,PopupRowRole::action});
+    actions.push_back({2,deleteLabel,{},true,false,PopupRowRole::destructiveAction});
     const juce::Component::SafePointer<PreverbAudioProcessorEditor> safe(this);
     swellMenu=std::make_unique<ChoicePopup>(list,std::move(actions),
-        [safe,request,name=swell->name,pass=flow.pass,targets=std::move(targets)](int result,PopupDismissal why)
+        [safe,request,name=swell->name,input=swell->inputGeneration,pass=flow.pass,targets=std::move(targets)](int result,PopupDismissal why)
         {
             if(!safe || safe->destroying)return;
             const auto keyboard=safe->swellMenu && safe->swellMenu->showFocusOnReturn();
@@ -664,6 +669,12 @@ void PreverbAudioProcessorEditor::showSwellMenu(m3::ui::controls::SwellList::Men
             if(result==2)
             {
                 safe->requestDeleteSwells(targets,request.epoch,pass,request.id,keyboard);
+                return;
+            }
+            if(result==3 || result==4)
+            {
+                engine.restoreIR(request.id,result==4,input,request.epoch);
+                safe->refresh();
                 return;
             }
 
@@ -1118,8 +1129,16 @@ void PreverbAudioProcessorEditor::refresh()
     {
         std::vector<m3::ui::controls::SwellListRow> rows;rows.reserve(state.session.swells.size());
         for(const auto& swell:state.session.swells)
-            rows.push_back({swell.id,swell.name,swell.irName,swell.phase==m3::Phase::ready?phaseName(swell.phase):swell.status,
-                swell.arrival,swell.enabled,swell.muted,swell.solo,swell.frozen,swell.phase==m3::Phase::error});
+        {
+            const auto request=state.irRequests.find(swell.id);
+            const bool failed=request!=state.irRequests.end() && request->second.error.isNotEmpty();
+            auto status=swell.phase==m3::Phase::ready
+                ?(swell.wetTimingIntent?"Wet timing adjusted":phaseName(swell.phase)):swell.status;
+            if(request!=state.irRequests.end())
+                status=failed?request->second.name+": "+request->second.error:"Preparing "+request->second.name;
+            rows.push_back({swell.id,swell.name,swell.irName,status,
+                swell.arrival,swell.enabled,swell.muted,swell.solo,swell.frozen,failed || swell.phase==m3::Phase::error});
+        }
         list.display(std::move(rows),state.session.selected,state.session.primary,state.sessionEpoch);
     }
     enabledButton.setToggleState(w && w->enabled,juce::dontSendNotification);muteButton.setToggleState(w && w->muted,juce::dontSendNotification);
@@ -1189,7 +1208,11 @@ void PreverbAudioProcessorEditor::refresh()
     for(const auto& swell:state.session.swells)
     {
         if(std::find(state.session.selected.begin(),state.session.selected.end(),swell.id)!=state.session.selected.end())
-        {selectedIR=selectedIR || swell.ir.present();selectedImport=selectedImport || swell.status=="Importing IR";}
+        {
+            selectedIR=selectedIR || swell.ir.present();
+            const auto request=state.irRequests.find(swell.id);
+            selectedImport=selectedImport || (request!=state.irRequests.end() && request->second.error.isEmpty());
+        }
     }
     removeButton.setEnabled(hasSelection);generateButton.setEnabled(hasSelection && selectedIR && !selectedImport);allButton.setEnabled(true);
     fullButton.setEnabled(w && state.raw);

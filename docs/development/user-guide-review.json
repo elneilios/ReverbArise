@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the integrated Loop guide examples for a four-step Rack take and two FL Studio Pattern passes alongside the waveform paint closeout. The current Perform navigation and waveform inspection guidance covers the canonical display behavior. No additional guide prose was required.",
+  "summary": "Reviewed Perform timing fit, seamless Song and Audition handover, scoped undo and redo, and failure recovery. The final headroom invalidation change leaves the documented controls and workflow intact. FL Studio regression is pending.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -295,13 +295,13 @@
     },
     {
       "path": "Source/Core/SwellSession.cpp",
-      "bytes": 33478,
-      "sha256": "3719c3f65b98e5fe76b66fff329a0fb65d6349b5b119675b9acb644402d00d9e"
+      "bytes": 37328,
+      "sha256": "c50d3c95e7c49998e9f6f91766350ebb3a4cf57c67f046503ebedb0c5e0f4404"
     },
     {
       "path": "Source/Core/SwellSession.h",
-      "bytes": 9698,
-      "sha256": "130adb2a3314a81962ead2303f5ac569e7d90e495eb78c3940e32192c93aba5b"
+      "bytes": 10190,
+      "sha256": "e194649cb65203e219859af5ad07bc03a16e4fb1b26c7d69930a34ee61ea833d"
     },
     {
       "path": "Source/Core/TransportTime.h",
@@ -445,23 +445,23 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 92260,
-      "sha256": "d6d883c6109f6d6fed05e2a9846600f447357f16b3af97ff26f63c4f57a3b63e"
+      "bytes": 104957,
+      "sha256": "aedd391e52f495259360ba9c92b28d43461e1699828f023293c41904c8075540"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 25868,
-      "sha256": "0de3763e8f6204cdb3ade8dac08c443ee868f1dccce2f45112100674cdbebd39"
+      "bytes": 27777,
+      "sha256": "173f1c04768028a066d8825923b3717a9f7f02a71965e571b24b00f7144aa1fb"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
-      "bytes": 28725,
-      "sha256": "c9e0ac82aab7463e48be6b50d4b963447b6f2e4f3ce23ca9b05b3f7782b08f55"
+      "bytes": 29036,
+      "sha256": "ecb31cd214b3e455e6d3e0fb47f45cb9d2034b542c13f58b47e932e1a9a1e435"
     },
     {
       "path": "Source/DSP/SwellMonitoring.cpp",
-      "bytes": 9442,
-      "sha256": "c65bda2e4e110969cc2f70d6cec13c2cbc6bb5f6594940173a42e120cf150968"
+      "bytes": 10379,
+      "sha256": "07a4a36cb6bf617578c9a8fb771c4a526de66fc029203ddfa41e8bf3eccb7cb1"
     },
     {
       "path": "Source/DSP/SwellShape.cpp",
@@ -475,8 +475,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 51960,
-      "sha256": "154b3710cde806b7bad6acf7bcf9a4108ce4eb4a73102b8f6b1d7a81c95f9f58"
+      "bytes": 58877,
+      "sha256": "bcec86daa5497f453ee4e91b43076bfabc288b6883f6cb0dd30babf2dec98ae6"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -490,13 +490,13 @@
     },
     {
       "path": "Source/Playback/AuditionVoice.cpp",
-      "bytes": 7099,
-      "sha256": "71b4716916da0424a6d60a44facd675a30c623bea96b4d2db8def1de98c4d476"
+      "bytes": 8691,
+      "sha256": "9aa574868be4fdbeef30ce44a713a322ecadee692bda679f9aa9b3fdbd102682"
     },
     {
       "path": "Source/Playback/AuditionVoice.h",
-      "bytes": 2758,
-      "sha256": "8bcdae1f6d166d934c3f9446d9b4b33f49cd68f3343679b6f3c3ba1df6a020b0"
+      "bytes": 2863,
+      "sha256": "2c6d16158ce1298c25f7f959c27d374f9f29d03f90e14fd1deac8e1bf14593f0"
     },
     {
       "path": "Source/Playback/ExportVoice.cpp",
@@ -585,8 +585,8 @@
     },
     {
       "path": "Source/Plugin/PluginEditor.cpp",
-      "bytes": 115739,
-      "sha256": "0d72d0a232830212eef0931143eb4a1db521a30f910de10a9f7c68bdfeb3ec35"
+      "bytes": 116851,
+      "sha256": "3dc21799ed9692a869ecc935f33f5bb130746f566e7ab1e8696beb4eab812de4"
     },
     {
       "path": "Source/Plugin/PluginEditor.h",
@@ -885,8 +885,8 @@
     },
     {
       "path": "Source/UI/ConvolutionIrBinding.h",
-      "bytes": 7938,
-      "sha256": "9c37d8923e14449286b03f1374b2d47aa71d97d3c9b4a047b46cc5f2f308715b"
+      "bytes": 8551,
+      "sha256": "e212f6f45a305d24152c8c68fcccb2a6db301ef3207c3b3f611960aa56adccb6"
     },
     {
       "path": "Source/UI/EditorPresentationState.h",
@@ -1085,8 +1085,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 126095,
-      "sha256": "3e9fc4e9d577fca270f70f5e2758f99a02777af6e1ac876857ecd8a47afae527"
+      "bytes": 126617,
+      "sha256": "3c6773729b02172bb3574384336f8427b2941c453622089ab01bf5c7ee387a45"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

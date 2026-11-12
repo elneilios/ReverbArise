@@ -252,7 +252,26 @@ public:
     {
         setScene(0);const auto invalid=directory.file.getChildFile("Invalid review IR.wav");
         REQUIRE(invalid.replaceWithText("Invalid native review fixture"));processor->swellEngine().loadIR(invalid);
-        wait([&]{const auto state=processor->swellEngine().savedSession();const auto* selected=m3::find(state,state.primary);return selected && selected->phase==m3::Phase::error;});
+        wait([&]{return processor->swellEngine().snapshot().irReplacementError.isNotEmpty();});
+    }
+    void prepareIRSwapReview()
+    {
+        auto& engine=processor->swellEngine();
+        auto session=engine.savedSession();
+        REQUIRE(engine.assignBundledIR(firstId,m3::find(session,firstId)->inputGeneration,"monumental"));
+        wait([&]{return m3::find(engine.savedSession(),firstId)->irName=="Monumental";});
+        REQUIRE(engine.edit(firstId,[](auto& swell,auto& error)
+        {
+            auto shape=swell.shape;
+            shape.automaticStart=false;
+            shape.startOffset=-96000;
+            shape.fadeIn=48000;
+            return m3::setShape(swell,shape,swell.render.start,swell.render.sourceEnd,error);
+        }));
+        session=engine.savedSession();
+        REQUIRE(engine.assignBundledIR(firstId,m3::find(session,firstId)->inputGeneration,"whisper"));
+        wait([&]{return m3::find(engine.savedSession(),firstId)->irName=="Whisper";});
+        REQUIRE(m3::find(engine.savedSession(),firstId)->wetTimingIntent.has_value());
     }
     void refresh()
     {
@@ -497,7 +516,8 @@ int main(int argc,char** argv)
         if(command=="--test-level"){content->composition.verifyFocusedLevel();std::cout<<"Level bounds, standard layout, first touch and accessibility checks passed.\n";return;}
         const auto levelReview=command=="--review-level";
         const auto commandReview=command=="--review-command-integrated";
-        const auto irReview=command=="--review-ir-integrated" || commandReview;
+        const auto irSwapReview=command=="--review-ir-swap";
+        const auto irReview=command=="--review-ir-integrated" || commandReview || irSwapReview;
         if(command=="--review-integrated" || command=="--review-audition-strip" || command=="--review-selection" || command=="--review-responsive" || irReview || levelReview)
         {
             class Window final:public juce::DocumentWindow
@@ -506,9 +526,11 @@ int main(int argc,char** argv)
                 {setUsingNativeTitleBar(true);auto* review=new IntegratedReview(std::move(scope),slim,selection,compact,irReview,levelReview);setContentOwned(review,true);setResizable(true,false);setResizeLimits(compact?900:1100,compact?644:894,2000,1444);centreWithSize(compact?900:1100,compact?644:924);if(compact)review->verifyCompactBaseline();setVisible(true);}
                 void closeButtonPressed()override{juce::MessageManager::getInstance()->stopDispatchLoop();}
             };
+            if(irSwapReview)content->composition.prepareIRSwapReview();
             Window window(std::move(content),command=="--review-audition-strip",command=="--review-selection",
                 command=="--review-responsive" || irReview || levelReview,irReview,levelReview);
             if(commandReview)window.setName("ReverbArise - #107 integrated button review");
+            if(irSwapReview)window.setName("ReverbArise - #183 IR replacement review");
             juce::MessageManager::getInstance()->runDispatchLoop();return;
         }
         if(command=="--test-navigation"){content->composition.verifyNavigation();std::cout<<"Perform navigation anchor/limits/Overview/identity checks passed.\n";return;}

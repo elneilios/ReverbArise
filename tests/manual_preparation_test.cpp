@@ -145,8 +145,8 @@ static void manualFailures()
     await([&]{return engine.snapshot().auditionReady;});
     const auto bad=fixture.root.file.getChildFile("unsupported.wv");REQUIRE(bad.replaceWithText("invalid WavPack content"));
     REQUIRE(engine.assignIR(id,find(engine.savedSession(),id)->inputGeneration,bad));
-    await([&]{return find(engine.savedSession(),id)->phase==Phase::error;});
-    REQUIRE(find(engine.savedSession(),id)->status.isNotEmpty());
+    await([&]{return engine.snapshot().irReplacementError.isNotEmpty();});
+    REQUIRE(engine.snapshot().auditionReady);
     REQUIRE(find(engine.savedSession(),id)->ir==accepted.ir && find(engine.savedSession(),id)->render.present());
     REQUIRE(engine.assignManagedIR(id,find(engine.savedSession(),id)->inputGeneration,accepted.ir,accepted.irName));
     await([&]{return engine.snapshot().auditionReady;});

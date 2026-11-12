@@ -1320,7 +1320,7 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(e.edit(id,[](auto& w,auto&){w.sourceStart=0;w.sourceEnd=64;w.shape.endOffset=64;w.shape.fadeOut=0;return true;}));
     const auto file=root.file.getChildFile("unit.wav");writeTestWav(file,1,1000,{1,0,0,0});e.loadIR(file);
     const auto until=juce::Time::getMillisecondCounter()+10000;
-    while(juce::Time::getMillisecondCounter()<until && e.savedSession().swells[0].status=="Importing IR")juce::Thread::sleep(5);
+    while(juce::Time::getMillisecondCounter()<until && e.snapshot().irReplacementPending)juce::Thread::sleep(5);
     e.generate();while(juce::Time::getMillisecondCounter()<until && e.savedSession().swells[0].phase!=m3::Phase::ready)juce::Thread::sleep(5);
     REQUIRE(e.savedSession().swells[0].phase==m3::Phase::ready);
     const auto compatibleRender=e.savedSession().swells[0].render;
