@@ -140,6 +140,11 @@ static void joinedActionCases()
     REQUIRE(action.getWantsKeyboardFocus() && !field->getWantsKeyboardFocus());
     pair.setState("A much longer playback status that needs the entire field");
     REQUIRE(field->getBounds()==fieldBounds);
+    window.addToDesktop(0);
+    window.setVisible(true);
+    window.toFront(true);
+    REQUIRE(window.getPeer());
+    window.getPeer()->grabFocus();
     const auto* state=field->getAccessibilityHandler();
     REQUIRE(state && state->getDescription().contains("A much longer playback status"));
 
@@ -148,9 +153,6 @@ static void joinedActionCases()
     action.beforeInvocation=[&]{++prepared;};
     action.onClick=[&]{if(requestCurrent)++committed;};
     const auto pump=[] {juce::MessageManager::getInstance()->runDispatchLoopUntil(30);};
-    window.addToDesktop(0);
-    window.setVisible(true);
-    window.toFront(true);
     before.grabKeyboardFocus();
     before.moveKeyboardFocusToSibling(true);
     pump();
@@ -184,10 +186,17 @@ static void joinedActionCases()
     REQUIRE(access->getActions().invoke(juce::AccessibilityActionType::press));
     pump();
     REQUIRE(prepared==4 && committed==3 && field->isEnabled() && field->getText().startsWith("A much longer"));
-    const auto rendered=pair.createComponentSnapshot(pair.getLocalBounds(),true);
     const auto body=commandBodyBounds(pair.getLocalBounds());
-    for(const auto y:{body.getY(),body.getBottom()-1})
-        REQUIRE(rendered.getPixelAt(seam-15,y)==rendered.getPixelAt(seam+15,y));
+    for(const auto scale:{1.f,1.25f,1.5f})
+    {
+        const auto rendered=pair.createComponentSnapshot(pair.getLocalBounds(),true,scale);
+        for(const auto y:{body.getY(),body.getBottom()-1})
+        {
+            const auto top=static_cast<int>(y*scale);
+            REQUIRE(rendered.getPixelAt(static_cast<int>((seam-15)*scale),top)
+                 == rendered.getPixelAt(static_cast<int>((seam+15)*scale),top));
+        }
+    }
     window.removeFromDesktop();
     pair.setLookAndFeel(nullptr);
 }
