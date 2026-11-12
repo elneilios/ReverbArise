@@ -11,7 +11,7 @@ try {
     if (!$Root) { $Root = Split-Path $PSScriptRoot -Parent }
     if (!$BaselinePath) { $BaselinePath = Join-Path $PSScriptRoot 'ui-standards-baseline.json' }
     $Root = (Resolve-Path -LiteralPath $Root).Path
-    $rules = @(
+    $productionRules = @(
         @{ id='token-definition'; path='Source/UI/(WorkspaceTheme|UiGeometry)\.h$'; pattern='\binline\s+constexpr\s+(?:int|float)\s+[^;]+;'; remedy='Changed/new token definitions require owner review and a standards revision.' },
         @{ id='raw-colour'; pattern='(?i)\b0x[0-9a-f]{6}(?:[0-9a-f]{2})?\b|\b(?:juce::)?Colour\s*(?:\(|\{)\s*(?:[0-9]+\s*,|"#[0-9a-f]+")|\b(?:juce::)?Colour::(?:fromRGB|fromRGBA|fromFloatRGBA|fromString)\s*\([^;]*?\)'; remedy='Use a named semantic colour in WorkspaceTheme/UiGeometry.' },
         @{ id='font-construction'; pattern='\bjuce::Font(?:Options)?\s*[({]|\bjuce::Font(?:Options)?\s+\w+\s*(?:;|[({]\s*[0-9"])|\b(?:getDefaultSansSerifFontName|setDefaultSansSerifTypefaceName|setDefaultLookAndFeel)\s*\('; remedy='Use embedded text roles; font construction belongs to the shared theme policy.' },
@@ -19,27 +19,38 @@ try {
         @{ id='interaction-default'; pattern='\b(?:setScrollWheelEnabled|setMouseDragSensitivity|setVelocityBasedMode|setVelocityModeParameters)\s*\([^;]*?\)'; remedy='Reuse the owning control family or named interaction policy.' },
         @{ id='literal-style'; pattern='\b(?:setColour|setColor)\s*\([^;]*?\b(?:juce::Colours::\w+|Colours::\w+)|\b(?:setMinimumHorizontalScale|setAlpha)\s*\(\s*(?:[0-9]+(?:\.[0-9]*)?f?|\.[0-9]+f?)\s*\)'; remedy='Use a named presentation policy or a reviewed scoped exception.' }
     )
+    $popupHostRule = @{ id='popup-tooltip-host'; pattern='\bTooltipWindow\b'; codeOnly=$true; remedy='Route hover help to the fixed bottom footer.' }
+    $cppExtensions = @('.cpp','.cc','.cxx','.c++','.h','.hh','.hpp','.hxx','.h++','.ipp','.inl','.tpp','.ixx','.cppm')
     $paths = @()
-    foreach ($dir in @('Source/UI','Source/Plugin')) {
+    foreach ($dir in @('Source/UI','Source/Plugin','tests')) {
         $path = Join-Path $Root $dir
         if (Test-Path -LiteralPath $path) {
-            $paths += @(Get-ChildItem -LiteralPath $path -Recurse -File | Where-Object { $_.Extension -in @('.h','.cpp') })
+            $paths += @(Get-ChildItem -LiteralPath $path -Recurse -File | Where-Object { $_.Extension -in $cppExtensions })
         }
     }
+    $nonCodePattern = '(?s)"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*''|//[^\r\n]*|/\*.*?\*/'
     $findings = @(
         foreach ($file in ($paths | Sort-Object FullName)) {
             $relative = $file.FullName.Substring($Root.Length).TrimStart('\','/').Replace('\','/')
             $source = [IO.File]::ReadAllText($file.FullName)
             # Match quoted strings first, so a URL or // inside text is not a comment.
             # Preserve newlines/offsets for useful diagnostics, including block comments.
-            $source = [regex]::Replace($source, '(?s)"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*''|//[^\r\n]*|/\*.*?\*/', {
+            $source = [regex]::Replace($source, $nonCodePattern, {
                 param($m)
                 if ($m.Value.StartsWith('//') -or $m.Value.StartsWith('/*')) { return [regex]::Replace($m.Value,'[^\r\n]',' ') }
                 return $m.Value
             })
+            $rules = @($popupHostRule)
+            if (!$relative.StartsWith('tests/') -and $file.Extension -in @('.h','.cpp')) {
+                $rules += $productionRules
+            }
             foreach ($rule in $rules) {
                 if ($rule.path -and $relative -notmatch $rule.path) { continue }
-                foreach ($match in [regex]::Matches($source,$rule.pattern)) {
+                $ruleSource = $source
+                if ($rule.codeOnly) {
+                    $ruleSource = [regex]::Replace($source, $nonCodePattern, { param($m) [regex]::Replace($m.Value,'[^\r\n]',' ') })
+                }
+                foreach ($match in [regex]::Matches($ruleSource,$rule.pattern)) {
                     [pscustomobject]@{
                         path=$relative; line=1+([regex]::Matches($source.Substring(0,$match.Index),"`n")).Count
                         rule=$rule.id; occurrence=([regex]::Replace($match.Value,'\s+','')).Trim()

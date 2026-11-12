@@ -51,7 +51,20 @@ Check 'control.setScrollWheelEnabled(false);' 1 'Incomplete UI exception' @($bad
 # Function return declarations and comments are not font construction.
 Check 'juce::Font fontFor(Component& c, float height) { return interFont(height); }' 0 'UI standards passed'
 Check 'juce::Font getLabelFont(juce::Label& label) { return interFont(controlSize); }' 0 'UI standards passed'
+Check "auto delay = 500;`njuce::TooltipWindow popupHost{nullptr, delay};" 1 'Source/UI/Example.h:2: popup-tooltip-host'
+$footerMetadata = 'juce::TooltipClient* helpSource; juce::SettableTooltipClient help; help.setTooltip("Footer help"); control.getProperties().set("contextHelp", "Footer help");'
+Check $footerMetadata 0 'UI standards passed'
+Check '// juce::TooltipWindow popupHost;' 0 'UI standards passed'
+Check 'auto typeName = "TooltipWindow";' 0 'UI standards passed'
 $sourcePath = Join-Path $fixture 'Source/UI/UiGeometry.h'
 Check 'inline constexpr int section = 24;' 1 'token-definition'
 Check 'auto x = samples * 24; bounds.removeFromTop(12);' 0 'UI standards passed'
+$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'Source/Plugin') -Force
+$sourcePath = Join-Path $fixture 'Source/Plugin/Editor.cpp'
+Check 'juce::TooltipWindow popupHost;' 1 'Source/Plugin/Editor.cpp:1: popup-tooltip-host'
+Check $footerMetadata 0 'UI standards passed'
+$null = New-Item -ItemType Directory -Path (Join-Path $fixture 'tests/ui') -Force
+$sourcePath = Join-Path $fixture 'tests/ui/audition_loop_component_test.cpp'
+Check 'void runInteractiveReview() { using namespace juce; TooltipWindow popupHost; }' 1 'tests/ui/audition_loop_component_test.cpp:1: popup-tooltip-host'
+Check "$footerMetadata auto testInk = 0xff123456;" 0 'UI standards passed'
 Write-Output "UI lint command fixtures passed: $script:assertions assertions (PowerShell $($PSVersionTable.PSVersion))."
