@@ -711,10 +711,26 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     capture("perform-custom-shaping-frozen-900");
     REQUIRE(engine.setFrozen(id,false));
     editor->refresh();
+    auto& highPass=require<KnobValue>(selected,"low-cutCell");
+    selected.onValueBegin();
+    selected.onValue("low-cut",110);
+    REQUIRE(highPass.valueField().getText().contains("110"));
+    selected.onValue("low-cut",180);
+    REQUIRE(highPass.valueField().getText().contains("180"));
+    REQUIRE(!engine.snapshot().irRequests.contains(id));
+    selected.onValueEnd();
+    wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==180
+        && engine.snapshot().auditionReady;});
+    reset(selected,"low-cut","Off");
+    wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0
+        && engine.snapshot().auditionReady;});
+    const auto acceptedCustom=engine.savedSession();
     engine.holdRenderPublicationForTesting(true);
-    setSoundValue(selected,"low-cut",230);
+    highPass.valueField().setText("230",false);
+    highPass.valueField().onReturnKey();
     wait([&]{return engine.renderPublicationWaitingForTesting();});
     REQUIRE(find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0);
+    REQUIRE(find(engine.savedSession(),id)->render==find(acceptedCustom,id)->render);
     editor->refresh();
     if(output!=juce::File{})
     {
@@ -725,6 +741,14 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==230
         && engine.snapshot().auditionReady;});
     if(output!=juce::File{})recordAudition("custom-high-pass-230");
+    const auto acceptedFraction=highPass.displayedFraction();
+    REQUIRE(acceptedFraction>.3 && acceptedFraction<.4);
+    REQUIRE(static_cast<juce::Component&>(highPass.valueKnob()).keyPressed(juce::KeyPress(juce::KeyPress::upKey)));
+    wait([&]{
+        editor->refresh();
+        const auto cutoff=find(engine.savedSession(),id)->soundPreset.shaping.lowCut;
+        return cutoff>230 && cutoff<300 && engine.snapshot().auditionReady;
+    });
     reset(selected,"low-cut","Off");
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0
         && engine.snapshot().auditionReady;});

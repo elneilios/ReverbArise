@@ -243,6 +243,21 @@ inline void bindingCases()
     level.setText("2.75", false);
     level.onReturnKey();
     REQUIRE(engine.savedSession().defaultLevelDb == 2.75f && find(engine.savedSession(), fixture.a)->shape == find(baseline, fixture.a)->shape);
+    auto& highPass = control<KnobValue>(defaults, "low-cutCell");
+    auto* cutoffHandler = highPass.valueKnob().getAccessibilityHandler();
+    REQUIRE(cutoffHandler != nullptr);
+    auto* cutoffValue = cutoffHandler->getValueInterface();
+    REQUIRE(cutoffValue != nullptr && !cutoffValue->isReadOnly());
+    REQUIRE(cutoffValue->getCurrentValueAsString() == "Off");
+    cutoffValue->setValueAsString("230");
+    settle([&] { return !engine.snapshot().defaultIRPending; });
+    refresh();
+    REQUIRE(engine.savedSession().defaultSoundPreset.shaping.lowCut == 230);
+    REQUIRE(cutoffValue->getCurrentValueAsString() == "230 Hz");
+    cutoffValue->setValueAsString("Off");
+    settle([&] { return !engine.snapshot().defaultIRPending; });
+    refresh();
+    REQUIRE(engine.savedSession().defaultSoundPreset.shaping.lowCut == 0);
 
     SoundPresetBinding::FileResult finish;
     learn.chooseFile = [&](auto result) { finish = std::move(result); };

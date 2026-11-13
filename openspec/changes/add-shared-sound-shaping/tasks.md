@@ -13,7 +13,7 @@
 
 ## 3. Shared Sound editor
 
-- [ ] 3.1 Add the common knobs using the existing editor and focus behavior. Verify logarithmic cutoff travel, Off, exact entry, keyboard and accessible readout, per-knob reset, immediate gesture feedback and one settled request. Verify Level and Envelope keep their existing update paths.
+- [x] 3.1 Add the common knobs using the existing editor and focus behavior. Verify logarithmic cutoff travel, Off, exact entry, keyboard and accessible readout, per-knob reset, immediate gesture feedback and one settled request. Verify Level and Envelope keep their existing update paths.
 - [x] 3.2 Capture native Learn and Perform previews at 900×600 and an expanded size, including Custom IR and the disabled and preparing states. Obtain owner review of the layout and interaction. Update living Sound guidance and run the user-guide currency check.
 
 ## 4. Integrated verification
