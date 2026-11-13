@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Learn capture feedback and FL Studio automatic repeat on returning from regeneration. The guide explains when rebuilt wet rejoins a running repeat and how an explicit Loop Stop differs.",
+  "summary": "Reviewed the six canonical specs synced during archive against the existing guide for shared Arm, Song and Loop capture, frozen-only explicit regeneration, automatic Stop behavior, Learn controls and FL Studio repeat resumption. The existing instructions already reflect the accepted behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1170,8 +1170,8 @@
     },
     {
       "path": "openspec/specs/automatic-swell-processing/spec.md",
-      "bytes": 33021,
-      "sha256": "d5c9a39d2c514ab9e4c15ebc3bab0f6b7405ad702e24fa217e329b6d6a6cae38"
+      "bytes": 34908,
+      "sha256": "6dc3f108c374443ecb75cd3b9ee78094444719dea4afbeed487789275214dfd8"
     },
     {
       "path": "openspec/specs/editor-presentation/spec.md",
@@ -1205,8 +1205,8 @@
     },
     {
       "path": "openspec/specs/loop-phrase-capture/spec.md",
-      "bytes": 13815,
-      "sha256": "0c3d27817ff2c3af48a2d2a864593418291b3821c3d338fff5d75288d1005272"
+      "bytes": 14387,
+      "sha256": "a29c01f8af80c8571c4fb28315a2efe20bca5b6c8aad9cdea02c0f40990543fb"
     },
     {
       "path": "openspec/specs/product-release-identity/spec.md",
@@ -1230,8 +1230,8 @@
     },
     {
       "path": "openspec/specs/song-timeline-audio/spec.md",
-      "bytes": 21014,
-      "sha256": "09308b5f59cbcce9c5006da25a341f1914b0229e8c3d7f89992335e237e435bd"
+      "bytes": 22115,
+      "sha256": "6d20717e63cdf43aa2100e8c859ce5cabea6303884ea50bea2357085cfd75648"
     },
     {
       "path": "openspec/specs/sound-presets/spec.md",
@@ -1255,13 +1255,13 @@
     },
     {
       "path": "openspec/specs/swell-session/spec.md",
-      "bytes": 22390,
-      "sha256": "515eb9fc39a44333c7d7709ed78d146b6b707398d6d3de3556129821fd16fd15"
+      "bytes": 23223,
+      "sha256": "e90e39e17a62fda92512075612525287f9e48c8c3596cd8cb1e9c34b8138c749"
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 134545,
-      "sha256": "36f78382ade6185a37dd8f2f0579e6f825582828904f7697f2a14866ce0de3d9"
+      "bytes": 136988,
+      "sha256": "ee1615c0389dc941796ec0ad47c489c8fd90ecb57e5cf8918c35e7b3afff0174"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",
@@ -1275,8 +1275,8 @@
     },
     {
       "path": "openspec/specs/workflow-modes/spec.md",
-      "bytes": 15347,
-      "sha256": "801379e5984ecfdaac490f0ad030f8fca21a0b5660adc5e657c417f789261f76"
+      "bytes": 16567,
+      "sha256": "cdb3d66ad1c4d17bc3fbdfc7aff5e93cbe85d6890692fa6aa6f7d5c6676345d7"
     },
     {
       "path": "resources/logo/png/wordmark/reverbarise-wordmark-dark-640px.png",
