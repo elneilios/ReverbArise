@@ -21,7 +21,7 @@ inline void learnPassPolicyCases()
             for(int c=0;c<2;++c)for(int n=0;n<1024;++n)REQUIRE(buffer.getSample(c,n)==dry.getSample(c,n));
         };
         const auto pass=[&](bool sparse,float scale){
-            tick(0,false,0);for(int n=0;n<32;++n){tick(n*1024,true,scale);juce::Thread::sleep(1);}
+            REQUIRE(setFixtureCaptureArmed(*processor));tick(0,false,0);for(int n=0;n<32;++n){tick(n*1024,true,scale);juce::Thread::sleep(1);}
             if(sparse)for(int n=0;n<32;++n){tick(65536+n*1024,true,scale);juce::Thread::sleep(1);}
             tick(sparse?98304:32768,false,0);REQUIRE(processor->flushCaptureForTesting());
             REQUIRE(processor->getWorkflowSnapshot().mode==workflow::Mode::capture);

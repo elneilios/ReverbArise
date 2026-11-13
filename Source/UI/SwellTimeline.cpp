@@ -314,7 +314,7 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(ui::text);g.setFont(ui::fontFor(*this,ui::emptyHeadingSize,juce::Font::bold));
         g.drawFittedText("Press play to begin\nmapping your song",headline.toNearestInt(),juce::Justification::centred,2);
         g.setFont(ui::fontFor(*this,ui::bodySize));g.setColour(ui::secondary);
-        g.drawFittedText("Start playback in your DAW.\nAudio is mapped as you play; swells are prepared for later playback.",headline.translated(0,76).withHeight(62).toNearestInt(),juce::Justification::centred,3);
+        g.drawFittedText("Arm capture in Learn, then start playback in your DAW.\nStop playback to finish a Song take.",headline.translated(0,76).withHeight(62).toNearestInt(),juce::Justification::centred,3);
         return;
     }
     waveformLayer.paint(g,getWidth(),getHeight(),view.first,view.last,[this](auto& drawing,float,auto& metrics){paintWaveforms(drawing,metrics,false);});

@@ -1,5 +1,6 @@
 #pragma once
 #include "LoopCaptureFixture.h"
+#include "WorkflowTestSupport.h"
 #include <Storage/WorkingFolder.h>
 #include <future>
 
@@ -19,7 +20,7 @@ static void workingFolderLoopCases()
     juce::AudioBuffer<float> song(2,128);
     juce::MidiBuffer midi;
     for(int channel=0;channel<2;++channel)std::fill_n(song.getWritePointer(channel),128,.25f);
-    processor.processBlock(song,midi);
+    REQUIRE(setFixtureCaptureArmed(processor));processor.processBlock(song,midi);
     position.setIsPlaying(false);
     processor.processBlock(song,midi);
     REQUIRE(processor.flushCaptureForTesting() && processor.getCaptureSnapshot().reference.isNotEmpty());

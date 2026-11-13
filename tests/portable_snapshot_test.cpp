@@ -31,7 +31,7 @@ int main(){juce::ScopedJuceInitialiser_GUI gui;return runTest([]{
     processor.setPlayHead(&host);processor.prepareToPlay(48000,512);juce::AudioBuffer<float> block(2,512);block.clear();juce::MidiBuffer midi;processor.processBlock(block,midi);
     std::atomic<bool> closureBad=false;std::atomic<int> closures=0;std::jthread auditor([&](std::stop_token token){while(!token.stop_requested()){Input input;juce::String why;if(processor.pinPortableAssets(input,why)){std::shared_ptr<Prepared> check;if(!prepare(input,check,why)){std::cerr<<why<<'\n';closureBad=true;}else ++closures;}juce::Thread::sleep(1);}});
     for(int channel=0;channel<2;++channel)for(int frame=0;frame<512;++frame)block.setSample(channel,frame,.125f);
-    host.position.setIsPlaying(true);processor.processBlock(block,midi);finishCaptureFixture(processor,host.position);
+    REQUIRE(setFixtureCaptureArmed(processor));host.position.setIsPlaying(true);processor.processBlock(block,midi);finishCaptureFixture(processor,host.position);
     const auto end=juce::Time::getMillisecondCounterHiRes()+10000;
     for(int i=0;i<4;++i){REQUIRE(processor.swellEngine().assignDefaultIR(a.root.getChildFile(a.irs[i].path),processor.swellEngine().assignmentEpoch(),processor.getWorkflowSnapshot().pass));
         while(processor.swellEngine().snapshot().defaultIRPending){REQUIRE(juce::Time::getMillisecondCounterHiRes()<end);juce::Thread::sleep(2);}}

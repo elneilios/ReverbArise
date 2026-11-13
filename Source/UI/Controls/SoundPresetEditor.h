@@ -119,6 +119,7 @@ public:
     ChoiceSelector& presetPicker() noexcept { return presets; }
     ChoiceSelector& filePicker() noexcept { return files; }
     juce::Label& pickerLabel() noexcept { return presetLabel; }
+    void alignLeadingControlEdges() noexcept { alignLeadingEdges=true; }
     bool hasResponsePreview() const noexcept { return view.acceptedPeaks != nullptr; }
     void previewValue(const juce::String& id, double value)
     {
@@ -550,7 +551,8 @@ private:
         presetLabel.setBounds(area.removeFromTop(captionHeight));
         area.removeFromTop(spacing::labelHelp);
         auto row = area.removeFromTop(controlHeight);
-        previous.setBounds(row.removeFromLeft(controlHeight + 2 * margin).expanded(0, margin));
+        const auto previousBounds = row.removeFromLeft(controlHeight + 2 * margin).expanded(0, margin);
+        previous.setBounds(alignLeadingEdges ? previousBounds.withLeft(previousBounds.getX()-margin) : previousBounds);
         next.setBounds(row.removeFromRight(controlHeight + 2 * margin).expanded(0, margin));
         presets.setRowBounds(row);
         presetFeedback.arrange(view.presetError, true, row);
@@ -564,7 +566,7 @@ private:
             const auto feedbackBounds = fileRow;
             import.setBounds(fileRow.removeFromRight(controlHeight + 2 * margin).expanded(0, margin));
             fileRow.removeFromRight(spacing::tight);
-            files.setRowBounds(fileRow);
+            files.setRowBounds(alignLeadingEdges ? fileRow.withLeft(fileRow.getX()-margin) : fileRow);
             fileFeedback.arrange(view.fileError, true, feedbackBounds);
             if (view.fileError.isNotEmpty()) area.setY(fileFeedback.getBottom());
         }
@@ -594,6 +596,7 @@ private:
     std::optional<juce::String> previousChoice, nextChoice;
     juce::Component content;
     FocusViewport viewport;
+    bool alignLeadingEdges=false;
     EllipsisLabel presetLabel, fileLabel;
     IconActionButton previous{ActionIcon::previous}, next{ActionIcon::next}, import{ActionIcon::openFile};
     ChoiceSelector presets, files;

@@ -28,7 +28,7 @@ bool sameDefinition(const Swell& a,const Swell& b)
 }
 AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const std::vector<Candidate>& candidates,
     const CaptureManifest& source,const SongTime& time,const CompletedPasses& completed,
-    const GenerationFingerprint& fingerprint,const std::function<bool()>& cancelled)
+    const GenerationFingerprint& fingerprint,const std::function<bool()>& cancelled,GenerationPolicy policy)
 {
     AutomaticGenerationPlan plan;
     const auto stop=[&]{return cancelled && cancelled();};
@@ -52,15 +52,17 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         if(!runs.empty() && range.startSample<=runs.back().second)runs.back().second=std::max(runs.back().second,end);
         else runs.push_back({range.startSample,end});
     }
+    const bool rebuild=policy==GenerationPolicy::rebuildUnfrozen;
     std::set<juce::String> eligibleIds;
     for(const auto& w:accepted.swells)
     {
         int64_t anchorEnd;
-        if(w.provenance==Provenance::automatic && !w.frozen
+        if(!rebuild && w.provenance==Provenance::automatic && !w.frozen
             && checkedAdd(w.detectorAnchor,1,anchorEnd) && covered(runs,w.detectorAnchor,anchorEnd)
             && covered(runs,w.sourceStart,renderInputEnd(w)))eligibleIds.insert(w.id);
     }
     const auto eligible=[&](const Swell& w){return eligibleIds.contains(w.id);};
+    const auto replaceable=[&](const Swell& w){return rebuild ? !w.frozen : eligible(w);};
     std::vector<int64_t> found;found.reserve(candidates.size());
     for(const auto& candidate:candidates)
     {
@@ -70,8 +72,9 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
     }
     std::sort(found.begin(),found.end());found.erase(std::unique(found.begin(),found.end()),found.end());
     if(found.empty()){plan.outcome=GenerationOutcome::empty;plan.message="No automatic markers found. Adjust sensitivity and try again.";return plan;}
-    std::vector<int64_t> protectedAnchors=accepted.suppressed;
-    for(const auto& w:accepted.swells)if(!eligible(w))
+    std::vector<int64_t> protectedAnchors;
+    if(!rebuild) protectedAnchors=accepted.suppressed;
+    for(const auto& w:accepted.swells)if(!replaceable(w))
     {
         protectedAnchors.push_back(w.arrival);
         if(w.provenance!=Provenance::manualCreated)protectedAnchors.push_back(w.detectorAnchor);
@@ -83,7 +86,13 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         return (at!=protectedAnchors.end() && separation(*at,sample)<=tolerance)
             || (at!=protectedAnchors.begin() && separation(*std::prev(at),sample)<=tolerance);
     });
-    if(found.empty()){plan.outcome=GenerationOutcome::protectedOnly;plan.message="No eligible swells to generate; manual and frozen swells were preserved.";return plan;}
+    if(found.empty())
+    {
+        plan.outcome=GenerationOutcome::protectedOnly;
+        plan.message=rebuild ? "All markers overlap frozen swells. Existing swells were kept."
+                             : "No eligible markers remain after checking protected swells and deleted targets.";
+        return plan;
+    }
     struct Edge{long double distance;int64_t sample;juce::String id;size_t index;};
     std::vector<Edge> edges;
     for(const auto& w:accepted.swells)if(eligible(w))
@@ -105,7 +114,7 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
     // The same automatic source-window/default-shape policy used by reconciliation
     // runs on a private arrangement. Restore every untouched definition afterward.
     Session working=accepted;
-    std::erase_if(working.swells,[&](const auto& w){return eligible(w);});
+    std::erase_if(working.swells,replaceable);
     std::vector<juce::String> planned;
     for(size_t i=0;i<found.size();++i)
     {
@@ -172,6 +181,12 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
             plan.changed.push_back(id);
         }
         else if(old)*w=*old;
+    }
+    if(rebuild && plan.changed.empty())
+    {
+        plan.outcome=GenerationOutcome::empty;
+        plan.message="No complete automatic source windows. Existing swells were kept.";
+        return plan;
     }
     for(const auto& old:accepted.swells)if(!find(working,old.id))plan.retired.push_back(old.id);
     // A nonempty lower-density collection is a real arrangement change even

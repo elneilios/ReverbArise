@@ -68,6 +68,7 @@ public:
     juce::SpinLock::ScopedTryLockType tryFenceCue() const noexcept { return juce::SpinLock::ScopedTryLockType(cueFence); }
     void requestStop() noexcept { commands.fetch_or(loop_capture::stop,std::memory_order_release); }
     void requestFinish() noexcept { commands.fetch_or(LoopCueScheduler::finishCommand,std::memory_order_release); }
+    void leavePerform() noexcept { commands.fetch_or(leavePerformCommand,std::memory_order_release); }
     Status status() const noexcept;
     PlaybackPeaks::Values peaks() const noexcept { return signalPeaks.read(); }
     // Call under the same control lock as publish and collect.
@@ -99,7 +100,8 @@ private:
     std::atomic<double> referenceRate{0}, referenceTempo{0};
     std::atomic<int> referenceBeats{0}, referenceNumerator{0}, referenceDenominator{0};
     std::atomic<bool> phraseInput{false}, external{false};
-    std::atomic<uint16_t> commands{0};
+    static constexpr uint32_t leavePerformCommand = 1u << 16;
+    std::atomic<uint32_t> commands{0};
     juce::SpinLock cueFence;
     // A supported phrase fits in 23 bits. A signed cursor also covers
     // up to 64 phrases of pre-roll. A nonzero lead-in encodes the display's slot.

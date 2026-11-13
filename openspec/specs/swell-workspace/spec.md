@@ -497,11 +497,11 @@ Learn SHALL show the existing branded header/mode navigation, narrow left captur
 
 #### Scenario: Fresh learning workspace
 - **WHEN** a fresh instance opens in Learn
-- **THEN** the timeline prompts DAW Play, the two independent control groups are visible and unrelated editing/export controls do not occupy the workspace
+- **THEN** the timeline prompts the user to arm capture and supplies the selected mode's timing guidance, the two independent control groups are visible and unrelated editing/export controls do not occupy the workspace
 
 #### Scenario: Return with source already present
 - **WHEN** a user returns to Learn from Perform
-- **THEN** accepted source and full-song context remain visible, Recapture is off unless explicitly armed, and the Perform editor state is retained for return
+- **THEN** accepted source and full-song context remain visible, Arm is off, and the Perform editor state is retained for return
 
 #### Scenario: Compact settings and keyboard focus
 - **WHEN** Learn is shown at the supported minimum or larger size and the user tabs through its controls
@@ -525,7 +525,7 @@ Learn SHALL separate Source Capture/Recapture from Automatic Swells. Automatic S
 - **THEN** no inactive/fictitious Character choices or parameter controls appear, and a bundled static IR is not presented as a Character algorithm
 
 ### Requirement: Learn generation controls are locked for a whole pass
-Automatic Swells, Default IR/file assignment and Marker Sensitivity SHALL be immutable from valid DAW Play through Stop drain/validation. Visible controls and every command/completion path SHALL enforce the same pass lock, with an explanation. After settlement, later detector edits SHALL asynchronously update candidates over accepted coverage without generating; current Default IR SHALL apply to the next explicit or eligible Stop generation snapshot without rewriting accepted pass context.
+Automatic Swells, Default IR/file assignment and Marker Sensitivity SHALL be immutable from capture Arm through cancellation or settlement. Visible controls and every command/completion path SHALL enforce the same pass lock, with an explanation. After settlement, later detector edits SHALL asynchronously update candidates over accepted coverage without generating; current Default IR SHALL apply to the next explicit or eligible Stop generation snapshot without rewriting accepted pass context.
 
 #### Scenario: Active gesture or chooser crosses Play
 - **WHEN** a gesture, typed edit, preset action, chooser or import completes after the pass lock begins
@@ -548,7 +548,7 @@ Learn Sound SHALL present bundled presets and Custom IR. The contextual IR File 
 - **THEN** the prior accepted default remains selected and usable, failure is explained at the IR File row, and no existing assignment changes
 
 #### Scenario: Playback begins during a pending import
-- **WHEN** DAW Play locks the pass before a requested default is accepted
+- **WHEN** Arm locks the pass before a requested default is accepted
 - **THEN** the pass uses the displayed previously accepted default, late completion cannot replace it, and any deferred or discarded request is disclosed
 
 ### Requirement: IR pickers share the instance's retained imported choices
@@ -1005,26 +1005,27 @@ Initial Perform selection/reveal SHALL use available definition/source timing wh
 - **THEN** the initial handoff uses available lead-in/arrival timing immediately, and delayed completion updates only matching content/status without stealing selection or moving the user's viewport
 
 ### Requirement: Learn offers one explicit Generate action
-Generate Swells SHALL be the primary Automatic Swells action below Marker Sensitivity and supported conditional parameters, or in a persistent action area below those settings at compact heights. Its labelled action and readiness helper SHALL remain directly discoverable when settings overflow. It SHALL reuse ActionButton, retain its label across runs and expose accessible readiness/progress reasons. Auto-generate on Stop SHALL reuse Switch below Enable automatic swells, before IR controls. The contextual readiness helper SHALL sit directly below Generate.
+When Detect events is enabled, Learn SHALL show one shared primary generation button in a fixed lower action area on both tabs. The taller button SHALL centre the swell icon and full label together, using larger semibold text. One centred helper line SHALL sit below it. Footer hover help and accessibility SHALL explain which swells a rebuild replaces. Auto-generate on Stop SHALL remain a switch in the capture settings.
 
 #### Scenario: Ready or disabled action
 - **WHEN** Learn is ready, capturing, settling, analysing, generating or missing usable source/IR
 - **THEN** Generate reflects canonical readiness, keyboard/pointer/secondary routes share the same guards and disabled reasons remain readable without a rejected click
+- **AND** the enabled button shows “Place swells manually in Perform” below it, while a disabled or busy button uses the same line for its status
 
 #### Scenario: Cancel a waiting automatic request
 - **WHEN** the user disables Auto-generate on Stop while its request awaits final analysis or preparation
 - **THEN** the not-yet-committed request is cancelled and no lock hides the cancellation path
 
 ### Requirement: Manual placement guidance remains readable
-A subdued helper SHALL read “Want to place swells yourself? Add manual swells in Perform.” It SHALL follow Generate's contextual helper when Automatic Swells is ON and remain below the enable-switch group when OFF. It SHALL use existing Inter helper typography, wrap naturally without a forced break after the question and remain readable with Generate disabled at minimum/larger sizes.
+Learn SHALL show “Place swells manually in Perform” on one line using the existing helper role. The helper SHALL remain in the shared action area when Detect events is off. When generation is disabled or busy with Detect events on, the same line SHALL show the current status.
 
 #### Scenario: Automatic Swells off and editor reopen
 - **WHEN** Automatic Swells is disabled in an open editor or before reopening it
-- **THEN** manual-placement guidance remains visible with valid layout while generation controls and their contextual helper stay hidden
+- **THEN** the manual placement helper remains visible while the generation button is hidden
 
 #### Scenario: Minimum-size busy workspace
-- **WHEN** Automatic Swells is ON at 1100x850 and generation is disabled or busy
-- **THEN** the full helper remains legible beneath Generate, all settings remain reachable and NoticeBar does not move the workspace
+- **WHEN** generation is disabled or busy at the minimum supported editor size
+- **THEN** the status occupies a single line, the full reason is available in footer hover help and accessibility, and tab settings remain reachable
 
 ### Requirement: Candidate markers have truthful visual identity
 The Learn timeline SHALL show sample-aligned events as restrained neutral guides, with stronger timing-accent emphasis for hovered or pinned events. Hollow heads SHALL identify provisional/updating data. Event emphasis SHALL reuse inspection without editing swells or filtering Generate. The white inspection pin and solid DAW cursor SHALL remain distinct. Refresh SHALL be read-only and bounded at display resolution.
@@ -1503,3 +1504,32 @@ Learn Sound and Perform Sound SHALL expose Level, Damping, High Pass and Low Pas
 - **THEN** the prior accepted sound stays audible until a verified replacement is available
 - **AND** the existing delayed Sound preparation overlay and actionable failure feedback apply
 - **AND** Damping, High Pass and Low Pass are temporarily unavailable in that Sound context during preparation, with contextual help explaining when they become available
+
+### Requirement: Learn tabs share a visible content gutter
+Learn SHALL align the visible tabs, capture headings and leading controls, and Sound Preset and contextual IR File rows on a shared left gutter. Focus decoration SHALL have room outside the visible control edges.
+
+#### Scenario: Compact Learn sidebar alignment
+- **WHEN** the musician switches tabs with Loop Mode on or off at the compact size and a supported 100% or 125% UI scale
+- **THEN** the visible leading edges remain aligned and the IR File selector and Import button retain their spacing and keyboard focus decoration
+
+### Requirement: Learn presents one Arm control for Song and Loop
+The Capture & Generate tab SHALL place a shared Arm button and adjoining capture state field at the top of Source Capture. The field SHALL show waiting, recording, finishing, settling and idle or unavailable status in one row. Full status SHALL be available through hover help and accessibility. Recapture Audio SHALL remain a separate replacement permission.
+
+#### Scenario: Switch the next capture mode while idle
+- **WHEN** a user changes between Song and Loop
+- **THEN** Arm stays in the same place and invokes the selected capture route with its timing and source permission
+- **AND** keyboard focus, activation and state feedback follow the shared latch policy
+
+#### Scenario: Song transport runs before recording
+- **WHEN** Learn receives valid Song transport timing outside active recording
+- **THEN** the Learn waveform shows no moving transport playhead
+- **AND** the Song playhead follows valid transport timing during active recording
+
+### Requirement: The Learn generation button communicates rebuild intent
+The action SHALL show Generate Swells before generation and Regenerate Swells when an arrangement or prior automatic deletions exist. Both labels SHALL invoke the same explicit rebuild policy. Its accessible name SHALL match its visible label and the icon SHALL support recognition alongside the text.
+
+#### Scenario: Compact Learn with the taller action
+- **WHEN** the Capture & Generate and Sound tabs are reviewed at the compact supported window size at 100% and 125% UI scale where available
+- **THEN** the same button and helper stay in place and remain visible across tabs, with the full label, icon and focus decoration fitting while tab settings remain reachable
+- **AND** hovering the button displays the rebuild explanation in the Learn footer
+- **AND** disabled, keyboard-focused and busy states retain their readable status and shared interaction policy

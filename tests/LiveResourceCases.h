@@ -6,6 +6,7 @@ inline void liveResourceCases()
     p->prepareToPlay(48000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setTimeInSamples(at);head.position.setPpqPosition(at/12000.0);head.position.setIsPlaying(playing);};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
+    REQUIRE(setFixtureCaptureArmed(*p));
     for(int64_t at=0;at<49152;at+=4096){position(at,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),4096,.05f);p->processBlock(buffer,midi);}
     REQUIRE(p->flushCaptureForTesting());finishCaptureFixture(*p,head.position);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.addTarget(12000));std::vector<float> ir(96000,.00001f);const auto file=root.file.getChildFile("long-ir.wav");writeTestWav(file,1,48000,ir);engine.loadIR(file);

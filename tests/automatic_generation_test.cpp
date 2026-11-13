@@ -16,8 +16,9 @@ int main(){return runTest([]
     Session accepted;accepted.defaultIR=asset('a');accepted.defaultIRName="A";accepted.defaultLevelDb=-4.f;
     const auto fingerprint=[](int64_t,int64_t,juce::String& result,juce::String&)
         {result=juce::String::repeatedString("a",64);return true;};
-    const auto plan=[&](const Session& session,const std::vector<Candidate>& candidates)
-        {return prepareAutomaticGeneration(session,candidates,source,timing,complete,fingerprint);};
+    const auto plan=[&](const Session& session,const std::vector<Candidate>& candidates,
+                        GenerationPolicy policy=GenerationPolicy::reconcile)
+        {return prepareAutomaticGeneration(session,candidates,source,timing,complete,fingerprint,{},policy);};
     const std::vector<Candidate> candidates{{600,1},{100,1},{100,2}};
     auto first=plan(accepted,candidates);
     REQUIRE(first.outcome==GenerationOutcome::generated && first.changed.size()==2 && accepted.swells.empty());
@@ -86,6 +87,19 @@ int main(){return runTest([]
     REQUIRE(find(mixed.replacement,b)->render==protectedB.render);
     auto suppressed=accepted;suppressed.suppressed={100,600};
     REQUIRE(plan(suppressed,candidates).outcome==GenerationOutcome::protectedOnly);
+    const auto rediscovered=plan(suppressed,candidates,GenerationPolicy::rebuildUnfrozen);
+    REQUIRE(rediscovered.outcome==GenerationOutcome::generated && rediscovered.changed.size()==2);
+    REQUIRE(rediscovered.replacement.suppressed==suppressed.suppressed);
+    auto rebuildInput=protectedSession;
+    Swell outsideEdit=protectedA;outsideEdit.id=juce::Uuid().toDashedString();
+    outsideEdit.sourceStart=outsideEdit.arrival=outsideEdit.detectorAnchor=1200;outsideEdit.sourceEnd=1300;
+    rebuildInput.swells.push_back(outsideEdit);
+    const auto rebuilt=plan(rebuildInput,{{100,1},{600,1}},GenerationPolicy::rebuildUnfrozen);
+    REQUIRE(rebuilt.outcome==GenerationOutcome::generated && rebuilt.changed.size()==1 && rebuilt.retired.size()==2);
+    REQUIRE(!find(rebuilt.replacement,a) && !find(rebuilt.replacement,outsideEdit.id));
+    REQUIRE(find(rebuilt.replacement,b) && sameSavedSwell(*find(rebuilt.replacement,b),protectedB));
+    REQUIRE(plan(rebuildInput,{{600,1}},GenerationPolicy::rebuildUnfrozen).outcome==GenerationOutcome::protectedOnly);
+    REQUIRE(plan(rebuildInput,{},GenerationPolicy::rebuildUnfrozen).outcome==GenerationOutcome::empty);
 
     source.ranges={{-200,600,CaptureCoverageKind::audio},{1000,400,CaptureCoverageKind::silence}};
     complete={{-200,400},{1000,1400}};

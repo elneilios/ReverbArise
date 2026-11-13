@@ -78,12 +78,18 @@ does not move the workspace or take focus.
 
 | Mode/phase | Source | Host-scheduled wet | Creative editing / internal preview |
 | --- | --- | --- | --- |
-| Learn idle | Can begin additive capture on valid DAW Play | Off, dry passes | Off / off |
-| Learn recording | Protected additive or explicitly armed replacement pass | Off, dry passes | Off / off; mode selection locked |
+| Learn idle | Waits for an explicit Arm | Off, dry passes | Off / off |
+| Learn armed or recording | One additive or replacement pass authorized by Arm | Off, dry passes | Off / off; mode selection locked |
 | Learn draining/validating | Provisional; old committed source remains authoritative | Off, dry passes | Off / off; mode selection locked |
 | Learn failed/empty | Prior source retained; reason visible | Off, dry passes | Off / off; stopped mode requests allowed |
 | Perform | Never records | Existing enable/routing/gain at absolute positions | Existing validated editor / preview |
 | Export | Never records | Off, dry passes | Off / explicit supported preview only |
+
+The Learn Song playhead is shown only during active recording with valid host
+timing. Leaving Perform fades the Loop's wet playback. If Regenerate returns to
+Perform with a matching host repeat still running, wet rejoins once the rebuilt
+plan is ready. An explicit Loop Stop remains in force until the host transport
+stops.
 
 Mode eligibility uses verified useful audio and compatible timing; silence is
 valid coverage but alone does not enable Perform. User-approved compatibility:

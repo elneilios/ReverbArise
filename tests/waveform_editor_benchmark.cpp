@@ -11,6 +11,7 @@ int main(int argc,char** argv){return runTest([&]{
  p->setPlayHead(&host);p->prepareToPlay(48000,4096);auto& engine=p->swellEngine();engine.setAutomaticProcessing(false);engine.setPostRoll(.25);
  host.position.setBpm(120);host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});host.position.setIsPlaying(true);
  juce::AudioBuffer<float> audio(2,4096);juce::MidiBuffer midi;
+ REQUIRE(setFixtureCaptureArmed(*p));
  for(int block=0;block<48;++block){host.position.setTimeInSamples(block*4096);host.position.setPpqPosition(block*4096/24000.);for(int c=0;c<2;++c)for(int i=0;i<4096;++i){const auto at=block*4096+i,local=at%48000;audio.setSample(c,i,review?static_cast<float>((c==0?.25:.175)*std::exp(-local/6500.)*std::sin(at*.07)):.125f);}p->processBlock(audio,midi);REQUIRE(p->flushCaptureForTesting());}
  finishCaptureFixture(*p,host.position);REQUIRE(p->flushCaptureForTesting());waitFor([&]{return engine.savedSession().defaultIR.present();});REQUIRE(engine.addTarget(48000));waitFor([&]{return engine.snapshot().auditionReady;});const auto original=engine.savedSession();
  std::cout<<"definitions,observation,refresh_and_paint_ms\n";

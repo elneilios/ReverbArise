@@ -1,4 +1,5 @@
 #include "LearnGenerationSupport.h"
+#include "AudioTestFiles.h"
 #include "DenseLearnGenerationCases.h"
 static void renderCompletionDuringAdmission()
 {
@@ -17,12 +18,11 @@ static void renderCompletionDuringAdmission()
     if(processor.getWorkflowSnapshot().mode!=workflow::Mode::live)std::cerr<<"Render/admission outcome: "<<result.learnGeneration.notice<<'\n';
     REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
     const auto* kept=find(result.session,manual);
-    REQUIRE(kept && kept->provenance==Provenance::manualCreated && kept->render.present());
-    // The generated batch must finish rendering before shared headroom is calculated.
+    REQUIRE(!kept);
+    // Retired work cannot reappear when the new batch completes.
     engine.holdLearnRendersForTesting(false);
-    await([&]{const auto s=engine.savedSession();const auto* swell=find(s,manual);return swell && swell->phase==Phase::ready;});
-    const auto completed=engine.savedSession();
-    REQUIRE(find(completed,manual)->render==kept->render && find(completed,manual)->generatedGain.has_value());
+    await([&]{const auto s=engine.savedSession();return !s.swells.empty() && s.swells.front().phase==Phase::ready;});
+    REQUIRE(!find(engine.savedSession(),manual));
 }
 static void interruptedRenderRecoversAfterFailure()
 {
@@ -44,16 +44,44 @@ static void interruptedRenderRecoversAfterFailure()
     engine.holdRenderPublicationForTesting(false);engine.holdLearnRendersForTesting(false);
     await([&]{return engine.snapshot().renderCount>rendered && find(engine.savedSession(),before.swells.front().id)->phase==Phase::ready;});
 }
+static void soundReplacementSurvivesFailedRebuild()
+{
+    GenerationFixture fixture;
+    auto& engine=fixture.engine();
+    auto& processor=*fixture.processor;
+    fixture.record();fixture.ready();
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(engine.addTarget(4800));
+    const auto id=engine.savedSession().primary;
+    await([&]{const auto s=engine.savedSession();return find(s,id)->phase==Phase::ready;});
+    const auto accepted=*find(engine.savedSession(),id);
+    const auto file=fixture.root.file.getChildFile("replacement.wav");
+    writeTestWav(file,1,48000,{1.f,.25f});
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(engine.assignIR(id,accepted.inputGeneration,file,false,engine.assignmentEpoch()));
+    await([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+    const auto ready=fixture.ready();
+    const auto defaultFile=engine.assetDirectory().getChildFile(ready.session.defaultIR.path);
+    REQUIRE(defaultFile.replaceWithText("Injected rebuild-only default IR failure"));
+    REQUIRE(fixture.generate());
+    engine.holdRenderPublicationForTesting(false);
+    await([&]{const auto v=engine.snapshot().learnGeneration;return !v.generating && v.failed;});
+    await([&]{const auto s=engine.savedSession();const auto* swell=find(s,id);return swell && swell->irName=="replacement.wav" && swell->phase==Phase::ready;});
+}
 int main(){return runTest([]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     renderCompletionDuringAdmission();
     interruptedRenderRecoversAfterFailure();
+    soundReplacementSurvivesFailedRebuild();
     GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
     REQUIRE(!engine.savedSession().autoGenerateOnStop);fixture.record(true);
     auto settled=fixture.ready();REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture);
     REQUIRE(settled.session.swells.empty() && settled.renderCount==0 && !settled.learnGeneration.displayed->identity.provisional);
     REQUIRE(settled.learnGeneration.displayed->positions.size()>=8);
+    const auto& completed=settled.learnGeneration.displayed->completedPasses;
+    REQUIRE(std::find(completed.begin(),completed.end(),std::pair<int64_t,int64_t>{0,72*4096})!=completed.end());
     // Cancel an analysis with a mode switch, then return with exactly the same
     // source/settings identity: an abandoned attempt must remain retryable.
     engine.holdLearnAnalysisForTesting(true);
@@ -108,7 +136,7 @@ int main(){return runTest([]
     const auto generated=engine.snapshot();REQUIRE(generated.workflowState.mode==workflow::Mode::live && generated.session.swells.size()>=8 && generated.renderCount==0 && generated.initialPerformHandoff);
     REQUIRE(!processor.getWorkflowReadiness().readySwell && processor.getWorkflowReadiness().usefulSource);
     for(const auto& swell:generated.session.swells)REQUIRE(swell.provenance==Provenance::automatic && swell.ir==generated.session.defaultIR && swell.generationSource.isNotEmpty());
-    // Identical repeated Generate cannot fabricate success or consume a new handoff.
+    // An explicit rebuild uses fresh identities even at the same marker positions.
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();
     engine.holdLearnAnalysisForTesting(true);engine.setPreferences(0,.8f,.08,false,processor.getWorkflowSnapshot().pass);
     await([&]{return engine.learnAnalysisWaitingForTesting();});
@@ -118,8 +146,20 @@ int main(){return runTest([]
     const auto afterRefinement=engine.savedSession();
     for(const auto& w:generated.session.swells)REQUIRE(sameSavedSwell(*find(afterRefinement,w.id),w));
     REQUIRE(engine.snapshot().renderCount==0);REQUIRE(fixture.generate());
-    await([&]{const auto view=engine.snapshot().learnGeneration;return !view.generating && view.notice.contains("No changes");});
-    REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture && engine.savedSession().swells.size()==generated.session.swells.size());
+    await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+    const auto rebuilt=engine.savedSession();
+    REQUIRE(rebuilt.swells.size()==generated.session.swells.size());
+    for(const auto& w:generated.session.swells)REQUIRE(!find(rebuilt,w.id));
+    std::vector<juce::String> removed;
+    for(const auto& w:rebuilt.swells)removed.push_back(w.id);
+    REQUIRE(engine.selectTargets(removed,removed.front()));
+    engine.removeSelected();
+    REQUIRE(engine.savedSession().swells.empty() && !engine.savedSession().suppressed.empty());
+    const auto sourceBeforeRediscovery=processor.getCaptureSnapshot().reference;
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture) && fixture.generate());
+    await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+    REQUIRE(engine.savedSession().swells.size()==rebuilt.swells.size());
+    REQUIRE(processor.getCaptureSnapshot().reference==sourceBeforeRediscovery);
     engine.holdLearnRendersForTesting(false);
 
     GenerationFixture automatic;auto& autoEngine=automatic.engine();autoEngine.holdLearnRendersForTesting(true);
@@ -158,7 +198,7 @@ int main(){return runTest([]
     GenerationFixture restarted;auto& restartEngine=restarted.engine();restarted.record();restarted.ready();
     const auto oldSource=restarted.processor->getCaptureSnapshot().reference;
     restartEngine.holdLearnGenerationForTesting(true);REQUIRE(restarted.generate());await([&]{return restartEngine.learnGenerationWaitingForTesting();});
-    REQUIRE(restarted.processor->setRecaptureExisting(true));restarted.tick(4096,true,.5f);
+    REQUIRE(restarted.processor->setRecaptureExisting(true) && restarted.arm());restarted.tick(4096,true,.5f);
     restartEngine.holdLearnGenerationForTesting(false);restarted.tick(8192,false);REQUIRE(restarted.processor->flushCaptureForTesting());
     await([&]{return !restartEngine.snapshot().learnGeneration.generating;});
     const auto revised=restarted.ready();REQUIRE(revised.session.swells.empty() && restarted.processor->getCaptureSnapshot().reference!=oldSource);
@@ -173,12 +213,13 @@ int main(){return runTest([]
     await([&]{return find(protectedEngine.savedSession(),frozenId)->phase==Phase::ready;});
     REQUIRE(protectedEngine.setFrozen(frozenId,true));
     const auto protectedSession=protectedEngine.savedSession();
-    const auto manual=*find(protectedSession,manualId),frozen=*find(protectedSession,frozenId);
+    const auto frozen=*find(protectedSession,frozenId);
     REQUIRE(protectedWork.processor->requestWorkflowMode(workflow::Mode::capture));protectedWork.ready();
     protectedEngine.holdLearnRendersForTesting(true);REQUIRE(protectedWork.generate());
     await([&]{return protectedWork.processor->getWorkflowSnapshot().mode==workflow::Mode::live;});
     juce::Thread::sleep(60);const auto preserved=protectedEngine.savedSession();
-    REQUIRE(sameSavedSwell(*find(preserved,manualId),manual) && sameSavedSwell(*find(preserved,frozenId),frozen));
+    REQUIRE(!find(preserved,manualId) && find(preserved,frozenId));
+    REQUIRE(sameSavedSwell(*find(preserved,frozenId),frozen));
     REQUIRE(preserved.swells.size()>protectedSession.swells.size());
     REQUIRE(protectedWork.processor->requestWorkflowMode(workflow::Mode::capture));protectedWork.ready();
     REQUIRE(protectedEngine.assignDefaultBundledIR("monumental"));await([&]{return !protectedEngine.snapshot().defaultIRPending;});
@@ -186,7 +227,8 @@ int main(){return runTest([]
     REQUIRE(protectedWork.processor->setRecaptureExisting(true));protectedWork.record();
     await([&]{return protectedWork.processor->getWorkflowSnapshot().mode==workflow::Mode::live;});
     juce::Thread::sleep(60);const auto automaticPreserved=protectedEngine.savedSession();
-    REQUIRE(sameSavedSwell(*find(automaticPreserved,manualId),manual) && sameSavedSwell(*find(automaticPreserved,frozenId),frozen));
+    REQUIRE(!find(automaticPreserved,manualId) && find(automaticPreserved,frozenId));
+    REQUIRE(sameSavedSwell(*find(automaticPreserved,frozenId),frozen));
     // Save/reopen rebuilds read-only candidates and committed render recovery,
     // never a deferred source-context generation command or initial handoff.
     REQUIRE(protectedWork.processor->requestWorkflowMode(workflow::Mode::capture));protectedWork.ready();

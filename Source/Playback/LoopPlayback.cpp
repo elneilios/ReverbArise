@@ -276,6 +276,8 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
     seenRevision = revision;
     wasObserving = canObserve;
     if (interrupted || !validFrames) scheduler.invalidateReference(timingInterrupted || !validFrames);
+    // Workflow changes fade wet without suppressing automatic playback on return.
+    if (local & leavePerformCommand) scheduler.stop();
     if (!hostPlaying) timelineSuppressed = false;
     if (interrupted || !canPlay) timeline.reset();
     constexpr auto stopRoles = finish | stop | LoopCueScheduler::finishCommand;
@@ -378,7 +380,7 @@ void LoopPlayback::process(float* left, float* right, int frames, const loop_cap
         if (!canPlay || !externalAllowed) roles &= ~(cue | finish | stop);
         if (hostPlaying && schedule.route != Route::manual && (roles & stopRoles))
             timelineSuppressed = true;
-        if (offset == 0 && !interrupted && canPlay) roles |= local;
+        if (offset == 0 && !interrupted && canPlay) roles |= static_cast<uint16_t>(local);
         if (!canCue) roles &= ~cue;
         if (offset == 0 && interrupted && (!playlist || discontinuity))
             roles = autoClock && (roles & captureClock) ? roles & (captureClock | rackBeatMask | bar | phrase) : 0;

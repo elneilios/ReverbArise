@@ -1,4 +1,5 @@
 #include "PortableFixture.h"
+#include "WorkflowTestSupport.h"
 #include <source_location>
 #include <Plugin/PluginProcessor.h>
 #include <Storage/PortableAssets.h>

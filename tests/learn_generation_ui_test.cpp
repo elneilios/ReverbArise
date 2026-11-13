@@ -77,7 +77,8 @@ static void sharedSoundBindings()
     REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::capture));editor.refresh();
     REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});
     const auto regenerated=engine.savedSession();
-    for(const auto& id:{frozen,edited,manual})REQUIRE(sameSavedSwell(*find(protectedState,id),*find(regenerated,id)));
+    REQUIRE(find(regenerated,frozen) && sameSavedSwell(*find(protectedState,frozen),*find(regenerated,frozen)));
+    REQUIRE(!find(regenerated,edited) && !find(regenerated,manual));
     for(const auto& w:regenerated.swells)if(w.provenance==Provenance::automatic)REQUIRE(w.ir==irB);
     // The opted-in Stop path takes the next accepted default through the same
     // control. Recapture makes this a genuinely eligible new source pass.
@@ -86,7 +87,7 @@ static void sharedSoundBindings()
     REQUIRE(engine.setAutoGenerateOnStop(true,engine.assignmentEpoch(),fixture.processor->getWorkflowSnapshot().pass));
     REQUIRE(fixture.processor->setRecaptureExisting(true));fixture.record();
     await([&]{const auto s=engine.savedSession();return !engine.snapshot().learnGeneration.generating && std::all_of(s.swells.begin(),s.swells.end(),[&](const auto& w){return w.provenance!=Provenance::automatic || w.ir==irA;});});
-    for(const auto& id:{frozen,edited,manual})
+    for(const auto& id:{frozen})
     {const auto current=engine.savedSession();const auto* kept=find(current,id);const auto* old=find(protectedState,id);REQUIRE(kept && kept->ir==old->ir && kept->shape==old->shape && kept->provenance==old->provenance && kept->frozen==old->frozen);}
 }
 static void pendingProtectedFraming()
@@ -110,6 +111,7 @@ static void controlBindings()
     auto* stop=dynamic_cast<m3::ui::controls::Switch*>(named(editor,"learnAutoGenerateOnStop"));
     auto* helper=dynamic_cast<juce::Label*>(named(editor,"learnManualSwellsHelp"));
     REQUIRE(generate && automatic && stop && helper && !generate->isEnabled() && visible(helper));
+    REQUIRE(generate->getButtonText()=="Generate Swells");
     REQUIRE(generate->getTooltip().contains(engine.snapshot().learnGeneration.reason) && generate->getAccessibilityHandler());
     stop->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));juce::MessageManager::getInstance()->runDispatchLoopUntil(30);
     REQUIRE(engine.savedSession().autoGenerateOnStop);
@@ -136,6 +138,25 @@ static void controlBindings()
     catch(...){const auto view=engine.snapshot().learnGeneration;std::cerr<<"Keyboard Generate: "<<view.reason<<" | "<<view.notice<<'\n';throw;}
     editor.refresh();
     REQUIRE(engine.savedSession().primary==m3::ui::firstChronologicalSwell(engine.savedSession()));
+    REQUIRE(fixture.processor->requestWorkflowMode(workflow::Mode::capture));
+    editor.enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
+    REQUIRE(editor.setPresentationSize(900,600));
+    for(int scale:{100,125})
+    {
+        REQUIRE(editor.setPresentationScale(scale));
+        editor.refresh();
+        REQUIRE(generate->getButtonText()=="Regenerate Swells");
+        REQUIRE(generate->getTitle()==generate->getButtonText());
+        REQUIRE(visible(helper) && generate->getBottom()<=helper->getY());
+        REQUIRE(helper->getText()=="Place swells manually in Perform");
+        REQUIRE(generate->getTooltip().contains("Keep frozen swells"));
+        auto* tabs=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(editor,"learnSections"));
+        REQUIRE(tabs);
+        const auto actionBounds=generate->getBounds(),helperBounds=helper->getBounds();
+        tabs->onRequest(2);REQUIRE(visible(named(editor,"learnIrEditor")) && visible(generate));
+        REQUIRE(generate->getBounds()==actionBounds && helper->getBounds()==helperBounds);
+        tabs->onRequest(1);REQUIRE(visible(generate) && generate->getBounds()==actionBounds);
+    }
 }
 static void captureImage(juce::Component& editor,const juce::String& tag,float scale=1)
 {
@@ -184,9 +205,23 @@ static void songHostTimingFeedback(bool review=false)
     fixture.host.position.setTimeInSamples(256);
     fixture.host.position.setPpqPosition(256./24000);
     fixture.host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    fixture.host.position.setIsPlaying(true);
     fixture.tick();
     editor.refresh();
-    REQUIRE(learn->songPlayhead()==256 && !notice->currentMessage());
+    REQUIRE(!learn->songPlayhead() && !notice->currentMessage());
+    const auto idle=processor.getWorkflowSnapshot();
+    REQUIRE(processor.setCaptureArmed(true,idle.pass,processor.swellEngine().assignmentEpoch()));
+    editor.refresh();
+    REQUIRE(!learn->songPlayhead());
+    fixture.host.position.setTimeInSamples(384);
+    fixture.host.position.setPpqPosition(384./24000);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(learn->songPlayhead()==384);
+    fixture.host.position.setIsPlaying(false);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(!learn->songPlayhead());
     processor.setPlayHead(nullptr);
 }
 
@@ -203,7 +238,7 @@ static void loopUiCases(bool review)
     editor.setVisible(true);
     editor.refresh();
     auto* toggle=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"learnLoopMode"));
-    auto* arm=dynamic_cast<m3::ui::controls::LatchingActionButton*>(named(editor,"learnLoopArm"));
+    auto* arm=dynamic_cast<m3::ui::controls::ActionButton*>(named(editor,"learnLoopArm"));
     auto* method=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopMethod"));
     auto* unit=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnLoopUnit"));
     auto* count=dynamic_cast<m3::ui::controls::FieldNumericInput*>(named(editor,"learnLoopCount"));
@@ -227,7 +262,7 @@ static void loopUiCases(bool review)
         return image.getPixelAt(12,button.getHeight()/2);
     };
     REQUIRE(visible(toggle) && toggle->getButtonText()=="Loop Mode" && !toggle->getToggleState());
-    REQUIRE(visible(named(editor,"recaptureExisting")) && !visible(arm));
+    REQUIRE(visible(named(editor,"recaptureExisting")) && visible(arm) && arm->isEnabled());
     const auto controlBounds=[&](const char* name){
         auto* control=named(editor,name);
         REQUIRE(control);
@@ -240,20 +275,30 @@ static void loopUiCases(bool review)
                                controlBounds("learnLoopMode"),recaptureBounds.getX(),recaptureBounds.getWidth());
     };
     const auto songGeometry=emptyLearnGeometry();
+    const auto songArmBounds=controlBounds("learnLoopArm");
+    REQUIRE(songArmBounds.getBottom()<=controlBounds("learnLoopMode").getY());
+    arm->keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));
+    juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    REQUIRE(processor.getWorkflowSnapshot().phase==workflow::Phase::armed);
+    REQUIRE(!recapture->isEnabled());
+    controlReview::pointerClick(*arm);
+    REQUIRE(processor.getWorkflowSnapshot().result==workflow::Result::cancelled);
     captureImage(editor,"issue133-empty-song");
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && visible(recapture) && !recapture->getToggleState());
+    REQUIRE(controlBounds("learnLoopArm")==songArmBounds);
     REQUIRE(toggle->getToggleState());
     REQUIRE(emptyLearnGeometry()==songGeometry);
     captureImage(editor,"issue133-empty-loop");
     activate(*toggle);
-    REQUIRE(!processor.getLoopCapturePreference().enabled && !toggle->getToggleState() && !visible(arm));
+    REQUIRE(!processor.getLoopCapturePreference().enabled && !toggle->getToggleState() && visible(arm));
     REQUIRE(emptyLearnGeometry()==songGeometry);
     activate(*toggle);
     REQUIRE(processor.getLoopCapturePreference().enabled && toggle->getToggleState());
     REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
-    REQUIRE(!visible(status));
+    REQUIRE(visible(status) && status->getText().isNotEmpty());
     REQUIRE(buttonFill(*arm)==m3::ui::background && buttonFill(*toggle)==m3::ui::aqua);
+    REQUIRE(arm->getTitle()=="Arm");
     REQUIRE(visible(automatic) && automatic->isEnabled());
     automatic->setToggleState(true,juce::dontSendNotification);
     automatic->onClick();
@@ -262,9 +307,9 @@ static void loopUiCases(bool review)
     method->setSelectedId(2,juce::sendNotificationSync);
     REQUIRE(method->getText()=="End on Signal");
     REQUIRE(arm->isEnabled() && !visible(count));
-    REQUIRE(!visible(status) && arm->getTooltip()=="Arm the next recording.");
+    REQUIRE(visible(status) && arm->getTooltip()=="Arm the next recording.");
     REQUIRE(method->getTooltip().contains("Stop MIDI note") && method->getTooltip().contains("next bar line"));
-    REQUIRE(controlBounds("recaptureExisting").getY()-controlBounds("learnLoopArm").getBottom()==m3::ui::spacing::tight);
+    REQUIRE(controlBounds("learnLoopArm").getBottom()<=controlBounds("learnLoopMode").getY());
     captureImage(editor,"issue126-learn-end-signal");
     activate(*arm);
     REQUIRE(arm->getToggleState() && processor.getWorkflowSnapshot().phase==workflow::Phase::armed);
@@ -386,15 +431,15 @@ static void loopUiCases(bool review)
     REQUIRE(status->getText().contains("Recapture audio"));
     REQUIRE(!onStop->isEnabled());
     REQUIRE(workspace->dryViewport()==std::make_pair(0.,static_cast<double>(accepted.manifest.loop->endSample)));
-    // Shared P3 wrapping must allocate the full Loop status and move following
-    // controls inside the existing scroll region, including long explanations.
+    // Long state text stays within the shared row and remains available in full.
+    const auto statusBounds=status->getBounds();
+    const auto recaptureBounds=recapture->getBounds();
     const auto longStatus=juce::String::repeatedString("Wait for the accepted Loop and its timing reference before recording again. ",12);
-    workspace->displayLoop(processor.getLoopCapturePreference(),false,false,false,false,false,longStatus);
+    workspace->displayCaptureControls(processor.getLoopCapturePreference(),false,false,false,false,false,longStatus);
     workspace->resized();
-    const auto* wrappedStatus=dynamic_cast<m3::ui::controls::WrappedLabel*>(status);REQUIRE(wrappedStatus);
-    REQUIRE(status->getHeight()==wrappedStatus->preferredHeight(status->getWidth()));
-    REQUIRE(recapture->getY()>=status->getBottom() && policies->getViewedComponent()->getHeight()>=generate->getBottom());
-    REQUIRE(status->getTooltip()==longStatus);
+    REQUIRE(status->getBounds()==statusBounds && recapture->getBounds()==recaptureBounds);
+    REQUIRE(status->getTooltip().contains(longStatus) && status->getDescription().contains(longStatus));
+    REQUIRE(!status->getWantsKeyboardFocus());
     editor.refresh();
     // Main's waveform navigation must use the accepted phrase, even when the
     // host has no Song position. Refresh retains inspection; a new source resets it.
@@ -432,14 +477,12 @@ static void loopUiCases(bool review)
         editor.refresh();
         policies->setViewPosition(0,0);
         REQUIRE(visible(status) && workspace->getLocalBounds().contains(workspace->getLocalArea(status,status->getLocalBounds())));
-        REQUIRE(arm->getBottom()<=status->getY() && count->getRight()<unit->getRight());
+        REQUIRE(status->getX()>=m3::ui::controls::commandBodyBounds(arm->getBounds()).getRight());
+        REQUIRE(arm->getBounds().getCentreY()==status->getBounds().getCentreY() && count->getRight()<unit->getRight());
         REQUIRE(m3::ui::controls::commandBodyBounds(method->getBounds()).getX()==count->getX());
-        REQUIRE(m3::ui::controls::commandBodyBounds(arm->getBounds()).getX()==status->getX());
-        REQUIRE(m3::ui::controls::commandBodyBounds(toggle->getBounds()).getX()==status->getX());
-        REQUIRE(count->getX()==status->getX());
+        REQUIRE(controlBounds("learnCaptureArm").getBottom()<=controlBounds("learnLoopMode").getY());
         captureImage(editor,"issue124-loop-markers-"+juce::String(scale));
-        policies->reveal(*generate);
-        REQUIRE(policies->getViewArea().contains(generate->getBounds()));
+        REQUIRE(generate->getParentComponent()==workspace && generate->getY()>=policies->getBottom());
         policies->setViewPosition(0,policies->getViewedComponent()->getHeight());
         captureImage(editor,"issue124-loop-options-"+juce::String(scale));
     }
@@ -473,6 +516,19 @@ static void loopUiCases(bool review)
         const auto swells=engine.savedSession().swells;
         REQUIRE(!swells.empty() && processor.getCaptureSnapshot().reference==accepted.reference);
         for(const auto& swell:swells) REQUIRE(swell.sourceStart>=0 && swell.sourceEnd<=accepted.manifest.loop->endSample);
+        std::vector<juce::String> ids;
+        for(const auto& swell:swells)ids.push_back(swell.id);
+        REQUIRE(engine.selectTargets(ids,ids.front()));
+        engine.removeSelected();
+        REQUIRE(engine.savedSession().swells.empty() && !engine.savedSession().suppressed.empty());
+        REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+        await([&]{return markers().canGenerate;});
+        editor.refresh();
+        REQUIRE(generate->getButtonText()=="Regenerate Swells");
+        activate(*generate);
+        await([&]{return processor.getWorkflowSnapshot().mode==workflow::Mode::live;});
+        REQUIRE(engine.savedSession().swells.size()==swells.size());
+        REQUIRE(processor.getCaptureSnapshot().reference==accepted.reference);
         return;
     }
 
@@ -635,6 +691,34 @@ static void alphaGuide()
 int main(int argc,char** argv){return runTest([&]
 {
     const auto option=argc==2 ? juce::String(argv[1]) : juce::String{};
+    if(option=="--review-capture-arm" || option=="--review-learn-alignment")
+    {
+        juce::ScopedJuceInitialiser_GUI gui;
+        GenerationFixture fixture;
+        fixture.record();
+        fixture.ready();
+        const bool alignment=option=="--review-learn-alignment";
+        if(alignment)
+        {
+            const auto file=fixture.root.file.getChildFile("Preview impulse.wav");
+            writeTestWav(file,1,48000,{1.f,.25f});
+            REQUIRE(fixture.engine().assignDefaultIR(file,fixture.engine().assignmentEpoch(),fixture.processor->getWorkflowSnapshot().pass));
+            await([&]{return fixture.engine().savedSession().defaultSoundPreset.id==customImpulseId;});
+        }
+        auto editor=std::make_unique<PreverbAudioProcessorEditor>(*fixture.processor);
+        editor->enableResponsiveReview({},m3::ui::PresentationFitContext{{1920,1080},{16,80}});
+        editor->setPresentationSize(900,600);
+        if(alignment)
+        {
+            REQUIRE(editor->setPresentationScale(125));
+            auto* tabs=dynamic_cast<m3::ui::controls::SegmentedSelector*>(named(*editor,"learnSections"));
+            REQUIRE(tabs && tabs->onRequest);
+            tabs->onRequest(2);
+        }
+        editor->refresh();
+        controlReview::run(std::move(editor));
+        return;
+    }
     if(option=="--review-song-timing")
     {
         juce::ScopedJuceInitialiser_GUI gui;
@@ -682,7 +766,7 @@ int main(int argc,char** argv){return runTest([&]
         GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
         auto editor=std::make_unique<PreverbAudioProcessorEditor>(processor);editor->setVisible(true);editor->setSize(1100,850);editor->refresh();
         const SwellViewport original{1200000,1584000};editor->timelineComponent().setViewport(original);
-        fixture.tick(4096,true);fixture.tick(8192,false);REQUIRE(processor.flushCaptureForTesting());
+        REQUIRE(fixture.arm());fixture.tick(4096,true);fixture.tick(8192,false);REQUIRE(processor.flushCaptureForTesting());
         await([&]{return processor.getWorkflowReadiness().usefulSource && !processor.getWorkflowSnapshot().locked();});
         // A useful-source, empty Perform visit does not establish an editing position.
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));editor->refresh();
@@ -690,7 +774,7 @@ int main(int argc,char** argv){return runTest([&]
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));editor->refresh();
         REQUIRE(sameView(emptyView,editor->timelineComponent().viewport()));
         auto seed=engine.savedSession();Swell late;late.arrival=late.sourceStart=200000;late.sourceEnd=204000;
-        late.provenance=Provenance::manualCreated;late.name="Protected later swell";late.enabled=false;
+        late.provenance=Provenance::manualCreated;late.name="Later swell";late.enabled=false;
         seed.swells.push_back(late);seed.primary.clear();seed.selected.clear();engine.restore(seed,processor.getCaptureSnapshot().reference);
         editor->refresh(); // Empty selection in a restored Learn session is still eligible.
         engine.holdLearnRendersForTesting(true);engine.holdLearnGenerationForTesting(!review);
@@ -700,17 +784,13 @@ int main(int argc,char** argv){return runTest([&]
         {
             candidateOverlay(*editor,fixture);
             auto* button=dynamic_cast<m3::ui::controls::ActionButton*>(named(*editor,"learnGenerateSwells"));REQUIRE(button && button->isEnabled());
-            auto* helper=dynamic_cast<m3::ui::controls::WrappedLabel*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
-            REQUIRE(helper->getText().replace("\n"," ")=="Want to place swells yourself? Add manual swells in Perform.");
-            REQUIRE(helper->textLayout(helper->getWidth()).getNumLines()>1 && helper->getFont().getHeight()==m3::ui::learnTypography::secondarySize);
-            REQUIRE(!helper->getText().contains("?\n") && helper->getText().contains("? Add"));
+            auto* helper=dynamic_cast<juce::Label*>(named(*editor,"learnManualSwellsHelp"));REQUIRE(helper && visible(helper));
+            REQUIRE(helper->getText()=="Place swells manually in Perform");
             for(auto size:{juce::Point{1100,850},juce::Point{1400,1000},juce::Point{1600,1100}})
             {
                 editor->setSize(size.x,size.y);editor->refresh();
-                REQUIRE(helper->getWidth()>0 && helper->getHeight()>=helper->preferredHeight(helper->getWidth()));
-                const auto* reason=named(*editor,"learnGenerateReason");REQUIRE(reason);
-                REQUIRE(reason->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
-                REQUIRE(helper->getY()-reason->getBottom()==m3::ui::spacing::labelHelp);
+                REQUIRE(helper->getWidth()>0 && helper->getHeight()==m3::ui::controlGeometry::helperLineHeight);
+                REQUIRE(helper->getY()-button->getBottom()==m3::ui::spacing::labelHelp);
                 REQUIRE(named(*editor,"learnAutoGenerateOnStop")->getY()-named(*editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
                 REQUIRE(helper->getParentComponent()->getLocalBounds().contains(helper->getBounds()));
                 auto* learn=dynamic_cast<m3::ui::LearnWorkspace*>(named(*editor,"learnWorkspace"));REQUIRE(learn);
@@ -730,13 +810,15 @@ int main(int argc,char** argv){return runTest([&]
             <<" generating="<<view.generating<<" pass="<<processor.getWorkflowSnapshot().pass<<'\n';throw;}
         const auto committed=engine.snapshot();REQUIRE(committed.workflowState.mode==workflow::Mode::live && committed.initialPerformHandoff && committed.session.swells.size()>2);
         const auto first=m3::ui::firstChronologicalSwell(committed.session);
-        REQUIRE(first!=committed.session.swells.front().id && committed.session.swells.front().id==late.id);
+        if(automatic) REQUIRE(first!=committed.session.swells.front().id && committed.session.swells.front().id==late.id);
+        else REQUIRE(!find(committed.session,late.id));
         // Commit with no editor refresh/reopen yet retains the pending handoff.
         editor=std::make_unique<PreverbAudioProcessorEditor>(processor);editor->setVisible(true);editor->refresh();
         selected(*editor,engine,first);REQUIRE(!engine.snapshot().initialPerformHandoff);
         const auto initialNavigation=engine.savedSession().performUi;
         REQUIRE(initialNavigation.hasView && sameView({initialNavigation.first,initialNavigation.last},editor->timelineComponent().viewport()));
-        REQUIRE(!find(engine.savedSession(),late.id)->enabled && processor.getWorkflowSnapshot().mode==workflow::Mode::live);
+        if(automatic) REQUIRE(!find(engine.savedSession(),late.id)->enabled);
+        REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::live);
         REQUIRE(!fixture.host.position.getIsPlaying());
         captureImage(*editor,automatic?"issue38-auto-first-pending":"issue38-explicit-first-pending");
         // Rendering cannot steal a newer selection or viewport, even across mode return.
@@ -756,8 +838,6 @@ int main(int argc,char** argv){return runTest([&]
             {return swell.provenance!=Provenance::automatic || swell.phase==Phase::ready;});});
         editor->refresh();REQUIRE(sameView(editing,editor->timelineComponent().viewport()));
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));editor->refresh();fixture.ready();
-        REQUIRE(fixture.generate());await([&]{return !engine.snapshot().learnGeneration.generating;});editor->refresh();
-        REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture && sameView(editing,editor->timelineComponent().viewport()));
         REQUIRE(engine.assetDirectory().getChildFile(engine.savedSession().defaultIR.path).replaceWithText("Injected UI generation failure"));
         REQUIRE(fixture.generate());
         try{await([&]{const auto view=engine.snapshot().learnGeneration;return !view.generating && view.failed;});}

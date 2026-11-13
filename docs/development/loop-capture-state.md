@@ -4,7 +4,7 @@ This is the saved-source contract for [#124](https://github.com/elneilios/Reverb
 
 ## Capture in Learn
 
-Loop Mode selects the next capture path. The Audio canvas identifies the accepted source and its extent independently. Recapture Audio off protects an accepted Loop from both Learn Arm and external Start/Arm. Turn it on to allow a fresh arm to replace the Loop after successful settlement.
+Loop Mode selects the next capture path. The shared Arm control above the mode settings authorizes one take. Song waits for a compatible playing block and settles on DAW Stop. Disarming Song cancels provisional audio. Loop follows the selected timing route below. Opening an instance, restoring a project or returning to Learn during playback leaves capture disarmed. The Audio canvas identifies the accepted source and its extent independently. Recapture Audio off protects an accepted Loop from both Learn Arm and external Start/Arm. Turn it on to allow a fresh arm to replace the Loop after successful settlement.
 
 Route stereo audio and aligned clock pulses to the same plug-in instance. The simplified route uses explicit 4/4 with one pulse per beat on MIDI channel 1 note 23. Optional notes 24 and 25 request Start/Arm and Stop. The existing marker-based Duration route remains available. See the [timing contract](loop-host-admission.md) for its mapping and measured configurations.
 

@@ -216,6 +216,51 @@ uint64_t PreverbAudioProcessor::reserveLoopArm(bool external) noexcept
     return pass;
 }
 
+bool PreverbAudioProcessor::canArmCapture() const
+{
+    const auto flow = workflowState.snapshot();
+    if (getLoopCapturePreference().enabled) return loopArmAllowed(flow, false);
+    return flow.mode == workflow::Mode::capture && !flow.locked() && captureWorker.canMap()
+        && !captureWorker.isLoading();
+}
+
+bool PreverbAudioProcessor::setCaptureArmed(bool armed, uint64_t expectedPass, uint64_t expectedSession,
+                                           std::optional<LoopCapturePreference> expectedPreference)
+{
+    const juce::ScopedLock guard(storageStateLock);
+    const auto flow = workflowState.snapshot();
+    const auto preference = getLoopCapturePreference();
+    if (flow.mode != workflow::Mode::capture || flow.pass != expectedPass
+        || swells->assignmentEpoch() != expectedSession
+        || (expectedPreference && expectedPreference->packed()!=preference.packed())) return false;
+    if (preference.enabled)
+        return armed ? reserveLoopArm(false) != 0 : requestLoopStop(expectedPass);
+    if (armed)
+        return canArmCapture() && workflowState.reserveCapture(expectedPass, true) != 0;
+    if (!captureWorker.cancelWorkflowPass(expectedPass, true)) return false;
+    recoveryIntent.reset();
+    return true;
+}
+
+juce::String PreverbAudioProcessor::songCaptureStatus() const
+{
+    const auto flow = workflowState.snapshot();
+    switch (flow.phase)
+    {
+        case workflow::Phase::armed:
+            return getHostPositionDiagnostics().isPlaying ? "Waiting for usable Song timing" : "Armed. Start DAW playback.";
+        case workflow::Phase::recording: return "Recording. Stop DAW playback to finish.";
+        case workflow::Phase::draining:
+        case workflow::Phase::validating: return "Checking recorded audio";
+        case workflow::Phase::failed: return "Capture failed";
+        default: break;
+    }
+    if (captureWorker.isLoading()) return "Loading captured audio";
+    if (!captureWorker.canMap()) return "Song capture unavailable. Check source and storage.";
+    if (flow.result==workflow::Result::cancelled) return "Capture cancelled";
+    return {};
+}
+
 bool PreverbAudioProcessor::setLoopRecapture(bool enabled)
 {
     const juce::ScopedLock guard(storageStateLock);
@@ -615,31 +660,44 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     if(offline && !wasOffline)offlineWorkflowMode=workflowState.snapshot().mode;
     wasOffline=offline;
     auto workflow=workflowState.snapshot();
+    const auto observedPass=workflow.pass;
     const bool loopSelected=getLoopCapturePreference().enabled;
     loop_capture::MidiObservations rackEvents;
     if (!flStudioLoopHost && !offline && (loopSelected || captureWorker.acceptedLoop()))
         observeRackClock(midi,buffer.getNumSamples(),diagnostics.sampleRate,rackEvents);
     else
         previousRackClockCallback = {};
-    const bool loopPath=workflow.mode==workflow::Mode::capture && (workflow.phase==workflow::Phase::armed
+    const bool loopPath=workflow.mode==workflow::Mode::capture && ((loopSelected && workflow.phase==workflow::Phase::armed)
         || (workflow.locked() && loopPass!=0 && workflow.pass==loopPass) || (loopSelected && !workflow.locked()));
     if(loopPath || seenLoopArm!=0 || loopPass!=0)
         processLoopCapture(buffer,midi,diagnostics,offline || !loopPath,captureGeneration,rackEvents);
     if (loopPath && diagnostics.positionAvailable) previousHostPlaying=diagnostics.isPlaying;
     if(!loopPath && !offline && diagnostics.positionAvailable)
     {
-        if(diagnostics.isPlaying && workflow.mode==workflow::Mode::capture && !workflow.locked() && (!previousHostPlaying || previousWorkflowMode!=workflow::Mode::capture))
-            if(workflowState.begin(transport.song.valid && captureWorker.canMap()))swells->captureStarted(transport.song.sample);
-        if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording){swells->captureStopped();workflowState.stop(workflow.pass);}
+        if(diagnostics.isPlaying && workflow.phase==workflow::Phase::armed
+            && buffer.getNumSamples()>0 && transport.song.valid && captureWorker.canMap()
+            && std::isfinite(transport.song.ppq) && std::isfinite(transport.song.bpm) && transport.song.bpm>0
+            && std::isfinite(transport.song.rate) && transport.song.rate>0
+            && transport.song.numerator>0 && transport.song.denominator>0
+            && workflowState.startReserved(workflow.pass))
+            swells->captureStarted(transport.song.sample);
+        if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording)
+        {
+            // Draining makes the take visible to the worker. Publish its
+            // endpoint first and let settlement match it by pass.
+            swells->captureStopped(workflow.pass);
+            workflowState.stop(workflow.pass);
+        }
         previousHostPlaying=diagnostics.isPlaying;
-        previousWorkflowMode=workflow.mode;
     }
     workflow=workflowState.snapshot();
     const CaptureHostTiming captureTiming{diagnostics.positionAvailable,diagnostics.samplePositionAvailable,
         diagnostics.ppqPositionAvailable,diagnostics.tempoAvailable,diagnostics.meterAvailable,diagnostics.isPlaying,
         diagnostics.isLooping,diagnostics.samplePosition,diagnostics.loopStart,diagnostics.loopEnd,
         diagnostics.ppqPosition,diagnostics.sampleRate,diagnostics.bpm,diagnostics.numerator,diagnostics.denominator};
-    if(!loopPath && !offline && workflow.phase==workflow::Phase::recording && observedCapturePass!=workflow.pass)
+    const bool songRecording=!loopPath && !offline && workflow.phase==workflow::Phase::recording
+        && workflow.pass==observedPass;
+    if(songRecording && observedCapturePass!=workflow.pass)
     {capturePassTime=transport.song;observedCapturePass=workflow.pass;capturePassDiagnosticBaseline=captureTiming;passQueuedBlocks=passDroppedBlocks=0;}
     const auto rejectCapture=[&](CaptureFailureReason reason)
     {
@@ -648,10 +706,9 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         event.start=diagnostics.samplePosition;event.frames=buffer.getNumSamples();event.queued=passQueuedBlocks;event.dropped=passDroppedBlocks;
         event.timing=captureTiming;event.baseline=capturePassDiagnosticBaseline;captureWorker.failPass(event);
     };
-    if(!loopPath && !offline && workflow.phase==workflow::Phase::recording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
+    if(songRecording && !diagnostics.positionAvailable && buffer.getNumSamples()>0)
         rejectCapture(CaptureFailureReason::timingUnavailable);
-    if (!loopPath && !offline && workflow.mode==workflow::Mode::capture && workflow.phase==workflow::Phase::recording
-        && diagnostics.isPlaying)
+    if (songRecording && diagnostics.isPlaying)
     {
         const bool compatiblePass=transportMappingMatches(capturePassTime,transport.song);
         const auto channelCount = buffer.getNumChannels();
@@ -916,7 +973,7 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
     swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();
     if(previous!=mode)
     {
-        if(previous==workflow::Mode::live && captureWorker.acceptedLoop())swells->loopTransport().requestStop();
+        if(previous==workflow::Mode::live && captureWorker.acceptedLoop())swells->loopTransport().leavePerform();
         persistentStateChanged();
     }
     return true;

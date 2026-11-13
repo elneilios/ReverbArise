@@ -56,6 +56,7 @@ static void manualCreation(const char* extension,bool creationOnly)
         fixture.tick(origin,false);
         // Include the saved two-second dry audition post-roll as well as the
         // wet extraction/support interval; missing dry is a separate gate.
+        REQUIRE(fixture.arm());
         for(int n=0;n<48;++n){fixture.tick(origin+n*4096,true);if(n%8==7)REQUIRE(processor.flushCaptureForTesting());}
         fixture.tick(origin+48*4096,false);REQUIRE(processor.flushCaptureForTesting());
     }

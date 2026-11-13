@@ -30,7 +30,9 @@ LearnGenerationView SwellEngine::learnViewLocked()const
     view.generating=learnGenerating || learnRequest.has_value();view.notice=learnNotice;view.failed=learnFailed;
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!workflowState || flow.mode!=workflow::Mode::capture)view.reason="Generate Swells is available in Learn.";
-    else if(flow.locked() || (transportActive.load() && (!learnCandidates || !learnCandidates->identity.loop)))view.reason="Finish recording before generating swells.";
+    else if(flow.phase==workflow::Phase::armed)view.reason="Cancel the arm or finish the take before generating swells.";
+    else if(flow.locked())view.reason="Finish recording before generating swells.";
+    else if(transportActive.load() && (!learnCandidates || !learnCandidates->identity.loop))view.reason="Stop the DAW before generating Song swells.";
     else if(view.generating)view.reason="Generating swells...";
     else if(!model.automaticProcessing || !model.autoMarkersEnabled)view.reason="Enable Automatic Swells to generate.";
     else if(!learnUsable)view.reason=learnReason.isNotEmpty()?learnReason:"Capture usable audio before generating swells.";
@@ -39,7 +41,7 @@ LearnGenerationView SwellEngine::learnViewLocked()const
         view.reason=learnReason.isNotEmpty()?learnReason:"Analysing captured audio... markers updating.";
     else if(defaultPending)view.reason="Finish preparing the Default IR before generating swells.";
     else if(!model.defaultIR.present())view.reason="Choose a valid Default IR before generating swells.";
-    else {view.canGenerate=true;view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers found. Generate Swells to apply.";}
+    else {view.canGenerate=true;view.reason=juce::String(static_cast<int>(learnCandidates->positions.size()))+" automatic markers found.";}
     return view;
 }
 bool SwellEngine::setAutoGenerateOnStop(bool enabled,uint64_t expectedSession,uint64_t expectedPass)
@@ -63,7 +65,10 @@ bool SwellEngine::requestLearnLocked(const PreviewContext& context,uint64_t sess
     }
     actionError.clear();LearnRequest request;request.candidates=learnCandidates;request.expected=model;request.source=context.capture.manifest;
     request.flow=flow;request.revision=modelRevision;request.cancellation=learnGenerationCancellation.load();request.automatic=automatic;
-    learnRequest=std::move(request);++learnRenderCancellation;learnNotice.clear();learnFailed=false;notify();return true;
+    learnRequest=std::move(request);
+    if(!automatic)++learnRebuildCancellation;
+    ++learnRenderCancellation;
+    learnNotice.clear();learnFailed=false;notify();return true;
 }
 bool SwellEngine::generateLearn(uint64_t expectedSession,uint64_t expectedPass,uint64_t serial)
 {
@@ -72,7 +77,10 @@ bool SwellEngine::generateLearn(uint64_t expectedSession,uint64_t expectedPass,u
 }
 void SwellEngine::captureSettled(uint64_t pass,uint64_t capture,bool useful)
 {
-    const auto context=contextProvider();collectCompletedPass(context,true);const juce::ScopedLock guard(lock);
+    const auto context=contextProvider();
+    if(context.captureGeneration!=capture)return;
+    collectCompletedPass(context,pass);
+    const juce::ScopedLock guard(lock);
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!learnCandidates || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {learnUpdating=true;learnAttempt.reset();}
@@ -218,7 +226,8 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
             if(!valid)plan.message="Could not generate swells. Existing swells were kept. "+error;
             else plan=prepareAutomaticGeneration(request.expected,request.candidates->positions,request.source,request.candidates->identity.timing,
                     request.candidates->completedPasses,[&](int64_t first,int64_t last,juce::String& identity,juce::String& failure)
-                        {return sourceFingerprint(source,request.source,first,last,identity,failure,cancel);},cancel);
+                        {return sourceFingerprint(source,request.source,first,last,identity,failure,cancel);},cancel,
+                    request.automatic ? GenerationPolicy::reconcile : GenerationPolicy::rebuildUnfrozen);
         }
     }
     catch(const std::exception& failure){plan.outcome=GenerationOutcome::failed;plan.message="Could not generate swells. Existing swells were kept. "+juce::String(failure.what());}
@@ -238,8 +247,9 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
         if(const auto old=find(plan.replacement,id))retainIRLocked(*old,latest,model.defaultIRName);
         forceRefresh.insert(id);invalidateLiveLocked(id);
     }
-    for(const auto& id:plan.retired){runtime.erase(id);retainedIR.erase(id);forceRefresh.erase(id);invalidateLiveLocked(id);}
-    for(const auto& w:model.swells)if(w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
+    for(const auto& id:plan.retired)
+    {cancelIRReplacementLocked(id);runtime.erase(id);retainedIR.erase(id);forceRefresh.erase(id);protectedGenerationCalibration.erase(id);invalidateLiveLocked(id);}
+    for(const auto& w:model.swells)if(w.frozen || w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
     dirty.clear();passDirty.clear();passRenderRequests.clear();analyzedContent.clear();automaticBoundsDirty=false;performWindowsRequested=false;
     ++successfulGeneration;if(!performPositionEstablished)initialPerformOffer=successfulGeneration;
     learnNotice.clear();learnFailed=false;message=plan.message;persistentChangedLocked();notify();

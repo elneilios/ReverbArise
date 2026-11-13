@@ -6,7 +6,7 @@ Preserve editable swell sessions and their managed IR/render dependencies across
 ## Requirements
 
 ### Requirement: Saved projects retain swell definitions and editing preferences
-Project state SHALL retain stable swell definitions/assets, source/arrival, shapes/gain/placement, activity/freeze, names/selection, timing, workflow and monitoring/automation preferences. Selected future defaults and accepted source/generation-context references SHALL persist without PCM. Restore SHALL disarm Recapture, discard candidate snapshots, pending Stop/generation requests and provisional operation/display authority and stop voices; only subsequent valid Play can start a new pass.
+Project state SHALL retain stable swell definitions/assets, source/arrival, shapes/gain/placement, activity/freeze, names/selection, timing, workflow and monitoring/automation preferences. Selected future defaults and accepted source/generation-context references SHALL persist without PCM. Restore SHALL clear Arm and Recapture, discard candidate snapshots, pending Stop/generation requests and provisional operation/display authority, and stop voices. Starting a new capture requires a fresh Arm.
 
 #### Scenario: Reopen an edited session
 - **WHEN** an edited multi-swell project with -24 dB audition level is saved and reopened on the same PC/profile
@@ -207,11 +207,12 @@ Auto-generate on Stop SHALL persist independently per project and default OFF fo
 - **THEN** the complete restore is rejected without replacing accepted source, swells or preferences
 
 ### Requirement: Generation eligibility trusts durable provenance conservatively
-Replacement SHALL use persisted provenance, never names, positions or UI order. ManualCreated, manualEdited and all frozen swells SHALL remain protected. Supported older metadata without trustworthy origin SHALL remain conservatively manual/unknown and protected. Malformed or unsupported provenance SHALL reject restore rather than fabricate automatic eligibility. Existing origin values and stable IDs SHALL retain meaning.
+Automatic reconciliation SHALL use persisted provenance, never names, positions or UI order. ManualCreated, manualEdited and all frozen swells SHALL remain protected. Supported older metadata without trustworthy origin SHALL remain conservatively manual/unknown and protected during automatic reconciliation. Explicit Learn rebuilds SHALL use freeze as the sole retention criterion. Malformed or unsupported provenance SHALL reject restore rather than fabricate automatic eligibility. Existing origin values and stable IDs SHALL retain meaning.
 
 #### Scenario: Legacy or edited automatic work
 - **WHEN** legacy origin is absent or an automatic swell was manually edited, renamed, disabled or frozen before save
-- **THEN** absent origin remains protected, manual edits remain protected, freeze always protects, and a valid saved automatic origin alone remains eligible subject to scope; name and enabled state never infer origin
+- **THEN** during automatic reconciliation absent origin remains protected, manual edits remain protected, freeze always protects, and a valid saved automatic origin alone remains eligible subject to scope
+- **AND** name and enabled state never infer origin
 
 #### Scenario: Save during analysis or generation
 - **WHEN** state is saved while candidate analysis or replacement preparation is held
@@ -248,3 +249,10 @@ Supported earlier projects SHALL migrate to versioned Sound metadata without rep
 #### Scenario: Malformed or unsupported Sound metadata
 - **WHEN** new-format state has unsupported versions, duplicate or invalid keys, incorrect value types, invalid gain or inconsistent asset identity
 - **THEN** restore fails transactionally without modifying valid accepted state or deleting assets
+
+### Requirement: A Learn rebuild retains frozen definitions verbatim
+A successful explicit Learn rebuild SHALL preserve frozen identities, accepted definitions, sound and render references, activity and any still-valid selection. It SHALL clear selection references to retired unfrozen identities. Saved source and existing project format SHALL remain compatible.
+
+#### Scenario: Save and reopen after rebuilding
+- **WHEN** a project containing a frozen swell and newly generated unfrozen swells is saved and reopened
+- **THEN** it restores the accepted rebuilt arrangement and its compatible source, preserving the frozen definition and resolving its existing assets

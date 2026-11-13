@@ -199,13 +199,16 @@ settings/default/source/workflow changes or OFF. ON, restore and mode entry neve
 generate. Admission freezes the currently displayed final candidates, current
 accepted Default IR, source, settings, model and workflow identities. The worker
 verifies IR content and every mapped source run, then prepares one replacement
-without mutating committed definitions. Protected collisions take priority using
-the existing detector tolerance; matched automatic IDs/activity remain stable.
-Manual/edited/frozen, unknown-origin and outside-scope definitions remain intact.
-An empty/protected-only/unchanged/failed/cancelled plan never retires old work.
+without mutating committed definitions. Automatic Stop gives protected collisions
+and deletion suppression priority, keeps matched automatic IDs and activity, and
+preserves manual, edited, frozen, unknown-origin and outside-scope definitions.
+An empty, protected-only, failed or cancelled plan leaves the prior arrangement
+in place. An unchanged automatic Stop plan also leaves it in place.
 
 A nonempty viable replacement with new/regenerated definitions or eligible retirements can publish the full replacement and
-guarded Perform transition. A low/high/low sensitivity loop can therefore remove extra unedited automatic swells while retaining unchanged survivors and their renders. Wet jobs queue afterward only for changed definitions. Last-good immutable render
+guarded Perform transition. Explicit regeneration at lower sensitivity creates
+a new set from the lower-density markers while retaining frozen swells and their
+renders. Wet jobs queue afterward only for changed definitions. Last-good immutable render
 references remain; accepted source-dependent work is maintained by the shared engine independently of preview/marker policy. Protected manual calibration
 also retains its saved reference through automatic collection replacement;
 explicit later source/IR/arrangement edits retain their normal editing policy.
@@ -213,8 +216,8 @@ Restore rebuilds preview and permitted committed-render recovery, never pending
 source-context generation. Retired job identities are pruned within the existing
 4096-swell bound, without deleting old immutable files or saved project assets.
 
-New Generate admission supersedes earlier unfrozen automatic wet work through a
-cooperative worker cancellation epoch. The serial worker services Generate before
+Explicit generation admission supersedes earlier unfrozen wet work. Automatic
+Stop can supersede unfrozen automatic wet work. The serial worker services Generate before
 remaining renders. Interrupted accepted jobs are kept eligible for recovery if
 the replacement does not commit. Completed protected/last-good render metadata is
 rebased into the request before planning when musical revision, session and
@@ -222,7 +225,9 @@ selection are unchanged. Render output still notifies persistence, but does not
 invalidate musical authority; real edits and workflow/dependency changes retain
 their original publication fences.
 
-After complete accepted Recapture, changed existing unfrozen swells rebuild through ordinary material reconciliation, including protected manually edited definitions and detection/marker Generate on Stop off. Saved marker parameters and assignments persist. Provisional/cancelled/rejected source cannot become render authority. Frozen work is held; exact compatible saved wet audio is reused. Explicit Perform Regenerate is still available to force a revision, not required for successful normal recovery. See [shared engine ownership](swell-engine-architecture.md).
+After complete accepted Recapture, changed existing unfrozen swells rebuild through ordinary material reconciliation, including protected manually edited definitions and detection/marker Generate on Stop off. Saved marker parameters and assignments persist. Provisional/cancelled/rejected source cannot become render authority. Frozen work is held and exact compatible saved wet audio is reused. Explicit Perform Regenerate can force a render revision. See [shared engine ownership](swell-engine-architecture.md).
+
+Learn's explicit Generate Swells and Regenerate Swells rebuild the arrangement from the accepted source, current markers and current default sound. A successful rebuild keeps frozen definitions and replaces every unfrozen definition with the newly generated set. It ignores earlier deletion suppression for that request and leaves the saved suppression record available for automatic reconciliation. Generate on Stop still protects manual, edited and frozen work. A failed, cancelled or empty explicit rebuild keeps the accepted arrangement and source.
 
 Learn accepts completed-pass boundaries through successful source settlement,
 including on a fresh instance whose previous empty manifest is still schema 1.

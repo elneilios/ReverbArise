@@ -26,6 +26,7 @@ inline void performanceExportCases()
     p->prepareToPlay(1000,4096);TestPlayHead head;p->setPlayHead(&head);head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/250.0);};
     juce::AudioBuffer<float> buffer(2,1000);juce::MidiBuffer midi;
+    REQUIRE(setFixtureCaptureArmed(*p));
     for(int at=0;at<24000;at+=1000){position(at,true);for(int c=0;c<2;++c)std::fill_n(buffer.getWritePointer(c),1000,.125f);p->processBlock(buffer,midi);REQUIRE(p->flushCaptureForTesting());}
     finishCaptureFixture(*p,head.position);position(0,false);buffer.clear();p->processBlock(buffer,midi);
     REQUIRE(engine.addTarget(500));const auto first=engine.savedSession().primary;

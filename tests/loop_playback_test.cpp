@@ -768,13 +768,14 @@ void flStudioScheduleCases()
     using PlaybackState=LoopCueScheduler::State;
     const auto block=[&](LoopPlayback& playback,int64_t hostSample,int frames,LoopPlayback::HostSchedule schedule,
                           const auto& oracle,bool hostPlaying=true,bool validTiming=true,
-                          bool discontinuity=false,uint16_t firstRoles=0){
+                          bool discontinuity=false,uint16_t firstRoles=0,
+                          LoopPlayback::Access access=LoopPlayback::Access::perform){
         std::array<float,256> left{},right{};
         const SongTime time{validTiming,hostSample,static_cast<double>(hostSample)/24000.0,48000,120,4,4};
         MidiObservations events;
         if(firstRoles)events.samples[events.size++]={0,firstRoles};
         {AudioAllocationGuard guard;
-            playback.process(left.data(),right.data(),frames,events,48000,1,1,LoopPlayback::Access::perform,
+            playback.process(left.data(),right.data(),frames,events,48000,1,1,access,
                              discontinuity,{},time,schedule,hostPlaying);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
         for(int i=0;i<frames;++i)
@@ -850,6 +851,29 @@ void flStudioScheduleCases()
     block(*atBoundary,32,256,repeat,timingLoss,true,false);
     REQUIRE(atBoundary->status().route==Route::manual
         && atBoundary->status().playback==LoopCueScheduler::State::standby);
+
+    const auto leaveFade=[&](int64_t sample){
+        return cyclic(31)*static_cast<float>(std::max<int64_t>(0,31+fadeFrames-sample))/fadeFrames;
+    };
+    for (const bool explicitStop : {false,true})
+    {
+        auto returning=create();
+        block(*returning,0,32,repeat,cyclic);
+        if (explicitStop) returning->requestStop();
+        else returning->leavePerform();
+        block(*returning,32,256,repeat,leaveFade,true,true,false,0,LoopPlayback::Access::observe);
+        REQUIRE(returning->status().playback==PlaybackState::standby);
+        if (explicitStop)
+        {
+            block(*returning,0,32,repeat,silent);
+            REQUIRE(returning->status().playback==PlaybackState::standby);
+        }
+        else
+        {
+            block(*returning,0,32,repeat,cyclic);
+            REQUIRE(returning->status().playback==PlaybackState::repeating);
+        }
+    }
 }
 }
 

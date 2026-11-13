@@ -3,7 +3,7 @@
 #include "FocusVisibility.h"
 namespace m3::ui::controls
 {
-enum class CommandIcon { none, play, stop, save, returnBack, add };
+enum class CommandIcon { none, play, stop, save, returnBack, add, generateSwells, record };
 // Shared command input, including accessibility paths that JUCE otherwise sends
 // straight to triggerClick/toggle without capturing the invocation owner.
 class CommandButton:public juce::Button
@@ -92,11 +92,13 @@ private:
 };
 class ActionButton:public CommandButton
 {
+    static bool isIconOnly(CommandIcon role) noexcept
+    {return role==CommandIcon::play || role==CommandIcon::stop || role==CommandIcon::add || role==CommandIcon::record;}
 public:
     ActionButton(const juce::String& label,CommandIcon role=CommandIcon::none,bool primary=false)
         :ActionButton(label,role,primary?CommandVariant::primary:CommandVariant::neutral){}
     ActionButton(const juce::String& label,CommandIcon role,CommandVariant presentation)
-        :CommandButton(label,role==CommandIcon::play || role==CommandIcon::stop || role==CommandIcon::add),icon(role),variant(presentation){}
+        :CommandButton(label,isIconOnly(role)),icon(role),variant(presentation){}
     void setVariant(CommandVariant next){if(variant!=next){variant=next;repaint();}}
     CommandVariant getVariant() const noexcept {return variant;}
     void setPlaybackIcon(bool playing)
@@ -121,7 +123,20 @@ public:
         const auto ink=commandInk(variant,state);
         g.setColour(ink.content);
         auto area=getLocalBounds().toFloat().reduced(12,4);
-        const bool iconOnly=icon==CommandIcon::play || icon==CommandIcon::stop || icon==CommandIcon::add;
+        const bool iconOnly=isIconOnly(icon);
+        if(icon==CommandIcon::generateSwells)
+        {
+            const auto font=componentTextFont(*this,TextRole::sectionHeading);
+            constexpr float iconWidth=18;
+            const auto textWidth=juce::GlyphArrangement::getStringWidth(font,getButtonText());
+            area=area.withSizeKeepingCentre(std::min(area.getWidth(),iconWidth+spacing::tight+textWidth),area.getHeight());
+            g.setColour(ink.glyph);
+            drawIcon(g,icon,area.removeFromLeft(iconWidth).getCentre());
+            area.removeFromLeft(spacing::tight);
+            g.setColour(ink.content);g.setFont(font);
+            g.drawText(getButtonText(),area,juce::Justification::centredLeft);
+            return;
+        }
         if(icon!=CommandIcon::none){g.setColour(ink.glyph);const auto centre=iconOnly?getLocalBounds().toFloat().getCentre():juce::Point<float>(area.getX()+10,area.getCentreY());drawIcon(g,icon,centre);if(!iconOnly)area.removeFromLeft(30);g.setColour(ink.content);}
         if(!iconOnly){g.setFont(componentTextFont(*this,TextRole::controlLabel));g.drawText(getButtonText(),area,juce::Justification::centred);}
     }
@@ -130,11 +145,18 @@ public:
         juce::Path p;
         if(icon==CommandIcon::play){p.addTriangle(c.x-5,c.y-8,c.x+8,c.y,c.x-5,c.y+8);g.fillPath(p);}
         else if(icon==CommandIcon::stop)g.fillRect(juce::Rectangle<float>(13,13).withCentre(c));
+        else if(icon==CommandIcon::record)g.fillEllipse(juce::Rectangle<float>(12,12).withCentre(c));
         else if(icon==CommandIcon::add){g.drawLine(c.x-5,c.y,c.x+5,c.y,rule);g.drawLine(c.x,c.y-5,c.x,c.y+5,rule);}
         else if(icon==CommandIcon::save){p.startNewSubPath(c.x,c.y-9);p.lineTo(c.x,c.y+3);p.startNewSubPath(c.x-5,c.y-2);p.lineTo(c.x,c.y+3);p.lineTo(c.x+5,c.y-2);
             p.startNewSubPath(c.x-9,c.y+2);p.lineTo(c.x-9,c.y+8);p.lineTo(c.x+9,c.y+8);p.lineTo(c.x+9,c.y+2);g.strokePath(p,juce::PathStrokeType(1.5f));}
         else if(icon==CommandIcon::returnBack){p.startNewSubPath(c.x-8,c.y-1);p.lineTo(c.x+3,c.y-1);p.cubicTo(c.x+12,c.y-1,c.x+12,c.y+8,c.x+2,c.y+8);
             p.startNewSubPath(c.x-2,c.y-7);p.lineTo(c.x-8,c.y-1);p.lineTo(c.x-2,c.y+5);g.strokePath(p,juce::PathStrokeType(1.5f));}
+        else if(icon==CommandIcon::generateSwells)
+        {
+            p.startNewSubPath(c.x-8,c.y+5);
+            p.quadraticTo(c.x,c.y+5,c.x+4,c.y-6);p.lineTo(c.x+4,c.y+5);p.lineTo(c.x+8,c.y+5);
+            g.strokePath(p,juce::PathStrokeType(1.5f));
+        }
     }
 protected:
     virtual void paintActionSurface(juce::Graphics& g,CommandVariant presentation,CommandState state)

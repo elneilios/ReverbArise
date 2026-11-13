@@ -915,8 +915,15 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto clock=liveClock.observe(time,frames,session);
     if(previousTransportSession!=session){previousTransportPlaying=false;previousTransportSession=session;}
     const auto publishPass=[&](int64_t start,int64_t end){if(start>=end)return;
-        if(passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
-        passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=start;passEnd=end;passSession=session;passSequence.fetch_add(1,std::memory_order_release);};
+        const auto stopped=stoppedCapturePass.load();
+        if(workflowState && stopped)
+        {
+            const auto flow=workflowState->snapshot();
+            if(flow.pass==stopped
+                && (flow.phase==workflow::Phase::draining || flow.phase==workflow::Phase::validating))return;
+        }
+        if(!stopped && passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
+        passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=start;passEnd=end;passSession=session;stoppedCapturePass=0;passSequence.fetch_add(1,std::memory_order_release);};
     int64_t blockEnd;
     if(time.song.valid && checkedAdd(time.song.sample,frames,blockEnd)){
         if(time.looping && time.loopEnd>time.loopStart)publishPass(time.loopStart,time.loopEnd);
@@ -933,11 +940,11 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     live.process(left,right,frames,time,modeAllows,&clock);
     processAudio(left,right,frames,time.song);
 }
-void SwellEngine::captureStopped() noexcept
+void SwellEngine::captureStopped(uint64_t pass) noexcept
 {
     if(!previousTransportPlaying || currentPassStart>=previousTransportEnd)return;
     passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=currentPassStart;passEnd=previousTransportEnd;
-    passSession=sessionGeneration.load(std::memory_order_acquire);passSequence.fetch_add(1,std::memory_order_release);
+    passSession=previousTransportSession;stoppedCapturePass=pass;passSequence.fetch_add(1,std::memory_order_release);
 }
 void SwellEngine::recaptureCompleted(int64_t a,int64_t b)
 {
@@ -1328,25 +1335,34 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             requested.wetTimingIntent=intent;
         }
     }
-    const auto renderEpoch=learnRenderCancellation.load();
+    const auto& renderCancellation=requested.provenance==Provenance::automatic
+        ? learnRenderCancellation : learnRebuildCancellation;
+    uint64_t renderEpoch;
     bool pendingAtStart;
-    {const juce::ScopedLock guard(lock);pendingAtStart=learnRequest.has_value();}
-    const auto superseded=[&]{return requested.provenance==Provenance::automatic && !requested.frozen
-        && (pendingAtStart || renderEpoch!=learnRenderCancellation.load());};
+    {
+        const juce::ScopedLock guard(lock);
+        renderEpoch=renderCancellation.load();
+        pendingAtStart=learnRequest && (!learnRequest->automatic || requested.provenance==Provenance::automatic);
+    }
+    // A Sound replacement has already consumed its import job. Let it stage
+    // so an unsuccessful Learn rebuild can leave the replacement usable.
+    const auto superseded=[&]{return !replacingIR && !requested.frozen
+        && (pendingAtStart || renderEpoch!=renderCancellation.load());};
     struct Finish
     {
-        SwellEngine& engine;const Swell& requested;uint64_t session,epoch;bool pending;
+        SwellEngine& engine;const Swell& requested;uint64_t session;
+        const decltype(superseded)& supersededRequest;
         ~Finish()
         {
             engine.renderPublicationWaiting=false;
-            if(requested.provenance!=Provenance::automatic || requested.frozen || (!pending && epoch==engine.learnRenderCancellation.load()))return;
+            if(!supersededRequest())return;
             const juce::ScopedLock guard(engine.lock);auto* current=find(engine.model,requested.id);
             if(session!=engine.sessionGeneration.load() || !current || current->inputGeneration!=requested.inputGeneration
-                || current->provenance!=Provenance::automatic || current->frozen)return;
+                || current->frozen)return;
             if(current->phase==Phase::rendering || current->phase==Phase::checking)
             {current->phase=Phase::checking;current->progress=0;current->status="Queued after Generate Swells";}
         }
-    }finish{*this,requested,session,renderEpoch,pendingAtStart};
+    }finish{*this,requested,session,superseded};
     if(superseded())return;
     // Cooperative page servicing keeps accepted audio and its neighbours resident
     // during long resampling/FFT work. Reserve the complete in-flight workspace

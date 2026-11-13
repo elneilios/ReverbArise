@@ -4,6 +4,7 @@
 namespace m3
 {
 enum class GenerationOutcome { generated, empty, protectedOnly, noChange, failed, cancelled };
+enum class GenerationPolicy { reconcile, rebuildUnfrozen };
 struct AutomaticGenerationPlan
 {
     GenerationOutcome outcome=GenerationOutcome::failed;
@@ -16,5 +17,5 @@ struct AutomaticGenerationPlan
 using GenerationFingerprint=std::function<bool(int64_t,int64_t,juce::String&,juce::String&)>;
 AutomaticGenerationPlan prepareAutomaticGeneration(const Session&,const std::vector<Candidate>&,
     const CaptureManifest&,const SongTime&,const CompletedPasses&,const GenerationFingerprint&,
-    const std::function<bool()>& cancelled={});
+    const std::function<bool()>& cancelled={}, GenerationPolicy policy=GenerationPolicy::reconcile);
 }

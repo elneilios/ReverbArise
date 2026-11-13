@@ -10,7 +10,7 @@ inline void multipleExportCases()
         auto& e=p->swellEngine();e.setAutomaticProcessing(false);e.setAutoMarkers(false);
         REQUIRE(e.setGainPolicy(m3::GainPolicy::legacy)); // Musical adoption is exercised separately below.
         heads[i].position.setBpm(120);heads[i].position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
-        juce::AudioBuffer<float> b(2,1000);for(int at=0;at<4001;at+=1000){const auto n=std::min(1000,4001-at);b.setSize(2,n);position(i,at,true);
+        REQUIRE(setFixtureCaptureArmed(*p));juce::AudioBuffer<float> b(2,1000);for(int at=0;at<4001;at+=1000){const auto n=std::min(1000,4001-at);b.setSize(2,n);position(i,at,true);
             for(int c=0;c<2;++c)std::fill_n(b.getWritePointer(c),n,i?.25f:.125f);p->processBlock(b,midi);REQUIRE(p->flushCaptureForTesting());}
         finishCaptureFixture(*p,heads[i].position);position(i,0,false);b.clear();p->processBlock(b,midi);
         REQUIRE(e.addTarget(500));const auto first=e.savedSession().primary;REQUIRE(e.addTarget(3900));finalIds[i]=e.savedSession().primary;

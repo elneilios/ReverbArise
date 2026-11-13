@@ -63,10 +63,10 @@ static void recoveryPreview(bool review,bool responsive=true)
     const auto old=processor->getCaptureSnapshot();const auto before=processor->swellEngine().savedSession();
     // Use the normal Learn Recapture control; partial source cannot publish.
     if(!processor->setRecaptureExisting(true))throw std::runtime_error(processor->swellEngine().snapshot().message.toStdString());juce::AudioBuffer<float> partial(2,1);partial.clear();partial.setSample(0,0,.5f);
-    host.position.setIsPlaying(true);processor->processBlock(partial,midi);host.position.setIsPlaying(false);processor->processBlock(partial,midi);REQUIRE(processor->flushCaptureForTesting());
+    REQUIRE(setFixtureCaptureArmed(*processor));host.position.setIsPlaying(true);processor->processBlock(partial,midi);host.position.setIsPlaying(false);processor->processBlock(partial,midi);REQUIRE(processor->flushCaptureForTesting());
     REQUIRE(processor->getCaptureSnapshot().reference==old.reference && processor->getCaptureSnapshot().unavailable);
     processor->cancelCapturePass();if(!processor->setRecaptureExisting(true))throw std::runtime_error(processor->swellEngine().snapshot().message.toStdString());
-    audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);processor->processBlock(audio,midi);host.position.setIsPlaying(false);processor->processBlock(audio,midi);REQUIRE(processor->flushCaptureForTesting());
+    REQUIRE(setFixtureCaptureArmed(*processor));audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);processor->processBlock(audio,midi);host.position.setIsPlaying(false);processor->processBlock(audio,midi);REQUIRE(processor->flushCaptureForTesting());
     // No Generate action: complete recovery rebuilds saved swells automatically.
     stage="saved swell generation";pump([&]{return processor->swellEngine().savedSession().swells[0].phase==m3::Phase::ready;});
     const auto after=processor->swellEngine().savedSession();REQUIRE(after.swells.size()==before.swells.size() && after.swells[0].id==before.swells[0].id && after.swells[0].shape==before.swells[0].shape && after.swells[0].name==before.swells[0].name);

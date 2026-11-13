@@ -197,6 +197,7 @@ static void sourceRangeFeedbackCases()
     head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     head.position.setIsPlaying(true);
     processor->setMappingEnabled(true);
+    REQUIRE(setFixtureCaptureArmed(*processor));
     juce::AudioBuffer<float> buffer(2,1000);
     juce::MidiBuffer midi;
     for(int block=0;block<4;++block)
@@ -669,6 +670,7 @@ int main(int argc,char* argv[]){return runTest([&]
         UIPlayHead head;head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});captureProcessor.setPlayHead(&head);
         auto capturingOwner=std::make_unique<PreverbAudioProcessorEditor>(captureProcessor);auto& capturing=*capturingOwner;capturing.setVisible(true);
         juce::AudioBuffer<float> input(2,4096);juce::MidiBuffer events;
+        REQUIRE(setFixtureCaptureArmed(captureProcessor));
         for(int b=0;b<24;++b)
         {
             head.position.setIsPlaying(true);head.position.setTimeInSamples(b*4096);head.position.setPpqPosition(b*4096./24000);
@@ -761,6 +763,7 @@ int main(int argc,char* argv[]){return runTest([&]
     UIPlayHead head;head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});head.position.setIsPlaying(true);
     processor->prepareToPlay(48000,4096);processor->setPlayHead(&head);juce::MidiBuffer midi;juce::AudioBuffer<float> buffer(2,4096);
     processor->setMappingEnabled(true);
+    REQUIRE(setFixtureCaptureArmed(*processor));
     for(int block=0;block<24;++block)
     {
         const auto start=block*4096;head.position.setTimeInSamples(start);head.position.setPpqPosition(start/24000.0);buffer.clear();
@@ -1309,6 +1312,7 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::AudioBuffer<float> probeAudio(2,32);juce::MidiBuffer probeMidi;
         const auto hostBlock=[&](int sample,bool playing){head.position.setTimeInSamples(sample);head.position.setPpqPosition(sample/24000.0);head.position.setIsPlaying(playing);
             probeAudio.clear();processor->processBlock(probeAudio,probeMidi);};
+        REQUIRE(setFixtureCaptureArmed(*processor));
         hostBlock(0,true);editor.refresh();for(int id:{1,2,3})REQUIRE(!mode->segment(id)->isEnabled());snapshotEditor(editor,"workflow-recording");
         REQUIRE(!automatic->isEnabled() && !sensitivity->isEnabled() && !defaultIR->isEnabled());
         largeWorkflowSnapshot("workflow-recording");
@@ -1319,6 +1323,7 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(processor->getCaptureProgress().ranges.empty());editor.refresh();
         REQUIRE(learning->timelineStatusText().startsWith("Capture cancelled"));snapshotEditor(editor,"learn-cancelled");largeWorkflowSnapshot("learn-cancelled");
         processor->holdCaptureWorkerForTesting(true);juce::Thread::sleep(5);
+        REQUIRE(setFixtureCaptureArmed(*processor));
         for(int sample=0;sample<40*32;sample+=32)hostBlock(sample,true);hostBlock(40*32,false);
         processor->holdCaptureWorkerForTesting(false);REQUIRE(processor->flushCaptureForTesting());
         REQUIRE(processor->getWorkflowSnapshot().phase==workflow::Phase::failed);editor.refresh();snapshotEditor(editor,"workflow-failed");

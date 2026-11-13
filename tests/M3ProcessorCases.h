@@ -16,7 +16,7 @@ inline void m3ProcessorCases()
     processor->swellEngine().setLivePlayback(false,m3::LiveRouting::dryWet,0);
     processor->swellEngine().setAutomaticProcessing(false);
     processor->prepareToPlay(1000,1000);TestPlayHead head;
-    head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});head.position.setIsPlaying(true);
+    head.position.setBpm(240);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});head.position.setIsPlaying(true);REQUIRE(setFixtureCaptureArmed(*processor));
     processor->setPlayHead(&head);juce::AudioBuffer<float> buffer(2,1000);juce::MidiBuffer midi;
     const auto position=[&](int64_t sample){head.position.setTimeInSamples(sample);head.position.setPpqPosition(sample/250.0);};
     processor->setMappingEnabled(true);
