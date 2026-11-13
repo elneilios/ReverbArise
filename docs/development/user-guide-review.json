@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Documented the temporary shaping control guard during response preparation in Learn and Perform.",
+  "summary": "Reviewed the synced Sound Presets and Swell Workspace specs against the existing Ping Pong and shared shaping guide. The archive introduces no further user-facing behavior.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1235,8 +1235,8 @@
     },
     {
       "path": "openspec/specs/sound-presets/spec.md",
-      "bytes": 4453,
-      "sha256": "330857c1f4d5821023ecf80e1cf1aaec828ee83bba0ec3d2e28f8ac75383dc9d"
+      "bytes": 12455,
+      "sha256": "3c3ad1855e546d9c2d2fb8f334d0629b23c8c25650d91cd01a4ca5e1d6bfa9ca"
     },
     {
       "path": "openspec/specs/swell-editing/spec.md",
@@ -1260,8 +1260,8 @@
     },
     {
       "path": "openspec/specs/swell-workspace/spec.md",
-      "bytes": 130706,
-      "sha256": "a98fff3a6f61a2d816010168c42c9e453742763dde3eb8405ae6378dd4d2889d"
+      "bytes": 134545,
+      "sha256": "36f78382ade6185a37dd8f2f0579e6f825582828904f7697f2a14866ce0de3d9"
     },
     {
       "path": "openspec/specs/transport-swell-playback/spec.md",

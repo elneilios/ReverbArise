@@ -1419,6 +1419,7 @@ The shared picker SHALL provide Previous, Preset and Next in that order. Command
 #### Scenario: Choose Custom IR without a file
 - **WHEN** Custom IR is chosen without a usable file for the current scope
 - **THEN** the contextual row permits a retained choice or native import while the previously accepted preset and response remain in effect
+- **AND** the editor shows the shared knobs and hides controls specific to the prior preset
 - **AND** cancel preserves the prior Sound and failure remains actionable at that row
 
 ### Requirement: Sound controls use the supported definition and inspector space
@@ -1428,7 +1429,7 @@ Sound SHALL use the approved compact two-column knob geometry and exact entry fo
 #### Scenario: Inspect a supported discrete parameter
 - **WHEN** a definition supplies Echo Rate
 - **THEN** supported dial gestures and keyboard edits select only declared subdivisions and accessibility reports the musical value
-- **AND** bundled presets and Custom IR expose only Level until another parameter is implemented for that definition
+- **AND** bundled presets and Custom IR expose the shared shaping controls
 
 #### Scenario: Navigate at supported sizes or inspect frozen controls
 - **WHEN** the user reaches overflow at 900×600, expands at 100% or 125%, or hovers a response control disabled by Freeze
@@ -1452,3 +1453,53 @@ Only a request pending longer than two seconds SHALL tint the whole Sound conten
 - **WHEN** preparation succeeds, fails, is cancelled or superseded, or the owning context changes
 - **THEN** short requests never flash the overlay, stale completions cannot change current feedback, and any covering overlay clears when its request loses ownership
 - **AND** focus is restored to a valid control in the same context when appropriate without stealing focus elsewhere
+
+### Requirement: Ping Pong exposes the same musical controls in both Sound contexts
+
+The shared Sound editor SHALL show Tempo Sync, Echo Rate, Stereo Spread, Build Intensity, Gate Amount, Damping and Level for Stereo Ping Pong Crescendo. The controls SHALL use the existing labeled switch and compact knob grid. Echo Rate SHALL use a stepped dial with a read-only musical value and the full subdivision name available to accessibility.
+
+#### Scenario: Reset one Sound dial
+- **WHEN** the user double-clicks an editable Sound dial or chooses its reset action
+- **THEN** only that dial returns to its default, using eighth notes, 85% Stereo Spread, 75% Build Intensity, 0% Gate Amount, 0% Damping, or 0 dB Level as applicable
+- **AND** the reset affects the current Learn defaults or the selected Perform swell according to the active workspace
+
+#### Scenario: Compare Learn and Perform
+- **WHEN** Ping Pong is accepted in Learn and on a selected Perform swell
+- **THEN** the same control family and ordering appear in both contexts at the compact and expanded plugin sizes
+- **AND** Learn edits the future default, Perform edits only the selected swell, and Freeze applies the existing response-edit guard and help
+
+#### Scenario: Inspect an unavailable tempo
+- **WHEN** the displayed Sync-on assignment uses the authored tempo or retains a previous response because compatible timing is unavailable
+- **THEN** the editor reports the timing condition using existing contextual feedback and keeps showing the accepted waveform
+- **AND** the established delayed preparation overlay remains scoped to Sound while an eligible request is pending
+
+#### Scenario: Cancel an unsettled Ping Pong gesture
+- **WHEN** a Ping Pong dial gesture is cancelled before submission
+- **THEN** the editor discards the unsettled value and a subsequent edit cannot submit it
+- **AND** a request already submitted retains its existing preparation and acceptance guards
+
+### Requirement: Learn and Perform share the same shaping controls
+
+Learn Sound and Perform Sound SHALL expose Level, Damping, High Pass and Low Pass through the same shared Sound editor for every preset and Custom IR. Preset-specific controls and contextual IR-file import SHALL remain available as applicable.
+
+#### Scenario: Open Sound in either workspace
+- **WHEN** a user opens Sound for an eligible assignment
+- **THEN** the four shared knobs use the same labels, relative order, value formatting and interactions in both contexts
+- **AND** the compact inspector exposes all four controls through its existing scroll and focus behavior
+
+#### Scenario: Edit or reset a shaping knob
+- **WHEN** a user drags a cutoff, enters an exact value, uses keyboard or accessibility input, or resets a knob
+- **THEN** the cutoff dial traverses frequencies logarithmically and its accepted value displays in Hz or kHz, or as Off
+- **AND** reset returns the selected knob to its neutral default
+- **AND** the editor previews a drag immediately and submits a render-changing edit once the gesture settles
+
+#### Scenario: Edit defaults or one swell
+- **WHEN** a user changes a shaping control
+- **THEN** Learn edits the accepted future defaults, while Perform edits only the selected swell
+- **AND** unavailable or frozen controls use the established disabled interaction and contextual help
+
+#### Scenario: A render-changing edit is pending
+- **WHEN** a shaping edit needs background preparation
+- **THEN** the prior accepted sound stays audible until a verified replacement is available
+- **AND** the existing delayed Sound preparation overlay and actionable failure feedback apply
+- **AND** Damping, High Pass and Low Pass are temporarily unavailable in that Sound context during preparation, with contextual help explaining when they become available
