@@ -15,7 +15,7 @@ inline void m2ProcessorCases()
     processor->prepareToPlay(1000, 250);
     TestPlayHead head;
     head.position.setBpm(240); head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
-    head.position.setIsPlaying(true);
+    REQUIRE(setFixtureCaptureArmed(*processor));head.position.setIsPlaying(true);
     processor->setPlayHead(&head);
     juce::AudioBuffer<float> buffer(2, 250);
     juce::MidiBuffer midi;

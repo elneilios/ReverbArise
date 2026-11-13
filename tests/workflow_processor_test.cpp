@@ -11,6 +11,7 @@
 #include <Core/MonitoringSafety.h>
 #include "ProcessorCaptureFailureCases.h"
 #include "ProcessorReactivationCases.h"
+#include "WorkflowTestSupport.h"
 
 struct WorkflowHost:juce::AudioPlayHead
 {PositionInfo position;juce::Optional<PositionInfo> getPosition()const override{return position;}};
@@ -1454,7 +1455,14 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(listener.changes==0); // Same mode and temporary arm are not saved edits.
     REQUIRE(p->getName()=="ReverbArise" && p->getParameters().isEmpty());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture);
-    REQUIRE(!e.addTarget(0) && !e.audition());process(0,true,.125f);
+    REQUIRE(!e.addTarget(0) && !e.audition());
+    process(-64,true,.25f);
+    const auto idle=p->getWorkflowSnapshot();
+    REQUIRE(idle.phase==workflow::Phase::idle && p->getCaptureProgress().ranges.empty());
+    REQUIRE(p->setCaptureArmed(true,idle.pass,e.assignmentEpoch()));
+    REQUIRE(!p->setCaptureArmed(true,idle.pass,e.assignmentEpoch()));
+    REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::armed);
+    process(0,true,.125f);
     e.setLearningAutomatic(true);p->flushHostStateChangesForTesting();REQUIRE(!e.savedSession().automaticProcessing && listener.changes==0);
     REQUIRE(!p->requestWorkflowMode(workflow::Mode::live));REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getCaptureSnapshot().manifest.ranges.empty());
@@ -1465,6 +1473,18 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(recording.ranges[0].range.startSample==0 && recording.ranges[0].range.frameCount==64 && recording.ranges[0].peaks[0].maximum==.125f);
     REQUIRE(p->getCaptureSnapshot().manifest.ranges.empty()); // Before storage batching; save/readers remain committed-only.
     juce::MemoryBlock midPass;p->getStateInformation(midPass);
+    {
+        auto reopened=std::make_unique<PreverbAudioProcessor>(root.file.getChildFile("restore-disarmed"));
+        reopened->prepareToPlay(1000,64);
+        reopened->setPlayHead(&host);
+        reopened->setStateInformation(midPass.getData(),static_cast<int>(midPass.getSize()));
+        REQUIRE(reopened->flushCaptureForTesting());
+        juce::AudioBuffer<float> neighbourAudio(2,64);
+        neighbourAudio.clear();
+        reopened->processBlock(neighbourAudio,midi);
+        REQUIRE(!reopened->getWorkflowSnapshot().locked() && reopened->getCaptureProgress().ranges.empty());
+        REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::recording);
+    }
     process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getWorkflowReadiness().usefulSource);
     p->flushHostStateChangesForTesting();REQUIRE(listener.changes==1 && !listener.wrongThread);
@@ -1479,11 +1499,26 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(block.getMagnitude(0,64)==0);process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getCaptureSnapshot().reference==accepted.reference); // Live never captures.
     const auto beforeMode=listener.changes;
+    process(64,true,.5f);
     REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));p->flushHostStateChangesForTesting();REQUIRE(listener.changes==beforeMode+1);
+    process(128,true,.5f);
+    REQUIRE(!p->getWorkflowSnapshot().locked() && p->getCaptureProgress().ranges.empty());
     REQUIRE(p->setRecaptureExisting(true) && p->setRecaptureExisting(false));p->flushHostStateChangesForTesting();REQUIRE(listener.changes==beforeMode+1);
+    REQUIRE(setFixtureCaptureArmed(*p));
+    process(0,false,0);
+    REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::armed);
+    REQUIRE(!p->setRecaptureExisting(true));
     process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getCaptureSnapshot().reference==accepted.reference);
-    REQUIRE(p->setRecaptureExisting(true));process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
+    process(64,true,.25f);
+    REQUIRE(!p->getWorkflowSnapshot().locked() && p->getCaptureProgress().ranges.empty());
+    REQUIRE(setFixtureCaptureArmed(*p));
+    process(128,true,.25f);
+    REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::recording);
+    REQUIRE(setFixtureCaptureArmed(*p,false));
+    process(192,false,0);
+    REQUIRE(p->flushCaptureForTesting() && p->getCaptureSnapshot().reference==accepted.reference);
+    REQUIRE(p->setRecaptureExisting(true) && setFixtureCaptureArmed(*p));process(0,true,.5f);process(64,false,0);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::capture && !p->getWorkflowSnapshot().recapture);
     REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
     REQUIRE(p->getCaptureSnapshot().reference!=accepted.reference);
@@ -1644,7 +1679,7 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(restored->swellEngine().assignmentEpoch()==acceptedEpoch);
     REQUIRE(restored->swellEngine().savedSession().defaultLevelDb==0 && restored->getCaptureSnapshot().manifest.ranges.empty());
     p->setNonRealtime(false);process(64,false,0);REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
-    p->holdCaptureValidationForTesting(true);process(200,true,.25f);process(264,false,0);
+    REQUIRE(setFixtureCaptureArmed(*p));p->holdCaptureValidationForTesting(true);process(200,true,.25f);process(264,false,0);
     const auto deadline=juce::Time::getMillisecondCounter()+2000;
     while(p->getWorkflowSnapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<deadline)juce::Thread::sleep(1);
     REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::validating && !p->requestWorkflowMode(workflow::Mode::live));
@@ -1653,12 +1688,12 @@ int main(int argc,char* argv[]){return runTest([&]{
     REQUIRE(p->getCaptureProgress().ranges.empty()); // Restore immediately fences the obsolete pass overlay.
     REQUIRE(p->flushCaptureForTesting() && p->getWorkflowSnapshot().mode==workflow::Mode::capture && p->getCaptureSnapshot().reference==replaced.reference);
     // Saturated capture queue aborts the whole pass, retaining accepted source.
-    p->holdCaptureWorkerForTesting(true);juce::Thread::sleep(5);process(0,false,0);
+    REQUIRE(setFixtureCaptureArmed(*p));p->holdCaptureWorkerForTesting(true);juce::Thread::sleep(5);process(0,false,0);
     for(int i=0;i<40;++i)process(1000+i*64,true,.2f);process(3560,false,0);
     p->holdCaptureWorkerForTesting(false);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(p->getCaptureProgress().ranges.empty()); // Failed pass overlay cannot survive settlement.
     REQUIRE(p->getDroppedCaptureBlockCount()>0 && p->getWorkflowSnapshot().phase==workflow::Phase::failed && p->getCaptureSnapshot().reference==replaced.reference);
-    p->holdCaptureValidationForTesting(true);process(4000,false,0);process(4000,true,.1f);process(4064,false,0);
+    REQUIRE(setFixtureCaptureArmed(*p));p->holdCaptureValidationForTesting(true);process(4000,false,0);process(4000,true,.1f);process(4064,false,0);
     const auto validationDeadline=juce::Time::getMillisecondCounter()+2000;
     while(p->getWorkflowSnapshot().phase!=workflow::Phase::validating && juce::Time::getMillisecondCounter()<validationDeadline)juce::Thread::sleep(1);
     REQUIRE(p->getWorkflowSnapshot().phase==workflow::Phase::validating);
@@ -1670,6 +1705,7 @@ int main(int argc,char* argv[]){return runTest([&]{
         cancelled->prepareToPlay(1000,64);cancelled->setPlayHead(&cancelHost);cancelled->swellEngine().setLearningAutomatic(false);
         cancelHost.position.setBpm(120);cancelHost.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
         cancelHost.position.setTimeInSamples(0);cancelHost.position.setPpqPosition(0);cancelHost.position.setIsPlaying(true);
+        REQUIRE(setFixtureCaptureArmed(*cancelled));
         juce::AudioBuffer<float> input(2,64);for(int c=0;c<2;++c)std::fill_n(input.getWritePointer(c),64,.25f);
         {AudioAllocationGuard guard;cancelled->processBlock(input,midi);}REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
         const auto until=juce::Time::getMillisecondCounter()+2000;
@@ -1681,10 +1717,12 @@ int main(int argc,char* argv[]){return runTest([&]{
     {
         auto quiet=std::make_unique<PreverbAudioProcessor>(root.file.getChildFile("quiet"));WorkflowHost quietHost;
         quiet->prepareToPlay(1000,64);quiet->setPlayHead(&quietHost);juce::AudioBuffer<float> silent(2,64);silent.clear();
+        REQUIRE(setFixtureCaptureArmed(*quiet));
         quietHost.position.setTimeInSamples(0);quietHost.position.setIsPlaying(true);quiet->processBlock(silent,midi);
         REQUIRE(quiet->getWorkflowSnapshot().phase==workflow::Phase::idle); // Missing musical timing is not fabricated.
         quietHost.position.setIsPlaying(false);quiet->processBlock(silent,midi);
         quietHost.position.setBpm(120);quietHost.position.setPpqPosition(0);quietHost.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+        REQUIRE(setFixtureCaptureArmed(*quiet));
         quietHost.position.setIsPlaying(true);quiet->processBlock(silent,midi);quietHost.position.setIsPlaying(false);quiet->processBlock(silent,midi);
         REQUIRE(quiet->flushCaptureForTesting() && quiet->getWorkflowSnapshot().mode==workflow::Mode::capture);
         REQUIRE(!quiet->requestWorkflowMode(workflow::Mode::live) && quiet->getCaptureSnapshot().manifest.ranges.front().kind==CaptureCoverageKind::silence);

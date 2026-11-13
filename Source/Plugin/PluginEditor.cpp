@@ -275,7 +275,8 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
         else processor.setRecaptureExisting(enabled);
     };learnWorkspace.onRefresh=[this]{refresh();};
     learnWorkspace.onLoopPreference=[this](LoopCapturePreference preference){processor.setLoopCapturePreference(preference);};
-    learnWorkspace.onLoopArm=[this](bool arm,uint64_t pass){if(arm)processor.armLoopCapture();else processor.requestLoopStop(pass);};
+    learnWorkspace.onCaptureArm=[this](bool arm,uint64_t pass,uint64_t session,LoopCapturePreference preference)
+    {processor.setCaptureArmed(arm,pass,session,preference);};
     addAndMakeVisible(workflowHeader);addAndMakeVisible(recaptureExisting);
     noticeBar.setName("workspaceNotice");noticeBar.setHeaderAppearance(true);addChildComponent(noticeBar);
     recaptureExisting.setName("legacyRecaptureExisting");
@@ -1513,7 +1514,7 @@ void PreverbAudioProcessorEditor::refresh()
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
-    recaptureStatus.setText(flow.recapture?"Recapture armed for encountered positions; commit on DAW Stop":"Recapture off; mapped source protected",juce::dontSendNotification);
+    recaptureStatus.setText(flow.recapture?"Recapture enabled for the next armed take":"Recapture off; mapped source protected",juce::dontSendNotification);
     mappingButton.setEnabled(!flow.locked());mappingButton.setTooltip("Legacy control requests Learn or Perform; workflow guards always apply.");
     mappingButton.setUnavailableReason("Wait for the current capture pass to finish.");
     clearButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
@@ -1572,13 +1573,14 @@ void PreverbAudioProcessorEditor::refresh()
     automaticButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());markerKnob.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());separationSlider.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());
     automaticButton.setUnavailableReason(flow.locked()?"Wait for the current capture pass to finish.":"Available in Learn or Perform.");
     gainPolicyBox.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());defaultIRButton.setEnabled(flow.mode!=workflow::Mode::finalise && !flow.locked());suppressionButton.setEnabled(edit);
-    toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Arm Recapture pass");
+    toneButton.setEnabled(flow.mode==workflow::Mode::live);recaptureButton.setButtonText("Enable Recapture Audio");
     toneButton.setUnavailableReason("The test tone is available in Perform.");
     if(learningLayout)
     {
-        learnWorkspace.displayLoop(loopSettings,processor.canArmLoopCapture(),
-            processor.loopCaptureArmed(),flow.locked(),processor.loopFinishing(),
-            processor.loopRecaptureEnabled(),loopStatus);
+        const bool armed=flow.phase==workflow::Phase::armed || flow.phase==workflow::Phase::recording;
+        learnWorkspace.displayCaptureControls(loopSettings,processor.canArmCapture(),armed,flow.locked(),
+            loopSettings.enabled && processor.loopFinishing(),processor.loopRecaptureEnabled(),
+            loopSettings.enabled?loopStatus:processor.songCaptureStatus());
         learnWorkspace.display(capture,state,hostTime,flow,songPlayheadAvailable,processor.getCaptureProgress(),songTimingIssue.has_value());
     }
     if(exportLayout){

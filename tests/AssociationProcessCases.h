@@ -11,7 +11,7 @@ static void associationChild(const juce::File& stateFile,const juce::File& regis
     TestDirectory external;REQUIRE(external.file.createDirectory().wasOk());const auto irFile=external.file.getChildFile("writer-ir.wav");
     writeTestWav(irFile,1,48000,{.12f*variant,.04f,-.02f});REQUIRE(engine.assignDefaultIR(irFile,engine.assignmentEpoch()));
     waitFor([&]{return !engine.snapshot().defaultIRPending && engine.savedSession().defaultIRName==irFile.getFileName();});
-    const auto imported=engine.savedSession().defaultIR;REQUIRE(imported.present());REQUIRE(p->setRecaptureExisting(true));
+    const auto imported=engine.savedSession().defaultIR;REQUIRE(imported.present());REQUIRE(p->setRecaptureExisting(true) && setFixtureCaptureArmed(*p));
     for(int c=0;c<2;++c)for(int i=0;i<14;++i)audio.setSample(c,i,static_cast<float>((variant+1)*(i+1))*.001f*(c?-1.0f:1.0f));
     host.position.setIsPlaying(true);p->processBlock(audio,midi);host.position.setIsPlaying(false);p->processBlock(audio,midi);REQUIRE(p->flushCaptureForTesting());
     REQUIRE(!p->getCaptureSnapshot().unavailable && p->getCaptureSnapshot().reference!=old.reference);

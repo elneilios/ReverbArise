@@ -1,5 +1,6 @@
 #pragma once
 #include <limits>
+#include "WorkflowTestSupport.h"
 
 struct CaptureFailureHost:juce::AudioPlayHead
 {
@@ -23,10 +24,10 @@ inline void processorCaptureFailureCases()
             REQUIRE(input.getSample(0,0)==.125f && input.getSample(1,input.getNumSamples()-1)==.125f);
         };
         if(prior)
-        {host.at(0,true);process();host.at(64,false);process();REQUIRE(processor->flushCaptureForTesting());REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));}
+        {REQUIRE(setFixtureCaptureArmed(*processor));host.at(0,true);process();host.at(64,false);process();REQUIRE(processor->flushCaptureForTesting());REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));}
         const auto before=processor->getCaptureSnapshot();
         juce::MemoryBlock savedBefore;processor->getStateInformation(savedBefore);
-        REQUIRE(processor->setRecaptureExisting(prior));host.at(10000,true);process();REQUIRE(processor->flushCaptureForTesting());
+        REQUIRE(processor->setRecaptureExisting(prior) && setFixtureCaptureArmed(*processor));host.at(10000,true);process();REQUIRE(processor->flushCaptureForTesting());
         const auto failedPass=processor->getWorkflowSnapshot().pass;host.at(10064,true);
         auto expected=CaptureFailureReason::timingUnavailable;
         switch(kind)
@@ -51,7 +52,7 @@ inline void processorCaptureFailureCases()
         // Existing incompatible-rate policy requires explicit restore or Clear.
         // Restore preserves source and retires diagnostics from the prior epoch.
         if(kind==7 && prior){processor->setStateInformation(savedBefore.getData(),static_cast<int>(savedBefore.getSize()));REQUIRE(processor->flushCaptureForTesting());}
-        host.at(20000,true);process();host.at(20064,false);process();
+        REQUIRE(setFixtureCaptureArmed(*processor));host.at(20000,true);process();host.at(20064,false);process();
         REQUIRE(processor->flushCaptureForTesting() && processor->getWorkflowSnapshot().result==workflow::Result::accepted);
         if(kind==7 && prior)REQUIRE(!processor->getCaptureSnapshot().failure);
         else REQUIRE(processor->getCaptureSnapshot().failure.event.pass==failedPass);

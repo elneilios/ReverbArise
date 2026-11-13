@@ -13,7 +13,7 @@ inline void automaticProcessorCases()
     const auto pass=[&](int64_t start,float scale=1)
     {
         if(processor->getWorkflowSnapshot().mode!=workflow::Mode::capture)REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
-        head.position.setIsPlaying(true);
+        REQUIRE(setFixtureCaptureArmed(*processor));head.position.setIsPlaying(true);
         for(int block=0;block<24;++block)
         {
             const auto at=block*4096;position(start+at);buffer.clear();

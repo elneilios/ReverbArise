@@ -34,7 +34,7 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
 {
     using controls::NoticeMessage;using controls::NoticeTone;
     if(flow.mode==workflow::Mode::capture && flow.admissionFailed)
-        return NoticeMessage{"Capture could not start - stop and play again","Settings changed during admission; no partial pass was accepted.",NoticeTone::warning};
+        return NoticeMessage{"Capture could not start - arm a new take","Settings changed during admission; no partial pass was accepted.",NoticeTone::warning};
     if(flow.phase==workflow::Phase::failed || (capture.failure && capture.failure.event.pass==flow.pass && flow.locked()))
         return NoticeMessage{capture.manifest.ranges.empty()?"Capture failed - no source accepted. Stop and retry.":"Capture failed - previous source retained. Stop and retry.",
             capture.failure && capture.failure.event.pass==flow.pass?captureFailureFeedback(capture.failure):capture.status,NoticeTone::error};
@@ -59,7 +59,7 @@ inline std::optional<controls::NoticeMessage> workspaceNotice(workflow::Snapshot
         default:break;
     }
     if(flow.mode==workflow::Mode::capture && flow.recapture)
-        return NoticeMessage{"Recapture is armed - existing audio will be replaced","Turn Recapture off to protect existing source.",NoticeTone::warning};
+        return NoticeMessage{"Recapture Audio is enabled","An armed take can replace audio at the positions it records.",NoticeTone::warning};
     if(flow.mode==workflow::Mode::finalise)
         return NoticeMessage{"DAW wet is bypassed - use Audition to preview","Export delivery controls are not available in this workspace yet.",NoticeTone::information};
     if(songTimingIssue)return songTimingIssue;

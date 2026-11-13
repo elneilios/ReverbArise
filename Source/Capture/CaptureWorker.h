@@ -24,7 +24,7 @@ public:
     void delayNextStageForTesting(unsigned milliseconds) noexcept {stageDelay.store(milliseconds);}
     void throwNextStageForTesting() noexcept {stageThrow.store(true);}
     // Non-RT cancellation fences the actual source publication as well as mode.
-    bool cancelWorkflowPass(std::optional<uint64_t> expectedPass={});
+    bool cancelWorkflowPass(std::optional<uint64_t> expectedPass={}, bool unsettledOnly=false);
     bool armRecovery(std::vector<std::pair<int64_t,int64_t>> required);
     bool recoveryArmed()const noexcept{return recoveryCaptureArmed.load();}
     void holdValidationForTesting(bool hold) noexcept {validationHold.store(hold);}

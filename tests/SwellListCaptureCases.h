@@ -7,6 +7,7 @@ static void swellListCaptureCases(bool review=false)
     UIPlayHead head;p->prepareToPlay(48000,4096);p->setPlayHead(&head);
     head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     waitUI([&]{return engine.savedSession().defaultIR.present();});
+    REQUIRE(engine.setAutoGenerateOnStop(true));
     auto editor=std::make_unique<PreverbAudioProcessorEditor>(*p);editor->setVisible(true);editor->refresh();
     snapshotEditor(*editor,"ordering-empty");
     const auto listFor=[](PreverbAudioProcessorEditor& e)
@@ -18,6 +19,7 @@ static void swellListCaptureCases(bool review=false)
         // Re-requesting Learn clears its explicit recapture arm. Preserve an
         // already prepared Learn pass, as the real UI does.
         if(p->getWorkflowSnapshot().mode!=workflow::Mode::capture)REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
+        if(!p->getWorkflowSnapshot().locked()) REQUIRE(setFixtureCaptureArmed(*p));
         head.position.setIsPlaying(true);
         for(int repeat=0;repeat<loops;++repeat)for(int local=0;local<48000;local+=4096)
         {
@@ -26,7 +28,11 @@ static void swellListCaptureCases(bool review=false)
                 {const auto value=static_cast<float>(amplitude*std::exp(-at/1800.)*std::sin(at*.17));buffer.setSample(0,n,value);buffer.setSample(1,n,value*.7f);}}
             head.position.setTimeInSamples(start+local);head.position.setPpqPosition((start+local)/24000.0);p->processBlock(buffer,midi);
         }
-        finishCaptureFixture(*p,head.position,true);
+        head.position.setIsPlaying(false);buffer.clear();p->processBlock(buffer,midi);
+        REQUIRE(p->flushCaptureForTesting());
+        waitUI([&]{return p->getWorkflowSnapshot().mode==workflow::Mode::live || !engine.snapshot().learnGeneration.generating;});
+        if(verifyProtected && p->getWorkflowSnapshot().mode==workflow::Mode::capture)
+            REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
         if(verifyProtected)
         {
             REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);

@@ -22,5 +22,13 @@ inline void finishCaptureFixture(PreverbAudioProcessor& processor,juce::AudioPla
     if(processor.getWorkflowSnapshot().mode==workflow::Mode::capture && processor.getWorkflowReadiness().usefulSource)
         REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
 }
+inline bool setFixtureCaptureArmed(PreverbAudioProcessor& processor,bool armed=true)
+{
+    return processor.setCaptureArmed(armed,processor.getWorkflowSnapshot().pass,processor.swellEngine().assignmentEpoch());
+}
 inline void armCaptureFixture(PreverbAudioProcessor& processor)
-{REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));REQUIRE(processor.setRecaptureExisting(true));}
+{
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(processor.setRecaptureExisting(true));
+    REQUIRE(setFixtureCaptureArmed(processor));
+}

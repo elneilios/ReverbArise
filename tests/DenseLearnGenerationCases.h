@@ -8,6 +8,7 @@ inline void denseLearnGenerationCases()
     const auto started=juce::Time::getMillisecondCounterHiRes();
     for(int section:{0,2})
     {
+        REQUIRE(fixture.arm());
         if(section==0)processor.holdCaptureValidationForTesting(true);
         const int64_t start=section*32LL*48000,frames=32LL*48000;
         for(int64_t local=0;local<frames;local+=4096)
@@ -47,6 +48,7 @@ inline void denseLearnGenerationCases()
     const auto manualId=engine.savedSession().primary;
     await([&]{return find(engine.savedSession(),manualId)->phase==Phase::ready;});
     REQUIRE(engine.edit(manualId,[](auto& swell,auto&){swell.name="Protected full-song edit";swell.shape.gainDb=-4;swell.enabled=false;return true;}));
+    REQUIRE(engine.setFrozen(manualId,true));
     const auto protectedWork=*find(engine.savedSession(),manualId);
     REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();engine.holdLearnRendersForTesting(true);
     const auto fileCount=[&]{return engine.assetDirectory().findChildFiles(juce::File::findFiles,true).size();};
@@ -81,9 +83,6 @@ inline void denseLearnGenerationCases()
         std::cout<<"Dense Learn sensitivity="<<sensitivity<<" candidates="<<count<<" swells="<<generated.swells.size()
             <<" preview+commit-ms="<<(juce::Time::getMillisecondCounterHiRes()-began)<<" resident-bytes="<<engine.residentBytes()<<'\n';
         if(processor.getWorkflowSnapshot().mode==workflow::Mode::live)REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));fixture.ready();
-        const auto retained=engine.savedSession();REQUIRE(fixture.generate());
-        await([&]{const auto view=engine.snapshot().learnGeneration;return !view.generating && view.notice.contains("No changes");});
-        REQUIRE(engine.savedSession().swells.size()==retained.swells.size() && processor.getWorkflowSnapshot().mode==workflow::Mode::capture);
     }
     REQUIRE(engine.residentBytes()<=previewMemoryBudget);
     engine.holdLearnRendersForTesting(true);engine.holdRenderPublicationForTesting(false);

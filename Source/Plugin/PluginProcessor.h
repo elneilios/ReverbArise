@@ -100,6 +100,10 @@ public:
     {return LoopCapturePreference::unpack(loopPreference.load(std::memory_order_relaxed));}
     bool setLoopCapturePreference(LoopCapturePreference preference);
     bool armLoopCapture();
+    bool canArmCapture() const;
+    bool setCaptureArmed(bool armed, uint64_t expectedPass, uint64_t expectedSession,
+                         std::optional<LoopCapturePreference> expectedPreference={});
+    juce::String songCaptureStatus() const;
     bool requestLoopStop(uint64_t pass) noexcept;
     bool loopRecaptureEnabled() const noexcept { return loopRecapture.load(std::memory_order_acquire); }
     bool setLoopRecapture(bool enabled);
@@ -160,7 +164,7 @@ public:
     void cancelRecapture() { cancelCapturePass(); }
     m3::RecaptureSnapshot getRecaptureSnapshot() const
     {const auto s=workflowState.snapshot();m3::RecaptureSnapshot result;result.active=s.recapture;result.token=s.pass;
-        result.status=s.recapture?"Pass-wide recapture armed; DAW Stop commits encountered source":"Recapture off; mapped source protected";return result;}
+        result.status=s.recapture?"Recapture enabled for the next armed take":"Recapture off; mapped source protected";return result;}
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -264,7 +268,6 @@ private:
     workflow::Mode offlineWorkflowMode=workflow::Mode::capture;
     workflow::State workflowState;
     bool previousHostPlaying=false;
-    workflow::Mode previousWorkflowMode=workflow::Mode::capture;
     SongTime capturePassTime;
     uint64_t observedCapturePass=0;
     PluginCaptureQueue captureQueue;

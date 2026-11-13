@@ -19,9 +19,9 @@ static void commonEngineCases()
     const auto initial=e.savedSession();const auto oldFirst=find(initial,first)->render,oldSecond=find(initial,second)->render;const auto count=e.snapshot().renderCount;
     const auto sourceHash=fileHash(e.assetDirectory().getChildFile(oldFirst.path));
     REQUIRE(p.requestWorkflowMode(workflow::Mode::capture));
-    const auto pass=[&](float scale,bool replace){REQUIRE(p.setRecaptureExisting(replace));f.tick(0,false);for(int i=0;i<8;++i){f.tick(i*4096,true,scale);juce::Thread::sleep(1);}f.tick(32768,false);REQUIRE(p.flushCaptureForTesting());};
+    const auto pass=[&](float scale,bool replace){REQUIRE(p.setRecaptureExisting(replace) && f.arm());f.tick(0,false);for(int i=0;i<8;++i){f.tick(i*4096,true,scale);juce::Thread::sleep(1);}f.tick(32768,false);REQUIRE(p.flushCaptureForTesting());};
     const auto acceptedReference=p.getCaptureSnapshot().reference;p.holdCaptureValidationForTesting(true);
-    REQUIRE(p.setRecaptureExisting(true));f.tick(0,false);for(int i=0;i<8;++i){f.tick(i*4096,true,.4f);juce::Thread::sleep(1);}f.tick(32768,false);
+    REQUIRE(p.setRecaptureExisting(true) && f.arm());f.tick(0,false);for(int i=0;i<8;++i){f.tick(i*4096,true,.4f);juce::Thread::sleep(1);}f.tick(32768,false);
     await([&]{return p.getWorkflowSnapshot().phase==workflow::Phase::validating;});juce::Thread::sleep(30);
     REQUIRE(p.getCaptureSnapshot().reference==acceptedReference && e.snapshot().renderCount==count && find(e.savedSession(),first)->render==oldFirst);
     p.holdCaptureValidationForTesting(false);REQUIRE(p.flushCaptureForTesting());

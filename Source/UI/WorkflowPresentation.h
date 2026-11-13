@@ -41,10 +41,10 @@ inline const char* entryExplanation(workflow::EntryBlock block) noexcept
 inline const char* workflowStatus(workflow::Snapshot state) noexcept
 {
     if(state.mode==workflow::Mode::capture && state.admissionFailed)
-        return "Capture could not start - stop and play again";
+        return "Capture could not start - arm a new take";
     switch(state.phase)
     {
-        case workflow::Phase::armed:return "Armed - waiting for the next phrase";
+        case workflow::Phase::armed:return "Armed - waiting for capture timing";
         case workflow::Phase::recording:return "Recording - stop the DAW to commit";
         case workflow::Phase::draining:return "Committing captured source";
         case workflow::Phase::validating:return "Validating captured source";
@@ -52,7 +52,7 @@ inline const char* workflowStatus(workflow::Snapshot state) noexcept
         case workflow::Phase::idle:break;
     }
     if(state.mode==workflow::Mode::capture)
-        return state.recapture?"Recapture armed - replaces encountered audio":"Mapped source protected - play your DAW to learn";
+        return state.recapture?"Recapture enabled - Arm to replace encountered audio":"Arm to capture audio";
     return state.mode==workflow::Mode::live?"":"DAW wet bypassed - editing locked";
 }
 struct WorkflowChoice

@@ -168,6 +168,18 @@ void Composition::verifyResponsive(const juce::File& output)
             REQUIRE(sourceHeading.getX()==learn.getLocalArea(&recapture,recapture.labelBounds()).getX());
             auto& ir=require<controls::SoundPresetEditor>(learn,"learnIrEditor");
             REQUIRE(ir.getY()==learnTabs.getBottom()+responsiveGeometry::contentPadding);
+            const auto gutter=require<juce::Label>(learn,"learnCaptureHeading").getX();
+            REQUIRE(controls::commandBodyBounds(learnTabs.getBounds()).getX()==gutter);
+            REQUIRE(sourceHeading.getX()==gutter);
+            REQUIRE(learn.getLocalArea(&ir.pickerLabel(),ir.pickerLabel().getLocalBounds()).getX()==gutter);
+            auto& previous=require<juce::Component>(ir,"soundPrevious");
+            REQUIRE(learn.getLocalArea(&previous,controls::commandBodyBounds(previous.getLocalBounds())).getX()==gutter);
+            if(ir.filePicker().isVisible())
+            {
+                const auto fileBody=learn.getLocalArea(&ir.filePicker(),controls::commandBodyBounds(ir.filePicker().getLocalBounds()));
+                const auto importBody=learn.getLocalArea(&ir.importAction(),controls::commandBodyBounds(ir.importAction().getLocalBounds()));
+                REQUIRE(fileBody.getX()==gutter && fileBody.getRight()<importBody.getX());
+            }
             auto manualView=enabledView;manualView.session.automaticProcessing=false;manualView.session.autoMarkersEnabled=false;
             learn.display(processor->getCaptureSnapshot(),manualView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
             for(const auto* name:{"learnIRLabel","learnDefaultIR","levelCell"})
@@ -179,13 +191,12 @@ void Composition::verifyResponsive(const juce::File& output)
             }
             REQUIRE(!require<juce::Component>(learn,"learnMarkerSensitivity").isVisible());
             learn.display(processor->getCaptureSnapshot(),enabledView,processor->getSongTime(),processor->getWorkflowSnapshot(),true);
-            for(const auto* name:{"learnGenerateSwells","learnGenerateReason","learnManualSwellsHelp"})checkVisible(name);
+            for(const auto* name:{"learnGenerateSwells","learnManualSwellsHelp"})checkVisible(name);
             if(section==1){checkVisible("learnAutoGenerateOnStop");checkVisible("learnMarkerSensitivity");}
             else{checkVisible("learnDefaultIR");checkVisible("levelCell");}
             const auto& generate=require<juce::Component>(learn,"learnGenerateSwells");
-            const auto& reason=require<juce::Component>(learn,"learnGenerateReason");
             const auto& manual=require<juce::Component>(learn,"learnManualSwellsHelp");
-            REQUIRE(generate.getBottom()<=reason.getY() && reason.getBottom()<=manual.getY());
+            REQUIRE(generate.getBottom()<=manual.getY());
             for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","levelCell"})
             {
                 auto& control=require<juce::Component>(learn,name);

@@ -18,11 +18,11 @@ static void recoveryDependencyCases()
     p.setPlayHead(&host);p.prepareToPlay(48000,6);juce::AudioBuffer<float> audio(2,6);audio.clear();juce::MidiBuffer midi;p.processBlock(audio,midi);
     const auto prior=p.getCaptureSnapshot();const auto work=renderWorkCounts();
     REQUIRE(p.setRecaptureExisting(true));juce::AudioBuffer<float> partial(2,1);partial.clear();partial.setSample(0,0,.5f);
-    host.position.setIsPlaying(true);p.processBlock(partial,midi);host.position.setIsPlaying(false);p.processBlock(partial,midi);REQUIRE(p.flushCaptureForTesting());
+    REQUIRE(setFixtureCaptureArmed(p));host.position.setIsPlaying(true);p.processBlock(partial,midi);host.position.setIsPlaying(false);p.processBlock(partial,midi);REQUIRE(p.flushCaptureForTesting());
     REQUIRE(p.getCaptureSnapshot().unavailable && p.getCaptureSnapshot().reference==prior.reference);p.cancelCapturePass();
     if(!p.setRecaptureExisting(true))
         throw std::runtime_error("Re-arm after rejected partial recovery: "+p.swellEngine().snapshot().message.toStdString());
-    audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);p.processBlock(audio,midi);host.position.setIsPlaying(false);p.processBlock(audio,midi);REQUIRE(p.flushCaptureForTesting());
+    REQUIRE(setFixtureCaptureArmed(p));audio.setSample(0,0,.5f);audio.setSample(1,0,-.5f);host.position.setIsPlaying(true);p.processBlock(audio,midi);host.position.setIsPlaying(false);p.processBlock(audio,midi);REQUIRE(p.flushCaptureForTesting());
     REQUIRE(!p.getCaptureSnapshot().unavailable && p.getCaptureSnapshot().reference!=prior.reference);
     try{waitFor([&]{return find(p.swellEngine().savedSession(),survivor.id)->phase==Phase::ready;});}
     catch(...){const auto s=p.swellEngine().savedSession();std::cerr<<"Frozen survivor: "<<find(s,survivor.id)->status<<" | root="<<p.swellEngine().assetDirectory().getFullPathName()<<" | source="<<p.getCaptureSnapshot().status<<"\n";throw;}

@@ -25,6 +25,11 @@ is not considered compliant merely because it inherits the shared LookAndFeel.
 
 ## Shared controls and ownership
 
+Production standards revision 27 adopts the joined Arm and capture status row,
+the taller shared Learn generation action and the common Learn sidebar gutter.
+Use shared command focus and the existing footer help. See the
+[Learn workspace](../design/learn-workspace.md).
+
 Production standards revision 26 uses `SurfaceInvocation`, `SurfaceFocusReturn`,
 `SurfaceEscape`, `OwnedAlertWindow` and `WorkspaceWindow` for P8 surface lifecycle.
 Keep native pickers and guarded binding continuations; surface closing adds no

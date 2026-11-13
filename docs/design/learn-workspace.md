@@ -17,6 +17,15 @@ Perform's list, inspector, audition band and compact Overview are hidden, with
 its navigation and selection retained for return. Learn navigation never seeks
 the DAW.
 
+The shared Arm command and adjoining state field sit above the Song and Loop
+settings. The state field shows capture progress and availability in the same
+row. Hover over the field for the full status in the footer.
+
+The Learn Settings tabs, capture headings and controls, and the leading Sound
+controls share a visible left gutter. The tab and Sound editor bounds reserve
+the shared focus margin outside that gutter. The Custom IR selector and Import
+button use the shared row spacing.
+
 ## Issue #38 preview and generation backend
 
 ### Current musician-focused native review
@@ -51,20 +60,20 @@ New projects default Auto-generate on Stop OFF and settle in Learn. Explicit
 Generate and eligible opted-in Stop share one guarded replacement transaction;
 only a changed viable automatic result enters Perform, before wet rendering
 finishes. Current accepted Default IR applies to that request without changing
-markers or protected assignments. Manual/edited/frozen and outside-scope work
-remain intact. Returning to Learn or restoring state never generates by itself.
+markers. Generate on Stop preserves manual, edited, frozen and outside-scope
+work. The explicit Generate Swells or Regenerate Swells action rebuilds from the
+accepted audio, keeps frozen swells and replaces all other definitions on
+success. Earlier deletions do not prevent explicit rediscovery. Returning to
+Learn or restoring state never generates by itself.
 See the [source/context protocol](../development/learn-source-context-protocol.md)
 and [in-progress validation](../validation/2026-11-04-issue-38-generation-workflow.md).
-The Generate on Stop switch reuses `Switch` immediately beneath Detect events,
-before the Default IR group. Generate Swells reuses the emphasized `ActionButton`
-directly below sensitivity. Its contextual readiness helper sits
-directly below the button; the persistent manual-placement hint follows last,
-flowing naturally across the available width without a forced break after the
-question. Both remain readable when generation is disabled. The manual hint
-also remains visible beneath the enable-switch group when Automatic Swells is
-OFF, including on editor reopen; generation controls and their contextual
-helper stay hidden. The accessible
-description also explains readiness. Invocations pin session, pass and
+Generate on Stop remains a switch in the capture settings. Generate Swells and
+Regenerate Swells use the same primary action in a fixed lower area on both Learn
+tabs. One centred line below it shows “Place swells manually in Perform” or the
+current disabled or busy status. The footer hover help and accessible description
+explain how the action treats frozen and unfrozen swells. With Detect events off,
+the manual placement line stays visible and the generation action is hidden.
+Invocations pin session, pass and
 displayed candidate identities. Automatic Swells OFF hides these controls while
 retaining the saved preference. Neutral heads/guides show events, with timing
 emphasis for hover/pin; hollow heads identify provisional/updating positions. They are

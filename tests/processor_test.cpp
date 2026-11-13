@@ -92,6 +92,7 @@ int main(int argc,char** argv)
         return 11;
 
     // Capture input (not generated output), save compact v2 state, then restore asynchronously.
+    REQUIRE(setFixtureCaptureArmed(*processor));
     stoppedPlayHead.position.setIsPlaying(true);
     stoppedPlayHead.position.setTimeInSamples(100);
     stoppedPlayHead.position.setPpqPosition(100.0/24000);stoppedPlayHead.position.setBpm(120);
@@ -113,6 +114,7 @@ int main(int argc,char** argv)
     buffer.setSize(2, 128);
     buffer.clear();
     processor->setMappingEnabled(true);
+    REQUIRE(setFixtureCaptureArmed(*processor));
     stoppedPlayHead.position.setIsPlaying(true);
     processor->processBlock(buffer, midiMessages);
     finishCaptureFixture(*processor,stoppedPlayHead.position);

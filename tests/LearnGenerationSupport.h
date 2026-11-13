@@ -24,6 +24,10 @@ struct GenerationFixture
         await([&]{return engine().savedSession().defaultIR.present();});tick(0,false);
     }
     SwellEngine& engine(){return processor->swellEngine();}
+    bool arm()
+    {
+        return processor->setCaptureArmed(true,processor->getWorkflowSnapshot().pass,engine().assignmentEpoch());
+    }
     void tick(int64_t at,bool playing,float scale=1)
     {
         host.position.setIsPlaying(playing);host.position.setTimeInSamples(at);host.position.setPpqPosition(at/24000.0);audio.clear();
@@ -39,6 +43,7 @@ struct GenerationFixture
     void record(bool inspectProvisional=false,bool flush=true)
     {
         tick(0,false);
+        REQUIRE(arm());
         for(int block=0;block<72;++block)
         {
             tick(block*4096,true);juce::Thread::sleep(2);

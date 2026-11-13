@@ -56,7 +56,7 @@ public:
         processor->swellEngine().setAutomaticProcessing(false);
         processor->swellEngine().setPostRoll(.25); // Fixture dry coverage excludes a deliberate gap.
         head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
-        head.position.setIsPlaying(true);processor->setPlayHead(&head);processor->prepareToPlay(48000,4096);
+        head.position.setIsPlaying(true);processor->setPlayHead(&head);processor->prepareToPlay(48000,4096);REQUIRE(setFixtureCaptureArmed(*processor));
         juce::AudioBuffer<float> audio(2,4096);juce::MidiBuffer midi;
         // Real test capture with a deliberately uncaptured middle interval.
         for(int block=0;block<48;++block)

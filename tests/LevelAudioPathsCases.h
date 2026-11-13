@@ -10,7 +10,7 @@ inline void levelAudioPathsCases()
     head.position.setBpm(120);head.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
     const auto position=[&](int64_t at,bool playing){head.position.setIsPlaying(playing);head.position.setTimeInSamples(at);head.position.setPpqPosition(at/500.);};
     juce::AudioBuffer<float> block(2,1000);juce::MidiBuffer midi;
-    position(0,true);for(int n=0;n<1000;++n){block.setSample(0,n,.01f);block.setSample(1,n,-.005f);}
+    REQUIRE(setFixtureCaptureArmed(*p));position(0,true);for(int n=0;n<1000;++n){block.setSample(0,n,.01f);block.setSample(1,n,-.005f);}
     p->processBlock(block,midi);REQUIRE(p->flushCaptureForTesting());finishCaptureFixture(*p,head.position);
     position(0,false);block.clear();p->processBlock(block,midi);
     REQUIRE(engine.addTarget(500));const auto id=engine.savedSession().primary;

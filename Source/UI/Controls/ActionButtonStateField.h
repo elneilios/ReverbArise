@@ -143,6 +143,8 @@ class ActionButtonStateField final : public juce::Component, public juce::Settab
         }
 
     private:
+        bool effectiveLatchState() const noexcept override { return getToggleState(); }
+
         void enablementChanged() override
         {
             ActionButton::enablementChanged();

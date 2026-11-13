@@ -288,6 +288,7 @@ private:
     juce::String learnReason,learnNotice;
     std::atomic<uint64_t> learnAnalysisCancellation{0},learnGenerationCancellation{0};
     std::atomic<uint64_t> learnRenderCancellation{0};
+    std::atomic<uint64_t> learnRebuildCancellation{0};
     std::atomic<bool> learnAnalysisHold{false},learnAnalysisWaiting{false},learnGenerationHold{false},learnGenerationWaiting{false},learnRenderHold{false};
     std::atomic<bool> renderPublicationHold{false},renderPublicationWaiting{false};
     CandidateIdentity learnIdentity(const PreviewContext&,bool provisional=false,uint64_t pass=0)const;

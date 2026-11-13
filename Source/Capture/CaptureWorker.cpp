@@ -77,12 +77,13 @@ void CaptureWorker::recoverWorkerException(const char* message)
     }
 }
 
-bool CaptureWorker::cancelWorkflowPass(std::optional<uint64_t> expectedPass)
+bool CaptureWorker::cancelWorkflowPass(std::optional<uint64_t> expectedPass, bool unsettledOnly)
 {
     const juce::ScopedLock guard(commandLock);
     if(expectedPass)
     {
-        if(!workflowState || !workflowState->cancelCapture(*expectedPass))return false;
+        if(!workflowState || !(unsettledOnly ? workflowState->cancelUnsettledCapture(*expectedPass)
+                                            : workflowState->cancelCapture(*expectedPass)))return false;
     }
     else if(workflowState)workflowState->cancel();
     if(recoveryCaptureArmed.exchange(false))mappingAllowed.store(false);refreshAdmission=true;notify();

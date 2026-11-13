@@ -78,8 +78,8 @@ does not move the workspace or take focus.
 
 | Mode/phase | Source | Host-scheduled wet | Creative editing / internal preview |
 | --- | --- | --- | --- |
-| Learn idle | Can begin additive capture on valid DAW Play | Off, dry passes | Off / off |
-| Learn recording | Protected additive or explicitly armed replacement pass | Off, dry passes | Off / off; mode selection locked |
+| Learn idle | Waits for an explicit Arm | Off, dry passes | Off / off |
+| Learn armed or recording | One additive or replacement pass authorized by Arm | Off, dry passes | Off / off; mode selection locked |
 | Learn draining/validating | Provisional; old committed source remains authoritative | Off, dry passes | Off / off; mode selection locked |
 | Learn failed/empty | Prior source retained; reason visible | Off, dry passes | Off / off; stopped mode requests allowed |
 | Perform | Never records | Existing enable/routing/gain at absolute positions | Existing validated editor / preview |

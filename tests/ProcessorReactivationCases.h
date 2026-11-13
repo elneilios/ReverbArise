@@ -29,6 +29,7 @@ inline void processorReactivationCases()
             if(bypass)processor->processBlockBypassed(buffer,midi);else processor->processBlock(buffer,midi);}
         REQUIRE(watchedAllocations==0 && watchedDeallocations==0);
     };
+    REQUIRE(setFixtureCaptureArmed(*processor));
     for(int64_t at=0;at<8192;at+=64){process(at,true);REQUIRE(processor->flushCaptureForTesting());}
     process(8192,false);REQUIRE(processor->flushCaptureForTesting());
     REQUIRE(processor->requestWorkflowMode(workflow::Mode::live));

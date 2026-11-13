@@ -1328,25 +1328,31 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             requested.wetTimingIntent=intent;
         }
     }
-    const auto renderEpoch=learnRenderCancellation.load();
+    const auto& renderCancellation=requested.provenance==Provenance::automatic
+        ? learnRenderCancellation : learnRebuildCancellation;
+    uint64_t renderEpoch;
     bool pendingAtStart;
-    {const juce::ScopedLock guard(lock);pendingAtStart=learnRequest.has_value();}
-    const auto superseded=[&]{return requested.provenance==Provenance::automatic && !requested.frozen
-        && (pendingAtStart || renderEpoch!=learnRenderCancellation.load());};
+    {
+        const juce::ScopedLock guard(lock);
+        renderEpoch=renderCancellation.load();
+        pendingAtStart=learnRequest && (!learnRequest->automatic || requested.provenance==Provenance::automatic);
+    }
+    const auto superseded=[&]{return !requested.frozen && (pendingAtStart || renderEpoch!=renderCancellation.load());};
     struct Finish
     {
-        SwellEngine& engine;const Swell& requested;uint64_t session,epoch;bool pending;
+        SwellEngine& engine;const Swell& requested;uint64_t session;
+        const decltype(superseded)& supersededRequest;
         ~Finish()
         {
             engine.renderPublicationWaiting=false;
-            if(requested.provenance!=Provenance::automatic || requested.frozen || (!pending && epoch==engine.learnRenderCancellation.load()))return;
+            if(!supersededRequest())return;
             const juce::ScopedLock guard(engine.lock);auto* current=find(engine.model,requested.id);
             if(session!=engine.sessionGeneration.load() || !current || current->inputGeneration!=requested.inputGeneration
-                || current->provenance!=Provenance::automatic || current->frozen)return;
+                || current->frozen)return;
             if(current->phase==Phase::rendering || current->phase==Phase::checking)
             {current->phase=Phase::checking;current->progress=0;current->status="Queued after Generate Swells";}
         }
-    }finish{*this,requested,session,renderEpoch,pendingAtStart};
+    }finish{*this,requested,session,superseded};
     if(superseded())return;
     // Cooperative page servicing keeps accepted audio and its neighbours resident
     // during long resampling/FFT work. Reserve the complete in-flight workspace
