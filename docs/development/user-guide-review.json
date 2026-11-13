@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the synced Sound Presets and Swell Workspace specs against the existing Ping Pong and shared shaping guide. The archive introduces no further user-facing behavior.",
+  "summary": "Reviewed the Ping Pong reference-tempo assignment and frozen Reset All handover against the production engine and Sound binding. Updated Perform guidance for both cases. Native PR validation is pending.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -330,8 +330,8 @@
     },
     {
       "path": "Source/DSP/AutomaticCoordinator.cpp",
-      "bytes": 26047,
-      "sha256": "aac7e9388bb790b43a28649c7749e769b73eb9f7d8aac1b1b555973dc725e7d7"
+      "bytes": 26660,
+      "sha256": "15e06d8929b91214225685a671a5efe0cb4a9470c51ecb34e3c7bdb1e658903e"
     },
     {
       "path": "Source/DSP/BundledImpulseEntries.inc",
@@ -465,13 +465,13 @@
     },
     {
       "path": "Source/DSP/SwellEngine.cpp",
-      "bytes": 113600,
-      "sha256": "67c50533d605a8c036e1699f0abaa40498002251013056cdf8ca30ea9f03d6d0"
+      "bytes": 115412,
+      "sha256": "514405211483a02717669590a4d98799f4552a6fb006a0b22a174fe5f0dcf694"
     },
     {
       "path": "Source/DSP/SwellEngine.h",
-      "bytes": 29086,
-      "sha256": "21101a876e3a77e3bcc74c20e075ff6c09eec7cba36cc119507ebf32871abc8a"
+      "bytes": 29156,
+      "sha256": "cabd959f06808551dd645ac7f418b3c4fe3724cb7cd12c918f9039b6027ec6fd"
     },
     {
       "path": "Source/DSP/SwellExport.cpp",
@@ -495,8 +495,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 59791,
-      "sha256": "2236d4aa338fe972a36b893980c3cf726c80a92a1100fdba67653e9be40385ab"
+      "bytes": 60321,
+      "sha256": "015cf734a97bda4e9b4b8b533f796c5ab1969b277f48953325a70672bff3ec65"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -1130,8 +1130,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 129567,
-      "sha256": "e7d186e6ccb6fb39930f6deb2fbbea5484109c0b1ec0deab1e2ba7ad0f124f6f"
+      "bytes": 130000,
+      "sha256": "97722fa71e2268865f5c009a74681351034be8a9c1d166c7cbbe0718bccacec2"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
