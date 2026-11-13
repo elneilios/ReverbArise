@@ -371,7 +371,7 @@ private:
             if (!owned) creativeDraft.reset();
         }
         const auto shown = creativeDraft ? std::optional{creativeDraft->settings} : creative;
-        if (shown)
+        if (shown && !view.showFile)
         {
             constexpr PingPongSettings initial;
             view.tempoSync = shown->tempoSync;

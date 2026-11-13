@@ -34,17 +34,25 @@ inline void sharedSoundPreparationSmoke()
     std::cout<<"Shared Sound: Off bypass, crossed cuts, cutoff endpoints, channel isolation, and silent and single-frame IRs passed.\n";
 }
 
-inline void choosePingPong(controls::SoundPresetEditor& panel)
+inline void chooseSoundPreset(controls::SoundPresetEditor& panel, const juce::String& name)
 {
     auto& picker=panel.presetPicker();
     for(int i=0;i<picker.getNumItems();++i)
-        if(picker.getItemText(i)==m3::pingPongPresetName)
+        if(picker.getItemText(i)==name)
         {
             picker.beforeInvocation();
-            picker.setSelectedId(i+1,juce::sendNotificationSync);
+            if(picker.getSelectedId()==i+1 && picker.onReselect)
+                picker.onReselect();
+            else
+                picker.setSelectedId(i+1,juce::sendNotificationSync);
             return;
         }
-    throw std::runtime_error("Ping Pong is missing from the native Sound picker");
+    throw std::runtime_error(("Missing from the native Sound picker: " + name).toStdString());
+}
+
+inline void choosePingPong(controls::SoundPresetEditor& panel)
+{
+    chooseSoundPreset(panel, m3::pingPongPresetName);
 }
 
 inline std::vector<int64_t> pingPongPeaks(const ImpulseResponse& ir)
@@ -298,12 +306,25 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     };
     const auto before=engine.savedSession();
     const auto id=before.primary;
+    const auto checkCustomFileChoice=[](controls::SoundPresetEditor& panel)
+    {
+        chooseSoundPreset(panel, "Custom IR");
+        REQUIRE(panel.presetPicker().displayedText()=="Custom IR (choose file)");
+        REQUIRE(panel.importAction().isVisible());
+        REQUIRE(!require<juce::Component>(panel,"soundTempoSync").isVisible());
+        REQUIRE(require<KnobValue>(panel,"dampingCell").isVisible());
+        REQUIRE(find(panel,"echo-rateCell")==nullptr);
+        choosePingPong(panel);
+        REQUIRE(require<KnobValue>(panel,"echo-rateCell").isVisible());
+    };
     mode.onRequest(1);
     editor->refresh();
     auto& defaults=require<controls::SoundPresetEditor>(*editor,"learnIrEditor");
     REQUIRE(defaults.isVisible());
     choosePingPong(defaults);
     wait([&]{editor->refresh();return defaults.presetPicker().getText()==pingPongPresetName && defaults.hasResponsePreview();});
+    REQUIRE(engine.savedSession().defaultSoundPreset.pingPong==PingPongSettings{});
+    checkCustomFileChoice(defaults);
     REQUIRE(engine.savedSession().defaultSoundPreset.pingPong==PingPongSettings{});
     REQUIRE(find(engine.savedSession(),id)->ir==find(before,id)->ir);
     capture("learn-ping-pong-900");
@@ -332,6 +353,11 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     });
     REQUIRE(require<juce::Component>(selected,"soundTempoSync").isVisible());
     REQUIRE(require<KnobValue>(selected,"echo-rateCell").isVisible());
+    const auto beforeCustomChoice=engine.savedSession();
+    checkCustomFileChoice(selected);
+    const auto afterCustomChoice=engine.savedSession();
+    REQUIRE(find(afterCustomChoice,id)->soundPreset==find(beforeCustomChoice,id)->soundPreset);
+    REQUIRE(find(afterCustomChoice,id)->render==find(beforeCustomChoice,id)->render);
     REQUIRE(find(engine.savedSession(),id)->soundPreset.pingPong->spread==85);
     REQUIRE(engine.addTarget(72000));
     const auto created=engine.savedSession().primary;
