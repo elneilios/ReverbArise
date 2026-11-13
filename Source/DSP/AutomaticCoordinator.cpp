@@ -54,6 +54,10 @@ bool SwellEngine::assignDefaultBundledIR(const juce::String& presetId,uint64_t e
 }
 bool SwellEngine::assignDefaultManagedIR(const Asset& asset,const juce::String& name,uint64_t expectedSession,uint64_t expectedWorkflowPass)
 {if(!asset.present())return false;return queueDefaultIR({},{},asset,name,expectedSession,expectedWorkflowPass);}
+bool SwellEngine::assignDefaultPingPong(const PingPongSettings& settings,uint64_t session,uint64_t pass)
+{
+    return settings.valid() && queueDefaultIR({},pingPongPresetId,{},pingPongPresetName,session,pass,settings);
+}
 bool SwellEngine::setDefaultLevel(float db,uint64_t expectedSession,uint64_t expectedWorkflowPass)
 {
     const juce::ScopedLock guard(lock);
@@ -70,7 +74,9 @@ bool SwellEngine::setDefaultLevel(float db,uint64_t expectedSession,uint64_t exp
     notify();
     return true;
 }
-bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& presetId,const Asset& asset,const juce::String& label,uint64_t expectedSession,uint64_t expectedWorkflowPass)
+bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& presetId,const Asset& asset,const juce::String& label,
+                                uint64_t expectedSession,uint64_t expectedWorkflowPass,std::optional<PingPongSettings> pingPong,
+                                std::optional<SoundShaping> shaping)
 {
     const juce::ScopedLock guard(lock);const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if((expectedSession && expectedSession!=sessionGeneration.load()) || (expectedWorkflowPass!=UINT64_MAX && expectedWorkflowPass!=flow.pass))
@@ -80,6 +86,7 @@ bool SwellEngine::queueDefaultIR(const juce::File& file,const juce::String& pres
     std::erase_if(imports,[](const auto& job){return job.futureDefault;});
     if(imports.size()>=32){message="IR import queue full";return false;}
     Import job;job.file=file;job.presetId=presetId;job.managed=asset;job.label=label;job.session=sessionGeneration.load();job.futureDefault=true;
+    job.pingPong=pingPong;job.shaping=shaping;
     cancelLearnGenerationLocked();
     job.defaultRequest=++defaultRequest;job.workflowPass=flow.pass;imports.push_back(std::move(job));
     defaultPending=true;requestedDefaultName=label;defaultError.clear();defaultStatus="Preparing requested Default IR";notify();return true;

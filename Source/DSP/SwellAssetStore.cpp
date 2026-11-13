@@ -111,6 +111,30 @@ bool SwellAssetStore::writeIR(const ImpulseResponse& ir,Asset& output,juce::Stri
     Asset a; a.path="irs"; a.rate=ir.rate; a.channels=ir.channels; a.frames=static_cast<int64_t>(ir.frames()); a.sourceEnd=a.frames;
     if(!write(ir.samples,a,error)) return false; output=std::move(a); return true;
 }
+bool SwellAssetStore::reuseOrWriteIR(const ImpulseResponse& ir,const juce::String& content,uint64_t budget,
+                                    Asset& output,juce::String& error)
+{
+    const auto directory=root.getChildFile("irs");
+    const auto bytes=ir.samples.size()*sizeof(float);
+    if(bytes<=budget/3 && noLinks(directory,root))
+    {
+        int examined=0;
+        for(const auto& child:juce::RangedDirectoryIterator(directory,false,content+"-*.json"))
+        {
+            if(++examined>32)break;
+            const auto metadata=child.getFile();
+            if(!noLinks(metadata,root) || metadata.getSize()>16384)continue;
+            Asset candidate;juce::var value;juce::String ignored;
+            if(juce::JSON::parse(metadata.loadFileAsString(),value).failed() || !parseAssetMetadata(value,candidate,ignored)
+                || candidate.content!=content || candidate.rate!=ir.rate || candidate.channels!=ir.channels
+                || candidate.frames!=static_cast<int64_t>(ir.frames()))continue;
+            ImpulseResponse verified;
+            if(readIR(candidate,budget-bytes,verified,ignored) && verified.samples==ir.samples)
+            {output=std::move(candidate);error.clear();return true;}
+        }
+    }
+    return writeIR(ir,output,error);
+}
 bool SwellAssetStore::writeRender(const WetRender& wet,const Asset& ir,const juce::String& dependency,
                                  const SongTime& time,Asset& output,juce::String& error)
 {

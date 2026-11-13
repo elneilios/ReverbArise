@@ -70,7 +70,7 @@ void SwellTimeline::setData(CaptureSessionSnapshot c,EditorSnapshot s,SongTime t
         if(loopChanged || s.sessionEpoch!=dragEpoch || s.session.primary!=dragId || s.session.selected!=dragSelection || !owner || (owner && owner->frozen!=dragFrozen) || timingChanged
             || available!=dragSampleAvailable || (wetDrag && (owner->inputGeneration!=dragInput || owner->render.content!=dragRender
                 || !s.raw || !dragRaw || s.raw->start!=dragRaw->start || s.raw->end!=dragRaw->end)))
-        {drag=Drag::none;gestureMessage("Gesture cancelled: selection, source, mode or fixed timing changed");}
+        {drag=Drag::none;timingDraft.reset();gestureMessage("Gesture cancelled: selection, source, mode or fixed timing changed");}
     }
     if(!sameCaptureDisplay(capture,c) || !sameWetDisplay(data,s) || time.valid!=t.valid || time.rate!=t.rate
         || time.bpm!=t.bpm || time.numerator!=t.numerator || time.denominator!=t.denominator)invalidateWaveforms();
@@ -88,7 +88,7 @@ void SwellTimeline::setGestureModifiers(bool fine,bool bypassed)
 void SwellTimeline::rebaseDrag()
 {
     if(drag==Drag::none)return;
-    const auto w=find(data.session,dragId);if(!w){drag=Drag::none;return;}
+    const auto w=timingDraft?&timingDraft->swell:find(data.session,dragId);if(!w){drag=Drag::none;return;}
     dragOrigin=lastPointer;initialEnvelope=w->shape;initialPlacement=w->placement;
     initialTension=drag==Drag::inTension?w->shape.inTension:w->shape.outTension;
     if(drag==Drag::arrival)initialSample=w->arrival;
@@ -343,6 +343,17 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(ui::aqua);g.strokePath(triangle,juce::PathStrokeType(1));
     }
     std::set<int> markerColumns;const auto primary=find(data.session,data.session.primary);
+    std::optional<EditorSnapshot::ProposedTiming> proposed;
+    if(primary)
+    {
+        if(drag!=Drag::none && timingDraft)
+        {
+            const auto& w=timingDraft->swell;
+            proposed=EditorSnapshot::ProposedTiming{w.arrival,w.sourceStart,w.sourceEnd,w.placement};
+        }
+        else if(const auto request=data.irRequests.find(primary->id);request!=data.irRequests.end())
+            proposed=request->second.timing;
+    }
     for(const auto& w:data.session.swells)
     {
         const auto at=x(w.arrival);if(at<source.getX() || at>source.getRight())continue;
@@ -351,8 +362,9 @@ void SwellTimeline::paint(juce::Graphics& g)
         g.setColour(selected?ui::text:ui::secondary);g.drawVerticalLine(static_cast<int>(at),source.getY(),wet.getBottom());
         g.fillEllipse(at-4,source.getY()+12,8,8);
     }
-    if(primary && x(primary->arrival)>=source.getX() && x(primary->arrival)<=source.getRight())
-    {const auto at=x(primary->arrival);g.setColour(ui::timing);const float dashes[]{4,4};
+    const auto target=primary?x(proposed?proposed->arrival:primary->arrival):source.getX()-1;
+    if(target>=source.getX() && target<=source.getRight())
+    {const auto at=target;g.setColour(ui::timing);const float dashes[]{4,4};
         g.drawDashedLine({at,source.getY(),at,wet.getBottom()},dashes,2,1);
         juce::Path marker;marker.addTriangle(at-5,source.getY()+5,at+5,source.getY()+5,at,source.getY()+14);g.fillPath(marker);
         g.drawText("Target",juce::Rectangle<float>(at+7,source.getY()+3,140,18),juce::Justification::left);}
@@ -443,8 +455,32 @@ void SwellTimeline::paint(juce::Graphics& g)
             }
         }
     }
-    if(primary && x(primary->arrival)>=source.getX() && x(primary->arrival)<=source.getRight())
-    {g.setColour(ui::timing);const float dashes[]{4,4};g.drawDashedLine({x(primary->arrival),source.getY()+24,x(primary->arrival),wet.getBottom()},dashes,2,1);}
+    if(target>=source.getX() && target<=source.getRight())
+    {g.setColour(ui::timing);const float dashes[]{4,4};g.drawDashedLine({target,source.getY()+24,target,wet.getBottom()},dashes,2,1);}
+    if(primary && proposed)
+    {
+        const float dashes[]{4,4};
+        const auto guide=[&](int64_t sample,juce::Rectangle<float> lane,juce::Colour colour)
+        {
+            const auto at=x(sample);
+            if(at<lane.getX() || at>lane.getRight())return;
+            g.setColour(colour);
+            g.drawDashedLine({at,lane.getY(),at,lane.getBottom()},dashes,2,ui::rule);
+        };
+        if(proposed->arrival==primary->arrival)
+        {
+            if(proposed->sourceStart!=primary->sourceStart)guide(proposed->sourceStart,source,ui::secondary);
+            if(proposed->sourceEnd!=primary->sourceEnd)guide(proposed->sourceEnd,source,ui::secondary);
+        }
+        if(data.raw && proposed->placement!=primary->placement)
+        {
+            auto moved=*primary;
+            moved.placement=proposed->placement;
+            int64_t first,last;
+            if(requestedShapeBounds(moved,data.raw->start,first,last))
+            {guide(first,wet,ui::aqua);guide(last,wet,ui::aqua);}
+        }
+    }
     if(const auto position=transportPlayhead())
     {
         const auto play=x(*position);
@@ -535,6 +571,34 @@ void SwellTimeline::dragTo(juce::Point<float> point)
     if(!vertical && (!std::isfinite(candidate) || candidate< -9223372036854775808.L || candidate>=9223372036854775808.L))
     {gestureMessage("Timing candidate overflow");return;}
     const auto requested=vertical?int64_t{0}:static_cast<int64_t>(candidate);
+    if(deferTimingDrag)
+    {
+        const auto* current=find(data.session,dragId);
+        if(!current)return;
+        auto proposed=*current;
+        auto anchor=*current;
+        anchor.shape=initialEnvelope;
+        anchor.placement=initialPlacement;
+        const auto kindOfEdit=kind==Drag::arrival?TimingAnchor::arrival:kind==Drag::sourceStart?TimingAnchor::sourceStart
+            :kind==Drag::sourceEnd?TimingAnchor::sourceEnd:TimingAnchor::move;
+        long double origin=0;
+        songOrigin(dragAcceptedTime,origin);
+        juce::String error;
+        if(!applyTimingCandidate(proposed,anchor,kindOfEdit,requested,dragRaw?dragRaw->start:0,dragRaw?dragRaw->end:0,
+                                 snapping,dragGrid?&*dragGrid:nullptr,origin,error))
+        {gestureMessage(error);return;}
+        timingDraft=TimingDraft{std::move(proposed),requested,snapping};
+        gestureMessage({});
+        repaint();
+        return;
+    }
+    submitDrag(requested,snapping,(point.y-dragOrigin.y)*(fineDrag?.1:1.));
+}
+
+void SwellTimeline::submitDrag(int64_t requested,bool snapping,double verticalDelta)
+{
+    const auto kind=drag;
+    const auto vertical=kind==Drag::inTension || kind==Drag::outTension;
     const auto raw=dragRaw;juce::String failure;bool stale=false,invoked=false;
     const auto changed=engine.edit(dragId,[&](Swell& w,juce::String& error)
     {
@@ -546,6 +610,8 @@ void SwellTimeline::dragTo(juce::Point<float> point)
         // current selection inside that same transaction, including secondary IDs.
         const auto current=engine.savedSession();
         if(current.primary!=dragId || current.selected!=dragSelection){stale=true;error=failure="Selection changed; start a new gesture";return false;}
+        if(deferTimingDrag && w.inputGeneration!=dragInput)
+        {stale=true;error=failure="Source changed; start a new gesture";return false;}
         if(!vertical)
         {
             const auto anchorKind=kind==Drag::arrival?TimingAnchor::arrival:kind==Drag::sourceStart?TimingAnchor::sourceStart:kind==Drag::sourceEnd?TimingAnchor::sourceEnd:
@@ -555,11 +621,11 @@ void SwellTimeline::dragTo(juce::Point<float> point)
             if(!ok)failure=error;return ok;
         }
         if(!raw)return false;auto shape=w.shape;
-        const auto verticalDelta=(point.y-dragOrigin.y)*(fineDrag?.1:1.);
         if(kind==Drag::inTension)shape.inTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         if(kind==Drag::outTension)shape.outTension=std::clamp(initialTension+verticalDelta/80.0,-1.0,1.0);
         return setShape(w,shape,raw->start,raw->end,error);
-    },dragEpoch,nullptr,capture.manifest.loop?capture.manifest.revision:0);
+    },dragEpoch,nullptr,capture.manifest.loop?capture.manifest.revision:0,
+        kind==Drag::arrival || kind==Drag::sourceStart || kind==Drag::sourceEnd || kind==Drag::move);
     if(!changed){if(!invoked || stale || engine.assignmentEpoch()!=dragEpoch)drag=Drag::none;gestureMessage(failure.isNotEmpty()?failure:"Edit rejected by current source/session/mode guard");return;}
     gestureMessage({});
     // Canonical metadata only: no waveform preparation or FFT on the message thread.
@@ -622,6 +688,9 @@ void SwellTimeline::mouseDown(const juce::MouseEvent& e)
     setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());
     if(beginEdit(e.position)==Press::open && (source.contains(e.position) || wet.contains(e.position)))
     {pointerGesture=PointerGesture::position;positionPlayhead(e.position.x);}
+    if(drag==Drag::arrival || drag==Drag::sourceStart || drag==Drag::sourceEnd || drag==Drag::move)
+        if(const auto* swell=find(data.session,dragId))
+            deferTimingDrag=swell->soundPreset.pingPong && swell->soundPreset.pingPong->tempoSync;
     repaint();
 }
 void SwellTimeline::mouseDrag(const juce::MouseEvent& e)
@@ -637,6 +706,17 @@ void SwellTimeline::mouseDrag(const juce::MouseEvent& e)
     }
     else if(pointerGesture==PointerGesture::position)positionPlayhead(e.position.x);
     else {setGestureModifiers(e.mods.isShiftDown(),e.mods.isCtrlDown());dragTo(e.position);}
+}
+void SwellTimeline::mouseUp(const juce::MouseEvent& event)
+{
+    if(drag!=Drag::none && timingDraft && event.position!=lastPointer)dragTo(event.position);
+    if(drag!=Drag::none && timingDraft)
+    {
+        const auto requested=timingDraft->requested;
+        const auto snapping=timingDraft->snapping;
+        submitDrag(requested,snapping,0);
+    }
+    endPointerGesture();
 }
 void SwellTimeline::positionPlayhead(float at)
 {

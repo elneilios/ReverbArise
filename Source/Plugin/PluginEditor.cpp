@@ -633,8 +633,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             index==endOffsetValue?"Signed seconds from the dry target. Negative creates a gap; positive overlaps unchanged dry audio.":
             index==placementValue?"Move wet audio and envelope together in milliseconds; dry stays fixed. Typed entry is never snapped.":
             index==inCurveValue || index==outCurveValue?"Independent curve tension, -1 to +1. Curve preset is in Settings.":"Type an exact value, or drag the knob. Shift-drag for fine adjustment.");
-        cell.onBegin=[this,index]{beginValueEdit(index);};cell.onEnd=[this,index]{valueAnchors[index].reset();};
-        cell.onDelta=[this,index](double delta){commitValueEdit(index,{},delta);};
+        cell.onBegin=[this,index]{beginValueEdit(index);};
+        cell.onEnd=[this,index]{valueAnchors[index].reset();valueTimingDrafts[index].reset();};
+        cell.onGestureCommitted=[this,index]{commitValueDrag(index);};
+        cell.onDelta=[this,index](double delta){stageValueDrag(index,delta);};
         cell.onRebase=[this,index]{rebaseValueEdit(index);};
         cell.onStep=[this,index](double amount,bool fineWheel){stepValueEdit(index,amount,fineWheel);};
         cell.setResetAction([this,index]{return prepareValueReset(index);});

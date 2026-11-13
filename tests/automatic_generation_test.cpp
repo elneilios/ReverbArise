@@ -27,6 +27,21 @@ int main(){return runTest([]
     REQUIRE(saved.swells[0].sourceStart==100 && saved.swells[0].sourceEnd==600);
     REQUIRE(saved.swells[1].sourceStart==600 && saved.swells[1].sourceEnd==1000);
     const auto a=saved.swells[0].id,b=saved.swells[1].id;
+    {
+        auto shaped=accepted;
+        shaped.defaultSoundPreset.shaping={50,230,1000};
+        const auto added=plan(shaped,candidates);
+        REQUIRE(added.outcome==GenerationOutcome::generated);
+        for(const auto& swell:added.replacement.swells)
+            REQUIRE(swell.soundPreset.shaping==shaped.defaultSoundPreset.shaping);
+        auto existing=added.replacement;
+        existing.defaultSoundPreset.shaping={100,20,20000};
+        existing.defaultIR=asset('b');existing.defaultIRName="B";
+        const auto regenerated=plan(existing,candidates);
+        REQUIRE(regenerated.outcome==GenerationOutcome::generated && regenerated.changed.size()==2);
+        for(const auto& swell:regenerated.replacement.swells)
+            REQUIRE(swell.soundPreset.shaping==shaped.defaultSoundPreset.shaping && swell.ir==existing.defaultIR);
+    }
     REQUIRE(saved.swells[0].generationSource==juce::String::repeatedString("a",64));
     REQUIRE(plan(saved,candidates).outcome==GenerationOutcome::noChange);
     // Older session metadata can lack generationSource after a wet-render upgrade.

@@ -26,3 +26,15 @@ dynamic pitch shifting. Original Hall remains untouched and remains the default.
 Reproduce with `scripts/generate_ir_library.py`, then verify using
 `scripts/package_ir_library.py --check`; see `docs/development/ir-library.md` for commands,
 gain/compatibility policy and native/host verification.
+
+## Stereo Ping Pong Crescendo source
+
+`presets/stereo-ping-pong-crescendo-v1.wav` holds the 11 bursts extracted from the
+owner-approved Creative IR Crescendo v2 reference. It packs the original 48 kHz,
+24-bit PCM in audible order. The companion JSON records the reference and packed
+checksums, original positions, channels, and peak offsets. The owner approved this
+source for the ReverbArise preset. The original synthesis code is unavailable.
+
+Reproduce with `python scripts/extract_ping_pong_source.py <reference-wav>`.
+Add `--check` to verify the packed asset and its manifest without writing files.
+The extraction verifies that the original stereo PCM can be reconstructed exactly.

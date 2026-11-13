@@ -10,6 +10,8 @@ public:
     explicit SwellAssetStore(juce::File root) : root(std::move(root)) {}
     bool importIR(const juce::File&, uint64_t budget, Asset&, juce::String& error);
     bool writeIR(const ImpulseResponse&, Asset&, juce::String& error);
+    bool reuseOrWriteIR(const ImpulseResponse&, const juce::String& content, uint64_t budget,
+                        Asset&, juce::String& error);
     bool writeRender(const WetRender&, const Asset& ir, const juce::String& dependency,
                      const SongTime&, Asset&, juce::String& error);
     bool readIR(const Asset&, uint64_t budget, ImpulseResponse&, juce::String& error) const;

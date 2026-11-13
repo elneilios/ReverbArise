@@ -30,6 +30,10 @@ public:
         double minimum = 0, maximum = 1, step = .01;
         juce::StringArray steps;
         juce::String unit;
+        juce::StringArray accessibleSteps;
+        juce::String help;
+        std::optional<double> initialValue;
+        bool cutoff = false, offAtTop = false;
         bool operator==(const Parameter&) const = default;
     };
     struct Value
@@ -37,6 +41,7 @@ public:
         Parameter parameter;
         double value = 0;
         bool editable = true;
+        juce::String unavailableReason;
     };
     struct View
     {
@@ -106,13 +111,24 @@ public:
     std::function<void()> beforeInvocation, onImport;
     std::function<void(const juce::String&)> onPreset, onFile;
     std::function<void(const juce::String&, double)> onValue;
-    std::function<void()> onValueBegin;
+    std::function<std::function<void()>(const juce::String&, double)> onPrepareValueReset;
+    std::function<void()> onValueBegin, onValueEnd;
+    std::function<void()> onValueCancel;
     std::function<void(bool)> onSync;
     juce::Component& importAction() noexcept { return import; }
     ChoiceSelector& presetPicker() noexcept { return presets; }
     ChoiceSelector& filePicker() noexcept { return files; }
     juce::Label& pickerLabel() noexcept { return presetLabel; }
     bool hasResponsePreview() const noexcept { return view.acceptedPeaks != nullptr; }
+    void previewValue(const juce::String& id, double value)
+    {
+        if (auto entry = std::find_if(view.values.begin(), view.values.end(),
+                [&](const auto& item) { return item.parameter.id == id; }); entry != view.values.end())
+        {
+            entry->value = value;
+            updateValues();
+        }
+    }
     void useLevelControl(KnobValue& level)
     {
         externalLevel = &level;
@@ -371,8 +387,25 @@ private:
 
     static juce::String displayText(const Parameter& p, double value)
     {
+        if (p.cutoff)
+            return value == 0 ? "Off" : value < 1000 ? juce::String(juce::roundToInt(value)) + " Hz"
+                : compactValue(value / 1000, 5) + " kHz";
         return p.steps.isEmpty() ? compactValue(value, 4) + p.unit
                                  : p.steps[juce::roundToInt(value)];
+    }
+    static constexpr double cutoffTravel = .985;
+    static double fraction(const Parameter& p, double value)
+    {
+        if (!p.cutoff) return (value - p.minimum) / (p.maximum - p.minimum);
+        if (value == 0) return p.offAtTop ? 1. : 0.;
+        const auto active = std::log(value / 20.) / std::log(1000.);
+        return (p.offAtTop ? 0. : 1. - cutoffTravel) + active * cutoffTravel;
+    }
+    static double cutoffAt(const Parameter& p, double position)
+    {
+        if (p.offAtTop ? position > cutoffTravel : position < 1. - cutoffTravel) return 0.;
+        const auto active = std::clamp((position - (p.offAtTop ? 0. : 1. - cutoffTravel)) / cutoffTravel, 0., 1.);
+        return std::round(20. * std::pow(1000., active));
     }
     void updateValues()
     {
@@ -389,9 +422,12 @@ private:
             const auto shown = displayText(p, item.value);
             const auto span = p.maximum - p.minimum;
             cell.displayDomain({item.value, p.minimum, p.maximum, p.step, span, shown});
-            cell.display(view.owner + "/" + view.accepted, shown, span > 0 ? (item.value - p.minimum) / span : 0.,
-                         item.editable, p.steps.isEmpty() ? preciseValue(item.value) : shown);
-            const auto help = item.editable ? p.label : view.disabledReason;
+            const auto exact = p.cutoff && item.value == 0 ? juce::String("Off") : p.steps.isEmpty() ? preciseValue(item.value)
+                : p.accessibleSteps.isEmpty() ? shown : p.accessibleSteps[juce::roundToInt(item.value)];
+            cell.display(view.owner + "/" + view.accepted, shown, span > 0 ? fraction(p, item.value) : 0.,
+                         item.editable, exact);
+            const auto help = item.editable ? (p.help.isEmpty() ? p.label : p.help)
+                : item.unavailableReason.isNotEmpty() ? item.unavailableReason : view.disabledReason;
             cell.setValueHelp(help);
             cell.setValueDescription(help);
             cell.setHelpText(help);
@@ -418,20 +454,39 @@ private:
         cell->configure(definition.label, id, definition.label);
         cell->setCompactPresentation(true);
         cell->setSteppedReadout(!definition.steps.isEmpty());
+        if (definition.cutoff) cell->valueField().setNumericCharacters("0123456789.oOfF");
         const auto anchor = std::make_shared<double>();
         const auto capture = [this, id, anchor]
         {
             if (const auto* value = current(id)) *anchor = value->value;
         };
         cell->onBegin = [this, capture] { capture(); if (onValueBegin) onValueBegin(); };
+        cell->onGestureCommitted = [this] { if (onValueEnd) onValueEnd(); };
+        cell->onEnd = [this] { if (onValueCancel) onValueCancel(); };
         cell->onRebase = capture;
         cell->onDelta = [this, id, anchor](double fraction)
-        { if (const auto* value = current(id)) submit(id, *anchor + fraction * (value->parameter.maximum - value->parameter.minimum)); };
+        {
+            if (const auto* value = current(id))
+            {
+                const auto& p = value->parameter;
+                submit(id, p.cutoff ? cutoffAt(p, SoundPresetEditor::fraction(p, *anchor) + fraction)
+                                    : *anchor + fraction * (p.maximum - p.minimum));
+            }
+        };
         cell->onAbsolute = [this, id](double value) { submit(id, value); };
         cell->onStep = [this, id](double delta, bool fine)
         {
             if (const auto* value = current(id))
             {
+                if (value->parameter.cutoff)
+                {
+                    const auto& p = value->parameter;
+                    if (value->value == 0 && (p.offAtTop ? delta < 0 : delta > 0))
+                        submit(id, p.offAtTop ? p.maximum : 20.);
+                    else
+                        submit(id, cutoffAt(p, fraction(p, value->value) + delta * (fine ? .004 : .02)));
+                    return;
+                }
                 const auto change = value->parameter.steps.isEmpty() ? delta * value->parameter.step * (fine ? .1 : 1.)
                                                                      : std::copysign(1., delta);
                 submit(id, value->value + change);
@@ -441,6 +496,11 @@ private:
         {
             const auto* value = current(id);
             if (!value) return false;
+            if (value->parameter.cutoff && input.trim().equalsIgnoreCase("Off"))
+            {
+                submit(id, 0);
+                return true;
+            }
             if (!value->parameter.steps.isEmpty())
             {
                 const auto index = value->parameter.steps.indexOf(input.trim());
@@ -455,14 +515,28 @@ private:
             double parsed = 0;
             const auto result = std::from_chars(first, last, parsed);
             const auto valid = result.ec == std::errc{} && result.ptr == last && std::isfinite(parsed)
-                            && parsed >= value->parameter.minimum && parsed <= value->parameter.maximum;
+                            && parsed >= value->parameter.minimum && parsed <= value->parameter.maximum
+                            && (!value->parameter.cutoff || parsed == 0 || parsed >= 20);
             if (valid) submit(id, parsed);
             else if (const auto it = std::find_if(dials.begin(), dials.end(), [&](const auto& dial) { return dial.definition.id == id; }); it != dials.end())
-                it->control->setValidation("Enter a value from " + displayText(value->parameter, value->parameter.minimum)
-                                          + " to " + displayText(value->parameter, value->parameter.maximum) + ".");
+                it->control->setValidation(value->parameter.cutoff ? "Enter Off or a frequency from 20 to 20000 Hz."
+                    : "Enter a value from " + displayText(value->parameter, value->parameter.minimum)
+                        + " to " + displayText(value->parameter, value->parameter.maximum) + ".");
             return valid;
         };
         cell->onFeedbackChanged = [this] { if (!layingOut) resized(); };
+        if (definition.initialValue)
+        {
+            const auto initial = *definition.initialValue;
+            const auto valueText = displayText(definition, initial) + (id == "level" ? " dB" : "");
+            cell->setResetAction([this, id, initial, valueText]() -> KnobValue::ResetAction
+            {
+                const auto* value = current(id);
+                if (!value || !value->editable || busy.isVisible() || !onPrepareValueReset)
+                    return {"Reset unavailable", {}};
+                return {"Reset to default (" + valueText + ")", onPrepareValueReset(id, initial)};
+            });
+        }
         if (id == "level") cell->setHomeDetent({0., .3});
         content.addAndMakeVisible(*cell);
         dials.push_back({definition, std::move(cell)});
@@ -496,19 +570,19 @@ private:
         }
         area.removeFromTop(contentPadding);
         if (view.tempoSync) sync.setBounds(area.removeFromTop(controlGeometry::switchHeight));
-        if (externalLevel)
+        const auto count = dials.size() + (externalLevel ? 1 : 0);
+        const auto layoutDial = [&](size_t index, Rect bounds)
         {
-            auto levelRow = area.removeFromTop(valueRowHeight);
-            levelRow.setWidth(std::max(0, (levelRow.getWidth() - contentPadding) / 2));
-            area.removeFromTop(externalLevel->setValueBounds(levelRow) - valueRowHeight);
-        }
-        for (size_t i = 0; i < dials.size(); i += 2)
+            if (index < dials.size()) return dials[index].control->setValueBounds(bounds);
+            return index == dials.size() && externalLevel ? externalLevel->setValueBounds(bounds) : 0;
+        };
+        for (size_t i = 0; i < count; i += 2)
         {
             auto pair = area.removeFromTop(valueRowHeight);
             const auto left = pair.removeFromLeft(std::max(0, (pair.getWidth() - contentPadding) / 2));
             pair.removeFromLeft(contentPadding);
-            const auto firstHeight = dials[i].control->setValueBounds(left);
-            const auto secondHeight = i + 1 < dials.size() ? dials[i + 1].control->setValueBounds(pair) : 0;
+            const auto firstHeight = layoutDial(i, left);
+            const auto secondHeight = layoutDial(i + 1, pair);
             area.removeFromTop(std::max(firstHeight, secondHeight) - valueRowHeight);
         }
         description.arrange(view.description, false, area.withHeight(spacing::tight));
