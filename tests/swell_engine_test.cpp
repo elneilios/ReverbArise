@@ -23,6 +23,61 @@ template<class F> static void waitFor(F condition,const std::source_location loc
 }
 #include "LiveClockEngineCases.h"
 #include "StorageLocationEngineCases.h"
+
+static void runPingPongReplacementCases()
+{
+    constexpr double rate=48000;
+    const SongTime captureTime{true,0,0,rate,120,4,4};
+    TestDirectory root;
+    CaptureSession capture(root.file);
+    std::vector<float> source(96000*2,0);
+    source[24000*2]=source[24000*2+1]=.5f;
+    REQUIRE(capture.commit(0,rate,source.data(),96000));
+    juce::CriticalSection contextLock;
+    PreviewContext context{capture.snapshot(),captureTime};
+    SwellEngine engine(root.file,[&]{const juce::ScopedLock guard(contextLock);return context;});
+    const auto setTime=[&](SongTime time){const juce::ScopedLock guard(contextLock);context.time=time;};
+    engine.setAutomaticProcessing(false);
+    waitFor([&]{return engine.savedSession().defaultIR.present();});
+    REQUIRE(engine.addTarget(24000));
+    const auto id=engine.savedSession().primary;
+    const auto swell=[&]{return *find(engine.savedSession(),id);};
+    waitFor([&]{return swell().phase==Phase::ready;});
+
+    // A new assignment uses the reference response and the capture's render
+    // metadata even if the host ruler is missing or running at another rate.
+    const SongTime wrongRate{true,0,0,44100,120,4,4};
+    for(const auto& unavailable:{SongTime{},wrongRate})
+    {
+        setTime(unavailable);
+        REQUIRE(engine.assignPingPong(id,swell().inputGeneration,PingPongSettings{},engine.assignmentEpoch()));
+        waitFor([&]{const auto current=swell();return current.phase==Phase::ready && current.soundPreset.pingPong.has_value();});
+        const auto fallback=swell();
+        REQUIRE(!fallback.soundPreset.rulerAligned && fallback.render.rate==rate && fallback.render.bpm==captureTime.bpm);
+        setTime(captureTime);
+        waitFor([&]{const auto current=swell();return current.phase==Phase::ready && current.soundPreset.rulerAligned;});
+        REQUIRE(engine.assignBundledIR(id,swell().inputGeneration,defaultImpulseId,engine.assignmentEpoch()));
+        waitFor([&]{const auto current=swell();return current.phase==Phase::ready && !current.soundPreset.pingPong;});
+    }
+
+    REQUIRE(engine.assignDefaultPingPong(PingPongSettings{},engine.assignmentEpoch(),0));
+    waitFor([&]{return engine.savedSession().defaultSoundPreset.pingPong.has_value();});
+    REQUIRE(engine.edit(id,[](auto& value,auto& error){return moveWet(value,1200,error);}));
+    REQUIRE(engine.setFrozen(id,true));
+    const auto before=swell();
+    REQUIRE(!engine.assignPingPong(id,before.inputGeneration,PingPongSettings{},engine.assignmentEpoch()));
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(engine.resetSwell(id,true));
+    waitFor([&]{return engine.renderPublicationWaitingForTesting();});
+    const auto pending=swell();
+    REQUIRE(pending.frozen && pending.placement==before.placement && pending.render==before.render);
+    engine.holdRenderPublicationForTesting(false);
+    waitFor([&]{const auto current=swell();return !current.frozen && current.phase==Phase::ready;});
+    const auto reset=swell();
+    REQUIRE(reset.placement==0 && reset.soundPreset.rulerAligned && reset.render.irContent==reset.ir.content);
+    REQUIRE(reset.render!=before.render);
+}
+
 int main() { return runTest([]
 {
     {
@@ -63,6 +118,7 @@ int main() { return runTest([]
     }
     runLiveClockEngineCases();
     runStorageLocationEngineCases();
+    runPingPongReplacementCases();
     TestDirectory root; CaptureSession capture(root.file); juce::String error;
     std::vector<float> source(6000,0); source[0]=1; source[1]=-0.5f; source[400]=0.8f; source[1000]=0.5f;
     REQUIRE(capture.commit(0,1000,source.data(),3000));

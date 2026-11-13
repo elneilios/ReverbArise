@@ -65,20 +65,78 @@ Legacy sessions seed known choices from accepted default/swell references;
 formerly unused imports cannot be recovered by scanning storage. Keep a
 pre-upgrade project copy when rollback to an older binary is required.
 
-Use the existing Selected Swell dropdown for any of the six bundled sounds, or
-the adjacent folder button for a WAV/WavPack. This changes only that swell. Its
-source, arrival, placement, level, curves and activity preferences stay intact.
-Freeze must be turned off before changing an IR. Descriptions identify the sound.
-Monumental deliberately has greater intensity than the subtle responses.
+Use Sound Preset in Learn Settings or Selected Swell. Previous and Next wrap
+through the six bundled sounds, Stereo Ping Pong Crescendo and Custom IR. Choose Custom IR to reveal the IR
+File selector, WAV/WavPack import action and shared shaping controls. The last
+accepted response stays audible while you choose a file. In Learn accepting a
+file sets the future default. In Perform it changes the selected swell while preserving its source,
+arrival, placement, Level, curves and activity. Unfreeze to change the response.
+Descriptions below the controls identify the sound.
+
+### Shared Sound shaping
+
+Level, Damping, High Pass and Low Pass are available for bundled presets and
+Custom IR in Learn and Perform. Learn sets future defaults. Perform edits the
+selected swell. Level keeps its existing gain path. The cuts shape the captured
+source feeding the wet render, with an Off setting and 20 Hz–20 kHz range. The
+worker bounds active cutoffs below Nyquist at lower rates and keeps separate
+filter history per channel. Captured and dry audio keep their original signal.
+
+Full-response Damping progressively shortens the contribution from the IR tail.
+Its taper uses the forward-time response energy distribution, so a hall and a
+short plate use different decay time scales. Ping Pong uses its existing per-hit
+Damping. Neutral values keep the existing render dependency and processing path.
+Projects with non-neutral shared shaping use state v14 and store the canonical
+values alongside the accepted assignment. Existing v12 and v13 values and render
+identities remain readable without regeneration.
+
+### Stereo Ping Pong Crescendo
+
+Stereo Ping Pong Crescendo prepares a response from the 11 approved PCM bursts
+in `resources/presets`. Tempo Sync uses the compatible Song ruler or committed
+Loop timing. Echo Rate selects quarter, eighth, dotted eighth, sixteenth, dotted
+sixteenth or thirty-second notes.
+With Sync off, the spacing uses the reference tempo and the final hit retains
+its arrival-relative offset. A new synced assignment with an unavailable ruler
+can use that same reference response while rendering against compatible accepted
+capture timing. The editor shows the fallback until a compatible ruler is
+available and its response is accepted. Reset All can unfreeze a swell and
+publish a rephased default Sound together with its replacement render.
+The accepted response and settings are saved
+together. Creative state v13 extends the v12 Sound record only when a project
+uses Ping Pong. Existing bundled and Custom IR projects retain their v12 format.
+The preset uses the version 1 PCM source. Revision 3 keeps the first audible
+hit as the reference for the response's gain curve. At 0% the hits have even
+peaks, 75% uses the authored build, and 100% gives a stronger rise into the
+arrival. Musical gain matching preserves the change in late-hit level before
+the usual headroom check. Gate Amount defaults to 0%, the original stereo
+excitation. At 100% it feeds both wet channels from a shared captured signal
+around the arrival and tapers the excitation over one echo interval. Values
+between those endpoints blend the two signals. The accepted render is preserved
+on reopen. Saved revisions 1–3 display 0%, and revision 4 displays 100%.
+Damping reduces resonance within each Ping Pong hit while preserving its peak,
+timing and channel placement. The moderate taper is at 50%. The 0% default
+uses the original response, including for assignments saved before Damping.
+Revision 7 extends the damping range above 50% and lets the wet response
+recede in the mix by lowering the musical matching target. Revision 6 assignments retain
+their accepted render and saved dial value on reopen.
+
+Target, source-bound and Move Wet edits can require a new synced response.
+Preparation uses the existing worker and publishes the new placement and render
+together through the IR handover. Matching verified response PCM reuses the
+managed asset. Dragging a response control or synced timing handle previews
+the proposed value or position immediately, then submits once on release.
+Level and Envelope keep their existing controls.
 
 An IR-only change on a verified ready swell keeps its accepted sound available while
-the requested one prepares. Status names both responses. Hover for full names and
-recovery details. The complete replacement joins the current Song position with
+the requested one prepares. After two seconds the Sound panel shows a waveform
+and names the request. The picker and menu use decorative peaks of the available
+responses. The complete replacement joins the current Song position with
 the existing transition of at most 5 ms. An active manual Audition crossfades to
 the new mix at the current listening position, wrapping into the new window if
 needed. Neighbours keep their positions and voices.
 
-On failure, status identifies the requested IR, the cause and what to try next.
+On failure, the affected picker or IR File row shows the reason and allows retry.
 The previous sound remains available where its dependencies still verify. Source,
 explicit envelope, placement and timing edits keep their normal invalidation
 rules. Activity and routing still govern what plays. Old and new pages and

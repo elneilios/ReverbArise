@@ -175,7 +175,7 @@ void Composition::verifyFocusedLevel()
         REQUIRE(viewport->getViewArea().contains(cell.getBounds()));
         REQUIRE(cell.getNumChildComponents()==standard.getNumChildComponents());
         auto& feedback=require<controls::FieldFeedbackLabel>(cell,"swellLevelFeedback");
-        REQUIRE(!feedback.getBounds().isEmpty() && local.contains(feedback.getBounds()));
+        REQUIRE(feedback.getBounds().isEmpty());
         REQUIRE(dial.getBounds()==standard.valueKnob().getBounds() && local.contains(field.getBounds()));
         const auto angles=dial.getRotaryParameters();
         const auto neutral=(angles.startAngleRadians+angles.endAngleRadians)/2;

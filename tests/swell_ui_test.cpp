@@ -9,6 +9,7 @@
 #include "ControlLibraryCases.h"
 #include "CommandButtonCases.h"
 #include "ConvolutionIrCases.h"
+#include "SoundPresetCases.h"
 #include "ExportLevelsCases.h"
 #include "ModeIconCases.h"
 #include "LearnTimelineCases.h"
@@ -380,6 +381,7 @@ int main(int argc,char* argv[]){return runTest([&]
     }
     profileCheckpoint("Command buttons");
     commandButtonCases::cases();
+    if(argc>1 && juce::String(argv[1])=="--test-sound-presets"){soundPresetCases::run();return;}
     if(argc>1 && (juce::String(argv[1])=="--test-ir-editor" || juce::String(argv[1])=="--review-ir-editor" || juce::String(argv[1])=="--review-ir-editor-failed"))
     {
         convolutionIrCases::cases();
@@ -1095,7 +1097,7 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto sourceHeading=dynamic_cast<juce::Label*>(named(editor,"learnCaptureHeading")),automaticHeading=dynamic_cast<juce::Label*>(named(editor,"learnAutomaticHeading"));
         REQUIRE(sourceHeading && automaticHeading && sourceHeading->getFont().getHeight()==automaticHeading->getFont().getHeight());
         REQUIRE(sourceHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi") && automaticHeading->getFont().getTypefaceStyle().containsIgnoreCase("semi"));
-        for(const auto* labelName:{"learnIRLabel","learnSensitivityLabel"})
+        for(const auto* labelName:{"learnSensitivityLabel"})
         {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label && label->getFont().getHeight()==m3::ui::bodySize);
             const auto* selector=named(editor,"learnDefaultIR");REQUIRE(selector);
             const auto expectedX=juce::String(labelName)=="learnIRLabel"
@@ -1116,10 +1118,9 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(named(editor,"learnAutomaticHelp")->getY()>=automaticSwitch->getBottom());
         REQUIRE(sourceHeading->getY()==learning->timelineHeadingBounds().getY());
         REQUIRE(!learning->showsEmptyPrompt());
-        for(const auto* labelName:{"learnRecaptureHelp","learnAutomaticHelp","learnIRStatus"})
+        for(const auto* labelName:{"learnRecaptureHelp","learnAutomaticHelp"})
         {const auto label=dynamic_cast<juce::Label*>(named(editor,labelName));REQUIRE(label);
-            if(juce::String(labelName)=="learnIRStatus")REQUIRE(label->getFont().getHeight()==m3::ui::controls::FieldPresentation::helperHeight);
-            else REQUIRE(label->getFont().getHeight()>=14);
+            REQUIRE(label->getFont().getHeight()>=14);
             REQUIRE(label->getFont().getTypefaceStyle().containsIgnoreCase("regular") && label->findColour(juce::Label::textColourId)==m3::ui::learnTypography::descriptionColour);}
         REQUIRE(!learning->timelineHeadingBounds().intersects(learning->timelineCaptionBounds()) && !learning->timelineCaptionBounds().intersects(learning->timelineRulerBounds()));
         REQUIRE(!learning->timelineRulerBounds().intersects(learning->timelineBounds()) && !learning->timelineStatusBounds().intersects(learning->timelineBounds()));
@@ -1241,13 +1242,13 @@ int main(int argc,char* argv[]){return runTest([&]
             REQUIRE(reopenedLearn && !reopenedLearn->hasPinnedInspection() && !reopenedLearn->inspectedSample());
             editor.removeFromDesktop();editor.setAlpha(1.f);editor.refresh();
         }
-        auto automatic=dynamic_cast<juce::ToggleButton*>(named(editor,"learnAutomaticSwells"));auto defaultIR=dynamic_cast<juce::ComboBox*>(named(editor,"learnDefaultIR"));
+        auto automatic=dynamic_cast<juce::ToggleButton*>(named(editor,"learnAutomaticSwells"));auto defaultIR=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnDefaultIR"));
         auto sensitivity=dynamic_cast<m3::ui::controls::InvocationSlider*>(named(editor,"learnMarkerSensitivity"));REQUIRE(automatic && defaultIR && sensitivity);
         automatic->setToggleState(true,juce::sendNotificationSync);editor.refresh();REQUIRE(visibleOffscreen(defaultIR) && visibleOffscreen(sensitivity));
         REQUIRE(sensitivity->getSliderStyle()==juce::Slider::LinearHorizontal && defaultIR->getNumItems()==7);
         sensitivity->onDragStart();sensitivity->setValue(37.5,juce::sendNotificationSync);if(sensitivity->onDragEnd)sensitivity->onDragEnd();editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f);
-        auto* sharedIr=dynamic_cast<m3::ui::controls::ConvolutionIrEditor*>(named(editor,"learnIrEditor"));REQUIRE(sharedIr);
-        const auto irLabelBounds=sharedIr->label.getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
+        auto* sharedIr=dynamic_cast<m3::ui::controls::SoundPresetEditor*>(named(editor,"learnIrEditor"));REQUIRE(sharedIr);
+        const auto irLabelBounds=sharedIr->pickerLabel().getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
         REQUIRE(m3::ui::controls::commandBodyBounds(defaultIR->getBounds()).getY()-irLabelBounds.getBottom()==m3::ui::spacing::labelHelp);
         const auto autoStopBounds=named(editor,"learnAutoGenerateOnStop")->getBounds();
         REQUIRE(autoStopBounds.getY()-named(editor,"learnAutomaticSwells")->getBottom()==m3::ui::spacing::related);
@@ -1279,22 +1280,20 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f && sensitivity->getValue()==37.5);
         controlReview::pointerClick(numeric->incrementButton());controlReview::pointerClick(numeric->decrementButton());editor.refresh(); // Clear only the deliberate stale-edit warning with accepted input.
         const auto savedDefault=engine.savedSession().defaultIR;const auto assigned=engine.savedSession().swells.front().ir;
-        engine.holdDefaultImportsForTesting(true);defaultIR->setSelectedId(6,juce::sendNotificationSync);
+        engine.holdDefaultImportsForTesting(true);defaultIR->beforeInvocation();defaultIR->setSelectedId(6,juce::sendNotificationSync);
         waitUI([&]{return engine.defaultImportWaitingForTesting();});editor.refresh();
-        auto irStatus=dynamic_cast<juce::Label*>(named(editor,"learnIRStatus"));REQUIRE(irStatus && irStatus->getText().contains("Requested: Whisper") && defaultIR->getText()==baseline.defaultIRName);
+        REQUIRE(engine.snapshot().requestedDefaultIRName=="Whisper" && defaultIR->getText()==baseline.defaultIRName);
         auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice && !notice->currentMessage());
-        juce::Thread::sleep(650);editor.refresh();REQUIRE(notice->currentMessage() && notice->currentMessage()->text=="Preparing IR: Whisper");
-        REQUIRE(irStatus->getText().contains("Requested: Whisper"));snapshotEditor(editor,"learn-ir-preparing");
+        juce::Thread::sleep(650);editor.refresh();REQUIRE(!notice->currentMessage());
+        snapshotEditor(editor,"learn-ir-preparing");
         REQUIRE(sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && sharedIr->getBounds().getPosition()==stableIRFeedback.getPosition());
         engine.holdDefaultImportsForTesting(false);waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
         REQUIRE(engine.savedSession().defaultIRName=="Whisper" && engine.savedSession().swells.front().ir==assigned);
-        REQUIRE(irStatus->getText().isEmpty() && sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && !notice->currentMessage());
+        REQUIRE(defaultIR->getValidationMessage().isEmpty() && !notice->currentMessage());
         snapshotEditor(editor,"learn-default-picker");largeWorkflowSnapshot("learn-default-picker");
         REQUIRE(engine.assignDefaultIR(root.file.getChildFile("invalid-default.wav")));waitUI([&]{return !engine.snapshot().defaultIRPending;});editor.refresh();
-        REQUIRE(irStatus->getText().contains("Couldn't load IR") && irStatus->findColour(juce::Label::textColourId)==m3::ui::danger && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
-        REQUIRE(notice->currentMessage() && notice->currentMessage()->tone==m3::ui::controls::NoticeTone::error && notice->currentMessage()->text.contains("retry"));
-        const auto irError=notice->currentMessage();juce::Thread::sleep(50);editor.refresh();REQUIRE(notice->currentMessage()==irError);snapshotEditor(editor,"learn-ir-error");
-        REQUIRE(sensitivity->getBounds().withPosition(0,0)==stableSensitivity.withPosition(0,0) && sharedIr->getBounds().getPosition()==stableIRFeedback.getPosition());
+        REQUIRE(defaultIR->getValidationMessage().isNotEmpty() && defaultIR->getText()=="Whisper" && engine.savedSession().defaultIRName=="Whisper");
+        REQUIRE(!notice->currentMessage());snapshotEditor(editor,"learn-ir-error");
         REQUIRE(engine.assignDefaultBundledIR(m3::defaultImpulseId));waitUI([&]{return !engine.snapshot().defaultIRPending;});REQUIRE(engine.savedSession().defaultIR==savedDefault);
         automatic->setToggleState(false,juce::sendNotificationSync);editor.refresh();REQUIRE(!visibleOffscreen(defaultIR) && !visibleOffscreen(sensitivity));
         REQUIRE(engine.savedSession().sensitivity==.375f);snapshotEditor(editor,"learn-off");largeWorkflowSnapshot("learn-off");uiStandardsLayoutCases(editor,"automatic-off");
@@ -1419,18 +1418,16 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto shape=m3::find(engine.savedSession(),first)->shape;
         auto field=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(field);field->setText("77",false);field->onEscapeKey();
         REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
-        auto irChoice=dynamic_cast<juce::ComboBox*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="musical-ir.wav");
+        auto irChoice=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="Custom IR");
         const auto before=engine.savedSession();const auto wasPlaying=engine.snapshot().playing;
         engine.holdRenderPublicationForTesting(true);
-        irChoice->setSelectedId(6,juce::sendNotificationSync);
+        irChoice->beforeInvocation();irChoice->setSelectedId(6,juce::sendNotificationSync);
         waitUI([&]{return engine.renderPublicationWaitingForTesting();});editor.refresh();
-        REQUIRE(irChoice->getText()=="musical-ir.wav");
-        const auto assignment=dynamic_cast<juce::Label*>(named(editor,"irAssignmentStatus"));
-        REQUIRE(assignment && assignment->getText().contains("Whisper") && assignment->getText().contains("musical-ir.wav"));
+        REQUIRE(irChoice->getText()=="Custom IR" && engine.snapshot().requestedIRName=="Whisper");
         snapshotEditor(editor,"ir-replacement-pending");
         engine.holdRenderPublicationForTesting(false);
         waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
-        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="musical-ir.wav");
+        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="Custom IR");
         REQUIRE(m3::find(engine.savedSession(),second)->ir==m3::find(before,second)->ir && engine.savedSession().defaultIR==before.defaultIR);
         engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");

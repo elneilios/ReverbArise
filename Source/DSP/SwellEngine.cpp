@@ -3,6 +3,8 @@
 #include <Core/ContentHash.h>
 #include "DefaultImpulse.h"
 #include "GainStaging.h"
+#include "PingPongResponse.h"
+#include "SoundShaping.h"
 #include "SourceEdgeConditioning.h"
 #include <cmath>
 
@@ -111,7 +113,7 @@ EditorSnapshot SwellEngine::snapshot() const
     s.learnGeneration=learnViewLocked();s.initialPerformHandoff=initialPerformOffer;
     s.session=model; s.candidates=candidates; s.actionError=actionError;s.message=actionError.isEmpty()?message:actionError; s.auditionSample=audioAllowed.load()?voice.position():std::nullopt;s.playing=s.auditionSample.has_value(); s.analyzing=analyzing; s.renderCount=renderCount;
     s.defaultIRError=defaultError;
-    s.defaultIRPending=defaultPending;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
+    s.defaultIRPending=defaultPending;s.defaultIRRequest=defaultRequest;s.requestedDefaultIRName=requestedDefaultName;s.defaultIRStatus=defaultStatus;
     s.livePreparation=livePreparation;
     s.liveObservation=live.observation();s.liveLastRejection=live.lastRejection();
     s.liveCausal=live.causalObservation();
@@ -130,7 +132,8 @@ EditorSnapshot SwellEngine::snapshot() const
     const auto w=find(model,model.primary); const auto at=runtime.find(model.primary);
     for(const auto& [id,replacement]:irReplacements)
         if(const auto* target=find(model,id);target && target->inputGeneration==replacement.input)
-            s.irRequests.emplace(id,EditorSnapshot::IRRequestStatus{replacement.name,replacement.error});
+            s.irRequests.emplace(id,EditorSnapshot::IRRequestStatus{replacement.name,replacement.error,
+                replacement.error.isEmpty()?replacement.timing:std::nullopt});
     if (w)
     {
         if (const auto replacement=s.irRequests.find(w->id); replacement!=s.irRequests.end())
@@ -318,8 +321,8 @@ bool SwellEngine::selectTargets(const std::vector<juce::String>& ids,const juce:
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation)
 {return editChecked(id,operation);}
 bool SwellEngine::edit(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
-                       uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop)
-{return editChecked(id,operation,false,expectedSession,rejection,expectedLoop);}
+                       uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop,bool timingGesture)
+{return editChecked(id,operation,false,expectedSession,rejection,expectedLoop,timingGesture);}
 bool SwellEngine::setGainPolicy(GainPolicy policy)
 {
     if(workflowState && (workflowState->snapshot().mode==workflow::Mode::finalise || workflowState->snapshot().locked()))
@@ -350,7 +353,7 @@ bool SwellEngine::setGainPolicy(GainPolicy policy)
     persistentChangedLocked();notify();return true;
 }
 bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Swell&,juce::String&)>& operation,
-                             bool allowReset,uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop)
+                             bool allowReset,uint64_t expectedSession,juce::String* rejection,uint64_t expectedLoop,bool timingGesture)
 {
     if(!permitCreative(rejection))return false;
     const auto context=contextProvider();
@@ -377,7 +380,9 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
         || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd)
         && (candidate.sourceStart<0 || renderInputEnd(candidate)>phrase->endSample))
     {message="Source range must stay within the captured Loop";return reject(message);}
-    const auto input=(allowReset && w->frozen && !candidate.frozen) || support || candidate.arrival!=w->arrival || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir;
+    const auto input=(allowReset && w->frozen && !candidate.frozen) || support || candidate.arrival!=w->arrival
+        || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd || candidate.ir!=w->ir
+        || candidate.soundPreset.effectiveShaping()!=w->soundPreset.effectiveShaping();
     if(!allowReset && (candidate.frozen!=w->frozen || (w->frozen && input))){message="Unfreeze before changing source, IR or render support";return reject(message);}
     const auto timingEdit=wetTiming(candidate.shape)!=wetTiming(w->shape) || candidate.wetTimingIntent!=w->wetTimingIntent;
     const auto shape=candidate.shape!=w->shape || candidate.placement!=w->placement || timingEdit;
@@ -385,6 +390,45 @@ bool SwellEngine::editChecked(const juce::String& id,const std::function<bool(Sw
     if(input || shape || activity || candidate.name!=w->name)
         if(candidate.provenance==Provenance::automatic)candidate.provenance=Provenance::manualEdited;
     Session trial=model; *find(trial,id)=candidate; if(!validate(trial,message)) return reject(message);
+    const auto rephase=candidate.soundPreset.pingPong && candidate.soundPreset.pingPong->tempoSync
+        && (candidate.arrival!=w->arrival || candidate.placement!=w->placement
+            || candidate.sourceStart!=w->sourceStart || candidate.sourceEnd!=w->sourceEnd);
+    if(rephase)
+    {
+        if(w->frozen && !(allowReset && !candidate.frozen))return reject("Unfreeze before moving a tempo-synced swell");
+        if(!pingPongRulerLocked(context).valid)return reject("Compatible ruler timing is required to move this tempo-synced swell");
+        std::erase_if(imports,[&](const auto& job){return job.timingCandidate && job.timingCandidate->id==id;});
+        if(imports.size()>=32)return reject("Sound preparation queue is full. Try again.");
+        beginIRReplacementLocked(*w,pingPongPresetName);
+        auto& replacement=irReplacements.at(id);
+        replacement.unfreezes=w->frozen;
+        replacement.timing=EditorSnapshot::ProposedTiming{candidate.arrival,candidate.sourceStart,
+            candidate.sourceEnd,candidate.placement};
+        candidate.inputGeneration=w->inputGeneration;
+        candidate.shapeGeneration=w->shapeGeneration+(shape?1:0);
+        Import command;
+        command.session=sessionGeneration.load();
+        command.targets.emplace_back(id,w->inputGeneration);
+        command.presetId=pingPongPresetId;
+        command.pingPong=candidate.soundPreset.pingPong;
+        command.timingCandidate=std::move(candidate);
+        imports.push_back(std::move(command));
+        notify();
+        return true;
+    }
+    if(timingGesture && !input && !shape)
+    {
+        const auto pending=irReplacements.find(id);
+        if(pending!=irReplacements.end() && pending->second.timing)
+        {
+            std::erase_if(imports,[&](const auto& job){return job.timingCandidate && job.timingCandidate->id==id;});
+            cancelIRReplacementLocked(id);
+            ++w->inputGeneration;
+            ++modelRevision;
+            notify();
+            return true;
+        }
+    }
     candidate.inputGeneration=w->inputGeneration+(input?1:0);
     candidate.shapeGeneration=w->shapeGeneration+(shape?1:0);
     if(input)
@@ -462,10 +506,42 @@ bool SwellEngine::assignBundledIR(const juce::String& id,uint64_t expectedInput,
 }
 bool SwellEngine::assignManagedIR(const juce::String& id,uint64_t expectedInput,const Asset& asset,const juce::String& name,uint64_t expectedSession)
 {return queueIR(id,expectedInput,{},{},expectedSession,asset,name);}
+bool SwellEngine::assignPingPong(const juce::String& id,uint64_t expectedInput,const PingPongSettings& settings,uint64_t session)
+{
+    return settings.valid() && queueIR(id,expectedInput,{},pingPongPresetId,session,{},pingPongPresetName,settings);
+}
+bool SwellEngine::assignSoundShaping(const juce::String& id,uint64_t input,SoundShaping values,uint64_t session)
+{
+    if(!values.valid() || !permitCreative())return false;
+    const juce::ScopedLock guard(lock);
+    auto* swell=find(model,id);
+    if(!swell || swell->inputGeneration!=input || session!=sessionGeneration.load()
+        || swell->frozen || !swell->ir.present() || imports.size()>=32)return false;
+    Import job;
+    job.session=session;job.managed=swell->ir;job.label=swell->irName;job.shaping=values;
+    beginIRReplacementLocked(*swell,swell->irName);
+    job.targets.emplace_back(id,swell->inputGeneration);
+    imports.push_back(std::move(job));
+    notify();
+    return true;
+}
+bool SwellEngine::assignDefaultSoundShaping(SoundShaping values,uint64_t session,uint64_t pass,uint64_t request)
+{
+    const juce::ScopedLock guard(lock);
+    if(!values.valid() || session!=sessionGeneration.load() || request!=defaultRequest
+        || defaultPending || !model.defaultIR.present())return false;
+    auto preset=resolvedSoundPreset(model.defaultSoundPreset,model.defaultIR);
+    const bool rebuild=preset.pingPong && preset.pingPong->damping!=values.damping;
+    preset.setShaping(values);
+    return queueDefaultIR({},rebuild?juce::String(pingPongPresetId):juce::String{},model.defaultIR,
+                          model.defaultIRName,session,pass,rebuild?preset.pingPong:std::nullopt,values);
+}
 std::vector<IRChoice> SwellEngine::irChoices() const
 {
     const juce::ScopedLock guard(lock);std::vector<IRChoice> choices;
     for(const auto& entry:bundledImpulses())choices.push_back({"bundled:"+juce::String(entry.id),entry.name,entry.description,entry.id,entry.decodedHash,{}});
+    choices.push_back({"bundled:"+juce::String(pingPongPresetId),pingPongPresetName,
+        "Alternating stereo echoes build toward the swell arrival.",pingPongPresetId,{},{}});
     std::set<juce::String> managedChoices;
     const auto append=[&](const Asset& asset,const juce::String& name,const SoundPresetIdentity& identity)
     {
@@ -479,17 +555,22 @@ std::vector<IRChoice> SwellEngine::irChoices() const
     for(const auto& [id,retained]:retainedIR)if(find(model,id))append(retained.accepted.ir,retained.accepted.irName,retained.accepted.soundPreset);
     return choices;
 }
-bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,const juce::String& presetId,uint64_t expectedSession,const Asset& managed,const juce::String& label)
+bool SwellEngine::queueIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,const juce::String& presetId,
+    uint64_t expectedSession,const Asset& managed,const juce::String& label,std::optional<PingPongSettings> pingPong)
 {
     if(!permitCreative())return false;
     const juce::ScopedLock guard(lock);actionError.clear();auto w=find(model,id);
     if(!w || w->inputGeneration!=expectedInput || (expectedSession!=0 && expectedSession!=sessionGeneration.load())){message="IR assignment superseded; select the swell again";return false;}
     if(w->frozen){message="Unfreeze this swell before changing its IR";return false;}
+    if(pingPong)
+        std::erase_if(imports,[&](const auto& job){return !job.futureDefault && job.pingPong && job.targets.size()==1
+            && job.targets.front().first==id;});
     if((presetId.isEmpty() && file==juce::File{} && !managed.present()) || imports.size()>=32){message="IR assignment unavailable; retry";return false;}
     Import command;command.file=file;command.presetId=presetId;command.session=sessionGeneration.load();
-    command.managed=managed;command.label=label;
+    command.managed=managed;command.label=label;command.pingPong=pingPong;
     const auto* choice=presetId.isNotEmpty()?findBundledImpulse(presetId):nullptr;
-    beginIRReplacementLocked(*w,choice?juce::String(choice->name):managed.present()?label:file.getFileName());
+    beginIRReplacementLocked(*w,pingPong?juce::String(pingPongPresetName)
+        :choice?juce::String(choice->name):managed.present()?label:file.getFileName());
     command.targets.emplace_back(id,w->inputGeneration);
     imports.push_back(std::move(command));notify();return true;
 }
@@ -546,7 +627,7 @@ bool SwellEngine::irReplacementCurrentLocked(const Swell& candidate) const
 {
     const auto at=irReplacements.find(candidate.id);
     const auto* accepted=find(model,candidate.id);
-    return at!=irReplacements.end() && accepted && !accepted->frozen && at->second.error.isEmpty()
+    return at!=irReplacements.end() && accepted && (!accepted->frozen || at->second.unfreezes) && at->second.error.isEmpty()
         && at->second.input==candidate.inputGeneration && accepted->inputGeneration==at->second.input
         && accepted->shapeGeneration==at->second.shape;
 }
@@ -947,10 +1028,10 @@ void SwellEngine::inspect(const PreviewContext& context)
     if(workflowState && workflowState->snapshot().mode==workflow::Mode::finalise && !model.exportState.initialized)initializeExport();
     if(context.capture.status.startsWith("Loading") || (awaitingCaptureReference.isNotEmpty() && context.capture.reference!=awaitingCaptureReference)) return;
     awaitingCaptureReference.clear();
-    // A reader can temporarily miss the host's coherent timing publication.
-    // That gates playback/preparation, but does not change any captured asset.
+    // A missing observation or a different device rate cannot replace the
+    // accepted capture mapping. Playback still checks the live timing separately.
     long double origin;
-    if(!songOrigin(context.time,origin))return;
+    if(!songOrigin(context.time,origin) || context.time.rate!=context.capture.manifest.sampleRate)return;
     if(timingChanged.exchange(false) || (model.timing.valid && !sameMusicalMapping(model.timing,context.time)))
     {
         irReplacements.clear();
@@ -1012,6 +1093,37 @@ bool SwellEngine::rememberIR(Session& target,const Asset& asset,const juce::Stri
     target.importedIRs.push_back({asset,label});
     return true;
 }
+SongTime SwellEngine::pingPongRulerLocked(const PreviewContext& context) const
+{
+    if(context.time.rate!=context.capture.manifest.sampleRate)return {};
+    if(context.capture.sourceKind()==CaptureSourceKind::loop)return context.time;
+    if(!model.timing.valid)return context.time;
+    return transportMappingMatches(model.timing,context.time)?model.timing:SongTime{};
+}
+
+bool SwellEngine::preparePingPongAsset(const PingPongSettings& settings,const PreviewContext& context,const Swell* swell,
+                                      SoundPresetIdentity& preset,Asset& asset,juce::String& error)
+{
+    PingPongTiming timing;
+    const auto rate=swell?context.capture.manifest.sampleRate:context.time.rate;
+    if(rate>=8000 && rate<=384000)timing.sampleRate=rate;
+    if(swell)
+    {
+        timing.arrival=swell->arrival;
+        timing.wetPlacement=swell->placement;
+        const juce::ScopedLock guard(lock);
+        timing.ruler=pingPongRulerLocked(context);
+        if(settings.tempoSync && swell->soundPreset.rulerAligned && !timing.ruler.valid)
+        {error="Compatible ruler timing is unavailable; the accepted Sound was retained";return false;}
+    }
+    ImpulseResponse response;
+    const auto budget=available();
+    if(!preparePingPong(settings,timing,budget,response,preset,error))return false;
+    SwellAssetStore store(instanceRoot(context.capture.manifest));
+    if(asset.content==preset.responseKey && store.verify(asset,error))return true;
+    return store.reuseOrWriteIR(response,preset.responseKey,budget,asset,error);
+}
+
 void SwellEngine::importJob(const Import& job)
 {
     if(job.futureDefault)
@@ -1025,23 +1137,36 @@ void SwellEngine::importJob(const Import& job)
     const auto budget=available();
     const auto bundled=job.presetId.isNotEmpty();
     ImpulseResponse managedIR;
-    auto ok=bundled?installBundledImpulse(store,job.presetId,budget,asset,error):job.managed.present()
+    auto ok=job.pingPong?true:bundled?installBundledImpulse(store,job.presetId,budget,asset,error):job.managed.present()
         ?store.readIR(job.managed,budget,managedIR,error):store.importIR(job.file,budget,asset,error);
     if(ok && job.managed.present())asset=job.managed;
     const auto* descriptor=bundled?findBundledImpulse(job.presetId):nullptr;
-    const auto label=descriptor?juce::String(descriptor->name):job.managed.present()?job.label:job.file.getFileName();
-    const auto preset=descriptor?SoundPresetIdentity{descriptor->id,static_cast<int>(descriptor->revision)}
+    const auto label=job.pingPong?juce::String(pingPongPresetName)
+        :descriptor?juce::String(descriptor->name):job.managed.present()?job.label:job.file.getFileName();
+    auto preset=descriptor?SoundPresetIdentity{descriptor->id,static_cast<int>(descriptor->revision)}
         :SoundPresetIdentity{customImpulseId,1};
     managedIR={};
     if(job.futureDefault)
     {
+        if(job.pingPong)ok=preparePingPongAsset(*job.pingPong,context,nullptr,preset,asset,error);
         const juce::ScopedLock guard(lock);
         if(job.session!=sessionGeneration.load())return;
         if(job.defaultRequest!=defaultRequest)return;defaultPending=false;
         if(workflowState){const auto flow=workflowState->snapshot();if(flow.locked() || flow.mode==workflow::Mode::finalise || flow.pass!=job.workflowPass)
             {defaultStatus="Default IR request superseded by workflow; previous default retained";message=defaultStatus;return;}}
+        if(job.shaping)
+        {
+            if(!job.pingPong)preset=resolvedSoundPreset(model.defaultSoundPreset,model.defaultIR);
+            preset.setShaping(*job.shaping);
+        }
+        else
+        {
+            auto values=model.defaultSoundPreset.effectiveShaping();
+            if(job.pingPong)values.damping=job.pingPong->damping;
+            preset.setShaping(values);
+        }
         auto next=model;next.defaultIR=asset;next.defaultIRName=label;next.defaultSoundPreset=preset;
-        if(ok)ok=rememberIR(next,asset,label,bundled,error);
+        if(ok && !job.shaping)ok=rememberIR(next,asset,label,bundled,error);
         if(ok){juce::String encoded;ok=encode(next,encoded,error);}
         if(ok && !publishGenerationLocked(next,job.workflowPass))
         {defaultStatus="Default IR request superseded by playback; previous default retained";message=defaultStatus;return;}
@@ -1069,12 +1194,31 @@ void SwellEngine::importJob(const Import& job)
                 failIRReplacementLocked(id,reason);
                 continue;
             }
-            candidate=accepted;
-            candidate->ir=asset;
+            candidate=job.timingCandidate?*job.timingCandidate:accepted;
+            if(job.shaping)
+            {
+                const bool rebuild=candidate->soundPreset.pingPong
+                    && candidate->soundPreset.pingPong->damping!=job.shaping->damping;
+                candidate->soundPreset.setShaping(*job.shaping);
+                if(rebuild)candidate->soundPreset.version=pingPongPresetVersion;
+            }
+            else if(job.pingPong)
+            {
+                const auto values=candidate->soundPreset.shaping;
+                candidate->soundPreset.id=pingPongPresetId;
+                candidate->soundPreset.version=pingPongPresetVersion;
+                candidate->soundPreset.pingPong=job.pingPong;
+                candidate->soundPreset.shaping={0,values.lowCut,values.highCut};
+            }
+            else
+            {
+                candidate->ir=asset;
+                candidate->soundPreset=preset;
+                candidate->soundPreset.setShaping(accepted.soundPreset.effectiveShaping());
+            }
             candidate->irName=label;
-            candidate->soundPreset=preset;
             candidate->provenance=Provenance::manualEdited;
-            irReplacements.at(id).bundled=bundled;
+            irReplacements.at(id).bundled=bundled || (job.shaping && candidate->soundPreset.id!=customImpulseId);
         }
         renderJob(std::move(*candidate),contextProvider(),job.session,true,true);
     }
@@ -1095,6 +1239,13 @@ void SwellEngine::analysisJob(const Analysis& job)
 }
 void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64_t session,bool restoreOrCheck,bool replacingIR)
 {
+    auto renderTime=context.time;
+    bool referenceTempoFallback=false;
+    const auto timingUnchanged=[&](const SongTime& latest)
+    {
+        if(!referenceTempoFallback)return sameMusicalMapping(context.time,latest);
+        return (!context.time.valid && !latest.valid) || transportMappingMatches(context.time,latest);
+    };
     const auto requestEnded=[&]
     {
         if(cancelled(requested.id,requested.inputGeneration,session))return true;
@@ -1112,6 +1263,43 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         if(!replacingIR)report(requested,session,phase,status,progress);
         else if(phase==Phase::stale || phase==Phase::error)failure(status);
     };
+    if(requested.soundPreset.pingPong && !requested.frozen
+        && ((replacingIR && [&] {
+                const juce::ScopedLock guard(lock);
+                const auto* accepted=find(model,requested.id);
+                return !accepted || accepted->soundPreset.pingPong!=requested.soundPreset.pingPong
+                    || accepted->soundPreset.version!=requested.soundPreset.version
+                    || accepted->arrival!=requested.arrival || accepted->placement!=requested.placement
+                    || accepted->sourceStart!=requested.sourceStart || accepted->sourceEnd!=requested.sourceEnd
+                    || (requested.soundPreset.pingPong->tempoSync && !requested.soundPreset.rulerAligned
+                        && pingPongRulerLocked(context).valid);
+            }()) || !requested.render.present() || requested.render.irContent!=requested.ir.content
+            || requested.render.rate!=context.time.rate || requested.render.bpm!=context.time.bpm
+            || (!replacingIR && requested.soundPreset.pingPong->tempoSync && !requested.soundPreset.rulerAligned)))
+    {
+        SoundPresetIdentity prepared;
+        juce::String error;
+        if(requestEnded())return;
+        if(!preparePingPongAsset(*requested.soundPreset.pingPong,context,&requested,prepared,requested.ir,error))
+        {failure(error);return;}
+        prepared.shaping=requested.soundPreset.shaping;
+        requested.soundPreset=std::move(prepared);
+        if(replacingIR && requested.soundPreset.pingPong->tempoSync && !requested.soundPreset.rulerAligned)
+        {
+            // The response was generated at its authored tempo. Use the capture
+            // mapping only for render metadata and admission, never as its ruler.
+            const juce::ScopedLock guard(lock);
+            const auto* accepted=find(model,requested.id);
+            const auto captureTime=context.capture.sourceKind()==CaptureSourceKind::loop?context.exportTime():model.timing;
+            long double origin;
+            if(accepted && !accepted->soundPreset.pingPong && songOrigin(captureTime,origin)
+                && captureTime.rate==context.capture.manifest.sampleRate)
+            {
+                renderTime=captureTime;
+                referenceTempoFallback=true;
+            }
+        }
+    }
     if(replacingIR)
     {
         auto end=renderInputEnd(requested);
@@ -1164,7 +1352,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     // during long resampling/FFT work. Reserve the complete in-flight workspace
     // while nested page preparation runs; it must not spend the FFT's memory.
     uint64_t reservation=previewMemoryBudget;int64_t sourceFrames=0;juce::String reservationError;
-    const auto preparedFrames=std::round(requested.ir.frames*context.time.rate/requested.ir.rate);
+    const auto preparedFrames=std::round(requested.ir.frames*renderTime.rate/requested.ir.rate);
     uint64_t required=0;
     if(checkedSubtract(renderInputEnd(requested),requested.sourceStart,sourceFrames) && sourceFrames>0
         && std::isfinite(preparedFrames) && preparedFrames>0 && preparedFrames<previewMemoryBudget/8
@@ -1207,12 +1395,12 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         ++liveRevision;forceRefresh.erase(w.id);return;
     }
     if(!requested.ir.present()) { failure("Assign an IR before generation"); return; }
-    if(!context.time.valid || context.time.rate!=context.capture.manifest.sampleRate)
+    if(!renderTime.valid || renderTime.rate!=context.capture.manifest.sampleRate)
     { update(Phase::stale,"Host timing or sample rate does not match the capture. Restore compatible project timing and try again."); return; }
     if(restoreOrCheck)
     {
         const juce::ScopedLock guard(lock);
-        if(model.timing.valid && !sameMusicalMapping(model.timing,context.time))
+        if(model.timing.valid && !sameMusicalMapping(model.timing,renderTime))
         { update(Phase::stale,"Saved timing differs; verify and regenerate"); return; }
     }
     CaptureAssetStore sourceStore(instanceRoot(context.capture.manifest)); SwellAssetStore assets(instanceRoot(context.capture.manifest));
@@ -1231,7 +1419,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     {
         { const juce::ScopedLock guard(lock); auto& r=runtime[requested.id]; r.raw.reset(); r.shaped.reset(); }
         int64_t sourceLength;
-        const auto preparedLength=std::round(requested.ir.frames*context.time.rate/requested.ir.rate);
+        const auto preparedLength=std::round(requested.ir.frames*renderTime.rate/requested.ir.rate);
         uint64_t required;
         if(!checkedSubtract(renderInputEnd(requested),requested.sourceStart,sourceLength) || sourceLength<=0
             || !std::isfinite(preparedLength) || preparedLength<1 || preparedLength>=static_cast<double>(INT64_MAX)
@@ -1244,7 +1432,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     if(!sourceFingerprint(sourceStore,context.capture.manifest,requested.sourceStart,renderInputEnd(requested),dependency,error,cancel))
     {
         WetRender recovered;juce::String verifyError;
-        if(!replacingIR && restoreOrCheck && requested.generatedGain && requested.render.present() && requested.render.rate==context.time.rate
+        if(!replacingIR && restoreOrCheck && requested.generatedGain && requested.render.present() && requested.render.rate==renderTime.rate
             && requested.render.irContent==requested.ir.content && requested.render.sourceStart==requested.sourceStart
             && requested.render.sourceEnd==renderInputEnd(requested) && assets.verify(requested.ir,verifyError)
             && assets.readRender(requested.render,available(),recovered,verifyError))
@@ -1253,21 +1441,36 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
             auto& r=runtime[requested.id];r.cachedWetOnly=true;r.raw=std::make_shared<WetRender>(std::move(recovered));
             r.rawWave=waveform(*r.raw);r.preparedShape=UINT64_MAX;r.preparedRender.clear();
             r.revision=juce::String(sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
-            if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+            if(!sameMusicalMapping(model.timing,renderTime))model.timing=renderTime;
             auto& w=*find(model,requested.id);w.phase=Phase::error;w.status="Missing source: last-committed Wet Only available";
         }
         else if(!cancel())failure(replacingIR?error+". Restore the capture or recapture the missing source.":error);return;
     }
     if(!assets.verify(requested.ir,error)){if(!cancel())failure(replacingIR?error+". Restore the IR or choose another file.":"Missing IR / invalid asset: "+error);return;}
     if(cancel()) return;
-    const auto renderDependency=juce::String(sourceEdgeRevision)+dependency;
+    const auto& pingPong=requested.soundPreset.pingPong;
+    const auto shaping=requested.soundPreset.shaping;
+    const auto gate=pingPong?pingPong->gateAmount:0;
+    auto renderDependency=juce::String(sourceEdgeRevision)+dependency;
+    if(gate>0)
+    {
+        auto conditioning=juce::String(pingPongExcitationRevision)+juce::String(requested.arrival)+"/"
+            +juce::String(static_cast<int>(pingPong->rate))+"/"+juce::String(requested.soundPreset.rulerAligned?1:0);
+        // Full gate matches the existing revision 4 processing and cache key.
+        if(gate!=100)conditioning+="/"+juce::String(gate);
+        renderDependency=conditioning+":"+dependency;
+    }
+    if(shaping!=SoundShaping{})
+        renderDependency=juce::String(soundShapingRevision)+juce::String(shaping.damping)+"/"
+            +juce::String(shaping.lowCut)+"/"+juce::String(shaping.highCut)+"/"+renderDependency;
     // Legacy assets retain their saved sound until an explicit regeneration.
     const auto matching=requested.render.present()
-        && (requested.render.dependency==dependency || requested.render.dependency==renderDependency)
+        && (requested.render.dependency==renderDependency
+            || (gate==0 && shaping==SoundShaping{} && requested.render.dependency==dependency))
         && requested.render.irContent==requested.ir.content && requested.render.sourceStart==requested.sourceStart
-        && requested.render.sourceEnd==renderInputEnd(requested) && requested.render.rate==context.time.rate
-        && requested.render.bpm==context.time.bpm && requested.render.numerator==context.time.numerator
-        && requested.render.denominator==context.time.denominator;
+        && requested.render.sourceEnd==renderInputEnd(requested) && requested.render.rate==renderTime.rate
+        && requested.render.bpm==renderTime.bpm && requested.render.numerator==renderTime.numerator
+        && requested.render.denominator==renderTime.denominator;
     bool alreadyVerified=false;
     {const juce::ScopedLock guard(lock);const auto at=runtime.find(requested.id);
         const auto calibrationReady=model.gainPolicy==GainPolicy::legacy
@@ -1278,7 +1481,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         alreadyVerified=matching && calibrationReady && at!=runtime.end() && !at->second.cachedWetOnly && at->second.verifiedRender==requested.render;}
     if(!replacingIR && restoreOrCheck && alreadyVerified && requested.generatedGain && assets.verify(requested.render,error)){
         const auto latest=contextProvider();
-        if(latest.captureGeneration!=context.captureGeneration || !sameMusicalMapping(context.time,latest.time)
+        if(latest.captureGeneration!=context.captureGeneration || !sameMusicalMapping(renderTime,latest.time)
             || sourceDependency(latest.capture.manifest,requested.sourceStart,renderInputEnd(requested))!=sourceDependency(context.capture.manifest,requested.sourceStart,renderInputEnd(requested)))return;
         const juce::ScopedLock guard(lock);if(cancel())return;auto& current=*find(model,requested.id);
         current.phase=Phase::ready;current.progress=1;current.status="Ready (unchanged source)";
@@ -1297,23 +1500,29 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         if(budget<=64ULL*1024*1024 || !readSourceInterval(sourceStore,context.capture.manifest,requested.sourceStart,renderInputEnd(requested),
             (budget-64ULL*1024*1024)/(sizeof(float)*2),source,error,cancel)) { failure(error.isEmpty()?"256 MiB working budget exceeded":error); return; }
         if(!conditionWetSourceEdges(source.samples,source.rate,error,cancel)) {if(!cancel())failure(error);return;}
+        if(!applySourceCut(source.samples,source.rate,shaping.lowCut,true,cancel)
+            || !applySourceCut(source.samples,source.rate,shaping.highCut,false,cancel))return;
+        if(gate>0 && !preparePingPongExcitation(source.samples,source.rate,
+            static_cast<size_t>(requested.arrival-source.start),requested.soundPreset,renderTime.bpm,cancel))
+        {if(!cancel())failure("Invalid Ping Pong source timing");return;}
         ImpulseResponse ir,prepared;
         auto remaining=available(source.samples.capacity()*sizeof(float));
         if(!assets.readIR(requested.ir,remaining,ir,error)) { failure(error); return; }
         remaining=available((source.samples.capacity()+ir.samples.capacity())*sizeof(float));
         if(!prepareImpulseResponse(ir,source.rate,remaining,prepared,error,cancel)) { if(!cancel()) failure(error); return; }
+        if(!dampFullResponse(prepared,shaping.damping,cancel))return;
         const auto overhead=previewMemoryBudget-available()+ir.samples.capacity()*sizeof(float);
         if(!renderReverseConvolution(source.samples,requested.sourceStart,source.rate,prepared,overhead,*raw,error,cancel,
             [&](float p){update(Phase::rendering,"Convolving",0.3f+p*0.5f);}))
         { if(!cancel()) failure(error); return; }
         if(cancel()) return;
         if(replacingIR && !fitWetShapeToResponse(requested,raw->start,raw->sourceEnd,error)){failure(error);return;}
-        if(!assets.writeRender(*raw,requested.ir,renderDependency,context.time,committed,error)) { failure(error); return; }
+        if(!assets.writeRender(*raw,requested.ir,renderDependency,renderTime,committed,error)) { failure(error); return; }
     }
     if(replacingIR && cached && !fitWetShapeToResponse(requested,raw->start,raw->sourceEnd,error)){failure(error);return;}
     const auto latest=contextProvider(); juce::String currentDependency;
     CaptureAssetStore latestStore(instanceRoot(latest.capture.manifest));
-    if(!sameMusicalMapping(context.time,latest.time) || latest.captureGeneration!=context.captureGeneration
+    if(!timingUnchanged(latest.time) || latest.captureGeneration!=context.captureGeneration
         || !sourceFingerprint(latestStore,latest.capture.manifest,requested.sourceStart,renderInputEnd(requested),currentDependency,error,cancel)
         || currentDependency!=dependency)
     { update(Phase::stale,"Source or timing changed during preparation. Select the IR again."); return; }
@@ -1327,7 +1536,7 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     GainCalibration calibration;juce::String calibrationNote;
     if(calibrationSession.gainPolicy==GainPolicy::musical)
     {
-        const auto requestedReference=std::max(int64_t{1},static_cast<int64_t>(std::llround(context.time.rate*candidateAttackSeconds)));
+        const auto requestedReference=std::max(int64_t{1},static_cast<int64_t>(std::llround(renderTime.rate*candidateAttackSeconds)));
         int64_t attackEnd;if(!checkedAdd(requested.arrival,requestedReference,attackEnd))attackEnd=requested.arrival;
         referenceEnd=std::min(referenceEnd,attackEnd);
         SourceInterval reference;
@@ -1339,9 +1548,12 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
                 calibrationSession.gainRevision==approvedGainRevision?approvedEnergyTargetDb:0.0f);
         else prepareSourcePeakCalibration(calibrationSession,requested,*raw,reference,referenceEnd,committed.content,calibration,calibrationNote);
     }
+    if(calibration.state!=CalibrationState::unavailable)
+        calibration.baselineDb=std::clamp(calibration.baselineDb+pingPongMatchingOffsetDb(requested.soundPreset),
+                                         -60.0f,candidateMaximumBoostDb);
     while(renderPublicationHold.load() && !cancel()){renderPublicationWaiting=true;wait(2);}renderPublicationWaiting=false;
     const auto finalContext=contextProvider();
-    if(finalContext.captureGeneration!=latest.captureGeneration || !sameMusicalMapping(latest.time,finalContext.time)
+    if(finalContext.captureGeneration!=latest.captureGeneration || !timingUnchanged(finalContext.time)
         || sourceDependency(finalContext.capture.manifest,requested.sourceStart,renderInputEnd(requested))!=sourceDependency(latest.capture.manifest,requested.sourceStart,renderInputEnd(requested)))
     {
         if(replacingIR)failure("Source changed during preparation. Select the IR again.");
@@ -1351,10 +1563,11 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     auto wave=waveform(*raw);
     const juce::ScopedLock guard(lock); if(cancel()) return;
     auto& w=*find(model,requested.id);
-    const auto support=std::max(int64_t{0},committed.sourceEnd-w.sourceEnd);
+    const auto support=std::max(int64_t{0},committed.sourceEnd-requested.sourceEnd);
     if(replacingIR)
     {
         auto& replacement=irReplacements.at(w.id);
+        if(referenceTempoFallback)replacement.fallbackObservation=context.time;
         replacement.fitted=requested.wetTimingIntent.has_value();
         replacement.sourceRevision=juce::String(sourceDependency(latest.capture.manifest,requested.sourceStart,renderInputEnd(requested)));
         replacement.rawWave=std::move(wave);
@@ -1372,13 +1585,14 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
     ++monitoringGeneration;
     const auto reuseGain=w.generatedGain && w.render==committed && w.calibration==calibration && w.supportOffset==support;
     if(!reuseGain){w.generatedGain.reset();persistentChangedLocked(false);}
+    w.ir=requested.ir;w.soundPreset=requested.soundPreset;
     w.render=committed;w.calibration=calibration;w.supportOffset=support;
     w.phase=reuseGain?Phase::ready:Phase::headroom;
     w.progress=1;w.status=reuseGain?"Ready (verified saved render)":"Checking generated headroom";
     if(calibrationNote.isNotEmpty())w.status+=" | "+calibrationNote;
     if(!cached && !retainedIR.contains(w.id))invalidateLiveLocked(w.id);
     else ++liveRevision;
-    if(!sameMusicalMapping(model.timing,context.time))model.timing=context.time;
+    if(!sameMusicalMapping(model.timing,renderTime))model.timing=renderTime;
     auto& runtimeState=runtime[w.id]; runtimeState.rawWave=std::move(wave);
     runtimeState.verifiedRender=committed;
     runtimeState.sourceWave=std::move(sourceWave);runtimeState.lastUse=++useSerial;
@@ -1462,7 +1676,7 @@ void SwellEngine::run()
                 const auto removed=std::erase_if(irReplacements,[&](const auto& item)
                 {
                     const auto* swell=find(model,item.first);
-                    return !swell || swell->frozen || swell->inputGeneration!=item.second.input
+                    return !swell || (swell->frozen && !item.second.unfreezes) || swell->inputGeneration!=item.second.input
                         || swell->shapeGeneration!=item.second.shape;
                 });
                 if(removed){resetStagedIRHeadroomLocked();++liveRevision;}

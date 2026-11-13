@@ -61,7 +61,8 @@ struct LivePreparationObservation
 };
 struct EditorSnapshot
 {
-    struct IRRequestStatus { juce::String name,error; };
+    struct ProposedTiming { int64_t arrival, sourceStart, sourceEnd, placement; };
+    struct IRRequestStatus { juce::String name,error; std::optional<ProposedTiming> timing; };
     workflow::Snapshot workflowState; // Captured under the same model publication lock.
     LearnGenerationView learnGeneration;
     uint64_t initialPerformHandoff=0;
@@ -83,6 +84,7 @@ struct EditorSnapshot
     juce::String dryStatus;
     juce::String defaultIRError;
     bool defaultIRPending=false;
+    uint64_t defaultIRRequest=0;
     juce::String requestedDefaultIRName,defaultIRStatus;
     juce::String retainedIRName,requestedIRName;
     juce::String irReplacementError;
@@ -156,7 +158,7 @@ public:
     bool selectTargets(const std::vector<juce::String>&,const juce::String& primary,uint64_t expectedSession);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&);
     bool edit(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,uint64_t expectedSession,
-              juce::String* rejection=nullptr,uint64_t expectedLoop=0);
+              juce::String* rejection=nullptr,uint64_t expectedLoop=0,bool timingGesture=false);
     void loadIR(const juce::File&,bool primaryOnly=false);
     uint64_t assignmentEpoch()const noexcept{return sessionGeneration.load();}
     bool assignIR(const juce::String& id,uint64_t expectedInput,const juce::File& file,bool bundled=false,uint64_t expectedSession=0);
@@ -198,6 +200,10 @@ public:
     bool assignDefaultIR(const juce::File&,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultBundledIR(const juce::String& presetId,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     bool assignDefaultManagedIR(const Asset&,const juce::String& name,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
+    bool assignDefaultPingPong(const PingPongSettings&,uint64_t expectedSession,uint64_t expectedWorkflowPass);
+    bool assignPingPong(const juce::String&,uint64_t expectedInput,const PingPongSettings&,uint64_t expectedSession);
+    bool assignSoundShaping(const juce::String&,uint64_t expectedInput,SoundShaping,uint64_t expectedSession);
+    bool assignDefaultSoundShaping(SoundShaping,uint64_t expectedSession,uint64_t expectedPass,uint64_t expectedRequest);
     bool setDefaultLevel(float db,uint64_t expectedSession=0,uint64_t expectedWorkflowPass=UINT64_MAX);
     void holdDefaultImportsForTesting(bool hold) noexcept {defaultImportHold.store(hold);notify();}
     bool defaultImportWaitingForTesting() const noexcept {return defaultImportWaiting.load();}
@@ -312,8 +318,14 @@ private:
         bool dryAvailable=false,cachedWetOnly=false;
         juce::String dryStatus;
     };
-    bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession,const Asset& managed={},const juce::String& label={});
-    bool queueDefaultIR(const juce::File&,const juce::String& presetId,const Asset&,const juce::String& label,uint64_t expectedSession,uint64_t expectedWorkflowPass);
+    bool queueIR(const juce::String&,uint64_t,const juce::File&,const juce::String& presetId,uint64_t expectedSession,
+                 const Asset& managed={},const juce::String& label={},std::optional<PingPongSettings> = {});
+    bool queueDefaultIR(const juce::File&,const juce::String& presetId,const Asset&,const juce::String& label,
+                        uint64_t expectedSession,uint64_t expectedWorkflowPass,std::optional<PingPongSettings> = {},
+                        std::optional<SoundShaping> = {});
+    SongTime pingPongRulerLocked(const PreviewContext&) const;
+    bool preparePingPongAsset(const PingPongSettings&,const PreviewContext&,const Swell*,
+                              SoundPresetIdentity&,Asset&,juce::String& error);
     struct RetainedIR { Swell accepted;SongTime timing;juce::String revision,requestedName; };
     bool retainedCompatible(const RetainedIR&,const Swell&,const PreviewContext&,const LiveClockSnapshot* liveContext=nullptr) const;
     bool retainIRLocked(const Swell&,const PreviewContext&,const juce::String& requestedName);
@@ -322,7 +334,9 @@ private:
     {
         uint64_t input=0, shape=0, acceptedInput=0;
         juce::String name, error, sourceRevision;
-        bool bundled=false, fitted=false;
+        bool bundled=false, fitted=false, unfreezes=false;
+        std::optional<SongTime> fallbackObservation;
+        std::optional<EditorSnapshot::ProposedTiming> timing;
         std::optional<Swell> candidate;
         std::shared_ptr<Waveform> rawWave, sourceWave;
     };
@@ -337,7 +351,10 @@ private:
     void commitIRReplacementsLocked(const std::vector<juce::String>&,std::vector<ImportedIR>);
     void acceptIdleIRReplacements(const PreviewContext&);
     struct Import { juce::File file; std::vector<std::pair<juce::String,uint64_t>> targets; uint64_t session=0; bool futureDefault=false;juce::String presetId;
-        Asset managed;juce::String label;uint64_t defaultRequest=0,workflowPass=0; };
+        Asset managed;juce::String label;uint64_t defaultRequest=0,workflowPass=0;
+        std::optional<PingPongSettings> pingPong;
+        std::optional<SoundShaping> shaping;
+        std::optional<Swell> timingCandidate; };
     struct Reset { Swell expected,candidate;uint64_t session=0;SongTime time;juce::String captureScope,sourceRevision; };
     struct Analysis { int64_t start,end; float sensitivity; double separation; uint64_t session,request; };
     void run() override;
@@ -357,7 +374,7 @@ private:
     void importJob(const Import&);
     void resetJob(const Reset&);
     bool editChecked(const juce::String&,const std::function<bool(Swell&,juce::String&)>&,bool allowReset=false,
-                     uint64_t expectedSession=0,juce::String* rejection=nullptr,uint64_t expectedLoop=0);
+                     uint64_t expectedSession=0,juce::String* rejection=nullptr,uint64_t expectedLoop=0,bool timingGesture=false);
     void analysisJob(const Analysis&);
     void renderJob(Swell,const PreviewContext&,uint64_t session,bool restoreOrCheck,bool replacingIR=false);
     void shapeJob(Swell,uint64_t session);

@@ -7,6 +7,7 @@
 namespace m3::ui::controls
 {
 enum class PopupDismissal { commit,cancel,outside,tabForward,tabBackward,ownerGone };
+using ChoiceDecoration = std::function<void(juce::Graphics&,juce::Rectangle<int>,int)>;
 
 // One-level, opt-in popup presentation. Rows may be navigated while unavailable;
 // the immutable snapshot and original binding still decide activation authority.
@@ -42,6 +43,7 @@ class ChoicePopup final:public juce::Component,private juce::Timer
             }
             auto area=getLocalBounds().reduced(owner.unit(SelectorPresentation::rowPadding));
             const auto check=area.removeFromLeft(checkColumnWidth());
+            if(owner.decoration)owner.decoration(g,area,item().id);
             if(item().hasSelectionMarker())
             {
                 const auto centre=check.toFloat().getCentre();juce::Path tick;
@@ -92,9 +94,10 @@ class ChoicePopup final:public juce::Component,private juce::Timer
         int index;
     };
 public:
-    ChoicePopup(juce::Component& source,std::vector<PopupChoice> items,std::function<void(int,PopupDismissal)> result)
+    ChoicePopup(juce::Component& source,std::vector<PopupChoice> items,std::function<void(int,PopupDismissal)> result,
+                ChoiceDecoration paintDecoration={})
         :origin(&source),interaction(std::move(items)),completion(std::move(result)),
-         rowFont(SelectorPresentation::valueFont(source)),reasonFont(componentTextFont(source,TextRole::helper))
+         decoration(std::move(paintDecoration)),rowFont(SelectorPresentation::valueFont(source)),reasonFont(componentTextFont(source,TextRole::helper))
     {
         magnification=source.getWidth()>0?static_cast<float>(source.getScreenBounds().getWidth())/source.getWidth():1.f;
         rowFont=rowFont.withHeight(rowFont.getHeight()*magnification);reasonFont=reasonFont.withHeight(reasonFont.getHeight()*magnification);
@@ -239,6 +242,7 @@ private:
     juce::Component::SafePointer<juce::Component> origin;
     PopupInteraction interaction;
     std::function<void(int,PopupDismissal)> completion;
+    ChoiceDecoration decoration;
     juce::Font rowFont,reasonFont;
     juce::Viewport viewport;
     juce::Component content;

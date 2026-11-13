@@ -633,8 +633,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             index==endOffsetValue?"Signed seconds from the dry target. Negative creates a gap; positive overlaps unchanged dry audio.":
             index==placementValue?"Move wet audio and envelope together in milliseconds; dry stays fixed. Typed entry is never snapped.":
             index==inCurveValue || index==outCurveValue?"Independent curve tension, -1 to +1. Curve preset is in Settings.":"Type an exact value, or drag the knob. Shift-drag for fine adjustment.");
-        cell.onBegin=[this,index]{beginValueEdit(index);};cell.onEnd=[this,index]{valueAnchors[index].reset();};
-        cell.onDelta=[this,index](double delta){commitValueEdit(index,{},delta);};
+        cell.onBegin=[this,index]{beginValueEdit(index);};
+        cell.onEnd=[this,index]{valueAnchors[index].reset();valueTimingDrafts[index].reset();};
+        cell.onGestureCommitted=[this,index]{commitValueDrag(index);};
+        cell.onDelta=[this,index](double delta){stageValueDrag(index,delta);};
         cell.onRebase=[this,index]{rebaseValueEdit(index);};
         cell.onStep=[this,index](double amount,bool fineWheel){stepValueEdit(index,amount,fineWheel);};
         cell.setResetAction([this,index]{return prepareValueReset(index);});
@@ -661,10 +663,10 @@ PreverbAudioProcessorEditor::PreverbAudioProcessorEditor(PreverbAudioProcessor& 
             };
         }
     }
-    irEditor.setName("selectedIrEditor");irEditor.selector.setName("selectedIR");irEditor.fileButton.setName("loadIR");irEditor.status.setName("irAssignmentStatus");
-    inspectorContent.addAndMakeVisible(irEditor);inspectorContent.addAndMakeVisible(performSoundScope);
-    performSoundScope.setName("performSoundScope");performSoundScope.setText("Selected swell only",juce::dontSendNotification);
-    m3::ui::applyTextRole(performSoundScope,m3::ui::TextRole::helper);performSoundScope.setTooltip(performSoundScope.getText());
+    irEditor.setName("selectedIrEditor");irEditor.presetPicker().setName("selectedIR");
+    irEditor.importAction().setName("loadIR");
+    inspectorContent.addAndMakeVisible(irEditor);
+    irEditor.useLevelControl(valueControls[levelValue]);
     irBinding.onRefresh=[this]{if(!destroying)refresh();};
     resetButton.setButtonText("Reset");resetButton.setName("resetWetShape");
     resetButton.setTooltip("Reset only the wet shape: start/end, fades, curves, level and placement return to defaults. Source points, IR and activity stay unchanged.");
@@ -892,17 +894,15 @@ void PreverbAudioProcessorEditor::resized()
     selectedStatus.setBounds(inspector.removeFromTop(24));
     fields[name].setBounds({});fieldLabels[name].setBounds({});
     auto row=inspector.removeFromTop(36);enabledButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));soloButton.setBounds(row.removeFromLeft((inspectorWidth-20)/3));freezeButton.setBounds(row);
-    performSoundScope.setBounds(inspector.removeFromTop(controlGeometry::feedbackHeight));
     irEditor.setBounds(inspector.removeFromTop(irEditor.preferredHeight(inspector.getWidth())));
     inspector.removeFromTop(12);
-    for(auto& group:inspectorGroups)group.setVisible(true);
+    for(size_t index=0;index<inspectorGroups.size();++index)inspectorGroups[index].setVisible(index<2);
     {
         const auto group=[&](int index){inspectorGroups[index].setBounds(inspector.removeFromTop(controlGeometry::labelHeight));inspector.removeFromTop(performGeometry::toolbarGap);};
         const auto values=[&](int first,int second=-1)
         {inspector.removeFromTop(layoutValueRow(inspector.withHeight(64),first,second,performGeometry::toolbarGap));};
         group(0);values(targetValue,placementValue);values(sourceStartValue);values(sourceEndValue);
         inspector.removeFromTop(spacing::group);group(1);values(preRollValue,endOffsetValue);values(fadeInValue,fadeOutValue);values(inCurveValue,outCurveValue);
-        inspector.removeFromTop(spacing::group);group(2);values(levelValue);
     }
     // Destructive resets sit beneath all the knob controls.
     inspector.removeFromTop(12);
@@ -924,10 +924,11 @@ void PreverbAudioProcessorEditor::enableResponsivePresentation(std::shared_ptr<m
     if(responsivePresentation)return;
     inspectorSections.setName("inspectorSections");addAndMakeVisible(inspectorSections);
     list.setInspectorTabTarget(inspectorSections);
-    inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();};
+    inspectorSections.onRequest=[this](int section){inspectorSection=section;refreshResponsiveSections();refresh();};
     // Fixed actions and flags belong to the editor, outside the scrolling fields.
     for(auto* child:std::initializer_list<juce::Component*>{&selectedStatus,&enabledButton,&soloButton,&freezeButton,&resetButton,&resetMenu})
         addAndMakeVisible(child);
+    addChildComponent(irEditor);
     for(auto& control:valueControls)control.setCompactPresentation(true);
     timeline.setResponsivePresentation(true);
     inspectorViewport.setFocusRevealEnabled(true);diagnosticsViewport.setFocusRevealEnabled(true);
@@ -954,7 +955,8 @@ void PreverbAudioProcessorEditor::refreshResponsiveSections()
         const auto section=i==levelValue?3:(i==targetValue || i==placementValue || i==sourceStartValue || i==sourceEndValue)?1:2;
         valueControls[i].setVisible(selected && section==inspectorSection);
     }
-    for(auto* child:std::initializer_list<juce::Component*>{&irEditor,&performSoundScope})child->setVisible(selected && inspectorSection==3);
+    irEditor.setVisible(selected && inspectorSection==3);
+    inspectorViewport.setVisible(selected && inspectorSection!=3);
     // Mute/full response/curve presets are owned by Settings, not this inspector.
     // Section refresh must not hide their existing access route.
     const bool editable=inspectorContent.isEnabled();
@@ -992,6 +994,7 @@ void PreverbAudioProcessorEditor::layoutResponsive()
     auto flags=layout.flags;enabledButton.setBounds(flags.removeFromLeft(90));soloButton.setBounds(flags.removeFromLeft(65));freezeButton.setBounds(flags);
     inspectorSections.setTextHeight(type.body);inspectorSections.setBounds(layout.tabs);
     inspectorViewport.setBounds(layout.fields);inspectorEmpty.setBounds(layout.fields);
+    irEditor.setBounds(layout.fields);
     auto resets=layout.resets;resetButton.setBounds(resets.removeFromLeft((resets.getWidth()-contentPadding)/2));resets.removeFromLeft(contentPadding);resetMenu.setBounds(resets);
     layoutResponsiveValues();
     timeline.setBounds(layout.detail);editorReadout.setBounds(layout.readout);
@@ -1017,11 +1020,8 @@ void PreverbAudioProcessorEditor::layoutResponsiveValues()
     {return y+layoutValueRow({0,y,width,valueRowHeight},first,second,contentPadding);};
     const auto timingBottom=values(values(values(0,targetValue,placementValue),sourceStartValue),sourceEndValue);
     const auto envelopeBottom=values(values(values(0,preRollValue,endOffsetValue),fadeInValue,fadeOutValue),inCurveValue,outCurveValue);
-    performSoundScope.setBounds(0,0,width,controlGeometry::feedbackHeight);
-    const auto soundTop=controlGeometry::feedbackHeight+contentPadding;
-    irEditor.setBounds(0,soundTop,width,irEditor.preferredHeight(width));
-    const auto soundBottom=values(irEditor.getBottom()+contentPadding,levelValue);
-    inspectorContent.setSize(width,std::max({inspectorViewport.getHeight(),timingBottom,envelopeBottom,soundBottom}));
+    irEditor.resized();
+    inspectorContent.setSize(width,std::max({inspectorViewport.getHeight(),timingBottom,envelopeBottom}));
 }
 void PreverbAudioProcessorEditor::layoutLiveDiagnostics()
 {
@@ -1358,8 +1358,9 @@ void PreverbAudioProcessorEditor::refresh()
         if(w->phase==m3::Phase::ready && (g.state==m3::CalibrationState::unavailable || g.state==m3::CalibrationState::capped))
             selectedStatus.setText(phaseName(w->phase)+" | "+(g.state==m3::CalibrationState::unavailable?"Calibration unavailable":"Calibration capped"),juce::dontSendNotification);}
     selectedStatus.setTooltip(selectedStatus.getText()+"\n"+selectedStatus.getTooltip());
-    irBinding.displaySelected(state);
-    if(responsivePresentation && !learningLayout && !exportLayout && irEditor.getHeight()!=irEditor.preferredHeight())layoutResponsive();
+    irBinding.displaySelected(state,!learningLayout && !exportLayout && w && (!responsivePresentation || inspectorSection==3));
+    if(!responsivePresentation && !learningLayout && !exportLayout && w
+       && irEditor.getHeight()!=irEditor.preferredHeight(irEditor.getWidth()))resized();
     resetButton.setEnabled(w && time.valid && capture.manifest.sampleRate==time.rate);resetMenu.setEnabled(w && time.valid);
     const std::array<juce::String,5> timingLabels{"Arrival","Source start","Source end","Wet start","Wet end"};
     for(int field=arrival;field<=audibleB;++field)
@@ -1508,8 +1509,7 @@ void PreverbAudioProcessorEditor::refresh()
         }
         workflowHeader.modeInformation().display(accepted);
     }
-    noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,irPreparationNotice.update(state,
-        processor.swellEngine().assignmentEpoch(),juce::Time::getMillisecondCounterHiRes()),loopStatus,songTimingIssue));
+    noticeBar.display(m3::ui::workspaceNotice(flow,capture,state,{},loopStatus,songTimingIssue,learningLayout && learnWorkspace.soundShowing()));
     recaptureExisting.setToggleState(flow.recapture,juce::dontSendNotification);recaptureExisting.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());
     recaptureExisting.setTooltip("Off fills unmapped positions only. On replaces encountered positions as one pass committed on DAW Stop. Independent of Automatic Swells.");
     recaptureButton.setEnabled(flow.mode==workflow::Mode::capture && !flow.locked());cancelButton.setEnabled(flow.mode==workflow::Mode::capture && (flow.locked() || flow.recapture));
@@ -1592,6 +1592,7 @@ void PreverbAudioProcessorEditor::refresh()
     }
     if(learningLayout || exportLayout)for(auto* c:workspaceRoot().getChildren())if(!isShared(c))c->setVisible(false);
     learnWorkspace.setVisible(learningLayout);exportWorkspace.setVisible(exportLayout);
+    if(!learningLayout)learnWorkspace.suspendSound();
     refreshPerformNavigation();
     if(hoverHelpSource && !hoverHelpSource->isShowing())hoverHelpSource=nullptr;
     refreshHoverHelp();

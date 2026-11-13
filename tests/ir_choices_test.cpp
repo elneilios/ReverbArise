@@ -12,7 +12,9 @@ int main(){return runTest([]
     const PreviewContext context{capture.snapshot(),{true,0,0,1000,120,4,4},0};
     SwellEngine engine(root.file,[&]{return context;});engine.setAutomaticProcessing(false);
     waitFor([&]{return engine.savedSession().defaultIR.present();});
-    REQUIRE(engine.irChoices().size()==bundledImpulses().size());
+    const auto catalogue=engine.irChoices();
+    REQUIRE(catalogue.size()==bundledImpulses().size()+1);
+    REQUIRE(std::any_of(catalogue.begin(),catalogue.end(),[](const auto& choice){return choice.presetId==pingPongPresetId;}));
     REQUIRE(engine.addTarget(100));const auto id=engine.savedSession().primary;
     const auto before=engine.savedSession().swells.front();
     const auto file=root.file.getChildFile("personal.wav");writeTestWav(file,1,1000,std::vector<float>(123,.003f));
@@ -24,7 +26,7 @@ int main(){return runTest([]
     REQUIRE(engine.assignDefaultIR(alias));waitFor([&]{return !engine.snapshot().defaultIRPending;});
     REQUIRE(engine.savedSession().defaultIR.content==custom.content && engine.savedSession().importedIRs.size()==1);
     REQUIRE(engine.assignDefaultBundledIR("monumental"));waitFor([&]{return !engine.snapshot().defaultIRPending;});
-    REQUIRE(engine.savedSession().importedIRs.size()==1 && engine.irChoices().size()==bundledImpulses().size()+1);
+    REQUIRE(engine.savedSession().importedIRs.size()==1 && engine.irChoices().size()==catalogue.size()+1);
     REQUIRE(file.deleteFile());
     REQUIRE(engine.assignManagedIR(id,find(engine.savedSession(),id)->inputGeneration,custom,"personal.wav"));
     waitFor([&]{return find(engine.savedSession(),id)->ir==custom;});
@@ -35,7 +37,7 @@ int main(){return runTest([]
     juce::String json,error;REQUIRE(encode(engine.savedSession(),json,error));Session restored;
     REQUIRE(decode(json,restored,error) && restored.importedIRs.size()==1 && restored.importedIRs[0].asset==custom);
     SwellEngine copy(root.file,[&]{return context;});copy.restore(restored);
-    REQUIRE(copy.irChoices().size()==bundledImpulses().size()+1);
+    REQUIRE(copy.irChoices().size()==catalogue.size()+1);
     REQUIRE(copy.assignDefaultManagedIR(custom,"personal.wav"));waitFor([&]{return !copy.snapshot().defaultIRPending;});
     REQUIRE(copy.savedSession().defaultIR==custom);
     const auto other=root.file.getChildFile("other.wav");writeTestWav(other,1,1000,std::vector<float>(125,.004f));
