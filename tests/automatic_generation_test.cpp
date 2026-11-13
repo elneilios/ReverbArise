@@ -91,7 +91,7 @@ int main(){return runTest([]
     REQUIRE(rediscovered.outcome==GenerationOutcome::generated && rediscovered.changed.size()==2);
     REQUIRE(rediscovered.replacement.suppressed==suppressed.suppressed);
     auto rebuildInput=protectedSession;
-    Swell outsideEdit=protectedA;outsideEdit.id=juce::Uuid().toString();
+    Swell outsideEdit=protectedA;outsideEdit.id=juce::Uuid().toDashedString();
     outsideEdit.sourceStart=outsideEdit.arrival=outsideEdit.detectorAnchor=1200;outsideEdit.sourceEnd=1300;
     rebuildInput.swells.push_back(outsideEdit);
     const auto rebuilt=plan(rebuildInput,{{100,1},{600,1}},GenerationPolicy::rebuildUnfrozen);

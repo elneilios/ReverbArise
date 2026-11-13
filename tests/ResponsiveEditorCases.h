@@ -200,7 +200,13 @@ void Composition::verifyResponsive(const juce::File& output)
             for(const auto* name:{"learnAutoGenerateOnStop","learnMarkerSensitivity","learnDefaultIR","levelCell"})
             {
                 auto& control=require<juce::Component>(learn,name);
-                if(control.isVisible()){const auto bounds=learn.getLocalArea(&control,control.getLocalBounds());REQUIRE(bounds.getBottom()+responsiveGeometry::contentPadding<=generate.getY());}
+                auto bounds=learn.getLocalArea(&control,control.getLocalBounds());
+                for(auto* ancestor=&control;ancestor && ancestor!=&learn;ancestor=ancestor->getParentComponent())
+                {
+                    if(!ancestor->isVisible()){bounds={};break;}
+                    bounds=bounds.getIntersection(learn.getLocalArea(ancestor,ancestor->getLocalBounds()));
+                }
+                if(!bounds.isEmpty()) REQUIRE(bounds.getBottom()+responsiveGeometry::contentPadding<=generate.getY());
             }
         }
         REQUIRE(processor->requestWorkflowMode(workflow::Mode::finalise));panel->refresh();

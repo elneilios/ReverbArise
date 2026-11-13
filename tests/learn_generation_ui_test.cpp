@@ -146,7 +146,7 @@ static void controlBindings()
         REQUIRE(editor.setPresentationScale(scale));
         editor.refresh();
         REQUIRE(generate->getButtonText()=="Regenerate Swells");
-        REQUIRE(generate->getAccessibilityHandler()->getTitle()==generate->getButtonText());
+        REQUIRE(generate->getTitle()==generate->getButtonText());
         REQUIRE(visible(helper) && generate->getBottom()<=helper->getY());
         REQUIRE(helper->getText()=="Place swells manually in Perform");
         REQUIRE(generate->getTooltip().contains("Keep frozen swells"));
@@ -284,7 +284,7 @@ static void loopUiCases(bool review)
     REQUIRE(visible(arm) && arm->isEnabled() && visible(count));
     REQUIRE(visible(status) && status->getText().isNotEmpty());
     REQUIRE(buttonFill(*arm)==m3::ui::background && buttonFill(*toggle)==m3::ui::aqua);
-    REQUIRE(arm->getAccessibilityHandler()->getTitle()=="Arm");
+    REQUIRE(arm->getTitle()=="Arm");
     REQUIRE(visible(automatic) && automatic->isEnabled());
     automatic->setToggleState(true,juce::dontSendNotification);
     automatic->onClick();

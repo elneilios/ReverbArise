@@ -1719,10 +1719,10 @@ int main(int argc,char* argv[]){return runTest([&]{
         quiet->prepareToPlay(1000,64);quiet->setPlayHead(&quietHost);juce::AudioBuffer<float> silent(2,64);silent.clear();
         REQUIRE(setFixtureCaptureArmed(*quiet));
         quietHost.position.setTimeInSamples(0);quietHost.position.setIsPlaying(true);quiet->processBlock(silent,midi);
-        REQUIRE(quiet->getWorkflowSnapshot().phase==workflow::Phase::idle); // Missing musical timing is not fabricated.
+        REQUIRE(quiet->getWorkflowSnapshot().phase==workflow::Phase::armed);
+        REQUIRE(quiet->getCaptureProgress().ranges.empty()); // Wait for valid timing without recording.
         quietHost.position.setIsPlaying(false);quiet->processBlock(silent,midi);
         quietHost.position.setBpm(120);quietHost.position.setPpqPosition(0);quietHost.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
-        REQUIRE(setFixtureCaptureArmed(*quiet));
         quietHost.position.setIsPlaying(true);quiet->processBlock(silent,midi);quietHost.position.setIsPlaying(false);quiet->processBlock(silent,midi);
         REQUIRE(quiet->flushCaptureForTesting() && quiet->getWorkflowSnapshot().mode==workflow::Mode::capture);
         REQUIRE(!quiet->requestWorkflowMode(workflow::Mode::live) && quiet->getCaptureSnapshot().manifest.ranges.front().kind==CaptureCoverageKind::silence);

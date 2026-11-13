@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed Learn capture and generation against the shared Arm record control and native preview. Updated the guide for explicit Song and Loop arming, capture status, frozen-only rebuilds, deletion rediscovery and generation from both Learn tabs. FL Studio smoke coverage is pending.",
+  "summary": "Rechecked the Learn capture, frozen-only rebuild and shared tab instructions after native verification. The focused Learn fixture corrections do not alter the documented behavior. Confirmed disarmed insertion, explicit capture and initial generation in FL Studio 2026 PAT playback.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1350,8 +1350,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 58075,
-      "sha256": "d87700b51cef29e4602273339fd41653cfd1c866e159986f645058485ddf095e"
+      "bytes": 58021,
+      "sha256": "39e751078f31c1bb1cf200e3c71e5318e057bbcb0afeffee28cdf57968e656cb"
     }
   ]
 }
