@@ -853,6 +853,47 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     });
     if(output!=juce::File{})recordAudition("custom-high-pass-off");
     if(output!=juce::File{})writePingPongListeningClips(output);
+    if(!show)
+    {
+        auto& processor=static_cast<PreverbAudioProcessor&>(*editor->getAudioProcessor());
+        const auto original=engine.savedSession();
+        const auto originalIr=find(original,id)->ir;
+        const auto originalClock=original.timing;
+        Head testHead;
+        struct RestorePlayHead
+        {
+            PreverbAudioProcessor& processor;
+            juce::AudioPlayHead* previous;
+            ~RestorePlayHead() { processor.setPlayHead(previous); }
+        } restore{processor,processor.getPlayHead()};
+        processor.setPlayHead(&testHead);
+        const auto observe=[&](int64_t sample,double bpm)
+        {
+            testHead.position.setBpm(bpm);
+            testHead.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+            testHead.position.setTimeInSamples(sample);
+            testHead.position.setPpqPosition(sample*bpm/(originalClock.rate*60.));
+            testHead.position.setIsPlaying(false);
+            juce::AudioBuffer<float> audio(2,256);
+            juce::MidiBuffer midi;
+            audio.clear();
+            processor.processBlock(audio,midi);
+        };
+        observe(24000,originalClock.bpm);
+        observe(12000,originalClock.bpm);
+        REQUIRE(find(engine.savedSession(),id)->ir==originalIr);
+        const auto newTempo=originalClock.bpm+10;
+        observe(12000,newTempo);
+        observe(12256,newTempo);
+        wait([&]{
+            const auto saved=engine.savedSession();
+            const auto* changed=find(saved,id);
+            return changed->phase==Phase::ready && changed->render.bpm==newTempo
+                && changed->soundPreset.rulerAligned;
+        });
+        REQUIRE(find(engine.savedSession(),id)->ir!=originalIr);
+        verifyRuler();
+    }
     std::cout<<"Native Sound: Learn/Perform isolation and inheritance, pending audio retention, Target and Move Wet grid, response reuse, Freeze, and saved render restore passed.\n";
     if(!show)return;
     class Window final : public juce::DocumentWindow

@@ -9,7 +9,7 @@
 ## 2. Preset preparation and persistence
 
 - [x] 2.1 Add the versioned definition, typed settings and deterministic response preparation. Verify all six rates, Sync off, multiple sample rates, hit omission from the start, spread, build, peak limits and repeatable keys with focused fixtures.
-- [ ] 2.2 Resolve compatible fixed Song timing and committed Loop tempo and their ruler origins. Prepare changed event offsets off the callback and publish placement, response and render through the bounded #183 handover. Verify stable phase and cache reuse, authored fallback, incompatible observations, stable tempo changes, seek, supersession, failure and Freeze without stale publication or off-grid intermediate audio.
+- [x] 2.2 Resolve compatible fixed Song timing and committed Loop tempo and their ruler origins. Prepare changed event offsets off the callback and publish placement, response and render through the bounded #183 handover. Verify stable phase and cache reuse, authored fallback, incompatible observations, stable tempo changes, seek, supersession, failure and Freeze without stale publication or off-grid intermediate audio.
 - [x] 2.3 Persist accepted settings and exact responses through the existing managed asset path. Verify independent Learn and per-swell values, bundled and Custom IR compatibility, project reopen and asset recovery, and unchanged Level and Envelope paths.
 
 ## 3. Shared Sound editor
