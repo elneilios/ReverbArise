@@ -497,6 +497,7 @@ private:
 
 #include "LoopPerformReview.h"
 #include "SoundPresetReview.h"
+#include "PingPongNativeReview.h"
 
 int main(int argc,char** argv)
 {
@@ -508,6 +509,8 @@ int main(int argc,char** argv)
         {loopPerformReview(command=="--review-loop-perform",argc>2?juce::File(argv[2]):juce::File{});return;}
         if(command=="--test-loop-export-bindings"){loopExportBindingCases();return;}
         auto content=std::make_unique<Review>(command!="--test-competing-refresh");
+        if(command=="--test-ping-pong" || command=="--review-ping-pong")
+        {pingPongNative(std::move(content),argc>2?juce::File(argv[2]):juce::File{},command=="--review-ping-pong");return;}
         if(command=="--review-sound-presets"){reviewSoundPresets(std::move(content));return;}
         if(command=="--capture-sound-presets")
         {

@@ -2,6 +2,7 @@
 
 #include "Controls/SoundPresetEditor.h"
 #include <DSP/DefaultImpulse.h>
+#include <DSP/PingPongResponse.h>
 #include <map>
 
 namespace m3::ui
@@ -18,6 +19,13 @@ public:
 
     std::shared_ptr<const Peaks> bundled(const juce::String& id)
     {
+        if (id == pingPongPresetId)
+            return get("generated/" + id + "/" + juce::String(pingPongPresetVersion), [](ImpulseResponse& response)
+            {
+                SoundPresetIdentity identity;
+                juce::String error;
+                return preparePingPong({}, {}, decodeBudget, response, identity, error);
+            });
         const auto* impulse = findBundledImpulse(id);
         if (!impulse) return {};
         return get("bundled/" + juce::String(impulse->decodedHash), [impulse](ImpulseResponse& response)

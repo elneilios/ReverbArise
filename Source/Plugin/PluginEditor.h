@@ -135,6 +135,8 @@ private:
     enum InspectorValue {targetValue,sourceStartValue,sourceEndValue,preRollValue,endOffsetValue,fadeInValue,fadeOutValue,levelValue,inCurveValue,outCurveValue,placementValue,valueCount};
     void beginValueEdit(int);
     void rebaseValueEdit(int);
+    void stageValueDrag(int,double);
+    void commitValueDrag(int);
     void stepValueEdit(int,double,bool fineWheel);
     m3::ui::KnobValue::ResetAction prepareValueReset(int);
     struct InitialValuePositions {int64_t arrival=0,start=0,end=1;};
@@ -149,6 +151,7 @@ private:
     void refreshValues(const m3::Swell*,const SongTime&);
     std::array<m3::ui::KnobValue,valueCount> valueControls;
     std::array<std::optional<m3::Swell>,valueCount> valueAnchors;
+    std::array<std::optional<m3::Swell>,valueCount> valueTimingDrafts;
     std::array<double,valueCount> valueSpans{};
     std::array<uint64_t,valueCount> valueTokens{};
     std::array<uint64_t,valueCount> valueWorkflowTokens{};

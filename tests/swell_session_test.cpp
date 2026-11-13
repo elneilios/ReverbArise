@@ -172,7 +172,7 @@ int main() { return runTest([]
     REQUIRE(restored.timing.rate==1000 && restored.swells[1].solo);
     const auto reject = [&](const juce::String& bad)
     { REQUIRE(! decode(bad,restored,error)); REQUIRE(restored.primary==first && restored.auditionDb==-24); };
-    reject(json.replace("\"version\":12", "\"version\":13"));
+    reject(json.replace("\"version\":12", "\"version\":15"));
     for(const auto& fields:{
         juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevelDb\":0,"),
         juce::String("\"defaultLevelDb\":\"invalid\",\"defaultLevel\\u0044b\":0,"),

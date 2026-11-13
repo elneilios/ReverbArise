@@ -31,10 +31,21 @@ SoundPresetIdentity inferSoundPreset(const Asset& asset)
 }
 bool validSoundPreset(const SoundPresetIdentity& preset,const Asset& asset)
 {
+    if(!preset.shaping.valid() || (preset.pingPong && preset.shaping.damping!=0))return false;
+    if(preset.id==pingPongPresetId)
+        return preset.version>=1 && preset.version<=pingPongPresetVersion && preset.pingPong && preset.pingPong->valid()
+            && (preset.version!=1 || preset.pingPong->rate<=EchoRate::sixteenth)
+            && (preset.version>=pingPongGateVersion
+                || preset.pingPong->gateAmount==(preset.version==pingPongExcitationVersion?100:0))
+            && (preset.version>=pingPongDampingVersion || preset.pingPong->damping==0)
+            && (!preset.rulerAligned || preset.pingPong->tempoSync) && asset.present()
+            && asset.channels==2 && preset.responseKey.isNotEmpty() && preset.responseKey==asset.content;
+    if(preset.pingPong || preset.responseKey.isNotEmpty() || preset.rulerAligned)return false;
     if(preset.id.isEmpty())return preset.version==1;
     if(!asset.present())return false;
     if(preset.id==customImpulseId)return preset.version==1;
-    return preset==inferSoundPreset(asset);
+    const auto inferred=inferSoundPreset(asset);
+    return preset.id==inferred.id && preset.version==inferred.version;
 }
 float calibrationDb(const Session& s,const Swell& w) noexcept
 {
@@ -405,7 +416,20 @@ static juce::var integer(int64_t v) { return juce::var(juce::String(v)); }
 static juce::var soundPresetMetadata(const SoundPresetIdentity& identity,const Asset& asset)
 {
     const auto preset=resolvedSoundPreset(identity,asset);
+    if(preset.pingPong)
+    {
+        const auto& settings=*preset.pingPong;
+        juce::Array<juce::var> fields{preset.id,preset.version,settings.tempoSync,static_cast<int>(settings.rate),
+            settings.spread,settings.build,preset.responseKey,preset.rulerAligned};
+        if(preset.version>=pingPongGateVersion)fields.add(settings.gateAmount);
+        if(preset.version>=pingPongDampingVersion)fields.add(settings.damping);
+        return fields;
+    }
     return juce::Array<juce::var>{preset.id,preset.version};
+}
+static juce::var shapingMetadata(const SoundShaping& values)
+{
+    return juce::Array<juce::var>{values.damping,values.lowCut,values.highCut};
 }
 juce::var assetMetadata(const Asset& a)
 {
@@ -420,7 +444,11 @@ juce::var assetMetadata(const Asset& a)
 bool encode(const Session& s, juce::String& json, juce::String& error)
 {
     if (! validate(s, error)) return false;
-    auto v = object(); put(v,"version",12); put(v,"autoGenerateOnStop",s.autoGenerateOnStop); put(v,"export",exportStateMetadata(s.exportState)); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
+    const auto hasPingPong=s.defaultSoundPreset.pingPong || std::any_of(s.swells.begin(),s.swells.end(),
+        [](const auto& swell){return swell.soundPreset.pingPong.has_value();});
+    const auto hasShaping=s.defaultSoundPreset.shaping!=SoundShaping{} || std::any_of(s.swells.begin(),s.swells.end(),
+        [](const auto& swell){return swell.soundPreset.shaping!=SoundShaping{};});
+    auto v = object(); put(v,"version",hasShaping?14:hasPingPong?13:12); put(v,"autoGenerateOnStop",s.autoGenerateOnStop); put(v,"export",exportStateMetadata(s.exportState)); put(v,"gainPolicy",static_cast<int>(s.gainPolicy));put(v,"gainRevision",s.gainRevision);put(v,"isolateDry",s.isolateDry); put(v,"regenerationSensitivity",s.regenerationSensitivity); put(v,"autoMarkersEnabled",s.autoMarkersEnabled); put(v,"isolateSelected",s.isolateSelected); put(v,"postRollSeconds",s.postRollSeconds); put(v,"auditionDb",s.auditionDb); put(v,"sensitivity",s.sensitivity);
     put(v,"performUi",performNavigationMetadata(s.performUi));
     put(v,"liveEnabled",s.liveEnabled); put(v,"liveRouting",static_cast<int>(s.liveRouting)); put(v,"liveWetDb",s.liveWetDb);
     put(v,"mappingEnabled",s.mappingEnabled); put(v,"automaticProcessing",s.automaticProcessing);
@@ -429,6 +457,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
     put(v,"defaultIR",assetMetadata(s.defaultIR)); put(v,"defaultIRName",s.defaultIRName);
     put(v,"defaultSoundPreset",soundPresetMetadata(s.defaultSoundPreset,s.defaultIR));
     put(v,"defaultLevelDb",s.defaultLevelDb);
+    if(s.defaultSoundPreset.shaping!=SoundShaping{})put(v,"defaultSoundShaping",shapingMetadata(s.defaultSoundPreset.shaping));
     juce::Array<juce::var> imported;
     for(const auto& entry:s.importedIRs){auto item=object();put(item,"asset",assetMetadata(entry.asset));put(item,"name",entry.name);imported.add(item);}
     put(v,"importedIRs",imported);
@@ -458,6 +487,7 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
         put(a,"provenance",static_cast<int>(w.provenance)); put(a,"detectorAnchor",integer(w.detectorAnchor));put(a,"generationSource",w.generationSource);
         put(a,"ir",assetMetadata(w.ir)); put(a,"render",assetMetadata(w.render));
         put(a,"soundPreset",soundPresetMetadata(w.soundPreset,w.ir));
+        if(w.soundPreset.shaping!=SoundShaping{})put(a,"soundShaping",shapingMetadata(w.soundPreset.shaping));
         auto h = object(); put(h,"automaticStart",w.shape.automaticStart); put(h,"start",integer(w.shape.startOffset));
         put(h,"end",integer(w.shape.endOffset)); put(h,"fadeIn",integer(w.shape.fadeIn)); put(h,"fadeOut",integer(w.shape.fadeOut));
         put(h,"inTension",w.shape.inTension); put(h,"outTension",w.shape.outTension); put(h,"inCurve",static_cast<int>(w.shape.inCurve)); put(h,"outCurve",static_cast<int>(w.shape.outCurve)); put(h,"gain",w.shape.gainDb);
@@ -486,6 +516,15 @@ bool encode(const Session& s, juce::String& json, juce::String& error)
 struct Parser
 {
     bool ok = true;
+    SoundShaping shaping(const juce::var& object,const char* key,int version)
+    {
+        if(!object.hasProperty(key))return {};
+        const auto value=object[key];
+        if(version<14 || !value.isArray() || value.size()!=3
+            || !value[0].isInt() || !value[1].isInt() || !value[2].isInt())
+        {ok=false;return {};}
+        return {static_cast<int>(value[0]),static_cast<int>(value[1]),static_cast<int>(value[2])};
+    }
     juce::var field(const juce::var& v, const char* key)
     { if (! v.isObject() || ! v.hasProperty(key)) { ok = false; return {}; } return v[key]; }
     juce::String string(const juce::var& v, const char* key)
@@ -498,11 +537,28 @@ struct Parser
     { const auto n = number(v,key); if (n < -1000000 || n > 1000000 || std::floor(n) != n) { ok = false; return 0; } return static_cast<int>(n); }
     int64_t big(const juce::var& v, const char* key)
     { auto x = string(v,key); auto n = x.getLargeIntValue(); if (juce::String(n) != x) ok = false; return n; }
-    SoundPresetIdentity soundPreset(const juce::var& value,const Asset& asset)
+    SoundPresetIdentity soundPreset(const juce::var& value,const Asset& asset,int stateVersion)
     {
-        if(!value.isArray() || value.size()!=2 || !value[0].isString() || !value[1].isInt())
+        if(!value.isArray() || value.size()<2 || !value[0].isString() || !value[1].isInt())
         {ok=false;return {};}
-        const SoundPresetIdentity preset{value[0].toString(),static_cast<int>(value[1])};
+        SoundPresetIdentity preset{value[0].toString(),static_cast<int>(value[1])};
+        if(preset.id==pingPongPresetId)
+        {
+            const bool hasGate=preset.version>=pingPongGateVersion;
+            const bool hasDamping=preset.version>=pingPongDampingVersion;
+            if(stateVersion<13 || value.size()!=8+static_cast<int>(hasGate)+static_cast<int>(hasDamping)
+                || !value[2].isBool() || !value[3].isInt()
+                || (hasGate && !value[8].isInt()) || (hasDamping && !value[9].isInt())
+                || !value[4].isInt() || !value[5].isInt() || !value[6].isString() || !value[7].isBool())
+            {ok=false;return {};}
+            preset.pingPong=PingPongSettings{static_cast<bool>(value[2]),static_cast<EchoRate>(static_cast<int>(value[3])),
+                static_cast<int>(value[4]),static_cast<int>(value[5]),
+                hasGate?static_cast<int>(value[8]):preset.version==pingPongExcitationVersion?100:0,
+                hasDamping?static_cast<int>(value[9]):0};
+            preset.responseKey=value[6].toString();
+            preset.rulerAligned=static_cast<bool>(value[7]);
+        }
+        else if(value.size()!=2){ok=false;return {};}
         if(preset.id.isEmpty()==asset.present() || !validSoundPreset(preset,asset))ok=false;
         return preset;
     }
@@ -572,7 +628,7 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
     if (auto result = juce::JSON::parse(json, v); result.failed()) { error = result.getErrorMessage(); return false; }
     Parser p; Session s;
     const auto version=p.small(v,"version");
-    if (version < 1 || version > 12) { error = "Unsupported swell state version"; return false; }
+    if (version < 1 || version > 14) { error = "Unsupported swell state version"; return false; }
     s.autoGenerateOnStop=version>=11?p.boolean(v,"autoGenerateOnStop"):true;
     if(version>=10 && !parseExportState(p.field(v,"export"),s.exportState,error))return false;
     s.performUi=parsePerformNavigation(v["performUi"]);
@@ -599,7 +655,8 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         { const auto text=value.toString();const auto anchor=text.getLargeIntValue();if(!value.isString() || juce::String(anchor)!=text)p.ok=false;s.suppressed.push_back(anchor); }
     }
     else {s.mappingEnabled=false;s.automaticProcessing=false;}
-    s.defaultSoundPreset=version>=12?p.soundPreset(p.field(v,"defaultSoundPreset"),s.defaultIR):inferSoundPreset(s.defaultIR);
+    s.defaultSoundPreset=version>=12?p.soundPreset(p.field(v,"defaultSoundPreset"),s.defaultIR,version):inferSoundPreset(s.defaultIR);
+    s.defaultSoundPreset.shaping=p.shaping(v,"defaultSoundShaping",version);
     if(version>=12)
     {
         const auto level=p.number(v,"defaultLevelDb");
@@ -636,7 +693,8 @@ bool decode(const juce::String& json, Session& output, juce::String& error)
         else {w.provenance=Provenance::manualEdited;w.detectorAnchor=w.arrival;}
         if(version>=11)w.generationSource=p.string(a,"generationSource");
         w.ir=p.asset(p.field(a,"ir")); w.render=p.asset(p.field(a,"render"));
-        w.soundPreset=version>=12?p.soundPreset(p.field(a,"soundPreset"),w.ir):inferSoundPreset(w.ir);
+        w.soundPreset=version>=12?p.soundPreset(p.field(a,"soundPreset"),w.ir,version):inferSoundPreset(w.ir);
+        w.soundPreset.shaping=p.shaping(a,"soundShaping",version);
         const auto h=p.field(a,"shape"); w.shape.automaticStart=p.boolean(h,"automaticStart");
         w.shape.startOffset=p.big(h,"start"); w.shape.endOffset=p.big(h,"end"); w.shape.fadeIn=p.big(h,"fadeIn"); w.shape.fadeOut=p.big(h,"fadeOut");
         if(version>=3){w.shape.inTension=p.number(h,"inTension");w.shape.outTension=p.number(h,"outTension");}

@@ -32,6 +32,19 @@ class SoundPresetBinding final : private juce::Timer
         double since;
         bool reducedMotion;
     };
+    struct CreativeDraft
+    {
+        Target owner;
+        PingPongSettings settings;
+        uint64_t defaultRequest = 0;
+        std::optional<uint64_t> submitted;
+    };
+    struct ShapingDraft
+    {
+        Target owner;
+        SoundShaping values;
+        uint64_t request;
+    };
 
 public:
     using FileResult = std::function<void(const juce::File&)>;
@@ -45,12 +58,34 @@ public:
         editor.onFile = [this](const auto& id) { choose(id, true); };
         editor.onImport = [this] { openFile(); };
         editor.onValueBegin = [this] { levelTarget = target; };
+        editor.onValueEnd = [this] { if (shapingDraft) commitShaping(); else commitPingPong(); };
+        editor.onValueCancel = [this] { shapingDraft.reset(); };
+        editor.onPrepareValueReset = [this](const juce::String& id, double value)
+        {
+            const auto owner = target;
+            const auto request = lastDefaultRequest;
+            const std::weak_ptr<int> weak = lifetime;
+            return [this, weak, owner, request, id, value]
+            {
+                if (weak.expired() || !active || !editable || owner != target
+                    || (owner.defaults && request != lastDefaultRequest)) return;
+                editor.onValueBegin();
+                editor.onValue(id, value);
+                if (id != "level") editor.onValueEnd();
+            };
+        };
+        editor.onSync = [this](bool enabled) { changePingPong("sync", enabled); commitPingPong(); };
         editor.onValue = [this](const auto& id, double value)
         {
             if (id == "level" && active && levelTarget == target && target.defaults && target.session != 0)
             {
                 engine.setDefaultLevel(static_cast<float>(value), target.session, target.pass);
                 refresh();
+            }
+            else if (id != "level" && levelTarget == target)
+            {
+                if (id == "damping" || id == "low-cut" || id == "high-cut") changeShaping(id, value);
+                else changePingPong(id, value);
             }
         };
         startTimerHz(10);
@@ -64,7 +99,11 @@ public:
         editor.onFile = {};
         editor.onImport = {};
         editor.onValueBegin = {};
+        editor.onValueEnd = {};
+        editor.onValueCancel = {};
         editor.onValue = {};
+        editor.onPrepareValueReset = {};
+        editor.onSync = {};
     }
 
     std::function<void()> onRefresh;
@@ -141,6 +180,8 @@ private:
     {
         invocation.reset();
         pending.reset();
+        creativeDraft.reset();
+        shapingDraft.reset();
         managedRetryAt.reset();
         customIntent = false;
         ++fileSerial;
@@ -149,6 +190,68 @@ private:
     }
 
     void refresh() { if (onRefresh) onRefresh(); }
+
+    void changeShaping(const juce::String& id, double value)
+    {
+        if (!active || !editable || !acceptedShaping || target.session == 0) return;
+        auto values = shapingDraft ? shapingDraft->values : *acceptedShaping;
+        auto canonical = juce::roundToInt(value);
+        if (id == "damping") values.damping = canonical;
+        else
+        {
+            if (canonical > 0) canonical = std::max(canonical, SoundShaping::minimumCutoff);
+            (id == "low-cut" ? values.lowCut : values.highCut) = canonical;
+        }
+        shapingDraft = ShapingDraft{target, values, lastDefaultRequest};
+        editor.previewValue(id, canonical);
+    }
+
+    void commitShaping()
+    {
+        auto draft = std::exchange(shapingDraft, std::nullopt);
+        if (active && editable && acceptedShaping && draft->owner == target && draft->values != *acceptedShaping)
+        {
+            if (target.defaults) engine.assignDefaultSoundShaping(draft->values, target.session, target.pass, draft->request);
+            else engine.assignSoundShaping(target.swell, target.input, draft->values, target.session);
+        }
+        refresh();
+    }
+
+    void changePingPong(const juce::String& id, double value)
+    {
+        if (!active || !editable || !creative || target.session == 0) return;
+        auto settings = creativeDraft ? creativeDraft->settings : *creative;
+        if (id == "sync") settings.tempoSync = value != 0;
+        else if (id == "echo-rate") { value = std::round(value); settings.rate = static_cast<EchoRate>(static_cast<int>(value)); }
+        else if (id == "stereo-spread") { value = std::round(value); settings.spread = static_cast<int>(value); }
+        else if (id == "build-intensity") { value = std::round(value); settings.build = static_cast<int>(value); }
+        else if (id == "gate-amount") { value = std::round(value); settings.gateAmount = static_cast<int>(value); }
+        else return;
+        if (creativeDraft && creativeDraft->settings == settings) return;
+        if (!creativeDraft && settings == *creative) return;
+        creativeDraft = CreativeDraft{target, settings, lastDefaultRequest, {}};
+        editor.previewValue(id, value);
+    }
+
+    void commitPingPong()
+    {
+        if (!creativeDraft || creativeDraft->submitted || !active || !editable || !creative
+            || creativeDraft->owner != target || (target.defaults && creativeDraft->defaultRequest != lastDefaultRequest)) return;
+        const auto owner = target;
+        if (creativeDraft->settings == *creative && !pending)
+        {
+            creativeDraft.reset();
+            refresh();
+            return;
+        }
+        const auto accepted = owner.defaults
+            ? engine.assignDefaultPingPong(creativeDraft->settings, owner.session, owner.pass)
+            : engine.assignPingPong(owner.swell, owner.input, creativeDraft->settings, owner.session);
+        if (accepted) creativeDraft->submitted = owner.defaults ? lastDefaultRequest + 1 : owner.input + 1;
+        else creativeDraft.reset();
+        refresh();
+        if (accepted && owner.sameOwner(target) && owner == levelTarget) levelTarget = target;
+    }
 
     void choose(const juce::String& id, bool file)
     {
@@ -169,6 +272,14 @@ private:
 
     void submit(const Target& owner, const IRChoice& choice, const juce::File& file)
     {
+        if (choice.presetId == pingPongPresetId)
+        {
+            auto settings = creative.value_or(PingPongSettings{});
+            if (acceptedShaping) settings.damping = acceptedShaping->damping;
+            if (owner.defaults) engine.assignDefaultPingPong(settings, owner.session, owner.pass);
+            else engine.assignPingPong(owner.swell, owner.input, settings, owner.session);
+            return;
+        }
         if (owner.defaults)
         {
             if (file != juce::File{}) engine.assignDefaultIR(file, owner.session, owner.pass);
@@ -187,6 +298,7 @@ private:
     {
         if (!target.sameOwner(next) || lastMode != state.workflowState.mode) resetContext();
         target = std::move(next);
+        lastDefaultRequest = state.defaultIRRequest;
         lastMode = state.workflowState.mode;
         setActive(visible);
         const bool locked = state.workflowState.locked();
@@ -202,10 +314,16 @@ private:
                 : "Sound editing is available in Perform.";
 
         const auto* asset = target.defaults ? &state.session.defaultIR : swell ? &swell->ir : nullptr;
+        creative.reset();
+        acceptedShaping.reset();
+        bool referenceTempo = false;
         if (asset && asset->present())
         {
             const auto& identity = target.defaults ? state.session.defaultSoundPreset : swell->soundPreset;
             view.accepted = resolvedSoundPreset(identity, *asset).id;
+            creative = identity.pingPong;
+            acceptedShaping = identity.effectiveShaping();
+            referenceTempo = creative && creative->tempoSync && !identity.rulerAligned;
             if (view.accepted == customImpulseId) view.file = irChoiceId(identity, *asset);
         }
         acceptedPreset = view.accepted;
@@ -232,8 +350,63 @@ private:
             else if (view.showFile) view.files.push_back({choice.id, choice.name, {}});
         }
         view.presets.push_back({customImpulseId, "Custom IR", view.file.isNotEmpty() ? view.acceptedPeaks : nullptr});
+        if (creativeDraft)
+        {
+            bool owned = editable && creative && creativeDraft->owner.sameOwner(target);
+            if (owned && creativeDraft->submitted)
+            {
+                if (target.defaults)
+                    owned = state.defaultIRPending && state.defaultIRRequest == *creativeDraft->submitted
+                        && state.requestedDefaultIRName == pingPongPresetName;
+                else
+                {
+                    const auto request = state.irRequests.find(target.swell);
+                    owned = target.input == *creativeDraft->submitted && request != state.irRequests.end()
+                        && request->second.name == pingPongPresetName && request->second.error.isEmpty();
+                }
+            }
+            else if (owned)
+                owned = target == creativeDraft->owner
+                    && (!target.defaults || lastDefaultRequest == creativeDraft->defaultRequest);
+            if (!owned) creativeDraft.reset();
+        }
+        const auto shown = creativeDraft ? std::optional{creativeDraft->settings} : creative;
+        if (shown)
+        {
+            constexpr PingPongSettings initial;
+            view.tempoSync = shown->tempoSync;
+            view.values.push_back({{"echo-rate", "Echo Rate", 0, static_cast<double>(EchoRate::thirtySecond), 1,
+                {"1/4", "1/8", "1/8.", "1/16", "1/16.", "1/32"}, {},
+                {"Quarter note", "Eighth note", "Dotted eighth note", "Sixteenth note", "Dotted sixteenth note", "Thirty-second note"},
+                {}, static_cast<double>(initial.rate)},
+                static_cast<double>(shown->rate), editable});
+            view.values.push_back({{"stereo-spread", "Stereo Spread", 0, 100, 1, {}, "%", {}, {}, initial.spread},
+                static_cast<double>(shown->spread), editable});
+            view.values.push_back({{"build-intensity", "Build Intensity", 0, 100, 1, {}, "%", {},
+                "0% keeps echo hits even. Higher values make the later hits build toward the arrival.", initial.build},
+                static_cast<double>(shown->build), editable});
+            view.values.push_back({{"gate-amount", "Gate Amount", 0, 100, 1, {}, "%", {},
+                "0% keeps the original echo tails. Higher values reduce overlap between left and right hits.", initial.gateAmount},
+                static_cast<double>(shown->gateAmount), editable});
+            if (referenceTempo)
+                view.description = target.defaults ? "Echoes build toward the arrival and follow each new swell's ruler."
+                    : "Using reference tempo until ruler timing is available.";
+        }
+        if (shapingDraft && (!editable || shapingDraft->owner != target
+            || (target.defaults && shapingDraft->request != lastDefaultRequest))) shapingDraft.reset();
+        if (acceptedShaping)
+        {
+            const auto values = shapingDraft ? shapingDraft->values : *acceptedShaping;
+            view.values.push_back({{"damping", "Damping", 0, 100, 1, {}, "%", {},
+                "0% keeps the original response. Higher values shorten the ring.", 0.}, static_cast<double>(values.damping), editable});
+            view.values.push_back({{"low-cut", "High Pass", 0, SoundShaping::maximumCutoff, 1, {}, {}, {},
+                "Removes low frequencies from the source feeding the swell.", 0., true}, static_cast<double>(values.lowCut), editable});
+            view.values.push_back({{"high-cut", "Low Pass", 0, SoundShaping::maximumCutoff, 1, {}, {}, {},
+                "Removes high frequencies from the source feeding the swell.", 0., true, true}, static_cast<double>(values.highCut), editable});
+        }
         if (target.defaults)
-            view.values.push_back({{"level", "Level (dB)", minimumDefaultLevelDb, maximumDefaultLevelDb, .1},
+            view.values.push_back({{"level", "Level (dB)", minimumDefaultLevelDb, maximumDefaultLevelDb, .1,
+                                   {}, {}, {}, {}, defaultSwellLevelDb},
                                   state.session.defaultLevelDb, editable});
 
         uint64_t request = 0;
@@ -263,7 +436,7 @@ private:
 
     void updateBusy()
     {
-        const auto covering = active && pending && editor.isShowing()
+        const auto covering = active && pending && editor.isShowing() && !shapingDraft && !(creativeDraft && !creativeDraft->submitted)
             && now() - pending->since >= busyDelayMs;
         editor.showBusy(covering ? "Preparing " + pending->name + juce::String::charToString(0x2026) : juce::String{},
                         covering && pending->reducedMotion);
@@ -287,6 +460,11 @@ private:
     std::optional<Target> invocation;
     workflow::Mode lastMode = workflow::Mode::capture;
     std::vector<IRChoice> choices;
+    std::optional<PingPongSettings> creative;
+    std::optional<CreativeDraft> creativeDraft;
+    std::optional<SoundShaping> acceptedShaping;
+    std::optional<ShapingDraft> shapingDraft;
+    uint64_t lastDefaultRequest = 0;
     juce::String acceptedPreset, acceptedFile;
     bool active = false, editable = false, customIntent = false;
     std::optional<Pending> pending;

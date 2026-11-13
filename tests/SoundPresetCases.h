@@ -99,6 +99,13 @@ inline void select(ChoiceSelector& picker, int id)
     picker.setSelectedId(id, juce::sendNotificationSync);
 }
 
+inline void selectNamed(ChoiceSelector& picker,const juce::String& name)
+{
+    for(int i=0;i<picker.getNumItems();++i)
+        if(picker.getItemText(i)==name){select(picker,i+1);return;}
+    throw std::runtime_error("Missing Sound Preset: "+name.toStdString());
+}
+
 inline void componentCases()
 {
     WorkspaceTheme theme;
@@ -229,7 +236,8 @@ inline void bindingCases()
     fixture.select(fixture.a);
     refresh();
     const auto baseline = engine.savedSession();
-    REQUIRE(defaults.presetPicker().getNumItems() == 7 && selected.presetPicker().getNumItems() == 7);
+    const auto catalogueSize=static_cast<int>(bundledImpulses().size())+2;
+    REQUIRE(defaults.presetPicker().getNumItems()==catalogueSize && selected.presetPicker().getNumItems()==catalogueSize);
     REQUIRE(!convolutionIrCases::findReviewComponent(defaults, "rateCell"));
     auto& level = control<KnobValue>(defaults, "levelCell").valueField();
     level.setText("2.75", false);
@@ -270,7 +278,7 @@ inline void bindingCases()
     refresh();
     REQUIRE(engine.savedSession().defaultSoundPreset.id == bundled.id);
     REQUIRE(same.deleteFile());
-    select(defaults.presetPicker(), 7);
+    selectNamed(defaults.presetPicker(), "Custom IR");
     auto& files = defaults.filePicker();
     REQUIRE(files.isVisible() && defaults.presetPicker().displayedText().contains("choose file"));
     for (int index = 0; index < files.getNumItems(); ++index)
@@ -348,7 +356,7 @@ inline void bindingCases()
     REQUIRE(!engine.snapshot().defaultIRPending && engine.savedSession().defaultLevelDb == 2.75f);
     REQUIRE(fixture.flow.cancelCapture(pass));
     refresh();
-    select(defaults.presetPicker(), 7);
+    selectNamed(defaults.presetPicker(), "Custom IR");
     auto state = engine.snapshot();
     state.defaultIRError.clear();
     state.defaultIRPending = true;
@@ -372,7 +380,7 @@ inline void bindingCases()
     REQUIRE(!busy.isVisible() && defaults.presetPicker().isEnabled());
     learn.displayDefault(state, true);
     REQUIRE(!busy.isVisible());
-    select(defaults.presetPicker(), 7);
+    selectNamed(defaults.presetPicker(), "Custom IR");
     state.defaultIRPending = false;
     state.defaultIRError = "Invalid file";
     learn.displayDefault(state, true);

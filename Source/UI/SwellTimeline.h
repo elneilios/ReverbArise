@@ -29,7 +29,7 @@ public:
     const ui::WaveformPaintMetrics& wetPaintMetrics()const noexcept{return wetWaveformLayer.metrics();}
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
-    void mouseUp(const juce::MouseEvent&) override {endPointerGesture();}
+    void mouseUp(const juce::MouseEvent&) override;
     void mouseMove(const juce::MouseEvent&) override;
     bool keyPressed(const juce::KeyPress&) override;
     std::vector<EnvelopeGrab> grabPoints() const;
@@ -87,11 +87,12 @@ private:
     void updateScroll();
     void navigationChanged(){drag=Drag::none;updateScroll();repaint();if(onViewportChanged)onViewportChanged();}
     Press beginEdit(juce::Point<float>);
-    void endPointerGesture(){pointerGesture=PointerGesture::none;drag=Drag::none;repaint();}
+    void endPointerGesture(){pointerGesture=PointerGesture::none;drag=Drag::none;timingDraft.reset();deferTimingDrag=false;repaint();}
     void positionPlayhead(float x);
     void panFrom(SwellViewport initial,double fraction);
     bool prepareDrag(juce::Point<float>);
     void rebaseDrag();
+    void submitDrag(int64_t requested,bool snapping,double verticalDelta);
     void gestureMessage(const juce::String& text){if(gestureStatus!=text){gestureStatus=text;setDescription(text);repaint();}}
     void constrainNavigation();
     double navigationAnchor()const;
@@ -117,6 +118,9 @@ private:
     SongTime dragTime,dragAcceptedTime;
     GridClockContext clockContext,dragClock;
     std::optional<HostGrid> dragGrid;
+    struct TimingDraft { Swell swell; int64_t requested; bool snapping; };
+    std::optional<TimingDraft> timingDraft;
+    bool deferTimingDrag=false;
     uint64_t dragEpoch=0,dragInput=0;
     std::vector<juce::String> dragSelection;
     juce::Point<float> lastPointer;

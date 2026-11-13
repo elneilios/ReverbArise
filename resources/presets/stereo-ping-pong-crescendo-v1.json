@@ -1,0 +1,90 @@
+{
+  "preset_id": "stereo-ping-pong-crescendo",
+  "source_version": 1,
+  "reference_name": "12_Stereo_Ping_Pong_Crescendo.wav",
+  "reference_pack": "ReverbArise Creative IR Crescendo v2",
+  "reference_wav_sha256": "bc5ee590f3d4caff32d639d6b5d1b6320251ad53adee7fd7c7c34694cdede91d",
+  "reference_frames": 120000,
+  "sample_rate": 48000,
+  "bits_per_sample": 24,
+  "packed_wav_sha256": "514ecd454a2c19348d00e5d48b24d0288808f7e4bdb3008c3e4f0675e12fa2a6",
+  "bursts": [
+    {
+      "audible_start_frame": 9960,
+      "packed_start_frame": 0,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2987
+    },
+    {
+      "audible_start_frame": 20521,
+      "packed_start_frame": 2999,
+      "frames": 2999,
+      "channel": 1,
+      "peak_offset_frames": 2987
+    },
+    {
+      "audible_start_frame": 31080,
+      "packed_start_frame": 5998,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2986
+    },
+    {
+      "audible_start_frame": 41640,
+      "packed_start_frame": 8997,
+      "frames": 2999,
+      "channel": 1,
+      "peak_offset_frames": 2986
+    },
+    {
+      "audible_start_frame": 52200,
+      "packed_start_frame": 11996,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2985
+    },
+    {
+      "audible_start_frame": 62760,
+      "packed_start_frame": 14995,
+      "frames": 2999,
+      "channel": 1,
+      "peak_offset_frames": 2985
+    },
+    {
+      "audible_start_frame": 73320,
+      "packed_start_frame": 17994,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2984
+    },
+    {
+      "audible_start_frame": 83880,
+      "packed_start_frame": 20993,
+      "frames": 2999,
+      "channel": 1,
+      "peak_offset_frames": 2983
+    },
+    {
+      "audible_start_frame": 94440,
+      "packed_start_frame": 23992,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2983
+    },
+    {
+      "audible_start_frame": 105000,
+      "packed_start_frame": 26991,
+      "frames": 2999,
+      "channel": 1,
+      "peak_offset_frames": 2982
+    },
+    {
+      "audible_start_frame": 115560,
+      "packed_start_frame": 29990,
+      "frames": 2999,
+      "channel": 0,
+      "peak_offset_frames": 2981
+    }
+  ]
+}

@@ -124,7 +124,8 @@ private:
                     ?(swell->wetTimingIntent?"Wet timing adjusted to fit this IR":juce::String{}):swell->status;
                 if(request!=state.irRequests.end())
                 {
-                    const auto& [name,error]=request->second;
+                    const auto& name=request->second.name;
+                    const auto& error=request->second.error;
                     const juce::String available=swell->phase==Phase::ready?" | Available: "+swell->irName:juce::String(" | No ready wet render");
                     view.status=error.isEmpty()?"Preparing "+name+available:name+": "+error+available;
                     view.reason+=(view.reason.isEmpty()?"":"\n")+view.status;

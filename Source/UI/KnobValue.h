@@ -159,6 +159,7 @@ public:
         applyTextRole(label,TextRole::controlLabel);
     }
     std::function<void()> onBegin,onEnd;
+    std::function<void()> onGestureCommitted;
     std::function<void()> onDialPress;
     std::function<void()> onRebase;
     std::function<void(const juce::ModifierKeys&)> onModifierInput;
@@ -196,9 +197,13 @@ public:
         canonical=valueText;canonicalExact=exact;canonicalFraction=std::clamp(fraction,0.0,1.0);
         if(!domainSupplied)domain={canonicalFraction,0,1,.01,1,canonical};
         setEnabled(enabled);
-        if(!typing){refreshing=true;entry.setText(canonical,false);if(!active)knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}knob.repaint();
+        if(!typing){refreshing=true;entry.setText(active && gesturePreview?*gesturePreview:canonical,false);if(!active)knob.setValue(canonicalFraction,juce::dontSendNotification);refreshing=false;}knob.repaint();
     }
-    void cancel(){if(active && !typing)cancelledGesture=true;active=false;typing=false;restore();if(onEnd)onEnd();}
+    void previewGestureValue(const juce::String& value)
+    {
+        if(active && !typing){gesturePreview=value;entry.setText(value,false);}
+    }
+    void cancel(){if(active && !typing)cancelledGesture=true;active=false;typing=false;gesturePreview.reset();restore();if(onEnd)onEnd();}
     bool editing()const noexcept{return active;}
     void setCaption(const juce::String& caption,const juce::String& fullTitle={})
     {
@@ -367,7 +372,7 @@ private:
             const juce::ScopedValueSetter<bool> guard(committing,true);
             onCommit(entry.getText());
         }
-        active=false;typing=false;restore();if(onEnd)onEnd();
+        active=false;typing=false;gesturePreview.reset();restore();if(onGestureCommitted)onGestureCommitted();if(onEnd)onEnd();
     }
     Caption label;Dial knob;Entry entry;
     controls::FieldFeedbackLabel feedback;
@@ -375,6 +380,7 @@ private:
     DomainValue domain;int modifiers=0;bool domainSupplied=false,domainValid=true;
     std::function<ResetAction()> onResetInvocation;uint64_t resetTicket=0;
     juce::String identity,canonical,canonicalExact,typingBaseline;
+    std::optional<juce::String> gesturePreview;
     std::optional<HomeDetent> homeDetent;
     double origin=0,canonicalFraction=0,dragDomainOrigin=0;
     bool refreshing=false,active=false,typing=false,cancelledGesture=false,committing=false;

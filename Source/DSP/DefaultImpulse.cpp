@@ -61,17 +61,6 @@ bool installBundledImpulse(SwellAssetStore& store,const juce::String& id,uint64_
 {
     const auto* entry=findBundledImpulse(id);if(!entry){error="Unknown bundled IR identity";return false;}
     ImpulseResponse ir;if(!decodeBundledImpulse(*entry,budget,ir,error))return false;
-    // Reuse only fully verified immutable PCM, never a label or menu position.
-    // Keep unique-file publication for new/corrupt assets and old saved snapshots.
-    const auto directory=store.directory().getChildFile("irs");int examined=0;
-    if(ir.samples.size()*sizeof(float)<=budget/3 && !directory.isSymbolicLink())
-        for(const auto& child:juce::RangedDirectoryIterator(directory,false,juce::String(entry->decodedHash)+"-*.json")){
-            if(++examined>32)break;const auto metadata=child.getFile();if(metadata.isSymbolicLink() || metadata.getSize()>16384)continue;
-            juce::var value;Asset candidate;juce::String ignored;
-            if(juce::JSON::parse(metadata.loadFileAsString(),value).failed() || !parseAssetMetadata(value,candidate,ignored)
-                || candidate.content!=entry->decodedHash || candidate.rate!=entry->rate || candidate.channels!=entry->channels || candidate.frames!=entry->frames)continue;
-            ImpulseResponse verified;
-            if(store.readIR(candidate,budget-ir.samples.size()*sizeof(float),verified,ignored) && verified.samples==ir.samples){output=candidate;error.clear();return true;}}
-    return store.writeIR(ir,output,error);
+    return store.reuseOrWriteIR(ir,entry->decodedHash,budget,output,error);
 }
 }

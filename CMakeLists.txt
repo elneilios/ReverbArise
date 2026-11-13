@@ -79,7 +79,8 @@ target_include_directories(preverb_analysis PUBLIC Source)
 target_link_libraries(preverb_analysis PUBLIC preverb_capture juce::juce_dsp)
 
 juce_add_binary_data(preverb_resources HEADER_NAME PreverbResources.h NAMESPACE PreverbResources SOURCES resources/PreverbHall.wav
-    resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav)
+    resources/irs/Monumental.wav resources/irs/IntimatePlate.wav resources/irs/VintageDarkHall.wav resources/irs/ShimmerCloud.wav resources/irs/Whisper.wav
+    resources/presets/stereo-ping-pong-crescendo-v1.wav resources/presets/stereo-ping-pong-crescendo-v1.json)
 juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMESPACE PreverbUIResources SOURCES
     resources/icons/learn.svg
     resources/icons/perform.svg
@@ -92,6 +93,7 @@ juce_add_binary_data(preverb_ui_resources HEADER_NAME PreverbUIResources.h NAMES
     resources/fonts/inter/Inter-Italic.ttf
 )
 add_library(preverb_assets STATIC Source/DSP/ExportFiles.cpp Source/DSP/SongMix.cpp Source/DSP/ExportSource.cpp Source/DSP/SongExport.cpp Source/DSP/SwellAssetStore.cpp Source/DSP/SwellShape.cpp Source/DSP/GainStaging.cpp Source/DSP/DefaultImpulse.cpp Source/DSP/AuditionMix.cpp)
+target_sources(preverb_assets PRIVATE Source/DSP/PingPongResponse.cpp)
 target_include_directories(preverb_assets PUBLIC Source)
 target_link_libraries(preverb_assets PUBLIC preverb_dsp preverb_session preverb_resources preverb_capture)
 
@@ -368,6 +370,7 @@ if(BUILD_TESTING)
     target_compile_definitions(preverb_perform_composition_preview PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(preverb_perform_composition_preview PRIVATE preverb_plugin juce::juce_audio_utils)
     add_test(NAME preverb_perform_composition_preview COMMAND preverb_perform_composition_preview)
+    add_test(NAME preverb_ping_pong_native_smoke COMMAND preverb_perform_composition_preview --test-ping-pong)
     add_test(NAME preverb_perform_navigation_test COMMAND preverb_perform_composition_preview --test-navigation)
     add_test(NAME preverb_perform_gesture_test COMMAND preverb_perform_composition_preview --test-gestures)
     add_test(NAME preverb_perform_binding_test COMMAND preverb_perform_composition_preview --test-editor)
@@ -423,6 +426,11 @@ if(BUILD_TESTING)
     add_executable(preverb_reverse_convolution_test tests/reverse_convolution_test.cpp)
     target_link_libraries(preverb_reverse_convolution_test PRIVATE preverb_dsp)
     add_test(NAME preverb_reverse_convolution_test COMMAND preverb_reverse_convolution_test)
+    if(DEFINED ENV{REVERBARISE_PING_PONG_SPIKE_REFERENCE})
+        add_executable(preverb_ping_pong_spike EXCLUDE_FROM_ALL tests/ping_pong_spike.cpp)
+        target_link_libraries(preverb_ping_pong_spike PRIVATE preverb_assets)
+        add_test(NAME preverb_ping_pong_spike COMMAND preverb_ping_pong_spike)
+    endif()
     add_executable(preverb_source_range_test tests/source_range_test.cpp)
     target_link_libraries(preverb_source_range_test PRIVATE preverb_capture)
     add_test(NAME preverb_source_range_test COMMAND preverb_source_range_test)

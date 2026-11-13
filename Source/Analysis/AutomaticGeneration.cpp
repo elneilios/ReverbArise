@@ -116,7 +116,17 @@ AutomaticGenerationPlan prepareAutomaticGeneration(const Session& accepted,const
         else {w.shape=initialShape(time.rate);w.shape.gainDb=accepted.defaultLevelDb;w.name=defaultSwellName(found[i],time,&working);}
         w.arrival=w.detectorAnchor=w.sourceStart=found[i];w.sourceEnd=found[i]+1;w.supportOffset=0;
         w.provenance=Provenance::automatic;w.ir=accepted.defaultIR;w.irName=accepted.defaultIRName;
+        const auto previousShaping=w.soundPreset.effectiveShaping();
         w.soundPreset=resolvedSoundPreset(accepted.defaultSoundPreset,accepted.defaultIR);
+        if(matches[i].isNotEmpty())
+        {
+            if(w.soundPreset.pingPong && w.soundPreset.pingPong->damping!=previousShaping.damping)
+            {
+                w.soundPreset.version=pingPongPresetVersion;
+                w.render={};
+            }
+            w.soundPreset.setShaping(previousShaping);
+        }
         planned.push_back(w.id);working.swells.push_back(std::move(w));
     }
     // Prune incomplete windows from right to left: removing a late target can
