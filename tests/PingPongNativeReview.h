@@ -751,9 +751,66 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0
         && engine.snapshot().auditionReady;});
     const auto acceptedCustom=engine.savedSession();
+    const auto acceptedRender=find(acceptedCustom,id)->render;
+    const auto acceptedPreset=find(acceptedCustom,id)->soundPreset;
+    const auto clock=acceptedCustom.timing;
+    const auto setCut=[&](int hz)
+    {
+        const auto session=engine.savedSession();
+        auto shaping=find(session,id)->soundPreset.effectiveShaping();
+        shaping.lowCut=hz;
+        return engine.assignSoundShaping(id,find(session,id)->inputGeneration,shaping,engine.assignmentEpoch());
+    };
+    engine.setLivePlayback(true,LiveRouting::wetOnly,0);
+    const auto offlineBlock=[&](int64_t sample)
+    {
+        auto time=clock;
+        time.sample=sample;
+        time.ppq=clock.ppq+(sample-clock.sample)*clock.bpm/(60*clock.rate);
+        std::array<float,2048> left{},right{};
+        engine.processOfflineAudio(left.data(),right.data(),static_cast<int>(left.size()),{time});
+        REQUIRE(!engine.snapshot().offlineStatus.startsWith("Export incomplete"));
+        return std::pair{left,right};
+    };
+    const auto comparisonSample=find(acceptedCustom,id)->arrival-2048;
+    offlineBlock(comparisonSample-2048);
+    const auto expectedBounce=offlineBlock(comparisonSample);
+    REQUIRE(std::ranges::any_of(expectedBounce.first,[](float sample){return sample!=0;}));
+    engine.endOffline();
+
+    REQUIRE(engine.assignIR(id,find(acceptedCustom,id)->inputGeneration,
+        engine.assetDirectory().getChildFile("missing-shaping-test.wav"),false,engine.assignmentEpoch()));
+    wait([&]{
+        const auto state=engine.snapshot();
+        const auto request=state.irRequests.find(id);
+        return request!=state.irRequests.end() && request->second.error.isNotEmpty();
+    });
+    REQUIRE(find(engine.savedSession(),id)->render==acceptedRender);
+    REQUIRE(find(engine.savedSession(),id)->soundPreset==acceptedPreset);
+    offlineBlock(comparisonSample-2048);
+    REQUIRE(offlineBlock(comparisonSample)==expectedBounce);
+    engine.endOffline();
+
     engine.holdRenderPublicationForTesting(true);
-    highPass.valueField().setText("230",false);
-    highPass.valueField().onReturnKey();
+    REQUIRE(setCut(150));
+    wait([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(setCut(480));
+    REQUIRE(find(engine.savedSession(),id)->render==acceptedRender);
+    REQUIRE(engine.setFrozen(id,true));
+    REQUIRE(!setCut(960));
+    engine.holdRenderPublicationForTesting(false);
+    REQUIRE(find(engine.savedSession(),id)->soundPreset==acceptedPreset);
+    offlineBlock(comparisonSample-2048);
+    REQUIRE(offlineBlock(comparisonSample)==expectedBounce);
+    engine.endOffline();
+    REQUIRE(engine.setFrozen(id,false));
+    wait([&]{
+        editor->refresh();
+        const auto state=engine.snapshot();
+        return state.auditionReady && find(state.session,id)->phase==Phase::ready;
+    });
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(setCut(230));
     wait([&]{return engine.renderPublicationWaitingForTesting();});
     REQUIRE(find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0);
     REQUIRE(find(engine.savedSession(),id)->render==find(acceptedCustom,id)->render);
@@ -766,6 +823,9 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     engine.holdRenderPublicationForTesting(false);
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==230
         && engine.snapshot().auditionReady;});
+    offlineBlock(comparisonSample-2048);
+    REQUIRE(offlineBlock(comparisonSample)!=expectedBounce);
+    engine.endOffline();
     if(output!=juce::File{})recordAudition("custom-high-pass-230");
     const auto acceptedFraction=highPass.displayedFraction();
     REQUIRE(acceptedFraction>.3 && acceptedFraction<.4);
@@ -775,6 +835,10 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
         const auto cutoff=find(engine.savedSession(),id)->soundPreset.shaping.lowCut;
         return cutoff>230 && cutoff<300 && engine.snapshot().auditionReady;
     });
+    highPass.valueField().setText("230",false);
+    highPass.valueField().onReturnKey();
+    wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==230
+        && engine.snapshot().auditionReady;});
     reset(selected,"low-cut","Off");
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0
         && engine.snapshot().auditionReady;});

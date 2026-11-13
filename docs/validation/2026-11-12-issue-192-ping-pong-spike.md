@@ -104,3 +104,9 @@ The Release installer verified SHA-256 `0b378f14710b31383e390d4840dc5eb16342a8c3
 The native Wet Audition capture reproduced the reported weak range. Revision 6 at 100% reduced final half-second wet energy by 0.33 dB on the fixture. A steeper response taper alone also yielded little change in wet energy after gain matching. Revision 7 extends the upper half of the taper and lowers the musical matching target above 50%. The same fixture then measured a 6.03 dB reduction. The direct native preview passed its grid, peak, saved-render and dial checks. The comparison in `out/issue-192-damping-range` presents 0%, revision 6 at 100%, and revision 7 at 100%.
 
 The plugin-only installer verified SHA-256 `f977acfa097d9517c1b3104caef652c981c5178dd9b4e33022ee848d42a88999` and retained the previous bundle in `out/vst3-install-backups/20261112-233132-a1298d2d9dae4003aa2433bd3156254f`. CTest did not run during installation. FL Studio listening remains pending.
+
+## Combined review candidate
+
+The owner reviewed the native layout, requested the final dial labels and range-label removal, and accepted the musical result of the filters in FL Studio. The Learn and Perform captures at 900×600 and 1100×760 and the production Wet Audition comparisons are in `out/shared-sound-shaping-approved`. The offline guide and [IR library guidance](../development/ir-library.md) cover the shared controls and the supported ruler timing.
+
+Release candidate `3dc4e44` passed the standard PR regression (15/15, `20261113-021641-70f6f98e`) and the focused native suite (6/6, `20261113-022108-13682fbb`) for Ping Pong, gestures, bindings, Loop, Level and Audition. The latter included an added fixture checking retained PCM after a failed IR request and Freeze, and changed PCM after an accepted High Pass edit. See [draft PR #202](https://github.com/elneilios/ReverbArise/pull/202) and the [combined host evidence](2026-11-13-shared-sound-shaping.md).

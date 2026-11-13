@@ -9,7 +9,7 @@
 
 - [x] 2.1 Implement source cuts in the render worker and verify exact Off bypass, both cutoff extremes, crossed cutoffs, mono and stereo responses, stable coefficients at supported rates and unchanged dry PCM.
 - [x] 2.2 Implement the approved full-response damping range and reuse the Ping Pong per-hit path. Verify that matched-level hall, plate and Custom IR clips span a full swell to a short accent, that the Ping Pong echo grid is unchanged, and that silent and short inputs are handled. Document the processing and listening evidence.
-- [ ] 2.3 Extend render dependencies and the existing replacement transaction. Verify neutral cache reuse, invalidation for canonical edits, fixed-Level Audition under musical gain matching, and retained audio during failure, supersession, Freeze and offline snapshots.
+- [x] 2.3 Extend render dependencies and the existing replacement transaction. Verify neutral cache reuse, invalidation for canonical edits, fixed-Level Audition under musical gain matching, and retained audio during failure, supersession, Freeze and offline snapshots.
 
 ## 3. Shared Sound editor
 

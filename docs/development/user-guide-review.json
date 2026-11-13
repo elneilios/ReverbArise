@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed preserved shared shaping across the bundled-to-Ping-Pong transition and the High Pass and Low Pass guidance.",
+  "summary": "Reviewed the native and FL Studio Custom IR selection before file import, including shared shaping, retained audio and the delayed preparation overlay.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -1025,8 +1025,8 @@
     },
     {
       "path": "Source/UI/SoundPresetBinding.h",
-      "bytes": 21745,
-      "sha256": "9e71c88b64de9372ae78075c7d767053dc7656c3c7899274296692fbebb6512c"
+      "bytes": 21763,
+      "sha256": "62edb4866c8a954892e9969f018c4120a886fbbb364ed8ca7ccb01fc775b1660"
     },
     {
       "path": "Source/UI/SoundResponsePeaks.h",
@@ -1130,8 +1130,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 129413,
-      "sha256": "58f663538dc700af8fae4e5f03f44db1be92e0dd57b777a31602884e49b2b5da"
+      "bytes": 129481,
+      "sha256": "aaa52bf355c7a1d720dba7c4280fbbf11bcd2d3b86842c73017e3a7118921340"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

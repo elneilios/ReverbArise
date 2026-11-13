@@ -67,8 +67,9 @@ pre-upgrade project copy when rollback to an older binary is required.
 
 Use Sound Preset in Learn Settings or Selected Swell. Previous and Next wrap
 through the six bundled sounds, Stereo Ping Pong Crescendo and Custom IR. Choose Custom IR to reveal the IR
-File selector and WAV/WavPack import action. In Learn this sets the future
-default. In Perform it changes the selected swell while preserving its source,
+File selector, WAV/WavPack import action and shared shaping controls. The last
+accepted response stays audible while you choose a file. In Learn accepting a
+file sets the future default. In Perform it changes the selected swell while preserving its source,
 arrival, placement, Level, curves and activity. Unfreeze to change the response.
 Descriptions below the controls identify the sound.
 
