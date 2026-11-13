@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed PR #206 fixes for the Song Stop endpoint and in-flight Sound replacements. The fixes preserve the documented capture and rebuild controls and outcomes.",
+  "summary": "Reviewed Learn capture feedback and FL Studio automatic repeat on returning from regeneration. The guide explains when rebuilt wet rejoins a running repeat and how an explicit Loop Stop differs.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -565,13 +565,13 @@
     },
     {
       "path": "Source/Playback/LoopPlayback.cpp",
-      "bytes": 22292,
-      "sha256": "9d822d0188b1a42c431bb63d3a98d9dc878d127b97e978f8f0b61774d08a8ccd"
+      "bytes": 22453,
+      "sha256": "b0161a700f91d8d92c08d48179e8bef2d15837ade71a9351e091cc79aca11792"
     },
     {
       "path": "Source/Playback/LoopPlayback.h",
-      "bytes": 5548,
-      "sha256": "253624c246837fd161a1527b6dffb470fda2ebe7f1eba4589f0df57e8fc2a6e5"
+      "bytes": 5713,
+      "sha256": "22c59b29e0456def9ea832f89396b7e333e2eba7c9f8b25af5758c789c2470b8"
     },
     {
       "path": "Source/Playback/LoopWetPlan.cpp",
@@ -630,8 +630,8 @@
     },
     {
       "path": "Source/Plugin/PluginProcessor.cpp",
-      "bytes": 90653,
-      "sha256": "c4b6895c95d19af54059e11918f6c1c86e0f4a2d9fbd84e2a4d1f44d2f423bcd"
+      "bytes": 90654,
+      "sha256": "8b32d24e322ea6a1887fd47377655f5e593fb91cf04e0d0a7d4528b95ab5dcf9"
     },
     {
       "path": "Source/Plugin/PluginProcessor.h",
@@ -960,8 +960,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 55238,
-      "sha256": "9864ef0fbece951e257baaccff1d21d1abf291a7031bfcd474f60ee8c0ed3451"
+      "bytes": 55289,
+      "sha256": "c4cb0d377d9df2267daebe9c7731e03f77517f8b40e20c39908dd69142f95e26"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",
@@ -1130,8 +1130,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 130609,
-      "sha256": "5fb84e70bb1ac8eb797278362d68b0fdf93ac1a8a235dde0771fbf68fd1171a0"
+      "bytes": 130758,
+      "sha256": "0171d7d2dcf0dce578091f2925912e5f27ffd80ea69303bbfd597c3ff54985a6"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",
@@ -1350,8 +1350,8 @@
     },
     {
       "path": "tests/learn_generation_ui_test.cpp",
-      "bytes": 58021,
-      "sha256": "39e751078f31c1bb1cf200e3c71e5318e057bbcb0afeffee28cdf57968e656cb"
+      "bytes": 58585,
+      "sha256": "75f8ca85a2db8b89a1bf2ec8f82517bf9a5999270ebd81c722f5e38233a911ad"
     }
   ]
 }

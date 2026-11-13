@@ -24,3 +24,4 @@
 
 - [x] 4.1 Follow the contribution test cadence. After owner approval to mark the draft ready, run focused Windows wrapper/CTest checks and the standard PR regression set, including the UI standards checker. Record revisions, commands, results and limitations with native and fixture results distinguished.
 - [x] 4.2 Consolidate FL Studio checks into one brief smoke test for a fresh insert during PAT playback, intentional capture and lower-sensitivity rebuilding from the same accepted source after deleting swells. Record actual Song/Loop and DPI coverage, including any unverified combinations.
+- [ ] 4.3 Address FL Studio acceptance findings. Keep the Learn Song playhead hidden outside active recording and resume automatic wet playback after Learn regeneration during an eligible running repeat. Verify explicit Stop still suppresses automatic playback, and retest the two reported cases in FL Studio.

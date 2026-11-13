@@ -129,7 +129,8 @@ public:
         progress=flow.locked() && pending.pass==flow.pass?pending:CaptureProgress{};
         const bool coordinateChange=wasFreshDomain!=progress.freshDomain
             || source.sourceKind()!=capture.sourceKind() || (loopSource && source.reference!=capture.reference);
-        refreshing=true;capture=source;clock=time;playhead=position && !phraseTimeline();
+        refreshing=true;capture=source;clock=time;
+        playhead=position && flow.phase==workflow::Phase::recording && !phraseTimeline();
         hostSongTimingBlocked=songTimingBlocked;
         if (phraseTimeline()) clock.valid=false;
         automaticOn=editor.session.automaticProcessing && editor.session.autoMarkersEnabled;

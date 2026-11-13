@@ -29,3 +29,9 @@ The host smoke used the installed Release build from before the draft review fix
 The Song Stop callback publishes a pass-tagged endpoint before exposing draining to the capture worker. Settlement accepts that endpoint only for the matching validating pass, and transport loop observations preserve it while that pass settles.
 
 An in-flight Sound replacement can finish staging even if Learn has queued a rebuild. A failed rebuild leaves the replacement eligible to publish. Successful retirement clears the old target's replacement state. The focused Release Learn generation fixture checks the failed-rebuild case and the accepted Song endpoint.
+
+## FL Studio acceptance follow-up
+
+The owner reported a moving yellow Learn playhead on fresh insertion while disarmed and wet remaining in standby after Regenerate with PAT playback running. The Learn playhead now follows host timing only during active Song recording. Leaving Perform fades Loop wet without setting the explicit Stop latch, so a matching repeat can pick up the rebuilt plan when it is ready.
+
+Windows MSVC Release checks passed on the fix diff based on `3761953`. The focused `preverb_learn_generation_ui_test` covered disarmed, armed, recording and stopped playhead visibility. The focused `preverb_loop_playback_test` covered the wet fade on leaving Perform, automatic repeat on return and explicit Stop suppression. The standard `-PrRegression` set passed 15 of 15. FL Studio verification on the follow-up build is pending.

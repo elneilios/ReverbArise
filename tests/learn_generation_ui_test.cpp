@@ -205,9 +205,23 @@ static void songHostTimingFeedback(bool review=false)
     fixture.host.position.setTimeInSamples(256);
     fixture.host.position.setPpqPosition(256./24000);
     fixture.host.position.setTimeSignature(juce::AudioPlayHead::TimeSignature{4,4});
+    fixture.host.position.setIsPlaying(true);
     fixture.tick();
     editor.refresh();
-    REQUIRE(learn->songPlayhead()==256 && !notice->currentMessage());
+    REQUIRE(!learn->songPlayhead() && !notice->currentMessage());
+    const auto idle=processor.getWorkflowSnapshot();
+    REQUIRE(processor.setCaptureArmed(true,idle.pass,processor.swellEngine().assignmentEpoch()));
+    editor.refresh();
+    REQUIRE(!learn->songPlayhead());
+    fixture.host.position.setTimeInSamples(384);
+    fixture.host.position.setPpqPosition(384./24000);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(learn->songPlayhead()==384);
+    fixture.host.position.setIsPlaying(false);
+    fixture.tick();
+    editor.refresh();
+    REQUIRE(!learn->songPlayhead());
     processor.setPlayHead(nullptr);
 }
 

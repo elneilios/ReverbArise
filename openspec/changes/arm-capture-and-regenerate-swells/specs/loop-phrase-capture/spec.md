@@ -25,6 +25,11 @@ Learn Source Capture SHALL expose a Loop Mode toggle for the next capture and on
 - **THEN** the explicit Learn generation action can publish definitions tied to that source revision while the clock continues
 - **AND** a capture restart, source replacement, changed marker inputs or incompatible workflow transition rejects stale work and leaves all accepted definitions intact
 
+#### Scenario: Regenerate while FL Studio repeats
+- **WHEN** the musician leaves Perform for Learn, explicitly regenerates from the accepted Loop, and a matching FL Studio repeat is still running
+- **THEN** automatic wet playback resumes at the host repeat phase once the rebuilt plan is ready, subject to Live playback and the existing route requirements
+- **AND** an explicit Loop Stop still suppresses automatic playback until a later host transport run
+
 ### Requirement: Each arm owns one verified capture
 The shared Learn Arm in Loop Mode and a verified external Start/Arm SHALL request the same one-take operation and pin its settings. The recorder SHALL accept original stereo input from the verified start sample inclusive through the verified end sample exclusive. Timing and role admission SHALL follow the Loop host admission contract.
 

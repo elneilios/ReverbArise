@@ -973,7 +973,7 @@ bool PreverbAudioProcessor::requestWorkflowMode(workflow::Mode mode)
     swells->stop();if(mode==workflow::Mode::finalise)swells->initializeExport();
     if(previous!=mode)
     {
-        if(previous==workflow::Mode::live && captureWorker.acceptedLoop())swells->loopTransport().requestStop();
+        if(previous==workflow::Mode::live && captureWorker.acceptedLoop())swells->loopTransport().leavePerform();
         persistentStateChanged();
     }
     return true;

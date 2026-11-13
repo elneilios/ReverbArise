@@ -85,6 +85,12 @@ does not move the workspace or take focus.
 | Perform | Never records | Existing enable/routing/gain at absolute positions | Existing validated editor / preview |
 | Export | Never records | Off, dry passes | Off / explicit supported preview only |
 
+The Learn Song playhead is shown only during active recording with valid host
+timing. Leaving Perform fades the Loop's wet playback. If Regenerate returns to
+Perform with a matching host repeat still running, wet rejoins once the rebuilt
+plan is ready. An explicit Loop Stop remains in force until the host transport
+stops.
+
 Mode eligibility uses verified useful audio and compatible timing; silence is
 valid coverage but alone does not enable Perform. User-approved compatibility:
 verified enabled/unmuted/solo-eligible frozen wet also qualifies for Perform at its

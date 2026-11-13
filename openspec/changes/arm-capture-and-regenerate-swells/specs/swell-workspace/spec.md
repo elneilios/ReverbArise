@@ -89,6 +89,11 @@ The Capture & Generate tab SHALL place a shared Arm button and adjoining capture
 - **THEN** Arm stays in the same place and invokes the selected capture route with its timing and source permission
 - **AND** keyboard focus, activation and state feedback follow the shared latch policy
 
+#### Scenario: Song transport runs before recording
+- **WHEN** Learn receives valid Song transport timing outside active recording
+- **THEN** the Learn waveform shows no moving transport playhead
+- **AND** the Song playhead follows valid transport timing during active recording
+
 ### Requirement: The Learn generation button communicates rebuild intent
 The action SHALL show Generate Swells before generation and Regenerate Swells when an arrangement or prior automatic deletions exist. Both labels SHALL invoke the same explicit rebuild policy. Its accessible name SHALL match its visible label and the icon SHALL support recognition alongside the text.
 
