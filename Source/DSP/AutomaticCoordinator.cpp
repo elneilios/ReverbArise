@@ -221,6 +221,18 @@ void SwellEngine::reconcileRenders(const PreviewContext& context)
         model=std::move(trial);automaticBoundsDirty=false;performWindowsRequested=false;}
     for(auto& w:model.swells)
     {
+        if(imports.size()<32 && !w.frozen && w.phase==Phase::ready && w.soundPreset.pingPong
+            && w.soundPreset.pingPong->tempoSync && !w.soundPreset.rulerAligned
+            && !irReplacements.contains(w.id) && pingPongRulerLocked(context).valid)
+        {
+            beginIRReplacementLocked(w,pingPongPresetName);
+            Import job;
+            job.session=sessionGeneration.load();
+            job.targets.emplace_back(w.id,w.inputGeneration);
+            job.presetId=pingPongPresetId;
+            job.pingPong=w.soundPreset.pingPong;
+            imports.push_back(std::move(job));
+        }
         if(w.frozen || (w.phase!=Phase::stale && w.phase!=Phase::empty))continue;
         if(!w.ir.present()){w.status="Missing IR: assign an impulse response";continue;}
         // Coverage alone is cheap admission; decoding/checksum validation stays in renderJob.

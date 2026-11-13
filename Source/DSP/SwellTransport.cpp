@@ -385,11 +385,24 @@ void SwellEngine::acceptIdleIRReplacements(const PreviewContext& context)
     const auto latest=contextProvider();
     const juce::ScopedLock guard(lock);
     if(cancel())return;
-    if(!sameMusicalMapping(context.time,latest.time) || latest.captureGeneration!=context.captureGeneration)return;
+    if(latest.captureGeneration!=context.captureGeneration)return;
+    const auto sameTiming=sameMusicalMapping(context.time,latest.time);
     for(const auto& id:replacements)
     {
         const auto& swell=*find(candidate,id);
-        if(!irReplacementCurrentLocked(swell) || irReplacements.at(id).sourceRevision
+        if(!irReplacementCurrentLocked(swell))return;
+        const auto& replacement=irReplacements.at(id);
+        if(const auto& observed=replacement.fallbackObservation)
+        {
+            const auto stillUnavailable=!observed->valid && !latest.time.valid;
+            if(!stillUnavailable && !transportMappingMatches(*observed,latest.time))
+            {
+                failIRReplacementLocked(id,"Host timing changed during preparation. Select the IR again.");
+                return;
+            }
+        }
+        else if(!sameTiming)return;
+        if(replacement.sourceRevision
             !=juce::String(sourceDependency(latest.capture.manifest,swell.sourceStart,renderInputEnd(swell))))return;
     }
     const auto stillAuditioning=audioAllowed.load() && voice.isActiveOrPending();

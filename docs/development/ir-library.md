@@ -97,7 +97,12 @@ in `resources/presets`. Tempo Sync uses the compatible Song ruler or committed
 Loop timing. Echo Rate selects quarter, eighth, dotted eighth, sixteenth, dotted
 sixteenth or thirty-second notes.
 With Sync off, the spacing uses the reference tempo and the final hit retains
-its arrival-relative offset. The accepted response and settings are saved
+its arrival-relative offset. A new synced assignment with an unavailable ruler
+can use that same reference response while rendering against compatible accepted
+capture timing. The editor shows the fallback until a compatible ruler is
+available and its response is accepted. Reset All can unfreeze a swell and
+publish a rephased default Sound together with its replacement render.
+The accepted response and settings are saved
 together. Creative state v13 extends the v12 Sound record only when a project
 uses Ping Pong. Existing bundled and Custom IR projects retain their v12 format.
 The preset uses the version 1 PCM source. Revision 3 keeps the first audible

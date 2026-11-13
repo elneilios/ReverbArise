@@ -334,7 +334,8 @@ private:
     {
         uint64_t input=0, shape=0, acceptedInput=0;
         juce::String name, error, sourceRevision;
-        bool bundled=false, fitted=false;
+        bool bundled=false, fitted=false, unfreezes=false;
+        std::optional<SongTime> fallbackObservation;
         std::optional<EditorSnapshot::ProposedTiming> timing;
         std::optional<Swell> candidate;
         std::shared_ptr<Waveform> rawWave, sourceWave;
