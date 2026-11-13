@@ -20,7 +20,9 @@ Runs used Windows MSVC Release from `187abde` with the fixture corrections in th
 
 Installed the Release VST3 with the repository installer and retained the prior bundle. The installed binary SHA256 was `57922F40A330BA3A6CA1A2AC546CB0775519F1FEF79B9503BF6E26993D969B5D`.
 
-In FL Studio 2026, a new instance inserted on the scratch project's master while PAT playback was running opened disarmed with an empty source. With the plug-in's Loop Mode off, clicking Arm began capture during playback. DAW Stop settled a 1.8-second take. Generate opened Perform with one swell, which reached Ready. Loop-mode host capture, deletion and regeneration in the host, and host DPI combinations are separate from the passing native fixtures.
+In FL Studio 2026, a new instance inserted on the scratch project's master while PAT playback was running opened disarmed with an empty source. With the plug-in's Loop Mode off, clicking Arm began capture during playback. DAW Stop settled a 1.8-second take. Generate opened Perform with one swell, which reached Ready. Deleting that swell in Swell settings left zero swells. Learn still showed the same 1.8-second capture. After reducing sensitivity from 50.0% to 35.3%, Regenerate opened Perform with one ready swell. The scratch project was left unsaved.
+
+The host smoke used the installed Release build from before the draft review fixes. It covered Song capture in the plug-in while FL Studio was in PAT playback. Loop-mode capture in FL Studio and host DPI combinations remain unverified. The native fixtures cover Loop and the plug-in's 100% and 125% UI scales.
 
 ## Draft review fixes
 

@@ -23,4 +23,4 @@
 ## 4. Integrated verification
 
 - [x] 4.1 Follow the contribution test cadence. After owner approval to mark the draft ready, run focused Windows wrapper/CTest checks and the standard PR regression set, including the UI standards checker. Record revisions, commands, results and limitations with native and fixture results distinguished.
-- [ ] 4.2 Consolidate FL Studio checks into one brief smoke test for a fresh insert during PAT playback, intentional capture and lower-sensitivity rebuilding from the same accepted source after deleting swells. Record actual Song/Loop and DPI coverage, including any unverified combinations.
+- [x] 4.2 Consolidate FL Studio checks into one brief smoke test for a fresh insert during PAT playback, intentional capture and lower-sensitivity rebuilding from the same accepted source after deleting swells. Record actual Song/Loop and DPI coverage, including any unverified combinations.
