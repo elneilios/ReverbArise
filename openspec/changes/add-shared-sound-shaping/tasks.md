@@ -18,5 +18,5 @@
 
 ## 4. Integrated verification
 
-- [ ] 4.1 Compare the installed build in FL Studio with the same hall, plate and Custom IR sources. Check audible Damping and cuts at fixed Level, existing projects reopening unchanged, and consistent accepted Wet Audition and offline output. Record the results and untested coverage.
+- [x] 4.1 Compare the installed build in FL Studio with the same hall, plate and Custom IR sources. Check audible Damping and cuts at fixed Level, existing projects reopening unchanged, and consistent accepted Wet Audition and offline output. Record the results and untested coverage.
 - [x] 4.2 At the repository review gate, run focused checks and the standard Release PR regression set. Record the tested revision, native preview, listening results and review status for the PR targeting the Sound Preset epic branch.

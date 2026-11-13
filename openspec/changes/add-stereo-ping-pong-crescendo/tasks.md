@@ -19,5 +19,5 @@
 
 ## 4. Integrated delivery checks
 
-- [ ] 4.1 Verify integrated Audition, fixed Song and Loop behavior, and accepted Export and bounce snapshots. Run one focused FL Studio online/offline comparison of ruler-aligned hits after an off-grid edit and record coverage and limitations separately from native tests.
+- [x] 4.1 Verify integrated Audition, fixed Song and Loop behavior, and accepted Export and bounce snapshots. Run one focused FL Studio online/offline comparison of ruler-aligned hits after an off-grid edit and record coverage and limitations separately from native tests.
 - [x] 4.2 At the repository review gate, run the focused tests and standard Release PR regression set against the final candidate. Record the tested revision, results, preview and listening evidence for the issue PR targeting the epic branch.
