@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the native and FL Studio Custom IR selection before file import, including shared shaping, retained audio and the delayed preparation overlay.",
+  "summary": "Documented the temporary shaping control guard during response preparation in Learn and Perform.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -860,8 +860,8 @@
     },
     {
       "path": "Source/UI/Controls/SoundPresetEditor.h",
-      "bytes": 28938,
-      "sha256": "ee16f6cfef554a653e1d95aa2b1569c3b4197754df32fef8a86e70e23ec6b03e"
+      "bytes": 29057,
+      "sha256": "69ef16444cb6ce77e76ec38e5186e6d9f1198e3f18c7c6f88b4378a62356c6ce"
     },
     {
       "path": "Source/UI/Controls/SurfaceLifecycle.h",
@@ -1025,8 +1025,8 @@
     },
     {
       "path": "Source/UI/SoundPresetBinding.h",
-      "bytes": 21763,
-      "sha256": "62edb4866c8a954892e9969f018c4120a886fbbb364ed8ca7ccb01fc775b1660"
+      "bytes": 22778,
+      "sha256": "1217b620870e12b5af85de727fa92ccde56e14ece25aa5537c2f27829fe394b3"
     },
     {
       "path": "Source/UI/SoundResponsePeaks.h",
@@ -1130,8 +1130,8 @@
     },
     {
       "path": "docs/development/alpha-guide.html",
-      "bytes": 129481,
-      "sha256": "aaa52bf355c7a1d720dba7c4280fbbf11bcd2d3b86842c73017e3a7118921340"
+      "bytes": 129567,
+      "sha256": "e7d186e6ccb6fb39930f6deb2fbbea5484109c0b1ec0deab1e2ba7ad0f124f6f"
     },
     {
       "path": "docs/development/fl-studio-test-install.md",

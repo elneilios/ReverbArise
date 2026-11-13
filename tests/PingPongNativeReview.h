@@ -326,6 +326,9 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     REQUIRE(engine.savedSession().defaultSoundPreset.pingPong==PingPongSettings{});
     checkCustomFileChoice(defaults);
     REQUIRE(engine.savedSession().defaultSoundPreset.pingPong==PingPongSettings{});
+    defaults.onValueBegin();
+    defaults.onValue("build-intensity",45);
+    defaults.onValueCancel();
     REQUIRE(find(engine.savedSession(),id)->ir==find(before,id)->ir);
     capture("learn-ping-pong-900");
     defaults.onValueBegin();
@@ -337,6 +340,7 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     defaults.onValueEnd();
     wait([&]{const auto saved=engine.savedSession();return saved.defaultSoundPreset.pingPong->spread==72;});
     REQUIRE(engine.snapshot().defaultIRRequest==beforeGesture+1);
+    REQUIRE(engine.savedSession().defaultSoundPreset.pingPong->build==75);
 
     mode.onRequest(2);
     editor->refresh();
@@ -815,6 +819,12 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     REQUIRE(find(engine.savedSession(),id)->soundPreset.shaping.lowCut==0);
     REQUIRE(find(engine.savedSession(),id)->render==find(acceptedCustom,id)->render);
     editor->refresh();
+    auto& lowPass=require<KnobValue>(selected,"high-cutCell");
+    REQUIRE(!lowPass.isEnabled());
+    REQUIRE(lowPass.valueField().getTooltip().contains("finish preparing"));
+    selected.onValueBegin();
+    selected.onValue("high-cut",1000);
+    selected.onValueEnd();
     if(output!=juce::File{})
     {
         juce::MessageManager::getInstance()->runDispatchLoopUntil(2200);
@@ -823,6 +833,7 @@ inline void pingPongNative(std::unique_ptr<Review> fixture,const juce::File& out
     engine.holdRenderPublicationForTesting(false);
     wait([&]{editor->refresh();return find(engine.savedSession(),id)->soundPreset.shaping.lowCut==230
         && engine.snapshot().auditionReady;});
+    REQUIRE(lowPass.isEnabled() && find(engine.savedSession(),id)->soundPreset.shaping.highCut==0);
     offlineBlock(comparisonSample-2048);
     REQUIRE(offlineBlock(comparisonSample)!=expectedBounce);
     engine.endOffline();

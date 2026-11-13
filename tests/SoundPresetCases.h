@@ -258,6 +258,20 @@ inline void bindingCases()
     settle([&] { return !engine.snapshot().defaultIRPending; });
     refresh();
     REQUIRE(engine.savedSession().defaultSoundPreset.shaping.lowCut == 0);
+    engine.holdDefaultImportsForTesting(true);
+    cutoffValue->setValueAsString("230");
+    settle([&] { return engine.defaultImportWaitingForTesting(); });
+    refresh();
+    auto& lowPass = control<KnobValue>(defaults, "high-cutCell");
+    REQUIRE(!lowPass.isEnabled());
+    REQUIRE(lowPass.valueField().getTooltip().contains("finish preparing"));
+    engine.holdDefaultImportsForTesting(false);
+    settle([&] { return !engine.snapshot().defaultIRPending; });
+    refresh();
+    REQUIRE(lowPass.isEnabled() && engine.savedSession().defaultSoundPreset.shaping.lowCut == 230);
+    cutoffValue->setValueAsString("Off");
+    settle([&] { return !engine.snapshot().defaultIRPending; });
+    refresh();
 
     SoundPresetBinding::FileResult finish;
     learn.chooseFile = [&](auto result) { finish = std::move(result); };

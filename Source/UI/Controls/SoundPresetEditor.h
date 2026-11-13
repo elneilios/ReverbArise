@@ -41,6 +41,7 @@ public:
         Parameter parameter;
         double value = 0;
         bool editable = true;
+        juce::String unavailableReason;
     };
     struct View
     {
@@ -425,7 +426,8 @@ private:
                 : p.accessibleSteps.isEmpty() ? shown : p.accessibleSteps[juce::roundToInt(item.value)];
             cell.display(view.owner + "/" + view.accepted, shown, span > 0 ? fraction(p, item.value) : 0.,
                          item.editable, exact);
-            const auto help = item.editable ? (p.help.isEmpty() ? p.label : p.help) : view.disabledReason;
+            const auto help = item.editable ? (p.help.isEmpty() ? p.label : p.help)
+                : item.unavailableReason.isNotEmpty() ? item.unavailableReason : view.disabledReason;
             cell.setValueHelp(help);
             cell.setValueDescription(help);
             cell.setHelpText(help);

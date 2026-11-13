@@ -59,7 +59,16 @@ public:
         editor.onImport = [this] { openFile(); };
         editor.onValueBegin = [this] { levelTarget = target; };
         editor.onValueEnd = [this] { if (shapingDraft) commitShaping(); else commitPingPong(); };
-        editor.onValueCancel = [this] { shapingDraft.reset(); };
+        editor.onValueCancel = [this]
+        {
+            const bool discardedCreative = creativeDraft && !creativeDraft->submitted;
+            const bool discarded = shapingDraft.has_value() || discardedCreative;
+            shapingDraft.reset();
+            if (discardedCreative) creativeDraft.reset();
+            if (discarded)
+                juce::MessageManager::callAsync([this, weak = std::weak_ptr<int>(lifetime)]
+                { if (!weak.expired()) refresh(); });
+        };
         editor.onPrepareValueReset = [this](const juce::String& id, double value)
         {
             const auto owner = target;
@@ -193,7 +202,7 @@ private:
 
     void changeShaping(const juce::String& id, double value)
     {
-        if (!active || !editable || !acceptedShaping || target.session == 0) return;
+        if (!active || !editable || shapingUnavailable || !acceptedShaping || target.session == 0) return;
         auto values = shapingDraft ? shapingDraft->values : *acceptedShaping;
         auto canonical = juce::roundToInt(value);
         if (id == "damping") values.damping = canonical;
@@ -209,7 +218,7 @@ private:
     void commitShaping()
     {
         auto draft = std::exchange(shapingDraft, std::nullopt);
-        if (active && editable && acceptedShaping && draft->owner == target && draft->values != *acceptedShaping)
+        if (active && editable && !shapingUnavailable && acceptedShaping && draft->owner == target && draft->values != *acceptedShaping)
         {
             if (target.defaults) engine.assignDefaultSoundShaping(draft->values, target.session, target.pass, draft->request);
             else engine.assignSoundShaping(target.swell, target.input, draft->values, target.session);
@@ -392,17 +401,22 @@ private:
                 view.description = target.defaults ? "Echoes build toward the arrival and follow each new swell's ruler."
                     : "Using reference tempo until ruler timing is available.";
         }
-        if (shapingDraft && (!editable || shapingDraft->owner != target
+        const auto selectedRequest = state.irRequests.find(target.swell);
+        shapingUnavailable = target.defaults ? state.defaultIRPending
+            : selectedRequest != state.irRequests.end() && selectedRequest->second.error.isEmpty();
+        if (shapingDraft && (!editable || shapingUnavailable || shapingDraft->owner != target
             || (target.defaults && shapingDraft->request != lastDefaultRequest))) shapingDraft.reset();
         if (acceptedShaping)
         {
             const auto values = shapingDraft ? shapingDraft->values : *acceptedShaping;
+            const auto shapingEditable = editable && !shapingUnavailable;
+            const auto waitHelp = editable && shapingUnavailable ? "Wait for the current sound to finish preparing." : "";
             view.values.push_back({{"damping", "Damping", 0, 100, 1, {}, "%", {},
-                "0% keeps the original response. Higher values shorten the ring.", 0.}, static_cast<double>(values.damping), editable});
+                "0% keeps the original response. Higher values shorten the ring.", 0.}, static_cast<double>(values.damping), shapingEditable, waitHelp});
             view.values.push_back({{"low-cut", "High Pass", 0, SoundShaping::maximumCutoff, 1, {}, {}, {},
-                "Removes low frequencies from the source feeding the swell.", 0., true}, static_cast<double>(values.lowCut), editable});
+                "Removes low frequencies from the source feeding the swell.", 0., true}, static_cast<double>(values.lowCut), shapingEditable, waitHelp});
             view.values.push_back({{"high-cut", "Low Pass", 0, SoundShaping::maximumCutoff, 1, {}, {}, {},
-                "Removes high frequencies from the source feeding the swell.", 0., true, true}, static_cast<double>(values.highCut), editable});
+                "Removes high frequencies from the source feeding the swell.", 0., true, true}, static_cast<double>(values.highCut), shapingEditable, waitHelp});
         }
         if (target.defaults)
             view.values.push_back({{"level", "Level (dB)", minimumDefaultLevelDb, maximumDefaultLevelDb, .1,
@@ -466,7 +480,7 @@ private:
     std::optional<ShapingDraft> shapingDraft;
     uint64_t lastDefaultRequest = 0;
     juce::String acceptedPreset, acceptedFile;
-    bool active = false, editable = false, customIntent = false;
+    bool active = false, editable = false, customIntent = false, shapingUnavailable = false;
     std::optional<Pending> pending;
     uint64_t fileSerial = 0;
     std::shared_ptr<int> lifetime = std::make_shared<int>(0);
