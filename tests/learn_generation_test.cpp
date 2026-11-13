@@ -1,4 +1,5 @@
 #include "LearnGenerationSupport.h"
+#include "AudioTestFiles.h"
 #include "DenseLearnGenerationCases.h"
 static void renderCompletionDuringAdmission()
 {
@@ -43,16 +44,44 @@ static void interruptedRenderRecoversAfterFailure()
     engine.holdRenderPublicationForTesting(false);engine.holdLearnRendersForTesting(false);
     await([&]{return engine.snapshot().renderCount>rendered && find(engine.savedSession(),before.swells.front().id)->phase==Phase::ready;});
 }
+static void soundReplacementSurvivesFailedRebuild()
+{
+    GenerationFixture fixture;
+    auto& engine=fixture.engine();
+    auto& processor=*fixture.processor;
+    fixture.record();fixture.ready();
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::live));
+    REQUIRE(engine.addTarget(4800));
+    const auto id=engine.savedSession().primary;
+    await([&]{const auto s=engine.savedSession();return find(s,id)->phase==Phase::ready;});
+    const auto accepted=*find(engine.savedSession(),id);
+    const auto file=fixture.root.file.getChildFile("replacement.wav");
+    writeTestWav(file,1,48000,{1.f,.25f});
+    engine.holdRenderPublicationForTesting(true);
+    REQUIRE(engine.assignIR(id,accepted.inputGeneration,file,false,engine.assignmentEpoch()));
+    await([&]{return engine.renderPublicationWaitingForTesting();});
+    REQUIRE(processor.requestWorkflowMode(workflow::Mode::capture));
+    const auto ready=fixture.ready();
+    const auto defaultFile=engine.assetDirectory().getChildFile(ready.session.defaultIR.path);
+    REQUIRE(defaultFile.replaceWithText("Injected rebuild-only default IR failure"));
+    REQUIRE(fixture.generate());
+    engine.holdRenderPublicationForTesting(false);
+    await([&]{const auto v=engine.snapshot().learnGeneration;return !v.generating && v.failed;});
+    await([&]{const auto s=engine.savedSession();const auto* swell=find(s,id);return swell && swell->irName=="replacement.wav" && swell->phase==Phase::ready;});
+}
 int main(){return runTest([]
 {
     juce::ScopedJuceInitialiser_GUI gui;
     renderCompletionDuringAdmission();
     interruptedRenderRecoversAfterFailure();
+    soundReplacementSurvivesFailedRebuild();
     GenerationFixture fixture;auto& engine=fixture.engine();auto& processor=*fixture.processor;
     REQUIRE(!engine.savedSession().autoGenerateOnStop);fixture.record(true);
     auto settled=fixture.ready();REQUIRE(processor.getWorkflowSnapshot().mode==workflow::Mode::capture);
     REQUIRE(settled.session.swells.empty() && settled.renderCount==0 && !settled.learnGeneration.displayed->identity.provisional);
     REQUIRE(settled.learnGeneration.displayed->positions.size()>=8);
+    const auto& completed=settled.learnGeneration.displayed->completedPasses;
+    REQUIRE(std::find(completed.begin(),completed.end(),std::pair<int64_t,int64_t>{0,72*4096})!=completed.end());
     // Cancel an analysis with a mode switch, then return with exactly the same
     // source/settings identity: an abandoned attempt must remain retryable.
     engine.holdLearnAnalysisForTesting(true);

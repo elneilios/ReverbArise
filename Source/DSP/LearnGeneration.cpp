@@ -77,7 +77,10 @@ bool SwellEngine::generateLearn(uint64_t expectedSession,uint64_t expectedPass,u
 }
 void SwellEngine::captureSettled(uint64_t pass,uint64_t capture,bool useful)
 {
-    const auto context=contextProvider();collectCompletedPass(context,true);const juce::ScopedLock guard(lock);
+    const auto context=contextProvider();
+    if(context.captureGeneration!=capture)return;
+    collectCompletedPass(context,pass);
+    const juce::ScopedLock guard(lock);
     const auto flow=workflowState?workflowState->snapshot():workflow::Snapshot{};
     if(!learnCandidates || !sameCandidateIdentity(learnCandidates->identity,learnIdentity(context)))
     {learnUpdating=true;learnAttempt.reset();}
@@ -245,7 +248,7 @@ void SwellEngine::performLearnGeneration(LearnRequest request)
         forceRefresh.insert(id);invalidateLiveLocked(id);
     }
     for(const auto& id:plan.retired)
-    {runtime.erase(id);retainedIR.erase(id);forceRefresh.erase(id);protectedGenerationCalibration.erase(id);invalidateLiveLocked(id);}
+    {cancelIRReplacementLocked(id);runtime.erase(id);retainedIR.erase(id);forceRefresh.erase(id);protectedGenerationCalibration.erase(id);invalidateLiveLocked(id);}
     for(const auto& w:model.swells)if(w.frozen || w.provenance!=Provenance::automatic)protectedGenerationCalibration.insert(w.id);
     dirty.clear();passDirty.clear();passRenderRequests.clear();analyzedContent.clear();automaticBoundsDirty=false;performWindowsRequested=false;
     ++successfulGeneration;if(!performPositionEstablished)initialPerformOffer=successfulGeneration;

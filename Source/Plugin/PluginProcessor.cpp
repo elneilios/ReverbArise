@@ -681,8 +681,13 @@ void PreverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             && transport.song.numerator>0 && transport.song.denominator>0
             && workflowState.startReserved(workflow.pass))
             swells->captureStarted(transport.song.sample);
-        if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording && workflowState.stop(workflow.pass))
-            swells->captureStopped();
+        if(!diagnostics.isPlaying && workflow.phase==workflow::Phase::recording)
+        {
+            // Draining makes the take visible to the worker. Publish its
+            // endpoint first and let settlement match it by pass.
+            swells->captureStopped(workflow.pass);
+            workflowState.stop(workflow.pass);
+        }
         previousHostPlaying=diagnostics.isPlaying;
     }
     workflow=workflowState.snapshot();

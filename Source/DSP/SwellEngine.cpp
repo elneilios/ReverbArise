@@ -915,8 +915,15 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     const auto clock=liveClock.observe(time,frames,session);
     if(previousTransportSession!=session){previousTransportPlaying=false;previousTransportSession=session;}
     const auto publishPass=[&](int64_t start,int64_t end){if(start>=end)return;
-        if(passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
-        passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=start;passEnd=end;passSession=session;passSequence.fetch_add(1,std::memory_order_release);};
+        const auto stopped=stoppedCapturePass.load();
+        if(workflowState && stopped)
+        {
+            const auto flow=workflowState->snapshot();
+            if(flow.pass==stopped
+                && (flow.phase==workflow::Phase::draining || flow.phase==workflow::Phase::validating))return;
+        }
+        if(!stopped && passSession.load()==session && passStart.load()==start && passEnd.load()==end)return;
+        passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=start;passEnd=end;passSession=session;stoppedCapturePass=0;passSequence.fetch_add(1,std::memory_order_release);};
     int64_t blockEnd;
     if(time.song.valid && checkedAdd(time.song.sample,frames,blockEnd)){
         if(time.looping && time.loopEnd>time.loopStart)publishPass(time.loopStart,time.loopEnd);
@@ -933,11 +940,11 @@ void SwellEngine::processTransportAudio(float* left,float* right,int frames,cons
     live.process(left,right,frames,time,modeAllows,&clock);
     processAudio(left,right,frames,time.song);
 }
-void SwellEngine::captureStopped() noexcept
+void SwellEngine::captureStopped(uint64_t pass) noexcept
 {
     if(!previousTransportPlaying || currentPassStart>=previousTransportEnd)return;
     passSequence.fetch_add(1,std::memory_order_acq_rel);passStart=currentPassStart;passEnd=previousTransportEnd;
-    passSession=sessionGeneration.load(std::memory_order_acquire);passSequence.fetch_add(1,std::memory_order_release);
+    passSession=previousTransportSession;stoppedCapturePass=pass;passSequence.fetch_add(1,std::memory_order_release);
 }
 void SwellEngine::recaptureCompleted(int64_t a,int64_t b)
 {
@@ -1337,7 +1344,10 @@ void SwellEngine::renderJob(Swell requested,const PreviewContext& context,uint64
         renderEpoch=renderCancellation.load();
         pendingAtStart=learnRequest && (!learnRequest->automatic || requested.provenance==Provenance::automatic);
     }
-    const auto superseded=[&]{return !requested.frozen && (pendingAtStart || renderEpoch!=renderCancellation.load());};
+    // A Sound replacement has already consumed its import job. Let it stage
+    // so an unsuccessful Learn rebuild can leave the replacement usable.
+    const auto superseded=[&]{return !replacingIR && !requested.frozen
+        && (pendingAtStart || renderEpoch!=renderCancellation.load());};
     struct Finish
     {
         SwellEngine& engine;const Swell& requested;uint64_t session;

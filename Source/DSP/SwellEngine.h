@@ -211,7 +211,7 @@ public:
     void captureCommitted(int64_t start,int64_t end,uint64_t generation,bool explicitRecapture=false);
     void transportPlaying(bool playing) noexcept {transportActive.store(playing);}
     void captureStarted(int64_t sample) noexcept {currentPassStart=sample;previousTransportPlaying=false;}
-    void captureStopped() noexcept;
+    void captureStopped(uint64_t pass) noexcept;
     void resetTransportClock() noexcept {liveClock.reset();loopPlayback.invalidateReference();}
     std::optional<LiveClockSnapshot> transportClockSnapshot()const noexcept {return liveClock.snapshot(sessionGeneration.load());}
     void holdLivePublicationForTesting(bool hold) noexcept {livePublicationHold.store(hold);notify();}
@@ -366,7 +366,7 @@ private:
     void inspect(const PreviewContext&);
     void prepareDefault(const PreviewContext&);
     bool automaticJob();
-    void collectCompletedPass(const PreviewContext&,bool acceptedCapture=false);
+    void collectCompletedPass(const PreviewContext&,uint64_t acceptedCapturePass=0);
     CompletedPasses applicableCompletedPasses(const CaptureManifest&) const;
     void reconcileRenders(const PreviewContext&);
     void requestManualPreparationLocked(const Swell&,const PreviewContext&);
@@ -467,7 +467,7 @@ private:
     std::atomic<uint64_t> loopSequence{0};
     std::atomic<bool> loopHint{false};std::atomic<int64_t> loopHintStart{0},loopHintEnd{0};
     int64_t preparedLoopStart=0,preparedLoopEnd=0;
-    std::atomic<uint64_t> passSequence{0},passSession{0};
+    std::atomic<uint64_t> passSequence{0},passSession{0},stoppedCapturePass{0};
     std::atomic<int64_t> passStart{0},passEnd{0};
     uint64_t acceptedPassSequence=0,previousTransportSession=0;
     SongTime previousTransportTime;

@@ -143,7 +143,7 @@ void SwellEngine::captureCommitted(int64_t a,int64_t b,uint64_t generation,bool 
     }
     notify();
 }
-void SwellEngine::collectCompletedPass(const PreviewContext& context,bool acceptedCapture)
+void SwellEngine::collectCompletedPass(const PreviewContext& context,uint64_t acceptedCapturePass)
 {
     {const juce::ScopedLock guard(lock);
         if(recoverPassBounds && !context.capture.status.startsWith("Loading") && (awaitingCaptureReference.isEmpty() || context.capture.reference==awaitingCaptureReference)){
@@ -160,12 +160,19 @@ void SwellEngine::collectCompletedPass(const PreviewContext& context,bool accept
     // In Learn, an RT Stop boundary is still provisional until source settlement
     // accepts it. It must never become legacy reconciliation work, including
     // while a fresh instance still exposes an empty schema-1 manifest.
-    if(workflowState && !acceptedCapture && workflowState->snapshot().mode!=workflow::Mode::live)return;
+    if(workflowState && !acceptedCapturePass && workflowState->snapshot().mode!=workflow::Mode::live)return;
     for(int attempt=0;attempt<8;++attempt){const auto version=passSequence.load(std::memory_order_acquire);if(version&1)continue;
         const auto first=passStart.load(),last=passEnd.load();const auto session=passSession.load();
+        const auto stopped=stoppedCapturePass.load();
         if(version!=passSequence.load(std::memory_order_acquire))continue;
         const juce::ScopedLock guard(lock);
         if(version==acceptedPassSequence || session!=sessionGeneration.load() || first>=last)return;
+        if(stopped!=acceptedCapturePass)return;
+        if(stopped)
+        {
+            const auto flow=workflowState->snapshot();
+            if(stopped!=flow.pass || flow.phase!=workflow::Phase::validating)return;
+        }
         acceptedPassSequence=version;
         auto found=std::find_if(completedPasses.begin(),completedPasses.end(),[&](const auto& pass){return pass.first==first;});
         if(found!=completedPasses.end()){

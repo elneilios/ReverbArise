@@ -21,3 +21,9 @@ Runs used Windows MSVC Release from `187abde` with the fixture corrections in th
 Installed the Release VST3 with the repository installer and retained the prior bundle. The installed binary SHA256 was `57922F40A330BA3A6CA1A2AC546CB0775519F1FEF79B9503BF6E26993D969B5D`.
 
 In FL Studio 2026, a new instance inserted on the scratch project's master while PAT playback was running opened disarmed with an empty source. With the plug-in's Loop Mode off, clicking Arm began capture during playback. DAW Stop settled a 1.8-second take. Generate opened Perform with one swell, which reached Ready. Loop-mode host capture, deletion and regeneration in the host, and host DPI combinations are separate from the passing native fixtures.
+
+## Draft review fixes
+
+The Song Stop callback publishes a pass-tagged endpoint before exposing draining to the capture worker. Settlement accepts that endpoint only for the matching validating pass, and transport loop observations preserve it while that pass settles.
+
+An in-flight Sound replacement can finish staging even if Learn has queued a rebuild. A failed rebuild leaves the replacement eligible to publish. Successful retirement clears the old target's replacement state. The focused Release Learn generation fixture checks the failed-rebuild case and the accepted Song endpoint.
