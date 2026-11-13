@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the six canonical specs synced during archive against the existing guide for shared Arm, Song and Loop capture, frozen-only explicit regeneration, automatic Stop behavior, Learn controls and FL Studio repeat resumption. The existing instructions already reflect the accepted behavior.",
+  "summary": "Reviewed alpha.4 against the shared Sound editor and shaping, explicit Song and Loop Arm, manual regeneration, provisional waveforms and FL Studio Loop placement on merged main. The existing guide covers these workflows. Release notes describe exact-package host acceptance as pending.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
