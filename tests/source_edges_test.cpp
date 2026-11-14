@@ -132,8 +132,10 @@ static void checkEngine()
     const auto duringImport=engine.generate(true);
     REQUIRE(duringImport.queued==2 && duringImport.frozen==1 && duringImport.importing==1);
     REQUIRE(engine.savedSession().swells[1].inputGeneration==importGeneration && engine.snapshot().irReplacementPending);
+    REQUIRE(engine.savedSession().swells[1].render==importing.render && assets.verify(importing.render,error));
     engine.holdRenderPublicationForTesting(false);
     waitFor([&]{return ready() && !engine.snapshot().irReplacementPending;});
+    REQUIRE(engine.savedSession().swells[1].irName=="pending fixture");
     // A failed explicit request keeps both old audio and immutable capture.
     const auto retained=engine.savedSession().swells[0].render;const auto failureCount=engine.snapshot().renderCount;
     REQUIRE(engine.edit(saved.swells[0].id,[](auto& w,auto&){w.sourceEnd=5000;return true;}));engine.generate(true);

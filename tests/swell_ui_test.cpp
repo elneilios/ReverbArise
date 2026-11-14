@@ -1248,7 +1248,8 @@ int main(int argc,char* argv[]){return runTest([&]
         auto automatic=dynamic_cast<juce::ToggleButton*>(named(editor,"learnAutomaticSwells"));auto defaultIR=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"learnDefaultIR"));
         auto sensitivity=dynamic_cast<m3::ui::controls::InvocationSlider*>(named(editor,"learnMarkerSensitivity"));REQUIRE(automatic && defaultIR && sensitivity);
         automatic->setToggleState(true,juce::sendNotificationSync);editor.refresh();REQUIRE(visibleOffscreen(defaultIR) && visibleOffscreen(sensitivity));
-        REQUIRE(sensitivity->getSliderStyle()==juce::Slider::LinearHorizontal && defaultIR->getNumItems()==7);
+        REQUIRE(sensitivity->getSliderStyle()==juce::Slider::LinearHorizontal
+            && defaultIR->getNumItems()==static_cast<int>(m3::bundledImpulses().size())+2);
         sensitivity->onDragStart();sensitivity->setValue(37.5,juce::sendNotificationSync);if(sensitivity->onDragEnd)sensitivity->onDragEnd();editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f);
         auto* sharedIr=dynamic_cast<m3::ui::controls::SoundPresetEditor*>(named(editor,"learnIrEditor"));REQUIRE(sharedIr);
         const auto irLabelBounds=sharedIr->pickerLabel().getBounds(),sensitivityLabelBounds=named(editor,"learnSensitivityLabel")->getBounds();
@@ -1263,7 +1264,9 @@ int main(int argc,char* argv[]){return runTest([&]
         REQUIRE(percentage);const auto choiceFont=defaultIR->getLookAndFeel().getComboBoxFont(*defaultIR);
         REQUIRE(percentage->getFont().getHeight()==choiceFont.getHeight() && percentage->getFont().getTypefaceStyle()==choiceFont.getTypefaceStyle());
         REQUIRE(percentage->getBounds().getCentreY()==sensitivity->getLocalBounds().getCentreY());
-        REQUIRE(percentage->getWidth()==m3::ui::controlGeometry::valueWidth && percentage->getHeight()==m3::ui::controlGeometry::valueHeight);
+        const auto valueBounds=sensitivity->getLookAndFeel().getSliderLayout(*sensitivity).textBoxBounds;
+        REQUIRE(percentage->getBounds()==valueBounds && percentage->getWidth()==m3::ui::controlGeometry::valueWidth
+            && percentage->getHeight()>0);
         percentage->showEditor();REQUIRE(percentage->getCurrentTextEditor());
         percentage->getCurrentTextEditor()->setText("42.5 %",false);percentage->hideEditor(false);
         juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(engine.savedSession().sensitivity==.425f && sensitivity->getValue()==42.5);
@@ -1283,7 +1286,7 @@ int main(int argc,char* argv[]){return runTest([&]
         juce::MessageManager::getInstance()->runDispatchLoopUntil(30);editor.refresh();REQUIRE(engine.savedSession().sensitivity==.375f && sensitivity->getValue()==37.5);
         controlReview::pointerClick(numeric->incrementButton());controlReview::pointerClick(numeric->decrementButton());editor.refresh(); // Clear only the deliberate stale-edit warning with accepted input.
         const auto savedDefault=engine.savedSession().defaultIR;const auto assigned=engine.savedSession().swells.front().ir;
-        engine.holdDefaultImportsForTesting(true);defaultIR->beforeInvocation();defaultIR->setSelectedId(6,juce::sendNotificationSync);
+        engine.holdDefaultImportsForTesting(true);soundPresetCases::selectNamed(*defaultIR,"Whisper");
         waitUI([&]{return engine.defaultImportWaitingForTesting();});editor.refresh();
         REQUIRE(engine.snapshot().requestedDefaultIRName=="Whisper" && defaultIR->getText()==baseline.defaultIRName);
         auto notice=dynamic_cast<m3::ui::controls::NoticeBar*>(named(editor,"workspaceNotice"));REQUIRE(notice && !notice->currentMessage());
@@ -1423,16 +1426,21 @@ int main(int argc,char* argv[]){return runTest([&]
         const auto shape=m3::find(engine.savedSession(),first)->shape;
         auto field=dynamic_cast<juce::TextEditor*>(named(editor,"fadeInMs"));REQUIRE(field);field->setText("77",false);field->onEscapeKey();
         REQUIRE(m3::find(engine.savedSession(),first)->shape==shape && field->getText().getDoubleValue()==0);
-        auto irChoice=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"selectedIR"));REQUIRE(irChoice && irChoice->getNumItems()==7 && irChoice->getItemText(0)=="Preverb Hall" && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud" && irChoice->getText()=="Custom IR");
+        auto irChoice=dynamic_cast<m3::ui::controls::ChoiceSelector*>(named(editor,"selectedIR"));
+        const auto catalogueSize=static_cast<int>(m3::bundledImpulses().size())+2;
+        REQUIRE(irChoice && irChoice->getNumItems()==catalogueSize && irChoice->getItemText(0)=="Preverb Hall"
+            && irChoice->getItemText(1)=="Monumental" && irChoice->getItemText(4)=="Shimmer Cloud"
+            && irChoice->getItemText(catalogueSize-2)==m3::pingPongPresetName && irChoice->getText()=="Custom IR");
         const auto before=engine.savedSession();const auto wasPlaying=engine.snapshot().playing;
         engine.holdRenderPublicationForTesting(true);
-        irChoice->beforeInvocation();irChoice->setSelectedId(6,juce::sendNotificationSync);
+        soundPresetCases::selectNamed(*irChoice,"Whisper");
         waitUI([&]{return engine.renderPublicationWaitingForTesting();});editor.refresh();
         REQUIRE(irChoice->getText()=="Custom IR" && engine.snapshot().requestedIRName=="Whisper");
         snapshotEditor(editor,"ir-replacement-pending");
         engine.holdRenderPublicationForTesting(false);
         waitUI([&]{return m3::find(engine.savedSession(),first)->irName=="Whisper";});editor.refresh();
-        REQUIRE(irChoice->getNumItems()==7 && irChoice->getText()=="Whisper" && irChoice->getItemText(6)=="Custom IR");
+        REQUIRE(irChoice->getNumItems()==catalogueSize && irChoice->getText()=="Whisper"
+            && irChoice->getItemText(catalogueSize-1)=="Custom IR");
         REQUIRE(m3::find(engine.savedSession(),second)->ir==m3::find(before,second)->ir && engine.savedSession().defaultIR==before.defaultIR);
         engine.restore(before);waitUI([&]{return engine.snapshot().auditionReady;});editor.refresh();if(wasPlaying)REQUIRE(engine.audition());
         snapshotEditor(editor,"inspector-default");
@@ -1960,14 +1968,15 @@ int main(int argc,char* argv[]){return runTest([&]
     // knob drag, wheel and keyboard all use the captured zero-origin grid.
     {auto session=engine.savedSession();session.swells.resize(1);auto& w=session.swells[0];
         w.id=juce::Uuid().toDashedString();w.arrival=w.sourceStart=0;w.sourceEnd=24000;w.frozen=false;w.ir={};w.render={};
-        w.shape=m3::initialShape(48000);w.placement=0;w.phase=m3::Phase::stale;
+        w.soundPreset={};w.shape=m3::initialShape(48000);w.placement=0;w.phase=m3::Phase::stale;
         session.timing={true,0,0,48000,120,4,4};session.selected={w.id};session.primary=w.id;session.automaticProcessing=false;
         engine.restore(session);engine.setLivePlayback(false,m3::LiveRouting::dryWet,0);
         head.position.setTimeInSamples(0);head.position.setPpqPosition(0);head.position.setIsPlaying(false);buffer.clear();processor->processBlock(buffer,midi);
         head.position.setTimeInSamples(16);head.position.setIsPlaying(true);buffer.clear();processor->processBlock(buffer,midi);editor.refresh();
         auto& canvas=editor.timelineComponent();canvas.setSnap(true);canvas.setSnapBypassed(false);canvas.setGridDivision(m3::GridDivision::quarterBeat);
         m3::SwellViewport frame;frame.first=-24000;frame.last=48000;canvas.setViewport(frame);editor.refresh();
-        REQUIRE(canvas.gridAvailable() && !engine.snapshot().liveActive && !engine.savedSession().swells[0].ir.present());
+        REQUIRE(engine.savedSession().primary==w.id && !engine.savedSession().swells[0].ir.present());
+        REQUIRE(canvas.gridAvailable() && !engine.snapshot().liveActive);
         const auto grid=canvas.makeGrid();REQUIRE(grid && grid->snap(-12240)==-12000);
         auto cell=dynamic_cast<m3::ui::KnobValue*>(named(editor,"sourceSampleStartCell"));REQUIRE(cell);
         auto& knob=cell->valueKnob();editor.modifierKeysChanged({});
@@ -2009,7 +2018,7 @@ int main(int argc,char* argv[]){return runTest([&]
     {
         auto exact=engine.savedSession();exact.swells.resize(1);auto& large=exact.swells[0];
         large.id=juce::Uuid().toDashedString();large.arrival=large.sourceStart=9007199254740993LL;large.sourceEnd=large.arrival+24000;
-        large.frozen=false;large.ir={};large.render={};large.shape=m3::initialShape(48000);large.placement=0;
+        large.frozen=false;large.ir={};large.render={};large.soundPreset={};large.shape=m3::initialShape(48000);large.placement=0;
         exact.selected={large.id};exact.primary=large.id;exact.automaticProcessing=false;
         engine.restore(exact);editor.refresh();
         auto units=dynamic_cast<juce::ToggleButton*>(named(editor,"sampleUnits"));REQUIRE(units);units->setToggleState(true,juce::dontSendNotification);units->onClick();editor.refresh();

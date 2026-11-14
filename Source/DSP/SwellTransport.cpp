@@ -180,6 +180,21 @@ void SwellEngine::prepareGeneratedHeadroom(const PreviewContext& context)
         if(!staged.empty() && std::any_of(swells.begin(),swells.end(),[](const auto& swell){return swell.phase==Phase::headroom;}))
             for(auto& swell:swells)
                 if(staged.contains(swell.id))swell.phase=Phase::headroom;
+        for(auto& swell:swells)
+        {
+            if(swell.phase!=Phase::checking || !irReplacementCurrentLocked(swell))continue;
+            // This render was superseded by the replacement. Account for its
+            // verified accepted audio while other swells finish regenerating.
+            const auto state=runtime.find(swell.id);
+            const auto verified=state!=runtime.end() && !state->second.cachedWetOnly
+                && swell.render.present() && state->second.verifiedRender==swell.render && swell.generatedGain
+                && swell.render.sourceStart==swell.sourceStart && swell.render.sourceEnd==renderInputEnd(swell)
+                && swell.render.irContent==swell.ir.content
+                && transportMappingMatches(model.timing,context.time)
+                && state->second.revision==juce::String(sourceDependency(context.capture.manifest,
+                    swell.sourceStart,renderInputEnd(swell)));
+            swell.phase=verified?Phase::ready:Phase::stale;
+        }
         const auto anySolo = std::any_of(swells.begin(),swells.end(),[](const auto& w){return w.solo;});
         for (const auto& swell : swells)
         {

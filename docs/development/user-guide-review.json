@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the six canonical specs synced during archive against the existing guide for shared Arm, Song and Loop capture, frozen-only explicit regeneration, automatic Stop behavior, Learn controls and FL Studio repeat resumption. The existing instructions already reflect the accepted behavior.",
+  "summary": "Reviewed issue 208 render handover and Learn Arm row containment against the offline guide. The existing instructions cover Arm, retained sound and Regenerate All. The existing guide text remains current.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -495,8 +495,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 60321,
-      "sha256": "015cf734a97bda4e9b4b8b533f796c5ab1969b277f48953325a70672bff3ec65"
+      "bytes": 61335,
+      "sha256": "13d1845beeb1af453f5255047c913b8b77c88d89853ddfb9ed8ceab447ab1832"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",
@@ -960,8 +960,8 @@
     },
     {
       "path": "Source/UI/LearnWorkspace.h",
-      "bytes": 55289,
-      "sha256": "c4cb0d377d9df2267daebe9c7731e03f77517f8b40e20c39908dd69142f95e26"
+      "bytes": 55357,
+      "sha256": "d8d1f2092ae238992c152690b4dee159cbf0a1fcb55f32bec7076cb6e40ebb36"
     },
     {
       "path": "Source/UI/LevelAdjustment.h",

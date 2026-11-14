@@ -66,11 +66,22 @@ inline void loopCaptureCases()
     armCaptureFixture(*p);head.position.setIsPlaying(true);pass(2048);
     waitM3([&]{const auto s=engine.snapshot();return s.renderCount>renders && !s.analyzing && s.pendingIntervals==0 && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});
     for(const auto& old:initial.swells)if(old.sourceStart>49000 || old.sourceEnd<48000)REQUIRE(m3::find(engine.savedSession(),old.id)->render==old.render);
-    // A later genuine extension removes the inferred cap; growing capture is
-    // never padded and the ordinary automatic source window becomes usable.
+    // A useful later take triggers Generate on Stop. Its contiguous coverage
+    // removes the old inferred cap and allows the full automatic source window.
     REQUIRE(p->requestWorkflowMode(workflow::Mode::capture) && setFixtureCaptureArmed(*p));head.position.setIsPlaying(true);
     for(int at=96000;at<120000;at+=4096){const auto count=std::min(4096,120000-at);buffer.setSize(2,count);buffer.clear();
+        // Keep this below the preceding onset and introduce no new attack.
+        for(int channel=0;channel<2;++channel)std::fill_n(buffer.getWritePointer(channel),count,.00001f);
         head.position.setTimeInSamples(at);head.position.setPpqPosition(at/24000.0);p->processBlock(buffer,midi);}
     head.position.setIsPlaying(false);block(0,512);REQUIRE(p->flushCaptureForTesting());
-    waitM3([&]{const auto state=engine.savedSession();const auto last=m3::find(state,finalId);return last && last->sourceEnd==last->arrival+24000 && last->phase==m3::Phase::ready;});
+    try{waitM3([&]{const auto state=engine.savedSession();const auto last=m3::find(state,finalId);return last && last->sourceEnd==last->arrival+24000 && last->phase==m3::Phase::ready;});}
+    catch(...){const auto state=engine.snapshot();const auto last=m3::find(state.session,finalId);
+        const auto snapshot=p->getCaptureSnapshot();
+        std::cerr<<"Extension mode="<<static_cast<int>(p->getWorkflowSnapshot().mode)
+                 <<" result="<<static_cast<int>(p->getWorkflowSnapshot().result)
+                 <<" revision="<<snapshot.manifest.revision<<" capture="<<snapshot.status<<" message="<<state.message
+                 <<" generation="<<state.learnGeneration.notice;
+        for(const auto& range:snapshot.manifest.ranges)std::cerr<<" range="<<range.startSample<<"+"<<range.frameCount;
+        if(last)std::cerr<<" arrival="<<last->arrival<<" end="<<last->sourceEnd<<" status="<<last->status;
+        std::cerr<<'\n';throw;}
 }
