@@ -13,9 +13,13 @@ static void swellListCaptureCases(bool review=false)
     const auto listFor=[](PreverbAudioProcessorEditor& e)
     {auto* list=dynamic_cast<m3::ui::controls::SwellList*>(named(e,"swellList"));REQUIRE(list);return list;};
     juce::AudioBuffer<float> buffer(2,4096);juce::MidiBuffer midi;
-    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells,bool verifyProtected=false)
+    const auto pass=[&](int64_t start,int loops,float amplitude,size_t expectedSwells,juce::String recapturedId={})
     {
         const auto previousAnalysis=engine.snapshot().analysisCount;
+        const auto previousRevision=p->getCaptureSnapshot().manifest.revision;
+        const auto before=engine.savedSession();
+        const auto* edited=m3::find(before,recapturedId);
+        if(recapturedId.isNotEmpty())REQUIRE(edited && edited->render.present());
         // Re-requesting Learn clears its explicit recapture arm. Preserve an
         // already prepared Learn pass, as the real UI does.
         if(p->getWorkflowSnapshot().mode!=workflow::Mode::capture)REQUIRE(p->requestWorkflowMode(workflow::Mode::capture));
@@ -31,9 +35,9 @@ static void swellListCaptureCases(bool review=false)
         head.position.setIsPlaying(false);buffer.clear();p->processBlock(buffer,midi);
         REQUIRE(p->flushCaptureForTesting());
         waitUI([&]{return p->getWorkflowSnapshot().mode==workflow::Mode::live || !engine.snapshot().learnGeneration.generating;});
-        if(verifyProtected && p->getWorkflowSnapshot().mode==workflow::Mode::capture)
+        if(edited && p->getWorkflowSnapshot().mode==workflow::Mode::capture)
             REQUIRE(p->requestWorkflowMode(workflow::Mode::live));
-        if(verifyProtected)
+        if(edited)
         {
             REQUIRE(p->getWorkflowSnapshot().mode==workflow::Mode::live);
             const auto accepted=engine.savedSession();REQUIRE(std::any_of(accepted.swells.begin(),accepted.swells.end(),[](const auto& w)
@@ -43,7 +47,12 @@ static void swellListCaptureCases(bool review=false)
         }
         // The previous pass can already be ready before the engine observes the
         // newly committed source. Wait for this pass, not that old idle snapshot.
-        try{waitUI([&]{const auto s=engine.snapshot();return s.analysisCount>previousAnalysis && s.session.swells.size()==expectedSwells && !s.analyzing && s.pendingIntervals==0
+        try{waitUI([&]{const auto s=engine.snapshot();
+            const auto* refreshed=edited?m3::find(s.session,edited->id):nullptr;
+            const auto processed=edited ? refreshed && refreshed->render.content!=edited->render.content
+                : s.analysisCount>previousAnalysis;
+            return p->getCaptureSnapshot().manifest.revision>previousRevision && processed
+                && s.session.swells.size()==expectedSwells && !s.analyzing && s.pendingIntervals==0
             && std::all_of(s.session.swells.begin(),s.session.swells.end(),[](const auto& w){return w.phase==m3::Phase::ready;});});}
         catch(...){const auto s=engine.snapshot();std::cerr<<"List capture start="<<start<<" analysis="<<s.analysisCount<<" previous="<<previousAnalysis
             <<" swells="<<s.session.swells.size()<<" expected="<<expectedSwells<<" analyzing="<<s.analyzing<<" pending="<<s.pendingIntervals
@@ -61,7 +70,7 @@ static void swellListCaptureCases(bool review=false)
     const auto capture=p->getCaptureSnapshot();REQUIRE(capture.manifest.ranges.size()>=2);
     REQUIRE(std::none_of(capture.manifest.ranges.begin(),capture.manifest.ranges.end(),[](const auto& r){return r.startSample>48000 && r.startSample<192000;}));
     const auto beforeRecapture=*m3::find(engine.savedSession(),early);
-    armCaptureFixture(*p);pass(0,1,.2f,2,true);editor->refresh();
+    armCaptureFixture(*p);pass(0,1,.2f,2,early);editor->refresh();
     const auto refreshed=*m3::find(engine.savedSession(),early);
     REQUIRE(refreshed.id==beforeRecapture.id && refreshed.name==beforeRecapture.name && refreshed.ir==beforeRecapture.ir
         && refreshed.shape==beforeRecapture.shape && refreshed.provenance==m3::Provenance::manualEdited);

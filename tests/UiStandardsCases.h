@@ -68,7 +68,9 @@ static void uiStandardsLayoutCases(PreverbAudioProcessorEditor& editor,const juc
     {
         editor.setSize(size.x,size.y);editor.refresh();
         const auto chart=learn->timelineBounds();REQUIRE(chart.getWidth()>0 && chart.getHeight()>0);
-        for(auto* child:learn->getChildren())if(child->isVisible())REQUIRE(learn->getLocalBounds().contains(child->getBounds()));
+        for(auto* child:learn->getChildren())if(child->isVisible() && !learn->getLocalBounds().contains(child->getBounds()))
+            throw std::runtime_error(("Learn control outside bounds: "+child->getName()+" at "+child->getBounds().toString()
+                +" in "+learn->getLocalBounds().toString()).toStdString());
         REQUIRE(juce::GlyphArrangement::getStringWidth(heading->getFont(),heading->getText())<=heading->getWidth());
         REQUIRE(helper->getText().isEmpty()?helper->getHeight()==0:helper->getHeight()>=textStyle(TextRole::helper).lineHeight);
         for(const auto* name:{"learnIRLabel","learnSensitivityLabel"})

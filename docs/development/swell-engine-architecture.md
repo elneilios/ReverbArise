@@ -112,6 +112,8 @@ Freeze is an explicit hold on the accepted saved sound, outside automatic replac
 
 `SwellEngine::edit` retains input versus shape generations. `shapeJob` and playback-page preparation derive envelope/level/pure placement from full wet audio; a real source-support extension changes the material footprint. `renderJob` retains session/ID/input-generation checks, latest capture generation/fingerprint checks, memory admission and cooperative page service. The callback still only queues capture/consumes published audio; the 256 MiB worker budget and reader retirement remain authoritative.
 
+An IR replacement can supersede an in-flight render while other swells regenerate. During headroom measurement for those other swells, a target owned by the replacement can contribute its verified accepted render if its source, response and timing still match. Its superseded Checking phase does not hold the other renders open. The replacement still settles through the staged handover.
+
 `PreverbAudioProcessor::setRecaptureExisting` can explicitly arm complete-known-coverage source replacement only from Learn. `beginSourceReplacement` releases the obsolete expected-source-reference barrier; it does not request DSP. The normal accepted-source notifications then drive maintenance. `reloadRecoveredAssets` verifies session/closure and reloads dependencies without adopting backup creative edits. The editor's owned modal and Storage callbacks resolve files, not rendering policy. No recovery-specific renderer remains.
 
 Native owner interaction approval and full integration/profile verification are recorded in [dated evidence](../validation/2026-11-06-shared-swell-engine.md). Implementation does not waive later folder-association, cleanup or release gates.

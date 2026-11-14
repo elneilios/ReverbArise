@@ -544,7 +544,8 @@ private:
         loopArm.setVisible(show);
         loopUnit.setVisible(duration);loopCount.setVisible(duration);
         if (!show) return;
-        loopArm.setBounds(column.removeFromTop(controlGeometry::height).expanded(policyFocusMargin,0));
+        auto armRow=column.removeFromTop(controlGeometry::height);
+        loopArm.setBounds(responsive || usesLoopPolicies()?armRow.expanded(policyFocusMargin,0):armRow);
         column.removeFromTop(spacing::related);
         auto row=column.removeFromTop(controlGeometry::height);
         loopMode.setBounds(responsive || usesLoopPolicies()?row.expanded(policyFocusMargin,0):row);
