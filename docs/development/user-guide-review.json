@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "normalization": "utf8-lf-v1",
-  "summary": "Reviewed the six canonical specs synced during archive against the existing guide for shared Arm, Song and Loop capture, frozen-only explicit regeneration, automatic Stop behavior, Learn controls and FL Studio repeat resumption. The existing instructions already reflect the accepted behavior.",
+  "summary": "Reviewed the IR handover and Regenerate All worker repair for issue 208. The guide already explains retained sound during IR preparation and how Regenerate All skips the target with an active import. User instructions and screenshots remain current.",
   "files": [
     {
       "path": ".agents/skills/maintain-user-guide/SKILL.md",
@@ -495,8 +495,8 @@
     },
     {
       "path": "Source/DSP/SwellTransport.cpp",
-      "bytes": 60321,
-      "sha256": "015cf734a97bda4e9b4b8b533f796c5ab1969b277f48953325a70672bff3ec65"
+      "bytes": 61335,
+      "sha256": "13d1845beeb1af453f5255047c913b8b77c88d89853ddfb9ed8ceab447ab1832"
     },
     {
       "path": "Source/DSP/WavPackDecoder.cpp",

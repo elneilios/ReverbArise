@@ -216,10 +216,15 @@ inline void cases()
     send(tilePoint, primary);
     send(farPoint, primary);
     send(farPoint, {});
+    // Drain the cancelled drag before the next gesture. Keep the peer's
+    // synthetic Save press and release together so native pointer events
+    // cannot interrupt the simulated press while the message loop runs.
+    pump();
+    REQUIRE(nativeHandoffs == 1 && nativeSaves == 1 && !tile.hasSolidBorder());
     send(savePoint, {});
     send(savePoint, primary);
-    pump();
     send(savePoint, {});
+    pump();
     REQUIRE(nativeHandoffs == 1 && nativeSaves == 2);
 
     send(tilePoint, {});

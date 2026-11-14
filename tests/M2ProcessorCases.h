@@ -87,7 +87,9 @@ inline void m2ProcessorCases()
     }
     REQUIRE(processor->auditionPreview());
     head.position.setIsPlaying(true); head.position.setTimeInSamples(4000); head.position.setPpqPosition(16);
-    processor->setMappingEnabled(true); buffer.clear(); processor->processBlock(buffer, midi);
+    REQUIRE(processor->requestWorkflowMode(workflow::Mode::capture));
+    REQUIRE(setFixtureCaptureArmed(*processor));
+    buffer.clear(); processor->processBlock(buffer, midi);
     finishCaptureFixture(*processor,head.position); REQUIRE(processor->flushCaptureForTesting());
     auto captured = processor->getCaptureSnapshot().manifest;
     CaptureAssetStore store(root.file.getChildFile(captured.projectId).getChildFile(captured.instanceId));

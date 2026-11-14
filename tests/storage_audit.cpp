@@ -86,17 +86,19 @@ static void compatibility()
 {
     juce::String error,encoded;Session original;Swell swell;swell.name="Retained";swell.shape=initialShape(rate);swell.sourceEnd=rate;swell.generationSource=juce::String::repeatedString("a",64);original.swells.push_back(swell);
     REQUIRE(encode(original,encoded,error));
-    for(int version=1;version<=12;++version){auto v=juce::JSON::parse(encoded);auto* p=v.getDynamicObject();p->setProperty("version",version);
+    for(int version=1;version<=14;++version){auto v=juce::JSON::parse(encoded);auto* p=v.getDynamicObject();p->setProperty("version",version);
         const auto remove=[&](int introduced,std::initializer_list<const char*> fields){if(version<introduced)for(auto key:fields)p->removeProperty(key);};
         remove(12,{"defaultSoundPreset","defaultLevelDb"});remove(11,{"autoGenerateOnStop"});remove(10,{"export"});remove(9,{"importedIRs"});remove(8,{"gainPolicy","gainRevision"});remove(7,{"isolateDry"});remove(6,{"regenerationSensitivity"});remove(5,{"liveEnabled","liveRouting","liveWetDb"});remove(4,{"autoMarkersEnabled","isolateSelected"});remove(3,{"postRollSeconds"});remove(2,{"mappingEnabled","automaticProcessing","auditionMode","wetBlend","defaultIR","defaultIRName","suppressed"});
         auto* w=v["swells"][0].getDynamicObject();if(version<12)w->removeProperty("soundPreset");if(version<11)w->removeProperty("generationSource");if(version<8)w->removeProperty("calibration");if(version<6)w->removeProperty("frozen");if(version<4)w->removeProperty("placement");if(version<3){w->removeProperty("supportOffset");v["swells"][0]["shape"].getDynamicObject()->removeProperty("inTension");v["swells"][0]["shape"].getDynamicObject()->removeProperty("outTension");}if(version<2){w->removeProperty("provenance");w->removeProperty("detectorAnchor");}
         Session decoded;REQUIRE(decode(juce::JSON::toString(v),decoded,error));REQUIRE(decoded.swells[0].id==swell.id && decoded.autoGenerateOnStop==(version<11));REQUIRE(decoded.swells[0].generationSource==(version>=11?swell.generationSource:juce::String{}));
     }
-    for(int version:{0,13}){auto bad=juce::JSON::parse(encoded);bad.getDynamicObject()->setProperty("version",version);Session kept=original;REQUIRE(!decode(juce::JSON::toString(bad),kept,error));juce::String after;REQUIRE(encode(kept,after,error) && after==encoded);}
+    for(int version:{0,15}){auto bad=juce::JSON::parse(encoded);bad.getDynamicObject()->setProperty("version",version);Session kept=original;
+        REQUIRE(!decode(juce::JSON::toString(bad),kept,error) && error=="Unsupported swell state version");
+        juce::String after;REQUIRE(encode(kept,after,error) && after==encoded);}
     TestDirectory temp;CaptureSession c(temp.file);auto samples=signal(0,100,7);REQUIRE(c.commit(0,rate,samples.data(),100));auto v1=c.snapshot().manifest;CaptureGenerationContext context;context.origin=CaptureContextOrigin::legacy;context.id=captureGenerationContextId(context);CaptureManifest v2;REQUIRE(captureWithLegacyContext(v1,context,v2,error));
     for(const auto& m:{v1,v2}){juce::String text;CaptureManifest loaded;REQUIRE(serializeCaptureManifest(m,text,error) && parseCaptureManifest(text,loaded,error));REQUIRE(loaded.schemaVersion==m.schemaVersion && loaded.ranges.size()==1);auto bad=juce::JSON::parse(text);bad.getDynamicObject()->setProperty("schemaVersion",3);REQUIRE(!parseCaptureManifest(juce::JSON::toString(bad),loaded,error) && loaded.schemaVersion==m.schemaVersion);}
     SwellAssetStore assets(temp.file.getChildFile("managed"));ImpulseResponse ir;ir.rate=rate;ir.channels=2;ir.samples=samples;Asset known;REQUIRE(assets.writeIR(ir,known,error));auto newer=known;newer.engine=2;Asset structural;REQUIRE(parseAssetMetadata(assetMetadata(newer),structural,error) && structural.engine==2);REQUIRE(!assets.verify(newer,error) && assets.verify(known,error));
-    std::cout<<"Compatibility: creative 1-12 and unknown 0/13; capture 1/2 and unknown 3 passed. Export and envelope versions covered by existing native tests.\n";
+    std::cout<<"Compatibility: creative 1-14 and unknown 0/15, capture 1/2 and unknown 3 passed. Export and envelope versions covered by existing native tests.\n";
 }
 static void writer(const juce::File& root,int identity)
 {

@@ -13,16 +13,24 @@ void Composition::verifyReadability()
     auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);panel->refresh();
     const auto saved=engine.savedSession();const auto renders=engine.snapshot().renderCount;const auto capture=processor->getCaptureSnapshot().manifest.revision;
     auto& viewport=require<juce::Viewport>(*panel,"inspectorViewport");auto* content=viewport.getViewedComponent();REQUIRE(content);
-    auto& timing=require<juce::Label>(*panel,"inspectorTimingGroup");auto& envelope=require<juce::Label>(*panel,"inspectorEnvelopeGroup");auto& level=require<juce::Label>(*panel,"inspectorLevelGroup");
-    REQUIRE(timing.isVisible() && timing.getY()<envelope.getY() && envelope.getY()<level.getY());
-    REQUIRE(content->getHeight()>viewport.getHeight());
-    for(const auto* name:{"arrivalSample","sourceSampleStart","sourceSampleEnd","wetPlacement","preRoll","endOffset","fadeInMs","fadeOutMs","curveInTension","curveOutTension","swellLevel"})
+    auto& tabs=require<controls::SegmentedSelector>(*panel,"inspectorSections");
+    auto& reset=require<juce::Button>(*panel,"resetWetShape");
+    const auto resetBounds=reset.getBounds();
+    REQUIRE(reset.getParentComponent()==find(*panel,"presentationContent"));
+    const auto checkFields=[&](int section,std::initializer_list<const char*> names)
     {
-        auto& cell=require<KnobValue>(*panel,juce::String(name)+"Cell");REQUIRE(content->getLocalBounds().contains(cell.getBounds()));
-        REQUIRE(cell.getLocalBounds().contains(cell.valueField().getBounds()) && cell.valueField().getWidth()==controlGeometry::valueWidth);
-        viewport.setViewPosition(0,std::clamp(cell.getY(),0,std::max(0,content->getHeight()-viewport.getHeight())));
-        REQUIRE(viewport.getViewArea().intersects(cell.getBounds()));
-    }
+        tabs.onRequest(section);panel->refresh();
+        REQUIRE(viewport.isVisible() && reset.isVisible() && reset.getBounds()==resetBounds);
+        for(const auto* name:names)
+        {
+            auto& cell=require<KnobValue>(*panel,juce::String(name)+"Cell");
+            REQUIRE(cell.isVisible() && content->getLocalBounds().contains(cell.getBounds()));
+            REQUIRE(cell.getLocalBounds().contains(cell.valueField().getBounds()) && cell.valueField().getWidth()==controlGeometry::valueWidth);
+            viewport.setViewPosition(0,std::clamp(cell.getY(),0,std::max(0,content->getHeight()-viewport.getHeight())));
+            REQUIRE(viewport.getViewArea().intersects(cell.getBounds()) && reset.getBounds()==resetBounds);
+        }
+    };
+    checkFields(1,{"arrivalSample","sourceSampleStart","sourceSampleEnd","wetPlacement"});
     for(const auto* name:{"sourceSampleStart","sourceSampleEnd"})
     {
         auto& cell=require<KnobValue>(*panel,juce::String(name)+"Cell");REQUIRE(cell.getWidth()>content->getWidth()-spacing::related);
@@ -30,7 +38,13 @@ void Composition::verifyReadability()
         REQUIRE(caption && caption->getText().startsWith("Source ") && !caption->getText().contains("Src"));
         REQUIRE(juce::GlyphArrangement::getStringWidth(caption->getFont(),caption->getText())<=caption->getWidth());
     }
-    auto& reset=require<juce::Button>(*panel,"resetWetShape");viewport.setViewPosition(0,10000);REQUIRE(viewport.getViewArea().contains(reset.getBounds()));
+    tabs.onRequest(3);panel->refresh();
+    auto& sound=require<controls::SoundPresetEditor>(*panel,"selectedIrEditor");
+    auto& level=require<KnobValue>(*panel,"swellLevelCell");
+    REQUIRE(sound.isVisible() && sound.isParentOf(&level) && level.isVisible() && !viewport.isVisible());
+    REQUIRE(level.getLocalBounds().contains(level.valueField().getBounds()));
+    REQUIRE(reset.isVisible() && reset.getBounds()==resetBounds);
+    checkFields(2,{"preRoll","endOffset","fadeInMs","fadeOutMs","curveInTension","curveOutTension"});
     auto& timeline=panel->timelineComponent();
     for(const auto view:{m3::SwellViewport{-24000,96000},m3::SwellViewport{40000,70000},m3::SwellViewport{230000,290000}})
     {
