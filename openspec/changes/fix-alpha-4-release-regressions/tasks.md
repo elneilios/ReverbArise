@@ -14,7 +14,7 @@
 
 ## 3. Integration
 
-- [ ] 3.1 Review the repair against the offline guide and verify the currency record. After the owner approves moving the draft to ready, run the targeted Windows Release tests and all 15 standard PR regressions and record results on the tested revision.
+- [x] 3.1 Review the repair against the offline guide and verify the currency record. After the owner approves moving the draft to ready, run the targeted Windows Release tests and all 15 standard PR regressions and record results on the tested revision.
 
 ## Workflow follow-up
 
