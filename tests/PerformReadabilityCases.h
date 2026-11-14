@@ -10,7 +10,9 @@ void Composition::verifyReadability()
     musical.denominator=8;musical.numerator=6;REQUIRE(m3::ui::musicalReadout(71999,musical)=="2.1");
     musical.valid=false;REQUIRE(m3::ui::footerPosition(0,musical)=="Position unavailable");
     stopTimer();setScene(0);auto& engine=processor->swellEngine();
-    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();panel->setSize(1100,850);panel->refresh();
+    auto panel=std::make_unique<PreverbAudioProcessorEditor>(*processor);panel->stopAutomaticRefreshForReview();
+    panel->enableResponsiveReview({},PresentationFitContext{{4000,3000},{0,0}});
+    panel->setPresentationSize(1100,850);panel->refresh();
     const auto saved=engine.savedSession();const auto renders=engine.snapshot().renderCount;const auto capture=processor->getCaptureSnapshot().manifest.revision;
     auto& viewport=require<juce::Viewport>(*panel,"inspectorViewport");auto* content=viewport.getViewedComponent();REQUIRE(content);
     auto& tabs=require<controls::SegmentedSelector>(*panel,"inspectorSections");
@@ -53,11 +55,12 @@ void Composition::verifyReadability()
         const auto ruler=timeline.musicalRulerBounds();const auto dry=timeline.sourceLane(),wet=timeline.wetLane();
         REQUIRE(ruler.getBottom()<dry.getY() && ruler.getX()==dry.getX() && ruler.getWidth()==dry.getWidth());
         REQUIRE(dry.getX()==wet.getX() && dry.getWidth()==wet.getWidth());
-        const auto ticks=controls::musicalTimelineTicks(timeline.viewport(),ruler.getWidth(),processor->getSongTime());REQUIRE(!ticks.empty());
+        const auto& rulerTime=timeline.acceptedGridTiming();
+        const auto ticks=controls::musicalTimelineTicks(timeline.viewport(),ruler.getWidth(),rulerTime);REQUIRE(!ticks.empty());
         for(const auto& tick:ticks)REQUIRE(std::abs(timeline.viewport().pixel(tick.sample,dry.getX(),dry.getWidth())-timeline.viewport().pixel(tick.sample,wet.getX(),wet.getWidth()))<1e-8);
         const auto actual=timeline.createComponentSnapshot(timeline.getLocalBounds()).getClippedImage(ruler);
         juce::Image expected(juce::Image::ARGB,ruler.getWidth(),ruler.getHeight(),true);
-        {juce::Graphics graphics(expected);graphics.fillAll(background);controls::paintMusicalTimelineRuler(graphics,expected.getBounds(),timeline.viewport(),processor->getSongTime());}
+        {juce::Graphics graphics(expected);graphics.fillAll(background);controls::paintMusicalTimelineRuler(graphics,expected.getBounds(),timeline.viewport(),rulerTime,&timeline);}
         for(int y=0;y<ruler.getHeight();++y)for(int x=0;x<ruler.getWidth();++x)REQUIRE(actual.getPixelAt(x,y)==expected.getPixelAt(x,y));
     }
     viewport.setViewPosition(0,0);NativeEditorPeer nativePeer(*panel,"ReverbArise - PerformReadabilityCases native validation");panel->setVisible(true);panel->toFront(true);
@@ -103,7 +106,7 @@ void Composition::verifyReadability()
     juce::AudioBuffer<float> transportAudio(2,64);juce::MidiBuffer transportMidi;
     for(const auto size:{juce::Point<int>{1100,850},{1400,900},{1400,1000},{1600,1000}})
     {
-        panel->setSize(size.x,size.y);panel->refresh();const auto geometry=footer.geometry();const auto bounds=footer.getBounds();
+        panel->setPresentationSize(size.x,size.y);panel->refresh();const auto geometry=footer.geometry();const auto bounds=footer.getBounds();
         for(const auto bar:{9,10,99,100,99,9})for(const auto bpm:{82.,123.45})for(const auto numerator:{4,6,12})
         {
             const auto ppq=static_cast<double>(bar-1)*numerator*4/8;
