@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "releaseIdentity": "v0.1.0-alpha.4",
+  "previousRelease": "v0.1.0-alpha.3",
+  "previousGitSha": "23ed96c31ca8fa6a7f84431d46f70d3df8b74b16",
+  "changes": [
+    "Use the same Sound editor for future swells in Learn and the selected swell in Perform. Preview responses in the preset picker, import a WAV or WavPack through Custom IR, and adjust Level, Damping, High Pass and Low Pass. Existing accepted swells keep their sound when you open a project.",
+    "Try Stereo Ping Pong Crescendo for alternating echoes that build into the arrival. Tempo Sync aligns the echoes to Beat 1 when compatible timing is available. Adjust the subdivision, stereo spread, build, gate and damping.",
+    "Click Arm for each new Song or Loop take. The record button and adjoining status show when capture is armed. Generate or Regenerate builds from the accepted audio and current markers, keeps frozen swells and can bring previously deleted swells back. Generate on Stop keeps its existing behavior.",
+    "In FL Studio, compatible Pattern and Playlist repeats that match the captured Loop length can play wet automatically. Use Set Loop Start to place a repeating Loop at one Playlist position and Stop Loop to finish the current pass and tail."
+  ],
+  "fixes": [
+    "Learn shows the provisional waveform during Loop recording and updates the Song waveform with small audio buffers. The Song playhead is visible during active recording. A rebuilt Loop can rejoin a compatible repeat already running in FL Studio.",
+    "Switching to a shorter valid response fits the wet shape to the available audio while keeping the swell arrival fixed. The previous sound stays available while the replacement prepares.",
+    "Learn tabs and capture and Sound controls share a common left edge. The taller Generate or Regenerate button is available from both Learn tabs when event detection is enabled."
+  ],
+  "upgradeSteps": [
+    "Close the DAW and keep the previous complete VST3 bundle, a copy of the saved project and its asset folders. Install the complete new bundle, rescan and try a copy of an existing project first. Use the retained project and assets if you roll back, because older builds may reject newer saved state.",
+    "In Learn, click Arm before recording each take. Starting DAW playback by itself leaves a disarmed instance idle."
+  ],
+  "knownLimitations": [
+    "This unsigned Windows x64 VST3 alpha uses manual installation. FL Studio checks for the new workflows used earlier builds. The exact package still needs its FL Studio smoke test. Clean-machine and new Rack coverage remain unverified.",
+    "Automatic Loop playback requires a compatible repeat matching the captured Loop length. Set Loop Start places one repeating section. Use Loop WAV Save or Drag for a wet Loop in an offline arrangement export.",
+    "Song scheduling uses compatible fixed tempo and meter. The Sound editor shows when a new synced Ping Pong assignment uses reference tempo. Playback still requires compatible timing."
+  ]
+}
