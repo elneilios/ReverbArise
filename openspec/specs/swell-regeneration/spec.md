@@ -51,6 +51,11 @@ The plugin SHALL provide Regenerate Selected and Regenerate All using committed 
 - **THEN** each eligible target receives a fresh render request through bounded background work, even though its inputs and processing version are unchanged
 - **AND** the action does not recapture source, alter edits or override frozen/importing ownership
 
+#### Scenario: Regenerate other swells during an IR replacement
+- **WHEN** a valid IR replacement supersedes a render already in progress and the user invokes Regenerate All
+- **THEN** the other eligible swells can complete their requested regeneration and the replacement can settle under its own request
+- **AND** the replacement retains the previous accepted assignment and render until the verified new assignment, wet shape and render publish together
+
 ### Requirement: Recapture and regenerate has an explicit armed interval
 Recapture & Regenerate SHALL arm one finite absolute source interval and identify dependent swells. The plugin SHALL instruct the user where to move the FL Studio playhead and press Play, admit dry input only inside that interval, and preserve all outside capture. It SHALL not command transport. Regeneration SHALL wait for committed complete fresh coverage of the armed interval; previous coverage SHALL not conceal missing fresh input.
 
